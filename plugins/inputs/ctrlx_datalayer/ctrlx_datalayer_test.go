@@ -204,9 +204,12 @@ func TestCtrlXMetricsField(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
-		v, found := acc.FloatField(measurement, fieldName)
-		return found && v == 43.0
-	}, time.Second*10, time.Second, "expected value to be 43.0 of type float")
+		if v, found := acc.FloatField(measurement, fieldName); found {
+				require.Equal(t, 43.0, v)
+				return true
+		}
+		return false
+	}, time.Second*10, time.Second)
 }
 
 func TestCtrlXMetricsMulti(t *testing.T) {
