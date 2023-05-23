@@ -205,9 +205,8 @@ func TestCtrlXMetricsField(t *testing.T) {
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
 		v, found := acc.FloatField(measurement, fieldName)
-		return found == true && v == 43.0
+		return found && v == 43.0
 	}, time.Second*10, time.Second, "expected value to be 43.0 of type float")
-
 }
 
 func TestCtrlXMetricsMulti(t *testing.T) {
@@ -223,7 +222,7 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
 		v, found := acc.FloatField(measurement, fieldName)
-		return found == true && v == 44.0
+		return found && v == 44.0
 	}, time.Second*10, time.Second, "expected value to be 44.0 of type float")
 
 	setMultiEntries(false)
