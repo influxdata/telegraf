@@ -292,9 +292,7 @@ func TestNode_fieldKey(t *testing.T) {
 				Name:    tt.fields.Name,
 				Address: tt.fields.Address,
 			}
-			if got := n.fieldKey(); got != tt.want {
-				t.Errorf("Node.fieldKey() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, n.fieldKey()
 		})
 	}
 }
