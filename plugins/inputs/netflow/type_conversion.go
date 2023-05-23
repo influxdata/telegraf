@@ -118,6 +118,9 @@ func decodeBool(b []byte) interface{} {
 }
 
 func decodeHex(b []byte) interface{} {
+	if len(b) == 0 {
+		return ""
+	}
 	return "0x" + hex.EncodeToString(b)
 }
 
