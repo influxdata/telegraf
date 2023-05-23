@@ -181,6 +181,7 @@ func (s *serializer) createObject(metric telegraf.Metric) map[string]interface{}
 
 // Create a metric item for append into "items" slice, grouping certain fields.
 //   Group _key fields into "keys" (keysStr) map
+//   Group _tag fields into "tags" (tagsStr) map
 //   Group xyz_min, xyz_max, xyz_avg fields into "xyz" map
 func createItem(metric telegraf.Metric) map[string]interface{} {
 
@@ -230,7 +231,7 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 
 				rt := reflect.TypeOf(myMap[myIndex])
 				if rt.Kind() != reflect.Slice {
-					// Make it a slice
+					// Make it a slice if it isn't already
 					myMap[myIndex] = make([]interface{}, 0)
 				}
 				
@@ -338,7 +339,7 @@ func buildMap(startMap map[string]interface{}, startKey string, s []string, numK
 			// i.e. car_tag=Ford and engine_car_tag=F150.
 			// Once we create..
 			//    {tags:{car: Ford}}
-			//"ab" We cannot create a
+			// We cannot create a
 			//    {tags:{car:{engine:F150}}}
 			// because the top level "car" element is already assigned the value "Ford" and thus
 			// cannot contain any subvalues.
