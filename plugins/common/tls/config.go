@@ -230,12 +230,12 @@ func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase
 	)
 	certBytes, err = os.ReadFile(certFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load certificate %q: %w", certFile, err)
 	}
 
 	keyBytes, err = os.ReadFile(keyFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load private key %q: %w", keyFile, err)
 	}
 
 	keyPEMBlock, _ := pem.Decode(keyBytes)
