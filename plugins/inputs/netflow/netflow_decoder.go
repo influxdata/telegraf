@@ -2,6 +2,7 @@ package netflow
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -553,7 +554,12 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	buf := bytes.NewBuffer(payload)
 	packet, err := netflow.DecodeMessage(buf, templates)
 	if err != nil {
-		return nil, err
+		var terr *netflow.ErrorTemplateNotFound
+		if errors.As(err, &terr) {
+			d.Log.Warnf("%v; skipping packet", err)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("decoding message failed: %w", err)
 	}
 
 	// Extract metrics
