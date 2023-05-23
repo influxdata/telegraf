@@ -249,8 +249,7 @@ func (c *CtrlXDataLayer) Init() error {
 			c.Log.Infof("The right queue behaviour values are %v", queueBehaviours)
 			return fmt.Errorf("subscription %d: setting 'queue_behaviour' %q is invalid", i, sub.QueueBehaviour)
 		}
-		err = choice.Check(sub.ValueChange, valueChanges)
-		if err != nil {
+		if !choice.Contains(sub.ValueChange, valueChanges) {
 			c.Log.Infof("The right value change values are %v", valueChanges)
 			return fmt.Errorf("subscription %d: setting 'value_change' %q is invalid", i, sub.ValueChange)
 		}
