@@ -75,7 +75,7 @@ func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
 	request := sub.createRequest(id)
 	payload, err := json.Marshal(request)
 	if err != nil {
-		return "", fmt.Errorf("failed to create subscription %d payload, error: %w", sub.index, err)
+		return "", fmt.Errorf("failed to create subscription %d payload: %w", sub.index, err)
 	}
 
 	requestBody := bytes.NewBuffer(payload)
