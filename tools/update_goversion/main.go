@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
 	"golang.org/x/net/html"
 )
 
@@ -27,7 +29,7 @@ func (f FileInfo) Update() error {
 	re := regexp.MustCompile(f.Regex)
 	newContents := re.ReplaceAll(b, []byte(f.Replace))
 
-	err = os.WriteFile(f.FileName, newContents, 0664)
+	err = os.WriteFile(f.FileName, newContents, 0640)
 	if err != nil {
 		return err
 	}
@@ -41,6 +43,12 @@ func removeZeroPatch(version string) string {
 		return strings.Trim(version, ".0")
 	}
 	return version
+}
+
+// removePatch cleans version from "1.20.1" to "1.20" (think go.mod entry)
+func removePatch(version string) string {
+	verInfo := semver.New(version)
+	return fmt.Sprintf("%d.%d", verInfo.Major, verInfo.Minor)
 }
 
 // findHash will search the downloads table for the hashes matching the artifacts list
@@ -65,7 +73,7 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 		//the end of the file, or the HTML was malformed
 		if tokenType == html.ErrorToken {
 			err := htmlTokens.Err()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				//end of the file, break out of the loop
 				break
 			}
@@ -107,6 +115,10 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 
 		// Reached end of table
 		if tokenType == html.EndTagToken && htmlTokens.Token().Data == "table" {
+			if len(hashes) == 0 {
+				return nil, fmt.Errorf("could not find version %q on downloads page", version)
+			}
+
 			return nil, fmt.Errorf("only found %d hashes expected %d: %v", len(hashes), len(artifacts), hashes)
 		}
 	}
@@ -130,12 +142,14 @@ func main() {
 	if strings.HasPrefix(version, "v") {
 		version = strings.TrimLeft(version, "v")
 	}
-	zeroPatchVersion := removeZeroPatch(version)
 
 	hashes, err := getHashes(version)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
+
+	zeroPatchVersion := removeZeroPatch(version)
+	noPatchVersion := removePatch(version)
 
 	files := []FileInfo{
 		{
@@ -144,9 +158,29 @@ func main() {
 			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
+			FileName: ".github/workflows/golangci-lint.yml",
+			Regex:    `(go-version).*`,
+			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
+		},
+		{
+			FileName: ".github/workflows/govulncheck.yml",
+			Regex:    `(go-version).*`,
+			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
+		},
+		{
+			FileName: "go.mod",
+			Regex:    `(go)\s(\d.\d*)`,
+			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
+		},
+		{
 			FileName: "Makefile",
 			Regex:    `(quay\.io\/influxdb\/telegraf-ci):(\d.\d*.\d)`,
 			Replace:  fmt.Sprintf("$1:%s", version),
+		},
+		{
+			FileName: "README.md",
+			Regex:    `(Telegraf requires Go version) (\d.\d*)`,
+			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
 		},
 		{
 			FileName: "scripts/ci.docker",

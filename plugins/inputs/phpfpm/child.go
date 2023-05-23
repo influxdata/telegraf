@@ -276,8 +276,6 @@ func (c *child) serveRequest(req *request, body io.ReadCloser) {
 		httpReq.Body = body
 		c.handler.ServeHTTP(r, httpReq)
 	}
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
 	r.Close()
 	c.mu.Lock()
 	delete(c.requests, req.reqID)
@@ -293,14 +291,10 @@ func (c *child) serveRequest(req *request, body io.ReadCloser) {
 	// some sort of abort request to the host, so the host
 	// can properly cut off the client sending all the data.
 	// For now just bound it a little and
-	//nolint:errcheck,revive
-	io.CopyN(io.Discard, body, 100<<20)
-	//nolint:errcheck,revive
+	io.CopyN(io.Discard, body, 100<<20) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 	body.Close()
 
 	if !req.keepConn {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
 		c.conn.Close()
 	}
 }
@@ -312,8 +306,6 @@ func (c *child) cleanUp() {
 		if req.pw != nil {
 			// race with call to Close in c.serveRequest doesn't matter because
 			// Pipe(Reader|Writer).Close are idempotent
-			// Ignore the returned error as we continue in the loop anyway
-			//nolint:errcheck,revive
 			req.pw.CloseWithError(ErrConnClosed)
 		}
 	}

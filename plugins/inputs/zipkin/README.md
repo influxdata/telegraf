@@ -7,6 +7,17 @@ __Please Note:__ This plugin is experimental; Its data schema may be subject to
 change based on its main usage cases and the evolution of the OpenTracing
 standard.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -14,15 +25,23 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 [[inputs.zipkin]]
-  # path = "/api/v1/spans" # URL path for span data
-  # port = 9411 # Port on which Telegraf listens
+  ## URL path for span data
+  # path = "/api/v1/spans"
+
+  ## Port on which Telegraf listens
+  # port = 9411
+
+  ## Maximum duration before timing out read of the request
+  # read_timeout = "10s"
+  ## Maximum duration before timing out write of the response
+  # write_timeout = "10s"
 ```
 
 The plugin accepts spans in `JSON` or `thrift` if the `Content-Type` is
@@ -56,7 +75,7 @@ Traces are built by collecting all Spans that share a traceId.
 
 ### Tags
 
-- __"id":__               The 64 bit ID of the span.
+- __"id":__               The 64-bit ID of the span.
 - __"parent_id":__        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
 - __"trace_id":__        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
 - __"name":__             Defines a span
@@ -92,7 +111,7 @@ SHOW TAG VALUES FROM "zipkin" WITH KEY = "service_name"
 
 - __Description:__  returns a list of all `distinct` endpoint service names.
 
--__Find spans with longest duration__-
+-__Find spans with the longest duration__-
 
 ```sql
 SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND "name" = 'my_span_name' AND time > now() - 20m GROUP BY "trace_id",time(30s) LIMIT 5
@@ -195,3 +214,5 @@ influxDB engine][1].
   ]
 }
 ```
+
+## Example Output

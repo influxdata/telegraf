@@ -28,7 +28,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -105,7 +105,7 @@ configuration file.
 
 ## Example Output
 
-```shell
+```text
 supervisor_processes,group=ExampleGroup,id=supervisor,port=9001,process=ExampleProcess,source=localhost state=20i,uptime=75958i 1659786637000000000
 supervisor_instance,id=supervisor,port=9001,source=localhost state=1i 1659786637000000000
 ```

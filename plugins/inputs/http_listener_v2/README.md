@@ -11,6 +11,17 @@ metrics in [InfluxDB Line Protocol][line_protocol] it's recommended to use the
 InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or
 [`influxdb_v2_listener`][influxdb_v2_listener].
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -18,7 +29,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -36,6 +47,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
+
+  ## Optional HTTP headers
+  ## These headers are applied to the server that is listening for HTTP
+  ## requests and included in responses.
+  # http_headers = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## maximum duration before timing out read of the request
   # read_timeout = "10s"

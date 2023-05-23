@@ -66,11 +66,12 @@ Telegraf uses Go modules. Assuming you can already build the project, run this i
 
 1. `go get github.com/[dependency]/[new-package]`
 
-**Unit Tests:**
+**Before opening a PR:**
 
-Before opening a pull request you should run the following checks to make sure the CI will pass.
+Before opening a pull request you should run the following checks locally to make sure the CI will pass.
 
 ```shell
+make lint
 make check
 make check-deps
 make test

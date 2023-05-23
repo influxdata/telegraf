@@ -20,7 +20,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -67,3 +67,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Please refer to GrayLog metrics api browser for full metric end points:
 `http://host:9000/api/api-browser`
+
+## Metrics
+
+## Example Output

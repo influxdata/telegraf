@@ -138,7 +138,7 @@ func (h *GrayLog) gatherServer(
 	}
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
-		return fmt.Errorf("unable to parse address '%s': %s", serverURL, err)
+		return fmt.Errorf("unable to parse address %q: %w", serverURL, err)
 	}
 
 	host, port, _ := net.SplitHostPort(requestURL.Host)
@@ -207,7 +207,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
-		return "", -1, fmt.Errorf("invalid server URL \"%s\"", serverURL)
+		return "", -1, fmt.Errorf("invalid server URL %q", serverURL)
 	}
 	// Add X-Requested-By header
 	headers["X-Requested-By"] = "Telegraf"
@@ -245,7 +245,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
 			requestURL.String(),
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),

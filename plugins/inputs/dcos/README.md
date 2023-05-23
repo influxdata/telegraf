@@ -26,7 +26,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -208,7 +208,7 @@ interpretation.
 
 ## Example Output
 
-```shell
+```text
 dcos_node,cluster=enterprise,hostname=192.168.122.18,path=/boot filesystem_capacity_free_bytes=918188032i,filesystem_capacity_total_bytes=1063256064i,filesystem_capacity_used_bytes=145068032i,filesystem_inode_free=523958,filesystem_inode_total=524288,filesystem_inode_used=330 1511859222000000000
 dcos_node,cluster=enterprise,hostname=192.168.122.18,interface=dummy0 network_in_bytes=0i,network_in_dropped=0,network_in_errors=0,network_in_packets=0,network_out_bytes=0i,network_out_dropped=0,network_out_errors=0,network_out_packets=0 1511859222000000000
 dcos_node,cluster=enterprise,hostname=192.168.122.18,interface=docker0 network_in_bytes=0i,network_in_dropped=0,network_in_errors=0,network_in_packets=0,network_out_bytes=0i,network_out_dropped=0,network_out_errors=0,network_out_packets=0 1511859222000000000

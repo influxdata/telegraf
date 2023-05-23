@@ -176,7 +176,7 @@ func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
-		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
+		return "", -1, fmt.Errorf("Invalid server URL %q", serverURL)
 	}
 
 	data := url.Values{}
@@ -228,7 +228,7 @@ func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("Response from url %q has status code %d (%s), expected %d (%s)",
 			requestURL.String(),
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),

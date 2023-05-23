@@ -11,10 +11,10 @@ import (
 	"strings"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
@@ -27,11 +27,12 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project        string            `toml:"project"`
-	Namespace      string            `toml:"namespace"`
-	ResourceType   string            `toml:"resource_type"`
-	ResourceLabels map[string]string `toml:"resource_labels"`
-	Log            telegraf.Logger   `toml:"-"`
+	Project          string            `toml:"project"`
+	Namespace        string            `toml:"namespace"`
+	ResourceType     string            `toml:"resource_type"`
+	ResourceLabels   map[string]string `toml:"resource_labels"`
+	MetricTypePrefix string            `toml:"metric_type_prefix"`
+	Log              telegraf.Logger   `toml:"-"`
 
 	client       *monitoring.MetricClient
 	counterCache *counterCache
@@ -55,6 +56,14 @@ const (
 	errStringPointsTooOld      = "data points cannot be written more than 24h in the past"
 	errStringPointsTooFrequent = "one or more points were written more frequently than the maximum sampling period configured for the metric"
 )
+
+func (s *Stackdriver) Init() error {
+	if s.MetricTypePrefix == "" {
+		s.MetricTypePrefix = "custom.googleapis.com"
+	}
+
+	return nil
+}
 
 func (*Stackdriver) SampleConfig() string {
 	return sampleConfig
@@ -114,15 +123,15 @@ type timeSeriesBuckets map[uint64][]*monitoringpb.TimeSeries
 
 func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monitoringpb.TimeSeries) {
 	h := fnv.New64a()
-	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte(f.Key))    //nolint:revive // from hash.go: "It never returns an error"
-	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte(m.Name()))
+	h.Write([]byte{'\n'})
+	h.Write([]byte(f.Key))
+	h.Write([]byte{'\n'})
 	for key, value := range m.Tags() {
-		h.Write([]byte(key))   //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte{'\n'})  //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte(value)) //nolint:revive // from hash.go: "It never returns an error"
-		h.Write([]byte{'\n'})  //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(key))
+		h.Write([]byte{'\n'})
+		h.Write([]byte(value))
+		h.Write([]byte{'\n'})
 	}
 	k := h.Sum64()
 
@@ -131,11 +140,38 @@ func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monit
 	tsb[k] = s
 }
 
-// Write the metrics to Google Cloud Stackdriver.
+// Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
+	metricBatch := make(map[int64][]telegraf.Metric)
+	timestamps := []int64{}
+	for _, metric := range sorted(metrics) {
+		timestamp := metric.Time().UnixNano()
+		if existingSlice, ok := metricBatch[timestamp]; ok {
+			metricBatch[timestamp] = append(existingSlice, metric)
+		} else {
+			metricBatch[timestamp] = []telegraf.Metric{metric}
+			timestamps = append(timestamps, timestamp)
+		}
+	}
+
+	// sort the timestamps we collected
+	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
+
+	s.Log.Debugf("received %d metrics\n", len(metrics))
+	s.Log.Debugf("split into %d groups by timestamp\n", len(metricBatch))
+	for _, timestamp := range timestamps {
+		if err := s.sendBatch(metricBatch[timestamp]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Write the metrics to Google Cloud Stackdriver.
+func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	ctx := context.Background()
 
-	batch := sorted(metrics)
 	buckets := make(timeSeriesBuckets)
 	for _, m := range batch {
 		for _, f := range m.FieldList() {
@@ -172,7 +208,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
-					Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
+					Type:   path.Join(s.MetricTypePrefix, s.Namespace, m.Name(), f.Key),
 					Labels: s.getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,

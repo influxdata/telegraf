@@ -93,7 +93,7 @@ func TestWriteToTruncatedFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, f[19:], []byte("Z I! TEST\n"))
 
-	tmpf, err := os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_TRUNC, 0644)
+	tmpf, err := os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_TRUNC, 0640)
 	require.NoError(t, err)
 	require.NoError(t, tmpf.Close())
 

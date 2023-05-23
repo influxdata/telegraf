@@ -12,7 +12,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -121,6 +121,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-> xio,guid=abcdefghifklmnopqrstuvwxyz111111,host=HOSTNAME,model_name=Eaton\ 5P\ 1550,name=X2-BBU,power_feed=PWR-B,serial_number=SER1234567890 bbus_average_daily_temp=22i,bbus_enabled=1i,bbus_power=286i,bbus_ups_low_battery_no_input=0i,bbus_ups_need_battery_replacement=0i 1638295340000000000
-> xio,guid=abcdefghifklmnopqrstuvwxyz222222,host=HOSTNAME,model_name=Eaton\ 5P\ 1550,name=X1-BBU,power_feed=PWR-A,serial_number=SER1234567891 bbus_average_daily_temp=22i,bbus_enabled=1i,bbus_power=246i,bbus_ups_low_battery_no_input=0i,bbus_ups_need_battery_replacement=0i 1638295340000000000
-> xio,guid=abcdefghifklmnopqrstuvwxyz333333,hardware_platform=X1,host=HOSTNAME,license_id=LIC123456789,name=SERVER01,sys_psnt_serial_number=FNM01234567890 clusters_compression_factor=1.5160012465000001,clusters_data_reduction_ratio=2.1613617899,clusters_free_ssd_space_in_percent=34i,clusters_number_of_volumes=36i,clusters_percent_memory_in_use=29i,clusters_read_iops=331i,clusters_ssd_num=50i,clusters_write_iops=4649i 1638295341000000000
+```text
+xio,guid=abcdefghifklmnopqrstuvwxyz111111,host=HOSTNAME,model_name=Eaton\ 5P\ 1550,name=X2-BBU,power_feed=PWR-B,serial_number=SER1234567890 bbus_average_daily_temp=22i,bbus_enabled=1i,bbus_power=286i,bbus_ups_low_battery_no_input=0i,bbus_ups_need_battery_replacement=0i 1638295340000000000
+xio,guid=abcdefghifklmnopqrstuvwxyz222222,host=HOSTNAME,model_name=Eaton\ 5P\ 1550,name=X1-BBU,power_feed=PWR-A,serial_number=SER1234567891 bbus_average_daily_temp=22i,bbus_enabled=1i,bbus_power=246i,bbus_ups_low_battery_no_input=0i,bbus_ups_need_battery_replacement=0i 1638295340000000000
+xio,guid=abcdefghifklmnopqrstuvwxyz333333,hardware_platform=X1,host=HOSTNAME,license_id=LIC123456789,name=SERVER01,sys_psnt_serial_number=FNM01234567890 clusters_compression_factor=1.5160012465000001,clusters_data_reduction_ratio=2.1613617899,clusters_free_ssd_space_in_percent=34i,clusters_number_of_volumes=36i,clusters_percent_memory_in_use=29i,clusters_read_iops=331i,clusters_ssd_num=50i,clusters_write_iops=4649i 1638295341000000000
+```

@@ -72,7 +72,7 @@ func TestReadCoreEvents(t *testing.T) {
 		metrics, err := mEntitiesReader.readCoreEvents(entity)
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to read core event `%s` values: %v", event, errMock))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to read core event %q values: %v", event, errMock))
 		require.Nil(t, metrics)
 		mReader.AssertExpectations(t)
 	})
@@ -149,7 +149,7 @@ func TestReadMultiEventSeparately(t *testing.T) {
 		metrics, err := mEntitiesReader.readMultiEventSeparately(multi)
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("failed to read uncore event `%s` values: %v", event, errMock))
+		require.Contains(t, err.Error(), fmt.Sprintf("failed to read uncore event %q values: %v", event, errMock))
 		require.Nil(t, metrics)
 		mReader.AssertExpectations(t)
 	})
@@ -248,7 +248,7 @@ func TestReadMultiEventAgg(t *testing.T) {
 				{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 1, Enabled: 0, Running: 0}},
 			},
 			result: ia.CounterValue{},
-			errMsg: fmt.Sprintf("cannot aggregate `%s` values, uint64 exceeding", perfEvent),
+			errMsg: fmt.Sprintf("cannot aggregate %q values, uint64 exceeding", perfEvent),
 		},
 		{
 			name:  "reading fail",

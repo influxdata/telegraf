@@ -20,7 +20,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -82,7 +82,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 The format of metrics produced by this plugin depends on the content and data
 format of the file.
 
+When the [internal][] input is enabled:
+
+- internal_directory_monitor
+  - fields:
+    - files_processed - How many files have been processed (counter)
+    - files_dropped - How many files have been dropped (counter)
+- internal_directory_monitor
+  - tags:
+    - directory - The monitored directory
+  - fields:
+    - files_processed_per_dir - How many files have been processed (counter)
+    - files_dropped_per_dir - How many files have been dropped (counter)
+    - files_queue_per_dir - How many files to be processed (gauge)
+
 ## Example Output
 
 The metrics produced by this plugin depends on the content and data
 format of the file.
+
+[internal]: /plugins/inputs/internal

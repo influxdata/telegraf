@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -115,13 +116,15 @@ func TestSqlServerIntegration_MultipleInstance(t *testing.T) {
 	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
 
 	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	sl := config.NewSecret([]byte(testServer))
 	s := &SQLServer{
-		Servers:      []string{testServer},
+		Servers:      []*config.Secret{&sl},
 		ExcludeQuery: []string{"MemoryClerk"},
 		Log:          testutil.Logger{},
 	}
+	sl2 := config.NewSecret([]byte(testServer))
 	s2 := &SQLServer{
-		Servers:      []string{testServer},
+		Servers:      []*config.Secret{&sl2},
 		ExcludeQuery: []string{"DatabaseSize"},
 		Log:          testutil.Logger{},
 	}
@@ -152,13 +155,16 @@ func TestSqlServerIntegration_MultipleInstanceWithHealthMetric(t *testing.T) {
 	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
 
 	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	sl := config.NewSecret([]byte(testServer))
 	s := &SQLServer{
-		Servers:      []string{testServer},
+		Servers:      []*config.Secret{&sl},
 		ExcludeQuery: []string{"MemoryClerk"},
 		Log:          testutil.Logger{},
 	}
+
+	sl2 := config.NewSecret([]byte(testServer))
 	s2 := &SQLServer{
-		Servers:      []string{testServer},
+		Servers:      []*config.Secret{&sl2},
 		ExcludeQuery: []string{"DatabaseSize"},
 		HealthMetric: true,
 		Log:          testutil.Logger{},
@@ -193,16 +199,20 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 	fakeServer1 := "localhost\\fakeinstance1;Database=fakedb1;Password=ABCabc01;"
 	fakeServer2 := "localhost\\fakeinstance2;Database=fakedb2;Password=ABCabc01;"
 
+	fs1 := config.NewSecret([]byte(fakeServer1))
+	fs2 := config.NewSecret([]byte(fakeServer2))
+
 	s1 := &SQLServer{
-		Servers:      []string{fakeServer1, fakeServer2},
+		Servers:      []*config.Secret{&fs1, &fs2},
 		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
 		HealthMetric: true,
 		AuthMethod:   "connection_string",
 		Log:          testutil.Logger{},
 	}
 
+	sl2 := config.NewSecret([]byte(fakeServer1))
 	s2 := &SQLServer{
-		Servers:      []string{fakeServer1},
+		Servers:      []*config.Secret{&sl2},
 		IncludeQuery: []string{"DatabaseSize"},
 		AuthMethod:   "connection_string",
 		Log:          testutil.Logger{},
@@ -343,14 +353,17 @@ func TestSqlServerIntegration_AGQueriesApplicableForDatabaseTypeSQLServer(t *tes
 	}
 	testServer := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
+	sl := config.NewSecret([]byte(testServer))
 	s := &SQLServer{
-		Servers:      []string{testServer},
+		Servers:      []*config.Secret{&sl},
 		DatabaseType: "SQLServer",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
 		Log:          testutil.Logger{},
 	}
+
+	sl2 := config.NewSecret([]byte(testServer))
 	s2 := &SQLServer{
-		Servers:      []string{testServer},
+		Servers:      []*config.Secret{&sl2},
 		DatabaseType: "AzureSQLDB",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
 		Log:          testutil.Logger{},
@@ -394,14 +407,17 @@ func TestSqlServerIntegration_AGQueryFieldsOutputBasedOnSQLServerVersion(t *test
 	testServer2019 := os.Getenv("AZURESQL_POOL_CONNECTION_STRING_2019")
 	testServer2012 := os.Getenv("AZURESQL_POOL_CONNECTION_STRING_2012")
 
+	sl2019 := config.NewSecret([]byte(testServer2019))
+	sl2012 := config.NewSecret([]byte(testServer2012))
+
 	s2019 := &SQLServer{
-		Servers:      []string{testServer2019},
+		Servers:      []*config.Secret{&sl2019},
 		DatabaseType: "SQLServer",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
 		Log:          testutil.Logger{},
 	}
 	s2012 := &SQLServer{
-		Servers:      []string{testServer2012},
+		Servers:      []*config.Secret{&sl2012},
 		DatabaseType: "SQLServer",
 		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
 		Log:          testutil.Logger{},

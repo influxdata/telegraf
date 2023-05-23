@@ -25,7 +25,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -37,6 +37,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## The namespace for the metric descriptor
   namespace = "telegraf"
+
+  ## Metric Type Prefix
+  ## The DNS name used with the metric type as a prefix.
+  # metric_type_prefix = "custom.googleapis.com"
 
   ## Custom resource type
   # resource_type = "generic_node"

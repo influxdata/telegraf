@@ -12,6 +12,7 @@ supplied by SQL Server.
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
 - Azure SQL Elastic Pool
+- Azure Arc-enabled SQL Managed Instance
 
 ## Additional Setup
 
@@ -116,7 +117,15 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `servers` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -146,7 +155,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
   ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
   ## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
-
   database_type = "SQLServer"
 
   ## A list of queries to include. If not specified, all the below listed queries are used.
@@ -171,6 +179,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Queries enabled by default for database_type = "AzureSQLPool" are -
   ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats,
   ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
+
+  ## Queries enabled by default for database_type = "AzureArcSQLManagedInstance" are -
+  ## AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats,
+  ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
 
   ## Following are old config settings
   ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
@@ -527,7 +539,7 @@ gathered.
 
 ## Example Output
 
-```shell
+```text
 sqlserver_cpu_other_process_cpu{host="servername",measurement_db_type="SQLServer",sql_instance="SERVERNAME:INST"} 9
 sqlserver_performance{counter="Log File(s) Size (KB)",counter_type="65792",host="servername",instance="instance_name",measurement_db_type="SQLServer",object="MSSQL$INSTANCE_NAME:Databases",sql_instance="SERVERNAME:INSTANCE_NAME"} 1.048568e+06
 ```

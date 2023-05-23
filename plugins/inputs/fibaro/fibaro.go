@@ -85,7 +85,7 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
 			requestURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),

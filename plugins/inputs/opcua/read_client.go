@@ -67,7 +67,7 @@ func (o *ReadClient) Connect() error {
 			NodesToRegister: o.NodeIDs,
 		})
 		if err != nil {
-			return fmt.Errorf("registerNodes failed: %v", err)
+			return fmt.Errorf("registerNodes failed: %w", err)
 		}
 
 		for _, v := range regResp.RegisteredNodeIDs {
@@ -83,7 +83,7 @@ func (o *ReadClient) Connect() error {
 
 	err = o.read()
 	if err != nil {
-		return fmt.Errorf("get Data Failed: %v", err)
+		return fmt.Errorf("get data failed: %w", err)
 	}
 
 	return nil
@@ -135,7 +135,7 @@ func (o *ReadClient) read() error {
 	resp, err := o.Client.Read(o.req)
 	if err != nil {
 		o.ReadError.Incr(1)
-		return fmt.Errorf("RegisterNodes Read failed: %v", err)
+		return fmt.Errorf("RegisterNodes Read failed: %w", err)
 	}
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {

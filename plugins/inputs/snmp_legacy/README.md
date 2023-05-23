@@ -11,7 +11,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -619,7 +619,7 @@ With the last example (Table with both mapping and subtable example):
 
 With the last example (Table with both mapping and subtable example):
 
-```shell
+```text
 ifHCOutOctets,host=127.0.0.1,instance=enp5s0,unit=octets ifHCOutOctets=10565628i 1456878706044462901
 ifInDiscards,host=127.0.0.1,instance=enp5s0 ifInDiscards=0i 1456878706044510264
 ifHCInOctets,host=127.0.0.1,instance=enp5s0,unit=octets ifHCInOctets=76351777i 1456878706044531312

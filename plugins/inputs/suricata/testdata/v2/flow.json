@@ -1,0 +1,21 @@
+{
+    "timestamp": "2023-04-07T00:28:22.136079+0800",
+    "flow_id": 911610881873910,
+    "in_iface": "eth1",
+    "event_type": "flow",
+    "src_ip": "192.168.0.121",
+    "src_port": 50212,
+    "dest_ip": "142.251.130.3",
+    "dest_port": 443,
+    "proto": "TCP",
+    "flow": {
+        "age": 0,
+        "state": "new",
+        "alerted": false
+    },
+    "tcp": {
+        "tcp_flags": "00",
+        "tcp_flags_ts": "00",
+        "tcp_flags_tc": "00"
+    }
+}

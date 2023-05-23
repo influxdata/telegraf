@@ -31,7 +31,7 @@ func (ms *MemStats) Init() error {
 func (ms *MemStats) Gather(acc telegraf.Accumulator) error {
 	vm, err := ms.ps.VMStat()
 	if err != nil {
-		return fmt.Errorf("error getting virtual memory info: %s", err)
+		return fmt.Errorf("error getting virtual memory info: %w", err)
 	}
 
 	fields := map[string]interface{}{

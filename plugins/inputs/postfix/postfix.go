@@ -35,7 +35,7 @@ func qScan(path string, acc telegraf.Accumulator) (map[string]interface{}, error
 
 	err := filepath.Walk(path, func(_ string, finfo os.FileInfo, err error) error {
 		if err != nil {
-			acc.AddError(fmt.Errorf("error scanning %s: %s", path, err))
+			acc.AddError(fmt.Errorf("error scanning %q: %w", path, err))
 			return nil
 		}
 		if finfo.IsDir() {
@@ -88,14 +88,14 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 		var err error
 		p.QueueDirectory, err = getQueueDirectory()
 		if err != nil {
-			return fmt.Errorf("unable to determine queue directory: %s", err)
+			return fmt.Errorf("unable to determine queue directory: %w", err)
 		}
 	}
 
 	for _, q := range []string{"active", "hold", "incoming", "maildrop", "deferred"} {
 		fields, err := qScan(filepath.Join(p.QueueDirectory, q), acc)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error scanning queue %s: %s", q, err))
+			acc.AddError(fmt.Errorf("error scanning queue %q: %w", q, err))
 			continue
 		}
 

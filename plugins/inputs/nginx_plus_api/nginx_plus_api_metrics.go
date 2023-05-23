@@ -47,7 +47,7 @@ func addError(acc telegraf.Accumulator, err error) {
 	//
 	// The correct solution is to do a GET to /api to get the available paths
 	// on the server rather than simply ignore.
-	if err != errNotFound {
+	if !errors.Is(err, errNotFound) {
 		acc.AddError(err)
 	}
 }
@@ -57,7 +57,7 @@ func (n *NginxPlusAPI) gatherURL(addr *url.URL, path string) ([]byte, error) {
 	resp, err := n.client.Get(address)
 
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", address, err)
+		return nil, fmt.Errorf("error making HTTP request to %q: %w", address, err)
 	}
 	defer resp.Body.Close()
 

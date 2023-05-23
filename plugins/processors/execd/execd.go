@@ -139,11 +139,12 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 
 		if err != nil {
 			// Stop parsing when we've reached the end.
-			if err == influx.EOF {
+			if errors.Is(err, influx.EOF) {
 				break
 			}
 
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
 				// Continue past parse errors.
 				e.acc.AddError(parseErr)
 				continue

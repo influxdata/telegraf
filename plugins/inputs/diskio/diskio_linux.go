@@ -83,12 +83,9 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		}
 		if l[:2] == "S:" {
 			if devlinks.Len() > 0 {
-				//nolint:errcheck,revive // this will never fail
 				devlinks.WriteString(" ")
 			}
-			//nolint:errcheck,revive // this will never fail
 			devlinks.WriteString("/dev/")
-			//nolint:errcheck,revive // this will never fail
 			devlinks.WriteString(l[2:])
 			continue
 		}

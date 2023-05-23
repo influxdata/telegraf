@@ -26,7 +26,8 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		// the output.
 		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
-		if exitError, ok := err.(*exec.ExitError); ok {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
 				fields["result_code"] = status
@@ -47,9 +48,9 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 			// Combine go err + stderr output
 			out = strings.TrimSpace(out)
 			if len(out) > 0 {
-				acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
+				acc.AddError(fmt.Errorf("host %q: %w - %s", u, err, out))
 			} else {
-				acc.AddError(fmt.Errorf("host %s: %s", u, err))
+				acc.AddError(fmt.Errorf("host %q: %w", u, err))
 			}
 			fields["result_code"] = 2
 			acc.AddFields("ping", fields, tags)
@@ -59,7 +60,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	stats, err := processPingOutput(out)
 	if err != nil {
 		// fatal error
-		acc.AddError(fmt.Errorf("%s: %s", err, u))
+		acc.AddError(fmt.Errorf("%q: %w", u, err))
 		fields["result_code"] = 2
 		acc.AddFields("ping", fields, tags)
 		return
@@ -200,7 +201,7 @@ func processPingOutput(out string) (stats, error) {
 }
 
 func getPacketStats(line string) (trans int, recv int, err error) {
-	trans, recv = 0, 0
+	recv = 0
 
 	stats := strings.Split(line, ", ")
 	// Transmitted packets

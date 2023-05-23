@@ -322,11 +322,10 @@ func (cols Columns) Keys() Columns {
 
 // Sorted returns a sorted copy of Columns.
 //
-// Columns are sorted so that they are in order as: [Time, Tags, Fields], with the columns within each group sorted
-// alphabetically.
+// Columns are sorted so that they are in order as: [Time, Tags, Fields], with the columns within each group sorted alphabetically.
 func (cols Columns) Sorted() Columns {
 	newCols := append([]Column{}, cols...)
-	(*utils.ColumnList)(unsafe.Pointer(&newCols)).Sort()
+	(*utils.ColumnList)(unsafe.Pointer(&newCols)).Sort() //nolint:gosec // G103: Valid use of unsafe call to speed up sorting
 	return newCols
 }
 
@@ -384,8 +383,8 @@ func (cols Columns) Fields() Columns {
 func (cols Columns) Hash() string {
 	hash := fnv.New32a()
 	for _, tc := range cols.Sorted() {
-		hash.Write([]byte(tc.Name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
-		hash.Write([]byte{0})       //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+		hash.Write([]byte(tc.Name))
+		hash.Write([]byte{0})
 	}
 	return strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash.Sum(nil)))
 }

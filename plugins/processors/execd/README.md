@@ -27,7 +27,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -65,12 +65,16 @@ import (
 
     "github.com/influxdata/telegraf/metric"
     "github.com/influxdata/telegraf/plugins/parsers/influx"
-    "github.com/influxdata/telegraf/plugins/serializers"
+    influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 func main() {
     parser := influx.NewStreamParser(os.Stdin)
-    serializer, _ := serializers.NewInfluxSerializer()
+    serializer := influxSerializer.Serializer{}
+    if err := serializer.Init(); err != nil {
+        fmt.Fprintf(os.Stderr, "serializer init failed: %v\n", err)
+        os.Exit(1)
+    }
 
     for {
         metric, err := parser.Next()

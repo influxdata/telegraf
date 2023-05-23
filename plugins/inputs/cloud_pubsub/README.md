@@ -3,6 +3,17 @@
 The GCP PubSub plugin ingests metrics from [Google Cloud PubSub][pubsub]
 and creates metrics using one of the supported [input data formats][].
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -10,7 +21,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -46,15 +57,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## treated as no limit.
   # max_message_len = 1000000
 
-  ## Optional. Maximum messages to read from PubSub that have not been written
-  ## to an output. Defaults to %d.
-  ## For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
+  ## Max undelivered messages
+  ## This plugin uses tracking metrics, which ensure messages are read to
+  ## outputs before acknowledging them to the original broker to ensure data
+  ## is not lost. This option sets the maximum messages to read from the
+  ## broker that have not been written by an output.
   ##
-  ## For example, if each message contains 10 metrics and the output
-  ## metric_batch_size is 1000, setting this to 100 will ensure that a
-  ## full batch is collected and the write is triggered immediately without
-  ## waiting until the next flush_interval.
+  ## This value needs to be picked with awareness of the agent's
+  ## metric_batch_size value as well. Setting max undelivered messages too high
+  ## can result in a constant stream of data batches to the output. While
+  ## setting it too low may never flush the broker's messages.
   # max_undelivered_messages = 1000
 
   ## The following are optional Subscription ReceiveSettings in PubSub.
@@ -89,6 +101,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## PubSub message data before parsing. Many GCP services that
   ## output JSON to Google PubSub base64-encode the JSON payload.
   # base64_data = false
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
+  ## If content encoding is not "identity", sets the maximum allowed size, 
+  ## in bytes, for a message payload when it's decompressed. Can be increased 
+  ## for larger payloads or reduced to protect against decompression bombs.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  # max_decompression_size = "500MB"
 ```
 
 ### Multiple Subscriptions and Topics
@@ -104,3 +126,7 @@ subscriptions/topics.
 [pubsub]: https://cloud.google.com/pubsub
 [pubsub create sub]: https://cloud.google.com/pubsub/docs/admin#create_a_pull_subscription
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
+
+## Metrics
+
+## Example Output

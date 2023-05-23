@@ -26,6 +26,8 @@ var sampleConfig string
 
 const magicIdleCount = -int(^uint(0) >> 1)
 
+var disconnectedServersBehavior = []string{"error", "ignore"}
+
 type Query struct {
 	Query               string   `toml:"query"`
 	Script              string   `toml:"query_script"`
@@ -109,8 +111,8 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 					return 0, fmt.Errorf("time column %q of type \"%T\" unsupported", name, columnData[i])
 				}
 				if !skipParsing {
-					if timestamp, err = internal.ParseTimestamp(q.TimeFormat, fieldvalue, ""); err != nil {
-						return 0, fmt.Errorf("parsing time failed: %v", err)
+					if timestamp, err = internal.ParseTimestamp(q.TimeFormat, fieldvalue, nil); err != nil {
+						return 0, fmt.Errorf("parsing time failed: %w", err)
 					}
 				}
 			}
@@ -118,7 +120,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.tagFilter.Match(name) {
 				tagvalue, err := internal.ToString(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting tag column %q failed: %v", name, err)
+					return 0, fmt.Errorf("converting tag column %q failed: %w", name, err)
 				}
 				if v := strings.TrimSpace(tagvalue); v != "" {
 					tags[name] = v
@@ -129,7 +131,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterFloat.Match(name) {
 				v, err := internal.ToFloat64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to float failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to float failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -138,7 +140,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterInt.Match(name) {
 				v, err := internal.ToInt64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to int failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to int failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -147,7 +149,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterUint.Match(name) {
 				v, err := internal.ToUint64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to uint failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to uint failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -156,7 +158,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterBool.Match(name) {
 				v, err := internal.ToBool(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to bool failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to bool failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -165,7 +167,7 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterString.Match(name) {
 				v, err := internal.ToString(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to string failed: %v", name, err)
+					return 0, fmt.Errorf("converting field column %q to string failed: %w", name, err)
 				}
 				fields[name] = v
 				continue
@@ -205,18 +207,20 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 }
 
 type SQL struct {
-	Driver             string          `toml:"driver"`
-	Dsn                config.Secret   `toml:"dsn"`
-	Timeout            config.Duration `toml:"timeout"`
-	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
-	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
-	MaxOpenConnections int             `toml:"connection_max_open"`
-	MaxIdleConnections int             `toml:"connection_max_idle"`
-	Queries            []Query         `toml:"query"`
-	Log                telegraf.Logger `toml:"-"`
+	Driver                      string          `toml:"driver"`
+	Dsn                         config.Secret   `toml:"dsn"`
+	Timeout                     config.Duration `toml:"timeout"`
+	MaxIdleTime                 config.Duration `toml:"connection_max_idle_time"`
+	MaxLifetime                 config.Duration `toml:"connection_max_life_time"`
+	MaxOpenConnections          int             `toml:"connection_max_open"`
+	MaxIdleConnections          int             `toml:"connection_max_idle"`
+	Queries                     []Query         `toml:"query"`
+	Log                         telegraf.Logger `toml:"-"`
+	DisconnectedServersBehavior string          `toml:"disconnected_servers_behavior"`
 
-	driverName string
-	db         *dbsql.DB
+	driverName      string
+	db              *dbsql.DB
+	serverConnected bool
 }
 
 func (*SQL) SampleConfig() string {
@@ -255,7 +259,7 @@ func (s *SQL) Init() error {
 		if q.Script != "" {
 			query, err := os.ReadFile(q.Script)
 			if err != nil {
-				return fmt.Errorf("reading script %q failed: %v", q.Script, err)
+				return fmt.Errorf("reading script %q failed: %w", q.Script, err)
 			}
 			s.Queries[i].Query = string(query)
 		}
@@ -268,45 +272,45 @@ func (s *SQL) Init() error {
 		// Compile the tag-filter
 		tagfilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagColumnsInclude, q.TagColumnsExclude, false, false)
 		if err != nil {
-			return fmt.Errorf("creating tag filter failed: %v", err)
+			return fmt.Errorf("creating tag filter failed: %w", err)
 		}
 		s.Queries[i].tagFilter = tagfilter
 
 		// Compile the explicit type field-filter
 		fieldfilterFloat, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsFloat, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for float failed: %v", err)
+			return fmt.Errorf("creating field filter for float failed: %w", err)
 		}
 		s.Queries[i].fieldFilterFloat = fieldfilterFloat
 
 		fieldfilterInt, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsInt, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for int failed: %v", err)
+			return fmt.Errorf("creating field filter for int failed: %w", err)
 		}
 		s.Queries[i].fieldFilterInt = fieldfilterInt
 
 		fieldfilterUint, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsUint, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for uint failed: %v", err)
+			return fmt.Errorf("creating field filter for uint failed: %w", err)
 		}
 		s.Queries[i].fieldFilterUint = fieldfilterUint
 
 		fieldfilterBool, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsBool, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for bool failed: %v", err)
+			return fmt.Errorf("creating field filter for bool failed: %w", err)
 		}
 		s.Queries[i].fieldFilterBool = fieldfilterBool
 
 		fieldfilterString, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsString, nil, false, false)
 		if err != nil {
-			return fmt.Errorf("creating field filter for string failed: %v", err)
+			return fmt.Errorf("creating field filter for string failed: %w", err)
 		}
 		s.Queries[i].fieldFilterString = fieldfilterString
 
 		// Compile the field-filter
 		fieldfilter, err := filter.NewIncludeExcludeFilter(q.FieldColumnsInclude, q.FieldColumnsExclude)
 		if err != nil {
-			return fmt.Errorf("creating field filter failed: %v", err)
+			return fmt.Errorf("creating field filter failed: %w", err)
 		}
 		s.Queries[i].fieldFilter = fieldfilter
 
@@ -351,21 +355,30 @@ func (s *SQL) Init() error {
 		return fmt.Errorf("driver %q not supported use one of %v", s.Driver, availDrivers)
 	}
 
+	if s.DisconnectedServersBehavior == "" {
+		s.DisconnectedServersBehavior = "error"
+	}
+
+	if !choice.Contains(s.DisconnectedServersBehavior, disconnectedServersBehavior) {
+		return fmt.Errorf("%q is not a valid value for disconnected_servers_behavior", s.DisconnectedServersBehavior)
+	}
+
 	return nil
 }
 
-func (s *SQL) Start(_ telegraf.Accumulator) error {
-	var err error
-
+func (s *SQL) setupConnection() error {
 	// Connect to the database server
-	dsn, err := s.Dsn.Get()
+	dsnSecret, err := s.Dsn.Get()
 	if err != nil {
-		return fmt.Errorf("getting DSN failed: %v", err)
+		return fmt.Errorf("getting DSN failed: %w", err)
 	}
-	defer config.ReleaseSecret(dsn)
+	dsn := string(dsnSecret)
+	config.ReleaseSecret(dsnSecret)
+
 	s.Log.Debug("Connecting...")
-	s.db, err = dbsql.Open(s.driverName, string(dsn))
+	s.db, err = dbsql.Open(s.driverName, dsn)
 	if err != nil {
+		// should return since the error is most likely with invalid DSN string format
 		return err
 	}
 
@@ -374,16 +387,23 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	s.db.SetConnMaxLifetime(time.Duration(s.MaxLifetime))
 	s.db.SetMaxOpenConns(s.MaxOpenConnections)
 	s.db.SetMaxIdleConns(s.MaxIdleConnections)
+	return nil
+}
 
+func (s *SQL) ping() error {
 	// Test if the connection can be established
 	s.Log.Debug("Testing connectivity...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
-	err = s.db.PingContext(ctx)
+	err := s.db.PingContext(ctx)
 	cancel()
 	if err != nil {
-		return fmt.Errorf("connecting to database failed: %v", err)
+		return fmt.Errorf("unable to connect to database: %w", err)
 	}
+	s.serverConnected = true
+	return nil
+}
 
+func (s *SQL) prepareStatements() {
 	// Prepare the statements
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
@@ -391,9 +411,31 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 		stmt, err := s.db.PrepareContext(ctx, q.Query)
 		cancel()
 		if err != nil {
-			return fmt.Errorf("preparing query %q failed: %v", q.Query, err)
+			// Some database drivers or databases do not support prepare
+			// statements and report an error here. However, we can still
+			// execute unprepared queries for those setups so do not bail-out
+			// here but simply do leave the `statement` with a `nil` value
+			// indicating no prepared statement.
+			s.Log.Warnf("preparing query %q failed: %s; falling back to unprepared query", q.Query, err)
+			continue
 		}
 		s.Queries[i].statement = stmt
+	}
+}
+
+func (s *SQL) Start(_ telegraf.Accumulator) error {
+	if err := s.setupConnection(); err != nil {
+		return err
+	}
+
+	if err := s.ping(); err != nil {
+		if s.DisconnectedServersBehavior == "error" {
+			return err
+		}
+		s.Log.Errorf("unable to connect to database: %s", err)
+	}
+	if s.serverConnected {
+		s.prepareStatements()
 	}
 
 	return nil
@@ -418,6 +460,16 @@ func (s *SQL) Stop() {
 }
 
 func (s *SQL) Gather(acc telegraf.Accumulator) error {
+	// during plugin startup, it is possible that the server was not reachable.
+	// we try pinging the server in this collection cycle.
+	// we are only concerned with `prepareStatements` function to complete(return true), just once.
+	if !s.serverConnected {
+		if err := s.ping(); err != nil {
+			return err
+		}
+		s.prepareStatements()
+	}
+
 	var wg sync.WaitGroup
 	tstart := time.Now()
 	for _, query := range s.Queries {
@@ -449,14 +501,22 @@ func init() {
 }
 
 func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Query, tquery time.Time) error {
-	if q.statement == nil {
-		return fmt.Errorf("statement is nil for query %q", q.Query)
-	}
-
-	// Execute the query
-	rows, err := q.statement.QueryContext(ctx)
-	if err != nil {
-		return err
+	// Execute the query either prepared or unprepared
+	var rows *dbsql.Rows
+	if q.statement != nil {
+		// Use the previously prepared query
+		var err error
+		rows, err = q.statement.QueryContext(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Fallback to unprepared query
+		var err error
+		rows, err = s.db.Query(q.Query)
+		if err != nil {
+			return err
+		}
 	}
 	defer rows.Close()
 
@@ -472,12 +532,7 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 }
 
 func (s *SQL) checkDSN() error {
-	dsn, err := s.Dsn.Get()
-	if err != nil {
-		return fmt.Errorf("getting DSN failed: %w", err)
-	}
-	defer config.ReleaseSecret(dsn)
-	if len(dsn) == 0 {
+	if s.Dsn.Empty() {
 		return errors.New("missing data source name (DSN) option")
 	}
 	return nil

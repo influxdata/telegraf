@@ -47,17 +47,18 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Get kernel statistics from /proc/stat
+# This plugin ONLY supports Linux
 [[inputs.kernel]]
   # no configuration
 ```
 
-## Measurements & Fields
+## Metrics
 
 - kernel
   - boot_time (integer, seconds since epoch, `btime`)
@@ -68,14 +69,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - processes_forked (integer, `processes`)
   - entropy_avail (integer, `entropy_available`)
 
-## Tags
-
-None
-
 ## Example Output
 
-```shell
-$ telegraf --config ~/ws/telegraf.conf --input-filter kernel --test
-* Plugin: kernel, Collection 1
-> kernel entropy_available=2469i,boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
+```text
+kernel entropy_available=2469i,boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
 ```

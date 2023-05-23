@@ -1,0 +1,22 @@
+{
+    "timestamp": "2023-04-07T00:27:50.220224+0800",
+    "flow_id": 1124332026121723,
+    "in_iface": "eth2",
+    "event_type": "http",
+    "src_ip": "192.168.0.120",
+    "src_port": 33950,
+    "dest_ip": "203.205.239.179",
+    "dest_port": 80,
+    "proto": "TCP",
+    "tx_id": 0,
+    "http": {
+        "hostname": "hkminorshort.weixin.qq.com",
+        "url": "/mmtls/2d6d45f1",
+        "http_user_agent": "MicroMessenger Client",
+        "http_content_type": "application/octet-stream",
+        "http_method": "POST",
+        "protocol": "HTTP/1.1",
+        "status": 200,
+        "length": 245
+    }
+}

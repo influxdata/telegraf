@@ -22,7 +22,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -159,7 +159,7 @@ pattern to allow monitoring of any CloudWatch Metric.
 Omitting or specifying a value of `'*'` for a dimension value configures all
 available metrics that contain a dimension with the specified name to be
 retrieved. If specifying >1 dimension, then the metric must contain *all* the
-configured dimensions where the the value of the wildcard dimension is ignored.
+configured dimensions where the value of the wildcard dimension is ignored.
 
 Example:
 
@@ -274,9 +274,8 @@ aws cloudwatch get-metric-data \
 
 ## Example Output
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter cloudwatch --test
-> cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875,latency_sample_count=4029,latency_sum=19.382705211639404 1459542420000000000
+```text
+cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875,latency_sample_count=4029,latency_sum=19.382705211639404 1459542420000000000
 ```
 
 [concept]: http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html

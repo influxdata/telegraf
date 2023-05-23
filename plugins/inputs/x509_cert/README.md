@@ -13,7 +13,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -54,6 +54,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - x509_cert
   - tags:
+    - type   - "leaf", "intermediate" or "root" classification of certificate
     - source - source of the certificate
     - organization
     - organizational_unit
@@ -67,6 +68,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - issuer_common_name
     - issuer_serial_number
     - san
+    - ocsp_stapled
+    - ocsp_status (when ocsp_stapled=yes)
+    - ocsp_verified (when ocsp_stapled=yes)
   - fields:
     - verification_code (int)
     - verification_error (string)
@@ -74,12 +78,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - age (int, seconds)
     - startdate (int, seconds)
     - enddate (int, seconds)
+    - ocsp_status_code (int)
+    - ocsp_next_update (int, seconds)
+    - ocsp_produced_at (int, seconds)
+    - ocsp_this_update (int, seconds)
 
 ## Example Output
 
-```shell
-x509_cert,common_name=ubuntu,source=/etc/ssl/certs/ssl-cert-snakeoil.pem,verification=valid age=7693222i,enddate=1871249033i,expiry=307666777i,startdate=1555889033i,verification_code=0i 1563582256000000000
-x509_cert,common_name=www.example.org,country=US,locality=Los\ Angeles,organization=Internet\ Corporation\ for\ Assigned\ Names\ and\ Numbers,organizational_unit=Technology,province=California,source=https://example.org:443,verification=invalid age=20219055i,enddate=1606910400i,expiry=43328144i,startdate=1543363200i,verification_code=1i,verification_error="x509: certificate signed by unknown authority" 1563582256000000000
-x509_cert,common_name=DigiCert\ SHA2\ Secure\ Server\ CA,country=US,organization=DigiCert\ Inc,source=https://example.org:443,verification=valid age=200838255i,enddate=1678276800i,expiry=114694544i,startdate=1362744000i,verification_code=0i 1563582256000000000
-x509_cert,common_name=DigiCert\ Global\ Root\ CA,country=US,organization=DigiCert\ Inc,organizational_unit=www.digicert.com,source=https://example.org:443,verification=valid age=400465455i,enddate=1952035200i,expiry=388452944i,startdate=1163116800i,verification_code=0i 1563582256000000000
+```text
+x509_cert,common_name=ubuntu,ocsp_stapled=no,source=/etc/ssl/certs/ssl-cert-snakeoil.pem,verification=valid age=7693222i,enddate=1871249033i,expiry=307666777i,startdate=1555889033i,verification_code=0i 1563582256000000000
+x509_cert,common_name=www.example.org,country=US,locality=Los\ Angeles,organization=Internet\ Corporation\ for\ Assigned\ Names\ and\ Numbers,organizational_unit=Technology,province=California,ocsp_stapled=no,source=https://example.org:443,verification=invalid age=20219055i,enddate=1606910400i,expiry=43328144i,startdate=1543363200i,verification_code=1i,verification_error="x509: certificate signed by unknown authority" 1563582256000000000
+x509_cert,common_name=DigiCert\ SHA2\ Secure\ Server\ CA,country=US,organization=DigiCert\ Inc,ocsp_stapled=no,source=https://example.org:443,verification=valid age=200838255i,enddate=1678276800i,expiry=114694544i,startdate=1362744000i,verification_code=0i 1563582256000000000
+x509_cert,common_name=DigiCert\ Global\ Root\ CA,country=US,organization=DigiCert\ Inc,organizational_unit=www.digicert.com,ocsp_stapled=yes,ocsp_status=good,ocsp_verified=yes,source=https://example.org:443,verification=valid age=400465455i,enddate=1952035200i,expiry=388452944i,ocsp_next_update=1676714398i,ocsp_produced_at=1676112480i,ocsp_status_code=0i,ocsp_this_update=1676109600i,startdate=1163116800i,verification_code=0i 1563582256000000000
 ```

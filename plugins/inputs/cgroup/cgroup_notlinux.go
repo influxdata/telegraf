@@ -6,6 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func (g *CGroup) Gather(acc telegraf.Accumulator) error {
+func (*CGroup) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

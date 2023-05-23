@@ -11,7 +11,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -59,12 +59,12 @@ values are included if they are less than a minute old.
   - fields:
     - temperature (float, unit)
 
-## Example
+## Example Output
 
 This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get
 this information.
 
-```shell
+```text
 fireboard,channel=2,host=patas-mbp,scale=Farenheit,title=telegraf-FireBoard,uuid=b55e766c-b308-49b5-93a4-df89fe31efd0 temperature=78.2 1561690040000000000
 ```

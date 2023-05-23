@@ -46,10 +46,11 @@ For deb-based platforms (e.g. Ubuntu and Debian) run the following to add the
 repo key and setup a new sources.list entry:
 
 ```shell
-# influxdb.key GPG Fingerprint: 05CE15085FC09D18E99EFB22684A14CF2582E0C5
-wget -q https://repos.influxdata.com/influxdb.key
-echo '23a1c8836f0afc5ed24e0486339d7cc8f6790b83886c4c96995b88a061c5bb5d influxdb.key' | sha256sum -c && cat influxdb.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdb.gpg > /dev/null
-echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
+# influxdata-archive_compat.key GPG fingerprint:
+#     9D53 9D90 D332 8DC7 D6C8 D3B9 D8FF 8E1F 7DF8 B07E
+wget -q https://repos.influxdata.com/influxdata-archive_compat.key
+echo '393e8779c89ac8d958f81f942f9ad7fb82a25e133faddaf92e15b16e6ac9ce4c influxdata-archive_compat.key' | sha256sum -c && cat influxdata-archive_compat.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null
+echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
 sudo apt-get update && sudo apt-get install telegraf
 ```
 
@@ -57,26 +58,27 @@ For RPM-based platforms (e.g. RHEL, CentOS) use the following to create a repo
 file and install telegraf:
 
 ```shell
-# influxdb.key GPG Fingerprint: 05CE15085FC09D18E99EFB22684A14CF2582E0C5
+# influxdata-archive_compat.key GPG fingerprint:
+#     9D53 9D90 D332 8DC7 D6C8 D3B9 D8FF 8E1F 7DF8 B07E
 cat <<EOF | sudo tee /etc/yum.repos.d/influxdata.repo
 [influxdata]
 name = InfluxData Repository - Stable
 baseurl = https://repos.influxdata.com/stable/\$basearch/main
 enabled = 1
 gpgcheck = 1
-gpgkey = https://repos.influxdata.com/influxdb.key
+gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
 EOF
 sudo yum install telegraf
 ```
 
 ### Build From Source
 
-Telegraf requires Go version 1.18 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.20 or newer and the Makefile requires GNU make.
 
 On Windows, the makefile requires the use of a bash terminal to support all makefile targets.
 An easy option to get bash for windows is using the version that comes with [git for windows](https://gitforwindows.org/).
 
-1. [Install Go](https://golang.org/doc/install) >=1.18 (1.18.0 recommended)
+1. [Install Go](https://golang.org/doc/install)
 2. Clone the Telegraf repository:
 
    ```shell

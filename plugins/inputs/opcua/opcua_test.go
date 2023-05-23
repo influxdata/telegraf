@@ -50,7 +50,7 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 
-	var testopctags = []OPCTags{
+	testopctags := []OPCTags{
 		{"ProductName", "1", "i", "2261", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
@@ -62,10 +62,6 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
 				SecurityPolicy: "None",
 				SecurityMode:   "None",
-				Certificate:    "",
-				PrivateKey:     "",
-				Username:       "",
-				Password:       "",
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
@@ -92,9 +88,6 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	logger := &testutil.CaptureLogger{}
 	readClient, err := readConfig.CreateReadClient(logger)
 	require.NoError(t, err)
-	err = readClient.Init()
-	require.NoError(t, err)
-
 	err = readClient.Connect()
 	require.NoError(t, err)
 }
@@ -116,7 +109,7 @@ func TestReadClientIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 
-	var testopctags = []OPCTags{
+	testopctags := []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
@@ -131,10 +124,6 @@ func TestReadClientIntegration(t *testing.T) {
 				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
 				SecurityPolicy: "None",
 				SecurityMode:   "None",
-				Certificate:    "",
-				PrivateKey:     "",
-				Username:       "",
-				Password:       "",
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
@@ -153,8 +142,64 @@ func TestReadClientIntegration(t *testing.T) {
 	client, err := readConfig.CreateReadClient(testutil.Logger{})
 	require.NoError(t, err)
 
-	err = client.Init()
-	require.NoError(t, err, "Initialization")
+	err = client.Connect()
+	require.NoError(t, err, "Connect")
+
+	for i, v := range client.LastReceivedData {
+		require.Equal(t, testopctags[i].Want, v.Value)
+	}
+}
+
+func TestReadClientIntegrationWithPasswordAuth(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		Entrypoint:   []string{"/opt/open62541/build/bin/examples/access_control_server"},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []OPCTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+	}
+
+	readConfig := ReadClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				Username:       config.NewSecret([]byte("peter")),
+				Password:       config.NewSecret([]byte("peter123")),
+				AuthMethod:     "UserName",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+	}
+
+	for _, tags := range testopctags {
+		readConfig.RootNodes = append(readConfig.RootNodes, MapOPCTag(tags))
+	}
+
+	client, err := readConfig.CreateReadClient(testutil.Logger{})
+	require.NoError(t, err)
+
 	err = client.Connect()
 	require.NoError(t, err, "Connect")
 
@@ -240,8 +285,8 @@ use_unregistered_reads = true
 	require.Equal(t, "/etc/telegraf/cert.pem", o.ReadClientConfig.Certificate)
 	require.Equal(t, "/etc/telegraf/key.pem", o.ReadClientConfig.PrivateKey)
 	require.Equal(t, "Anonymous", o.ReadClientConfig.AuthMethod)
-	require.Equal(t, "", o.ReadClientConfig.Username)
-	require.Equal(t, "", o.ReadClientConfig.Password)
+	require.True(t, o.ReadClientConfig.Username.Empty())
+	require.True(t, o.ReadClientConfig.Password.Empty())
 	require.Equal(t, []input.NodeSettings{
 		{
 			FieldName:      "name",

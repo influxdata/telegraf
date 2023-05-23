@@ -220,10 +220,7 @@ func (n *mockNSQD) handle(conn net.Conn) {
 	}
 
 exit:
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
 	n.tcpListener.Close()
-	//nolint:errcheck,revive
 	conn.Close()
 }
 

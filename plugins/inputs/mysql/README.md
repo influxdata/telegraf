@@ -30,7 +30,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -118,8 +118,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## list of events to be gathered for gather_perf_sum_per_acc_per_event
   ## in case of empty list all events will be gathered
   # perf_summary_events                       = []
-  #
-  # gather_perf_events_statements = false
 
   ## the limits for metrics form perf_events_statements
   # perf_events_statements_digest_text_limit = 120
@@ -384,3 +382,5 @@ The unit of fields varies by the tags.
   * engine
   * row_format
   * create_options
+
+## Example Output

@@ -11,13 +11,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var downInterfacesBehaviors = []string{"expose", "skip"}
-
 type Command interface {
 	Init() error
 	DriverName(intf NamespacedInterface) (string, error)
 	Interfaces(includeNamespaces bool) ([]NamespacedInterface, error)
 	Stats(intf NamespacedInterface) (map[string]uint64, error)
+	Get(intf NamespacedInterface) (map[string]uint64, error)
 }
 
 type Ethtool struct {

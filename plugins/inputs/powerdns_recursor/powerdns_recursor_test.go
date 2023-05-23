@@ -112,12 +112,7 @@ func TestV1PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			// Ignore the returned error as we need to remove the socket file anyway
-			//nolint:errcheck,revive
 			socket.Close()
-			// Ignore the returned error as we want to remove the file and ignore
-			// no-such-file errors
-			//nolint:errcheck,revive
 			os.Remove(controlSocket)
 			wg.Done()
 		}()
@@ -126,19 +121,13 @@ func TestV1PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			buf := make([]byte, 1024)
 			n, remote, err := socket.ReadFromUnix(buf)
 			if err != nil {
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
 				socket.Close()
 				return
 			}
 
 			data := buf[:n]
 			if string(data) == "get-all\n" {
-				// Ignore the returned error as we need to close the socket anyway
-				//nolint:errcheck,revive
-				socket.WriteToUnix([]byte(metrics), remote)
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
+				socket.WriteToUnix([]byte(metrics), remote) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 				socket.Close()
 			}
 
@@ -178,12 +167,7 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			// Ignore the returned error as we need to remove the socket file anyway
-			//nolint:errcheck,revive
 			socket.Close()
-			// Ignore the returned error as we want to remove the file and ignore
-			// no-such-file errors
-			//nolint:errcheck,revive
 			os.Remove(controlSocket)
 			wg.Done()
 		}()
@@ -192,8 +176,6 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			status := make([]byte, 4)
 			n, _, err := socket.ReadFromUnix(status)
 			if err != nil || n != 4 {
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
 				socket.Close()
 				return
 			}
@@ -201,21 +183,14 @@ func TestV2PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			buf := make([]byte, 1024)
 			n, remote, err := socket.ReadFromUnix(buf)
 			if err != nil {
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
 				socket.Close()
 				return
 			}
 
 			data := buf[:n]
 			if string(data) == "get-all" {
-				// Ignore the returned error as we need to close the socket anyway
-				//nolint:errcheck,revive
-				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote)
-				//nolint:errcheck,revive
-				socket.WriteToUnix([]byte(metrics), remote)
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
+				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
+				socket.WriteToUnix([]byte(metrics), remote)    //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 				socket.Close()
 			}
 
@@ -254,12 +229,7 @@ func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			// Ignore the returned error as we need to remove the socket file anyway
-			//nolint:errcheck,revive
 			socket.Close()
-			// Ignore the returned error as we want to remove the file and ignore
-			// no-such-file errors
-			//nolint:errcheck,revive
 			os.Remove(controlSocket)
 			wg.Done()
 		}()
@@ -288,20 +258,10 @@ func TestV3PowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			}
 
 			if string(buf) == "get-all" {
-				// Ignore the returned error as we need to close the socket anyway
-				//nolint:errcheck,revive
-				conn.Write([]byte{0, 0, 0, 0})
-
+				conn.Write([]byte{0, 0, 0, 0}) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 				metrics := []byte(metrics)
-
-				//nolint:errcheck,revive
-				writeNativeUIntToConn(conn, uint(len(metrics)))
-
-				//nolint:errcheck,revive
-				conn.Write(metrics)
-
-				// Ignore the returned error as we cannot do anything about it anyway
-				//nolint:errcheck,revive
+				writeNativeUIntToConn(conn, uint(len(metrics))) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
+				conn.Write(metrics)                             //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 				socket.Close()
 			}
 

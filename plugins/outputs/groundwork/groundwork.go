@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -31,8 +32,8 @@ type metricMeta struct {
 type Groundwork struct {
 	Server              string          `toml:"url"`
 	AgentID             string          `toml:"agent_id"`
-	Username            string          `toml:"username"`
-	Password            string          `toml:"password"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
 	DefaultAppType      string          `toml:"default_app_type"`
 	DefaultHost         string          `toml:"default_host"`
 	DefaultServiceState string          `toml:"default_service_state"`
@@ -53,10 +54,10 @@ func (g *Groundwork) Init() error {
 	if g.AgentID == "" {
 		return errors.New(`no "agent_id" provided`)
 	}
-	if g.Username == "" {
+	if g.Username.Empty() {
 		return errors.New(`no "username" provided`)
 	}
-	if g.Password == "" {
+	if g.Password.Empty() {
 		return errors.New(`no "password" provided`)
 	}
 	if g.DefaultAppType == "" {
@@ -72,16 +73,27 @@ func (g *Groundwork) Init() error {
 		return errors.New(`invalid "default_service_state" provided`)
 	}
 
+	username, err := g.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	password, err := g.Password.Get()
+	if err != nil {
+		config.ReleaseSecret(username)
+		return fmt.Errorf("getting password failed: %w", err)
+	}
 	g.client = clients.GWClient{
 		AppName: "telegraf",
 		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
-			UserName:           g.Username,
-			Password:           g.Password,
+			UserName:           string(username),
+			Password:           string(password),
 			IsDynamicInventory: true,
 		},
 	}
+	config.ReleaseSecret(username)
+	config.ReleaseSecret(password)
 
 	logper.SetLogger(
 		func(fields interface{}, format string, a ...interface{}) {
@@ -104,7 +116,7 @@ func (g *Groundwork) Init() error {
 func (g *Groundwork) Connect() error {
 	err := g.client.Connect()
 	if err != nil {
-		return fmt.Errorf("could not log in: %v", err)
+		return fmt.Errorf("could not log in: %w", err)
 	}
 	return nil
 }
@@ -112,7 +124,7 @@ func (g *Groundwork) Connect() error {
 func (g *Groundwork) Close() error {
 	err := g.client.Disconnect()
 	if err != nil {
-		return fmt.Errorf("could not log out: %v", err)
+		return fmt.Errorf("could not log out: %w", err)
 	}
 	return nil
 }

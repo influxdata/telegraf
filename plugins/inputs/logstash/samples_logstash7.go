@@ -7,13 +7,13 @@ const logstash7PipelinesJSON = `
   "http_address" : "127.0.0.1:9600",
   "id" : "28580380-ad2c-4032-934b-76359125edca",
   "name" : "HOST01.local",
-  "ephemeral_id" : "bd95ff6b-3fa8-42ae-be32-098a4e4ea1ec", 
-  "status" : "green", 
-  "snapshot" : true, 
-  "pipeline" : { 
-    "workers" : 8, 
-    "batch_size" : 125, 
-    "batch_delay" : 50 
+  "ephemeral_id" : "bd95ff6b-3fa8-42ae-be32-098a4e4ea1ec",
+  "status" : "green",
+  "snapshot" : true,
+  "pipeline" : {
+    "workers" : 8,
+    "batch_size" : 125,
+    "batch_delay" : 50
   },
   "pipelines" : {
     "infra" : {
@@ -31,22 +31,22 @@ const logstash7PipelinesJSON = `
             "out" : 2665549,
             "queue_push_duration_in_millis" : 13300
           },
-          "peak_connections" : 1, 
-          "name" : "beats", 
-          "current_connections" : 1 
+          "peak_connections" : 1,
+          "name" : "beats",
+          "current_connections" : 1
         } ],
-        "codecs" : [ { 
-          "id" : "plain_7312c097-1e7f-41db-983b-4f5a87a9eba2", 
-          "encode" : { 
-            "duration_in_millis" : 0, 
-            "writes_in" : 0 
-          }, 
-          "name" : "plain", 
-          "decode" : { 
-            "out" : 0, 
-            "duration_in_millis" : 0, 
-            "writes_in" : 0 
-          } 
+        "codecs" : [ {
+          "id" : "plain_7312c097-1e7f-41db-983b-4f5a87a9eba2",
+          "encode" : {
+            "duration_in_millis" : 0,
+            "writes_in" : 0
+          },
+          "name" : "plain",
+          "decode" : {
+            "out" : 0,
+            "duration_in_millis" : 0,
+            "writes_in" : 0
+          }
         }, {
           "id" : "rubydebug_e958e3dc-10f6-4dd6-b7c5-ae3de2892afb",
           "encode" : {
@@ -80,7 +80,7 @@ const logstash7PipelinesJSON = `
             "duration_in_millis" : 8648
           },
           "name" : "date",
-          "matches" : 2665549 
+          "matches" : 2665549
         }, {
           "id" : "bec0c77b3f53a78c7878449c72ec59f97be31c1f12f9621f61ed2d4563bad869",
           "events" : {
@@ -133,8 +133,8 @@ const logstash7PipelinesJSON = `
         "queue_size_in_bytes" : 32028566,
         "max_queue_size_in_bytes" : 4294967296
       },
-      "hash" : "5bc589ae4b02cb3e436626429b50928b9d99360639c84dc7fc69268ac01a9fd0", 
-      "ephemeral_id" : "4bcacefa-6cbf-461e-b14e-184edd9ebdf3" 
+      "hash" : "5bc589ae4b02cb3e436626429b50928b9d99360639c84dc7fc69268ac01a9fd0",
+      "ephemeral_id" : "4bcacefa-6cbf-461e-b14e-184edd9ebdf3"
     }
   }
 }`

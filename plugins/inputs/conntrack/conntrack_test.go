@@ -27,6 +27,7 @@ func TestNoFilesFound(t *testing.T) {
 	dfltFiles = []string{"baz.txt"}
 	dfltDirs = []string{"./foo/bar"}
 	c := &Conntrack{}
+	require.NoError(t, c.Init())
 	acc := &testutil.Accumulator{}
 	err := c.Gather(acc)
 
@@ -49,8 +50,9 @@ func TestDefaultsUsed(t *testing.T) {
 	dfltFiles = []string{fname}
 
 	count := 1234321
-	require.NoError(t, os.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0660))
+	require.NoError(t, os.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0640))
 	c := &Conntrack{}
+	require.NoError(t, c.Init())
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, c.Gather(acc))
@@ -78,9 +80,10 @@ func TestConfigsUsed(t *testing.T) {
 
 	count := 1234321
 	max := 9999999
-	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0660))
-	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0660))
+	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0640))
+	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0640))
 	c := &Conntrack{}
+	require.NoError(t, c.Init())
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, c.Gather(acc))
@@ -123,9 +126,10 @@ func TestCollectStats(t *testing.T) {
 
 	mps.On("NetConntrack", false).Return([]net.ConntrackStat{sts}, nil)
 	cs := &Conntrack{
-		ps: &mps,
+		ps:      &mps,
+		Collect: []string{"all"},
 	}
-	cs.Collect = []string{"all"}
+	require.NoError(t, cs.Init())
 
 	err := cs.Gather(&acc)
 	if err != nil && strings.Contains(err.Error(), "Is the conntrack kernel module loaded?") {
@@ -211,10 +215,35 @@ func TestCollectStatsPerCpu(t *testing.T) {
 
 	mps.On("NetConntrack", true).Return(sts, nil)
 
-	cs := &Conntrack{
-		ps: &mps,
+	allSts := []net.ConntrackStat{
+		{
+			Entries:       129,
+			Searched:      20,
+			Found:         2,
+			New:           10,
+			Invalid:       86,
+			Ignore:        26,
+			Delete:        6,
+			DeleteList:    10,
+			Insert:        18,
+			InsertFailed:  40,
+			Drop:          98,
+			EarlyDrop:     17,
+			IcmpError:     42,
+			ExpectNew:     24,
+			ExpectCreate:  88,
+			ExpectDelete:  106,
+			SearchRestart: 62,
+		},
 	}
-	cs.Collect = []string{"all", "percpu"}
+
+	mps.On("NetConntrack", false).Return(allSts, nil)
+
+	cs := &Conntrack{
+		ps:      &mps,
+		Collect: []string{"all", "percpu"},
+	}
+	require.NoError(t, cs.Init())
 
 	err := cs.Gather(&acc)
 	if err != nil && strings.Contains(err.Error(), "Is the conntrack kernel module loaded?") {
@@ -243,13 +272,76 @@ func TestCollectStatsPerCpu(t *testing.T) {
 		"search_restart": uint32(31),
 	}
 
-	acc.AssertContainsFields(t, inputName, expectedFields)
 	acc.AssertContainsTaggedFields(t, inputName, expectedFields,
 		map[string]string{
 			"cpu": "cpu0",
 		})
 
-	//TODO: check cpu1 fields
+	//cpu1
+	expectedFields1 := map[string]interface{}{
+		"entries":        uint32(79),
+		"searched":       uint32(10),
+		"found":          uint32(1),
+		"new":            uint32(5),
+		"invalid":        uint32(43),
+		"ignore":         uint32(13),
+		"delete":         uint32(3),
+		"delete_list":    uint32(5),
+		"insert":         uint32(9),
+		"insert_failed":  uint32(10),
+		"drop":           uint32(49),
+		"early_drop":     uint32(7),
+		"icmp_error":     uint32(21),
+		"expect_new":     uint32(12),
+		"expect_create":  uint32(44),
+		"expect_delete":  uint32(53),
+		"search_restart": uint32(31),
+	}
 
-	require.Equal(t, 36, acc.NFields())
+	acc.AssertContainsTaggedFields(t, inputName, expectedFields1,
+		map[string]string{
+			"cpu": "cpu1",
+		})
+
+	allFields := map[string]interface{}{
+		"entries":        uint32(129),
+		"searched":       uint32(20),
+		"found":          uint32(2),
+		"new":            uint32(10),
+		"invalid":        uint32(86),
+		"ignore":         uint32(26),
+		"delete":         uint32(6),
+		"delete_list":    uint32(10),
+		"insert":         uint32(18),
+		"insert_failed":  uint32(40),
+		"drop":           uint32(98),
+		"early_drop":     uint32(17),
+		"icmp_error":     uint32(42),
+		"expect_new":     uint32(24),
+		"expect_create":  uint32(88),
+		"expect_delete":  uint32(106),
+		"search_restart": uint32(62),
+	}
+
+	acc.AssertContainsTaggedFields(t, inputName, allFields,
+		map[string]string{
+			"cpu": "all",
+		})
+
+	require.Equal(t, 53, acc.NFields())
+}
+
+func TestCollectPsSystemInit(t *testing.T) {
+	var acc testutil.Accumulator
+	cs := &Conntrack{
+		ps:      system.NewSystemPS(),
+		Collect: []string{"all"},
+	}
+	require.NoError(t, cs.Init())
+	err := cs.Gather(&acc)
+	if err != nil && strings.Contains(err.Error(), "Is the conntrack kernel module loaded?") {
+		t.Skip("Conntrack kernel module not loaded.")
+	}
+	//make sure Conntrack.ps gets initialized without mocking
+	require.NoError(t, err)
 }

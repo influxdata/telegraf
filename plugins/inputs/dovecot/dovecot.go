@@ -4,6 +4,7 @@ package dovecot
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -74,19 +75,19 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 
 		_, _, err := net.SplitHostPort(addr)
 		if err != nil {
-			return fmt.Errorf("%q on url %s", err.Error(), addr)
+			return fmt.Errorf("%w on url %q", err, addr)
 		}
 	}
 
 	c, err := net.DialTimeout(proto, addr, defaultTimeout)
 	if err != nil {
-		return fmt.Errorf("unable to connect to dovecot server '%s': %s", addr, err)
+		return fmt.Errorf("unable to connect to dovecot server %q: %w", addr, err)
 	}
 	defer c.Close()
 
 	// Extend connection
 	if err := c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
-		return fmt.Errorf("setting deadline failed for dovecot server '%s': %s", addr, err)
+		return fmt.Errorf("setting deadline failed for dovecot server %q: %w", addr, err)
 	}
 
 	msg := fmt.Sprintf("EXPORT\t%s", qtype)
@@ -96,15 +97,16 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	msg += "\n"
 
 	if _, err := c.Write([]byte(msg)); err != nil {
-		return fmt.Errorf("writing message %q failed for dovecot server '%s': %s", msg, addr, err)
+		return fmt.Errorf("writing message %q failed for dovecot server %q: %w", msg, addr, err)
 	}
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, c); err != nil {
 		// We need to accept the timeout here as reading from the connection will only terminate on EOF
 		// or on a timeout to happen. As EOF for TCP connections will only be sent on connection closing,
 		// the only way to get the whole message is to wait for the timeout to happen.
-		if nerr, ok := err.(net.Error); !ok || !nerr.Timeout() {
-			return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+		var nerr net.Error
+		if !errors.As(err, &nerr) || !nerr.Timeout() {
+			return fmt.Errorf("copying message failed for dovecot server %q: %w", addr, err)
 		}
 	}
 

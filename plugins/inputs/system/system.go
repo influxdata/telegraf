@@ -106,9 +106,6 @@ func formatUptime(uptime uint64) string {
 	minutes %= 60
 
 	fmt.Fprintf(w, "%2d:%02d", hours, minutes)
-
-	// This will always succeed, so skip checking the error
-	//nolint:errcheck,revive
 	w.Flush()
 	return buf.String()
 }

@@ -16,7 +16,21 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## SNMP backend: gosmi and netsnmp
+
+Telegraf has two backends to translate SNMP objects. By default, Telegraf will
+use `netsnmp`, however, this option is deprecated and it is encouraged that
+users migrate to `gosmi`. If users find issues with `gosmi` that do not occur
+with `netsnmp` please open a project issue on GitHub.
+
+The SNMP backend setting is a global-level setting that applies to all use of
+SNMP in Telegraf. Users can set this option in the `[agent]` configuration via
+the `snmp_translator` option. See the [agent configuration][AGENT] for more
+details.
+
+[AGENT]: ../../../docs/CONFIGURATION.md#agent
 
 ## Configuration
 
@@ -43,7 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## When true, SNMP reponses are accepted from any address not just
   ## the requested address. This can be useful when gathering from
   ## redundant/failover systems.
-  # unconnected_udp_socket = false 
+  # unconnected_udp_socket = false
 
   ## Path to mib files
   ## Used by the gosmi translator.
@@ -374,7 +388,7 @@ The field and tags will depend on the table and fields configured.
 
 ## Example Output
 
-```shell
+```text
 snmp,agent_host=127.0.0.1,source=loaner uptime=11331974i 1575509815000000000
 interface,agent_host=127.0.0.1,ifDescr=wlan0,ifIndex=3,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=3436617431i,ifInUcastPkts=2717778i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=581368041i,ifOutQLen=0i,ifOutUcastPkts=1354338i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=0i,ifType=6i 1575509815000000000
 interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=21i,ifInOctets=3852386380i,ifInUcastPkts=3634004i,ifInUnknownProtos=0i,ifLastChange=9088763i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=434865441i,ifOutQLen=0i,ifOutUcastPkts=2110394i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=1000000000i,ifType=6i 1575509815000000000

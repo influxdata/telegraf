@@ -31,12 +31,13 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Collects conntrack stats from the configured directories and files.
+# This plugin ONLY supports Linux
 [[inputs.conntrack]]
   ## The following defaults would work with multiple versions of conntrack.
   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
@@ -57,8 +58,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-A detailed explanation of each fields can be found in [kernel documentation](
-https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt).
+A detailed explanation of each fields can be found in
+[kernel documentation][kerneldoc]
+
+[kerneldoc]: https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt
 
 - conntrack
   - `ip_conntrack_count` `(int, count)`: The number of entries in the conntrack table
@@ -93,15 +96,13 @@ Without `"percpu"` the `cpu` tag will have `all` value.
 
 ## Example Output
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter conntrack --test
+```text
 conntrack,host=myhost ip_conntrack_count=2,ip_conntrack_max=262144 1461620427667995735
 ```
 
 with stats:
 
-```shell
-$ telegraf --config /etc/telegraf/telegraf.conf --input-filter conntrack --test
-> conntrack,cpu=all,host=localhost delete=0i,delete_list=0i,drop=2i,early_drop=0i,entries=5568i,expect_create=0i,expect_delete=0i,expect_new=0i,found=7i,icmp_error=1962i,ignore=2586413402i,insert=0i,insert_failed=2i,invalid=46853i,new=0i,search_restart=453336i,searched=0i 1615233542000000000
-> conntrack,host=localhost ip_conntrack_count=464,ip_conntrack_max=262144 1615233542000000000
+```text
+conntrack,cpu=all,host=localhost delete=0i,delete_list=0i,drop=2i,early_drop=0i,entries=5568i,expect_create=0i,expect_delete=0i,expect_new=0i,found=7i,icmp_error=1962i,ignore=2586413402i,insert=0i,insert_failed=2i,invalid=46853i,new=0i,search_restart=453336i,searched=0i 1615233542000000000
+conntrack,host=localhost ip_conntrack_count=464,ip_conntrack_max=262144 1615233542000000000
 ```

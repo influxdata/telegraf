@@ -15,8 +15,6 @@ import (
 var sampleConfig string
 
 type Mock struct {
-	counter int64
-
 	MetricName string            `toml:"metric_name"`
 	Tags       map[string]string `toml:"tags"`
 
@@ -25,6 +23,9 @@ type Mock struct {
 	Step     []*step     `toml:"step"`
 	Stock    []*stock    `toml:"stock"`
 	SineWave []*sineWave `toml:"sine_wave"`
+
+	counter int64
+	rand    *rand.Rand
 }
 
 type constant struct {
@@ -65,7 +66,7 @@ func (*Mock) SampleConfig() string {
 }
 
 func (m *Mock) Init() error {
-	rand.Seed(time.Now().UnixNano())
+	m.rand = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: not security critical
 	return nil
 }
 
@@ -92,17 +93,17 @@ func (m *Mock) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Generate random value between min and max, inclusivly
+// Generate random value between min and max, inclusively
 func (m *Mock) generateRandomFloat64(fields map[string]interface{}) {
 	for _, random := range m.Random {
-		fields[random.Name] = random.Min + rand.Float64()*(random.Max-random.Min)
+		fields[random.Name] = random.Min + m.rand.Float64()*(random.Max-random.Min)
 	}
 }
 
 // Create sine waves
 func (m *Mock) generateSineWave(fields map[string]interface{}) {
 	for _, field := range m.SineWave {
-		fields[field.Name] = math.Sin((float64(m.counter) * field.Period * math.Pi)) * field.Amplitude
+		fields[field.Name] = math.Sin(float64(m.counter)*field.Period*math.Pi) * field.Amplitude
 	}
 }
 
@@ -125,7 +126,7 @@ func (m *Mock) generateStockPrice(fields map[string]interface{}) {
 		if stock.latest == 0.0 {
 			stock.latest = stock.Price
 		} else {
-			noise := 2 * (rand.Float64() - 0.5)
+			noise := 2 * (m.rand.Float64() - 0.5)
 			stock.latest = stock.latest + (stock.latest * stock.Volatility * noise)
 
 			// avoid going below zero

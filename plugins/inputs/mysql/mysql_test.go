@@ -3,12 +3,14 @@ package mysql
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -31,17 +33,18 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 		),
 	}
 
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
+	dsn := fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])
+	s := config.NewSecret([]byte(dsn))
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])},
+		Servers: []*config.Secret{&s},
 	}
+	require.NoError(t, m.Init())
 
 	var acc testutil.Accumulator
-	err = m.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 
 	require.True(t, acc.HasMeasurement("mysql"))
@@ -66,55 +69,39 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		),
 	}
 
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
+	dsn := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
+	s := config.NewSecret([]byte(dsn))
 	m := &Mysql{
-		Servers:          []string{testServer},
-		IntervalSlow:     "30s",
+		Servers:          []*config.Secret{&s},
+		IntervalSlow:     config.Duration(30 * time.Second),
 		GatherGlobalVars: true,
 		MetricVersion:    2,
 	}
+	require.NoError(t, m.Init())
 
-	var acc, acc2 testutil.Accumulator
-	err = m.Gather(&acc)
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("mysql"))
 	// acc should have global variables
 	require.True(t, acc.HasMeasurement("mysql_variables"))
 
+	s2 := config.NewSecret([]byte(dsn))
 	m2 := &Mysql{
-		Servers:       []string{testServer},
+		Servers:       []*config.Secret{&s2},
 		MetricVersion: 2,
 	}
-	err = m2.Gather(&acc2)
-	require.NoError(t, err)
+	require.NoError(t, m2.Init())
+
+	var acc2 testutil.Accumulator
+	require.NoError(t, m2.Gather(&acc2))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc2.HasMeasurement("mysql"))
 	// acc2 should not have global variables
 	require.False(t, acc2.HasMeasurement("mysql_variables"))
-}
-
-func TestMysqlMultipleInits(t *testing.T) {
-	m := &Mysql{
-		IntervalSlow: "30s",
-	}
-	m2 := &Mysql{}
-
-	m.InitMysql()
-	require.True(t, m.initDone)
-	require.False(t, m2.initDone)
-	require.Equal(t, m.scanIntervalSlow, uint32(30))
-	require.Equal(t, m2.scanIntervalSlow, uint32(0))
-
-	m2.InitMysql()
-	require.True(t, m.initDone)
-	require.True(t, m2.initDone)
-	require.Equal(t, m.scanIntervalSlow, uint32(30))
-	require.Equal(t, m2.scanIntervalSlow, uint32(0))
 }
 
 func TestMysqlGetDSNTag(t *testing.T) {
@@ -178,44 +165,58 @@ func TestMysqlGetDSNTag(t *testing.T) {
 
 func TestMysqlDNSAddTimeout(t *testing.T) {
 	tests := []struct {
+		name   string
 		input  string
 		output string
 	}{
 		{
+			"empty",
 			"",
 			"tcp(127.0.0.1:3306)/?timeout=5s",
 		},
 		{
+			"no timeout",
 			"tcp(192.168.1.1:3306)/",
 			"tcp(192.168.1.1:3306)/?timeout=5s",
 		},
 		{
+			"no timeout with credentials",
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false",
 			"root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=false",
 		},
 		{
+			"with timeout and credentials",
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
 			"root:passwd@tcp(192.168.1.1:3306)/?timeout=10s&tls=false",
 		},
 		{
+			"no timeout different IP",
 			"tcp(10.150.1.123:3306)/",
 			"tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 		{
+			"no timeout with bracket credentials",
 			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/",
 			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 		{
+			"no timeout with strange credentials",
 			"root:Test3a#@!@tcp(10.150.1.123:3306)/",
 			"root:Test3a#@!@tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 	}
 
-	for _, test := range tests {
-		output, _ := dsnAddTimeout(test.input)
-		if output != test.output {
-			t.Errorf("Expected %s, got %s\n", test.output, output)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := config.NewSecret([]byte(tt.input))
+			m := &Mysql{
+				Servers: []*config.Secret{&s},
+			}
+			require.NoError(t, m.Init())
+			equal, err := m.Servers[0].EqualTo([]byte(tt.output))
+			require.NoError(t, err)
+			require.True(t, equal)
+		})
 	}
 }
 
@@ -228,7 +229,7 @@ func TestGatherGlobalVariables(t *testing.T) {
 		Log:           testutil.Logger{},
 		MetricVersion: 2,
 	}
-	m.InitMysql()
+	require.NoError(t, m.Init())
 
 	columns := []string{"Variable_name", "Value"}
 	measurement := "mysql_variables"
@@ -322,7 +323,7 @@ func TestGatherGlobalVariables(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 
-			err = m.gatherGlobalVariables(db, "test", acc)
+			err := m.gatherGlobalVariables(db, getDSNTag("test"), acc)
 			require.NoErrorf(t, err, "err on gatherGlobalVariables (test case %q)", testCase.name)
 
 			foundFields := map[string]bool{}

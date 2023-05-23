@@ -34,8 +34,7 @@ func (s statServer) serverSocket(l net.Listener) {
 
 			data := buf[:n]
 			if string(data) == "show stat\n" {
-				//nolint:errcheck,revive // we return anyway
-				c.Write(csvOutputSample)
+				c.Write(csvOutputSample) //nolint:errcheck // we return anyway
 			}
 		}(conn)
 	}
@@ -135,7 +134,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		}
 
 		sockets[i] = sock
-		defer sock.Close() //nolint:revive // done on purpose, closing will be executed properly
+		defer sock.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 		s := statServer{}
 		go s.serverSocket(sock)
@@ -168,6 +167,37 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 
 	require.NoError(t, r.Gather(&acc))
 	require.NotEmpty(t, acc.Errors)
+}
+
+func TestHaproxyGeneratesMetricsUsingTcp(t *testing.T) {
+	l, err := net.Listen("tcp", "localhost:8192")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+
+	s := statServer{}
+	go s.serverSocket(l)
+
+	r := &haproxy{
+		Servers: []string{"tcp://" + l.Addr().String()},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, r.Gather(&acc))
+
+	fields := HaproxyGetFieldValues()
+
+	tags := map[string]string{
+		"server": l.Addr().String(),
+		"proxy":  "git",
+		"sv":     "www",
+		"type":   "server",
+	}
+
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+
+	require.NoError(t, r.Gather(&acc))
 }
 
 // When not passing server config, we default to localhost

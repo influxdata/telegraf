@@ -11,6 +11,17 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
 
 [1]: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -18,7 +29,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -36,7 +47,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # encoding = "proto"
 
   ## redial in case of failures after
-  redial = "10s"
+  # redial = "10s"
+
+  ## gRPC Maximum Message Size
+  # max_msg_size = "4MB"
 
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = false
@@ -56,7 +70,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # prefix = ""
   # target = ""
 
-  ## Define additional aliases to map telemetry encoding paths to simple measurement names
+  ## Vendor specific options
+  ## This defines what vendor specific options to load.
+  ## * Juniper Header Extension (juniper_header): some sensors are directly managed by
+  ##   Linecard, which adds the Juniper GNMI Header Extension. Enabling this
+  ##   allows the decoding of the Extension header if present. Currently this knob
+  ##   adds component, component_id & sub_component_id as additionnal tags
+  # vendor_specific = []
+
+  ## Define additional aliases to map encoding paths to measurement names
   # [inputs.gnmi.aliases]
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
 
@@ -68,12 +90,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
     ##
     ## origin usually refers to a (YANG) data model implemented by the device
-    ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
-    ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
+    ## and path to a specific substructure inside it that should be subscribed
+    ## to (similar to an XPath). YANG models can be found e.g. here:
+    ## https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
     origin = "openconfig-interfaces"
     path = "/interfaces/interface/state/counters"
 
-    # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
+    ## Subscription mode ("target_defined", "sample", "on_change") and interval
     subscription_mode = "sample"
     sample_interval = "10s"
 
@@ -83,17 +106,33 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## If suppression is enabled, send updates at least every X seconds anyway
     # heartbeat_interval = "60s"
 
-  #[[inputs.gnmi.subscription]]
-    # name = "descr"
-    # origin = "openconfig-interfaces"
-    # path = "/interfaces/interface/state/description"
-    # subscription_mode = "on_change"
-
-    ## If tag_only is set, the subscription in question will be utilized to maintain a map of
-    ## tags to apply to other measurements emitted by the plugin, by matching path keys
-    ## All fields from the tag-only subscription will be applied as tags to other readings,
-    ## in the format <name>_<fieldBase>.
-    # tag_only = true
+  ## Tag subscriptions are applied as tags to other subscriptions.
+  # [[inputs.gnmi.tag_subscription]]
+  #  ## When applying this value as a tag to other metrics, use this tag name
+  #  name = "descr"
+  #
+  #  ## All other subscription fields are as normal
+  #  origin = "openconfig-interfaces"
+  #  path = "/interfaces/interface/state"
+  #  subscription_mode = "on_change"
+  #
+  #  ## Match strategy to use for the tag.
+  #  ## Tags are only applied for metrics of the same address. The following
+  #  ## settings are valid:
+  #  ##   unconditional -- always match
+  #  ##   name          -- match by the "name" key
+  #  ##                    This resembles the previsou 'tag-only' behavior.
+  #  ##   elements      -- match by the keys in the path filtered by the path
+  #  ##                    parts specified `elements` below
+  #  ## By default, 'elements' is used if the 'elements' option is provided,
+  #  ## otherwise match by 'name'.
+  #  # match = ""
+  #
+  #  ## For the 'elements' match strategy, at least one path-element name must
+  #  ## be supplied containing at least one key to match on. Multiple path
+  #  ## elements can be specified in any order. All given keys must be equal
+  #  ## for a match.
+  #  # elements = ["description", "interface"]
 ```
 
 ## Metrics
@@ -104,7 +143,7 @@ measurement. GNMI PathElement keys for leaves will attach tags to the field(s).
 
 ## Example Output
 
-```shell
+```text
 ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=MgmtEth0/RP0/CPU0/0,source=10.49.234.115,descr/description=Foo in-multicast-pkts=0i,out-multicast-pkts=0i,out-errors=0i,out-discards=0i,in-broadcast-pkts=0i,out-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,in-errors=0i,out-unicast-pkts=0i,in-octets=0i,out-octets=0i,last-clear="2019-05-22T16:53:21Z",in-unicast-pkts=0i 1559145777425000000
 ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=GigabitEthernet0/0/0/0,source=10.49.234.115,descr/description=Bar out-multicast-pkts=0i,out-broadcast-pkts=0i,in-errors=0i,out-errors=0i,in-discards=0i,out-octets=0i,in-unknown-protos=0i,in-unicast-pkts=0i,in-octets=0i,in-multicast-pkts=0i,in-broadcast-pkts=0i,last-clear="2019-05-22T16:54:50Z",out-unicast-pkts=0i,out-discards=0i 1559145777425000000
 ```

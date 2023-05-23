@@ -52,6 +52,7 @@ type Parser struct {
 	Log                telegraf.Logger `toml:"-"`
 
 	metadataSeparatorList metadataPattern
+	location              *time.Location
 
 	gotColumnNames bool
 
@@ -163,11 +164,19 @@ func (p *Parser) Init() error {
 	}
 
 	if err := p.initializeMetadataSeparators(); err != nil {
-		return fmt.Errorf("initializing separators failed: %v", err)
+		return fmt.Errorf("initializing separators failed: %w", err)
 	}
 
 	if p.TimeFunc == nil {
 		p.TimeFunc = time.Now
+	}
+
+	if p.Timezone != "" {
+		loc, err := time.LoadLocation(p.Timezone)
+		if err != nil {
+			return fmt.Errorf("invalid timezone: %w", err)
+		}
+		p.location = loc
 	}
 
 	if p.ResetMode == "" {
@@ -393,17 +402,17 @@ outer:
 				case "int":
 					val, err = strconv.ParseInt(value, 10, 64)
 					if err != nil {
-						return nil, fmt.Errorf("column type: parse int error %s", err)
+						return nil, fmt.Errorf("column type: parse int error %w", err)
 					}
 				case "float":
 					val, err = strconv.ParseFloat(value, 64)
 					if err != nil {
-						return nil, fmt.Errorf("column type: parse float error %s", err)
+						return nil, fmt.Errorf("column type: parse float error %w", err)
 					}
 				case "bool":
 					val, err = strconv.ParseBool(value)
 					if err != nil {
-						return nil, fmt.Errorf("column type: parse bool error %s", err)
+						return nil, fmt.Errorf("column type: parse bool error %w", err)
 					}
 				default:
 					val = value
@@ -446,7 +455,7 @@ outer:
 		}
 	}
 
-	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.Timezone)
+	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.location)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +473,7 @@ outer:
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string, timezone string,
+	timestampColumn, timestampFormat string, timezone *time.Location,
 ) (time.Time, error) {
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {

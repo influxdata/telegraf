@@ -9,7 +9,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -132,6 +141,6 @@ a successful connection.
 
 ## Example Output
 
-```shell
+```text
 http_response,method=GET,result=success,server=http://github.com,status_code=200 content_length=87878i,http_response_code=200i,response_time=0.937655534,result_code=0i,result_type="success" 1565839598000000000
 ```

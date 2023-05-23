@@ -15,15 +15,17 @@ func TestUpsdGather(t *testing.T) {
 
 	var (
 		tests = []struct {
-			name   string
-			err    bool
-			tags   map[string]string
-			fields map[string]interface{}
-			out    func() []interaction
+			name       string
+			forceFloat bool
+			err        bool
+			tags       map[string]string
+			fields     map[string]interface{}
+			out        func() []interaction
 		}{
 			{
-				name: "test listening server with output",
-				err:  false,
+				name:       "test listening server with output",
+				forceFloat: false,
+				err:        false,
 				tags: map[string]string{
 					"serial":    "ABC123",
 					"ups_name":  "fake",
@@ -31,21 +33,50 @@ func TestUpsdGather(t *testing.T) {
 					"status_OL": "true",
 				},
 				fields: map[string]interface{}{
-					"status_flags":            uint64(8),
-					"ups_status":              "OL",
 					"battery_charge_percent":  float64(100),
+					"battery_date":            nil,
+					"battery_mfr_date":        "2016-07-26",
 					"battery_voltage":         float64(13.4),
-					"input_frequency":         nil,
-					"input_voltage":           float64(242),
-					"internal_temp":           nil,
-					"load_percent":            float64(23),
-					"output_voltage":          float64(230),
-					"time_left_ns":            int64(600000000000),
-					"nominal_input_voltage":   float64(230),
-					"nominal_battery_voltage": float64(24),
-					"nominal_power":           int64(700),
 					"firmware":                "CUSTOM_FIRMWARE",
-					"battery_date":            "2016-07-26",
+					"input_voltage":           float64(242),
+					"load_percent":            float64(23),
+					"nominal_battery_voltage": float64(24),
+					"nominal_input_voltage":   float64(230),
+					"nominal_power":           int64(700),
+					"output_voltage":          float64(230),
+					"real_power":              float64(41),
+					"status_flags":            uint64(8),
+					"time_left_ns":            int64(600000000000),
+					"ups_status":              "OL",
+				},
+				out: genOutput,
+			},
+			{
+				name:       "test listening server with output & force floats",
+				forceFloat: true,
+				err:        false,
+				tags: map[string]string{
+					"serial":    "ABC123",
+					"ups_name":  "fake",
+					"model":     "Model 12345",
+					"status_OL": "true",
+				},
+				fields: map[string]interface{}{
+					"battery_charge_percent":  float64(100),
+					"battery_date":            nil,
+					"battery_mfr_date":        "2016-07-26",
+					"battery_voltage":         float64(13.4),
+					"firmware":                "CUSTOM_FIRMWARE",
+					"input_voltage":           float64(242),
+					"load_percent":            float64(23),
+					"nominal_battery_voltage": float64(24),
+					"nominal_input_voltage":   float64(230),
+					"nominal_power":           int64(700),
+					"output_voltage":          float64(230),
+					"real_power":              float64(41),
+					"status_flags":            uint64(8),
+					"time_left_ns":            int64(600000000000),
+					"ups_status":              "OL",
 				},
 				out: genOutput,
 			},
@@ -63,12 +94,14 @@ func TestUpsdGather(t *testing.T) {
 
 			nut.Server = (lAddr.(*net.TCPAddr)).IP.String()
 			nut.Port = (lAddr.(*net.TCPAddr)).Port
+			nut.ForceFloat = tt.forceFloat
 
 			err = nut.Gather(&acc)
 			if tt.err {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+				acc.AssertContainsFields(t, "upsd", tt.fields)
 				acc.AssertContainsTaggedFields(t, "upsd", tt.fields, tt.tags)
 			}
 			cancel()
@@ -217,6 +250,7 @@ VAR fake output.voltage "230.0"
 VAR fake battery.voltage "13.4"
 VAR fake input.voltage.nominal "230.0"
 VAR fake battery.voltage.nominal "24.0"
+VAR fake ups.realpower "41.0"
 VAR fake ups.realpower.nominal "700"
 VAR fake ups.firmware "CUSTOM_FIRMWARE"
 VAR fake battery.mfr.date "2016-07-26"
@@ -234,6 +268,7 @@ END LIST VAR fake
 	m = appendVariable(m, "battery.voltage", "NUMBER")
 	m = appendVariable(m, "input.voltage.nominal", "NUMBER")
 	m = appendVariable(m, "battery.voltage.nominal", "NUMBER")
+	m = appendVariable(m, "ups.realpower", "NUMBER")
 	m = appendVariable(m, "ups.realpower.nominal", "NUMBER")
 	m = appendVariable(m, "ups.firmware", "STRING:64")
 	m = appendVariable(m, "battery.mfr.date", "STRING:64")

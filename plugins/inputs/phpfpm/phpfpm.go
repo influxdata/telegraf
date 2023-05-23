@@ -113,7 +113,7 @@ func (p *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
 		u, err := url.Parse(addr)
 		if err != nil {
-			return fmt.Errorf("unable parse server address '%s': %s", addr, err)
+			return fmt.Errorf("unable parse server address %q: %w", addr, err)
 		}
 		socketAddr := strings.Split(u.Host, ":")
 		fcgiIP := socketAddr[0]
@@ -158,29 +158,29 @@ func (p *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 		importMetric(bytes.NewReader(fpmOutput), acc, addr)
 		return nil
 	}
-	return fmt.Errorf("unable parse phpfpm status, error: %v %v", string(fpmErr), err)
+	return fmt.Errorf("unable parse phpfpm status, error: %s; %w", string(fpmErr), err)
 }
 
 // Gather stat using http protocol
 func (p *phpfpm) gatherHTTP(addr string, acc telegraf.Accumulator) error {
 	u, err := url.Parse(addr)
 	if err != nil {
-		return fmt.Errorf("unable parse server address '%s': %v", addr, err)
+		return fmt.Errorf("unable parse server address %q: %w", addr, err)
 	}
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return fmt.Errorf("unable to create new request '%s': %v", addr, err)
+		return fmt.Errorf("unable to create new request %q: %w", addr, err)
 	}
 
 	res, err := p.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("unable to connect to phpfpm status page '%s': %v", addr, err)
+		return fmt.Errorf("unable to connect to phpfpm status page %q: %w", addr, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("unable to get valid stat result from '%s': %v", addr, err)
+		return fmt.Errorf("unable to get valid stat result from %q: %w", addr, err)
 	}
 
 	importMetric(res.Body, acc, addr)
@@ -262,7 +262,7 @@ func globUnixSocket(address string) ([]string, error) {
 	pattern, status := unixSocketPaths(address)
 	glob, err := globpath.Compile(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
+		return nil, fmt.Errorf("could not compile glob %q: %w", pattern, err)
 	}
 	paths := glob.Match()
 	if len(paths) == 0 {

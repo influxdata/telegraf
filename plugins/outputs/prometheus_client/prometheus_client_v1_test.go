@@ -108,6 +108,35 @@ cpu_time_idle{host="example.org"} 42
 `),
 		},
 		{
+			name: "when export timestamp is true timestamp is present in the metric",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				ExportTimestamp:   true,
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"counter": 42.0,
+					},
+					time.Unix(1257894000, 0),
+					telegraf.Counter,
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle counter
+cpu_time_idle{host="example.org"} 42 1257894000000
+`),
+		},
+		{
 			name: "replace characters when using string as label",
 			output: &PrometheusClient{
 				Listen:            ":0",

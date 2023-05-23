@@ -13,7 +13,15 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `dsn` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -47,6 +55,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## will be clipped to the maximum number of connections limit if any.
   # connection_max_open = 0
   # connection_max_idle = auto
+
+  ## Specifies plugin behavior regarding disconnected servers
+  ## Available choices :
+  ##   - error: telegraf will return an error on startup if one the servers is unreachable
+  ##   - ignore: telegraf will ignore unreachable servers on both startup and gather
+  # disconnected_servers_behavior = "error"
 
   [[inputs.sql.query]]
     ## Query to perform on the server
@@ -176,7 +190,7 @@ Using the [MariaDB sample database][maria-sample] and the configuration
 
 Telegraf will output the following metrics
 
-```shell
+```text
 nation,host=Hugin,name=John guest_id=1i 1611332164000000000
 nation,host=Hugin,name=Jane guest_id=2i 1611332164000000000
 nation,host=Hugin,name=Jean guest_id=3i 1611332164000000000
@@ -185,3 +199,8 @@ nation,host=Hugin,name=Beast guest_id=5i 1611332164000000000
 ```
 
 [maria-sample]: https://www.mariadbtutorial.com/getting-started/mariadb-sample-database
+
+## Metrics
+
+The format of metrics produced by this plugin depends on the content and data
+format of the file.

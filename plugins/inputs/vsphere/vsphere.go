@@ -4,6 +4,7 @@ package vsphere
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"sync"
 	"time"
 
@@ -21,54 +22,58 @@ var sampleConfig string
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
 type VSphere struct {
-	Vcenters                  []string
-	Username                  string
-	Password                  string
-	DatacenterInstances       bool
-	DatacenterMetricInclude   []string
-	DatacenterMetricExclude   []string
-	DatacenterInclude         []string
-	DatacenterExclude         []string
-	ClusterInstances          bool
-	ClusterMetricInclude      []string
-	ClusterMetricExclude      []string
-	ClusterInclude            []string
-	ClusterExclude            []string
-	ResourcePoolInstances     bool
-	ResourcePoolMetricInclude []string
-	ResourcePoolMetricExclude []string
-	ResourcePoolInclude       []string
-	ResourcePoolExclude       []string
-	HostInstances             bool
-	HostMetricInclude         []string
-	HostMetricExclude         []string
-	HostInclude               []string
-	HostExclude               []string
-	VMInstances               bool     `toml:"vm_instances"`
-	VMMetricInclude           []string `toml:"vm_metric_include"`
-	VMMetricExclude           []string `toml:"vm_metric_exclude"`
-	VMInclude                 []string `toml:"vm_include"`
-	VMExclude                 []string `toml:"vm_exclude"`
-	DatastoreInstances        bool
-	DatastoreMetricInclude    []string
-	DatastoreMetricExclude    []string
-	DatastoreInclude          []string
-	DatastoreExclude          []string
-	Separator                 string
-	CustomAttributeInclude    []string
-	CustomAttributeExclude    []string
-	UseIntSamples             bool
-	IPAddresses               []string
-	MetricLookback            int
-
-	MaxQueryObjects         int
-	MaxQueryMetrics         int
-	CollectConcurrency      int
-	DiscoverConcurrency     int
-	ForceDiscoverOnInit     bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
-	ObjectDiscoveryInterval config.Duration
-	Timeout                 config.Duration
-	HistoricalInterval      config.Duration
+	Vcenters                    []string
+	Username                    config.Secret `toml:"username"`
+	Password                    config.Secret `toml:"password"`
+	DatacenterInstances         bool
+	DatacenterMetricInclude     []string
+	DatacenterMetricExclude     []string
+	DatacenterInclude           []string
+	DatacenterExclude           []string
+	ClusterInstances            bool
+	ClusterMetricInclude        []string
+	ClusterMetricExclude        []string
+	ClusterInclude              []string
+	ClusterExclude              []string
+	ResourcePoolInstances       bool
+	ResourcePoolMetricInclude   []string
+	ResourcePoolMetricExclude   []string
+	ResourcePoolInclude         []string
+	ResourcePoolExclude         []string
+	HostInstances               bool
+	HostMetricInclude           []string
+	HostMetricExclude           []string
+	HostInclude                 []string
+	HostExclude                 []string
+	VMInstances                 bool     `toml:"vm_instances"`
+	VMMetricInclude             []string `toml:"vm_metric_include"`
+	VMMetricExclude             []string `toml:"vm_metric_exclude"`
+	VMInclude                   []string `toml:"vm_include"`
+	VMExclude                   []string `toml:"vm_exclude"`
+	DatastoreInstances          bool
+	DatastoreMetricInclude      []string
+	DatastoreMetricExclude      []string
+	DatastoreInclude            []string
+	DatastoreExclude            []string
+	VSANMetricInclude           []string `toml:"vsan_metric_include"`
+	VSANMetricExclude           []string `toml:"vsan_metric_exclude"`
+	VSANMetricSkipVerify        bool     `toml:"vsan_metric_skip_verify"`
+	VSANClusterInclude          []string `toml:"vsan_cluster_include"`
+	Separator                   string
+	CustomAttributeInclude      []string
+	CustomAttributeExclude      []string
+	UseIntSamples               bool
+	IPAddresses                 []string
+	MetricLookback              int
+	DisconnectedServersBehavior string
+	MaxQueryObjects             int
+	MaxQueryMetrics             int
+	CollectConcurrency          int
+	DiscoverConcurrency         int
+	ForceDiscoverOnInit         bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
+	ObjectDiscoveryInterval     config.Duration
+	Timeout                     config.Duration
+	HistoricalInterval          config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -136,7 +141,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		go func(endpoint *Endpoint) {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
@@ -153,47 +158,50 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters: []string{},
-
-			DatacenterInstances:       false,
-			DatacenterMetricInclude:   nil,
-			DatacenterMetricExclude:   nil,
-			DatacenterInclude:         []string{"/*"},
-			ClusterInstances:          false,
-			ClusterMetricInclude:      nil,
-			ClusterMetricExclude:      nil,
-			ClusterInclude:            []string{"/*/host/**"},
-			HostInstances:             true,
-			HostMetricInclude:         nil,
-			HostMetricExclude:         nil,
-			HostInclude:               []string{"/*/host/**"},
-			ResourcePoolInstances:     false,
-			ResourcePoolMetricInclude: nil,
-			ResourcePoolMetricExclude: nil,
-			ResourcePoolInclude:       []string{"/*/host/**"},
-			VMInstances:               true,
-			VMMetricInclude:           nil,
-			VMMetricExclude:           nil,
-			VMInclude:                 []string{"/*/vm/**"},
-			DatastoreInstances:        false,
-			DatastoreMetricInclude:    nil,
-			DatastoreMetricExclude:    nil,
-			DatastoreInclude:          []string{"/*/datastore/**"},
-			Separator:                 "_",
-			CustomAttributeInclude:    []string{},
-			CustomAttributeExclude:    []string{"*"},
-			UseIntSamples:             true,
-			IPAddresses:               []string{},
-
-			MaxQueryObjects:         256,
-			MaxQueryMetrics:         256,
-			CollectConcurrency:      1,
-			DiscoverConcurrency:     1,
-			MetricLookback:          3,
-			ForceDiscoverOnInit:     true,
-			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
-			Timeout:                 config.Duration(time.Second * 60),
-			HistoricalInterval:      config.Duration(time.Second * 300),
+			Vcenters:                    []string{},
+			DatacenterInstances:         false,
+			DatacenterMetricInclude:     nil,
+			DatacenterMetricExclude:     nil,
+			DatacenterInclude:           []string{"/*"},
+			ClusterInstances:            false,
+			ClusterMetricInclude:        nil,
+			ClusterMetricExclude:        nil,
+			ClusterInclude:              []string{"/*/host/**"},
+			HostInstances:               true,
+			HostMetricInclude:           nil,
+			HostMetricExclude:           nil,
+			HostInclude:                 []string{"/*/host/**"},
+			ResourcePoolInstances:       false,
+			ResourcePoolMetricInclude:   nil,
+			ResourcePoolMetricExclude:   nil,
+			ResourcePoolInclude:         []string{"/*/host/**"},
+			VMInstances:                 true,
+			VMMetricInclude:             nil,
+			VMMetricExclude:             nil,
+			VMInclude:                   []string{"/*/vm/**"},
+			DatastoreInstances:          false,
+			DatastoreMetricInclude:      nil,
+			DatastoreMetricExclude:      nil,
+			DatastoreInclude:            []string{"/*/datastore/**"},
+			VSANMetricInclude:           nil,
+			VSANMetricExclude:           []string{"*"},
+			VSANMetricSkipVerify:        false,
+			VSANClusterInclude:          []string{"/*/host/**"},
+			Separator:                   "_",
+			CustomAttributeInclude:      []string{},
+			CustomAttributeExclude:      []string{"*"},
+			UseIntSamples:               true,
+			IPAddresses:                 []string{},
+			MaxQueryObjects:             256,
+			MaxQueryMetrics:             256,
+			CollectConcurrency:          1,
+			DiscoverConcurrency:         1,
+			MetricLookback:              3,
+			ForceDiscoverOnInit:         true,
+			ObjectDiscoveryInterval:     config.Duration(time.Second * 300),
+			Timeout:                     config.Duration(time.Second * 60),
+			HistoricalInterval:          config.Duration(time.Second * 300),
+			DisconnectedServersBehavior: "error",
 		}
 	})
 }

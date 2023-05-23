@@ -66,7 +66,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -99,8 +99,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
-$ telegraf --config telegraf.conf --input-filter chrony --test
-* Plugin: chrony, Collection 1
-> chrony,leap_status=normal,reference_id=192.168.1.1,stratum=3 frequency=-35.657,system_time=0.000027073,last_offset=-0.000013616,residual_freq=-0,rms_offset=0.000027073,root_delay=0.000644,root_dispersion=0.003444,skew=0.001,update_interval=1031.2 1463750789687639161
+```text
+chrony,leap_status=normal,reference_id=192.168.1.1,stratum=3 frequency=-35.657,system_time=0.000027073,last_offset=-0.000013616,residual_freq=-0,rms_offset=0.000027073,root_delay=0.000644,root_dispersion=0.003444,skew=0.001,update_interval=1031.2 1463750789687639161
 ```

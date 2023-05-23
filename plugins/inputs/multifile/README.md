@@ -15,7 +15,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -45,6 +45,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     conversion = "float(3)"
 ```
 
+## Metrics
+
 Each file table can contain the following options:
 
 * `file`:
@@ -68,7 +70,7 @@ Data format used to parse the file contents:
 This example shows a BME280 connected to a Raspberry Pi, using the sample
 config.
 
-```sh
+```text
 multifile pressure=101.343285156,temperature=20.4,humidityrelative=48.9 1547202076000000000
 ```
 

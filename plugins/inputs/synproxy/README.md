@@ -11,12 +11,13 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Get synproxy counter statistics from procfs
+# This plugin ONLY supports Linux
 [[inputs.synproxy]]
   # no configuration
 ```
@@ -57,6 +58,6 @@ cat /proc/net/stat/synproxy
 
 This section shows example output in Line Protocol format.
 
-```shell
+```text
 synproxy,host=Filter-GW01,rack=filter-node1 conn_reopened=0i,cookie_invalid=235i,cookie_retrans=0i,cookie_valid=8814i,entries=0i,syn_received=8742i 1549550634000000000
 ```

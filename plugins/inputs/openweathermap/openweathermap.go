@@ -117,7 +117,7 @@ func (n *OpenWeatherMap) createHTTPClient() *http.Client {
 func (n *OpenWeatherMap) gatherURL(addr string) (*Status, error) {
 	resp, err := n.client.Get(addr)
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", addr, err)
+		return nil, fmt.Errorf("error making HTTP request to %q: %w", addr, err)
 	}
 	defer resp.Body.Close()
 
@@ -152,6 +152,10 @@ type WeatherEntry struct {
 		Rain1 float64 `json:"1h"`
 		Rain3 float64 `json:"3h"`
 	} `json:"rain"`
+	Snow struct {
+		Snow1 float64 `json:"1h"`
+		Snow3 float64 `json:"3h"`
+	} `json:"snow"`
 	Sys struct {
 		Country string `json:"country"`
 		Sunrise int64  `json:"sunrise"`
@@ -193,9 +197,16 @@ func gatherWeatherURL(r io.Reader) (*Status, error) {
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
-		return nil, fmt.Errorf("error while decoding JSON response: %s", err)
+		return nil, fmt.Errorf("error while decoding JSON response: %w", err)
 	}
 	return status, nil
+}
+
+func gatherSnow(e WeatherEntry) float64 {
+	if e.Snow.Snow1 > 0 {
+		return e.Snow.Snow1
+	}
+	return e.Snow.Snow3
 }
 
 func gatherRain(e WeatherEntry) float64 {
@@ -214,6 +225,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"humidity":     e.Main.Humidity,
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
+			"snow":         gatherSnow(e),
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
@@ -254,6 +266,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"humidity":     e.Main.Humidity,
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
+			"snow":         gatherSnow(e),
 			"temperature":  e.Main.Temp,
 			"feels_like":   e.Main.Feels,
 			"wind_degrees": e.Wind.Deg,

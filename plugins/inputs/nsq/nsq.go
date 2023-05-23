@@ -112,7 +112,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 	}
 	r, err := n.httpClient.Get(u.String())
 	if err != nil {
-		return fmt.Errorf("error while polling %s: %s", u.String(), err)
+		return fmt.Errorf("error while polling %s: %w", u.String(), err)
 	}
 	defer r.Body.Close()
 
@@ -122,20 +122,20 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return fmt.Errorf(`error reading body: %s`, err)
+		return fmt.Errorf(`error reading body: %w`, err)
 	}
 
 	data := &NSQStatsData{}
 	err = json.Unmarshal(body, data)
 	if err != nil {
-		return fmt.Errorf(`error parsing response: %s`, err)
+		return fmt.Errorf(`error parsing response: %w`, err)
 	}
 	// Data was not parsed correctly attempt to use old format.
 	if len(data.Version) < 1 {
 		wrapper := &NSQStats{}
 		err = json.Unmarshal(body, wrapper)
 		if err != nil {
-			return fmt.Errorf(`error parsing response: %s`, err)
+			return fmt.Errorf(`error parsing response: %w`, err)
 		}
 		data = &wrapper.Data
 	}
@@ -165,7 +165,7 @@ func buildURL(e string) (*url.URL, error) {
 	u := fmt.Sprintf(requestPattern, e)
 	addr, err := url.Parse(u)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse address '%s': %s", u, err)
+		return nil, fmt.Errorf("unable to parse address %q: %w", u, err)
 	}
 	return addr, nil
 }

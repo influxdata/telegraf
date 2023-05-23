@@ -12,10 +12,10 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -69,9 +69,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	// Ignore the returned error as the tests will fail anyway
-	//nolint:errcheck,revive
-	go serv.Serve(lis)
+	go serv.Serve(lis) //nolint:errcheck // Ignore the returned error as the tests will fail anyway
 
 	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
 	conn, err := grpc.Dial(lis.Addr().String(), opt)
@@ -316,14 +314,16 @@ func TestWriteBatchable(t *testing.T) {
 	err = s.Write(metrics)
 	require.NoError(t, err)
 
-	require.Len(t, mockMetric.reqs, 2)
+	require.Len(t, mockMetric.reqs, 5)
+
+	// Request 1 with two time series
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Len(t, request.TimeSeries, 6)
+	require.Len(t, request.TimeSeries, 2)
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
 		EndTime: &timestamppb.Timestamp{
-			Seconds: 3,
+			Seconds: 1,
 		},
 	})
 	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
@@ -345,31 +345,47 @@ func TestWriteBatchable(t *testing.T) {
 		},
 	})
 
-	ts = request.TimeSeries[2]
+	// Request 2 with 1 time series
+	request = mockMetric.reqs[1].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 1)
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+	require.Equal(t, &monitoringpb.TimeInterval{
+		EndTime: &timestamppb.Timestamp{
+			Seconds: 2,
+		},
+	}, request.TimeSeries[0].Points[0].Interval)
+
+	// Request 3 with 1 time series with 1 point
+	request = mockMetric.reqs[2].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 3)
+	require.Len(t, request.TimeSeries[0].Points, 1)
+	require.Len(t, request.TimeSeries[1].Points, 1)
+	require.Len(t, request.TimeSeries[2].Points, 1)
+	require.Equal(t, &monitoringpb.TimeInterval{
 		EndTime: &timestamppb.Timestamp{
 			Seconds: 3,
 		},
-	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
-			Int64Value: int64(43),
-		},
-	})
+	}, request.TimeSeries[0].Points[0].Interval)
 
-	ts = request.TimeSeries[4]
-	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+	// Request 4 with 1 time series with 1 point
+	request = mockMetric.reqs[3].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 1)
+	require.Len(t, request.TimeSeries[0].Points, 1)
+	require.Equal(t, &monitoringpb.TimeInterval{
+		EndTime: &timestamppb.Timestamp{
+			Seconds: 4,
+		},
+	}, request.TimeSeries[0].Points[0].Interval)
+
+	// Request 5 with 1 time series with 1 point
+	request = mockMetric.reqs[4].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 1)
+	require.Len(t, request.TimeSeries[0].Points, 1)
+	require.Equal(t, &monitoringpb.TimeInterval{
 		EndTime: &timestamppb.Timestamp{
 			Seconds: 5,
 		},
-	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
-			Int64Value: int64(43),
-		},
-	})
+	}, request.TimeSeries[0].Points[0].Interval)
 }
 
 func TestWriteIgnoredErrors(t *testing.T) {

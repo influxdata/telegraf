@@ -93,8 +93,6 @@ func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 	n.acc = acc.WithTracking(n.MaxUndeliveredMessages)
 
-	var connectErr error
-
 	options := []nats.Option{
 		nats.MaxReconnects(-1),
 		nats.ErrorHandler(n.natsErrHandler),
@@ -119,6 +117,7 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 	}
 
 	if n.conn == nil || n.conn.IsClosed() {
+		var connectErr error
 		n.conn, connectErr = nats.Connect(strings.Join(n.Servers, ","), options...)
 		if connectErr != nil {
 			return connectErr
@@ -219,7 +218,9 @@ func (n *natsConsumer) receiver(ctx context.Context) {
 					<-sem
 					continue
 				}
-
+				for _, m := range metrics {
+					m.AddTag("subject", msg.Subject)
+				}
 				n.acc.AddTrackingMetricGroup(metrics)
 			}
 		}
@@ -260,7 +261,6 @@ func init() {
 	inputs.Add("nats_consumer", func() telegraf.Input {
 		return &natsConsumer{
 			Servers:                []string{"nats://localhost:4222"},
-			Secure:                 false,
 			Subjects:               []string{"telegraf"},
 			QueueGroup:             "telegraf_consumers",
 			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,

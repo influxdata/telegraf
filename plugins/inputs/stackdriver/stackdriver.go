@@ -13,10 +13,10 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"google.golang.org/api/iterator"
 	distributionpb "google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -147,7 +147,7 @@ func (smc *stackdriverMetricClient) ListMetricDescriptors(
 		for {
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
-				if mdErr != iterator.Done {
+				if !errors.Is(mdErr, iterator.Done) {
 					smc.log.Errorf("Failed iterating metric descriptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
@@ -176,7 +176,7 @@ func (smc *stackdriverMetricClient) ListTimeSeries(
 		for {
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
-				if tsErr != iterator.Done {
+				if !errors.Is(tsErr, iterator.Done) {
 					smc.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
 				}
 				break
@@ -408,7 +408,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	if s.client == nil {
 		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to create stackdriver monitoring client: %v", err)
+			return fmt.Errorf("failed to create stackdriver monitoring client: %w", err)
 		}
 
 		tags := map[string]string{

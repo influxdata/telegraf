@@ -59,7 +59,10 @@ type DirectoryMonitor struct {
 	context             context.Context
 	parserFunc          parsers.ParserFunc
 	filesProcessed      selfstat.Stat
+	filesProcessedDir   selfstat.Stat
 	filesDropped        selfstat.Stat
+	filesDroppedDir     selfstat.Stat
+	filesQueuedDir      selfstat.Stat
 	waitGroup           *sync.WaitGroup
 	acc                 telegraf.TrackingAccumulator
 	sem                 *semaphore.Weighted
@@ -81,8 +84,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 		stat, err := times.Stat(path)
 		if err != nil {
-			// Don't stop traversing if there is an eror
-			return nil //nolint:nilerr
+			return nil //nolint:nilerr // don't stop traversing if there is an error
 		}
 
 		timeThresholdExceeded := time.Since(stat.AccessTime()) >= time.Duration(monitor.DirectoryDurationThreshold)
@@ -104,8 +106,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 				return processFile(path)
 			})
 		// We've been cancelled via Stop().
-		if err == io.EOF {
-			//nolint:nilerr // context cancelation is not an error
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {
@@ -125,8 +126,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 			path := monitor.Directory + "/" + file.Name()
 			err := processFile(path)
 			// We've been cancelled via Stop().
-			if err == io.EOF {
-				//nolint:nilerr // context cancelation is not an error
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 		}
@@ -177,6 +177,9 @@ func (monitor *DirectoryMonitor) Monitor() {
 
 		// We've finished reading the file and moved it away, delete it from files in use.
 		monitor.filesInUse.Delete(filePath)
+
+		// Keep track of how many files still to process
+		monitor.filesQueuedDir.Set(int64(len(monitor.filesToProcess)))
 	}
 }
 
@@ -202,7 +205,8 @@ func (monitor *DirectoryMonitor) processFile(path string) {
 func (monitor *DirectoryMonitor) read(filePath string) {
 	// Open, read, and parse the contents of the file.
 	err := monitor.ingestFile(filePath)
-	if _, isPathError := err.(*os.PathError); isPathError {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
 		return
 	}
 
@@ -210,6 +214,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	if err != nil {
 		monitor.Log.Errorf("Error while reading file: '" + filePath + "'. " + err.Error())
 		monitor.filesDropped.Incr(1)
+		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
 			monitor.moveFile(filePath, monitor.ErrorDirectory)
 		}
@@ -219,6 +224,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	// File is finished, move it to the 'finished' directory.
 	monitor.moveFile(filePath, monitor.FinishedDirectory)
 	monitor.filesProcessed.Incr(1)
+	monitor.filesProcessedDir.Incr(1)
 }
 
 func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
@@ -400,19 +406,25 @@ func (monitor *DirectoryMonitor) Init() error {
 
 	// Finished directory can be created if not exists for convenience.
 	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(monitor.FinishedDirectory, 0755)
+		err = os.Mkdir(monitor.FinishedDirectory, 0750)
 		if err != nil {
 			return err
 		}
 	}
 
+	tags := map[string]string{
+		"directory": monitor.Directory,
+	}
 	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", map[string]string{})
+	monitor.filesDroppedDir = selfstat.Register("directory_monitor", "files_dropped_per_dir", tags)
 	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", map[string]string{})
+	monitor.filesProcessedDir = selfstat.Register("directory_monitor", "files_processed_per_dir", tags)
+	monitor.filesQueuedDir = selfstat.Register("directory_monitor", "files_queue_per_dir", tags)
 
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {
 		if _, err := os.Stat(monitor.ErrorDirectory); os.IsNotExist(err) {
-			err := os.Mkdir(monitor.ErrorDirectory, 0755)
+			err := os.Mkdir(monitor.ErrorDirectory, 0750)
 			if err != nil {
 				return err
 			}

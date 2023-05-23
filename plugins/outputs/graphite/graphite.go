@@ -25,6 +25,7 @@ type Graphite struct {
 	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
 	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
 	GraphiteSeparator       string `toml:"graphite_separator"`
+	GraphiteStrictRegex     string `toml:"graphite_strict_sanitize_regex"`
 	// URL is only for backwards compatibility
 	Servers   []string        `toml:"servers"`
 	Prefix    string          `toml:"prefix"`
@@ -101,7 +102,9 @@ func (g *Graphite) Connect() error {
 		}
 	}
 
-	if len(g.failedServers) > 0 {
+	g.Log.Debugf("Successful connections: %d", len(conns))
+	if len(failedServers) > 0 {
+		g.Log.Debugf("Failed servers: %d", len(failedServers))
 		g.conns = append(g.conns, conns...)
 		g.failedServers = failedServers
 	} else {
@@ -138,7 +141,7 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 		return err
 	}
 	num, err := conn.Read(b)
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		g.Log.Debugf("Conn %s is closed. closing conn explicitly", conn.RemoteAddr().String())
 		err = conn.Close()
 		g.Log.Debugf("Failed to close the connection: %v", err)
@@ -149,7 +152,8 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, b[:num])
 	}
 	// Log non-timeout errors and close.
-	if e, ok := err.(net.Error); !(ok && e.Timeout()) {
+	var netErr net.Error
+	if !(errors.As(err, &netErr) && netErr.Timeout()) {
 		g.Log.Debugf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
 		err = conn.Close()
 		g.Log.Debugf("Failed to close the connection: %v", err)
@@ -164,7 +168,15 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteTagSanitizeMode, g.GraphiteSeparator, g.Templates)
+	s, err := serializers.NewGraphiteSerializer(
+		g.Prefix,
+		g.Template,
+		g.GraphiteStrictRegex,
+		g.GraphiteTagSupport,
+		g.GraphiteTagSanitizeMode,
+		g.GraphiteSeparator,
+		g.Templates,
+	)
 	if err != nil {
 		return err
 	}
@@ -184,7 +196,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		g.Log.Debugf("Reconnecting and retrying for the following servers: %s", strings.Join(g.failedServers, ","))
 		err = g.Connect()
 		if err != nil {
-			return fmt.Errorf("Failed to reconnect: %v", err)
+			return fmt.Errorf("failed to reconnect: %w", err)
 		}
 		err = g.send(batch)
 	}
@@ -213,18 +225,18 @@ func (g *Graphite) send(batch []byte) error {
 			g.failedServers = append(g.failedServers, g.conns[n].RemoteAddr().String())
 			break
 		}
-		if _, e := g.conns[n].Write(batch); e != nil {
-			// Error
-			g.Log.Debugf("Graphite Error: " + e.Error())
-			// Close explicitly and let's try the next one
-			err := g.conns[n].Close()
-			g.Log.Debugf("Failed to close the connection: %v", err)
-			// Mark server as failed so a new connection will be made
-			g.failedServers = append(g.failedServers, g.conns[n].RemoteAddr().String())
-		} else {
+		_, e := g.conns[n].Write(batch)
+		if e == nil {
 			globalErr = nil
 			break
 		}
+		// Error
+		g.Log.Debugf("Graphite Error: " + e.Error())
+		// Close explicitly and let's try the next one
+		err = g.conns[n].Close()
+		g.Log.Debugf("Failed to close the connection: %v", err)
+		// Mark server as failed so a new connection will be made
+		g.failedServers = append(g.failedServers, g.conns[n].RemoteAddr().String())
 	}
 
 	return globalErr

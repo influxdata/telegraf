@@ -37,7 +37,7 @@ func (p *PowerdnsRecursor) Init() error {
 	if p.SocketMode != "" {
 		mode, err := strconv.ParseUint(p.SocketMode, 8, 32)
 		if err != nil {
-			return fmt.Errorf("could not parse socket_mode: %v", err)
+			return fmt.Errorf("could not parse socket_mode: %w", err)
 		}
 
 		p.mode = uint32(mode)

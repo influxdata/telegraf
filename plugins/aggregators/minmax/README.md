@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -37,8 +37,7 @@ No tags are applied by this aggregator.
 
 ## Example Output
 
-```shell
-$ telegraf --config telegraf.conf --quiet
+```text
 system,host=tars load1=1.72 1475583980000000000
 system,host=tars load1=1.6 1475583990000000000
 system,host=tars load1=1.66 1475584000000000000

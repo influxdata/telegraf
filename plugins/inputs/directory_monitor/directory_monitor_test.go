@@ -77,7 +77,7 @@ func TestCSVGZImport(t *testing.T) {
 	require.NoError(t, err)
 	err = w.Close()
 	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0666)
+	err = os.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0640)
 	require.NoError(t, err)
 
 	// Start plugin before adding file.
@@ -148,7 +148,7 @@ func TestCSVGZImportWithHeader(t *testing.T) {
 	require.NoError(t, err)
 	err = w.Close()
 	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0666)
+	err = os.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0640)
 	require.NoError(t, err)
 
 	// Start plugin before adding file.
@@ -577,7 +577,7 @@ func TestParseSubdirectories(t *testing.T) {
 	err = f.Close()
 	require.NoError(t, err)
 
-	// Write json file to process into a subdirectory in the the 'process' directory.
+	// Write json file to process into a subdirectory in the 'process' directory.
 	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
 	require.NoError(t, err)
 	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))
@@ -655,7 +655,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	err = f.Close()
 	require.NoError(t, err)
 
-	// Write json file to process into a subdirectory in the the 'process' directory.
+	// Write json file to process into a subdirectory in the 'process' directory.
 	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
 	require.NoError(t, err)
 	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))

@@ -68,6 +68,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 type AggregatorConfig struct {
 	Name         string
 	Alias        string
+	ID           string
 	DropOriginal bool
 	Period       time.Duration
 	Delay        time.Duration
@@ -92,6 +93,13 @@ func (r *RunningAggregator) Init() error {
 		}
 	}
 	return nil
+}
+
+func (r *RunningAggregator) ID() string {
+	if p, ok := r.Aggregator.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return r.Config.ID
 }
 
 func (r *RunningAggregator) Period() time.Duration {
@@ -125,7 +133,10 @@ func (r *RunningAggregator) MakeMetric(telegrafMetric telegraf.Metric) telegraf.
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
 func (r *RunningAggregator) Add(m telegraf.Metric) bool {
-	if ok := r.Config.Filter.Select(m); !ok {
+	ok, err := r.Config.Filter.Select(m)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		return false
 	}
 

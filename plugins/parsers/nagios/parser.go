@@ -27,8 +27,8 @@ func getExitCode(err error) (int, error) {
 		return 0, nil
 	}
 
-	ee, ok := err.(*exec.ExitError)
-	if !ok {
+	var ee *exec.ExitError
+	if !errors.As(err, &ee) {
 		return unknownExitCode, err
 	}
 
@@ -135,7 +135,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		metrics = append(metrics, ms...)
 		fallthrough
 	case 1:
-		msg.Write(bytes.TrimSpace(parts[0])) //nolint:revive // from buffer.go: "err is always nil"
+		msg.Write(bytes.TrimSpace(parts[0]))
 	default:
 		return nil, errors.New("illegal output format")
 	}
@@ -145,9 +145,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if bytes.Contains(s.Bytes(), []byte{'|'}) {
 			parts := bytes.Split(s.Bytes(), []byte{'|'})
 			if longmsg.Len() != 0 {
-				longmsg.WriteByte('\n') //nolint:revive // from buffer.go: "err is always nil"
+				longmsg.WriteByte('\n')
 			}
-			longmsg.Write(bytes.TrimSpace(parts[0])) //nolint:revive // from buffer.go: "err is always nil"
+			longmsg.Write(bytes.TrimSpace(parts[0]))
 
 			ms, err := parsePerfData(string(parts[1]), ts)
 			if err != nil {
@@ -157,9 +157,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			break
 		}
 		if longmsg.Len() != 0 {
-			longmsg.WriteByte('\n') //nolint:revive // from buffer.go: "err is always nil"
+			longmsg.WriteByte('\n')
 		}
-		longmsg.Write(bytes.TrimSpace(s.Bytes())) //nolint:revive // from buffer.go: "err is always nil"
+		longmsg.Write(bytes.TrimSpace(s.Bytes()))
 	}
 
 	// Parse extra performance data.

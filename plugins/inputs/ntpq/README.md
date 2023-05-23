@@ -31,7 +31,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -92,8 +92,6 @@ additional `source` tag.
 
 ## Example Output
 
-```shell
-$ telegraf --config ~/ws/telegraf.conf --input-filter ntpq --test
-* Plugin: ntpq, Collection 1
-> ntpq,refid=.GPSs.,remote=*time.apple.com,stratum=1,type=u delay=91.797,jitter=3.735,offset=12.841,poll=64i,reach=377i,when=35i 1457960478909556134
+```text
+ntpq,refid=.GPSs.,remote=*time.apple.com,stratum=1,type=u delay=91.797,jitter=3.735,offset=12.841,poll=64i,reach=377i,when=35i 1457960478909556134
 ```

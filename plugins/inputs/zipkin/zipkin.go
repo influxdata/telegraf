@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
@@ -21,22 +23,22 @@ import (
 var sampleConfig string
 
 const (
-	// DefaultPort is the default port zipkin listens on, which zipkin implementations
-	// expect.
-	DefaultPort = 9411
+	// defaultPort is the default port zipkin listens on, which zipkin implementations expect.
+	defaultPort = 9411
 
-	// DefaultRoute is the default route zipkin uses, and zipkin implementations
-	// expect.
-	DefaultRoute = "/api/v1/spans"
+	// defaultRoute is the default route zipkin uses, and zipkin implementations expect.
+	defaultRoute = "/api/v1/spans"
 
-	// DefaultShutdownTimeout is the max amount of time telegraf will wait
-	// for the plugin to shutdown
-	DefaultShutdownTimeout = 5
+	// defaultShutdownTimeout is the max amount of time telegraf will wait for the plugin to shut down
+	defaultShutdownTimeout = 5 * time.Second
+
+	defaultReadTimeout  = 10 * time.Second
+	defaultWriteTimeout = 10 * time.Second
 )
 
 var (
-	// DefaultNetwork is the network to listen on; use only in tests.
-	DefaultNetwork = "tcp"
+	// defaultNetwork is the network to listen on; use only in tests.
+	defaultNetwork = "tcp"
 )
 
 // Recorder represents a type which can record zipkin trace data as well as
@@ -56,9 +58,10 @@ type Handler interface {
 // but it also contains fields for the management of a separate, concurrent
 // zipkin http server
 type Zipkin struct {
-	ServiceAddress string
-	Port           int
-	Path           string
+	Port         int             `toml:"port"`
+	Path         string          `toml:"path"`
+	ReadTimeout  config.Duration `toml:"read_timeout"`
+	WriteTimeout config.Duration `toml:"write_timeout"`
 
 	Log telegraf.Logger
 
@@ -79,6 +82,13 @@ func (z *Zipkin) Gather(_ telegraf.Accumulator) error { return nil }
 // Start launches a separate goroutine for collecting zipkin client http requests,
 // passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
+	if z.ReadTimeout < config.Duration(time.Second) {
+		z.ReadTimeout = config.Duration(defaultReadTimeout)
+	}
+	if z.WriteTimeout < config.Duration(time.Second) {
+		z.WriteTimeout = config.Duration(defaultWriteTimeout)
+	}
+
 	z.handler = NewSpanHandler(z.Path)
 
 	var wg sync.WaitGroup
@@ -91,11 +101,13 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	}
 
 	z.server = &http.Server{
-		Handler: router,
+		Handler:      router,
+		ReadTimeout:  time.Duration(z.ReadTimeout),
+		WriteTimeout: time.Duration(z.WriteTimeout),
 	}
 
 	addr := ":" + strconv.Itoa(z.Port)
-	ln, err := net.Listen(DefaultNetwork, addr)
+	ln, err := net.Listen(defaultNetwork, addr)
 	if err != nil {
 		return err
 	}
@@ -115,17 +127,15 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 
 // Stop shuts the internal http server down with via context.Context
 func (z *Zipkin) Stop() {
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 
 	defer z.waitGroup.Wait()
 	defer cancel()
 
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
-	z.server.Shutdown(ctx)
+	z.server.Shutdown(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 }
 
-// Listen creates an http server on the zipkin instance it is called with, and
+// Listen creates a http server on the zipkin instance it is called with, and
 // serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
 func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 	if err := z.server.Serve(ln); err != nil {
@@ -135,7 +145,7 @@ func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 		// This interferes with telegraf's internal data collection,
 		// by making it appear as if a serious error occurred.
 		if err != http.ErrServerClosed {
-			acc.AddError(fmt.Errorf("error listening: %v", err))
+			acc.AddError(fmt.Errorf("error listening: %w", err))
 		}
 	}
 }
@@ -143,8 +153,8 @@ func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 func init() {
 	inputs.Add("zipkin", func() telegraf.Input {
 		return &Zipkin{
-			Path: DefaultRoute,
-			Port: DefaultPort,
+			Path: defaultRoute,
+			Port: defaultPort,
 		}
 	})
 }

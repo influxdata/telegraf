@@ -795,15 +795,15 @@ func TestShortPatternRegression(t *testing.T) {
 	}
 	require.NoError(t, p.Compile())
 
-	metric, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
+	m, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
 	require.NoError(t, err)
-	require.NotNil(t, metric)
+	require.NotNil(t, m)
 
 	require.Equal(t,
 		map[string]interface{}{
 			"value": int64(42),
 		},
-		metric.Fields())
+		m.Fields())
 }
 
 func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
@@ -1166,4 +1166,20 @@ func TestTrimRegression(t *testing.T) {
 		actual.Time(),
 	)
 	require.Equal(t, expected, actual)
+}
+
+func TestMultilineNilMetric(t *testing.T) {
+	buf, err := os.ReadFile("./testdata/test_multiline.log")
+	require.NoError(t, err)
+
+	p := &Parser{
+		Measurement: "multiline",
+		Patterns:    []string{`%{TIMESTAMP_ISO8601:timestamp:ts-rfc3339} Info%{MULTILINEDATA:text}`},
+		Multiline:   true,
+		Log:         testutil.Logger{},
+	}
+	require.NoError(t, p.Compile())
+	actual, err := p.Parse(buf)
+	require.NoError(t, err)
+	require.Empty(t, actual)
 }

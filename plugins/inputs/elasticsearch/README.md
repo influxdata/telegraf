@@ -34,7 +34,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -879,3 +879,5 @@ Emitted when the appropriate `shards_stats` options are set.
     - warmer_current (float)
     - warmer_total (float)
     - warmer_total_time_in_millis (float)
+
+## Example Output

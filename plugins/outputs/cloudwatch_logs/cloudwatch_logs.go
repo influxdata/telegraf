@@ -127,11 +127,11 @@ func (c *CloudWatchLogs) Init() error {
 
 	c.logDatKey = lsSplitArray[0]
 	c.logDataSource = lsSplitArray[1]
-	c.Log.Debugf("Log data: key '%s', source '%s'...", c.logDatKey, c.logDataSource)
+	c.Log.Debugf("Log data: key %q, source %q...", c.logDatKey, c.logDataSource)
 
 	if c.lsSource == "" {
 		c.lsSource = c.LogStream
-		c.Log.Debugf("Log stream '%s'...", c.lsSource)
+		c.Log.Debugf("Log stream %q...", c.lsSource)
 	}
 
 	return nil

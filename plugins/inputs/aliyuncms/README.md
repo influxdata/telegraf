@@ -30,7 +30,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -144,7 +144,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Allow metrics without discovery data, if discovery is enabled.
   ## If set to true, then metric without discovery data would be emitted, otherwise dropped.
   ## This cane be of help, in case debugging dimension filters, or partial coverage of
-  ## discovery scope vs monitoring scope 
+  ## discovery scope vs monitoring scope
   # allow_dps_without_discovery = false
 ```
 
@@ -175,7 +175,6 @@ case](https://en.wikipedia.org/wiki/Snake_case)
 
 ## Example Output
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter aliyuncms --test
-> aliyuncms_acs_slb_dashboard,instanceId=p-example,regionId=cn-hangzhou,userId=1234567890 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875
+```text
+aliyuncms_acs_slb_dashboard,instanceId=p-example,regionId=cn-hangzhou,userId=1234567890 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875
 ```

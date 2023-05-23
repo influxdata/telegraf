@@ -12,6 +12,17 @@ later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
 The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and
 later.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -19,7 +30,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -47,6 +58,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
  # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 
+  ## Include the delete field in every telemetry message.
+  # include_delete_field = false
+
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
@@ -73,7 +87,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## removed, and adding subsequent subscriptions does not keep a stable session.
   # permit_keepalive_without_calls = false
 
-  ## GRPC minimum timeout between successive pings, decreasing this value may 
+  ## GRPC minimum timeout between successive pings, decreasing this value may
   ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
   # keepalive_minimum_time = "5m"
 ```
@@ -94,7 +108,7 @@ Additional tags (such as interface_name) may be included depending on the path.
 
 ## Example Output
 
-```shell
+```text
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet2,source=csr1kv,subscription=101 in-unicast-pkts=27i,in-multicast-pkts=0i,discontinuity-time="2019-05-23T07:40:23.000362+00:00",in-octets=5233i,in-errors=0i,out-multicast-pkts=0i,out-discards=0i,in-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,out-unicast-pkts=0i,out-broadcast-pkts=0i,out-octets=0i,out-errors=0i 1559150462624000000
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet1,source=csr1kv,subscription=101 in-octets=3394770806i,in-broadcast-pkts=0i,in-multicast-pkts=0i,out-broadcast-pkts=0i,in-unknown-protos=0i,out-octets=350212i,in-unicast-pkts=9477273i,in-discards=0i,out-unicast-pkts=2726i,out-discards=0i,discontinuity-time="2019-05-23T07:40:23.000363+00:00",in-errors=30i,out-multicast-pkts=0i,out-errors=0i 1559150462624000000
 ```

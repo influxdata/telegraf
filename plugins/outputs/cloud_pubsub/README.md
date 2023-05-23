@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -23,6 +23,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Required. Name of PubSub topic to publish metrics to.
   topic = "my-topic"
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 
   ## Required. Data format to consume.
   ## Each data format has its own unique set of configuration options.

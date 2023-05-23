@@ -31,7 +31,7 @@ const (
 type Warp10 struct {
 	Prefix             string          `toml:"prefix"`
 	WarpURL            string          `toml:"warp_url"`
-	Token              string          `toml:"token"`
+	Token              config.Secret   `toml:"token"`
 	Timeout            config.Duration `toml:"timeout"`
 	PrintErrorBody     bool            `toml:"print_error_body"`
 	MaxStringErrorSize int             `toml:"max_string_error_size"`
@@ -122,11 +122,16 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	addr := w.WarpURL + "/api/v0/update"
 	req, err := http.NewRequest("POST", addr, bytes.NewBufferString(payload))
 	if err != nil {
-		return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+		return fmt.Errorf("unable to create new request %q: %w", addr, err)
 	}
 
-	req.Header.Set("X-Warp10-Token", w.Token)
 	req.Header.Set("Content-Type", "text/plain")
+	token, err := w.Token.Get()
+	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	req.Header.Set("X-Warp10-Token", string(token))
+	config.ReleaseSecret(token)
 
 	resp, err := w.client.Do(req)
 	if err != nil {
@@ -193,7 +198,38 @@ func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
 }
 
+/*
+Warp10 supports Infinity/-Infinity/NaN
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// Infinity
+'>
+PARSE
+
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// -Infinity
+'>
+PARSE
+
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// NaN
+'>
+PARSE
+*/
 func floatToString(inputNum float64) string {
+	switch {
+	case math.IsNaN(inputNum):
+		return "NaN"
+	case math.IsInf(inputNum, -1):
+		return "-Infinity"
+	case math.IsInf(inputNum, 1):
+		return "Infinity"
+	}
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 

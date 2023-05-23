@@ -21,6 +21,7 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -99,8 +100,22 @@ func (cf *ClientFactory) testClient(ctx context.Context) error {
 		cf.parent.Log.Info("Client session seems to have time out. Reauthenticating!")
 		ctx2, cancel2 := context.WithTimeout(ctx, time.Duration(cf.parent.Timeout))
 		defer cancel2()
-		if err := cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)); err != nil {
-			return fmt.Errorf("renewing authentication failed: %s", err.Error())
+
+		// Resolving the secrets and construct the authentication info
+		username, err := cf.parent.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		defer config.ReleaseSecret(username)
+		password, err := cf.parent.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(password)
+		auth := url.UserPassword(string(username), string(password))
+
+		if err := cf.client.Client.SessionManager.Login(ctx2, auth); err != nil {
+			return fmt.Errorf("renewing authentication failed: %w", err)
 		}
 	}
 
@@ -120,8 +135,20 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 	if tlsCfg == nil {
 		tlsCfg = &tls.Config{}
 	}
-	if vs.Username != "" {
-		vSphereURL.User = url.UserPassword(vs.Username, vs.Password)
+	if !vs.Username.Empty() {
+		// Resolving the secrets and construct the authentication info
+		username, err := vs.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		password, err := vs.Password.Get()
+		if err != nil {
+			config.ReleaseSecret(username)
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		vSphereURL.User = url.UserPassword(string(username), string(password))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
 
 	vs.Log.Debugf("Creating client: %s", vSphereURL.Host)

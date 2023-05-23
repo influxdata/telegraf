@@ -2,6 +2,17 @@
 
 The StatsD input plugin gathers metrics from a Statsd server.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -9,7 +20,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -45,6 +56,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
+  ## Enable aggregation temporality adds temporality=delta or temporality=commulative tag, and
+  ## start_time field, which adds the start time of the metric accumulation.
+  ## You should use this when using OpenTelemetry output.
+  # enable_aggregation_temporality = false
+
   ## Percentiles to calculate for timing & histogram stats.
   percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 
@@ -74,6 +90,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Number of UDP messages allowed to queue up, once filled,
   ## the statsd server will start dropping packets
   allowed_pending_messages = 10000
+
+  ## Number of worker threads used to parse the incoming messages.
+  # number_workers_threads = 5
 
   ## Number of timing/histogram values to track per-measurement in the
   ## calculation of percentiles. Raising this limit increases the accuracy
@@ -276,3 +295,5 @@ mem.cached.localhost:256|g
 
 Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
 additional details.
+
+## Example Output

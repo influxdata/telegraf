@@ -9,7 +9,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -34,7 +34,7 @@ On many systems this can be accomplished by adding the `telegraf` user to the
 usermod telegraf -a -G pdns
 ```
 
-## Measurements & Fields
+## Metrics
 
 - powerdns
   - corrupt-packets
@@ -82,7 +82,6 @@ usermod telegraf -a -G pdns
 
 ## Example Output
 
-```sh
-$ ./telegraf --config telegraf.conf --input-filter powerdns --test
-> powerdns,server=/var/run/pdns.controlsocket corrupt-packets=0i,deferred-cache-inserts=0i,deferred-cache-lookup=0i,dnsupdate-answers=0i,dnsupdate-changes=0i,dnsupdate-queries=0i,dnsupdate-refused=0i,key-cache-size=0i,latency=26i,meta-cache-size=0i,packetcache-hit=0i,packetcache-miss=1i,packetcache-size=0i,qsize-q=0i,query-cache-hit=0i,query-cache-miss=6i,rd-queries=1i,recursing-answers=0i,recursing-questions=0i,recursion-unanswered=0i,security-status=3i,servfail-packets=0i,signature-cache-size=0i,signatures=0i,sys-msec=4349i,tcp-answers=0i,tcp-queries=0i,timedout-packets=0i,udp-answers=1i,udp-answers-bytes=50i,udp-do-queries=0i,udp-queries=0i,udp4-answers=1i,udp4-queries=1i,udp6-answers=0i,udp6-queries=0i,uptime=166738i,user-msec=3036i 1454078624932715706
+```text
+powerdns,server=/var/run/pdns.controlsocket corrupt-packets=0i,deferred-cache-inserts=0i,deferred-cache-lookup=0i,dnsupdate-answers=0i,dnsupdate-changes=0i,dnsupdate-queries=0i,dnsupdate-refused=0i,key-cache-size=0i,latency=26i,meta-cache-size=0i,packetcache-hit=0i,packetcache-miss=1i,packetcache-size=0i,qsize-q=0i,query-cache-hit=0i,query-cache-miss=6i,rd-queries=1i,recursing-answers=0i,recursing-questions=0i,recursion-unanswered=0i,security-status=3i,servfail-packets=0i,signature-cache-size=0i,signatures=0i,sys-msec=4349i,tcp-answers=0i,tcp-queries=0i,timedout-packets=0i,udp-answers=1i,udp-answers-bytes=50i,udp-do-queries=0i,udp-queries=0i,udp4-answers=1i,udp4-queries=1i,udp6-answers=0i,udp6-queries=0i,uptime=166738i,user-msec=3036i 1454078624932715706
 ```

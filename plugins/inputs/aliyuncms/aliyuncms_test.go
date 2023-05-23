@@ -2,6 +2,8 @@ package aliyuncms
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -12,7 +14,6 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -93,13 +94,13 @@ func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool,
 	}
 	credential, err = providers.NewChainProvider(credentialProviders).Retrieve()
 	if err != nil {
-		return nil, errors.Errorf("failed to retrieve credential: %v", err)
+		return nil, fmt.Errorf("failed to retrieve credential: %w", err)
 	}
 
 	dt, err := newDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
 
 	if err != nil {
-		return nil, errors.Errorf("Can't create discovery tool object: %v", err)
+		return nil, fmt.Errorf("can't create discovery tool object: %w", err)
 	}
 	return dt, nil
 }
@@ -107,7 +108,7 @@ func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool,
 func getMockSdkCli(httpResp *http.Response) (mockAliyunSDKCli, error) {
 	resp := responses.NewCommonResponse()
 	if err := responses.Unmarshal(resp, httpResp, "JSON"); err != nil {
-		return mockAliyunSDKCli{}, errors.Errorf("Can't parse response: %v", err)
+		return mockAliyunSDKCli{}, fmt.Errorf("can't parse response: %w", err)
 	}
 	return mockAliyunSDKCli{resp: resp}, nil
 }
@@ -273,7 +274,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			regions:             []string{"cn-shanghai"},
 			accessKeyID:         "dummy",
 			accessKeySecret:     "dummy",
-			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[" :unexpected end of JSON input`,
+			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[": unexpected end of JSON input`,
 			metrics: []*Metric{
 				{
 					MetricNames: []string{},

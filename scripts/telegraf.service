@@ -13,6 +13,7 @@ ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartForceExitStatus=SIGPIPE
 KillMode=control-group
+LimitMEMLOCK=8M:8M
 
 [Install]
 WantedBy=multi-user.target

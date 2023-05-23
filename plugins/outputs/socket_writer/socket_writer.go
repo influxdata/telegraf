@@ -4,6 +4,7 @@ package socket_writer
 import (
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -119,11 +120,12 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
-			if err, ok := err.(net.Error); ok {
+			var netErr net.Error
+			if errors.As(err, &netErr) {
 				// permanent error. close the connection
-				sw.Close() //nolint:revive // There is another error which will be returned here
+				sw.Close()
 				sw.Conn = nil
-				return fmt.Errorf("closing connection: %v", err)
+				return fmt.Errorf("closing connection: %w", netErr)
 			}
 			return err
 		}
@@ -142,13 +144,8 @@ func (sw *SocketWriter) Close() error {
 	return err
 }
 
-func newSocketWriter() *SocketWriter {
-	s := serializers.NewInfluxSerializer()
-	return &SocketWriter{
-		Serializer: s,
-	}
-}
-
 func init() {
-	outputs.Add("socket_writer", func() telegraf.Output { return newSocketWriter() })
+	outputs.Add("socket_writer", func() telegraf.Output {
+		return &SocketWriter{}
+	})
 }

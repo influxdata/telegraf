@@ -17,7 +17,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -381,7 +381,7 @@ status if configured.
 
 ## Example Output
 
-```shell
+```text
 docker,engine_host=debian-stretch-docker,server_version=17.09.0-ce n_containers=6i,n_containers_paused=0i,n_containers_running=1i,n_containers_stopped=5i,n_cpus=2i,n_goroutines=41i,n_images=2i,n_listener_events=0i,n_used_file_descriptors=27i 1524002041000000000
 docker,engine_host=debian-stretch-docker,server_version=17.09.0-ce,unit=bytes memory_total=2101661696i 1524002041000000000
 docker_container_mem,container_image=telegraf,container_name=zen_ritchie,container_status=running,container_version=unknown,engine_host=debian-stretch-docker,server_version=17.09.0-ce active_anon=8327168i,active_file=2314240i,cache=27402240i,container_id="adc4ba9593871bf2ab95f3ffde70d1b638b897bb225d21c2c9c84226a10a8cf4",hierarchical_memory_limit=9223372036854771712i,inactive_anon=0i,inactive_file=25088000i,limit=2101661696i,mapped_file=20582400i,max_usage=36646912i,pgfault=4193i,pgmajfault=214i,pgpgin=9243i,pgpgout=520i,rss=8327168i,rss_huge=0i,total_active_anon=8327168i,total_active_file=2314240i,total_cache=27402240i,total_inactive_anon=0i,total_inactive_file=25088000i,total_mapped_file=20582400i,total_pgfault=4193i,total_pgmajfault=214i,total_pgpgin=9243i,total_pgpgout=520i,total_rss=8327168i,total_rss_huge=0i,total_unevictable=0i,total_writeback=0i,unevictable=0i,usage=36528128i,usage_percent=0.4342225020025297,writeback=0i 1524002042000000000

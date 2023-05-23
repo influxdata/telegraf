@@ -28,10 +28,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var (
+const (
 	defaultListen             = ":9273"
 	defaultPath               = "/metrics"
 	defaultExpirationInterval = config.Duration(60 * time.Second)
+	defaultReadTimeout        = 10 * time.Second
+	defaultWriteTimeout       = 10 * time.Second
 )
 
 type Collector interface {
@@ -42,6 +44,8 @@ type Collector interface {
 
 type PrometheusClient struct {
 	Listen             string          `toml:"listen"`
+	ReadTimeout        config.Duration `toml:"read_timeout"`
+	WriteTimeout       config.Duration `toml:"write_timeout"`
 	MetricVersion      int             `toml:"metric_version"`
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
@@ -96,7 +100,7 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
-		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.Log)
+		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
@@ -113,7 +117,7 @@ func (p *PrometheusClient) Init() error {
 	for _, cidr := range p.IPRange {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
-			return fmt.Errorf("error parsing ip_range: %v", err)
+			return fmt.Errorf("error parsing ip_range: %w", err)
 		}
 
 		ipRange = append(ipRange, ipNet)
@@ -141,10 +145,19 @@ func (p *PrometheusClient) Init() error {
 		return err
 	}
 
+	if p.ReadTimeout < config.Duration(time.Second) {
+		p.ReadTimeout = config.Duration(defaultReadTimeout)
+	}
+	if p.WriteTimeout < config.Duration(time.Second) {
+		p.WriteTimeout = config.Duration(defaultWriteTimeout)
+	}
+
 	p.server = &http.Server{
-		Addr:      p.Listen,
-		Handler:   mux,
-		TLSConfig: tlsConfig,
+		Addr:         p.Listen,
+		Handler:      mux,
+		TLSConfig:    tlsConfig,
+		ReadTimeout:  time.Duration(p.ReadTimeout),
+		WriteTimeout: time.Duration(p.WriteTimeout),
 	}
 
 	return nil

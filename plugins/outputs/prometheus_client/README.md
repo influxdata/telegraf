@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -19,6 +19,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[outputs.prometheus_client]]
   ## Address to listen on.
   listen = ":9273"
+
+  ## Maximum duration before timing out read of the request
+  # read_timeout = "10s"
+  ## Maximum duration before timing out write of the response
+  # write_timeout = "10s"
 
   ## Metric version controls the mapping from Prometheus metrics into Telegraf metrics.
   ## See "Metric Format Configuration" in plugins/inputs/prometheus/README.md for details.

@@ -136,7 +136,7 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 		go func(baseUrl string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			if err := k.gatherKibanaStatus(baseUrl, acc); err != nil {
-				acc.AddError(fmt.Errorf("[url=%s]: %s", baseUrl, err))
+				acc.AddError(fmt.Errorf("[url=%s]: %w", baseUrl, err))
 				return
 			}
 		}(serv, acc)
@@ -218,7 +218,7 @@ func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) er
 func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err error) {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", fmt.Errorf("unable to create new request '%s': %v", url, err)
+		return "", fmt.Errorf("unable to create new request %q: %w", url, err)
 	}
 
 	if (k.Username != "") || (k.Password != "") {

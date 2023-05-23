@@ -3,6 +3,8 @@ package prometheus
 import (
 	"testing"
 
+	"k8s.io/client-go/tools/cache"
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +20,7 @@ func initPrometheus() *Prometheus {
 	prom.MonitorKubernetesPodsPort = 9102
 	prom.MonitorKubernetesPodsPath = "/metrics"
 	prom.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
+	prom.kubernetesPods = map[PodID]URLAndAddress{}
 	return prom
 }
 
@@ -127,7 +130,7 @@ func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
 }
 
 func TestAddPod(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -146,18 +149,20 @@ func TestAddPodScrapeConfig(t *testing.T) {
 }
 
 func TestAddMultipleDuplicatePods(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 	p.Name = "Pod2"
 	registerPod(p, prom)
-	require.Equal(t, 1, len(prom.kubernetesPods))
+
+	urls, _ := prom.GetAllURLs()
+	require.Equal(t, 1, len(urls))
 }
 
 func TestAddMultiplePods(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -169,32 +174,38 @@ func TestAddMultiplePods(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	unregisterPod(p, prom)
+
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	unregisterPod(PodID(podID), prom)
 	require.Equal(t, 0, len(prom.kubernetesPods))
 }
 
 func TestKeepDefaultNamespaceLabelName(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	tags := prom.kubernetesPods["http://127.0.0.1:9102/metrics"].Tags
+
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["namespace"])
 }
 
 func TestChangeNamespaceLabelName(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}, PodNamespaceLabelName: "pod_namespace"}
+	prom := &Prometheus{Log: testutil.Logger{}, PodNamespaceLabelName: "pod_namespace", kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	tags := prom.kubernetesPods["http://127.0.0.1:9102/metrics"].Tags
+
+	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["pod_namespace"])
 	require.Equal(t, "", tags["namespace"])
 }
@@ -253,6 +264,96 @@ func TestInvalidFieldSelector(t *testing.T) {
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
 	require.NotEqual(t, err, nil)
+}
+
+func TestAnnotationFilters(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{
+		"prometheus.io/scrape": "true",
+		"includeme":            "true",
+		"excludeme":            "true",
+		"neutral":              "true",
+	}
+
+	cases := []struct {
+		desc         string
+		include      []string
+		exclude      []string
+		expectedTags []string
+	}{
+		{"Just include",
+			[]string{"includeme"},
+			nil,
+			[]string{"includeme"}},
+		{"Just exclude",
+			nil,
+			[]string{"excludeme"},
+			[]string{"includeme", "neutral"}},
+		{"Include & exclude",
+			[]string{"includeme"},
+			[]string{"exludeme"},
+			[]string{"includeme"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
+			prom.PodAnnotationInclude = tc.include
+			prom.PodAnnotationExclude = tc.exclude
+			require.NoError(t, prom.initFilters())
+			registerPod(p, prom)
+			for _, pd := range prom.kubernetesPods {
+				for _, tagKey := range tc.expectedTags {
+					require.Contains(t, pd.Tags, tagKey)
+				}
+			}
+		})
+	}
+}
+
+func TestLabelFilters(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Labels = map[string]string{
+		"includeme": "true",
+		"excludeme": "true",
+		"neutral":   "true",
+	}
+
+	cases := []struct {
+		desc         string
+		include      []string
+		exclude      []string
+		expectedTags []string
+	}{
+		{"Just include",
+			[]string{"includeme"},
+			nil,
+			[]string{"includeme"}},
+		{"Just exclude",
+			nil,
+			[]string{"excludeme"},
+			[]string{"includeme", "neutral"}},
+		{"Include & exclude",
+			[]string{"includeme"},
+			[]string{"exludeme"},
+			[]string{"includeme"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
+			prom.PodLabelInclude = tc.include
+			prom.PodLabelExclude = tc.exclude
+			require.NoError(t, prom.initFilters())
+			registerPod(p, prom)
+			for _, pd := range prom.kubernetesPods {
+				for _, tagKey := range tc.expectedTags {
+					require.Contains(t, pd.Tags, tagKey)
+				}
+			}
+		})
+	}
 }
 
 func pod() *corev1.Pod {

@@ -18,6 +18,17 @@ receive a 200 OK response with message body `{"results":[]}` but they are not
 relayed. The output configuration of the Telegraf instance which ultimately
 submits data to InfluxDB determines the destination database.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -25,7 +36,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -93,3 +104,5 @@ curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=
 
 [influxdb_http_api]: https://docs.influxdata.com/influxdb/v1.8/guides/write_data/
 [http_listener_v2]: /plugins/inputs/http_listener_v2/README.md
+
+## Example Output

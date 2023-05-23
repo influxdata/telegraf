@@ -131,7 +131,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
-		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
+		return fmt.Errorf("unable to marshal TimeSeries: %w", err)
 	}
 
 	var req *http.Request
@@ -192,7 +192,7 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 		}
 		var p Point
 		if err := p.setValue(field.Value); err != nil {
-			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", field.Key, err.Error())
+			return ms, fmt.Errorf("unable to extract value from Field %v: %w", field.Key, err)
 		}
 		p[0] = float64(m.Time().Unix())
 		ms[field.Key] = p

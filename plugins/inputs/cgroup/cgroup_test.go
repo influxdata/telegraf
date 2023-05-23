@@ -59,7 +59,10 @@ func TestCgroupStatistics_2(t *testing.T) {
 
 	var cg = &CGroup{
 		Paths: []string{"testdata/cpu"},
-		Files: []string{"cpuacct.usage_percpu"},
+		Files: []string{
+			"cpuacct.usage_percpu",
+			"cpu.stat",
+		},
 	}
 
 	require.NoError(t, acc.GatherError(cg.Gather))
@@ -70,10 +73,14 @@ func TestCgroupStatistics_2(t *testing.T) {
 				"path": "testdata/cpu",
 			},
 			map[string]interface{}{
-				"cpuacct.usage_percpu.0": int64(-1452543795404),
-				"cpuacct.usage_percpu.1": int64(1376681271659),
-				"cpuacct.usage_percpu.2": int64(1450950799997),
-				"cpuacct.usage_percpu.3": int64(-1473113374257),
+				"cpu.stat.core_sched.force_idle_usec": int64(0),
+				"cpu.stat.system_usec":                int64(103537582650),
+				"cpu.stat.usage_usec":                 int64(614953149468),
+				"cpu.stat.user_usec":                  int64(511415566817),
+				"cpuacct.usage_percpu.0":              int64(-1452543795404),
+				"cpuacct.usage_percpu.1":              int64(1376681271659),
+				"cpuacct.usage_percpu.2":              int64(1450950799997),
+				"cpuacct.usage_percpu.3":              int64(-1473113374257),
 			},
 			time.Unix(0, 0),
 		),

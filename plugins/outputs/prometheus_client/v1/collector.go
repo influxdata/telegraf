@@ -57,16 +57,30 @@ type Collector struct {
 	Log                telegraf.Logger
 
 	sync.Mutex
-	fam map[string]*MetricFamily
+	fam          map[string]*MetricFamily
+	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool, logger telegraf.Logger) *Collector {
-	return &Collector{
+func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool, logger telegraf.Logger) *Collector {
+	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
+		ExportTimestamp:    exportTimestamp,
 		Log:                logger,
 		fam:                make(map[string]*MetricFamily),
 	}
+
+	if c.ExpirationInterval != 0 {
+		c.expireTicker = time.NewTicker(c.ExpirationInterval)
+		go func() {
+			for {
+				<-c.expireTicker.C
+				c.Expire(time.Now())
+			}
+		}()
+	}
+
+	return c
 }
 
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
@@ -76,10 +90,6 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.Lock()
 	defer c.Unlock()
-
-	// Expire metrics, doing this on Collect ensure metrics are removed even if no
-	// new metrics are added to the output.
-	c.Expire(time.Now(), c.ExpirationInterval)
 
 	for name, family := range c.fam {
 		// Get list of all labels on MetricFamily
@@ -368,22 +378,17 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 				c.addMetricFamily(point, sample, mname, sampleID)
 			}
 		}
-
-		// Expire metrics, doing this on Add ensure metrics are removed even if no
-		// one is querying the data.
-		c.Expire(time.Now(), c.ExpirationInterval)
 	}
 	return nil
 }
 
-func (c *Collector) Expire(now time.Time, age time.Duration) {
-	if age == 0 {
-		return
-	}
+func (c *Collector) Expire(now time.Time) {
+	c.Lock()
+	defer c.Unlock()
 
 	for name, family := range c.fam {
 		for key, sample := range family.Samples {
-			if age != 0 && now.After(sample.Expiration) {
+			if now.After(sample.Expiration) {
 				for k := range sample.Labels {
 					family.LabelSet[k]--
 				}

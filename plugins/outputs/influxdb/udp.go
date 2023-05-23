@@ -46,10 +46,12 @@ func NewUDPClient(config UDPConfig) (*udpClient, error) {
 
 	serializer := config.Serializer
 	if serializer == nil {
-		s := influx.NewSerializer()
-		serializer = s
+		serializer = &influx.Serializer{}
+		if err := serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
-	serializer.SetMaxLineBytes(size)
+	serializer.MaxLineBytes = size
 
 	dialer := config.Dialer
 	if dialer == nil {
@@ -85,7 +87,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	if c.conn == nil {
 		conn, err := c.dialer.DialContext(ctx, c.url.Scheme, c.url.Host)
 		if err != nil {
-			return fmt.Errorf("error dialing address [%s]: %s", c.url, err)
+			return fmt.Errorf("error dialing address [%s]: %w", c.url, err)
 		}
 		c.conn = conn
 	}

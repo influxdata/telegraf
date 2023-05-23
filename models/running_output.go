@@ -21,6 +21,7 @@ const (
 type OutputConfig struct {
 	Name   string
 	Alias  string
+	ID     string
 	Filter Filter
 
 	FlushInterval     time.Duration
@@ -128,11 +129,20 @@ func (r *RunningOutput) Init() error {
 	return nil
 }
 
+func (r *RunningOutput) ID() string {
+	if p, ok := r.Output.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return r.Config.ID
+}
+
 // AddMetric adds a metric to the output.
-//
 // Takes ownership of metric
 func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
-	if ok := r.Config.Filter.Select(metric); !ok {
+	ok, err := r.Config.Filter.Select(metric)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		r.metricFiltered(metric)
 		return
 	}

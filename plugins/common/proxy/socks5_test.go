@@ -15,12 +15,12 @@ func TestSocks5ProxyConfigIntegration(t *testing.T) {
 	}
 
 	const (
-		proxyAddress  = "0.0.0.0:12345"
+		proxyAddress  = "127.0.0.1:12345"
 		proxyUsername = "user"
 		proxyPassword = "password"
 	)
 
-	l, err := net.Listen("tcp", "0.0.0.0:0")
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	server, err := socks5.New(&socks5.Config{

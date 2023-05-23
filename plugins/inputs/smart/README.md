@@ -87,7 +87,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -96,21 +96,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.smart]]
     ## Optionally specify the path to the smartctl executable
     # path_smartctl = "/usr/bin/smartctl"
-  
+
     ## Optionally specify the path to the nvme-cli executable
     # path_nvme = "/usr/bin/nvme"
-  
+
     ## Optionally specify if vendor specific attributes should be propagated for NVMe disk case
     ## ["auto-on"] - automatically find and enable additional vendor specific disk info
     ## ["vendor1", "vendor2", ...] - e.g. "Intel" enable additional Intel specific disk info
     # enable_extensions = ["auto-on"]
-  
+
     ## On most platforms used cli utilities requires root access.
     ## Setting 'use_sudo' to true will make use of sudo to run smartctl or nvme-cli.
     ## Sudo must be configured to allow the telegraf user to run smartctl or nvme-cli
     ## without a password.
     # use_sudo = false
-  
+
     ## Skip checking disks in this power mode. Defaults to
     ## "standby" to not wake up disks that have stopped rotating.
     ## See --nocheck in the man pages for smartctl.
@@ -118,22 +118,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## power mode and might require changing this value to
     ## "never" depending on your disks.
     # nocheck = "standby"
-  
+
     ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
     ## information from each drive into the 'smart_attribute' measurement.
     # attributes = false
-  
+
     ## Optionally specify devices to exclude from reporting if disks auto-discovery is performed.
     # excludes = [ "/dev/pass6" ]
-  
+
     ## Optionally specify devices and device type, if unset
     ## a scan (smartctl --scan and smartctl --scan -d nvme) for S.M.A.R.T. devices will be done
     ## and all found will be included except for the excluded in excludes.
     # devices = [ "/dev/ada0 -d atacam", "/dev/nvme0"]
-  
+
     ## Timeout for the cli command to complete.
     # timeout = "30s"
-    
+
     ## Optionally call smartctl and nvme-cli with a specific concurrency policy.
     ## By default, smartctl and nvme-cli are called in separate threads (goroutines) to gather disk attributes.
     ## Some devices (e.g. disks in RAID arrays) may have access limitations that require sequential reading of
@@ -297,7 +297,7 @@ to sequential:
 
 ## Example Output
 
-```shell
+```text
 smart_device,enabled=Enabled,host=mbpro.local,device=rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
 smart_attribute,capacity=500277790720,device=rdisk0,enabled=Enabled,fail=-,flags=-O-RC-,host=mbpro.local,id=199,model=APPLE\ SSD\ SM0512F,name=UDMA_CRC_Error_Count,serial_no=S1K5NYCD964433,wwn=5002538655584d30 exit_status=0i,raw_value=0i,threshold=0i,value=200i,worst=200i 1502536854000000000
 smart_attribute,capacity=500277790720,device=rdisk0,enabled=Enabled,fail=-,flags=-O---K,host=mbpro.local,id=199,model=APPLE\ SSD\ SM0512F,name=Unknown_SSD_Attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30 exit_status=0i,raw_value=0i,threshold=0i,value=100i,worst=100i 1502536854000000000

@@ -7,7 +7,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func (z *Zfs) Gather(acc telegraf.Accumulator) error {
+func (*Zfs) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

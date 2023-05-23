@@ -29,7 +29,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -68,7 +68,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```text
+```shell
 > pfctl -s info
 Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
@@ -95,8 +95,6 @@ Counters
   synproxy                               0            0.0/s
 ```
 
-```shell
-> ./telegraf --config telegraf.conf --input-filter pf --test
-* Plugin: inputs.pf, Collection 1
-> pf,host=columbia entries=3i,searches=2668i,inserts=12i,removals=9i 1510941775000000000
+```text
+pf,host=columbia entries=3i,searches=2668i,inserts=12i,removals=9i 1510941775000000000
 ```

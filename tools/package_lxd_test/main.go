@@ -10,7 +10,7 @@ import (
 )
 
 var imagesRPM = []string{
-	"fedora/35",
+	"fedora/37",
 	"fedora/36",
 	"centos/7",
 	"centos/9-Stream",
@@ -20,10 +20,8 @@ var imagesRPM = []string{
 }
 
 var imagesDEB = []string{
-	"debian/buster",
 	"debian/bullseye",
 	"debian/bookworm",
-	"ubuntu/bionic",
 	"ubuntu/focal",
 	"ubuntu/jammy",
 }
@@ -47,10 +45,10 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 			if image != "" && packageFile != "" {
-				fmt.Printf("test package '%s' on image '%s'\n", packageFile, image)
+				fmt.Printf("test package %q on image %q\n", packageFile, image)
 				return launchTests(packageFile, []string{image})
 			} else if packageFile != "" {
-				fmt.Printf("test package '%s' on all applicable images\n", packageFile)
+				fmt.Printf("test package %q on all applicable images\n", packageFile)
 
 				extension := filepath.Ext(packageFile)
 				switch extension {

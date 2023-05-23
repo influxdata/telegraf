@@ -18,7 +18,30 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `sec_name`,
+`auth_password` and `priv_password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
+## SNMP backend: gosmi and netsnmp
+
+Telegraf has two backends to translate SNMP objects. By default, Telegraf will
+use `netsnmp`, however, this option is deprecated and it is encouraged that
+users migrate to `gosmi`. If users find issues with `gosmi` that do not occur
+with `netsnmp` please open a project issue on GitHub.
+
+The SNMP backend setting is a global-level setting that applies to all use of
+SNMP in Telegraf. Users can set this option in the `[agent]` configuration via
+the `snmp_translator` option. See the [agent configuration][AGENT] for more
+details.
+
+[AGENT]: ../../../docs/CONFIGURATION.md#agent
 
 ## Configuration
 
@@ -104,10 +127,12 @@ On Mac OS, listening on privileged ports is unrestricted on versions
 
 ## Example Output
 
-```shell
+```text
 snmp_trap,mib=SNMPv2-MIB,name=coldStart,oid=.1.3.6.1.6.3.1.1.5.1,source=192.168.122.102,version=2c,community=public snmpTrapEnterprise.0="linux",sysUpTimeInstance=1i 1574109187723429814
 snmp_trap,mib=NET-SNMP-AGENT-MIB,name=nsNotifyShutdown,oid=.1.3.6.1.4.1.8072.4.0.2,source=192.168.122.102,version=2c,community=public sysUpTimeInstance=5803i,snmpTrapEnterprise.0="netSnmpNotificationPrefix" 1574109186555115459
 ```
 
-[net-snmp]: http://www.net-snmp.org/
-[man snmpcmd]: http://net-snmp.sourceforge.net/docs/man/snmpcmd.html#lbAK
+## References
+
+- [net-snmp project home](http://www.net-snmp.org)
+- [`snmpcmd` man-page](http://net-snmp.sourceforge.net/docs/man/snmpcmd.html)

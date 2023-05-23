@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/99designs/keyring"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/secretstores"
@@ -39,15 +40,21 @@ func (j *Jose) Init() error {
 		return errors.New("path missing")
 	}
 
-	passwd, err := j.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %v", err)
-	}
-	defer config.ReleaseSecret(passwd)
-
 	// Create the prompt-function in case we need it
 	promptFunc := keyring.TerminalPrompt
-	if len(passwd) != 0 {
+	if !j.Password.Empty() {
+		passwd, err := j.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer config.ReleaseSecret(passwd)
+		promptFunc = keyring.FixedStringPrompt(string(passwd))
+	} else if !config.Password.Empty() {
+		passwd, err := config.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting global password failed: %w", err)
+		}
+		defer config.ReleaseSecret(passwd)
 		promptFunc = keyring.FixedStringPrompt(string(passwd))
 	}
 
@@ -59,7 +66,7 @@ func (j *Jose) Init() error {
 	}
 	kr, err := keyring.Open(cfg)
 	if err != nil {
-		return fmt.Errorf("opening keyring failed: %v", err)
+		return fmt.Errorf("opening keyring failed: %w", err)
 	}
 	j.ring = kr
 

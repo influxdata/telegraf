@@ -385,7 +385,7 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		t.Skip("no cgroups in windows")
 	}
 	td := t.TempDir()
-	err := os.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0644)
+	err := os.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0640)
 	require.NoError(t, err)
 
 	p := Procstat{

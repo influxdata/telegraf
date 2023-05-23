@@ -1,6 +1,7 @@
 package execd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -151,15 +152,17 @@ func TestMain(m *testing.M) {
 func runCountMultiplierProgram() {
 	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	_ = serializer.Init() // this should always succeed
 
 	for {
 		m, err := parser.Next()
 		if err != nil {
-			if err == influx.EOF {
+			if errors.Is(err, influx.EOF) {
 				return // stream ended
 			}
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				//nolint:revive // os.Exit called intentionally
 				os.Exit(1)

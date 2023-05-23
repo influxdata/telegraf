@@ -14,15 +14,27 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesI
 		acc.AddError(err)
 		return
 	}
+
+	ki.gatherNodeCount(len(list.Items), acc)
+
 	for _, n := range list.Items {
 		ki.gatherNode(n, acc)
 	}
 }
 
+func (ki *KubernetesInventory) gatherNodeCount(count int, acc telegraf.Accumulator) {
+	fields := map[string]interface{}{"node_count": count}
+	tags := map[string]string{}
+
+	acc.AddFields(nodeMeasurement, fields, tags)
+}
+
 func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
-		"node_name": n.Name,
+		"node_name":         n.Name,
+		"cluster_namespace": n.Annotations["cluster.x-k8s.io/cluster-namespace"],
+		"version":           n.Status.NodeInfo.KubeletVersion,
 	}
 
 	for resourceName, val := range n.Status.Capacity {
@@ -48,6 +60,39 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 			fields["allocatable_pods"] = atoi(val.String())
 		}
 	}
+
+	for _, val := range n.Status.Conditions {
+		conditionfields := map[string]interface{}{}
+		conditiontags := map[string]string{
+			"status":    string(val.Status),
+			"condition": string(val.Type),
+		}
+		for k, v := range tags {
+			conditiontags[k] = v
+		}
+		running := 0
+		nodeready := 0
+		if val.Status == "True" {
+			if val.Type == "Ready" {
+				nodeready = 1
+			}
+			running = 1
+		} else if val.Status == "Unknown" {
+			if val.Type == "Ready" {
+				nodeready = 0
+			}
+			running = 2
+		}
+		conditionfields["status_condition"] = running
+		conditionfields["ready"] = nodeready
+		acc.AddFields(nodeMeasurement, conditionfields, conditiontags)
+	}
+
+	unschedulable := 0
+	if n.Spec.Unschedulable {
+		unschedulable = 1
+	}
+	fields["spec_unschedulable"] = unschedulable
 
 	acc.AddFields(nodeMeasurement, fields, tags)
 }

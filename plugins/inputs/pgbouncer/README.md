@@ -14,7 +14,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -91,7 +91,7 @@ the server and doesn't restrict the databases we are trying to grab metrics for.
 
 ## Example Output
 
-```shell
+```text
 pgbouncer,db=pgbouncer,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\  avg_query_count=0i,avg_query_time=0i,avg_wait_time=0i,avg_xact_count=0i,avg_xact_time=0i,total_query_count=26i,total_query_time=0i,total_received=0i,total_sent=0i,total_wait_time=0i,total_xact_count=26i,total_xact_time=0i 1581569936000000000
 pgbouncer_pools,db=pgbouncer,pool_mode=statement,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\ ,user=pgbouncer cl_active=1i,cl_waiting=0i,maxwait=0i,maxwait_us=0i,sv_active=0i,sv_idle=0i,sv_login=0i,sv_tested=0i,sv_used=0i 1581569936000000000
 ```

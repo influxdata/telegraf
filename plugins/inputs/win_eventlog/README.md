@@ -18,15 +18,16 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Input plugin to collect Windows Event Log messages
+# This plugin ONLY supports Windows
 [[inputs.win_eventlog]]
-  ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
-  ## (System log, for example)
+  ## Telegraf should have Administrator permissions to subscribe for some
+  ## Windows Events channels (e.g. System log)
 
   ## LCID (Locale ID) for event rendering
   ## 1033 to force English language
@@ -64,42 +65,58 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   </QueryList>
   '''
 
-  ## System field names:
-  ##   "Source", "EventID", "Version", "Level", "Task", "Opcode", "Keywords", "TimeCreated",
-  ##   "EventRecordID", "ActivityID", "RelatedActivityID", "ProcessID", "ThreadID", "ProcessName",
-  ##   "Channel", "Computer", "UserID", "UserName", "Message", "LevelText", "TaskText", "OpcodeText"
-
-  ## In addition to System, Data fields can be unrolled from additional XML nodes in event.
-  ## Human-readable representation of those nodes is formatted into event Message field,
-  ## but XML is more machine-parsable
+  ## When true, event logs are read from the beginning; otherwise only future
+  ## events will be logged.
+  # from_beginning = false
 
   # Process UserData XML to fields, if this node exists in Event XML
-  process_userdata = true
+  # process_userdata = true
 
   # Process EventData XML to fields, if this node exists in Event XML
-  process_eventdata = true
+  # process_eventdata = true
 
   ## Separator character to use for unrolled XML Data field names
-  separator = "_"
+  # separator = "_"
 
-  ## Get only first line of Message field. For most events first line is usually more than enough
-  only_first_line_of_message = true
+  ## Get only first line of Message field. For most events first line is
+  ## usually more than enough
+  # only_first_line_of_message = true
 
   ## Parse timestamp from TimeCreated.SystemTime event field.
-  ## Will default to current time of telegraf processing on parsing error or if set to false
-  timestamp_from_event = true
+  ## Will default to current time of telegraf processing on parsing error or if
+  ## set to false
+  # timestamp_from_event = true
 
-  ## Fields to include as tags. Globbing supported ("Level*" for both "Level" and "LevelText")
-  event_tags = ["Source", "EventID", "Level", "LevelText", "Task", "TaskText", "Opcode", "OpcodeText", "Keywords", "Channel", "Computer"]
+  ## System field names:
+  ##   "Source", "EventID", "Version", "Level", "Task", "Opcode", "Keywords",
+  ##   "TimeCreated", "EventRecordID", "ActivityID", "RelatedActivityID",
+  ##   "ProcessID", "ThreadID", "ProcessName", "Channel", "Computer", "UserID",
+  ##   "UserName", "Message", "LevelText", "TaskText", "OpcodeText"
+  ##
+  ## In addition to System, Data fields can be unrolled from additional XML
+  ## nodes in event. Human-readable representation of those nodes is formatted
+  ## into event Message field, but XML is more machine-parsable
 
-  ## Default list of fields to send. All fields are sent by default. Globbing supported
-  event_fields = ["*"]
+  ## Event fields to include as tags
+  ## The values below are included by default.
+  ## Globbing supported (e.g. "Level*" matches both "Level" and "LevelText")
+  # event_tags = ["Source", "EventID", "Level", "LevelText", "Task", "TaskText", "Opcode", "OpcodeText", "Keywords", "Channel", "Computer"]
 
-  ## Fields to exclude. Also applied to data fields. Globbing supported
-  exclude_fields = ["TimeCreated", "Binary", "Data_Address*"]
+  ## Event fields to include
+  ## All fields are sent by default.
+  ## Globbing supported (e.g. "Level*" matches both "Level" and "LevelText")
+  # event_fields = ["*"]
 
-  ## Skip those tags or fields if their value is empty or equals to zero. Globbing supported
-  exclude_empty = ["*ActivityID", "UserID"]
+  ## Event fields to exclude
+  ## Note that if you exclude all fields then no metrics are produced. A valid
+  ## metric includes at least one field.
+  ## Globbing supported (e.g. "Level*" matches both "Level" and "LevelText")
+  # exclude_fields = []
+
+  ## Event fields to exclude if their value is empty or equals to zero
+  ## The values below are included by default.
+  ## Globbing supported (e.g. "Level*" matches both "Level" and "LevelText")
+  # exclude_empty = ["Task", "Opcode", "*ActivityID", "UserID"]
 ```
 
 ### Filtering
@@ -260,11 +277,7 @@ Some values are changed for anonymity.
 
 ```text
 win_eventlog,Channel=System,Computer=PC,EventID=105,Keywords=0x8000000000000000,Level=4,LevelText=Information,Opcode=10,OpcodeText=General,Source=WudfUsbccidDriver,Task=1,TaskText=Driver,host=PC ProcessName="WUDFHost.exe",UserName="NT AUTHORITY\\LOCAL SERVICE",Data_dwMaxCCIDMessageLength="271",Data_bPINSupport="0x0",Data_bMaxCCIDBusySlots="1",EventRecordID=1914688i,UserID="S-1-5-19",Version=0i,Data_bClassGetEnvelope="0x0",Data_wLcdLayout="0x0",Data_bClassGetResponse="0x0",TimeCreated="2020-08-21T08:43:26.7481077Z",Message="The Smartcard reader reported the following class descriptor (part 2)." 1597999410000000000
-
 win_eventlog,Channel=Security,Computer=PC,EventID=4798,Keywords=Audit\ Success,Level=0,LevelText=Information,Opcode=0,OpcodeText=Info,Source=Microsoft-Windows-Security-Auditing,Task=13824,TaskText=User\ Account\ Management,host=PC Data_TargetDomainName="PC",Data_SubjectUserName="User",Data_CallerProcessId="0x3d5c",Data_SubjectLogonId="0x46d14f8d",Version=0i,EventRecordID=223157i,Message="A user's local group membership was enumerated.",Data_TargetUserName="User",Data_TargetSid="S-1-5-21-.-.-.-1001",Data_SubjectUserSid="S-1-5-21-.-.-.-1001",Data_CallerProcessName="C:\\Windows\\explorer.exe",ActivityID="{0d4cc11d-7099-0002-4dc1-4c0d9970d601}",UserID="",Data_SubjectDomainName="PC",TimeCreated="2020-08-21T08:43:27.3036771Z",ProcessName="lsass.exe" 1597999410000000000
-
 win_eventlog,Channel=Microsoft-Windows-Dhcp-Client/Admin,Computer=PC,EventID=1002,Keywords=0x4000000000000001,Level=2,LevelText=Error,Opcode=76,OpcodeText=IpLeaseDenied,Source=Microsoft-Windows-Dhcp-Client,Task=3,TaskText=Address\ Configuration\ State\ Event,host=PC Version=0i,Message="The IP address lease 10.20.30.40 for the Network Card with network address 0xaabbccddeeff has been denied by the DHCP server 10.20.30.1 (The DHCP Server sent a DHCPNACK message).",UserID="S-1-5-19",Data_HWLength="6",Data_HWAddress="545595B7EA01",TimeCreated="2020-08-21T08:43:42.8265853Z",EventRecordID=34i,ProcessName="svchost.exe",UserName="NT AUTHORITY\\LOCAL SERVICE" 1597999430000000000
-
 win_eventlog,Channel=System,Computer=PC,EventID=10016,Keywords=Classic,Level=3,LevelText=Warning,Opcode=0,OpcodeText=Info,Source=Microsoft-Windows-DistributedCOM,Task=0,host=PC Data_param3="Активация",Data_param6="PC",Data_param8="S-1-5-21-2007059868-50816014-3139024325-1001",Version=0i,UserName="PC\\User",Data_param1="по умолчанию для компьютера",Data_param2="Локально",Data_param7="User",Data_param9="LocalHost (с использованием LRPC)",Data_param10="Microsoft.Windows.ShellExperienceHost_10.0.19041.423_neutral_neutral_cw5n1h2txyewy",ActivityID="{839cac9e-73a1-4559-a847-62f3a5e73e44}",ProcessName="svchost.exe",Message="The по умолчанию для компьютера permission settings do not grant Локально Активация permission for the COM Server application with CLSID ",Data_param5="{316CDED5-E4AE-4B15-9113-7055D84DCC97}",Data_param11="S-1-15-2-.-.-.-.-.-.-2861478708",TimeCreated="2020-08-21T08:43:45.5233759Z",EventRecordID=1914689i,UserID="S-1-5-21-.-.-.-1001",Data_param4="{C2F03A33-21F5-47FA-B4BB-156362A2F239}" 1597999430000000000
-
 ```

@@ -16,7 +16,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -60,6 +60,12 @@ Defaults!FAIL2BAN !logfile, !syslog, !pam_session
 
 ## Example Output
 
+```text
+fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
+```
+
+### Execute the binary directly
+
 ```shell
 # fail2ban-client status sshd
 Status for the jail: sshd
@@ -71,8 +77,4 @@ Status for the jail: sshd
    |- Currently banned: 2
    |- Total banned:     10
    `- Banned IP list:   192.168.0.1 192.168.0.2
-```
-
-```shell
-fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
 ```

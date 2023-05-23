@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -45,6 +46,7 @@ type SocketListener struct {
 	KeepAlivePeriod      *config.Duration `toml:"keep_alive_period"`
 	SocketMode           string           `toml:"socket_mode"`
 	ContentEncoding      string           `toml:"content_encoding"`
+	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
 	SplittingStrategy    string           `toml:"splitting_strategy"`
 	SplittingDelimiter   string           `toml:"splitting_delimiter"`
 	SplittingLength      int              `toml:"splitting_length"`
@@ -159,6 +161,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("parsing address failed: %w", err)
 	}
 
+	if sl.MaxDecompressionSize <= 0 {
+		sl.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+	}
+
 	switch u.Scheme {
 	case "tcp", "tcp4", "tcp6":
 		ssl := &streamListener{
@@ -195,8 +201,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	case "udp", "udp4", "udp6":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:             sl.ContentEncoding,
+			MaxDecompressionSize: int64(sl.MaxDecompressionSize),
+			Parser:               sl.parser,
 		}
 		if err := psl.setupUDP(u, ifname, int(sl.ReadBufferSize)); err != nil {
 			return err
@@ -204,8 +211,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.listener = psl
 	case "ip", "ip4", "ip6":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:             sl.ContentEncoding,
+			MaxDecompressionSize: int64(sl.MaxDecompressionSize),
+			Parser:               sl.parser,
 		}
 		if err := psl.setupIP(u); err != nil {
 			return err
@@ -213,8 +221,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.listener = psl
 	case "unixgram":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:             sl.ContentEncoding,
+			MaxDecompressionSize: int64(sl.MaxDecompressionSize),
+			Parser:               sl.parser,
 		}
 		if err := psl.setupUnixgram(u, sl.SocketMode); err != nil {
 			return err

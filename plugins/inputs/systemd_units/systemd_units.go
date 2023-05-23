@@ -196,9 +196,7 @@ func setSystemctl(timeout config.Duration, unitType string, pattern string) (*by
 	// create patterns parameters if provided in config
 	if pattern != "" {
 		psplit := strings.SplitN(pattern, " ", -1)
-		for v := range psplit {
-			params = append(params, psplit[v])
-		}
+		params = append(params, psplit...)
 	}
 	params = append(params, "--all", "--plain")
 	// add type as configured in config
@@ -209,7 +207,7 @@ func setSystemctl(timeout config.Duration, unitType string, pattern string) (*by
 	cmd.Stdout = &out
 	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl %s: %s", strings.Join(params, " "), err)
+		return &out, fmt.Errorf("error running systemctl %q: %w", strings.Join(params, " "), err)
 	}
 	return &out, nil
 }

@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.netlow
+//go:build !custom || inputs || inputs.netflow
 
 package all
 

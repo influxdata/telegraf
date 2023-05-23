@@ -1,14 +1,16 @@
 package prometheus
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/config"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/fields"
@@ -76,6 +78,65 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
 }
 
+func TestPrometheusCustomHeader(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.Header.Get("accept"))
+		switch r.Header.Get("accept") {
+		case "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3":
+			_, err := fmt.Fprintln(w, "proto 15 1490802540000")
+			require.NoError(t, err)
+		case "text/plain":
+			_, err := fmt.Fprintln(w, "plain 42 1490802380000")
+			require.NoError(t, err)
+		default:
+			_, err := fmt.Fprintln(w, "other 44 1490802420000")
+			require.NoError(t, err)
+		}
+	}))
+	defer ts.Close()
+
+	tests := []struct {
+		name                    string
+		headers                 map[string]string
+		expectedMeasurementName string
+	}{
+		{
+			"default",
+			map[string]string{},
+			"proto",
+		},
+		{
+			"plain text",
+			map[string]string{
+				"accept": "text/plain",
+			},
+			"plain",
+		},
+		{
+			"other",
+			map[string]string{
+				"accept": "fakeACCEPTitem",
+			},
+			"other",
+		},
+	}
+
+	for _, test := range tests {
+		p := &Prometheus{
+			Log:         testutil.Logger{},
+			URLs:        []string{ts.URL},
+			URLTag:      "url",
+			HTTPHeaders: test.headers,
+		}
+		err := p.Init()
+		require.NoError(t, err)
+
+		var acc testutil.Accumulator
+		require.NoError(t, acc.GatherError(p.Gather))
+		require.Equal(t, test.expectedMeasurementName, acc.Metrics[0].Measurement)
+	}
+}
+
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
@@ -135,6 +196,116 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+}
+
+func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(4 * time.Second)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL},
+		URLTag:          "url",
+		ResponseTimeout: config.Duration(time.Second * 5),
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	require.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	require.True(t, acc.HasFloatField("test_metric", "value"))
+	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	require.False(t, acc.HasTag("test_metric", "address"))
+	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+}
+
+func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(6 * time.Second)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL},
+		URLTag:          "url",
+		ResponseTimeout: config.Duration(time.Second * 5),
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(p.Gather)
+	errMessage := fmt.Sprintf("error making HTTP request to \"%s/metrics\": Get \"%s/metrics\": "+
+		"context deadline exceeded (Client.Timeout exceeded while awaiting headers)", ts.URL, ts.URL)
+	errExpected := errors.New(errMessage)
+	require.Error(t, err)
+	require.Equal(t, errExpected.Error(), err.Error())
+}
+
+func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(4 * time.Second)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
+	}
+	err := p.Init()
+	require.NoError(t, err)
+	p.client.Timeout = time.Second * 5
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	require.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	require.True(t, acc.HasFloatField("test_metric", "value"))
+	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	require.False(t, acc.HasTag("test_metric", "address"))
+	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+}
+
+func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(6 * time.Second)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
+	}
+	err := p.Init()
+	require.NoError(t, err)
+	p.client.Timeout = time.Second * 5
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(p.Gather)
+	require.ErrorContains(t, err, "error making HTTP request to \""+ts.URL+"/metrics\"")
 }
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
@@ -301,30 +472,35 @@ func TestInitConfigErrors(t *testing.T) {
 	}
 
 	// Both invalid IP addresses
-	p.NodeIP = "10.240.0.0.0"
-	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0.0"))
-	err := p.Init()
-	require.Error(t, err)
-	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; " +
-		"cannot get pod list for monitor_kubernetes_pods using node scrape scope"
-	require.Equal(t, expectedMessage, err.Error())
-	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0"))
+	t.Run("Both invalid IP addresses", func(t *testing.T) {
+		p.NodeIP = "10.240.0.0.0"
+		t.Setenv("NODE_IP", "10.000.0.0.0")
+		err := p.Init()
+		require.Error(t, err)
+		expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+			"cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+		require.Equal(t, expectedMessage, err.Error())
+	})
 
-	p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
-	err = p.Init()
-	expectedMessage = "error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
-	require.Error(t, err, expectedMessage)
-	p.KubernetesLabelSelector = "label0==label"
+	t.Run("Valid IP address", func(t *testing.T) {
+		t.Setenv("NODE_IP", "10.000.0.0")
 
-	p.KubernetesFieldSelector = "field,"
-	err = p.Init()
-	expectedMessage = "error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
-	require.Error(t, err, expectedMessage)
+		p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
+		err := p.Init()
+		expectedMessage := "error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
+		require.Error(t, err, expectedMessage)
+		p.KubernetesLabelSelector = "label0==label"
 
-	p.KubernetesFieldSelector = "spec.containerNames=containerNames"
-	err = p.Init()
-	expectedMessage = "the field selector spec.containerNames is not supported for pods"
-	require.Error(t, err, expectedMessage)
+		p.KubernetesFieldSelector = "field,"
+		err = p.Init()
+		expectedMessage = "error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
+		require.Error(t, err, expectedMessage)
+
+		p.KubernetesFieldSelector = "spec.containerNames=containerNames"
+		err = p.Init()
+		expectedMessage = "the field selector spec.containerNames is not supported for pods"
+		require.Error(t, err, expectedMessage)
+	})
 }
 
 func TestInitConfigSelectors(t *testing.T) {

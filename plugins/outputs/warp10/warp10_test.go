@@ -1,8 +1,10 @@
 package warp10
 
 import (
+	"math"
 	"testing"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -16,18 +18,51 @@ func TestWriteWarp10(t *testing.T) {
 	w := Warp10{
 		Prefix:  "unit.test",
 		WarpURL: "http://localhost:8090",
-		Token:   "WRITE",
+		Token:   config.NewSecret([]byte("WRITE")),
 	}
 
 	payload := w.GenWarp10Payload(testutil.MockMetrics())
 	require.Exactly(t, "1257894000000000// unit.testtest1.value{source=telegraf,tag1=value1} 1.000000\n", payload)
 }
 
+func TestWriteWarp10ValueNaN(t *testing.T) {
+	w := Warp10{
+		Prefix:  "unit.test",
+		WarpURL: "http://localhost:8090",
+		Token:   config.NewSecret([]byte("WRITE")),
+	}
+
+	payload := w.GenWarp10Payload(testutil.MockMetricsWithValue(math.NaN()))
+	require.Exactly(t, "1257894000000000// unit.testtest1.value{source=telegraf,tag1=value1} NaN\n", payload)
+}
+
+func TestWriteWarp10ValueInfinity(t *testing.T) {
+	w := Warp10{
+		Prefix:  "unit.test",
+		WarpURL: "http://localhost:8090",
+		Token:   config.NewSecret([]byte("WRITE")),
+	}
+
+	payload := w.GenWarp10Payload(testutil.MockMetricsWithValue(math.Inf(1)))
+	require.Exactly(t, "1257894000000000// unit.testtest1.value{source=telegraf,tag1=value1} Infinity\n", payload)
+}
+
+func TestWriteWarp10ValueMinusInfinity(t *testing.T) {
+	w := Warp10{
+		Prefix:  "unit.test",
+		WarpURL: "http://localhost:8090",
+		Token:   config.NewSecret([]byte("WRITE")),
+	}
+
+	payload := w.GenWarp10Payload(testutil.MockMetricsWithValue(math.Inf(-1)))
+	require.Exactly(t, "1257894000000000// unit.testtest1.value{source=telegraf,tag1=value1} -Infinity\n", payload)
+}
+
 func TestWriteWarp10EncodedTags(t *testing.T) {
 	w := Warp10{
 		Prefix:  "unit.test",
 		WarpURL: "http://localhost:8090",
-		Token:   "WRITE",
+		Token:   config.NewSecret([]byte("WRITE")),
 	}
 
 	metrics := testutil.MockMetrics()
@@ -43,7 +78,7 @@ func TestHandleWarp10Error(t *testing.T) {
 	w := Warp10{
 		Prefix:  "unit.test",
 		WarpURL: "http://localhost:8090",
-		Token:   "WRITE",
+		Token:   config.NewSecret([]byte("WRITE")),
 	}
 	tests := [...]*ErrorTest{
 		{

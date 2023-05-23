@@ -22,7 +22,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -135,7 +135,7 @@ time                non_negative_derivative_A non_negative_derivative_PTR
 
 Here is example output of this plugin:
 
-```shell
+```text
 bind_memory,host=LAP,port=8053,source=localhost,url=localhost:8053 block_size=12058624i,context_size=4575056i,in_use=4113717i,lost=0i,total_use=16663252i 1554276619000000000
 bind_counter,host=LAP,port=8053,source=localhost,type=opcode,url=localhost:8053 IQUERY=0i,NOTIFY=0i,QUERY=9i,STATUS=0i,UPDATE=0i 1554276619000000000
 bind_counter,host=LAP,port=8053,source=localhost,type=rcode,url=localhost:8053 17=0i,18=0i,19=0i,20=0i,21=0i,22=0i,BADCOOKIE=0i,BADVERS=0i,FORMERR=0i,NOERROR=7i,NOTAUTH=0i,NOTIMP=0i,NOTZONE=0i,NXDOMAIN=0i,NXRRSET=0i,REFUSED=0i,RESERVED11=0i,RESERVED12=0i,RESERVED13=0i,RESERVED14=0i,RESERVED15=0i,SERVFAIL=2i,YXDOMAIN=0i,YXRRSET=0i 1554276619000000000

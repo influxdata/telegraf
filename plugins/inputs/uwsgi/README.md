@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -92,7 +92,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
+```text
 uwsgi_overview,gid=0,uid=0,source=172.17.0.2,version=2.0.18 listen_queue=0i,listen_queue_errors=0i,load=0i,pid=1i,signal_queue=0i 1564441407000000000
 uwsgi_workers,source=172.17.0.2,worker_id=1 accepting=1i,avg_rt=0i,delta_request=0i,exceptions=0i,harakiri_count=0i,last_spawn=1564441202i,pid=6i,requests=0i,respawn_count=1i,rss=0i,running_time=0i,signal_queue=0i,signals=0i,status="idle",tx=0i,vsz=0i 1564441407000000000
 uwsgi_apps,app_id=0,worker_id=1,source=172.17.0.2 exceptions=0i,modifier1=0i,requests=0i,startup_time=0i 1564441407000000000

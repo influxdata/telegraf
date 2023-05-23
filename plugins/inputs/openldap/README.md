@@ -9,7 +9,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -107,8 +107,6 @@ An OpenLDAP 2.4 server will provide these metrics:
 
 ## Example Output
 
-```shell
-$ telegraf -config telegraf.conf -input-filter openldap -test --debug
-* Plugin: inputs.openldap, Collection 1
-> openldap,server=localhost,port=389,host=niska.ait.psu.edu operations_bind_initiated=10i,operations_unbind_initiated=6i,operations_modrdn_completed=0i,operations_delete_initiated=0i,operations_add_completed=2i,operations_delete_completed=0i,operations_abandon_completed=0i,statistics_entries=1516i,threads_open=2i,threads_active=1i,waiters_read=1i,operations_modify_completed=0i,operations_extended_initiated=4i,threads_pending=0i,operations_search_initiated=36i,operations_compare_initiated=0i,connections_max_file_descriptors=4096i,operations_modify_initiated=0i,operations_modrdn_initiated=0i,threads_max=16i,time_uptime=6017i,connections_total=1037i,connections_current=1i,operations_add_initiated=2i,statistics_bytes=162071i,operations_unbind_completed=6i,operations_abandon_initiated=0i,statistics_pdu=1566i,threads_max_pending=0i,threads_backload=1i,waiters_write=0i,operations_bind_completed=10i,operations_search_completed=35i,operations_compare_completed=0i,operations_extended_completed=4i,statistics_referrals=0i,threads_starting=0i 1516912070000000000
+```text
+openldap,server=localhost,port=389,host=niska.ait.psu.edu operations_bind_initiated=10i,operations_unbind_initiated=6i,operations_modrdn_completed=0i,operations_delete_initiated=0i,operations_add_completed=2i,operations_delete_completed=0i,operations_abandon_completed=0i,statistics_entries=1516i,threads_open=2i,threads_active=1i,waiters_read=1i,operations_modify_completed=0i,operations_extended_initiated=4i,threads_pending=0i,operations_search_initiated=36i,operations_compare_initiated=0i,connections_max_file_descriptors=4096i,operations_modify_initiated=0i,operations_modrdn_initiated=0i,threads_max=16i,time_uptime=6017i,connections_total=1037i,connections_current=1i,operations_add_initiated=2i,statistics_bytes=162071i,operations_unbind_completed=6i,operations_abandon_initiated=0i,statistics_pdu=1566i,threads_max_pending=0i,threads_backload=1i,waiters_write=0i,operations_bind_completed=10i,operations_search_completed=35i,operations_compare_completed=0i,operations_extended_completed=4i,statistics_referrals=0i,threads_starting=0i 1516912070000000000
 ```

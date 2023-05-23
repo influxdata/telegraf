@@ -19,6 +19,17 @@ see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 The plugin expects messages in one of the [Telegraf Input Data
 Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -26,7 +37,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -107,7 +118,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## The preserve_newline option can be true or false (defaults to false).
     ## If true, the newline character is preserved for multiline elements,
     ## this is useful to preserve message-structure e.g. for logging outputs.
-    #preserver_newline = false
+    #preserve_newline = false
 
     #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
     #timeout = 5s

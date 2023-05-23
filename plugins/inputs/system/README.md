@@ -12,7 +12,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -47,7 +47,7 @@ same requirements for `n_users` apply.
 
 ## Example Output
 
-```shell
+```text
 system,host=tyrion load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_cpus=4i 1483964144000000000
 system,host=tyrion uptime=1249632i 1483964144000000000
 system,host=tyrion uptime_format="14 days, 11:07" 1483964144000000000

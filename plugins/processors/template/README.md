@@ -17,19 +17,21 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
 ```toml @sample.conf
 # Uses a Go template to create a new tag
 [[processors.template]]
-  ## Tag to set with the output of the template.
+  ## Go template used to create the tag name of the output. In order to
+  ## ease TOML escaping requirements, you should use single quotes around
+  ## the template string.
   tag = "topic"
 
-  ## Go template used to create the tag value.  In order to ease TOML
-  ## escaping requirements, you may wish to use single quotes around the
-  ## template string.
+  ## Go template used to create the tag value of the output. In order to
+  ## ease TOML escaping requirements, you should use single quotes around
+  ## the template string.
   template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
 ```
 
@@ -46,6 +48,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```diff
 - cpu,level=debug,hostname=localhost time_idle=42
 + cpu,level=debug,hostname=localhost,topic=localhost.debug time_idle=42
+```
+
+### Use a field value as tag name
+
+```toml
+[[processors.template]]
+  tag = '{{ .Field "type" }}'
+  template = '{{ .Name }}'
+```
+
+```diff
+- cpu,level=debug,hostname=localhost time_idle=42,type=sensor
++ cpu,level=debug,hostname=localhost,sensor=cpu time_idle=42,type=sensor
 ```
 
 ### Add measurement name as a tag

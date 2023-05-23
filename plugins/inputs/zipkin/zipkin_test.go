@@ -594,7 +594,7 @@ func TestZipkinPlugin(t *testing.T) {
 
 	// Workaround for Go 1.8
 	// https://github.com/golang/go/issues/18806
-	DefaultNetwork = "tcp4"
+	defaultNetwork = "tcp4"
 
 	z := &Zipkin{
 		Log:  testutil.Logger{},
@@ -654,7 +654,7 @@ func postThriftData(datafile, address, contentType string) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("HTTP POST request to zipkin endpoint %s failed %v", address, err)
+		return fmt.Errorf("HTTP POST request to zipkin endpoint %q failed: %w", address, err)
 	}
 
 	defer resp.Body.Close()

@@ -52,7 +52,7 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			n, err := url.Parse(s)
 			if err != nil {
-				acc.AddError(fmt.Errorf("could not parse uWSGI Stats Server url '%s': %s", s, err.Error()))
+				acc.AddError(fmt.Errorf("could not parse uWSGI Stats Server url %q: %w", s, err))
 				return
 			}
 
@@ -97,13 +97,13 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, address *url.URL) error {
 		r = resp.Body
 		s.source = address.Host
 	default:
-		return fmt.Errorf("'%s' is not a supported scheme", address.Scheme)
+		return fmt.Errorf("%q is not a supported scheme", address.Scheme)
 	}
 
 	defer r.Close()
 
 	if err := json.NewDecoder(r).Decode(&s); err != nil {
-		return fmt.Errorf("failed to decode json payload from '%s': %s", address.String(), err.Error())
+		return fmt.Errorf("failed to decode json payload from %q: %w", address.String(), err)
 	}
 
 	u.gatherStatServer(acc, &s)

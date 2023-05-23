@@ -81,7 +81,7 @@ func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*Table
 
 func NewTableSource(postgresql *Postgresql, name string) *TableSource {
 	h := fnv.New64a()
-	h.Write([]byte(name)) //nolint:revive // all Write() methods for hash in fnv.go returns nil err
+	h.Write([]byte(name))
 
 	tsrc := &TableSource{
 		postgresql:  postgresql,
@@ -196,9 +196,9 @@ func (tsrc *TableSource) DropColumn(col utils.Column) error {
 	case utils.FieldColType:
 		return tsrc.dropFieldColumn(col)
 	case utils.TimeColType, utils.TagsIDColType:
-		return fmt.Errorf("critical column \"%s\"", col.Name)
+		return fmt.Errorf("critical column %q", col.Name)
 	default:
-		return fmt.Errorf("internal error: unknown column \"%s\"", col.Name)
+		return fmt.Errorf("internal error: unknown column %q", col.Name)
 	}
 }
 

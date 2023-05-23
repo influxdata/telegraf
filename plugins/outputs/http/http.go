@@ -15,15 +15,16 @@ import (
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/idtoken"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/idtoken"
 )
 
 //go:embed sample.conf
@@ -43,8 +44,8 @@ const (
 type HTTP struct {
 	URL                     string            `toml:"url"`
 	Method                  string            `toml:"method"`
-	Username                string            `toml:"username"`
-	Password                string            `toml:"password"`
+	Username                config.Secret     `toml:"username"`
+	Password                config.Secret     `toml:"password"`
 	Headers                 map[string]string `toml:"headers"`
 	ContentEncoding         string            `toml:"content_encoding"`
 	UseBatchFormat          bool              `toml:"use_batch_format"`
@@ -135,10 +136,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	var err error
 	if h.ContentEncoding == "gzip" {
-		rc, err := internal.CompressWithGzip(reqBodyBuffer)
-		if err != nil {
-			return err
-		}
+		rc := internal.CompressWithGzip(reqBodyBuffer)
 		defer rc.Close()
 		reqBodyBuffer = rc
 	}
@@ -180,8 +178,19 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		}
 	}
 
-	if h.Username != "" || h.Password != "" {
-		req.SetBasicAuth(h.Username, h.Password)
+	if !h.Username.Empty() || !h.Password.Empty() {
+		username, err := h.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		password, err := h.Password.Get()
+		if err != nil {
+			config.ReleaseSecret(username)
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		req.SetBasicAuth(string(username), string(password))
+		config.ReleaseSecret(username)
+		config.ReleaseSecret(password)
 	}
 
 	// google api auth
@@ -230,7 +239,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
+		return fmt.Errorf("when writing to [%s] received error: %w", h.URL, err)
 	}
 
 	return nil
@@ -253,12 +262,12 @@ func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Tok
 
 	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
 	if err != nil {
-		return nil, fmt.Errorf("error creating oauth2 token source: %s", err)
+		return nil, fmt.Errorf("error creating oauth2 token source: %w", err)
 	}
 
 	token, err := ts.Token()
 	if err != nil {
-		return nil, fmt.Errorf("error fetching oauth2 token: %s", err)
+		return nil, fmt.Errorf("error fetching oauth2 token: %w", err)
 	}
 
 	h.oauth2Token = token

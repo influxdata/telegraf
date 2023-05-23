@@ -14,7 +14,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -22,10 +22,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Monitor UPSes connected via Network UPS Tools
 [[inputs.upsd]]
   ## A running NUT server to connect to.
+  ## IPv6 addresses must be enclosed in brackets (e.g. "[::1]")
   # server = "127.0.0.1"
   # port = 3493
   # username = "user"
   # password = "password"
+
+  ## Force parsing numbers as floats
+  ## It is highly recommended to enable this setting to parse numbers
+  ## consistently as floats to avoid database conflicts where some numbers are
+  ## parsed as integers and others as floats.
+  # force_float = false
 ```
 
 ## Metrics
@@ -38,7 +45,7 @@ This implementation tries to maintain compatibility with the apcupsd metrics:
     - ups_name
     - model
   - fields:
-    - status_flags ([status-bits][])
+    - status_flags ([status-bits][rfc9271-sec5.1])
     - input_voltage
     - load_percent
     - battery_charge_percent
@@ -60,8 +67,10 @@ With the exception of:
 - fields:
   - time_on_battery_ns
 
+[rfc9271-sec5.1]: https://www.rfc-editor.org/rfc/rfc9271.html#section-5.1
+
 ## Example Output
 
-```shell
+```text
 upsd,serial=AS1231515,ups_name=name1 load_percent=9.7,time_left_ns=9800000,output_voltage=230.4,internal_temp=32.4,battery_voltage=27.4,input_frequency=50.2,input_voltage=230.4,battery_charge_percent=100,status_flags=8i 1490035922000000000
 ```

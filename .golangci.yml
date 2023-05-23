@@ -10,8 +10,12 @@ linters:
     - dogsled
     - errcheck
     - errname
+    - errorlint
     - exportloopref
+    - gocheckcompilerdirectives
+    - gocritic
     - goprintffuncname
+    - gosec
     - gosimple
     - govet
     - ineffassign
@@ -20,11 +24,13 @@ linters:
     - makezero
     - nakedret
     - nilerr
+    - nolintlint
     - prealloc
     - predeclared
     - revive
     - sqlclosecheck
     - staticcheck
+    - tenv
     - tparallel
     - typecheck
     - unconvert
@@ -71,6 +77,84 @@ linters-settings:
       - "**/testutil/**"
       - "**/tools/**"
       - "**/*_test.go"
+  errcheck:
+    # List of functions to exclude from checking, where each entry is a single function to exclude.
+    # See https://github.com/kisielk/errcheck#excluding-functions for details.
+    exclude-functions:
+      - "(*hash/maphash.Hash).Write"
+      - "(*hash/maphash.Hash).WriteByte"
+      - "(*hash/maphash.Hash).WriteString"
+  gocritic:
+    # Which checks should be enabled; can't be combined with 'disabled-checks'.
+    # See https://go-critic.github.io/overview#checks-overview.
+    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
+    # By default, list of stable checks is used.
+    enabled-checks:
+      - argOrder
+      - badCall
+      - badCond
+      - badLock
+      - badSorting
+      - builtinShadowDecl
+      - caseOrder
+      - codegenComment
+      - deferInLoop
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - emptyDecl
+      - evalOrder
+      - exitAfterDefer
+      - externalErrorReassign
+      - nilValReturn
+      - regexpPattern
+      - sloppyTypeAssert
+      - sortSlice
+      - sqlQuery
+      - uncheckedInlineErr
+      - unnecessaryDefer
+      - weakCond
+  gosec:
+    # To select a subset of rules to run.
+    # Available rules: https://github.com/securego/gosec#available-rules
+    # Default: [] - means include all rules
+    includes:
+      - G101
+      - G102
+      - G103
+      - G106
+      - G107
+      - G108
+      - G109
+      - G110
+      - G111
+      - G112
+      - G114
+      - G201
+      - G202
+      - G203
+      - G301
+      - G302
+      - G303
+      - G305
+      - G306
+      - G401
+      - G403
+      - G404
+      - G501
+      - G502
+      - G503
+      - G505
+      - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
+    # To specify the configuration of rules.
+    config:
+      # Maximum allowed permissions mode for os.OpenFile and os.Chmod
+      # Default: "0600"
+      G302: "0640"
+      # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
+      # Default: "0600"
+      G306: "0640"
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
@@ -79,6 +163,13 @@ linters-settings:
     # Tab width in spaces.
     # Default: 1
     tab-width: 4
+  nolintlint:
+    # Enable to require an explanation of nonzero length after each nolint directive.
+    # Default: false
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter being suppressed.
+    # Default: false
+    require-specific: true
   prealloc:
     # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
     # Default: true
@@ -129,8 +220,6 @@ linters-settings:
       - name: time-naming
       - name: unconditional-recursion
       - name: unexported-naming
-      - name: unhandled-error
-        arguments: [ "outputBuffer.Write", "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
@@ -140,6 +229,11 @@ linters-settings:
   nakedret:
     # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
     max-func-lines: 1
+  tenv:
+    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
+    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
+    # Default: false
+    all: true
 
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
@@ -172,16 +266,57 @@ issues:
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
 
+  # List of regexps of issue texts to exclude.
+  #
+  # But independently of this option we use default exclude patterns,
+  # it can be disabled by `exclude-use-default: false`.
+  # To list all excluded by default patterns execute `golangci-lint run --help`
+  #
+  # Default: https://golangci-lint.run/usage/false-positives/#default-exclusions
   exclude:
-    - don't use an underscore in package name #revive:var-naming
+    # revive:var-naming
+    - don't use an underscore in package name
+    # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close.*|.*Flush|.*Disconnect|.*Clear|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+    # EXC0013 revive: Annoying issue about not having a comment. The rare codebase has such comments
+    - package comment should be of the form "(.+)...
+    # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
+    - should have a package comment
 
+  # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     - path: plugins/parsers/influx
       linters:
         - govet
 
     - path: cmd/telegraf/(main|printer).go
-      text: "Error return value of `outputBuffer.Write` is not checked"
+      text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
+    - path: _test\.go
+      text: "Potential hardcoded credentials" #gosec:G101
+
+    - path: _test\.go
+      text: "Use of weak random number generator" #gosec:G404
+
+  # Independently of option `exclude` we use default exclude patterns,
+  # it can be disabled by this option.
+  # To list all excluded by default patterns execute `golangci-lint run --help`.
+  # Default: true.
+  exclude-use-default: false
+
+# output configuration options
 output:
+  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
+  #
+  # Multiple can be specified by separating them by comma, output can be provided
+  # for each of them by separating format name and path by colon symbol.
+  # Output path can be either `stdout`, `stderr` or path to the file to write to.
+  # Example: "checkstyle:report.json,colored-line-number"
+  #
+  # Default: colored-line-number
   format: tab
+  # Make issues output unique by line.
+  # Default: true
+  uniq-by-line: false
+  # Sort results by: filepath, line and column.
+  sort-results: true

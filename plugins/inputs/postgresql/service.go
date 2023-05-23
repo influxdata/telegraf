@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"net"
@@ -88,26 +89,34 @@ func parseURL(uri string) (string, error) {
 // Service common functionality shared between the postgresql and postgresql_extensible
 // packages.
 type Service struct {
-	Address       string
-	OutputAddress string
-	MaxIdle       int
-	MaxOpen       int
-	MaxLifetime   config.Duration
+	Address       config.Secret   `toml:"address"`
+	OutputAddress string          `toml:"outputaddress"`
+	MaxIdle       int             `toml:"max_idle"`
+	MaxOpen       int             `toml:"max_open"`
+	MaxLifetime   config.Duration `toml:"max_lifetime"`
+	IsPgBouncer   bool            `toml:"-"`
 	DB            *sql.DB
-	IsPgBouncer   bool `toml:"-"`
 }
 
 var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
-	const localhost = "host=localhost sslmode=disable"
+	addrSecret, err := p.Address.Get()
+	if err != nil {
+		return fmt.Errorf("getting address failed: %w", err)
+	}
+	addr := string(addrSecret)
+	defer config.ReleaseSecret(addrSecret)
 
-	if p.Address == "" || p.Address == "localhost" {
-		p.Address = localhost
+	if p.Address.Empty() || addr == "localhost" {
+		addr = "host=localhost sslmode=disable"
+		if err := p.Address.Set([]byte(addr)); err != nil {
+			return err
+		}
 	}
 
-	connConfig, err := pgx.ParseConfig(p.Address)
+	connConfig, err := pgx.ParseConfig(addr)
 	if err != nil {
 		return err
 	}
@@ -137,8 +146,6 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 
 // Stop stops the services and closes any necessary channels and connections
 func (p *Service) Stop() {
-	// Ignore the returned error as we cannot do anything about it anyway
-	//nolint:errcheck,revive
 	p.DB.Close()
 }
 
@@ -146,23 +153,24 @@ var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)
 
 // SanitizedAddress utility function to strip sensitive information from the connection string.
 func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
-	var (
-		canonicalizedAddress string
-	)
-
 	if p.OutputAddress != "" {
 		return p.OutputAddress, nil
 	}
 
-	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		if canonicalizedAddress, err = parseURL(p.Address); err != nil {
+	addr, err := p.Address.Get()
+	if err != nil {
+		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
+	}
+	defer config.ReleaseSecret(addr)
+
+	var canonicalizedAddress string
+	if bytes.HasPrefix(addr, []byte("postgres://")) || bytes.HasPrefix(addr, []byte("postgresql://")) {
+		if canonicalizedAddress, err = parseURL(string(addr)); err != nil {
 			return sanitizedAddress, err
 		}
 	} else {
-		canonicalizedAddress = p.Address
+		canonicalizedAddress = string(addr)
 	}
 
-	sanitizedAddress = kvMatcher.ReplaceAllString(canonicalizedAddress, "")
-
-	return sanitizedAddress, err
+	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil
 }

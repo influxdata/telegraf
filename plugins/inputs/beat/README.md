@@ -10,7 +10,7 @@ additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
@@ -146,15 +146,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
-$ telegraf --input-filter beat --test
-
-> beat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6
-  cpu_system_ticks=656750,cpu_system_time_ms=656750,cpu_total_ticks=5461190,cpu_total_time_ms=5461198,cpu_total_value=5461190,cpu_user_ticks=4804440,cpu_user_time_ms=4804448,info_uptime_ms=342634196,memstats_gc_next=20199584,memstats_memory_alloc=12547424,memstats_memory_total=486296424792,memstats_rss=72552448 1540316047000000000
-> beat_libbeat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6
-  config_module_running=0,config_module_starts=0,config_module_stops=0,config_reloads=0,output_events_acked=192404,output_events_active=0,output_events_batches=1607,output_events_dropped=0,output_events_duplicates=0,output_events_failed=0,output_events_total=192404,output_read_bytes=0,output_read_errors=0,output_write_bytes=0,output_write_errors=0,outputs_kafka_bytes_read=1118528,outputs_kafka_bytes_write=48002014,pipeline_clients=1,pipeline_events_active=0,pipeline_events_dropped=0,pipeline_events_failed=0,pipeline_events_filtered=11496,pipeline_events_published=192404,pipeline_events_retry=14,pipeline_events_total=203900,pipeline_queue_acked=192404 1540316047000000000
-> beat_system,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6
-  cpu_cores=32,load_1=46.08,load_15=49.82,load_5=47.88,load_norm_1=1.44,load_norm_15=1.5569,load_norm_5=1.4963 1540316047000000000
-> beat_filebeat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6
-  events_active=0,events_added=3223,events_done=3223,harvester_closed=0,harvester_open_files=0,harvester_running=0,harvester_skipped=0,harvester_started=0,input_log_files_renamed=0,input_log_files_truncated=0 1540320286000000000
+```text
+beat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6 cpu_system_ticks=656750,cpu_system_time_ms=656750,cpu_total_ticks=5461190,cpu_total_time_ms=5461198,cpu_total_value=5461190,cpu_user_ticks=4804440,cpu_user_time_ms=4804448,info_uptime_ms=342634196,memstats_gc_next=20199584,memstats_memory_alloc=12547424,memstats_memory_total=486296424792,memstats_rss=72552448 1540316047000000000
+beat_libbeat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6 config_module_running=0,config_module_starts=0,config_module_stops=0,config_reloads=0,output_events_acked=192404,output_events_active=0,output_events_batches=1607,output_events_dropped=0,output_events_duplicates=0,output_events_failed=0,output_events_total=192404,output_read_bytes=0,output_read_errors=0,output_write_bytes=0,output_write_errors=0,outputs_kafka_bytes_read=1118528,outputs_kafka_bytes_write=48002014,pipeline_clients=1,pipeline_events_active=0,pipeline_events_dropped=0,pipeline_events_failed=0,pipeline_events_filtered=11496,pipeline_events_published=192404,pipeline_events_retry=14,pipeline_events_total=203900,pipeline_queue_acked=192404 1540316047000000000
+beat_system,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6 cpu_cores=32,load_1=46.08,load_15=49.82,load_5=47.88,load_norm_1=1.44,load_norm_15=1.5569,load_norm_5=1.4963 1540316047000000000
+beat_filebeat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6 events_active=0,events_added=3223,events_done=3223,harvester_closed=0,harvester_open_files=0,harvester_running=0,harvester_skipped=0,harvester_started=0,input_log_files_renamed=0,input_log_files_truncated=0 1540320286000000000
 ```
