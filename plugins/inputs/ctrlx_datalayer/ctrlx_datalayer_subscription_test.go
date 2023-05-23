@@ -122,9 +122,7 @@ func TestSubscription_createRequest(t *testing.T) {
 				OutputJSONString:  tt.fields.OutputJSONString,
 			}
 			got := s.createRequest(tt.args.id)
-			if !reflect.DeepEqual(got, tt.wantBody) {
-				t.Errorf("Subscription.createRequest() = %v, want %v", got, tt.wantBody)
-			}
+			require.Equal(t, tt.wantBody, got)
 		})
 	}
 }
