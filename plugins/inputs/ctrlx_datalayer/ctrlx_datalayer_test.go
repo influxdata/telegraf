@@ -60,8 +60,8 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 
 	subID, err := s.createSubscription(&subs[0])
 
+	require.NoError(t, err)
 	require.NotEmpty(t, subID)
-	require.Equal(t, nil, err)
 }
 
 func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
