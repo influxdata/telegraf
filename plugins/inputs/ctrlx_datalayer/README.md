@@ -315,6 +315,8 @@ Metrics:
 ```text
 memory,server=192.168.1.1,host=host.example.com,node=framework/metrics/system/memavailable-mb,node_tag1=memory_available_tag1,node_tag2=memory_available_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 available=365.93359375 1680093310249627400
 memory,server=192.168.1.1,host=host.example.com,node=framework/metrics/system/memused-mb,node_tag1=memory_used_node_tag1,node_tag2=memory_used_node_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 used=567.67578125 1680093310249667600
+memory,ctrlx_host=192.168.1.1,host=host.example.com,node=framework/metrics/system/memavailable-mb,node_tag1=memory_available_tag1,node_tag2=memory_available_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 available=365.93359375 1680093310249627400
+memory,ctrlx_host=192.168.1.1,host=host.example.com,node=framework/metrics/system/memused-mb,node_tag1=memory_used_node_tag1,node_tag2=memory_used_node_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 used=567.67578125 1680093310249667600
 ```
 
 
