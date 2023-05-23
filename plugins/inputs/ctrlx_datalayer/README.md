@@ -237,7 +237,8 @@ input={"x":4720,"y":9440,"z":{"d": 14160}} -> output="{\"x\":4720,\"y\":9440,\"z
 ```
 
 The JSON output string can be passed to a processor plugin for transformation
-e.g. [Parser Processor Plugin][PARSER.md] or [Starlark Processor Plugin][STARLARK.md]
+e.g. [Parser Processor Plugin][PARSER.md]
+or [Starlark Processor Plugin][STARLARK.md]
 
 [PARSER.md]: ../../processors/parser/README.md
 [STARLARK.md]: ../../processors/starlark/README.md
@@ -316,7 +317,6 @@ Metrics:
 memory,server=192.168.1.1,host=host.example.com,node=framework/metrics/system/memavailable-mb,node_tag1=memory_available_tag1,node_tag2=memory_available_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 available=365.93359375 1680093310249627400
 memory,server=192.168.1.1,host=host.example.com,node=framework/metrics/system/memused-mb,node_tag1=memory_used_node_tag1,node_tag2=memory_used_node_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 used=567.67578125 1680093310249667600
 ```
-
 
 ### Example with array data type
 
