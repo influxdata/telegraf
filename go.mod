@@ -14,7 +14,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor v0.4.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
-	github.com/Azure/go-autorest/autorest v0.11.28
+	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.23
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12
 	github.com/BurntSushi/toml v1.2.1
