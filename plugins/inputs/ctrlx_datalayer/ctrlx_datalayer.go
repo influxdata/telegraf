@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
@@ -40,9 +41,9 @@ var sampleConfig string
 
 // CtrlXDataLayer encapsulated the configuration as well as the state of this plugin.
 type CtrlXDataLayer struct {
-	Server   string `toml:"server"`
-	Username string `toml:"username"`
-	Password string `toml:"password"`
+	Server   string        `toml:"server"`
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
 
 	Log          telegraf.Logger `toml:"-"`
 	Subscription []Subscription
@@ -92,7 +93,7 @@ func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		return "", fmt.Errorf("failed to create sse subscription %d, status: %q", sub.index, resp.Status)
+		return "", fmt.Errorf("failed to create sse subscription %d, status: %s", sub.index, resp.Status)
 	}
 
 	return sseURL + "/" + id, nil
@@ -129,7 +130,7 @@ func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
 		}
 		m, err := c.createMetric(&d, sub)
 		if err != nil {
-			c.acc.AddError(fmt.Errorf("failed to create metrics: %v", m))
+			c.acc.AddError(fmt.Errorf("failed to create metrics: %w", err))
 			return
 		}
 		c.acc.AddMetric(m)
@@ -259,7 +260,7 @@ func (c *CtrlXDataLayer) Init() error {
 		sub.index = i
 	}
 
-	// Generate valid communication url based on configured hostname
+	// Generate valid communication url based on configured server address
 	u := url.URL{
 		Scheme: "https",
 		Host:   c.Server,
@@ -267,7 +268,7 @@ func (c *CtrlXDataLayer) Init() error {
 	c.url = u.String()
 	_, err := url.Parse(c.url)
 	if err != nil {
-		return errors.New("invalid hostname")
+		return errors.New("invalid server address")
 	}
 
 	return nil
@@ -284,10 +285,22 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to create http client, err: %w", err)
 	}
 
+	username, err := c.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer config.ReleaseSecret(username)
+
+	password, err := c.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer config.ReleaseSecret(password)
+
 	c.tokenManager = token.TokenManager{
 		Url:        c.url,
-		Username:   c.Username,
-		Password:   c.Password,
+		Username:   string(username),
+		Password:   string(password),
 		Connection: c.connection,
 	}
 

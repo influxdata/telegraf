@@ -13,10 +13,10 @@ import (
 // The plugin is able to create and manage multiple subscriptions.
 
 // The allowed values of the subscription property 'QueueBehaviour'
-var queueBehaviours = []string{"", "DiscardOldest", "DiscardNewest"}
+var queueBehaviours = []string{"DiscardOldest", "DiscardNewest"}
 
 // The allowed values of the subscription property 'ValueChange'
-var valueChanges = []string{"", "Status", "StatusValue", "StatusValueTimestamp"}
+var valueChanges = []string{"Status", "StatusValue", "StatusValueTimestamp"}
 
 // The default subscription settings
 const (

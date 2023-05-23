@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/boschrexroth/ctrlx-datalayer-golang/pkg/token"
+	"github.com/influxdata/telegraf/config"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
@@ -51,8 +52,8 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 	s := &CtrlXDataLayer{
 		connection:   &http.Client{},
 		url:          server.URL,
-		Username:     "user",
-		Password:     "password",
+		Username:     config.NewSecret([]byte("user")),
+		Password:     config.NewSecret([]byte("password")),
 		tokenManager: token.TokenManager{Url: server.URL, Username: "user", Password: "password", Connection: &http.Client{}},
 		Subscription: subs,
 		Log:          testutil.Logger{},
@@ -60,8 +61,8 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 
 	subID, err := s.createSubscription(&subs[0])
 
+	require.NoError(t, err)
 	require.NotEmpty(t, subID)
-	require.Equal(t, nil, err)
 }
 
 func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
@@ -93,8 +94,8 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 			s := &CtrlXDataLayer{
 				connection:   &http.Client{},
 				url:          server.URL,
-				Username:     "user",
-				Password:     "password",
+				Username:     config.NewSecret([]byte("user")),
+				Password:     config.NewSecret([]byte("password")),
 				Subscription: subs,
 				tokenManager: token.TokenManager{Url: server.URL, Username: "user", Password: "password", Connection: &http.Client{}},
 				Log:          testutil.Logger{},
@@ -179,8 +180,8 @@ func initRunner(t *testing.T) (*CtrlXDataLayer, *httptest.Server) {
 	s := &CtrlXDataLayer{
 		connection: &http.Client{},
 		url:        server.URL,
-		Username:   "user",
-		Password:   "password",
+		Username:   config.NewSecret([]byte("user")),
+		Password:   config.NewSecret([]byte("password")),
 		HTTPClientConfig: httpconfig.HTTPClientConfig{
 			ClientConfig: tls.ClientConfig{
 				InsecureSkipVerify: true,
@@ -201,14 +202,12 @@ func TestCtrlXMetricsField(t *testing.T) {
 	defer cleanup(server)
 
 	var acc testutil.Accumulator
-	time.Sleep(time.Microsecond * 1000)
 	require.NoError(t, acc.GatherError(s.Start))
+	require.Eventually(t, func() bool {
+		v, found := acc.FloatField(measurement, fieldName)
+		return found == true && v == 43.0
+	}, time.Second*10, time.Second, "expected value to be 43.0 of type float")
 
-	time.Sleep(time.Millisecond * 2000)
-
-	v, found := acc.FloatField(measurement, fieldName)
-	require.True(t, found, "expected value to be a float")
-	require.Equalf(t, 43.0, v, "expected value to be 43, but got %v", v)
 }
 
 func TestCtrlXMetricsMulti(t *testing.T) {
@@ -220,14 +219,12 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 	defer cleanup(server)
 
 	var acc testutil.Accumulator
-	time.Sleep(time.Microsecond * 1000)
+
 	require.NoError(t, acc.GatherError(s.Start))
-
-	time.Sleep(time.Millisecond * 2000)
-
-	v, found := acc.FloatField(measurement, fieldName)
-	require.True(t, found, "expected value to be a float")
-	require.Equalf(t, 44.0, v, "expected value to be 44, but got %v", v)
+	require.Eventually(t, func() bool {
+		v, found := acc.FloatField(measurement, fieldName)
+		return found == true && v == 44.0
+	}, time.Second*10, time.Second, "expected value to be 44.0 of type float")
 
 	setMultiEntries(false)
 }

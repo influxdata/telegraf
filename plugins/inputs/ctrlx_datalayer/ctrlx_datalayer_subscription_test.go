@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSubscription_createRequest(t *testing.T) {
@@ -28,14 +29,14 @@ func TestSubscription_createRequest(t *testing.T) {
 	}
 	tests := []struct {
 		name     string
-		fields   fields
+		fields   Subscription
 		args     args
 		wantBody SubscriptionRequest
 		wantErr  bool
 	}{
 		{
 			name: "Should_Return_Expected_Request",
-			fields: fields{
+			fields: Subscription{
 				Nodes: []Node{
 					{
 						Name:    "node1",
@@ -122,9 +123,7 @@ func TestSubscription_createRequest(t *testing.T) {
 				OutputJSONString:  tt.fields.OutputJSONString,
 			}
 			got := s.createRequest(tt.args.id)
-			if !reflect.DeepEqual(got, tt.wantBody) {
-				t.Errorf("Subscription.createRequest() = %v, want %v", got, tt.wantBody)
-			}
+			require.Equal(t, tt.wantBody, got)
 		})
 	}
 }

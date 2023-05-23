@@ -140,7 +140,6 @@ corresponding node address as defined in the ctrlX Data Layer.
 - measurement name
   - tags:
     - `server` (ctrlX Data Layer server where the metrics are gathered from)
-    - `host` (The host where the telegraf agent is running)
     - `node` (Address of the ctrlX Data Layer node)
   - fields:
     - `{name}` (for nodes with simple data types)
@@ -238,8 +237,9 @@ input={"x":4720,"y":9440,"z":{"d": 14160}} -> output="{\"x\":4720,\"y\":9440,\"z
 ```
 
 The JSON output string can be passed to a processor plugin for transformation
-e.g. [Starlark Processor Plugin][STARLARK.md]
+e.g. [Parser Processor Plugin][PARSER.md] or [Starlark Processor Plugin][STARLARK.md]
 
+[PARSER.md]: ../../processors/parser/README.md
 [STARLARK.md]: ../../processors/starlark/README.md
 
 example:
@@ -312,10 +312,11 @@ Source:
 
 Metrics:
 
-```shell
-memory,ctrlx_host=192.168.1.1,host=host.example.com,node=framework/metrics/system/memavailable-mb,node_tag1=memory_available_tag1,node_tag2=memory_available_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 available=365.93359375 1680093310249627400
-memory,ctrlx_host=192.168.1.1,host=host.example.com,node=framework/metrics/system/memused-mb,node_tag1=memory_used_node_tag1,node_tag2=memory_used_node_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 used=567.67578125 1680093310249667600
+```text
+memory,server=192.168.1.1,host=host.example.com,node=framework/metrics/system/memavailable-mb,node_tag1=memory_available_tag1,node_tag2=memory_available_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 available=365.93359375 1680093310249627400
+memory,server=192.168.1.1,host=host.example.com,node=framework/metrics/system/memused-mb,node_tag1=memory_used_node_tag1,node_tag2=memory_used_node_tag2,sub_tag1=memory2_tag1,sub_tag2=memory_tag2 used=567.67578125 1680093310249667600
 ```
+
 
 ### Example with array data type
 
@@ -339,9 +340,9 @@ Source:
 
 Metrics:
 
-```shell
-array,ctrlx_host=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-bool8 ar_bool8_0=true,ar_bool8_1=false,ar_bool8_2=true 1680095727347018800
-array,ctrlx_host=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-uint8 ar_uint8_0=0,ar_uint8_1=255 1680095727347223300
+```text
+array,server=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-bool8 ar_bool8_0=true,ar_bool8_1=false,ar_bool8_2=true 1680095727347018800
+array,server=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-uint8 ar_uint8_0=0,ar_uint8_1=255 1680095727347223300
 ```
 
 ### Example with object data type (JSON)
@@ -366,9 +367,9 @@ Source:
 
 Metrics:
 
-```shell
-motion,ctrlx_host=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear_actualVel=5,linear_distLeftUnit="mm",linear_actualAcc=0,linear_distLeft=0,linear_actualPosUnit="mm",linear_actualAccUnit="m/s^2",linear_actualTorqueUnit="Nm",linear_actualPos=65.249329860957,linear_actualVelUnit="mm/min",linear_actualTorque=0 1680258290342523500
-motion,ctrlx_host=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational_distLeft=0,rotational_actualVelUnit="rpm",rotational_actualAccUnit="rad/s^2",rotational_distLeftUnit="deg",rotational_actualPos=120,rotational_actualVel=0,rotational_actualAcc=0,rotational_actualPosUnit="deg",rotational_actualTorqueUnit="Nm",rotational_actualTorque=0 1680258290342538100
+```text
+motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear_actualVel=5,linear_distLeftUnit="mm",linear_actualAcc=0,linear_distLeft=0,linear_actualPosUnit="mm",linear_actualAccUnit="m/s^2",linear_actualTorqueUnit="Nm",linear_actualPos=65.249329860957,linear_actualVelUnit="mm/min",linear_actualTorque=0 1680258290342523500
+motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational_distLeft=0,rotational_actualVelUnit="rpm",rotational_actualAccUnit="rad/s^2",rotational_distLeftUnit="deg",rotational_actualPos=120,rotational_actualVel=0,rotational_actualAcc=0,rotational_actualPosUnit="deg",rotational_actualTorqueUnit="Nm",rotational_actualTorque=0 1680258290342538100
 ```
 
 If `output_json_string` is set in the configuration:
@@ -379,7 +380,7 @@ If `output_json_string` is set in the configuration:
 
 then the metrics will be generated like this:
 
-```shell
-motion,ctrlx_host=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear="{\"actualAcc\":0,\"actualAccUnit\":\"m/s^2\",\"actualPos\":65.249329860957,\"actualPosUnit\":\"mm\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":5,\"actualVelUnit\":\"mm/min\",\"distLeft\":0,\"distLeftUnit\":\"mm\"}" 1680258290342523500
-motion,ctrlx_host=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational="{\"actualAcc\":0,\"actualAccUnit\":\"rad/s^2\",\"actualPos\":120,\"actualPosUnit\":\"deg\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":0,\"actualVelUnit\":\"rpm\",\"distLeft\":0,\"distLeftUnit\":\"deg\"}" 1680258290342538100
+```text
+motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear="{\"actualAcc\":0,\"actualAccUnit\":\"m/s^2\",\"actualPos\":65.249329860957,\"actualPosUnit\":\"mm\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":5,\"actualVelUnit\":\"mm/min\",\"distLeft\":0,\"distLeftUnit\":\"mm\"}" 1680258290342523500
+motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational="{\"actualAcc\":0,\"actualAccUnit\":\"rad/s^2\",\"actualPos\":120,\"actualPosUnit\":\"deg\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":0,\"actualVelUnit\":\"rpm\",\"distLeft\":0,\"distLeftUnit\":\"deg\"}" 1680258290342538100
 ```
