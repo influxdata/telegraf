@@ -125,7 +125,7 @@ func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
 		var d sseEventData
 
 		if err := json.Unmarshal([]byte(se.Data), &d); err != nil {
-			c.acc.AddError(fmt.Errorf("received malformed data from 'update' event"))
+			c.acc.AddError(fmt.Errorf("received malformed data from 'update' event: %w", err))
 			return
 		}
 		m, err := c.createMetric(&d, sub)
