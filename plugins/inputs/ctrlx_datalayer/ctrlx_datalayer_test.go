@@ -205,8 +205,8 @@ func TestCtrlXMetricsField(t *testing.T) {
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
 		if v, found := acc.FloatField(measurement, fieldName); found {
-				require.Equal(t, 43.0, v)
-				return true
+			require.Equal(t, 43.0, v)
+			return true
 		}
 		return false
 	}, time.Second*10, time.Second)
@@ -225,8 +225,8 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
 		if v, found := acc.FloatField(measurement, fieldName); found {
-				require.Equal(t, 44.0, v)
-				return true
+			require.Equal(t, 44.0, v)
+			return true
 		}
 		return false
 	}, time.Second*10, time.Second)
