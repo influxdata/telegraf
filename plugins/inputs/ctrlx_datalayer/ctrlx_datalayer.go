@@ -289,13 +289,11 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
 
 	password, err := c.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
 
 	c.tokenManager = token.TokenManager{
 		Url:        c.url,
@@ -303,6 +301,8 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 		Password:   string(password),
 		Connection: c.connection,
 	}
+	config.ReleaseSecret(username)
+	config.ReleaseSecret(password)
 
 	c.acc = acc
 
