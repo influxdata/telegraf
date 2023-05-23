@@ -61,10 +61,10 @@ github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 h1:/vQbFIOMb
 github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4/go.mod h1:hN7oaIRCjzsZ2dE+yG5k+rsdt3qcwykqK6HVGcKwsw4=
 github.com/99designs/keyring v1.2.2 h1:pZd3neh/EmUzWONb35LxQfvuY7kiSXAq3HQd97+XBn0=
 github.com/99designs/keyring v1.2.2/go.mod h1:wes/FrByc8j7lFOAGLGSNEg8f/PaI3cgTBqhFkHUrPk=
-github.com/Azure/azure-amqp-common-go/v4 v4.0.0 h1:mV5O74KYmonn0ZXtwfMjGUtZ9Z+Hv7AIFVS1s03sRvo=
-github.com/Azure/azure-amqp-common-go/v4 v4.0.0/go.mod h1:4+qRvizIo4+CbGG552O6a8ONkEwRgWXqes3SUt1Ftrc=
-github.com/Azure/azure-event-hubs-go/v3 v3.4.0 h1:LtH0nHkXivyV/GajOu5ZFC5sb/5KZ8j+9U8UsfHVTOo=
-github.com/Azure/azure-event-hubs-go/v3 v3.4.0/go.mod h1:ODgt5C1/c73FToYj+mWojUJLXF877ALc6G4XnfRFlAY=
+github.com/Azure/azure-amqp-common-go/v4 v4.1.0 h1:gcS6P4q/Qv1nmdq1IWoU3mLYlHnvNxAhVjxReEFmSz8=
+github.com/Azure/azure-amqp-common-go/v4 v4.1.0/go.mod h1:HDiTPilyFCWPOT8dBeSjGztqgrW27LctWs/4p6nR9FY=
+github.com/Azure/azure-event-hubs-go/v3 v3.5.0 h1:H3nhguNPKFH+Z6GP0GZTJVsiuHjqrz5rsRsD816zNkQ=
+github.com/Azure/azure-event-hubs-go/v3 v3.5.0/go.mod h1:7zahh3eGktdZ6Xtfv0F0mrnllBR0iE9TJMbGDsqxwkE=
 github.com/Azure/azure-kusto-go v0.8.0 h1:AeO6VBRGzB1BhmWeheSyN+WSrx+1wmhHm47vzptitdw=
 github.com/Azure/azure-kusto-go v0.8.0/go.mod h1:i7WCtgt4XeHge3+Oi5sq84HYhneNi7VY7hr35wsUdrg=
 github.com/Azure/azure-pipeline-go v0.1.8/go.mod h1:XA1kFWRVhSK+KNFiOhfv83Fv8L9achrP7OxIzeTn1Yg=
@@ -95,8 +95,8 @@ github.com/Azure/azure-storage-blob-go v0.15.0 h1:rXtgp8tN1p29GvpGgfJetavIG0V7Og
 github.com/Azure/azure-storage-blob-go v0.15.0/go.mod h1:vbjsVbX0dlxnRc4FFMPsS9BsJWPcne7GB7onqlPvz58=
 github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd h1:b3wyxBl3vvr15tUAziPBPK354y+LSdfPCpex5oBttHo=
 github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd/go.mod h1:K6am8mT+5iFXgingS9LUc7TmbsW6XBw3nxaRyaMyWc8=
-github.com/Azure/go-amqp v0.18.0 h1:95bTiJq0oxjK1RUlt5T3HF/THj6jWTRZpSXMPSOJLz8=
-github.com/Azure/go-amqp v0.18.0/go.mod h1:+bg0x3ce5+Q3ahCEXnCsGG3ETpDQe3MEVnOuT2ywPwc=
+github.com/Azure/go-amqp v0.19.1 h1:S1l3HiSMU7Rhko2f70lBH6Vd0mLj5UZiTWC6xKY5Kho=
+github.com/Azure/go-amqp v0.19.1/go.mod h1:+bg0x3ce5+Q3ahCEXnCsGG3ETpDQe3MEVnOuT2ywPwc=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 h1:UQHMgLO+TxOElx5B5HZ4hJQsoJ/PvUvKRhJHDQXO8P8=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/Azure/go-autorest v14.2.0+incompatible h1:V5VMDjClD3GiElqLWO7mz2MxNAK/vTfRHdAubSIPRgs=
