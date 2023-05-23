@@ -1,7 +1,6 @@
 package ctrlx_datalayer
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -274,7 +273,7 @@ func TestNode_fieldKey(t *testing.T) {
 				Name:    tt.fields.Name,
 				Address: tt.fields.Address,
 			}
-			require.Equal(t, tt.want, n.fieldKey()
+			require.Equal(t, tt.want, n.fieldKey())
 		})
 	}
 }
