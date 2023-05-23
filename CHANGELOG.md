@@ -1,6 +1,12 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## next
+
+### BREAKING API CHANGES
+
+- Removal of old-style parser creation
+
 ## v1.26.3 [2023-05-22]
 
 ### Bugfixes

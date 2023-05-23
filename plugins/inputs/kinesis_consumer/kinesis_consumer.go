@@ -22,7 +22,6 @@ import (
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -44,7 +43,7 @@ type (
 		Log telegraf.Logger
 
 		cons   *consumer.Consumer
-		parser parsers.Parser
+		parser telegraf.Parser
 		cancel context.CancelFunc
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
@@ -82,7 +81,7 @@ func (*KinesisConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
+func (k *KinesisConsumer) SetParser(parser telegraf.Parser) {
 	k.parser = parser
 }
 
