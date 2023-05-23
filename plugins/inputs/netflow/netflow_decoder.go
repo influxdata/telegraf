@@ -196,8 +196,8 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	// 148: common
 	149: {{"observation_domain_id", decodeUint}}, // observationDomainId
 	150: {{"flow_start", decodeUint}},            // flowStartSeconds
-	// 151 - 152: common
-	153: {{"flow_end_ms", decodeUint}},              // flowEndMilliseconds
+	151: {{"flow_end", decodeUint}},              // flowEndSeconds
+	// 152 - 153: common
 	154: {{"flow_start_us", decodeUint}},            // flowStartMicroseconds
 	155: {{"flow_end_us", decodeUint}},              // flowEndMicroseconds
 	156: {{"flow_start_ns", decodeUint}},            // flowStartNanoseconds
