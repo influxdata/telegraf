@@ -221,9 +221,12 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
-		v, found := acc.FloatField(measurement, fieldName)
-		return found && v == 44.0
-	}, time.Second*10, time.Second, "expected value to be 44.0 of type float")
+		if v, found := acc.FloatField(measurement, fieldName); found {
+				require.Equal(t, 44.0, v)
+				return true
+		}
+		return false
+	}, time.Second*10, time.Second)
 
 	setMultiEntries(false)
 }
