@@ -81,7 +81,7 @@ func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
 	requestBody := bytes.NewBuffer(payload)
 	req, err := http.NewRequest("POST", sseURL, requestBody)
 	if err != nil {
-		return "", fmt.Errorf("failed to create subscription %d request, error: %w", sub.index, err)
+		return "", fmt.Errorf("failed to create subscription %d request: %w", sub.index, err)
 	}
 
 	req.Header.Add("Authorization", c.tokenManager.Token.String())
