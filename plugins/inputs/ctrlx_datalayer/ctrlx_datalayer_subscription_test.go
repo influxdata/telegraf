@@ -189,9 +189,7 @@ func TestSubscription_node(t *testing.T) {
 			s := &Subscription{
 				Nodes: tt.fields.Nodes,
 			}
-			if got := s.node(tt.args.address); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Subscription.node() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, s.node(tt.args.address))
 		})
 	}
 }
