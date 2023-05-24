@@ -139,7 +139,7 @@ corresponding node address as defined in the ctrlX Data Layer.
 
 - measurement name
   - tags:
-    - `server` (ctrlX Data Layer server where the metrics are gathered from)
+    - `source` (ctrlX Data Layer server where the metrics are gathered from)
     - `node` (Address of the ctrlX Data Layer node)
   - fields:
     - `{name}` (for nodes with simple data types)
