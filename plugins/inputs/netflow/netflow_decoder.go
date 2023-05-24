@@ -2,6 +2,7 @@ package netflow
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -530,6 +531,7 @@ type netflowDecoder struct {
 	templates     map[string]*netflow.BasicTemplateSystem
 	mappingsV9    map[uint16]fieldMapping
 	mappingsIPFIX map[uint16]fieldMapping
+	mappingsPEN   map[string]fieldMapping
 
 	sync.Mutex
 }
@@ -552,7 +554,12 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	buf := bytes.NewBuffer(payload)
 	packet, err := netflow.DecodeMessage(buf, templates)
 	if err != nil {
-		return nil, err
+		var terr *netflow.ErrorTemplateNotFound
+		if errors.As(err, &terr) {
+			d.Log.Warnf("%v; skipping packet", err)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("decoding message failed: %w", err)
 	}
 
 	// Extract metrics
@@ -571,7 +578,13 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					}
 					fields := make(map[string]interface{})
 					for _, value := range record.Values {
-						for _, field := range d.decodeValueV9(value) {
+						var extracted []telegraf.Field
+						if value.PenProvided {
+							extracted = d.decodeValuePEN(value)
+						} else {
+							extracted = d.decodeValueV9(value)
+						}
+						for _, field := range extracted {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -594,7 +607,13 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					fields := make(map[string]interface{})
 					t := time.Now()
 					for _, value := range record.Values {
-						for _, field := range d.decodeValueIPFIX(value) {
+						var extracted []telegraf.Field
+						if value.PenProvided {
+							extracted = d.decodeValuePEN(value)
+						} else {
+							extracted = d.decodeValueIPFIX(value)
+						}
+						for _, field := range extracted {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -620,6 +639,7 @@ func (d *netflowDecoder) Init() error {
 	d.templates = make(map[string]*netflow.BasicTemplateSystem)
 	d.mappingsV9 = make(map[uint16]fieldMapping)
 	d.mappingsIPFIX = make(map[uint16]fieldMapping)
+	d.mappingsPEN = make(map[string]fieldMapping)
 
 	return nil
 }
@@ -705,5 +725,26 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	// Return the raw data if no mapping was found
 	d.Log.Debugf("unknown data field %v", field)
 	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
+	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
+}
+
+func (d *netflowDecoder) decodeValuePEN(field netflow.DataField) []telegraf.Field {
+	raw := field.Value.([]byte)
+
+	var prefix string
+	elementID := field.Type
+	if field.Type&0x4000 != 0 {
+		prefix = "rev_"
+		elementID = field.Type & (0x4000 ^ 0xffff)
+	}
+
+	key := fmt.Sprintf("%d.%d", field.Pen, elementID)
+	if m, found := d.mappingsPEN[key]; found {
+		return []telegraf.Field{{Key: m.name, Value: m.decoder(raw)}}
+	}
+
+	// Return the raw data if no mapping was found
+	d.Log.Debugf("unknown PEN data field %v", field)
+	name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
 	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 }
