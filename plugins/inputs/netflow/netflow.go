@@ -29,6 +29,7 @@ type NetFlow struct {
 	ReadBufferSize config.Size     `toml:"read_buffer_size"`
 	Protocol       string          `toml:"protocol"`
 	DumpPackets    bool            `toml:"dump_packets"`
+	PENFiles       []string        `toml:"private_enterprise_number_files"`
 	Log            telegraf.Logger `toml:"-"`
 
 	conn    *net.UDPConn
@@ -56,12 +57,16 @@ func (n *NetFlow) Init() error {
 
 	switch strings.ToLower(n.Protocol) {
 	case "", "netflow v9", "ipfix":
-		n.decoder = &netflowDecoder{Log: n.Log}
+		n.decoder = &netflowDecoder{
+			PENFiles: n.PENFiles,
+			Log:      n.Log,
+		}
 	case "netflow v5":
 		n.decoder = &netflowv5Decoder{}
 	default:
 		return fmt.Errorf("invalid protocol %q, only supports 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)
 	}
+
 	return n.decoder.Init()
 }
 

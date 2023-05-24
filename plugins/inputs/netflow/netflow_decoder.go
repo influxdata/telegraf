@@ -15,9 +15,11 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+type decoderFunc func([]byte) interface{}
+
 type fieldMapping struct {
 	name    string
-	decoder func([]byte) interface{}
+	decoder decoderFunc
 }
 
 // Default field mappings common for Netflow version 9 and IPFIX
@@ -526,7 +528,8 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 
 // Decoder structure
 type netflowDecoder struct {
-	Log telegraf.Logger
+	PENFiles []string
+	Log      telegraf.Logger
 
 	templates     map[string]*netflow.BasicTemplateSystem
 	mappingsV9    map[uint16]fieldMapping
@@ -640,6 +643,18 @@ func (d *netflowDecoder) Init() error {
 	d.mappingsV9 = make(map[uint16]fieldMapping)
 	d.mappingsIPFIX = make(map[uint16]fieldMapping)
 	d.mappingsPEN = make(map[string]fieldMapping)
+	for _, fn := range d.PENFiles {
+		mappings, err := loadMapping(fn)
+		if err != nil {
+			return err
+		}
+		for k, v := range mappings {
+			if _, found := d.mappingsPEN[k]; found {
+				return fmt.Errorf("duplicate entries for ID %q", k)
+			}
+			d.mappingsPEN[k] = v
+		}
+	}
 
 	return nil
 }
