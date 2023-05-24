@@ -651,7 +651,9 @@ are provided in the [language definition][CEL lang] as well as in the
 ### Modifiers
 
 Modifier filters remove tags and fields from a metric.  If all fields are
-removed the metric is removed.
+removed the metric is removed. Tags and fields are modified before a metric is
+passed to a processor, aggregator, or output plugin. When used with an input
+plugin the filter applies after the input runs.
 
 - **fieldpass**:
 An array of [glob pattern][] strings.  Only fields whose field key matches a
