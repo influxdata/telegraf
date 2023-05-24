@@ -58,11 +58,46 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   "ipfix"      -- IPFIX / Netflow v10 protocol (also works for Netflow v9)
   # protocol = "ipfix"
 
+  ## Private Enterprise Numbers (PEN) mappings for decoding
+  ## This option allows to specify vendor-specific mapping files to use during
+  ## decoding.
+  # private_enterprise_number_files = []
+
   ## Dump incoming packets to the log
   ## This can be helpful to debug parsing issues. Only active if
   ## Telegraf is in debug mode.
   # dump_packets = false
 ```
+
+## Private Enterprise Number mapping
+
+Using the `private_enterprise_number_files` option you can specify mappings for
+vendor-specific element-IDs with a PEN specification. The mapping has to be a
+comma-separated-file (CSV) containing the element's `ID`, its `name` and the
+`data-type`. A comma (`,`) is used as separator and comments are allowed using
+the hash (`#`) prefix.
+The element `ID` has the form `<pen-number>.<element-id>`, the `name` has to be
+a valid field-name and `data-type` denotes the mapping of the raw-byte value to
+the field's type. For example
+
+```csv
+# PEN.ID, name, data type
+35632.349,in_src_osi_sap,hex
+35632.471,nprobe_ipv4_address,ip
+35632.1028,protocol_ntop,string
+35632.1036,l4_srv_port,uint
+```
+
+specify four elements (`349`, `471`, `1028` and `1036`) for PEN `35632` (ntop)
+with the corresponding name and data-type.
+
+Currently the following `data-type`s are supported:
+
+- `uint`   unsigned integer with 8, 16, 32 or 64 bit
+- `hex`    hex-encoding of the raw byte sequence with `0x` prefix
+- `string` string interpretation of the raw byte sequence
+- `ip`     IPv4 or IPv6 address
+- `proto`  mapping of layer-4 protocol numbers to names
 
 ## Metrics
 
