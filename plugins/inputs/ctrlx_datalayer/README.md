@@ -341,8 +341,8 @@ Source:
 Metrics:
 
 ```text
-array,server=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-bool8 ar_bool8_0=true,ar_bool8_1=false,ar_bool8_2=true 1680095727347018800
-array,server=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-uint8 ar_uint8_0=0,ar_uint8_1=255 1680095727347223300
+array,source=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-bool8 ar_bool8_0=true,ar_bool8_1=false,ar_bool8_2=true 1680095727347018800
+array,source=192.168.1.1,host=host.example.com,node=alldata/dynamic/array-of-uint8 ar_uint8_0=0,ar_uint8_1=255 1680095727347223300
 ```
 
 ### Example with object data type (JSON)
