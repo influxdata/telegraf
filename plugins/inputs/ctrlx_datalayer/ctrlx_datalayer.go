@@ -162,7 +162,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (tele
 	// default tags
 	tags := map[string]string{
 		"node":   em.Node,
-		"server": c.Server,
+		"source": c.Server,
 	}
 
 	// add tags of subscription if user has defined
