@@ -368,8 +368,8 @@ Source:
 Metrics:
 
 ```text
-motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear_actualVel=5,linear_distLeftUnit="mm",linear_actualAcc=0,linear_distLeft=0,linear_actualPosUnit="mm",linear_actualAccUnit="m/s^2",linear_actualTorqueUnit="Nm",linear_actualPos=65.249329860957,linear_actualVelUnit="mm/min",linear_actualTorque=0 1680258290342523500
-motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational_distLeft=0,rotational_actualVelUnit="rpm",rotational_actualAccUnit="rad/s^2",rotational_distLeftUnit="deg",rotational_actualPos=120,rotational_actualVel=0,rotational_actualAcc=0,rotational_actualPosUnit="deg",rotational_actualTorqueUnit="Nm",rotational_actualTorque=0 1680258290342538100
+motion,source=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear_actualVel=5,linear_distLeftUnit="mm",linear_actualAcc=0,linear_distLeft=0,linear_actualPosUnit="mm",linear_actualAccUnit="m/s^2",linear_actualTorqueUnit="Nm",linear_actualPos=65.249329860957,linear_actualVelUnit="mm/min",linear_actualTorque=0 1680258290342523500
+motion,source=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational_distLeft=0,rotational_actualVelUnit="rpm",rotational_actualAccUnit="rad/s^2",rotational_distLeftUnit="deg",rotational_actualPos=120,rotational_actualVel=0,rotational_actualAcc=0,rotational_actualPosUnit="deg",rotational_actualTorqueUnit="Nm",rotational_actualTorque=0 1680258290342538100
 ```
 
 If `output_json_string` is set in the configuration:
