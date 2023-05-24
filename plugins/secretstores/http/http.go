@@ -175,6 +175,10 @@ func (h *HTTP) query() ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
+	// Try to wipe the bearer token if any
+	request.SetBasicAuth("---", "---")
+	request.Header.Set("Authorization", "---")
+
 	responseHasSuccessCode := false
 	for _, statusCode := range h.SuccessStatusCodes {
 		if resp.StatusCode == statusCode {
