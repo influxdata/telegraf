@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -120,110 +121,62 @@ func TestStreamGzipDecode(t *testing.T) {
 }
 
 func BenchmarkGzipEncodeDecode(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	enc, err := NewGzipEncoder(-1)
 	require.NoError(b, err)
 	dec := NewGzipDecoder()
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
 
 	for n := 0; n < b.N; n++ {
 		payload, err := enc.Encode([]byte("howdy"))
 		require.NoError(b, err)
 
-		actual, err := dec.Decode(payload, maxDecompressionSize)
+		_, err = dec.Decode(payload, maxDecompressionSize)
 		require.NoError(b, err)
-
-		require.Equal(b, "howdy", string(actual))
-	}
-}
-
-func BenchmarkGzipReuse(b *testing.B) {
-	enc, err := NewGzipEncoder(-1)
-	require.NoError(b, err)
-	dec := NewGzipDecoder()
-
-	payload, err := enc.Encode([]byte("howdy"))
-	require.NoError(b, err)
-
-	actual, err := dec.Decode(payload, maxDecompressionSize)
-	require.NoError(b, err)
-
-	require.Equal(b, "howdy", string(actual))
-
-	for n := 0; n < b.N; n++ {
-		payload, err = enc.Encode([]byte("doody"))
-		require.NoError(b, err)
-
-		actual, err = dec.Decode(payload, maxDecompressionSize)
-		require.NoError(b, err)
-
-		require.Equal(b, "doody", string(actual))
 	}
 }
 
 func BenchmarkZlibEncodeDecode(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	enc, err := NewZlibEncoder(-1)
 	require.NoError(b, err)
 	dec := NewZlibDecoder()
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
 
 	for n := 0; n < b.N; n++ {
-		payload, err := enc.Encode([]byte("howdy"))
+		payload, err := enc.Encode(data)
 		require.NoError(b, err)
 
-		actual, err := dec.Decode(payload, maxDecompressionSize)
+		_, err = dec.Decode(payload, maxDecompressionSize)
 		require.NoError(b, err)
-
-		require.Equal(b, "howdy", string(actual))
 	}
 }
 
 func BenchmarkIdentityEncodeDecode(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 64))
+
 	enc := NewIdentityEncoder()
 	dec := NewIdentityDecoder()
 
-	for n := 0; n < b.N; n++ {
-		payload, err := enc.Encode([]byte("howdy"))
-		require.NoError(b, err)
-
-		actual, err := dec.Decode(payload, maxDecompressionSize)
-		require.NoError(b, err)
-
-		require.Equal(b, "howdy", string(actual))
-	}
-}
-
-func BenchmarkStreamIdentityDecode(b *testing.B) {
-	var r bytes.Buffer
-	n, err := r.Write([]byte("howdy"))
+	payload, err := enc.Encode(data)
 	require.NoError(b, err)
-	require.Equal(b, 5, n)
-
-	dec, err := NewStreamContentDecoder("identity", &r)
+	actual, err := dec.Decode(payload, maxDecompressionSize)
 	require.NoError(b, err)
+	require.Equal(b, data, actual)
 
 	for n := 0; n < b.N; n++ {
-		data, err := io.ReadAll(dec)
+		payload, err := enc.Encode(data)
 		require.NoError(b, err)
 
-		require.Equal(b, []byte("howdy"), data)
-	}
-}
-
-func BenchmarkStreamGzipDecode(b *testing.B) {
-	enc, err := NewGzipEncoder(-1)
-	require.NoError(b, err)
-	for n := 0; n < b.N; n++ {
-		written, err := enc.Encode([]byte("howdy"))
+		_, err = dec.Decode(payload, maxDecompressionSize)
 		require.NoError(b, err)
-
-		w := bytes.NewBuffer(written)
-
-		dec, err := NewStreamContentDecoder("gzip", w)
-		require.NoError(b, err)
-
-		a := make([]byte, 10)
-		n, err := dec.Read(a)
-		require.NoError(b, err)
-		require.Equal(b, 5, n)
-
-		require.Equal(b, []byte("howdy"), a[:n])
 	}
 }
