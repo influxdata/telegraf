@@ -70,6 +70,8 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
+	input.Command = `Raw command which may or may not contain # in it
+# is unique`
 
 	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
@@ -85,7 +87,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Values: []string{"mytag"},
+				Values: []string{"mytag", "tagwith#value", "TagWithMultilineSyntax"},
 			},
 		},
 	}
@@ -103,6 +105,96 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c.Inputs[0].Config.ID = ""
 	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct mockup struct.")
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct input metadata.")
+}
+
+func Test_envSub(t *testing.T) {
+	tests := []struct {
+		name         string
+		setEnv       func(*testing.T)
+		contents     string
+		expected     string
+		wantErr      bool
+		errSubstring string
+	}{
+		{
+			name: "Legacy with ${} and without {}",
+			setEnv: func(t *testing.T) {
+				t.Setenv("TEST_ENV1", "VALUE1")
+				t.Setenv("TEST_ENV2", "VALUE2")
+			},
+			contents: "A string with ${TEST_ENV1}, $TEST_ENV2 and $TEST_ENV1 as repeated",
+			expected: "A string with VALUE1, VALUE2 and VALUE1 as repeated",
+		},
+		{
+			name:     "Env not set",
+			contents: "Env variable ${NOT_SET} will be empty",
+			expected: "Env variable  will be empty", // Two spaces present
+		},
+		{
+			name:     "Env not set, fallback to default",
+			contents: "Env variable ${THIS_IS_ABSENT:-Fallback}",
+			expected: "Env variable Fallback",
+		},
+		{
+			name: "No fallback",
+			setEnv: func(t *testing.T) {
+				t.Setenv("MY_ENV1", "VALUE1")
+			},
+			contents: "Env variable ${MY_ENV1:-Fallback}",
+			expected: "Env variable VALUE1",
+		},
+		{
+			name: "Mix and match",
+			setEnv: func(t *testing.T) {
+				t.Setenv("MY_VAR", "VALUE")
+				t.Setenv("MY_VAR2", "VALUE2")
+			},
+			contents: "Env var ${MY_VAR} is set, with $MY_VAR syntax and default on this ${MY_VAR1:-Substituted}, no default on this ${MY_VAR2:-NoDefault}",
+			expected: "Env var VALUE is set, with VALUE syntax and default on this Substituted, no default on this VALUE2",
+		},
+		{
+			name:     "Default has special chars",
+			contents: `Not recommended but supported ${MY_VAR:-Default with special chars Supported#$\"}`,
+			expected: `Not recommended but supported Default with special chars Supported#$\"`, // values are escaped
+		},
+		{
+			name:         "unset error",
+			contents:     "Contains ${THIS_IS_NOT_SET?unset-error}",
+			wantErr:      true,
+			errSubstring: "unset-error",
+		},
+		{
+			name: "env empty error",
+			setEnv: func(t *testing.T) {
+				t.Setenv("ENV_EMPTY", "")
+			},
+			contents:     "Contains ${ENV_EMPTY:?empty-error}",
+			wantErr:      true,
+			errSubstring: "empty-error",
+		},
+		{
+			name: "Fallback as env variable",
+			setEnv: func(t *testing.T) {
+				t.Setenv("FALLBACK", "my-fallback")
+			},
+			contents: "Should output ${NOT_SET:-${FALLBACK}}",
+			expected: "Should output my-fallback",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv != nil {
+				tt.setEnv(t)
+			}
+			actual, err := substituteEnvironment([]byte(tt.contents))
+			if tt.wantErr {
+				require.ErrorContains(t, err, tt.errSubstring)
+				return
+			}
+			require.EqualValues(t, tt.expected, string(actual))
+		})
+	}
 }
 
 func TestConfig_LoadSingleInput(t *testing.T) {
@@ -399,13 +491,15 @@ func TestConfig_WrongFieldType(t *testing.T) {
 
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
+	t.Setenv("TOKEN", "test")
+
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
 	require.Len(t, c.Outputs, 2)
 
 	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
 	require.True(t, ok)
-	require.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
+	require.Equal(t, map[string]string{"Authorization": "Token test", "Content-Type": "application/json"}, output.Headers)
 	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
 }
 
@@ -758,7 +852,7 @@ func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
 	}
 }
 
-func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
+func TestConfig_ParserInterface(t *testing.T) {
 	formats := []string{
 		"collectd",
 		"csv",
@@ -782,21 +876,13 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	require.NoError(t, c.LoadConfig("./testdata/parsers_new.toml"))
 	require.Len(t, c.Inputs, len(formats))
 
-	cfg := parsers.Config{
-		CSVHeaderRowCount:     42,
-		DropwizardTagPathsMap: make(map[string]string),
-		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
-		JSONStrict:            true,
-		MetricName:            "parser_test_new",
-	}
-
 	override := map[string]struct {
 		param map[string]interface{}
 		mask  []string
 	}{
 		"csv": {
 			param: map[string]interface{}{
-				"HeaderRowCount": cfg.CSVHeaderRowCount,
+				"HeaderRowCount": 42,
 			},
 			mask: []string{"TimeFunc", "ResetMode"},
 		},
@@ -810,15 +896,12 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		formatCfg := &cfg
-		formatCfg.DataFormat = format
-
-		logger := models.NewLogger("parsers", format, cfg.MetricName)
+		logger := models.NewLogger("parsers", format, "parser_test_new")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)
 
-		parser := creator(formatCfg.MetricName)
+		parser := creator("parser_test_new")
 		if settings, found := override[format]; found {
 			s := reflect.Indirect(reflect.ValueOf(parser))
 			for key, value := range settings.param {
@@ -870,126 +953,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		}
 
 		// Do a manual comparision as require.EqualValues will also work on unexported fields
-		// that cannot be cleared or ignored.
-		diff := cmp.Diff(expected[i], actual[i], options...)
-		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
-		diff = cmp.Diff(expected[i], generated[i], options...)
-		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
-	}
-}
-
-func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
-	formats := []string{
-		"collectd",
-		"csv",
-		"dropwizard",
-		"form_urlencoded",
-		"graphite",
-		"grok",
-		"influx",
-		"json",
-		"json_v2",
-		"logfmt",
-		"nagios",
-		"prometheus",
-		"prometheusremotewrite",
-		"value",
-		"wavefront",
-		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
-	}
-
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/parsers_old.toml"))
-	require.Len(t, c.Inputs, len(formats))
-
-	cfg := parsers.Config{
-		CSVHeaderRowCount:     42,
-		DropwizardTagPathsMap: make(map[string]string),
-		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
-		JSONStrict:            true,
-		MetricName:            "parser_test_old",
-	}
-
-	override := map[string]struct {
-		param map[string]interface{}
-		mask  []string
-	}{
-		"csv": {
-			param: map[string]interface{}{
-				"HeaderRowCount": cfg.CSVHeaderRowCount,
-			},
-			mask: []string{"TimeFunc", "ResetMode"},
-		},
-		"xpath_protobuf": {
-			param: map[string]interface{}{
-				"ProtobufMessageDef":  "testdata/addressbook.proto",
-				"ProtobufMessageType": "addressbook.AddressBook",
-			},
-		},
-	}
-
-	expected := make([]telegraf.Parser, 0, len(formats))
-	for _, format := range formats {
-		formatCfg := &cfg
-		formatCfg.DataFormat = format
-
-		logger := models.NewLogger("parsers", format, cfg.MetricName)
-
-		creator, found := parsers.Parsers[format]
-		require.Truef(t, found, "No parser for format %q", format)
-
-		parser := creator(formatCfg.MetricName)
-		if settings, found := override[format]; found {
-			s := reflect.Indirect(reflect.ValueOf(parser))
-			for key, value := range settings.param {
-				v := reflect.ValueOf(value)
-				s.FieldByName(key).Set(v)
-			}
-		}
-		models.SetLoggerOnPlugin(parser, logger)
-		if p, ok := parser.(telegraf.Initializer); ok {
-			require.NoError(t, p.Init())
-		}
-		expected = append(expected, parser)
-	}
-	require.Len(t, expected, len(formats))
-
-	actual := make([]interface{}, 0)
-	generated := make([]interface{}, 0)
-	for _, plugin := range c.Inputs {
-		input, ok := plugin.Input.(*MockupInputPluginParserOld)
-		require.True(t, ok)
-		// Get the parser set with 'SetParser()'
-		if p, ok := input.Parser.(*models.RunningParser); ok {
-			actual = append(actual, p.Parser)
-		} else {
-			actual = append(actual, input.Parser)
-		}
-		// Get the parser set with 'SetParserFunc()'
-		g, err := input.ParserFunc()
-		require.NoError(t, err)
-		if rp, ok := g.(*models.RunningParser); ok {
-			generated = append(generated, rp.Parser)
-		} else {
-			generated = append(generated, g)
-		}
-	}
-	require.Len(t, actual, len(formats))
-
-	for i, format := range formats {
-		// Determine the underlying type of the parser
-		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
-		// Ignore all unexported fields and fields not relevant for functionality
-		options := []cmp.Option{
-			cmpopts.IgnoreUnexported(stype),
-			cmpopts.IgnoreTypes(sync.Mutex{}),
-			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
-		}
-		if settings, found := override[format]; found {
-			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
-		}
-
-		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
@@ -1362,25 +1325,6 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 	}
 }
 
-/*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
-type MockupInputPluginParserOld struct {
-	Parser     parsers.Parser
-	ParserFunc parsers.ParserFunc
-}
-
-func (m *MockupInputPluginParserOld) SampleConfig() string {
-	return "Mockup old parser test plugin"
-}
-func (m *MockupInputPluginParserOld) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser) {
-	m.Parser = parser
-}
-func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc) {
-	m.ParserFunc = f
-}
-
 /*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserNew struct {
 	Parser     telegraf.Parser
@@ -1694,9 +1638,6 @@ func init() {
 	// Register the mockup input plugin for the required names
 	inputs.Add("parser_test_new", func() telegraf.Input {
 		return &MockupInputPluginParserNew{}
-	})
-	inputs.Add("parser_test_old", func() telegraf.Input {
-		return &MockupInputPluginParserOld{}
 	})
 	inputs.Add("parser", func() telegraf.Input {
 		return &MockupInputPluginParserOnly{}

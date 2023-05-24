@@ -89,6 +89,7 @@ following works:
 - github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
 - github.com/clarify/clarify-go [Apache License 2.0](https://github.com/clarify/clarify-go/blob/master/LICENSE)
 - github.com/cloudevents/sdk-go [Apache License 2.0](https://github.com/cloudevents/sdk-go/blob/main/LICENSE)
+- github.com/compose-spec/compose-go [Apache License 2.0](https://github.com/compose-spec/compose-go/blob/master/LICENSE)
 - github.com/containerd/containerd [Apache License 2.0](https://github.com/containerd/containerd/blob/master/LICENSE)
 - github.com/coocood/freecache [MIT License](https://github.com/coocood/freecache/blob/master/LICENSE)
 - github.com/coreos/go-semver [Apache License 2.0](https://github.com/coreos/go-semver/blob/main/LICENSE)

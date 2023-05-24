@@ -123,20 +123,22 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				if isRetryable(err) {
-					if flushErr := w.sender.Flush(); flushErr != nil {
-						w.Log.Errorf("wavefront flushing error: %v", flushErr)
+					// The internal buffer in the Wavefront SDK is full. To prevent data loss,
+					// we flush the buffer (which is a blocking operation) and try again.
+					w.Log.Debug("SDK buffer overrun, forcibly flushing the buffer")
+					if err = w.sender.Flush(); err != nil {
+						return fmt.Errorf("wavefront flushing error: %w", err)
 					}
-					return fmt.Errorf("wavefront sending error: %w", err)
+					// Try again.
+					err = w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
+					if err != nil {
+						if isRetryable(err) {
+							return fmt.Errorf("wavefront sending error: %w", err)
+						}
+					}
 				}
-				w.Log.Errorf("non-retryable error during Wavefront.Write: %w", err)
-				w.Log.Debugf(
-					"Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ",
-					point.Metric,
-					point.Value,
-					point.Timestamp,
-					point.Source,
-					point.Tags,
-				)
+				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
+				w.Log.Debugf("non-retryable metric data: %+v", point)
 			}
 		}
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -70,7 +69,7 @@ type MQTTConsumer struct {
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
-	parser                 parsers.Parser
+	parser                 telegraf.Parser
 
 	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
@@ -98,7 +97,7 @@ func (*MQTTConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
+func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {

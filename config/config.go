@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/compose-spec/compose-go/template"
+	"github.com/compose-spec/compose-go/utils"
 	"github.com/coreos/go-semver/semver"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -39,13 +41,6 @@ import (
 )
 
 var (
-	// envVarRe is a regex to find environment variables in the config file
-	envVarRe = regexp.MustCompile(`\${(\w+)}|\$(\w+)`)
-
-	envVarEscaper = strings.NewReplacer(
-		`"`, `\"`,
-		`\`, `\\`,
-	)
 	httpLoadConfigRetryInterval = 10 * time.Second
 
 	// fetchURLRe is a regex to determine whether the requested file should
@@ -697,11 +692,6 @@ func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
-// escapeEnv escapes a value for inserting into a TOML string.
-func escapeEnv(value string) string {
-	return envVarEscaper.Replace(value)
-}
-
 func LoadConfigFile(config string) ([]byte, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
@@ -782,30 +772,87 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 // will find environment variables and replace them.
 func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
+	var err error
+	contents, err = removeComments(contents)
+	if err != nil {
+		return nil, err
+	}
+	outputBytes, err := substituteEnvironment(contents)
+	if err != nil {
+		return nil, err
+	}
+	return toml.Parse(outputBytes)
+}
 
-	parameters := envVarRe.FindAllSubmatch(contents, -1)
-	for _, parameter := range parameters {
-		if len(parameter) != 3 {
-			continue
+func removeComments(contents []byte) ([]byte, error) {
+	tomlReader := bytes.NewReader(contents)
+
+	// Initialize variables for tracking state
+	var inQuote, inComment bool
+	var quoteChar, prevChar byte
+
+	// Initialize buffer for modified TOML data
+	var output bytes.Buffer
+
+	buf := make([]byte, 1)
+	// Iterate over each character in the file
+	for {
+		_, err := tomlReader.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
 		}
+		char := buf[0]
 
-		var envVar []byte
-		if parameter[1] != nil {
-			envVar = parameter[1]
-		} else if parameter[2] != nil {
-			envVar = parameter[2]
+		if inComment {
+			// If we're currently in a comment, check if this character ends the comment
+			if char == '\n' {
+				// End of line, comment is finished
+				inComment = false
+				_, _ = output.WriteRune('\n')
+			}
+		} else if inQuote {
+			// If we're currently in a quote, check if this character ends the quote
+			if char == quoteChar && prevChar != '\\' {
+				// End of quote, we're no longer in a quote
+				inQuote = false
+			}
+			output.WriteByte(char)
 		} else {
-			continue
-		}
-
-		envVal, ok := os.LookupEnv(strings.TrimPrefix(string(envVar), "$"))
-		if ok {
-			envVal = escapeEnv(envVal)
-			contents = bytes.Replace(contents, parameter[0], []byte(envVal), 1)
+			// Not in a comment or a quote
+			if char == '"' || char == '\'' {
+				// Start of quote
+				inQuote = true
+				quoteChar = char
+				output.WriteByte(char)
+			} else if char == '#' {
+				// Start of comment
+				inComment = true
+			} else {
+				// Not a comment or a quote, just output the character
+				output.WriteByte(char)
+			}
+			prevChar = char
 		}
 	}
+	return output.Bytes(), nil
+}
 
-	return toml.Parse(contents)
+func substituteEnvironment(contents []byte) ([]byte, error) {
+	envMap := utils.GetAsEqualsMap(os.Environ())
+	retVal, err := template.Substitute(string(contents), func(k string) (string, bool) {
+		if v, ok := envMap[k]; ok {
+			return v, ok
+		}
+		return "", false
+	})
+	var invalidTmplError *template.InvalidTemplateError
+	if err != nil && !errors.As(err, &invalidTmplError) {
+		return nil, err
+	}
+	return []byte(retVal), nil
 }
 
 func (c *Config) addAggregator(name string, table *ast.Table) error {
@@ -1228,34 +1275,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	// Keep the old interface for backward compatibility
-	if t, ok := input.(parsers.ParserInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserPlugin.
-		missCountThreshold = 1
-		parser, err := c.addParser("inputs", name, table)
-		if err != nil {
-			return fmt.Errorf("adding parser failed: %w", err)
-		}
-		t.SetParser(parser)
-	}
-
 	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
 		missCountThreshold = 1
 		if !c.probeParser("inputs", name, table) {
 			return errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
-			return c.addParser("inputs", name, table)
-		})
-	}
-
-	if t, ok := input.(parsers.ParserFuncInput); ok {
-		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncPlugin.
-		missCountThreshold = 1
-		if !c.probeParser("inputs", name, table) {
-			return errors.New("parser not found")
-		}
-		t.SetParserFunc(func() (parsers.Parser, error) {
 			return c.addParser("inputs", name, table)
 		})
 	}
@@ -1452,10 +1477,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldString(tbl, "prefix", &sc.Prefix)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
-	c.getFieldBool(tbl, "csv_column_prefix", &sc.CSVPrefix)
-	c.getFieldBool(tbl, "csv_header", &sc.CSVHeader)
-	c.getFieldString(tbl, "csv_separator", &sc.CSVSeparator)
-	c.getFieldString(tbl, "csv_timestamp_format", &sc.TimestampFormat)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
@@ -1550,7 +1571,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
-		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_strict_sanitize_regex",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
