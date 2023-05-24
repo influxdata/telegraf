@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -101,9 +102,11 @@ func (a *AesEncryptor) Init() error {
 			return fmt.Errorf("decoding key failed: %w", err)
 		}
 		config.ReleaseSecret(encodedKey)
+		actuallen := len(key)
+		memguard.WipeBytes(key)
 
-		if len(key) != keylen {
-			return fmt.Errorf("key length (%d bit) does not match cipher (%d bit)", len(key)*8, keylen*8)
+		if actuallen != keylen {
+			return fmt.Errorf("key length (%d bit) does not match cipher (%d bit)", actuallen*8, keylen*8)
 		}
 	}
 
@@ -156,11 +159,12 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("getting initialization-vector failed: %w", err)
 	}
 	iv := make([]byte, hex.DecodedLen(len(encodedIV)))
-	if _, err := hex.Decode(iv, encodedIV); err != nil {
-		config.ReleaseSecret(encodedIV)
+	_, err = hex.Decode(iv, encodedIV)
+	config.ReleaseSecret(encodedIV)
+	if err != nil {
+		memguard.WipeBytes(iv)
 		return nil, fmt.Errorf("decoding init vector failed: %w", err)
 	}
-	config.ReleaseSecret(encodedIV)
 
 	cipher.NewCBCDecrypter(block, iv).CryptBlocks(data, data)
 	return a.trim(data)
