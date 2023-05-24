@@ -381,6 +381,6 @@ If `output_json_string` is set in the configuration:
 then the metrics will be generated like this:
 
 ```text
-motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear="{\"actualAcc\":0,\"actualAccUnit\":\"m/s^2\",\"actualPos\":65.249329860957,\"actualPosUnit\":\"mm\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":5,\"actualVelUnit\":\"mm/min\",\"distLeft\":0,\"distLeftUnit\":\"mm\"}" 1680258290342523500
-motion,server=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational="{\"actualAcc\":0,\"actualAccUnit\":\"rad/s^2\",\"actualPos\":120,\"actualPosUnit\":\"deg\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":0,\"actualVelUnit\":\"rpm\",\"distLeft\":0,\"distLeftUnit\":\"deg\"}" 1680258290342538100
+motion,source=192.168.1.1,host=host.example.com,node=motion/axs/Axis_1/state/values/actual linear="{\"actualAcc\":0,\"actualAccUnit\":\"m/s^2\",\"actualPos\":65.249329860957,\"actualPosUnit\":\"mm\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":5,\"actualVelUnit\":\"mm/min\",\"distLeft\":0,\"distLeftUnit\":\"mm\"}" 1680258290342523500
+motion,source=192.168.1.1,host=host.example.com,node=motion/axs/Axis_2/state/values/actual rotational="{\"actualAcc\":0,\"actualAccUnit\":\"rad/s^2\",\"actualPos\":120,\"actualPosUnit\":\"deg\",\"actualTorque\":0,\"actualTorqueUnit\":\"Nm\",\"actualVel\":0,\"actualVelUnit\":\"rpm\",\"distLeft\":0,\"distLeftUnit\":\"deg\"}" 1680258290342538100
 ```
