@@ -352,10 +352,9 @@ func TestComposeAPICompatibleMetrics(t *testing.T) {
 	metricStream.composeMetrics(data)
 
 	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_ec2",
-		map[string]interface{}{"cpu_utilization_maximum": 0.4366666666666666, "cpu_utilization_minimum": 0.3683333333333333,
-			"cpu_utilization_sum": 1.9399999999999997, "cpu_utilization_sample_count": 5.0, "cpu_utilization_average": 0.38799999999999996},
-		map[string]string{"auto_scaling_group_name": "test-autoscaling-group", "account": "546734499701", "region": "us-west-2"},
+	acc.AssertContainsTaggedFields(t, "aws_ec2_cpuutilization",
+		map[string]interface{}{"maximum": 0.4366666666666666, "minimum": 0.3683333333333333, "sum": 1.9399999999999997, "samplecount": 5.0},
+		map[string]string{"AutoScalingGroupName": "test-autoscaling-group", "accountId": "546734499701", "region": "us-west-2"},
 	)
 }
 
