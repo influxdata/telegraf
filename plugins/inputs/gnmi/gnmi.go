@@ -42,23 +42,24 @@ var supportedExtensions = []string{"juniper_header"}
 
 // gNMI plugin instance
 type GNMI struct {
-	Addresses        []string          `toml:"addresses"`
-	Subscriptions    []Subscription    `toml:"subscription"`
-	TagSubscriptions []TagSubscription `toml:"tag_subscription"`
-	Aliases          map[string]string `toml:"aliases"`
-	Encoding         string            `toml:"encoding"`
-	Origin           string            `toml:"origin"`
-	Prefix           string            `toml:"prefix"`
-	Target           string            `toml:"target"`
-	UpdatesOnly      bool              `toml:"updates_only"`
-	VendorSpecific   []string          `toml:"vendor_specific"`
-	Username         string            `toml:"username"`
-	Password         string            `toml:"password"`
-	Redial           config.Duration   `toml:"redial"`
-	MaxMsgSize       config.Size       `toml:"max_msg_size"`
-	Trace            bool              `toml:"dump_responses"`
-	EnableTLS        bool              `toml:"enable_tls"`
-	Log              telegraf.Logger   `toml:"-"`
+	Addresses           []string          `toml:"addresses"`
+	Subscriptions       []Subscription    `toml:"subscription"`
+	TagSubscriptions    []TagSubscription `toml:"tag_subscription"`
+	Aliases             map[string]string `toml:"aliases"`
+	Encoding            string            `toml:"encoding"`
+	Origin              string            `toml:"origin"`
+	Prefix              string            `toml:"prefix"`
+	Target              string            `toml:"target"`
+	UpdatesOnly         bool              `toml:"updates_only"`
+	VendorSpecific      []string          `toml:"vendor_specific"`
+	Username            string            `toml:"username"`
+	Password            string            `toml:"password"`
+	Redial              config.Duration   `toml:"redial"`
+	MaxMsgSize          config.Size       `toml:"max_msg_size"`
+	Trace               bool              `toml:"dump_responses"`
+	CanonicalFieldNames bool              `toml:"canonical_field_names"`
+	EnableTLS           bool              `toml:"enable_tls"`
+	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
@@ -192,15 +193,18 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			confHandler := configHandler{
-				aliases:       c.internalAliases,
-				subscriptions: c.TagSubscriptions,
-				maxSize:       int(c.MaxMsgSize),
-				log:           c.Log,
-				trace:         c.Trace,
-				vendorExt:     c.VendorSpecific,
+
+			h := handler{
+				address:             addr,
+				aliases:             c.internalAliases,
+				tagsubs:             c.TagSubscriptions,
+				maxMsgSize:          int(c.MaxMsgSize),
+				vendorExt:           c.VendorSpecific,
+				tagStore:            newTagStore(c.TagSubscriptions),
+				trace:               c.Trace,
+				canonicalFieldNames: c.CanonicalFieldNames,
+				log:                 c.Log,
 			}
-			h := newHandler(addr, confHandler)
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)

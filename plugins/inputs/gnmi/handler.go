@@ -28,38 +28,16 @@ import (
 const eidJuniperTelemetryHeader = 1
 
 type handler struct {
-	address            string
-	aliases            map[string]string
-	tagsubs            []TagSubscription
-	maxMsgSize         int
-	emptyNameWarnShown bool
-	vendorExt          []string
-	tagStore           *tagStore
-	trace              bool
-	log                telegraf.Logger
-}
-
-// Allow to convey additionnal configuration elements
-type configHandler struct {
-	aliases       map[string]string
-	subscriptions []TagSubscription
-	maxSize       int
-	log           telegraf.Logger
-	trace         bool
-	vendorExt     []string
-}
-
-func newHandler(addr string, confHandler configHandler) *handler {
-	return &handler{
-		address:    addr,
-		aliases:    confHandler.aliases,
-		tagsubs:    confHandler.subscriptions,
-		maxMsgSize: confHandler.maxSize,
-		vendorExt:  confHandler.vendorExt,
-		tagStore:   newTagStore(confHandler.subscriptions),
-		trace:      confHandler.trace,
-		log:        confHandler.log,
-	}
+	address             string
+	aliases             map[string]string
+	tagsubs             []TagSubscription
+	maxMsgSize          int
+	emptyNameWarnShown  bool
+	vendorExt           []string
+	tagStore            *tagStore
+	trace               bool
+	canonicalFieldNames bool
+	log                 telegraf.Logger
 }
 
 // SubscribeGNMI and extract telemetry data
@@ -266,15 +244,22 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				// conversion on the key.
 				key = key[len(aliasPath)+1:]
 			} else if len(aliasPath) >= len(key) {
-				// Otherwise use the last path element as the field key.
-				key = path.Base(key)
+				if h.canonicalFieldNames {
+					// Strip the origin is any for the field names
+					if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
+						key = parts[1]
+					}
+				} else {
+					// Otherwise use the last path element as the field key.
+					key = path.Base(key)
 
-				// If there are no elements skip the item; this would be an
-				// invalid message.
-				key = strings.TrimLeft(key, "/.")
-				if key == "" {
-					h.log.Errorf("invalid empty path: %q", k)
-					continue
+					// If there are no elements skip the item; this would be an
+					// invalid message.
+					key = strings.TrimLeft(key, "/.")
+					if key == "" {
+						h.log.Errorf("invalid empty path: %q", k)
+						continue
+					}
 				}
 			}
 			grouper.Add(name, tags, timestamp, key, v)
