@@ -731,13 +731,20 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 func (d *netflowDecoder) decodeValuePEN(field netflow.DataField) []telegraf.Field {
 	raw := field.Value.([]byte)
 
-	key := fmt.Sprintf("%d.%d", field.Pen, field.Type)
+	var prefix string
+	elementID := field.Type
+	if field.Type&0x4000 != 0 {
+		prefix = "rev_"
+		elementID = field.Type & (0x4000 ^ 0xffff)
+	}
+
+	key := fmt.Sprintf("%d.%d", field.Pen, elementID)
 	if m, found := d.mappingsPEN[key]; found {
 		return []telegraf.Field{{Key: m.name, Value: m.decoder(raw)}}
 	}
 
 	// Return the raw data if no mapping was found
 	d.Log.Debugf("unknown PEN data field %v", field)
-	name := fmt.Sprintf("type_%d_%d", field.Pen, field.Type)
+	name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
 	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 }
