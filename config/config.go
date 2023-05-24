@@ -1481,11 +1481,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
 
-	c.getFieldString(tbl, "graphite_strict_sanitize_regex", &sc.GraphiteStrictRegex)
-	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
-	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
-	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
-
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
 	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
 	c.getFieldString(tbl, "json_transformation", &sc.Transformation)
@@ -1571,8 +1566,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
-		"graphite_strict_sanitize_regex",
-		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
 		"json_timestamp_format", "json_timestamp_units", "json_transformation",
 		"json_nested_fields_include", "json_nested_fields_exclude",
