@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
+  "github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
@@ -177,8 +178,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewPrometheusSerializer(config), nil
 	case "prometheusremotewrite":
 		serializer, err = NewPrometheusRemoteWriteSerializer(config), nil
-	case "msgpack":
-		serializer, err = NewMsgpackSerializer(), nil
 	default:
 		creator, found := Serializers[config.DataFormat]
 		if !found {
@@ -249,8 +248,4 @@ func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimet
 
 func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
-}
-
-func NewMsgpackSerializer() Serializer {
-	return msgpack.NewSerializer()
 }
