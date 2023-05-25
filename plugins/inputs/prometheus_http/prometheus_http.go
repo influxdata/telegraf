@@ -127,6 +127,38 @@ func (*PrometheusHttp) SampleConfig() string {
 	return sampleConfig
 }
 
+func (p *PrometheusHttp) Info(obj interface{}, args ...interface{}) {
+	s, ok := obj.(string)
+	if !ok {
+		return
+	}
+	p.Log.Infof(s, args)
+}
+
+func (p *PrometheusHttp) Warn(obj interface{}, args ...interface{}) {
+	s, ok := obj.(string)
+	if !ok {
+		return
+	}
+	p.Log.Warnf(s, args)
+}
+
+func (p *PrometheusHttp) Debug(obj interface{}, args ...interface{}) {
+	s, ok := obj.(string)
+	if !ok {
+		return
+	}
+	p.Log.Debugf(s, args)
+}
+
+func (p *PrometheusHttp) Error(obj interface{}, args ...interface{}) {
+	s, ok := obj.(string)
+	if !ok {
+		return
+	}
+	p.Log.Errorf(s, args)
+}
+
 func (p *PrometheusHttp) getMetricPeriod(m *PrometheusHttpMetric) *PrometheusHttpPeriod {
 
 	duration := p.Duration
@@ -366,7 +398,7 @@ func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) inte
 
 	t, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
 		Content: template,
-	}, nil)
+	}, p)
 	if err != nil {
 		p.Log.Error(err)
 		return err
@@ -393,7 +425,7 @@ func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.Tex
 		Name:    fmt.Sprintf("%s_template", name),
 		Content: value,
 		Funcs:   funcs,
-	}, nil)
+	}, p)
 
 	if err != nil {
 		p.Log.Error(err)
