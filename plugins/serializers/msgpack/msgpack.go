@@ -47,6 +47,6 @@ func init() {
 }
 
 // InitFromConfig is a compatibility function to construct the parser the old way
-func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+func (s *Serializer) InitFromConfig(_ *serializers.Config) error {
 	return nil
 }
