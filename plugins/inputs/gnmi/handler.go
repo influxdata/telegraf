@@ -239,17 +239,17 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		// Group metrics
 		for k, v := range fields {
 			key := k
-			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
-				// This may not be an exact prefix, due to naming style
-				// conversion on the key.
-				key = key[len(aliasPath)+1:]
-			} else if len(aliasPath) >= len(key) {
-				if h.canonicalFieldNames {
-					// Strip the origin is any for the field names
-					if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
-						key = parts[1]
-					}
-				} else {
+			if h.canonicalFieldNames {
+				// Strip the origin is any for the field names
+				if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
+					key = parts[1]
+				}
+			} else {
+				if len(aliasPath) < len(key) && len(aliasPath) != 0 {
+					// This may not be an exact prefix, due to naming style
+					// conversion on the key.
+					key = key[len(aliasPath)+1:]
+				} else if len(aliasPath) >= len(key) {
 					// Otherwise use the last path element as the field key.
 					key = path.Base(key)
 
