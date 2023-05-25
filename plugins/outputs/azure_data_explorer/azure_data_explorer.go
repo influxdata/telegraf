@@ -248,11 +248,11 @@ func (adx *AzureDataExplorer) Init() error {
 		return fmt.Errorf("unknown ingestion type %q", adx.IngestionType)
 	}
 
-	serializer, err := json.NewSerializer(json.FormatConfig{
+	serializer := &json.Serializer{
 		TimestampUnits:  time.Nanosecond,
 		TimestampFormat: time.RFC3339Nano,
-	})
-	if err != nil {
+	}
+	if err := serializer.Init(); err != nil {
 		return err
 	}
 	adx.serializer = serializer

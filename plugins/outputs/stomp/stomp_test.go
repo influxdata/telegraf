@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -28,12 +28,13 @@ func TestConnectAndWrite(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer container.Terminate()
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
-	s, err := serializers.NewJSONSerializer(
-		&serializers.Config{
-			TimestampUnits:  10 * time.Second,
-			TimestampFormat: "yyy-dd-mmThh:mm:ss",
-		})
-	require.NoError(t, err)
+
+	s := &json.Serializer{
+		TimestampUnits:  10 * time.Second,
+		TimestampFormat: "yyy-dd-mmThh:mm:ss",
+	}
+	require.NoError(t, s.Init())
+
 	st := &STOMP{
 		Host:          url,
 		QueueName:     "test_queue",
