@@ -1481,12 +1481,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
 
-	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
-	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
-	c.getFieldString(tbl, "json_transformation", &sc.Transformation)
-	c.getFieldStringSlice(tbl, "json_nested_fields_include", &sc.JSONNestedFieldInclude)
-	c.getFieldStringSlice(tbl, "json_nested_fields_exclude", &sc.JSONNestedFieldExclude)
-
 	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
 	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
 	c.getFieldBool(tbl, "splunkmetric_omit_event_tag", &sc.SplunkmetricOmitEventTag)
@@ -1566,9 +1560,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
-		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
-		"json_timestamp_format", "json_timestamp_units", "json_transformation",
-		"json_nested_fields_include", "json_nested_fields_exclude",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"prometheus_compact_encoding",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric", "splunkmetric_omit_event_tag",

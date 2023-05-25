@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
@@ -163,8 +162,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
-	case "json":
-		serializer, err = NewJSONSerializer(config)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag), nil
 	case "nowmetric":
@@ -244,16 +241,6 @@ func NewPrometheusSerializer(config *Config) Serializer {
 
 func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) Serializer {
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
-}
-
-func NewJSONSerializer(config *Config) (Serializer, error) {
-	return json.NewSerializer(json.FormatConfig{
-		TimestampUnits:      config.TimestampUnits,
-		TimestampFormat:     config.TimestampFormat,
-		Transformation:      config.Transformation,
-		NestedFieldsInclude: config.JSONNestedFieldInclude,
-		NestedFieldsExclude: config.JSONNestedFieldExclude,
-	})
 }
 
 func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) Serializer {

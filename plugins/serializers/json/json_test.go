@@ -29,8 +29,8 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":91.5},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
@@ -90,11 +90,11 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 				},
 				time.Unix(1525478795, 123456789),
 			)
-			s, err := NewSerializer(FormatConfig{
+			s := Serializer{
 				TimestampUnits:  tt.timestampUnits,
 				TimestampFormat: tt.timestampFormat,
-			})
-			require.NoError(t, err)
+			}
+			require.NoError(t, s.Init())
 			actual, err := s.Serialize(m)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected+"\n", string(actual))
@@ -112,8 +112,8 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 
@@ -131,8 +131,8 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 
@@ -151,8 +151,8 @@ func TestSerializeMultiFields(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 
@@ -170,8 +170,8 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	}
 	m := metric.New("My CPU", tags, fields, now)
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 
@@ -188,10 +188,10 @@ func TestSerializeBatch(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-
 	metrics := []telegraf.Metric{m, m}
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(
@@ -214,8 +214,8 @@ func TestSerializeBatchSkipInf(t *testing.T) {
 		),
 	}
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(t, []byte(`{"metrics":[{"fields":{"time_idle":42},"name":"cpu","tags":{},"timestamp":0}]}`), buf)
@@ -233,8 +233,8 @@ func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 		),
 	}
 
-	s, err := NewSerializer(FormatConfig{})
-	require.NoError(t, err)
+	s := Serializer{}
+	require.NoError(t, s.Init())
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(t, []byte(`{"metrics":[{"fields":{},"name":"cpu","tags":{},"timestamp":0}]}`), buf)
@@ -269,13 +269,13 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			expected := expectedArray.([]interface{})
 
 			// Serialize
-			serializer, err := NewSerializer(
-				FormatConfig{
-					TimestampUnits:  cfg.TimestampUnits,
-					TimestampFormat: cfg.TimestampFormat,
-					Transformation:  cfg.Transformation,
-				})
-			require.NoError(t, err)
+			serializer := Serializer{
+				TimestampUnits:  cfg.TimestampUnits,
+				TimestampFormat: cfg.TimestampFormat,
+				Transformation:  cfg.Transformation,
+			}
+			require.NoError(t, serializer.Init())
+
 			for i, m := range metrics {
 				buf, err := serializer.Serialize(m)
 				require.NoError(t, err)
@@ -317,13 +317,13 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			// Serialize
-			serializer, err := NewSerializer(
-				FormatConfig{
-					TimestampUnits:  cfg.TimestampUnits,
-					TimestampFormat: cfg.TimestampFormat,
-					Transformation:  cfg.Transformation,
-				})
-			require.NoError(t, err)
+			serializer := Serializer{
+				TimestampUnits:  cfg.TimestampUnits,
+				TimestampFormat: cfg.TimestampFormat,
+				Transformation:  cfg.Transformation,
+			}
+			require.NoError(t, serializer.Init())
+
 			buf, err := serializer.SerializeBatch(metrics)
 			require.NoError(t, err)
 
@@ -376,12 +376,10 @@ func TestSerializeTransformationIssue12734(t *testing.T) {
 	}
 
 	// Setup serializer
-	serializer, err := NewSerializer(
-		FormatConfig{
-			Transformation: transformation,
-		},
-	)
-	require.NoError(t, err)
+	serializer := Serializer{
+		Transformation: transformation,
+	}
+	require.NoError(t, serializer.Init())
 
 	// Check multiple serializations as issue #12734 shows that the
 	// transformation breaks after the first iteration
@@ -433,15 +431,14 @@ func TestSerializeNesting(t *testing.T) {
 			expected := expectedArray.(map[string]interface{})
 
 			// Serialize
-			serializer, err := NewSerializer(
-				FormatConfig{
-					TimestampUnits:      cfg.TimestampUnits,
-					TimestampFormat:     cfg.TimestampFormat,
-					Transformation:      cfg.Transformation,
-					NestedFieldsInclude: cfg.JSONNestedFieldsInclude,
-					NestedFieldsExclude: cfg.JSONNestedFieldsExclude,
-				})
-			require.NoError(t, err)
+			serializer := Serializer{
+				TimestampUnits:      cfg.TimestampUnits,
+				TimestampFormat:     cfg.TimestampFormat,
+				Transformation:      cfg.Transformation,
+				NestedFieldsInclude: cfg.JSONNestedFieldsInclude,
+				NestedFieldsExclude: cfg.JSONNestedFieldsExclude,
+			}
+			require.NoError(t, serializer.Init())
 
 			buf, err := serializer.Serialize(metrics[0])
 			require.NoError(t, err)
