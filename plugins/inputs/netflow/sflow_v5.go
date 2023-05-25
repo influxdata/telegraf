@@ -2,6 +2,7 @@ package netflow
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"time"
@@ -15,12 +16,20 @@ import (
 )
 
 // Decoder structure
-type sflowv5Decoder struct{}
+type sflowv5Decoder struct {
+	Log telegraf.Logger
+
+	warnedCounterRaw map[uint32]bool
+	warnedFlowRaw    map[int64]bool
+}
 
 func (d *sflowv5Decoder) Init() error {
 	if err := initL4ProtoMapping(); err != nil {
 		return fmt.Errorf("initializing layer 4 protocol mapping failed: %w", err)
 	}
+	d.warnedCounterRaw = make(map[uint32]bool)
+	d.warnedFlowRaw = make(map[int64]bool)
+
 	return nil
 }
 
@@ -74,7 +83,7 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			} else {
 				fields["direction"] = "egress"
 			}
-			recordFields, err := decodeFlowRecords(sample.Records)
+			recordFields, err := d.decodeFlowRecords(sample.Records)
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +116,7 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			} else {
 				fields["direction"] = "egress"
 			}
-			recordFields, err := decodeFlowRecords(sample.Records)
+			recordFields, err := d.decodeFlowRecords(sample.Records)
 			if err != nil {
 				return nil, err
 			}
@@ -127,7 +136,7 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			if name := decodeSflowSourceInterface(sample.Header.SourceIdType); name != "" {
 				fields[name] = sample.Header.SourceIdValue
 			}
-			recordFields, err := decodeCounterRecords(sample.Records)
+			recordFields, err := d.decodeCounterRecords(sample.Records)
 			if err != nil {
 				return nil, err
 			}
@@ -143,7 +152,7 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	return metrics, nil
 }
 
-func decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, error) {
+func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, error) {
 	fields := make(map[string]interface{})
 	for _, r := range records {
 		if r.Data == nil {
@@ -153,7 +162,7 @@ func decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, erro
 		case sflow.SampledHeader:
 			fields["l2_protocol"] = decodeSflowHeaderProtocol(record.Protocol)
 			fields["l2_bytes"] = record.FrameLength
-			pktfields, err := decodeRawHeaderSample(&record)
+			pktfields, err := d.decodeRawHeaderSample(&record)
 			if err != nil {
 				return nil, err
 			}
@@ -207,7 +216,7 @@ func decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, erro
 	return fields, nil
 }
 
-func decodeRawHeaderSample(record *sflow.SampledHeader) (map[string]interface{}, error) {
+func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map[string]interface{}, error) {
 	var packet gopacket.Packet
 	switch record.Protocol {
 	case 1: // ETHERNET-ISO8023
@@ -319,14 +328,23 @@ func decodeRawHeaderSample(record *sflow.SampledHeader) (map[string]interface{},
 		case *gopacket.Payload:
 			// Ignore the payload
 		default:
-			fmt.Println(l)
-			return nil, fmt.Errorf("unknown layer type %T", pkt)
+			ltype := int64(pkt.LayerType())
+			if !d.warnedFlowRaw[ltype] {
+				contents := hex.EncodeToString(pkt.LayerContents())
+				payload := hex.EncodeToString(pkt.LayerPayload())
+				d.Log.Warnf("Unknown flow raw flow message %s (%d):", pkt.LayerType().String(), pkt.LayerType())
+				d.Log.Warnf("  contents: %s", contents)
+				d.Log.Warnf("  payload:  %s", payload)
+
+				d.Log.Warn("This message is only printed once.")
+			}
+			d.warnedFlowRaw[ltype] = true
 		}
 	}
 	return fields, nil
 }
 
-func decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}, error) {
+func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}, error) {
 	for _, r := range records {
 		if r.Data == nil {
 			continue
@@ -376,6 +394,25 @@ func decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}
 				"errors_symbols":          record.Dot3StatsSymbolErrors,
 			}
 			return fields, nil
+		case *sflow.FlowRecordRaw:
+			switch r.Header.DataFormat {
+			case 1005:
+				// Openflow port-name
+				if len(record.Data) < 4 {
+					return nil, fmt.Errorf("invalid data for raw counter %+v", r)
+				}
+				fields := map[string]interface{}{
+					"port_name": string(record.Data[4:]),
+				}
+				return fields, nil
+			default:
+				if !d.warnedCounterRaw[r.Header.DataFormat] {
+					data := hex.EncodeToString(record.Data)
+					d.Log.Warnf("Unknown counter raw flow message %d: %s", r.Header.DataFormat, data)
+					d.Log.Warn("This message is only printed once.")
+				}
+				d.warnedCounterRaw[r.Header.DataFormat] = true
+			}
 		default:
 			return nil, fmt.Errorf("unhandled counter record type %T", r.Data)
 		}
