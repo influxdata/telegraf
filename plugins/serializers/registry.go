@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
-  "github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
