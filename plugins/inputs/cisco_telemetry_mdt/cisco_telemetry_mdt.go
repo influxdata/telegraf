@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -360,6 +361,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
+		c.Log.Debugf("incoming data: %s", hex.EncodeToString(data))
 		c.acc.AddError(fmt.Errorf("failed to decode: %w", err))
 		return
 	}
