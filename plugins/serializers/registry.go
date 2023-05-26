@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 // Creator is the function to create a new serializer
@@ -154,50 +153,18 @@ type Config struct {
 
 // NewSerializer a Serializer interface based on the given config.
 func NewSerializer(config *Config) (Serializer, error) {
-	var err error
-	var serializer Serializer
-	switch config.DataFormat {
-	case "prometheus":
-		serializer, err = NewPrometheusSerializer(config), nil
-	default:
-		creator, found := Serializers[config.DataFormat]
-		if !found {
-			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
-		}
-
-		// Try to create new-style serializers the old way...
-		serializer := creator()
-		p, ok := serializer.(SerializerCompatibility)
-		if !ok {
-			return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
-		}
-		err := p.InitFromConfig(config)
-
-		return serializer, err
+	creator, found := Serializers[config.DataFormat]
+	if !found {
+		return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
+
+	// Try to create new-style serializers the old way...
+	serializer := creator()
+	p, ok := serializer.(SerializerCompatibility)
+	if !ok {
+		return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
+	}
+	err := p.InitFromConfig(config)
+
 	return serializer, err
-}
-
-func NewPrometheusSerializer(config *Config) Serializer {
-	exportTimestamp := prometheus.NoExportTimestamp
-	if config.PrometheusExportTimestamp {
-		exportTimestamp = prometheus.ExportTimestamp
-	}
-
-	sortMetrics := prometheus.NoSortMetrics
-	if config.PrometheusExportTimestamp {
-		sortMetrics = prometheus.SortMetrics
-	}
-
-	stringAsLabels := prometheus.DiscardStrings
-	if config.PrometheusStringAsLabel {
-		stringAsLabels = prometheus.StringAsLabel
-	}
-
-	return prometheus.NewSerializer(prometheus.FormatConfig{
-		TimestampExport: exportTimestamp,
-		MetricSortOrder: sortMetrics,
-		StringHandling:  stringAsLabels,
-		CompactEncoding: config.PrometheusCompactEncoding,
-	})
 }

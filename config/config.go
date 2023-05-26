@@ -1478,11 +1478,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 
-	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
-	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
-	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
-	c.getFieldBool(tbl, "prometheus_compact_encoding", &sc.PrometheusCompactEncoding)
-
 	if c.hasErrs() {
 		return nil, c.firstErr()
 	}
@@ -1548,9 +1543,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "data_type", "influx_parser_type":
 
 	// Serializer options to ignore
-	case "prefix", "template", "templates",
-		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
-		"prometheus_compact_encoding":
+	case "prefix", "template", "templates":
 	default:
 		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
