@@ -171,10 +171,7 @@ func TestSubscription_node(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Subscription{
-				Nodes: tt.fields.Nodes,
-			}
-			require.Equal(t, tt.want, s.node(tt.args.address))
+			require.Equal(t, tt.want, tt.fields.node(tt.args.address))
 		})
 	}
 }
