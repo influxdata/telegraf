@@ -463,3 +463,156 @@ func TestSerializeBatchMultiGroupsMultiLevel(t *testing.T) {
 
 	assert.Equal(t, string(expS), string(buf))
 }
+
+func TestSerializeBatchArrays1(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnumber": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"@a_sysCapSupported_tag": "ROUTER",
+	}
+
+	m1 := metric.New("TestArrays1", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"testArrays1":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["ROUTER"]}}],"name":"TestArrays1","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
+
+}
+
+func TestSerializeBatchArrays2(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnumber": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"@a_sysCapSupported_tag": "ROUTER",
+		"@b_sysCapSupported_tag": "BRIDGE",
+	}
+
+	m1 := metric.New("TestArrays2", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	// For some reason, metric field order processing can vary, so depending
+	// on order, the output can vary since array append will append
+	// to slice in the order processed.  Need to account for differnt order
+	expS1 := []byte(fmt.Sprintf(`{"testArrays2":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["ROUTER","BRIDGE"]}}],"name":"TestArrays2","ts":%d}]}`, now.Unix()))
+	
+	expS2 := []byte(fmt.Sprintf(`{"testArrays2":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["BRIDGE","ROUTER"]}}],"name":"TestArrays2","ts":%d}]}`, now.Unix()))
+
+	if (string(expS1) != string(buf)) {
+		if (string(expS2) != string(buf)) {
+
+			fmt.Printf("--- NO MATCHES ---\n")
+			fmt.Printf("ACTUAL:\n%v\n\n",string(buf))
+			fmt.Printf("S1:\n%v\n\n",string(expS1))
+			fmt.Printf("S2:\n%v\n\n",string(expS2))
+			assert.Equal(t, string(expS1), string(buf))
+		} else {
+			fmt.Printf("--- MATCHES S2 ---\n")
+			fmt.Printf("S2:\n%v\n\n",string(expS2))
+		}
+	} else {
+		fmt.Printf("--- MATCHES S1 ---\n")
+		fmt.Printf("S1:\n%v\n\n",string(expS1))
+	}
+}
+
+func TestSerializeBatchArrays3(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnumber": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"@1_sysCapSupported_tag": "ROUTER",
+		"@2_sysCapSupported_tag": "BRIDGE",
+		"@3_sysCapSupported_tag": "REPEATER",
+	}
+
+	m1 := metric.New("TestArrays3", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	// For some reason, metric field order processing can vary, so depending
+	// on order, the output can vary since array append will append
+	// to slice in the order processed.  Need to account for differnt order
+
+	expS1 := []byte(fmt.Sprintf(`{"testArrays3":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["ROUTER","BRIDGE","REPEATER"]}}],"name":"TestArrays3","ts":%d}]}`, now.Unix()))
+	
+	expS2 := []byte(fmt.Sprintf(`{"testArrays3":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["ROUTER","REPEATER","BRIDGE"]}}],"name":"TestArrays3","ts":%d}]}`, now.Unix()))
+
+	expS3 := []byte(fmt.Sprintf(`{"testArrays3":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["BRIDGE","ROUTER","REPEATER"]}}],"name":"TestArrays3","ts":%d}]}`, now.Unix()))
+
+	expS4 := []byte(fmt.Sprintf(`{"testArrays3":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["BRIDGE","REPEATER","ROUTER"]}}],"name":"TestArrays3","ts":%d}]}`, now.Unix()))
+
+	expS5 := []byte(fmt.Sprintf(`{"testArrays3":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["REPEATER","BRIDGE","ROUTER"]}}],"name":"TestArrays3","ts":%d}]}`, now.Unix()))
+
+	expS6 := []byte(fmt.Sprintf(`{"testArrays3":[{"device":{"serialnumber":"ABC-123"},"items":[{"tags":{"sysCapSupported":["REPEATER","ROUTER","BRIDGE"]}}],"name":"TestArrays3","ts":%d}]}`, now.Unix()))
+
+
+	if (string(expS1) != string(buf)) {
+		if (string(expS2) != string(buf)) {
+			if (string(expS3) != string(buf)) {
+				if (string(expS4) != string(buf)) {
+					if (string(expS5) != string(buf)) {
+						if (string(expS6) != string(buf)) {
+
+							fmt.Printf("--- NO MATCHES ---\n")
+							fmt.Printf("ACTUAL:\n%v\n\n",string(buf))
+							fmt.Printf("S1:\n%v\n\n",string(expS1))
+							fmt.Printf("S2:\n%v\n\n",string(expS2))
+							fmt.Printf("S3:\n%v\n\n",string(expS3))
+							fmt.Printf("S4:\n%v\n\n",string(expS4))
+							fmt.Printf("S5:\n%v\n\n",string(expS5))
+							fmt.Printf("S6:\n%v\n\n",string(expS6))
+			
+							assert.Equal(t, string(expS1), string(buf))
+						} else {
+							fmt.Printf("--- MATCHES S6 ---\n")
+							fmt.Printf("S6:\n%v\n\n",string(expS6))
+						}
+					} else {
+						fmt.Printf("--- MATCHES S5 ---\n")
+						fmt.Printf("S5:\n%v\n\n",string(expS5))
+					}
+				} else {
+					fmt.Printf("--- MATCHES S4 ---\n")
+					fmt.Printf("S4:\n%v\n\n",string(expS4))
+				}
+			} else {
+				fmt.Printf("--- MATCHES S3---\n")
+				fmt.Printf("S3:\n%v\n\n",string(expS3))
+			}
+		} else {
+			fmt.Printf("--- MATCHES S2 ---\n")
+			fmt.Printf("S2:\n%v\n\n",string(expS2))
+		}
+	} else {
+		fmt.Printf("--- MATCHES S1 ---\n")
+		fmt.Printf("S1:\n%v\n\n",string(expS1))
+	}
+}
+
+

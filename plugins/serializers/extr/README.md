@@ -9,26 +9,29 @@ The `extr` output data format converts metrics into JSON documents, performing t
         --> "usage":{"avg":50,"max":100,"min":1}
         ifAdminStatus_old="Up",ifAdminStatus_new="Down"
         --> "ifAdminStatus":{"old":"Up","new":"Down"}
+        *You could also use old_ifAdminStatus="Up",new_ifAdminStatus="Down" to achieve the same result.
 
-- Groups metric fields appended with _key.
+- Groups metric fields appended with _key to a keys group
         ifIndex_key=1, name_key="1:2"
-        --> "key":{ifIndex:1, name:"1:2"}
+        --> "keys":{ifIndex:1, name:"1:2"}
+        *You could also use ifIndex_keys=1,name_keys="1:2"
 
-- Groups metric fields appended with _tag.
+- Groups metric fields appended with _tag to a tags group
         partNumber_tag="1647G-00129 800751-00-01", revision_tag="01"
         --> "tags":{partNumber:"1647G-00129 800751-00-01", revision:"01"}
+        *You could also use partNumber_tags="1647G-00129 800751-00-01", revision_tags="01"
 
 - Groups like metric names into a toplevel map. Name of group is same as name, but with first char lowercase
         "fanStats" :[{grouped_FanStats_Metric1}, {grouped_FanStats_Metric2} ]
 
 - Creates nested JSON schema by parsing underscore "_" seperated field keys
-        cpu1_subcore_core_keys=2
-        cpu2_subcore_core_keys=5
+        cpu1_subcore_core_key=2
+        cpu2_subcore_core_key=5
         --> {"keys":{"core":{"subcore":{"cpu1":2, "cpu2":5}}}}
         usage_subcore_cpu1_min=21
         usage_subcore_cpu1_max=100
         usage_subcore_cpu1_avg=54
-        --> "usage":{"subcore":{"cpu1":{"avg":54,"max":100,"min":21}}}
+        --> "cpu1":{"subcore":{"usage":{"avg":54,"max":100,"min":21}}}
         x_foo_bar=21
         y_foo_bar=37
         --> "bar":{"foo":{"x"=21,"y"=21}}
@@ -38,6 +41,10 @@ The `extr` output data format converts metrics into JSON documents, performing t
         y/_foo/_bar=33
         --> "x_foo_bar"=21
         --> "y_foo_bar"=33
+
+- To specify an array, precede the fieldKey with \@uniquevalue_.  The uniquevalue string can be anything, as long as it makes the metric unique.
+        @1_sysCap_lldp=11,@xx_sysCap_lldp=43,@abc_sysCap=87
+        --> {"lldp":{"sysCap":[11,43,87]}}
 
 *extr serializer batches metrics by default.
 
@@ -94,6 +101,7 @@ FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=10i,rpm_min=4112,rpm_max=5012
 FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=11i,rpm_min=5002,rpm_max=5092,rpm_avg=4102,pwm_min=52,pwm_max=62,pwm_avg=52
 OspfNeighborStateChange,serialnum="ABCD-1234",reporterSerialnum="XYZ-5678" routerId_key=10,neighborAddress_key="10.20.4.1",neighborAdressLessInterface_key=0,neighborRouterId=10,name_vrf_key="vrf-1",id_vrf_key=99,state_old="Init",state_new="2Way"
 OspfNeighborStateChange,serialnum="ABCD-1234",reporterSerialnum="XYZ-5678" routerId_key=10,neighborAddress_key="10.20.66.1",neighborAdressLessInterface_key=0,neighborRouterId=20,name_vrf_key="vrf-4",id_vrf_key=33,state_old="Exchange",state_new="Full"
+LldpStateChange,serialnum="ABCD-1234" name_key="1:10",ifIndex_key=233,timeMark_key=0,index_key=2,chassisId_tag="5420",chassisIdSubtype_tag="MAC_ADDRESS",macSrcAddress_tag="01:03:22:33:00:66",@1_medCapSupported_tag="EXTENDED_PD",@1_medCapCurrent_tag="EXTENDED_PD",portDesc_tag="Extreme Networks Virtual Services Platform 7432CQ - 100GbCR4 Port 1/10",portId_tag="port 1:10",portIdSubtype_tag="INTERFACE_NAME",sysDescription_tag="VSP-7432CQ (9.0.0.0_B024) (PRIVATE)",@1_sysCapSupported_tag="ROUTER",@2_sysCapSupported_tag="BRIDGE",@3_sysCapSupported_tag="REPEATER",@1_sysCapEnabled_tag="ROUTER",sysName_tag="VSP7432-1234",reason="LLDP neighbor removed",state_old="UP",state_new="DOWN",usage_subcore_cpu1_min=21,usage_subcore_cpu1_max=99,usage_subcore_cpu1_avg=56
 ```
 
 will serialize into the following extr JSON ouput
@@ -348,6 +356,63 @@ will serialize into the following extr JSON ouput
       ],
       "name": "InterfaceStateChanged",
       "ts": 1654791970
+    }
+  ],
+  "lldpStateChange": [
+    {
+      "device": {
+        "serialnum": "\"ABCD-1234\""
+      },
+      "items": [
+        {
+          "cpu1": {
+            "subcore": {
+              "usage": {
+                "avg": 56,
+                "max": 99,
+                "min": 21
+              }
+            }
+          },
+          "keys": {
+            "ifIndex": 233,
+            "index": 2,
+            "name": "1:10",
+            "timeMark": 0
+          },
+          "reason": "LLDP neighbor removed",
+          "state": {
+            "new": "DOWN",
+            "old": "UP"
+          },
+          "tags": {
+            "chassisId": "5420",
+            "chassisIdSubtype": "MAC_ADDRESS",
+            "macSrcAddress": "01:03:22:33:00:66",
+            "medCapCurrent": [
+              "EXTENDED_PD"
+            ],
+            "medCapSupported": [
+              "EXTENDED_PD"
+            ],
+            "portDesc": "Extreme Networks Virtual Services Platform 7432CQ - 100GbCR4 Port 1/10",
+            "portId": "port 1:10",
+            "portIdSubtype": "INTERFACE_NAME",
+            "sysCapEnabled": [
+              "ROUTER"
+            ],
+            "sysCapSupported": [
+              "ROUTER",
+              "BRIDGE",
+              "REPEATER"
+            ],
+            "sysDescription": "VSP-7432CQ (9.0.0.0_B024) (PRIVATE)",
+            "sysName": "VSP7432-1234"
+          }
+        }
+      ],
+      "name": "LldpStateChange",
+      "ts": 1684541930
     }
   ],
   "ospfNeighborStateChange": [
