@@ -341,7 +341,7 @@ func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 						c.Log.Debugf("Requesting data of subscription %d cancelled", sub.index)
 						return
 					}
-					c.Log.Errorf("Requesting data of subscription %d failed, %v", sub.index, err)
+					c.Log.Errorf("Requesting data of subscription %d failed: %v", sub.index, err)
 				}
 			}
 		}(sub)
