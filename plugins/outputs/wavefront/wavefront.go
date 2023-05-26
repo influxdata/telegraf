@@ -7,11 +7,13 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
@@ -32,13 +34,14 @@ type Wavefront struct {
 	ConvertPaths         bool                            `toml:"convert_paths"`
 	ConvertBool          bool                            `toml:"convert_bool"`
 	HTTPMaximumBatchSize int                             `toml:"http_maximum_batch_size"`
+	Timeout              config.Duration                 `toml:"timeout"`
 	UseRegex             bool                            `toml:"use_regex"`
 	UseStrict            bool                            `toml:"use_strict"`
 	TruncateTags         bool                            `toml:"truncate_tags"`
 	ImmediateFlush       bool                            `toml:"immediate_flush"`
 	SourceOverride       []string                        `toml:"source_override"`
 	StringToNumber       map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
-
+	tls.ClientConfig
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
 }
@@ -97,9 +100,16 @@ func (w *Wavefront) Connect() error {
 		connectionURL = senderURLFromHostAndPort(w.Host, w.Port)
 	}
 
+	tlsConfig, err := w.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	sender, err := wavefront.NewSender(connectionURL,
 		wavefront.BatchSize(w.HTTPMaximumBatchSize),
 		wavefront.FlushIntervalSeconds(flushSeconds),
+		wavefront.TLSConfigOptions(tlsConfig),
+		wavefront.Timeout(time.Duration(w.Timeout)),
 	)
 
 	if err != nil {
@@ -306,6 +316,7 @@ func init() {
 			TruncateTags:         false,
 			ImmediateFlush:       true,
 			HTTPMaximumBatchSize: 10000,
+			Timeout:              config.Duration(10 * time.Second),
 		}
 	})
 }
