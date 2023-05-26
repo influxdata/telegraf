@@ -6,7 +6,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 // Creator is the function to create a new serializer
@@ -158,13 +157,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
-	case "wavefront":
-		serializer, err = NewWavefrontSerializer(
-			config.Prefix,
-			config.WavefrontUseStrict,
-			config.WavefrontSourceOverride,
-			config.WavefrontDisablePrefixConversion,
-		), nil
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config), nil
 	default:
@@ -208,8 +200,4 @@ func NewPrometheusSerializer(config *Config) Serializer {
 		StringHandling:  stringAsLabels,
 		CompactEncoding: config.PrometheusCompactEncoding,
 	})
-}
-
-func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) Serializer {
-	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
