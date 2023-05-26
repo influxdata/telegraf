@@ -13,38 +13,15 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 type MetricKey uint64
 
-// MetricSortOrder controls if the output is sorted.
-type MetricSortOrder int
-
-const (
-	NoSortMetrics MetricSortOrder = iota
-	SortMetrics
-)
-
-// StringHandling defines how to process string fields.
-type StringHandling int
-
-const (
-	DiscardStrings StringHandling = iota
-	StringAsLabel
-)
-
-type FormatConfig struct {
-	MetricSortOrder MetricSortOrder
-	StringHandling  StringHandling
-}
-
 type Serializer struct {
-	config FormatConfig
-}
-
-func NewSerializer(config FormatConfig) *Serializer {
-	return &Serializer{config: config}
+	SortMetrics   bool `toml:"prometheus_sort_metrics"`
+	StringAsLabel bool `toml:"prometheus_string_as_label"`
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -204,7 +181,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		i++
 	}
 
-	if s.config.MetricSortOrder == SortMetrics {
+	if s.SortMetrics {
 		sort.Slice(promTS, func(i, j int) bool {
 			lhs := promTS[i].Labels
 			rhs := promTS[j].Labels
@@ -274,7 +251,7 @@ func (s *Serializer) appendCommonLabels(labels []prompb.Label, metric telegraf.M
 		labels = append(labels, prompb.Label{Name: name, Value: tag.Value})
 	}
 
-	if s.config.StringHandling != StringAsLabel {
+	if !s.StringAsLabel {
 		return labels
 	}
 
@@ -341,4 +318,20 @@ func (sl sortableLabels) Less(i, j int) bool {
 }
 func (sl sortableLabels) Swap(i, j int) {
 	sl[i], sl[j] = sl[j], sl[i]
+}
+
+func init() {
+	serializers.Add("prometheusremotewrite",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.SortMetrics = cfg.PrometheusSortMetrics
+	s.StringAsLabel = cfg.PrometheusStringAsLabel
+
+	return nil
 }
