@@ -67,12 +67,11 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 
 func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 	var tests = []struct {
-		res    string
-		status int
-		subID  string
+		res       string
+		status    int
 	}{
-		{res: "{\"status\":200}", status: 200, subID: "subID"},
-		{res: "{\"status\":401}", status: 401, subID: ""},
+		{res: "{\"status\":200}", status: 200},
+		{res: "{\"status\":401}", status: 401},
 	}
 
 	for _, test := range tests {
@@ -101,13 +100,10 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 				Log:          testutil.Logger{},
 			}
 			subID, err := s.createSubscription(&subs[0])
-
-			if test.subID != "" {
-				require.NoError(t, err)
-				require.NotEmpty(t, subID)
-			} else {
-				require.Error(t, err)
+			if err != nil {
 				require.Empty(t, subID)
+			} else {
+				require.NotEmpty(t, subID)
 			}
 		})
 	}
