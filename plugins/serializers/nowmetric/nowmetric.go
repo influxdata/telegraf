@@ -10,9 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-type Serializer struct {
-	TimestampUnits time.Duration
-}
+type Serializer struct{}
 
 /*
 Example for the JSON generated and pushed to the MID
