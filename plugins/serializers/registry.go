@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
@@ -174,8 +173,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		), nil
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config), nil
-	case "prometheusremotewrite":
-		serializer, err = NewPrometheusRemoteWriteSerializer(config), nil
 	default:
 		creator, found := Serializers[config.DataFormat]
 		if !found {
@@ -193,23 +190,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		return serializer, err
 	}
 	return serializer, err
-}
-
-func NewPrometheusRemoteWriteSerializer(config *Config) Serializer {
-	sortMetrics := prometheusremotewrite.NoSortMetrics
-	if config.PrometheusExportTimestamp {
-		sortMetrics = prometheusremotewrite.SortMetrics
-	}
-
-	stringAsLabels := prometheusremotewrite.DiscardStrings
-	if config.PrometheusStringAsLabel {
-		stringAsLabels = prometheusremotewrite.StringAsLabel
-	}
-
-	return prometheusremotewrite.NewSerializer(prometheusremotewrite.FormatConfig{
-		MetricSortOrder: sortMetrics,
-		StringHandling:  stringAsLabels,
-	})
 }
 
 func NewPrometheusSerializer(config *Config) Serializer {
