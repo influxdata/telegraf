@@ -323,7 +323,7 @@ func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 				default:
 					client, err := c.createSubscriptionAndSseClient(&sub)
 					if err != nil {
-						c.Log.Errorf("Creating sse client to subscription %d, %v", sub.index, err)
+						c.Log.Errorf("Creating sse client to subscription %d: %v", sub.index, err)
 						time.Sleep(time.Duration(defaultReconnectInterval))
 						continue
 					}
