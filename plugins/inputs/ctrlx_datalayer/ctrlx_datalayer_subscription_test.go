@@ -9,19 +9,16 @@ import (
 )
 
 func TestSubscription_createRequest(t *testing.T) {
-	type args struct {
-		id string
-	}
 	tests := []struct {
-		name     string
-		fields   Subscription
-		args     args
-		wantBody SubscriptionRequest
-		wantErr  bool
+		name         string
+		subscription Subscription
+		id           string
+		wantBody     SubscriptionRequest
+		wantErr      bool
 	}{
 		{
 			name: "Should_Return_Expected_Request",
-			fields: Subscription{
+			subscription: Subscription{
 				Nodes: []Node{
 					{
 						Name:    "node1",
@@ -46,9 +43,7 @@ func TestSubscription_createRequest(t *testing.T) {
 				ValueChange:       "StatusValueTimestamp",
 				OutputJSONString:  true,
 			},
-			args: args{
-				id: "sub_id",
-			},
+			id: "sub_id",
 			wantBody: SubscriptionRequest{
 				Properties: SubscriptionProperties{
 					KeepaliveInterval: 10000,
@@ -93,49 +88,39 @@ func TestSubscription_createRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.fields.createRequest(tt.args.id)
+			got := tt.subscription.createRequest(tt.id)
 			require.Equal(t, tt.wantBody, got)
 		})
 	}
 }
 
 func TestSubscription_node(t *testing.T) {
-	type fields struct {
-		Nodes []Node
-	}
-	type args struct {
-		address string
-	}
 	tests := []struct {
-		name   string
-		fields Subscription
-		args   args
-		want   *Node
+		name    string
+		nodes   []Node
+		address string
+		want    *Node
 	}{
 		{
 			name: "Should_Return_Node_Of_Given_Address",
-			fields: fields{
-				Nodes: []Node{
-					{
-						Name:    "node1",
-						Address: "path/to/node1",
-						Tags:    map[string]string{},
-					},
-					{
-						Name:    "node2",
-						Address: "path/to/node2",
-						Tags:    map[string]string{},
-					},
-					{
-						Name:    "",
-						Address: "path/to/node3",
-						Tags:    map[string]string{},
-					},
+			nodes: []Node{
+				{
+					Name:    "node1",
+					Address: "path/to/node1",
+					Tags:    map[string]string{},
+				},
+				{
+					Name:    "node2",
+					Address: "path/to/node2",
+					Tags:    map[string]string{},
+				},
+				{
+					Name:    "",
+					Address: "path/to/node3",
+					Tags:    map[string]string{},
 				},
 			},
-			args: args{
-				address: "path/to/node3",
-			},
+			address: "path/to/node3",
 			want: &Node{
 				Name:    "",
 				Address: "path/to/node3",
@@ -144,63 +129,59 @@ func TestSubscription_node(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Nil_If_Node_With_Given_Address_Not_Found",
-			fields: fields{
-				Nodes: []Node{
-					{
-						Name:    "Node1",
-						Address: "path/to/node1",
-						Tags:    map[string]string{},
-					},
-					{
-						Name:    "Node2",
-						Address: "path/to/node2",
-						Tags:    map[string]string{},
-					},
-					{
-						Name:    "",
-						Address: "path/to/node3",
-						Tags:    map[string]string{},
-					},
+			nodes: []Node{
+				{
+					Name:    "Node1",
+					Address: "path/to/node1",
+					Tags:    map[string]string{},
+				},
+				{
+					Name:    "Node2",
+					Address: "path/to/node2",
+					Tags:    map[string]string{},
+				},
+				{
+					Name:    "",
+					Address: "path/to/node3",
+					Tags:    map[string]string{},
 				},
 			},
-			args: args{
-				address: "path/to/node4",
-			},
-			want: nil,
+			address: "path/to/node4",
+			want:    nil,
 		},
 	}
+	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, tt.fields.node(tt.args.address))
+			s := &Subscription{
+				Nodes: tt.nodes,
+			}
+			require.Equal(t, tt.want, s.node(tt.address))
 		})
 	}
 }
 
 func TestSubscription_addressList(t *testing.T) {
-	type fields struct {
-		Nodes []Node
-	}
+
 	tests := []struct {
-		name   string
-		fields fields
-		want   []string
+		name  string
+		nodes []Node
+		want  []string
 	}{
 		{
 			name: "Should_Return_AddressArray_Of_All_Nodes",
-			fields: fields{
-				Nodes: []Node{
-					{
-						Address: "framework/metrics/system/memused-mb",
-					},
-					{
-						Address: "framework/metrics/system/memavailable-mb",
-					},
-					{
-						Address: "root",
-					},
-					{
-						Address: "",
-					},
+			nodes: []Node{
+				{
+					Address: "framework/metrics/system/memused-mb",
+				},
+				{
+					Address: "framework/metrics/system/memavailable-mb",
+				},
+				{
+					Address: "root",
+				},
+				{
+					Address: "",
 				},
 			},
 			want: []string{
@@ -214,7 +195,7 @@ func TestSubscription_addressList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Subscription{
-				Nodes: tt.fields.Nodes,
+				Nodes: tt.nodes,
 			}
 			require.Equal(t, tt.want, s.addressList())
 		})
@@ -222,18 +203,15 @@ func TestSubscription_addressList(t *testing.T) {
 }
 
 func TestNode_fieldKey(t *testing.T) {
-	type fields struct {
-		Name    string
-		Address string
-	}
+
 	tests := []struct {
-		name   string
-		fields Node
-		want   string
+		name string
+		node Node
+		want string
 	}{
 		{
 			name: "Should_Return_Name_When_Name_Is_Not_Empty",
-			fields: fields{
+			node: Node{
 				Name:    "used",
 				Address: "framework/metrics/system/memused-mb",
 			},
@@ -241,7 +219,7 @@ func TestNode_fieldKey(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Address_Base_When_Name_Is_Empty_And_Address_Contains_Full_Path",
-			fields: fields{
+			node: Node{
 				Name:    "",
 				Address: "framework/metrics/system/memused-mb",
 			},
@@ -249,7 +227,7 @@ func TestNode_fieldKey(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Address_Base_Root_When_Name_Is_Empty_And_Address_Contains_Root_Path",
-			fields: fields{
+			node: Node{
 				Name:    "",
 				Address: "root",
 			},
@@ -257,7 +235,7 @@ func TestNode_fieldKey(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Empty_When_Name_and_Address_Are_Empty",
-			fields: fields{
+			node: Node{
 				Name:    "",
 				Address: "",
 			},
@@ -266,7 +244,7 @@ func TestNode_fieldKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, tt.fields.fieldKey())
+			require.Equal(t, tt.want, tt.node.fieldKey())
 		})
 	}
 }
