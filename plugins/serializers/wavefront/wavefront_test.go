@@ -68,7 +68,7 @@ func TestBuildTags(t *testing.T) {
 	s := &Serializer{SourceOverride: []string{"instanceid", "instance-id", "hostname", "snmp_host", "node_host"}}
 
 	for _, tt := range tagTests {
-		source, tags := buildTags(tt.ptIn, s)
+		source, tags := s.buildTags(tt.ptIn)
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outTags, tags)
 		}
@@ -93,7 +93,7 @@ func TestBuildTagsHostTag(t *testing.T) {
 	s := &Serializer{SourceOverride: []string{"snmp_host"}}
 
 	for _, tt := range tagTests {
-		source, tags := buildTags(tt.ptIn, s)
+		source, tags := s.buildTags(tt.ptIn)
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outTags, tags)
 		}

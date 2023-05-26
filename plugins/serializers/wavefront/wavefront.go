@@ -50,7 +50,7 @@ func (s *Serializer) serializeMetric(m telegraf.Metric) {
 			// bad value continue to next metric
 			continue
 		}
-		source, tags := buildTags(m.Tags(), s)
+		source, tags := s.buildTags(m.Tags())
 		metric := MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
@@ -83,7 +83,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return out, nil
 }
 
-func findSourceTag(mTags map[string]string, s *Serializer) string {
+func (s *Serializer) findSourceTag(mTags map[string]string) string {
 	if src, ok := mTags["source"]; ok {
 		delete(mTags, "source")
 		return src
@@ -98,14 +98,14 @@ func findSourceTag(mTags map[string]string, s *Serializer) string {
 	return mTags["host"]
 }
 
-func buildTags(mTags map[string]string, s *Serializer) (string, map[string]string) {
+func (s *Serializer) buildTags(mTags map[string]string) (string, map[string]string) {
 	// Remove all empty tags.
 	for k, v := range mTags {
 		if v == "" {
 			delete(mTags, k)
 		}
 	}
-	source := findSourceTag(mTags, s)
+	source := s.findSourceTag(mTags)
 	delete(mTags, "host")
 	return tagValueReplacer.Replace(source), mTags
 }
