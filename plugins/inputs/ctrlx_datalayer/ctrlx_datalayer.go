@@ -279,7 +279,7 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 	var err error
 	c.connection, err = c.HTTPClientConfig.CreateClient(ctx, c.Log)
 	if err != nil {
-		return fmt.Errorf("failed to create http client, err: %w", err)
+		return fmt.Errorf("failed to create http client: %w", err)
 	}
 
 	username, err := c.Username.Get()
