@@ -67,8 +67,8 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 
 func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 	var tests = []struct {
-		res       string
-		status    int
+		res    string
+		status int
 	}{
 		{res: "{\"status\":200}", status: 200},
 		{res: "{\"status\":401}", status: 401},
