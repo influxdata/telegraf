@@ -1477,13 +1477,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldString(tbl, "prefix", &sc.Prefix)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
-	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
-	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
-	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
-
-	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
-	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
-	c.getFieldBool(tbl, "splunkmetric_omit_event_tag", &sc.SplunkmetricOmitEventTag)
 
 	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
 	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
@@ -1562,7 +1555,6 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "prefix", "template", "templates",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"prometheus_compact_encoding",
-		"splunkmetric_hec_routing", "splunkmetric_multimetric", "splunkmetric_omit_event_tag",
 		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":
 	default:
 		c.unusedFieldsMutex.Lock()
