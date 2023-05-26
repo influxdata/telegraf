@@ -108,7 +108,7 @@ func TestSubscription_node(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		fields Subscription
 		args   args
 		want   *Node
 	}{
