@@ -86,7 +86,7 @@ type Subscription struct {
 	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
 
 	// Mark this subscription as a tag-only lookup source, not emitting any metric
-	TagOnly bool `toml:"tag_only" deprecated:"1.25.0;2.0.0;please use 'tag_subscription's instead"`
+	TagOnly bool `toml:"tag_only" deprecated:"1.25.0;1.30.0;please use 'tag_subscription's instead"`
 }
 
 // Tag Subscription for a gNMI client

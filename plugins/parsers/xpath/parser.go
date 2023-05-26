@@ -88,7 +88,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsXML...)
 			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xml", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.30.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -100,7 +100,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsJSON...)
 			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.30.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -112,7 +112,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
 			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.30.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -134,7 +134,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsProto...)
 			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.30.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}

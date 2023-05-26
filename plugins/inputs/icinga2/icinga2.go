@@ -25,7 +25,7 @@ type Icinga2 struct {
 	Server          string
 	Objects         []string
 	Status          []string
-	ObjectType      string `toml:"object_type" deprecated:"1.26.0;2.0.0;use 'objects' instead"`
+	ObjectType      string `toml:"object_type" deprecated:"1.26.0;1.30.0;use 'objects' instead"`
 	Username        string
 	Password        string
 	ResponseTimeout config.Duration
@@ -90,7 +90,6 @@ func (i *Icinga2) Init() error {
 	i.client = client
 
 	// For backward config compatibility
-	// should be removed in 2.0.0
 	if i.ObjectType != "" {
 		i.Objects = []string{i.ObjectType}
 	}
