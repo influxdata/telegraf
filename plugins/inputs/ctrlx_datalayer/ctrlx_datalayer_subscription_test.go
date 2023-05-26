@@ -150,7 +150,7 @@ func TestSubscription_node(t *testing.T) {
 			want:    nil,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Subscription{
@@ -162,7 +162,6 @@ func TestSubscription_node(t *testing.T) {
 }
 
 func TestSubscription_addressList(t *testing.T) {
-
 	tests := []struct {
 		name  string
 		nodes []Node
@@ -203,7 +202,6 @@ func TestSubscription_addressList(t *testing.T) {
 }
 
 func TestNode_fieldKey(t *testing.T) {
-
 	tests := []struct {
 		name string
 		node Node
