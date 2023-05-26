@@ -6,6 +6,8 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -101,6 +103,11 @@ func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {
+	mqtt.ERROR = log.New(os.Stdout, "[ERROR] ", 0)
+	mqtt.CRITICAL = log.New(os.Stdout, "[CRIT] ", 0)
+	mqtt.WARN = log.New(os.Stdout, "[WARN]  ", 0)
+	mqtt.DEBUG = log.New(os.Stdout, "[DEBUG] ", 0)
+
 	m.state = Disconnected
 	if m.PersistentSession && m.ClientID == "" {
 		return errors.New("persistent_session requires client_id")
