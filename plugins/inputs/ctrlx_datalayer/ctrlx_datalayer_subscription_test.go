@@ -266,11 +266,7 @@ func TestNode_fieldKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := &Node{
-				Name:    tt.fields.Name,
-				Address: tt.fields.Address,
-			}
-			require.Equal(t, tt.want, n.fieldKey())
+			require.Equal(t, tt.want, tt.fields.fieldKey())
 		})
 	}
 }
