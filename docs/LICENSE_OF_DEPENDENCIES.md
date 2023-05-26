@@ -82,6 +82,7 @@ following works:
 - github.com/beorn7/perks [MIT License](https://github.com/beorn7/perks/blob/master/LICENSE)
 - github.com/blues/jsonata-go [MIT License](https://github.com/blues/jsonata-go/blob/main/LICENSE)
 - github.com/bmatcuk/doublestar [MIT License](https://github.com/bmatcuk/doublestar/blob/master/LICENSE)
+- github.com/boschrexroth/ctrlx-datalayer-golang [MIT License](https://github.com/boschrexroth/ctrlx-datalayer-golang/blob/main/LICENSE)
 - github.com/bufbuild/protocompile [Apache License 2.0](https://github.com/bufbuild/protocompile/blob/main/LICENSE)
 - github.com/caio/go-tdigest [MIT License](https://github.com/caio/go-tdigest/blob/master/LICENSE)
 - github.com/cenkalti/backoff [MIT License](https://github.com/cenkalti/backoff/blob/master/LICENSE)

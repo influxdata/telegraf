@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
@@ -160,8 +158,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
-	case "nowmetric":
-		serializer, err = NewNowSerializer()
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(
 			config.Prefix,
@@ -171,8 +167,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		), nil
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config), nil
-	case "prometheusremotewrite":
-		serializer, err = NewPrometheusRemoteWriteSerializer(config), nil
 	default:
 		creator, found := Serializers[config.DataFormat]
 		if !found {
@@ -190,23 +184,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		return serializer, err
 	}
 	return serializer, err
-}
-
-func NewPrometheusRemoteWriteSerializer(config *Config) Serializer {
-	sortMetrics := prometheusremotewrite.NoSortMetrics
-	if config.PrometheusExportTimestamp {
-		sortMetrics = prometheusremotewrite.SortMetrics
-	}
-
-	stringAsLabels := prometheusremotewrite.DiscardStrings
-	if config.PrometheusStringAsLabel {
-		stringAsLabels = prometheusremotewrite.StringAsLabel
-	}
-
-	return prometheusremotewrite.NewSerializer(prometheusremotewrite.FormatConfig{
-		MetricSortOrder: sortMetrics,
-		StringHandling:  stringAsLabels,
-	})
 }
 
 func NewPrometheusSerializer(config *Config) Serializer {
@@ -235,8 +212,4 @@ func NewPrometheusSerializer(config *Config) Serializer {
 
 func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) Serializer {
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
-}
-
-func NewNowSerializer() (Serializer, error) {
-	return nowmetric.NewSerializer()
 }
