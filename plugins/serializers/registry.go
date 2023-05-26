@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
@@ -163,8 +162,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 	switch config.DataFormat {
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag), nil
-	case "nowmetric":
-		serializer, err = NewNowSerializer()
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(
 			config.Prefix,
@@ -242,8 +239,4 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 
 func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) Serializer {
 	return splunkmetric.NewSerializer(splunkmetricHecRouting, splunkmetricMultimetric, splunkmetricOmitEventTag)
-}
-
-func NewNowSerializer() (Serializer, error) {
-	return nowmetric.NewSerializer()
 }
