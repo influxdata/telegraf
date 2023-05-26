@@ -1478,10 +1478,6 @@ func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 
-	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
-	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
-	c.getFieldBool(tbl, "wavefront_disable_prefix_conversion", &sc.WavefrontDisablePrefixConversion)
-
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
 	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
@@ -1554,8 +1550,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	// Serializer options to ignore
 	case "prefix", "template", "templates",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
-		"prometheus_compact_encoding",
-		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":
+		"prometheus_compact_encoding":
 	default:
 		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
