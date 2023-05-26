@@ -51,6 +51,7 @@ require (
 	github.com/benbjohnson/clock v1.3.3
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bmatcuk/doublestar/v3 v3.0.0
+	github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.2.4
