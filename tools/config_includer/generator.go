@@ -105,7 +105,9 @@ func main() {
 				log.Fatalf("Reading template %q failed: %v", fn, err)
 			}
 			known[name] = true
-			roottmpl.AddParseTree(name, tmpl.Tree)
+			if _, err := roottmpl.AddParseTree(name, tmpl.Tree); err != nil {
+				log.Fatalf("Adding include %q failed: %v", fn, err)
+			}
 
 			// For relative paths we need to make it relative to the include
 			pwd, err := filepath.Abs(fn)
@@ -134,7 +136,7 @@ func main() {
 		log.Fatalf("Executing template failed: %v", err)
 	}
 
-	if err := os.WriteFile(outputFilename, buf.Bytes(), 0660); err != nil {
+	if err := os.WriteFile(outputFilename, buf.Bytes(), 0640); err != nil {
 		log.Fatalf("Writing output %q failed: %v", outputFilename, err)
 	}
 }
