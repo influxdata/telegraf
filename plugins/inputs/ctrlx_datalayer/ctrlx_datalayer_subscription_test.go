@@ -228,7 +228,7 @@ func TestNode_fieldKey(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		fields Node
 		want   string
 	}{
 		{
