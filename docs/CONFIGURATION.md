@@ -321,6 +321,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   stateful plugins on termination of Telegraf. If the file exists on start,
   the state in the file will be restored for the plugins.
 
+- **always_include_local_tags**:
+  Ensure tags explicitly defined in a plugin will *always* pass tag-filtering
+  via `taginclude` or `tagexclude`. This removes the need to specify local tags
+  twice.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
@@ -675,11 +680,6 @@ tag.
 The inverse of `taginclude`. Tags with a tag key matching one of the patterns
 will be discarded from the metric.  Any tag can be filtered including global
 tags and the agent `host` tag.
-
-- **always_include_local_tags**:
-If `true` always include the tags specified in the plugin when tag-filtering
-via `taginclude` or `tagexclude`. This removes the need to specify local tags
-twice. The option is only effective if tag-filtering is performed.
 
 ### Filtering Examples
 

@@ -252,6 +252,10 @@ type AgentConfig struct {
 	// stateful plugins on termination of Telegraf. If the file exists on start,
 	// the state in the file will be restored for the plugins.
 	Statefile string `toml:"statefile"`
+
+	// Flag to always keep tags explicitly defined in the plugin itself and
+	// ensure those tags always pass filtering.
+	AlwaysIncludeLocalTags bool `toml:"always_include_local_tags"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -1428,7 +1432,10 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 // builds the filter and returns a
 // models.InputConfig to be inserted into models.RunningInput
 func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
-	cp := &models.InputConfig{Name: name}
+	cp := &models.InputConfig{
+		Name:                   name,
+		AlwaysIncludeLocalTags: c.Agent.AlwaysIncludeLocalTags,
+	}
 	c.getFieldDuration(tbl, "interval", &cp.Interval)
 	c.getFieldDuration(tbl, "precision", &cp.Precision)
 	c.getFieldDuration(tbl, "collection_jitter", &cp.CollectionJitter)
@@ -1436,7 +1443,6 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	c.getFieldString(tbl, "name_prefix", &cp.MeasurementPrefix)
 	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &cp.NameOverride)
-	c.getFieldBool(tbl, "always_include_local_tags", &cp.AlwaysIncludeLocalTags)
 	c.getFieldString(tbl, "alias", &cp.Alias)
 
 	cp.Tags = make(map[string]string)
