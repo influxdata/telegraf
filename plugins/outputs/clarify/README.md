@@ -19,14 +19,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[outputs.clarify]]
   ## Credentials File (Oauth 2.0 from Clarify integration)
   credentials_file = "/path/to/clarify/credentials.json"
-  
+
   ## Clarify username password (Basic Auth from Clarify integration)
   username = "i-am-bob"
   password = "secret-password"
-  
+
   ## Timeout for Clarify operations
   # timeout = "20s"
-  
+
   ## Optional tags to be included when generating the unique ID for a signal in Clarify
   # id_tags = []
   # clarify_id_tag = 'clarify_input_id'
@@ -83,5 +83,4 @@ temperature,host=demo.clarifylocal,sensor=TC0P value=49 1682670910000000000
 ```
 
 [clarify]: https://clarify.io
-[clarifydoc]: https://docs.clarify.io
 [credentials]: https://docs.clarify.io/users/admin/integrations/credentials
