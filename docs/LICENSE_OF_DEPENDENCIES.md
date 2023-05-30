@@ -280,7 +280,6 @@ following works:
 - github.com/pion/dtls [MIT License](https://github.com/pion/dtls/blob/master/LICENSES/MIT.txt)
 - github.com/pion/logging [MIT License](https://github.com/pion/logging/blob/master/LICENSES/MIT.txt)
 - github.com/pion/transport [MIT License](https://github.com/pion/transport/blob/master/LICENSES/MIT.txt)
-- github.com/pion/udp [MIT License](https://github.com/pion/udp/blob/master/LICENSE)
 - github.com/pkg/browser [BSD 2-Clause "Simplified" License](https://github.com/pkg/browser/blob/master/LICENSE)
 - github.com/pkg/errors [BSD 2-Clause "Simplified" License](https://github.com/pkg/errors/blob/master/LICENSE)
 - github.com/pmezard/go-difflib [BSD 3-Clause Clear License](https://github.com/pmezard/go-difflib/blob/master/LICENSE)
