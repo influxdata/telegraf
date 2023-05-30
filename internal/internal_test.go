@@ -708,6 +708,12 @@ func TestParseTimestampInvalid(t *testing.T) {
 			timestamp: "1,568,338,208.500",
 			expected:  "invalid number",
 		},
+		{
+			name:      "invalid timezone abbreviation",
+			format:    "RFC850",
+			timestamp: "Monday, 02-Jan-06 15:04:05 CDT",
+			expected:  "cannot resolve timezone abbreviation",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
