@@ -402,3 +402,28 @@ prometheus,cpu=cpu1,url=http://example.org:9273/metrics cpu_usage_user=5.8291457
 prometheus,cpu=cpu2,url=http://example.org:9273/metrics cpu_usage_user=2.119071644805144 1505776751000000000
 prometheus,cpu=cpu3,url=http://example.org:9273/metrics cpu_usage_user=1.5228426395944945 1505776751000000000
 ```
+
+### Output with timestamp included
+
+Assuming a prometheus metric example including a timestamp
+
+```text
+# TYPE test_counter counter
+test_counter{label="test"} 1 1685443805885
+```
+
+we get the following metric
+
+```text
+test_counter,address=127.0.0.1,label=test counter=1 1685443805885000000
+```
+
+using the standard configuration
+
+```toml
+[inputs.prometheus]]
+  ## An array of urls to scrape metrics from.
+  urls = ["http://localhost:2019/metrics"]
+```
+
+**Please note:** The prometheus timestamp is in **millisecond** precision!
