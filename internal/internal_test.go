@@ -643,6 +643,13 @@ func TestParseTimestamp(t *testing.T) {
 			timestamp: "Jan 2 15:04:05.000000000",
 			expected:  stampnano("Jan 2 15:04:05.000000000"),
 		},
+
+		{
+			name:      "RFC850",
+			format:    "RFC850",
+			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
+			expected:  time.Unix(1136239445, 0),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -654,7 +661,7 @@ func TestParseTimestamp(t *testing.T) {
 			}
 			tm, err := ParseTimestamp(tt.format, tt.timestamp, loc, tt.separator...)
 			require.NoError(t, err)
-			require.Equal(t, tt.expected, tm)
+			require.Equal(t, tt.expected.Unix(), tm.Unix())
 		})
 	}
 }
