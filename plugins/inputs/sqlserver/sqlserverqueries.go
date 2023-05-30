@@ -211,6 +211,29 @@ IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0'
 	END AS [hardware_type]'
 
 SET @SqlStatement = '
+
+DECLARE @ForceEncryption INT
+DECLARE @DynamicportNo NVARCHAR(50);
+DECLARE @StaticportNo NVARCHAR(50);
+
+EXEC [master].[dbo].[xp_instance_regread]
+       @rootkey = ''HKEY_LOCAL_MACHINE'',
+       @key = ''SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib'',
+       @value_name = ''ForceEncryption'',
+       @value = @ForceEncryption OUTPUT;
+
+EXEC xp_instance_regread @rootkey = ''HKEY_LOCAL_MACHINE''
+                        ,@key =
+                         ''Software\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IpAll''
+                        ,@value_name = ''TcpDynamicPorts''
+                        ,@value = @DynamicportNo OUTPUT
+
+EXEC xp_instance_regread @rootkey = ''HKEY_LOCAL_MACHINE''
+                        ,@key =
+                         ''Software\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IpAll''
+                        ,@value_name = ''TcpPort''
+                        ,@value = @StaticportNo OUTPUT
+
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
@@ -224,6 +247,9 @@ SELECT
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
 	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
+	,@ForceEncryption AS ForceEncryption
+	,COALESCE(@DynamicportNo,@StaticportNo) AS Port
+	,IIF(@DynamicportNo IS NULL, ''Static'', ''Dynamic'') AS PortType
 	,dbs.[db_online]
 	,dbs.[db_restoring]
 	,dbs.[db_recovering]
@@ -243,24 +269,6 @@ SELECT
 		FROM sys.databases
 	) AS dbs
 '
-
-EXEC sp_executesql @SqlStatement
-`
-
-const SQLServerForceEncryption = `
-SET DEADLOCK_PRIORITY -10;
-
-DECLARE 
-@ForceEncryption INT
-,@SqlStatement AS nvarchar(max)
-
-SET @SqlStatement = N'
-EXEC xp_instance_regread 
-	@rootkey = 'HKEY_LOCAL_MACHINE', 
-	@key = 'SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib', 
-	@value_name = 'ForceEncryption',
-	@value = @ForceEncryption OUTPUT
-SELECT @ForceEncryption AS ForceEncryption'
 
 EXEC sp_executesql @SqlStatement
 `
