@@ -242,8 +242,9 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			if h.canonicalFieldNames {
 				// Strip the origin is any for the field names
 				if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
-					key = strings.TrimLeft(parts[1], "/.")
+					key = parts[1]
 				}
+				key = strings.TrimLeft(key, "/.")
 			} else {
 				if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 					// This may not be an exact prefix, due to naming style
