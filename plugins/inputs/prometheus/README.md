@@ -405,7 +405,7 @@ prometheus,cpu=cpu3,url=http://example.org:9273/metrics cpu_usage_user=1.5228426
 
 ### Output with timestamp included
 
-Assuming a prometheus metric example including a timestamp
+Below is an example of a Prometheus metric which includes a timestamp:
 
 ```text
 # TYPE test_counter counter
