@@ -421,7 +421,7 @@ test_counter,address=127.0.0.1,label=test counter=1 1685443805885000000
 using the standard configuration
 
 ```toml
-[inputs.prometheus]]
+[[inputs.prometheus]]
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:2019/metrics"]
 ```
