@@ -1436,8 +1436,8 @@ github.com/shoenig/test v0.6.3/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnj
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24/go.mod h1:M+9NzErvs504Cn4c5DxATwIqPbtswREoFCre64PpcG4=
 github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
-github.com/showwin/speedtest-go v1.6.1 h1:epogVvo2eX3eYqv0A0htgGF0lwuufD09ZTIwSEDS4rU=
-github.com/showwin/speedtest-go v1.6.1/go.mod h1:XuGWHfAyS57C+8bKUxrDM696ffrQtgi01r7l8wipw9I=
+github.com/showwin/speedtest-go v1.6.2 h1:Pu9lxNV3apSanq675C4xmOMcARSccSf4uGVEolzwdHM=
+github.com/showwin/speedtest-go v1.6.2/go.mod h1:XuGWHfAyS57C+8bKUxrDM696ffrQtgi01r7l8wipw9I=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3 h1:32k2QLgsKhcEs55q4REPKyIadvid5FPy2+VMgvbmKJ0=
 github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3/go.mod h1:gJrXWi7wSGXfiC7+VheQaz+ypdCt5SmZNL+BRxUe7y4=
