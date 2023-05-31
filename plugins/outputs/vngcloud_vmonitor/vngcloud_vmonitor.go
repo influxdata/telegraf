@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	metricPath           = "/intake/v2/metrics"
+	metricPath           = "/intake/v2/series"
 	quotaPath            = "/intake/v2/check"
 	defaultClientTimeout = 10 * time.Second
 	defaultContentType   = "application/json"
