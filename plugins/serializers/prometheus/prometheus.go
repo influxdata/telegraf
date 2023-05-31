@@ -7,48 +7,21 @@ import (
 	"github.com/prometheus/common/expfmt"
 
 	"github.com/influxdata/telegraf"
-)
-
-// TimestampExport controls if the output contains timestamps.
-type TimestampExport int
-
-const (
-	NoExportTimestamp TimestampExport = iota
-	ExportTimestamp
-)
-
-// MetricSortOrder controls if the output is sorted.
-type MetricSortOrder int
-
-const (
-	NoSortMetrics MetricSortOrder = iota
-	SortMetrics
-)
-
-// StringHandling defines how to process string fields.
-type StringHandling int
-
-const (
-	DiscardStrings StringHandling = iota
-	StringAsLabel
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type FormatConfig struct {
-	TimestampExport TimestampExport
-	MetricSortOrder MetricSortOrder
-	StringHandling  StringHandling
+	ExportTimestamp bool `toml:"prometheus_export_timestamp"`
+	SortMetrics     bool `toml:"prometheus_sort_metrics"`
+	StringAsLabel   bool `toml:"prometheus_string_as_label"`
 	// CompactEncoding defines whether to include
 	// HELP metadata in Prometheus payload. Setting to true
 	// helps to reduce payload size.
-	CompactEncoding bool
+	CompactEncoding bool `toml:"prometheus_compact_encoding"`
 }
 
 type Serializer struct {
-	config FormatConfig
-}
-
-func NewSerializer(config FormatConfig) *Serializer {
-	return &Serializer{config: config}
+	FormatConfig
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -56,7 +29,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	coll := NewCollection(s.config)
+	coll := NewCollection(s.FormatConfig)
 	for _, metric := range metrics {
 		coll.Add(metric, time.Now())
 	}
@@ -71,4 +44,22 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func init() {
+	serializers.Add("prometheus",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.FormatConfig.CompactEncoding = cfg.PrometheusCompactEncoding
+	s.FormatConfig.SortMetrics = cfg.PrometheusSortMetrics
+	s.FormatConfig.StringAsLabel = cfg.PrometheusStringAsLabel
+	s.FormatConfig.ExportTimestamp = cfg.PrometheusExportTimestamp
+
+	return nil
 }
