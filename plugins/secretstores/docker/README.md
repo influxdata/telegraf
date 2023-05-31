@@ -72,9 +72,12 @@ Referencing the secret within a plugin occurs by:
   password = "@{docker_secretstore:secret_for_plugin}"
 ```
 
-See the plugin documentation to find out if the respective plugin option supports secrets.
+To see which plugins and options support secrets, see their respective
+documentation (e.g. `plugins/outputs/influxdb/README.md`). If the plugin's
+README has the `Secret-store support` section, it will detail what options
+support secret store usage.
 
-## Additonal Information
+## Additional Information
 
 [Docker Secrets in Swarm][2]
 

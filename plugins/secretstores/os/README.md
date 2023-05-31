@@ -15,8 +15,12 @@ to get more information on how to do this with Telegraf.
 
 ## How to use the secrets
 
-Secrets can be referenced with `@{<store-id>:<secret_key>}` in certain options of plugins which support this.
-To see which plugins and options support this, see their respective documentation. (Ex: outputs.influxdb)
+Secrets can be referenced with `@{<store-id>:<secret_key>}` in certain options
+of plugins which support this. To see which plugins and options support
+secrets, see their respective documentation
+(e.g. `plugins/outputs/influxdb/README.md`). If the plugin's README has the
+`Secret-store support` section, it will detail what options support secret
+store usage.
 
 ## Configuration
 
