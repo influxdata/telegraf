@@ -1069,7 +1069,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if err != nil {
 		return err
 	}
-	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
+	processorBefore, count, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
 	if err != nil {
 		return err
 	}
@@ -1088,10 +1088,9 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	rf = models.NewRunningProcessor(processorAfter, processorAfterConfig)
 	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
-	// Check the number of misses against the threshold
-	if hasParser {
-		missCountThreshold = 2
-	}
+	// Check the number of misses against the threshold. We need to double
+	// the count as the processor setup is executed twice.
+	missCountThreshold = 2 * count
 	for key, count := range missCount {
 		if count <= missCountThreshold {
 			continue
@@ -1104,8 +1103,8 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) setupProcessor(name string, creator processors.StreamingCreator, table *ast.Table) (telegraf.StreamingProcessor, bool, error) {
-	var hasParser bool
+func (c *Config) setupProcessor(name string, creator processors.StreamingCreator, table *ast.Table) (telegraf.StreamingProcessor, int, error) {
+	var optionTestCount int
 
 	streamingProcessor := creator()
 
@@ -1122,20 +1121,20 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	if t, ok := processor.(telegraf.ParserPlugin); ok {
 		parser, err := c.addParser("processors", name, table)
 		if err != nil {
-			return nil, true, fmt.Errorf("adding parser failed: %w", err)
+			return nil, 0, fmt.Errorf("adding parser failed: %w", err)
 		}
 		t.SetParser(parser)
-		hasParser = true
+		optionTestCount++
 	}
 
 	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser("processors", name, table) {
-			return nil, false, errors.New("parser not found")
+			return nil, 0, errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
 			return c.addParser("processors", name, table)
 		})
-		hasParser = true
+		optionTestCount++
 	}
 
 	// If the (underlying) processor has a SetSerializer function it can accept
@@ -1143,17 +1142,18 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	if t, ok := processor.(telegraf.SerializerPlugin); ok {
 		serializer, err := c.addSerializer(name, table)
 		if err != nil {
-			return nil, true, fmt.Errorf("adding serializer failed: %w", err)
+			return nil, 0, fmt.Errorf("adding serializer failed: %w", err)
 		}
 		t.SetSerializer(serializer)
+		optionTestCount++
 	}
 
 	if err := c.toml.UnmarshalTable(table, processor); err != nil {
-		return nil, hasParser, fmt.Errorf("unmarshalling failed: %w", err)
+		return nil, 0, fmt.Errorf("unmarshalling failed: %w", err)
 	}
 
 	err := c.printUserDeprecation("processors", name, processor)
-	return streamingProcessor, hasParser, err
+	return streamingProcessor, optionTestCount, err
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -1545,6 +1545,7 @@ func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Output)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Aggregator)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Processor)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.StreamingProcessor)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Parser)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Serializer)(nil)).Elem())
 
