@@ -412,7 +412,7 @@ Below is an example of a Prometheus metric which includes a timestamp:
 test_counter{label="test"} 1 1685443805885
 ```
 
-we get the following metric
+Telegraf will generate the following metric:
 
 ```text
 test_counter,address=127.0.0.1,label=test counter=1 1685443805885000000
