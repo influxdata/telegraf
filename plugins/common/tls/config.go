@@ -222,18 +222,12 @@ func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 }
 
 func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase string) error {
-	var (
-		cert      tls.Certificate
-		certBytes []byte
-		keyBytes  []byte
-		err       error
-	)
-	certBytes, err = os.ReadFile(certFile)
+	certBytes, err := os.ReadFile(certFile)
 	if err != nil {
 		return fmt.Errorf("could not load certificate %q: %w", certFile, err)
 	}
 
-	keyBytes, err = os.ReadFile(keyFile)
+	keyBytes, err := os.ReadFile(keyFile)
 	if err != nil {
 		return fmt.Errorf("could not load private key %q: %w", keyFile, err)
 	}
@@ -243,6 +237,7 @@ func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase
 		return errors.New("failed to decode private key: no PEM data found")
 	}
 
+	var cert tls.Certificate
 	if keyPEMBlock.Type == "ENCRYPTED PRIVATE KEY" {
 		if privateKeyPassphrase == "" {
 			return errors.New("missing password for PKCS#8 encrypted private key")
