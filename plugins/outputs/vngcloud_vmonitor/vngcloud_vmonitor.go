@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	metricPath           = "/metrics"
-	quotaPath            = "/check"
+	metricPath           = "/intake/v2/metrics"
+	quotaPath            = "/intake/v2/check"
 	defaultClientTimeout = 10 * time.Second
 	defaultContentType   = "application/json"
 	AgentVersion         = "1.26.0-2.0.0"
@@ -460,7 +460,7 @@ func (h *VNGCloudvMonitor) checkQuota() error {
 		return fmt.Errorf("[vMonitor] Can not marshal quota struct: %s", err)
 	}
 
-	const retryTime = 5
+	const retryTime = 8
 
 	for i := 0; i < retryTime; i++ {
 
@@ -492,7 +492,7 @@ func (h *VNGCloudvMonitor) checkQuota() error {
 			h.dropTime = time.Now()
 			return nil
 		} else if resp.StatusCode == 409 {
-			if h.dropCount < 5 {
+			if h.dropCount < retryTime {
 				h.dropCount++
 			}
 			dropDuration := time.Duration(int(math.Pow(2, float64(h.dropCount))) * int(h.OutOfQuotaRetry))
@@ -507,8 +507,8 @@ func (h *VNGCloudvMonitor) checkQuota() error {
 		if i == retryTime-1 {
 			return fmt.Errorf("[vMonitor] Can not check quota, max retry exceed")
 		} else {
-			log.Printf("[vMonitor] Request-ID: %s. Checking quota fail (%s), sleep in %.0fs and retry", resp.Header.Get("Api-Request-ID"), dataRsp, time.Duration(h.CheckQuotaRetry).Seconds())
-			time.Sleep(time.Duration(h.CheckQuotaRetry))
+			log.Printf("[vMonitor] Request-ID: %s. Checking quota fail (%s), sleep in %.0fs and retry", resp.Header.Get("Api-Request-ID"), dataRsp, time.Duration(int(h.CheckQuotaRetry)*int(math.Pow(2, float64(i)))).Seconds())
+			time.Sleep(time.Duration(int(h.CheckQuotaRetry) * int(math.Pow(2, float64(i)))))
 		}
 	}
 
