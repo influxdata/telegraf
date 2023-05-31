@@ -84,8 +84,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.Len(t, cfg.Processors, 1, "wrong number of processors")
 
-			type unwrappable interface{ Unwrap() telegraf.Processor }
-			proc := cfg.Processors[0].Processor.(unwrappable)
+			proc := cfg.Processors[0].Processor.(processors.HasUnwrap)
 			plugin := proc.Unwrap().(*Processor)
 			require.NoError(t, plugin.Init())
 
@@ -154,8 +153,7 @@ func TestCasesTracking(t *testing.T) {
 			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.Len(t, cfg.Processors, 1, "wrong number of processors")
 
-			type unwrappableProcessor interface{ Unwrap() telegraf.Processor }
-			proc := cfg.Processors[0].Processor.(unwrappableProcessor)
+			proc := cfg.Processors[0].Processor.(processors.HasUnwrap)
 			plugin := proc.Unwrap().(*Processor)
 			require.NoError(t, plugin.Init())
 

@@ -1106,7 +1106,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	streamingProcessor := creator()
 
 	var processor interface{}
-	if p, ok := streamingProcessor.(unwrappable); ok {
+	if p, ok := streamingProcessor.(processors.HasUnwrap); ok {
 		processor = p.Unwrap()
 	} else {
 		processor = streamingProcessor
@@ -1746,11 +1746,4 @@ func (c *Config) firstErr() error {
 
 func (c *Config) addError(tbl *ast.Table, err error) {
 	c.errs = append(c.errs, fmt.Errorf("line %d:%d: %w", tbl.Line, tbl.Position, err))
-}
-
-// unwrappable lets you retrieve the original telegraf.Processor from the
-// StreamingProcessor. This is necessary because the toml Unmarshaller won't
-// look inside composed types.
-type unwrappable interface {
-	Unwrap() telegraf.Processor
 }

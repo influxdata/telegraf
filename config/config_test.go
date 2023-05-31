@@ -35,10 +35,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type unwrappable interface {
-	Unwrap() telegraf.Processor
-}
-
 func TestReadBinaryFile(t *testing.T) {
 	// Create a temporary binary file using the Telegraf tool custom_builder to pass as a config
 	wd, err := os.Getwd()
@@ -979,7 +975,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	generated := make([]interface{}, 0)
 	for _, plugin := range c.Processors {
 		var processorIF telegraf.Processor
-		if p, ok := plugin.Processor.(unwrappable); ok {
+		if p, ok := plugin.Processor.(processors.HasUnwrap); ok {
 			processorIF = p.Unwrap()
 		} else {
 			processorIF = plugin.Processor.(telegraf.Processor)
@@ -1162,7 +1158,7 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 
 	// Register the processors
 	for _, plugin := range c.Processors {
-		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+		unwrapped := plugin.Processor.(processors.HasUnwrap).Unwrap()
 
 		p := unwrapped.(*MockupProcessorPlugin)
 		require.NoError(t, dut.Register(plugin.ID(), p))
@@ -1170,7 +1166,7 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 
 	// Register the after-aggregator processors
 	for _, plugin := range c.AggProcessors {
-		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+		unwrapped := plugin.Processor.(processors.HasUnwrap).Unwrap()
 
 		p := unwrapped.(*MockupProcessorPlugin)
 		require.NoError(t, dut.Register(plugin.ID(), p))
