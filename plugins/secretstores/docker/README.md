@@ -71,6 +71,7 @@ Referencing the secret within a plugin occurs by:
 [[inputs.<some_plugin>]]
   password = "@{docker_secretstore:secret_for_plugin}"
 ```
+See the plugin documentation to find out if the respective plugin option supports secrets.
 
 ## Additonal Information
 
