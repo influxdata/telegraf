@@ -134,7 +134,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsProto...)
 			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "1.30.0",
+				RemovalIn: "2.0.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
