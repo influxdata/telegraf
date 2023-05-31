@@ -211,28 +211,27 @@ IF CAST(SERVERPROPERTY('ProductVersion') AS varchar(50)) >= '10.50.2500.0'
 	END AS [hardware_type]'
 
 SET @SqlStatement = '
-
 DECLARE @ForceEncryption INT
 DECLARE @DynamicportNo NVARCHAR(50);
 DECLARE @StaticportNo NVARCHAR(50);
 
-EXEC [master].[dbo].[xp_instance_regread]
-       @rootkey = ''HKEY_LOCAL_MACHINE'',
-       @key = ''SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib'',
-       @value_name = ''ForceEncryption'',
-       @value = @ForceEncryption OUTPUT;
+EXEC [xp_instance_regread]
+	 @rootkey = ''HKEY_LOCAL_MACHINE''
+	,@key = ''SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib''
+	,@value_name = ''ForceEncryption''
+	,@value = @ForceEncryption OUTPUT;
 
-EXEC xp_instance_regread @rootkey = ''HKEY_LOCAL_MACHINE''
-                        ,@key =
-                         ''Software\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IpAll''
-                        ,@value_name = ''TcpDynamicPorts''
-                        ,@value = @DynamicportNo OUTPUT
+EXEC [xp_instance_regread]
+	 @rootkey = ''HKEY_LOCAL_MACHINE''
+	,@key = ''Software\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IpAll''
+	,@value_name = ''TcpDynamicPorts''
+	,@value = @DynamicportNo OUTPUT
 
-EXEC xp_instance_regread @rootkey = ''HKEY_LOCAL_MACHINE''
-                        ,@key =
-                         ''Software\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IpAll''
-                        ,@value_name = ''TcpPort''
-                        ,@value = @StaticportNo OUTPUT
+EXEC [xp_instance_regread]
+	  @rootkey = ''HKEY_LOCAL_MACHINE''
+     ,@key = ''Software\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IpAll''
+     ,@value_name = ''TcpPort''
+     ,@value = @StaticportNo OUTPUT
 
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
@@ -247,9 +246,9 @@ SELECT
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
 	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
-	,@ForceEncryption AS ForceEncryption
-	,COALESCE(@DynamicportNo,@StaticportNo) AS Port
-	,IIF(@DynamicportNo IS NULL, ''Static'', ''Dynamic'') AS PortType
+	,@ForceEncryption AS [ForceEncryption]
+	,COALESCE(@DynamicportNo,@StaticportNo) AS [Port]
+	,IIF(@DynamicportNo IS NULL, ''Static'', ''Dynamic'') AS [PortType]
 	,dbs.[db_online]
 	,dbs.[db_restoring]
 	,dbs.[db_recovering]
@@ -260,12 +259,12 @@ SELECT
 	FROM sys.[dm_os_sys_info] AS si
 	CROSS APPLY (
 		SELECT
-			 SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS [db_online]
-			,SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS [db_restoring]
-			,SUM(CASE WHEN state = 2 THEN 1 ELSE 0 END) AS [db_recovering]
-			,SUM(CASE WHEN state = 3 THEN 1 ELSE 0 END) AS [db_recoveryPending]
-			,SUM(CASE WHEN state = 4 THEN 1 ELSE 0 END) AS [db_suspect]
-			,SUM(CASE WHEN state IN(6, 10) THEN 1 ELSE 0 END) AS [db_offline]
+			 SUM(CASE WHEN [state] = 0 THEN 1 ELSE 0 END) AS [db_online]
+			,SUM(CASE WHEN [state] = 1 THEN 1 ELSE 0 END) AS [db_restoring]
+			,SUM(CASE WHEN [state] = 2 THEN 1 ELSE 0 END) AS [db_recovering]
+			,SUM(CASE WHEN [state] = 3 THEN 1 ELSE 0 END) AS [db_recoveryPending]
+			,SUM(CASE WHEN [state] = 4 THEN 1 ELSE 0 END) AS [db_suspect]
+			,SUM(CASE WHEN [state] IN (6,10) THEN 1 ELSE 0 END) AS [db_offline]
 		FROM sys.databases
 	) AS dbs
 '
