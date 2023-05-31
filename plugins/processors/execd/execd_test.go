@@ -5,14 +5,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/processors"
+	_ "github.com/influxdata/telegraf/plugins/serializers/all"
 	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -24,6 +29,10 @@ func TestExternalProcessorWorks(t *testing.T) {
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 	e.SetParser(parser)
+
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+	e.SetSerializer(serializer)
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -89,6 +98,10 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 	e.SetParser(parser)
+
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+	e.SetSerializer(serializer)
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -197,5 +210,68 @@ func runCountMultiplierProgram() {
 			os.Exit(1)
 		}
 		fmt.Fprint(os.Stdout, string(b))
+	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Make sure tests contains data
+	require.NotEmpty(t, folders)
+
+	// Set up for file inputs
+	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
+		return New()
+	})
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		fname := f.Name()
+		t.Run(fname, func(t *testing.T) {
+			testdataPath := filepath.Join("testcases", fname)
+			configFilename := filepath.Join(testdataPath, "telegraf.conf")
+			inputFilename := filepath.Join(testdataPath, "input.influx")
+			expectedFilename := filepath.Join(testdataPath, "expected.out")
+
+			// Get parser to parse input and expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			input, err := testutil.ParseMetricsFromFile(inputFilename, parser)
+			require.NoError(t, err)
+
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Processors, 1, "wrong number of outputs")
+			plugin := cfg.Processors[0].Processor
+
+			// Process the metrics
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			for _, m := range input {
+				require.NoError(t, plugin.Add(m, &acc))
+			}
+			plugin.Stop()
+
+			require.Eventually(t, func() bool {
+				acc.Lock()
+				defer acc.Unlock()
+				return acc.NMetrics() >= uint64(len(expected))
+			}, time.Second, 100*time.Millisecond)
+
+			// Check the expectations
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual)
+		})
 	}
 }
