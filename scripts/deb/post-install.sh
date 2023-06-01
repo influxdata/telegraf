@@ -60,7 +60,7 @@ test -d "$STATE_DIR" || {
 
 STATE_FILE="$STATE_DIR/statefile"
 test -f "$STATE_FILE" || {
-    touch -h "$STATE_FILE"
+    touch "$STATE_FILE"
     chown root:telegraf "$STATE_FILE"
     chmod 660 "$STATE_FILE"
 }
