@@ -56,12 +56,22 @@ func (n *NetFlow) Init() error {
 	}
 
 	switch strings.ToLower(n.Protocol) {
-	case "", "netflow v9", "ipfix":
+	case "netflow v9":
+		if len(n.PENFiles) != 0 {
+			n.Log.Warn("'private_enterprise_number_files' option will be ignored in 'netflow v9'")
+		}
+		n.decoder = &netflowDecoder{
+			Log: n.Log,
+		}
+	case "", "ipfix":
 		n.decoder = &netflowDecoder{
 			PENFiles: n.PENFiles,
 			Log:      n.Log,
 		}
 	case "netflow v5":
+		if len(n.PENFiles) != 0 {
+			n.Log.Warn("'private_enterprise_number_files' option will be ignored in 'netflow v5'")
+		}
 		n.decoder = &netflowv5Decoder{}
 	default:
 		return fmt.Errorf("invalid protocol %q, only supports 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)

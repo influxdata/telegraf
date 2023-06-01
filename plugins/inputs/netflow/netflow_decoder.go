@@ -581,13 +581,7 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					}
 					fields := make(map[string]interface{})
 					for _, value := range record.Values {
-						var extracted []telegraf.Field
-						if value.PenProvided {
-							extracted = d.decodeValuePEN(value)
-						} else {
-							extracted = d.decodeValueV9(value)
-						}
-						for _, field := range extracted {
+						for _, field := range d.decodeValueV9(value) {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -610,13 +604,7 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					fields := make(map[string]interface{})
 					t := time.Now()
 					for _, value := range record.Values {
-						var extracted []telegraf.Field
-						if value.PenProvided {
-							extracted = d.decodeValuePEN(value)
-						} else {
-							extracted = d.decodeValueIPFIX(value)
-						}
-						for _, field := range extracted {
+						for _, field := range d.decodeValueIPFIX(value) {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -644,6 +632,7 @@ func (d *netflowDecoder) Init() error {
 	d.mappingsIPFIX = make(map[uint16]fieldMapping)
 	d.mappingsPEN = make(map[string]fieldMapping)
 	for _, fn := range d.PENFiles {
+		d.Log.Debugf("Loading PEN mapping file %q...", fn)
 		mappings, err := loadMapping(fn)
 		if err != nil {
 			return err
@@ -655,20 +644,24 @@ func (d *netflowDecoder) Init() error {
 			d.mappingsPEN[k] = v
 		}
 	}
+	d.Log.Infof("Loaded %d PEN mappings...", len(d.mappingsPEN))
+	//REMOVE
+	d.Log.Debugf("PEN mappings: %+v", d.mappingsPEN)
 
 	return nil
 }
 
 func (d *netflowDecoder) decodeValueV9(field netflow.DataField) []telegraf.Field {
 	raw := field.Value.([]byte)
+	elementID := field.Type
 
 	// Check the user-specified mapping
-	if m, found := d.mappingsV9[field.Type]; found {
+	if m, found := d.mappingsV9[elementID]; found {
 		return []telegraf.Field{{Key: m.name, Value: m.decoder(raw)}}
 	}
 
 	// Check the version specific default field mappings
-	if mappings, found := fieldMappingsNetflowV9[field.Type]; found {
+	if mappings, found := fieldMappingsNetflowV9[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
 			fields = append(fields, telegraf.Field{
@@ -680,7 +673,7 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) []telegraf.Field
 	}
 
 	// Check the common default field mappings
-	if mappings, found := fieldMappingsNetflowCommon[field.Type]; found {
+	if mappings, found := fieldMappingsNetflowCommon[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
 			fields = append(fields, telegraf.Field{
@@ -693,7 +686,7 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) []telegraf.Field
 
 	// Return the raw data if no mapping was found
 	d.Log.Debugf("unknown data field %v", field)
-	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
+	name := "type_" + strconv.FormatUint(uint64(elementID), 10)
 	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 }
 
@@ -706,6 +699,20 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	if field.Type&0x4000 != 0 {
 		prefix = "rev_"
 		elementID = field.Type & (0x4000 ^ 0xffff)
+	}
+
+	// Handle messages with Private Enterprise Numbers (PENs)
+	if field.PenProvided {
+		key := fmt.Sprintf("%d.%d", field.Pen, elementID)
+		// REMOVE
+		d.Log.Debugf("decoding PEN field %+v (eid: %d; key: %q)", field, elementID, key)
+		if m, found := d.mappingsPEN[key]; found {
+			name := prefix + m.name
+			return []telegraf.Field{{Key: name, Value: m.decoder(raw)}}
+		}
+		d.Log.Debugf("unknown IPFIX PEN data field %v", field)
+		name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
+		return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 	}
 
 	// Check the user-specified mapping
@@ -740,26 +747,5 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	// Return the raw data if no mapping was found
 	d.Log.Debugf("unknown data field %v", field)
 	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
-	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
-}
-
-func (d *netflowDecoder) decodeValuePEN(field netflow.DataField) []telegraf.Field {
-	raw := field.Value.([]byte)
-
-	var prefix string
-	elementID := field.Type
-	if field.Type&0x4000 != 0 {
-		prefix = "rev_"
-		elementID = field.Type & (0x4000 ^ 0xffff)
-	}
-
-	key := fmt.Sprintf("%d.%d", field.Pen, elementID)
-	if m, found := d.mappingsPEN[key]; found {
-		return []telegraf.Field{{Key: m.name, Value: m.decoder(raw)}}
-	}
-
-	// Return the raw data if no mapping was found
-	d.Log.Debugf("unknown PEN data field %v", field)
-	name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
 	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 }
