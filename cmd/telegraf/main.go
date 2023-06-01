@@ -245,6 +245,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		return m.Run()
 	}
 
+	commands := append(
+		getConfigCommands(m, pluginFilterFlags, outputBuffer),
+		getSecretStoreCommands(m)...,
+	)
+
 	app := &cli.App{
 		Name:   "Telegraf",
 		Usage:  "The plugin-driven server agent for collecting & reporting metrics.",
@@ -342,19 +347,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		Action: action,
 		Commands: append([]*cli.Command{
 			{
-				Name:  "config",
-				Usage: "print out full sample configuration to stdout",
-				Flags: pluginFilterFlags,
-				Action: func(cCtx *cli.Context) error {
-					// The sub_Filters are populated when the filter flags are set after the subcommand config
-					// e.g. telegraf config --section-filter inputs
-					filters := processFilterFlags(cCtx)
-
-					printSampleConfig(outputBuffer, filters)
-					return nil
-				},
-			},
-			{
 				Name:  "version",
 				Usage: "print current version to stdout",
 				Action: func(cCtx *cli.Context) error {
@@ -362,9 +354,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					return nil
 				},
 			},
-		},
-			getSecretStoreCommands(m)...,
-		),
+		}, commands...),
 	}
 
 	// Make sure we safely erase secrets
