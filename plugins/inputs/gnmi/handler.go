@@ -244,7 +244,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
 					key = parts[1]
 				}
-				h.log.Debugf("using canonical key %q -> %q", k, key)
 			} else {
 				if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 					// This may not be an exact prefix, due to naming style
