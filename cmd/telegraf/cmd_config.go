@@ -17,7 +17,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func getConfigCommands(m App, pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
+func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "config",
@@ -161,12 +161,7 @@ To migrate the file 'mysettings.conf' use
 							}
 
 							// Write the output file
-							file, err := os.Create(outfn)
-							if err != nil {
-								return fmt.Errorf("opening output %q failed: %w", outfn, err)
-							}
-							defer file.Close()
-							if _, err := file.Write(out); err != nil {
+							if err := os.WriteFile(outfn, out, 0640); err != nil {
 								return fmt.Errorf("writing output %q failed: %w", outfn, err)
 							}
 						}

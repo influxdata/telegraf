@@ -246,7 +246,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	}
 
 	commands := append(
-		getConfigCommands(m, pluginFilterFlags, outputBuffer),
+		getConfigCommands(pluginFilterFlags, outputBuffer),
 		getSecretStoreCommands(m)...,
 	)
 
