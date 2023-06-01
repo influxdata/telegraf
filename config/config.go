@@ -1069,7 +1069,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if err != nil {
 		return err
 	}
-	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
+	processorBefore, count, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
 	if err != nil {
 		return err
 	}
@@ -1088,10 +1088,9 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	rf = models.NewRunningProcessor(processorAfter, processorAfterConfig)
 	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
-	// Check the number of misses against the threshold
-	if hasParser {
-		missCountThreshold = 2
-	}
+	// Check the number of misses against the threshold. We need to double
+	// the count as the processor setup is executed twice.
+	missCountThreshold = 2 * count
 	for key, count := range missCount {
 		if count <= missCountThreshold {
 			continue
@@ -1104,8 +1103,8 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) setupProcessor(name string, creator processors.StreamingCreator, table *ast.Table) (telegraf.StreamingProcessor, bool, error) {
-	var hasParser bool
+func (c *Config) setupProcessor(name string, creator processors.StreamingCreator, table *ast.Table) (telegraf.StreamingProcessor, int, error) {
+	var optionTestCount int
 
 	streamingProcessor := creator()
 
@@ -1122,28 +1121,39 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	if t, ok := processor.(telegraf.ParserPlugin); ok {
 		parser, err := c.addParser("processors", name, table)
 		if err != nil {
-			return nil, true, fmt.Errorf("adding parser failed: %w", err)
+			return nil, 0, fmt.Errorf("adding parser failed: %w", err)
 		}
 		t.SetParser(parser)
-		hasParser = true
+		optionTestCount++
 	}
 
 	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser("processors", name, table) {
-			return nil, false, errors.New("parser not found")
+			return nil, 0, errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
 			return c.addParser("processors", name, table)
 		})
-		hasParser = true
+		optionTestCount++
+	}
+
+	// If the (underlying) processor has a SetSerializer function it can accept
+	// arbitrary data-formats, so build the requested serializer and set it.
+	if t, ok := processor.(telegraf.SerializerPlugin); ok {
+		serializer, err := c.addSerializer(name, table)
+		if err != nil {
+			return nil, 0, fmt.Errorf("adding serializer failed: %w", err)
+		}
+		t.SetSerializer(serializer)
+		optionTestCount++
 	}
 
 	if err := c.toml.UnmarshalTable(table, processor); err != nil {
-		return nil, hasParser, fmt.Errorf("unmarshalling failed: %w", err)
+		return nil, 0, fmt.Errorf("unmarshalling failed: %w", err)
 	}
 
 	err := c.printUserDeprecation("processors", name, processor)
-	return streamingProcessor, hasParser, err
+	return streamingProcessor, optionTestCount, err
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -1177,32 +1187,20 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// arbitrary types of output, so build the serializer and set it.
 	if t, ok := output.(telegraf.SerializerPlugin); ok {
 		missThreshold = 1
-		if serializer, err := c.addSerializer(name, table); err == nil {
-			t.SetSerializer(serializer)
-		} else {
-			missThreshold = 0
-			// Fallback to the old way of instantiating the parsers.
-			serializer, err := c.buildSerializerOld(table)
-			if err != nil {
-				return err
-			}
-			t.SetSerializer(serializer)
+		serializer, err := c.addSerializer(name, table)
+		if err != nil {
+			return err
 		}
+		t.SetSerializer(serializer)
 	} else if t, ok := output.(serializers.SerializerOutput); ok {
 		// Keep the old interface for backward compatibility
 		// DEPRECATED: Please switch your plugin to telegraf.Serializers
 		missThreshold = 1
-		if serializer, err := c.addSerializer(name, table); err == nil {
-			t.SetSerializer(serializer)
-		} else {
-			missThreshold = 0
-			// Fallback to the old way of instantiating the parsers.
-			serializer, err := c.buildSerializerOld(table)
-			if err != nil {
-				return err
-			}
-			t.SetSerializer(serializer)
+		serializer, err := c.addSerializer(name, table)
+		if err != nil {
+			return err
 		}
+		t.SetSerializer(serializer)
 	}
 
 	outputConfig, err := c.buildOutput(name, table)
@@ -1469,29 +1467,6 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	return cp, err
 }
 
-// buildSerializerOld grabs the necessary entries from the ast.Table for creating
-// a serializers.Serializer object, and creates it, which can then be added onto
-// an Output object.
-func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error) {
-	sc := &serializers.Config{TimestampUnits: 1 * time.Second}
-
-	c.getFieldString(tbl, "data_format", &sc.DataFormat)
-
-	if sc.DataFormat == "" {
-		sc.DataFormat = "influx"
-	}
-
-	c.getFieldString(tbl, "prefix", &sc.Prefix)
-	c.getFieldString(tbl, "template", &sc.Template)
-	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
-
-	if c.hasErrs() {
-		return nil, c.firstErr()
-	}
-
-	return serializers.NewSerializer(sc)
-}
-
 // buildOutput parses output specific items from the ast.Table,
 // builds the filter and returns a
 // models.OutputConfig to be inserted into models.RunningInput
@@ -1546,11 +1521,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	// Secret-store options to ignore
 	case "id":
 
-	// Parser options to ignore
+	// Parser and serializer options to ignore
 	case "data_type", "influx_parser_type":
 
-	// Serializer options to ignore
-	case "prefix", "template", "templates":
 	default:
 		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
@@ -1572,6 +1545,7 @@ func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Output)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Aggregator)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Processor)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.StreamingProcessor)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Parser)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Serializer)(nil)).Elem())
 
