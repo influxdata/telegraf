@@ -244,7 +244,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
 					key = parts[1]
 				}
-				key = strings.TrimLeft(key, "/.")
+				h.log.Debugf("using canonical key %q -> %q", k, key)
 			} else {
 				if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 					// This may not be an exact prefix, due to naming style
@@ -253,15 +253,12 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				} else if len(aliasPath) >= len(key) {
 					// Otherwise use the last path element as the field key.
 					key = path.Base(key)
-
-					// If there are no elements skip the item; this would be an
-					// invalid message.
-					key = strings.TrimLeft(key, "/.")
-					if key == "" {
-						h.log.Errorf("invalid empty path: %q", k)
-						continue
-					}
 				}
+			}
+			key = strings.TrimLeft(key, "/.")
+			if key == "" {
+				h.log.Errorf("invalid empty path: %q", k)
+				continue
 			}
 			grouper.Add(name, tags, timestamp, key, v)
 		}
