@@ -239,7 +239,7 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	194: {{"mpls_payload_len", decodeUint}},         // mplsPayloadLength
 	195: {{"dscp", decodeUint}},                     // ipDiffServCodePoint
 	196: {{"precedence", decodeUint}},               // ipPrecedence
-	197: {{"fragement_flags", decodeFragmentFlags}}, // fragmentFlags
+	197: {{"fragment_flags", decodeFragmentFlags}},  // fragmentFlags
 	198: {{"bytes_sqr_sum", decodeUint}},            // octetDeltaSumOfSquares
 	199: {{"bytes_sqr_sum_total", decodeUint}},      // octetTotalSumOfSquares
 	200: {{"mpls_top_label_ttl", decodeUint}},       // mplsTopLabelTTL
@@ -256,10 +256,10 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	211: {{"collector", decodeIP}},                  // collectorIPv4Address
 	212: {{"collector", decodeIP}},                  // collectorIPv6Address
 	213: {{"export_interface", decodeUint}},         // exportInterface
-	214: {{"export_proto_version", decodeUint}},     //exportProtocolVersion
-	215: {{"export_transport_proto", decodeUint}},   //exportTransportProtocol
-	216: {{"collector_transport_port", decodeUint}}, //collectorTransportPort
-	217: {{"exporter_transport_port", decodeUint}},  //exporterTransportPort
+	214: {{"export_proto_version", decodeUint}},     // exportProtocolVersion
+	215: {{"export_transport_proto", decodeUint}},   // exportTransportProtocol
+	216: {{"collector_transport_port", decodeUint}}, // collectorTransportPort
+	217: {{"exporter_transport_port", decodeUint}},  // exporterTransportPort
 	218: {{"tcp_syn_total", decodeUint}},            // tcpSynTotalCount
 	219: {{"tcp_fin_total", decodeUint}},            // tcpFinTotalCount
 	220: {{"tcp_rst_total", decodeUint}},            // tcpRstTotalCount
