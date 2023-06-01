@@ -1,6 +1,6 @@
 # Nebius Cloud Monitoring Output Plugin
 
-This plugin will send custom metrics to [ Cloud
+This plugin will send custom metrics to [Cloud
 Monitoring](https://nebius.com/il/services/monitoring).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
