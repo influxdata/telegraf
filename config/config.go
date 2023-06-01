@@ -376,7 +376,7 @@ func WalkDirectory(path string) ([]string, error) {
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
 //  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf
-func getDefaultConfigPath() ([]string, error) {
+func GetDefaultConfigPath() ([]string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
@@ -434,7 +434,7 @@ func (c *Config) LoadConfig(path string) error {
 	paths := []string{}
 
 	if path == "" {
-		if paths, err = getDefaultConfigPath(); err != nil {
+		if paths, err = GetDefaultConfigPath(); err != nil {
 			return err
 		}
 	} else {
@@ -446,7 +446,7 @@ func (c *Config) LoadConfig(path string) error {
 			log.Printf("I! Loading config: %s", path)
 		}
 
-		data, err := LoadConfigFile(path)
+		data, _, err := LoadConfigFile(path)
 		if err != nil {
 			return fmt.Errorf("error loading config file %s: %w", path, err)
 		}
@@ -696,33 +696,34 @@ func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
-func LoadConfigFile(config string) ([]byte, error) {
+func LoadConfigFile(config string) ([]byte, bool, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
 		if err != nil {
-			return nil, err
+			return nil, true, err
 		}
 
 		switch u.Scheme {
 		case "https", "http":
-			return fetchConfig(u)
+			data, err := fetchConfig(u)
+			return data, true, err
 		default:
-			return nil, fmt.Errorf("scheme %q not supported", u.Scheme)
+			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}
 	}
 
 	// If it isn't a https scheme, try it as a file
 	buffer, err := os.ReadFile(config)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	mimeType := http.DetectContentType(buffer)
 	if !strings.Contains(mimeType, "text/plain") {
-		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
+		return nil, false, fmt.Errorf("provided config is not a TOML file: %s", config)
 	}
 
-	return buffer, nil
+	return buffer, false, nil
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {

@@ -109,7 +109,7 @@ func (s *selection) Filter(p packageCollection) *packageCollection {
 
 func (s *selection) importFiles(configurations []string) error {
 	for _, cfg := range configurations {
-		buf, err := config.LoadConfigFile(cfg)
+		buf, _, err := config.LoadConfigFile(cfg)
 		if err != nil {
 			return fmt.Errorf("reading %q failed: %w", cfg, err)
 		}

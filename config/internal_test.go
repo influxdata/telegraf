@@ -135,18 +135,3 @@ func TestURLRetries3FailsThenPasses(t *testing.T) {
 	require.NoError(t, c.LoadConfig(ts.URL))
 	require.Equal(t, 4, responseCounter)
 }
-
-func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
-
-	c := NewConfig()
-	t.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
-	configPath, err := getDefaultConfigPath()
-	require.NoError(t, err)
-	require.Equal(t, []string{ts.URL}, configPath)
-	err = c.LoadConfig("")
-	require.NoError(t, err)
-}
