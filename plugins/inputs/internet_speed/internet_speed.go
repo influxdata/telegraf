@@ -129,6 +129,7 @@ func (is *InternetSpeed) findClosestServer() error {
 		client.SetNThread(is.Connections)
 	}
 
+	var err error
 	is.servers, err = client.FetchServers()
 	if err != nil {
 		return fmt.Errorf("fetching server list failed: %w", err)
