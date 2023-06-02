@@ -67,7 +67,7 @@ const (
 	defaultEndpointURL    = "https://monitoring.api.il.nebius.cloud/monitoring/v2/data/write"
 	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
-	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/nebius/folder-id"
+	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
 func (*NebiusCloudMonitoring) SampleConfig() string {
