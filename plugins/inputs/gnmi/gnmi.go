@@ -99,7 +99,8 @@ func (*GNMI) SampleConfig() string {
 }
 
 func (c *GNMI) Init() error {
-	if time.Duration(c.Redial).Nanoseconds() <= 0 {
+	// Check options
+	if time.Duration(c.Redial) <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
@@ -117,6 +118,15 @@ func (c *GNMI) Init() error {
 	// and prepare them.
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
 		subscription := c.Subscriptions[i]
+
+		// Check the subscription
+		if subscription.Name == "" {
+			return fmt.Errorf("empty 'name' found for subscription %d", i+1)
+		}
+		if subscription.Path == "" {
+			return fmt.Errorf("empty 'name' found for subscription %d", i+1)
+		}
+
 		// Support and convert legacy TagOnly subscriptions
 		if subscription.TagOnly {
 			tagSub := TagSubscription{
