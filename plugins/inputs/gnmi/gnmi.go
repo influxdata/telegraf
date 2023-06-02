@@ -64,7 +64,6 @@ type GNMI struct {
 
 	// Internal state
 	internalAliases map[string]string
-	acc             telegraf.Accumulator
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 }
@@ -102,13 +101,6 @@ func (*GNMI) SampleConfig() string {
 
 // Start the http listener service
 func (c *GNMI) Start(acc telegraf.Accumulator) error {
-	var err error
-	var ctx context.Context
-	var tlscfg *tls.Config
-	var request *gnmiLib.SubscribeRequest
-	c.acc = acc
-	ctx, c.cancel = context.WithCancel(context.Background())
-
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
 		subscription := c.Subscriptions[i]
 		// Support and convert legacy TagOnly subscriptions
@@ -122,12 +114,12 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			c.Subscriptions = append(c.Subscriptions[:i], c.Subscriptions[i+1:]...)
 			continue
 		}
-		if err = subscription.buildFullPath(c); err != nil {
+		if err := subscription.buildFullPath(c); err != nil {
 			return err
 		}
 	}
 	for idx := range c.TagSubscriptions {
-		if err = c.TagSubscriptions[idx].buildFullPath(c); err != nil {
+		if err := c.TagSubscriptions[idx].buildFullPath(c); err != nil {
 			return err
 		}
 		if c.TagSubscriptions[idx].TagOnly != c.TagSubscriptions[0].TagOnly {
@@ -152,26 +144,29 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Validate configuration
-	if request, err = c.newSubscribeRequest(); err != nil {
+	request, err := c.newSubscribeRequest()
+	if err != nil {
 		return err
 	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
 	// Parse TLS config
+	var tlscfg *tls.Config
 	if c.EnableTLS {
 		if tlscfg, err = c.ClientConfig.TLSConfig(); err != nil {
 			return err
 		}
 	}
 
+	var ctx context.Context
+	ctx, c.cancel = context.WithCancel(context.Background())
 	if len(c.Username) > 0 {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
 	}
 
 	// Invert explicit alias list and prefill subscription names
 	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
-
 	for _, s := range c.Subscriptions {
 		if err := s.buildAlias(c.internalAliases); err != nil {
 			return err
