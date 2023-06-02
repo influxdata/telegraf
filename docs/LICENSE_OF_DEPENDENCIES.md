@@ -376,6 +376,8 @@ following works:
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
 - google.golang.org/appengine [Apache License 2.0](https://github.com/golang/appengine/blob/master/LICENSE)
 - google.golang.org/genproto [Apache License 2.0](https://github.com/google/go-genproto/blob/master/LICENSE)
+- google.golang.org/genproto/googleapis/api [Apache License 2.0](https://pkg.go.dev/google.golang.org/genproto/googleapis/api?tab=licenses)
+- google.golang.org/genproto/googleapis/rpc [Apache License 2.0](https://pkg.go.dev/google.golang.org/genproto/googleapis/rpc?tab=licenses)
 - google.golang.org/grpc [Apache License 2.0](https://github.com/grpc/grpc-go/blob/master/LICENSE)
 - google.golang.org/protobuf [BSD 3-Clause "New" or "Revised" License](https://pkg.go.dev/google.golang.org/protobuf?tab=licenses)
 - gopkg.in/fatih/pool.v2 [MIT License](https://github.com/fatih/pool/blob/v2.0.0/LICENSE)
