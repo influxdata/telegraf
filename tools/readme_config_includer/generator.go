@@ -99,7 +99,13 @@ func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	}
 
 	// Insert all includes in the order they occurred
-	for _, include := range b.Includes {
+	for i, include := range b.Includes {
+		if i > 0 {
+			// Add a separating newline between included blocks
+			if _, err := buf.Write([]byte("\n")); err != nil {
+				return errors.New("adding newline failed")
+			}
+		}
 		if err := insertInclude(buf, include); err != nil {
 			return err
 		}

@@ -112,10 +112,12 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/config_includer/generator$(EXEEXT) ./tools/config_includer/generator.go
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	go generate -run="tools/config_includer/generator" ./plugins/$*/...
+	go generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
 
 .PHONY: config
 config:
