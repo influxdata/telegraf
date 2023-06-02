@@ -99,7 +99,18 @@ func (*GNMI) SampleConfig() string {
 	return sampleConfig
 }
 
-// Start the http listener service
+func (c *GNMI) Init() error {
+	if time.Duration(c.Redial).Nanoseconds() <= 0 {
+		return fmt.Errorf("redial duration must be positive")
+	}
+
+	// Check vendor_specific options configured by user
+	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
+		return fmt.Errorf("unsupported vendor_specific option: %w", err)
+	}
+	return nil
+}
+
 func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
 		subscription := c.Subscriptions[i]
@@ -147,8 +158,6 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	request, err := c.newSubscribeRequest()
 	if err != nil {
 		return err
-	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
-		return fmt.Errorf("redial duration must be positive")
 	}
 
 	// Parse TLS config
@@ -314,14 +323,6 @@ func init() {
 	inputs.Add("gnmi", New)
 	// Backwards compatible alias:
 	inputs.Add("cisco_telemetry_gnmi", New)
-}
-
-func (c *GNMI) Init() error {
-	// Check vendor_specific options configured by user
-	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
-		return fmt.Errorf("unsupported vendor_specific option: %w", err)
-	}
-	return nil
 }
 
 func (s *Subscription) buildFullPath(c *GNMI) error {
