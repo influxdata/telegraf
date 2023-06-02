@@ -57,7 +57,7 @@ type GNMI struct {
 	MaxMsgSize          config.Size       `toml:"max_msg_size"`
 	Trace               bool              `toml:"dump_responses"`
 	CanonicalFieldNames bool              `toml:"canonical_field_names"`
-	EnableTLS           bool              `toml:"enable_tls"`
+	EnableTLS           bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
 	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
@@ -109,7 +109,9 @@ func (c *GNMI) Init() error {
 	}
 
 	// Use the new TLS option for enabling
-	c.ClientConfig.Enable = &c.EnableTLS
+	// Honor deprecated option
+	enable := (c.ClientConfig.Enable != nil && *c.ClientConfig.Enable) || c.EnableTLS
+	c.ClientConfig.Enable = &enable
 
 	// Split the subscriptions into "normal" and "tag" subscription
 	// and prepare them.
