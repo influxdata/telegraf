@@ -8,6 +8,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -728,6 +729,20 @@ func TestParseTimestampInvalid(t *testing.T) {
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}
+}
+
+func TestTimestampAbbrevWarning(t *testing.T) {
+	var buf bytes.Buffer
+	backup := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(backup)
+
+	once = sync.Once{}
+	ts, err := ParseTimestamp("RFC1123", "Mon, 02 Jan 2006 15:04:05 MST", nil)
+	require.NoError(t, err)
+	require.EqualValues(t, 1136239445, ts.Unix())
+
+	require.Contains(t, buf.String(), "You are using abbreviated timezones for which parsing was fixed in v1.27.0")
 }
 
 func TestProductToken(t *testing.T) {

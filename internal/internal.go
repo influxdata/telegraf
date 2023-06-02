@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"math/rand"
 	"os"
@@ -23,6 +24,8 @@ import (
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+var once sync.Once
 
 var (
 	ErrTimeout        = errors.New("command timed out")
@@ -410,6 +413,13 @@ func parseTime(format string, timestamp string, location *time.Location) (time.T
 	if zone == "UTC" || offset != 0 {
 		return ts.In(loc), nil
 	}
+	once.Do(func() {
+		log.Print("W! You are using abbreviated timezones for which parsing was fixed in v1.27.0.")
+		log.Print("W! Please remove any workarounds in place and check your resulting times carefully!")
+		log.Print("W! In case you experience any problems, please file an issue!")
+		log.Print("W! This message is only printed once...")
+	})
+
 	abbrevLoc, err := time.LoadLocation(zone)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("cannot resolve timezone abbreviation %q: %w", zone, err)
