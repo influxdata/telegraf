@@ -108,10 +108,9 @@ func (c *GNMI) Init() error {
 	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
 		return fmt.Errorf("unsupported vendor_specific option: %w", err)
 	}
-	return nil
-}
 
-func (c *GNMI) Start(acc telegraf.Accumulator) error {
+	// Split the subscriptions into "normal" and "tag" subscription
+	// and prepare them.
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
 		subscription := c.Subscriptions[i]
 		// Support and convert legacy TagOnly subscriptions
@@ -154,6 +153,27 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
+	// Invert explicit alias list and prefill subscription names
+	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
+	for _, s := range c.Subscriptions {
+		if err := s.buildAlias(c.internalAliases); err != nil {
+			return err
+		}
+	}
+	for _, s := range c.TagSubscriptions {
+		if err := s.buildAlias(c.internalAliases); err != nil {
+			return err
+		}
+	}
+	for alias, encodingPath := range c.Aliases {
+		c.internalAliases[encodingPath] = alias
+	}
+	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
+
+	return nil
+}
+
+func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	// Validate configuration
 	request, err := c.newSubscribeRequest()
 	if err != nil {
@@ -173,24 +193,6 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	if len(c.Username) > 0 {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
 	}
-
-	// Invert explicit alias list and prefill subscription names
-	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
-	for _, s := range c.Subscriptions {
-		if err := s.buildAlias(c.internalAliases); err != nil {
-			return err
-		}
-	}
-	for _, s := range c.TagSubscriptions {
-		if err := s.buildAlias(c.internalAliases); err != nil {
-			return err
-		}
-	}
-
-	for alias, encodingPath := range c.Aliases {
-		c.internalAliases[encodingPath] = alias
-	}
-	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
 
 	// Create a goroutine for each device, dial and subscribe
 	c.wg.Add(len(c.Addresses))
