@@ -414,10 +414,10 @@ func parseTime(format string, timestamp string, location *time.Location) (time.T
 		return ts.In(loc), nil
 	}
 	once.Do(func() {
-		const msg = `You are using abbreviated timezones for which parsing was fixed in v1.27.0!
-Please remove any workarounds in place and check your resulting times carefully!
-In case you experience any problems, please file an issue! This message is only
-printed once...`
+		const msg = `Your config is using abbreviated timezones and parsing was changed in v1.27.0!
+		Please see the change log, remove any workarounds in place, and carefully
+		check your data timestamps! If case you experience any problems, please
+		file an issue on https://github.com/influxdata/telegraf/issues!`
 		log.Print("W! " + msg)
 	})
 

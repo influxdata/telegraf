@@ -742,7 +742,7 @@ func TestTimestampAbbrevWarning(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 1136239445, ts.Unix())
 
-	require.Contains(t, buf.String(), "You are using abbreviated timezones for which parsing was fixed in v1.27.0")
+	require.Contains(t, buf.String(), "Your config is using abbreviated timezones and parsing was changed in v1.27.0")
 }
 
 func TestProductToken(t *testing.T) {
