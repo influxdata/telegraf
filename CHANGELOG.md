@@ -3,9 +3,19 @@
 
 ## next
 
-### BREAKING API CHANGES
+### **BREAKING CHANGES**
 
-- Removal of old-style parser creation
+- Fix parsing of timezone abbreviations such as `MST`. Up to now, when parsing
+  times with abbreviated timezones (i.e. the format ) the timezone information
+  is ignored completely and the _timestamp_ is located in UTC. This is a golang
+  issue (see [#9617](https://github.com/golang/go/issues/9617) or
+  [#56528](https://github.com/golang/go/issues/56528)). If you worked around
+  that issue, please remove the workaround before using v1.27+. In case you
+  experience issues with abbreviated timezones please file an issue!
+- Removal of old-style parser creation. This should not directly affect users as
+  it is an API change. All parsers in Telegraf are already ported to the new
+  framework. If you experience any issues with not being able to create parsers
+  let us know!
 
 ## v1.26.3 [2023-05-22]
 
