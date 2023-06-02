@@ -80,7 +80,6 @@ to use them.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-
   ## Optional Cookie authentication
   # cookie_auth_url = "https://localhost/authMe"
   # cookie_auth_method = "POST"
