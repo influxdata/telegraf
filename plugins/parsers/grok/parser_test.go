@@ -792,10 +792,11 @@ func TestShortPatternRegression(t *testing.T) {
 		CustomPatterns: `
 		  TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
 		`,
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, p.Compile())
 
-	m, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
+	m, err := p.ParseLine(`Wed Apr 12 13:10:34 MST 2017 42`)
 	require.NoError(t, err)
 	require.NotNil(t, m)
 

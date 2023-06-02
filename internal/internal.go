@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"math/rand"
 	"os"
@@ -23,6 +24,8 @@ import (
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+var once sync.Once
 
 var (
 	ErrTimeout        = errors.New("command timed out")
@@ -391,5 +394,40 @@ func parseTime(format string, timestamp string, location *time.Location) (time.T
 	case "stampnano":
 		format = time.StampNano
 	}
-	return time.ParseInLocation(format, timestamp, loc)
+
+	if !strings.Contains(format, "MST") {
+		return time.ParseInLocation(format, timestamp, loc)
+	}
+
+	// Golang does not parse times with ambiguous timezone abbreviations,
+	// but only parses the time-fields and the timezone NAME with a zero
+	// offset (see https://groups.google.com/g/golang-nuts/c/hDMdnm_jUFQ/m/yeL9IHOsAQAJ).
+	// To handle those timezones correctly we can use the timezone-name and
+	// force parsing the time in that timezone. This way we get the correct
+	// time for the "most probably" of the ambiguous timezone-abbreviations.
+	ts, err := time.Parse(format, timestamp)
+	if err != nil {
+		return time.Time{}, err
+	}
+	zone, offset := ts.Zone()
+	if zone == "UTC" || offset != 0 {
+		return ts.In(loc), nil
+	}
+	once.Do(func() {
+		const msg = `Your config is using abbreviated timezones and parsing was changed in v1.27.0!
+		Please see the change log, remove any workarounds in place, and carefully
+		check your data timestamps! If case you experience any problems, please
+		file an issue on https://github.com/influxdata/telegraf/issues!`
+		log.Print("W! " + msg)
+	})
+
+	abbrevLoc, err := time.LoadLocation(zone)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("cannot resolve timezone abbreviation %q: %w", zone, err)
+	}
+	ts, err = time.ParseInLocation(format, timestamp, abbrevLoc)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return ts.In(loc), nil
 }
