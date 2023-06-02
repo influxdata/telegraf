@@ -3,7 +3,6 @@ package gnmi
 
 import (
 	"context"
-	"crypto/tls"
 	_ "embed"
 	"fmt"
 	"path"
@@ -109,6 +108,9 @@ func (c *GNMI) Init() error {
 		return fmt.Errorf("unsupported vendor_specific option: %w", err)
 	}
 
+	// Use the new TLS option for enabling
+	c.ClientConfig.Enable = &c.EnableTLS
+
 	// Split the subscriptions into "normal" and "tag" subscription
 	// and prepare them.
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
@@ -180,14 +182,13 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// Parse TLS config
-	var tlscfg *tls.Config
-	if c.EnableTLS {
-		if tlscfg, err = c.ClientConfig.TLSConfig(); err != nil {
-			return err
-		}
+	// Generate TLS config if enabled
+	tlscfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
 	}
 
+	// Prepare the context, optionally with credentials
 	var ctx context.Context
 	ctx, c.cancel = context.WithCancel(context.Background())
 	if len(c.Username) > 0 {
