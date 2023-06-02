@@ -249,7 +249,7 @@ func (adx *AzureDataExplorer) Init() error {
 	}
 
 	serializer := &json.Serializer{
-		TimestampUnits:  time.Nanosecond,
+		TimestampUnits:  config.Duration(time.Nanosecond),
 		TimestampFormat: time.RFC3339Nano,
 	}
 	if err := serializer.Init(); err != nil {

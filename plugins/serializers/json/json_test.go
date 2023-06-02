@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -91,7 +92,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 				time.Unix(1525478795, 123456789),
 			)
 			s := Serializer{
-				TimestampUnits:  tt.timestampUnits,
+				TimestampUnits:  config.Duration(tt.timestampUnits),
 				TimestampFormat: tt.timestampFormat,
 			}
 			require.NoError(t, s.Init())
@@ -270,7 +271,7 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 
 			// Serialize
 			serializer := Serializer{
-				TimestampUnits:  cfg.TimestampUnits,
+				TimestampUnits:  config.Duration(cfg.TimestampUnits),
 				TimestampFormat: cfg.TimestampFormat,
 				Transformation:  cfg.Transformation,
 			}
@@ -318,7 +319,7 @@ func TestSerializeTransformationBatch(t *testing.T) {
 
 			// Serialize
 			serializer := Serializer{
-				TimestampUnits:  cfg.TimestampUnits,
+				TimestampUnits:  config.Duration(cfg.TimestampUnits),
 				TimestampFormat: cfg.TimestampFormat,
 				Transformation:  cfg.Transformation,
 			}
@@ -432,7 +433,7 @@ func TestSerializeNesting(t *testing.T) {
 
 			// Serialize
 			serializer := Serializer{
-				TimestampUnits:      cfg.TimestampUnits,
+				TimestampUnits:      config.Duration(cfg.TimestampUnits),
 				TimestampFormat:     cfg.TimestampFormat,
 				Transformation:      cfg.Transformation,
 				NestedFieldsInclude: cfg.JSONNestedFieldsInclude,

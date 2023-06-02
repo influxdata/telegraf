@@ -10,16 +10,17 @@ import (
 	"github.com/blues/jsonata-go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type Serializer struct {
-	TimestampUnits      time.Duration `toml:"json_timestamp_units"`
-	TimestampFormat     string        `toml:"json_timestamp_format"`
-	Transformation      string        `toml:"json_transformation"`
-	NestedFieldsInclude []string      `toml:"json_nested_fields_include"`
-	NestedFieldsExclude []string      `toml:"json_nested_fields_exclude"`
+	TimestampUnits      config.Duration `toml:"json_timestamp_units"`
+	TimestampFormat     string          `toml:"json_timestamp_format"`
+	Transformation      string          `toml:"json_transformation"`
+	NestedFieldsInclude []string        `toml:"json_nested_fields_include"`
+	NestedFieldsExclude []string        `toml:"json_nested_fields_exclude"`
 
 	nestedfields filter.Filter
 }
@@ -27,18 +28,20 @@ type Serializer struct {
 func (s *Serializer) Init() error {
 	// Default precision is 1s
 	if s.TimestampUnits <= 0 {
-		s.TimestampUnits = time.Second
+		s.TimestampUnits = config.Duration(time.Second)
 	}
 
 	// Search for the power of ten less than the duration
 	d := time.Nanosecond
+	t := time.Duration(s.TimestampUnits)
 	for {
-		if d*10 > s.TimestampUnits {
-			s.TimestampUnits = d
+		if d*10 > t {
+			t = d
 			break
 		}
 		d = d * 10
 	}
+	s.TimestampUnits = config.Duration(t)
 
 	if len(s.NestedFieldsInclude) > 0 || len(s.NestedFieldsExclude) > 0 {
 		f, err := filter.NewIncludeExcludeFilter(s.NestedFieldsInclude, s.NestedFieldsExclude)
@@ -165,7 +168,7 @@ func init() {
 
 // InitFromConfig is a compatibility function to construct the parser the old way
 func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
-	s.TimestampUnits = cfg.TimestampUnits
+	s.TimestampUnits = config.Duration(cfg.TimestampUnits)
 	s.TimestampFormat = cfg.TimestampFormat
 	s.Transformation = cfg.Transformation
 	s.NestedFieldsInclude = cfg.JSONNestedFieldInclude

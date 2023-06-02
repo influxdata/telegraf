@@ -666,7 +666,7 @@ func TestBatchedUnbatched(t *testing.T) {
 	influxSerializer := &influx.Serializer{}
 	require.NoError(t, influxSerializer.Init())
 
-	jsonSerializer := &json.Serializer{TimestampUnits: time.Second}
+	jsonSerializer := &json.Serializer{}
 	require.NoError(t, jsonSerializer.Init())
 
 	s := map[string]serializers.Serializer{
