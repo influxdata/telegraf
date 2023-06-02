@@ -3,7 +3,7 @@
 The Sematext output plugin writes metrics to [Sematext](https://sematext.com/spm/).
 Check the [docs](https://sematext.com/docs/monitoring) for more info.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Sematext output config
