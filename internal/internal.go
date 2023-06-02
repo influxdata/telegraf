@@ -414,10 +414,11 @@ func parseTime(format string, timestamp string, location *time.Location) (time.T
 		return ts.In(loc), nil
 	}
 	once.Do(func() {
-		log.Print("W! You are using abbreviated timezones for which parsing was fixed in v1.27.0.")
-		log.Print("W! Please remove any workarounds in place and check your resulting times carefully!")
-		log.Print("W! In case you experience any problems, please file an issue!")
-		log.Print("W! This message is only printed once...")
+		const msg = `You are using abbreviated timezones for which parsing was fixed in v1.27.0!
+Please remove any workarounds in place and check your resulting times carefully!
+In case you experience any problems, please file an issue! This message is only
+printed once...`
+		log.Print("W! " + msg)
 	})
 
 	abbrevLoc, err := time.LoadLocation(zone)
