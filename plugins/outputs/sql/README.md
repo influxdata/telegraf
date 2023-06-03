@@ -181,16 +181,28 @@ docs](https://modernc.org/sqlite) for details.
 
 ### clickhouse
 
-Use this metric type to SQL type conversion:
+#### DSN
+
+Currently, Telegraf's sql output plugin depends on
+[clickhouse-go v1.5.4](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4)
+which uses a [different DSN
+format](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4#dsn) than its
+newer `v2.*` version.
+
+#### Metric type to SQL type conversion
+
+The following configuration makes the mapping compatible with Clickhouse:
 
 ```toml
   [outputs.sql.convert]
+    conversion_style     = "literal"
     integer              = "Int64"
     text                 = "String"
     timestamp            = "DateTime"
     defaultvalue         = "String"
     unsigned             = "UInt64"
     bool                 = "UInt8"
+    real                 = "Float64"
 ```
 
 See [ClickHouse data
