@@ -26,7 +26,7 @@ func TestWrite(t *testing.T) {
 	testMetadataHTTPServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/token") {
-				token := MetadataIamToken{
+				token := metadataIamToken{
 					AccessToken: "token1",
 					ExpiresIn:   123,
 				}
@@ -127,7 +127,9 @@ func TestWrite(t *testing.T) {
 			tt.plugin.Endpoint = url
 			tt.plugin.metadataTokenURL = metadataTokenURL
 			tt.plugin.metadataFolderURL = metadataFolderURL
-			err := tt.plugin.Connect()
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+			err = tt.plugin.Connect()
 			require.NoError(t, err)
 
 			err = tt.plugin.Write(tt.metrics)

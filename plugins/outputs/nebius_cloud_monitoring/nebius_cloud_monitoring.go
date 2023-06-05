@@ -56,7 +56,7 @@ type nebiusCloudMonitoringMetric struct {
 	Value      float64           `json:"value"`
 }
 
-type MetadataIamToken struct {
+type metadataIamToken struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int64  `json:"expires_in"`
 	TokenType   string `json:"token_type"`
@@ -74,8 +74,7 @@ func (*NebiusCloudMonitoring) SampleConfig() string {
 	return sampleConfig
 }
 
-// Connect initializes the plugin and validates connectivity
-func (a *NebiusCloudMonitoring) Connect() error {
+func (a *NebiusCloudMonitoring) Init() error {
 	if a.Timeout <= 0 {
 		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
@@ -98,17 +97,19 @@ func (a *NebiusCloudMonitoring) Connect() error {
 		},
 		Timeout: time.Duration(a.Timeout),
 	}
+	tags := map[string]string{}
+	a.MetricOutsideWindow = selfstat.Register("nebius_cloud_monitoring", "metric_outside_window", tags)
+	return nil
+}
 
+// Connect initializes the plugin and validates connectivity
+func (a *NebiusCloudMonitoring) Connect() error {
 	var err error
 	a.folderID, err = a.getFolderIDFromMetadata()
 	if err != nil {
 		return err
 	}
-
 	a.Log.Infof("Writing to Nebius.Cloud Monitoring URL: %s", a.Endpoint)
-
-	tags := map[string]string{}
-	a.MetricOutsideWindow = selfstat.Register("nebius_cloud_monitoring", "metric_outside_window", tags)
 
 	return nil
 }
@@ -133,9 +134,9 @@ func (a *NebiusCloudMonitoring) Write(metrics []telegraf.Metric) error {
 			nebiusCloudMonitoringMetrics = append(
 				nebiusCloudMonitoringMetrics,
 				nebiusCloudMonitoringMetric{
-					Name:   fmt.Sprintf("%s_%s", m.Name(), field.Key),
+					Name:   m.Name() + "_" + field.Key,
 					Labels: m.Tags(),
-					TS:     fmt.Sprint(m.Time().Format(time.RFC3339)),
+					TS:     m.Time().Format(time.RFC3339),
 					Value:  value,
 				},
 			)
@@ -198,7 +199,7 @@ func (a *NebiusCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	var metadata MetadataIamToken
+	var metadata metadataIamToken
 	if err := json.Unmarshal(body, &metadata); err != nil {
 		return "", 0, err
 	}
