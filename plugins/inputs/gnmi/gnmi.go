@@ -124,7 +124,7 @@ func (c *GNMI) Init() error {
 			return fmt.Errorf("empty 'name' found for subscription %d", i+1)
 		}
 		if subscription.Path == "" {
-			return fmt.Errorf("empty 'name' found for subscription %d", i+1)
+			return fmt.Errorf("empty 'path' found for subscription %d", i+1)
 		}
 
 		// Support and convert legacy TagOnly subscriptions
