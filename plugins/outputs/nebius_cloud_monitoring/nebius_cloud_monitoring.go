@@ -143,17 +143,15 @@ func (a *NebiusCloudMonitoring) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	var body []byte
-	jsonBytes, err := json.Marshal(
+	body, err := json.Marshal(
 		nebiusCloudMonitoringMessage{
 			Metrics: nebiusCloudMonitoringMetrics,
 		},
 	)
-
 	if err != nil {
 		return err
 	}
-	body = append(jsonBytes, '\n')
+	body = append(body, '\n')
 	return a.send(body)
 }
 
