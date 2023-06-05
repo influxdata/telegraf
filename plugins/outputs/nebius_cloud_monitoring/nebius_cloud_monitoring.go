@@ -23,17 +23,17 @@ var sampleConfig string
 // NebiusCloudMonitoring allows publishing of metrics to the Nebius Cloud Monitoring custom metrics
 // service
 type NebiusCloudMonitoring struct {
-	Timeout     config.Duration `toml:"timeout"`
-	EndpointURL string          `toml:"endpoint_url"`
-	Service     string          `toml:"service"`
+	Timeout  config.Duration `toml:"timeout"`
+	Endpoint string          `toml:"endpoint"`
+	Service  string          `toml:"service"`
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
-	MetadataTokenURL       string
-	MetadataFolderURL      string
-	FolderID               string
-	IAMToken               string
-	IamTokenExpirationTime time.Time
+	metadataTokenURL       string
+	metadataFolderURL      string
+	folderID               string
+	iamToken               string
+	iamTokenExpirationTime time.Time
 
 	client *http.Client
 
@@ -64,7 +64,7 @@ type MetadataIamToken struct {
 
 const (
 	defaultRequestTimeout = time.Second * 20
-	defaultEndpointURL    = "https://monitoring.api.il.nebius.cloud/monitoring/v2/data/write"
+	defaultEndpoint       = "https://monitoring.api.il.nebius.cloud/monitoring/v2/data/write"
 	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
@@ -79,17 +79,17 @@ func (a *NebiusCloudMonitoring) Connect() error {
 	if a.Timeout <= 0 {
 		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
-	if a.EndpointURL == "" {
-		a.EndpointURL = defaultEndpointURL
+	if a.Endpoint == "" {
+		a.Endpoint = defaultEndpoint
 	}
 	if a.Service == "" {
 		a.Service = "custom"
 	}
-	if a.MetadataTokenURL == "" {
-		a.MetadataTokenURL = defaultMetadataTokenURL
+	if a.metadataTokenURL == "" {
+		a.metadataTokenURL = defaultMetadataTokenURL
 	}
-	if a.MetadataFolderURL == "" {
-		a.MetadataFolderURL = defaultMetadataFolderURL
+	if a.metadataFolderURL == "" {
+		a.metadataFolderURL = defaultMetadataFolderURL
 	}
 
 	a.client = &http.Client{
@@ -100,12 +100,12 @@ func (a *NebiusCloudMonitoring) Connect() error {
 	}
 
 	var err error
-	a.FolderID, err = a.getFolderIDFromMetadata()
+	a.folderID, err = a.getFolderIDFromMetadata()
 	if err != nil {
 		return err
 	}
 
-	a.Log.Infof("Writing to Nebius.Cloud Monitoring URL: %s", a.EndpointURL)
+	a.Log.Infof("Writing to Nebius.Cloud Monitoring URL: %s", a.Endpoint)
 
 	tags := map[string]string{}
 	a.MetricOutsideWindow = selfstat.Register("nebius_cloud_monitoring", "metric_outside_window", tags)
@@ -180,21 +180,21 @@ func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error)
 }
 
 func (a *NebiusCloudMonitoring) getFolderIDFromMetadata() (string, error) {
-	a.Log.Infof("getting folder ID in %s", a.MetadataFolderURL)
-	body, err := getResponseFromMetadata(a.client, a.MetadataFolderURL)
+	a.Log.Infof("getting folder ID in %s", a.metadataFolderURL)
+	body, err := getResponseFromMetadata(a.client, a.metadataFolderURL)
 	if err != nil {
 		return "", err
 	}
 	folderID := string(body)
 	if folderID == "" {
-		return "", fmt.Errorf("unable to fetch folder id from URL %s: %w", a.MetadataFolderURL, err)
+		return "", fmt.Errorf("unable to fetch folder id from URL %s: %w", a.metadataFolderURL, err)
 	}
 	return folderID, nil
 }
 
 func (a *NebiusCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
-	a.Log.Debugf("getting new IAM token in %s", a.MetadataTokenURL)
-	body, err := getResponseFromMetadata(a.client, a.MetadataTokenURL)
+	a.Log.Debugf("getting new IAM token in %s", a.metadataTokenURL)
+	body, err := getResponseFromMetadata(a.client, a.metadataTokenURL)
 	if err != nil {
 		return "", 0, err
 	}
@@ -203,32 +203,32 @@ func (a *NebiusCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 		return "", 0, err
 	}
 	if metadata.AccessToken == "" || metadata.ExpiresIn == 0 {
-		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %w", a.MetadataTokenURL, err)
+		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %w", a.metadataTokenURL, err)
 	}
 	return metadata.AccessToken, int(metadata.ExpiresIn), nil
 }
 
 func (a *NebiusCloudMonitoring) send(body []byte) error {
-	req, err := http.NewRequest("POST", a.EndpointURL, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", a.Endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
 	q := req.URL.Query()
-	q.Add("folderId", a.FolderID)
+	q.Add("folderId", a.folderID)
 	q.Add("service", a.Service)
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
-	isTokenExpired := !a.IamTokenExpirationTime.After(time.Now())
-	if a.IAMToken == "" || isTokenExpired {
+	isTokenExpired := !a.iamTokenExpirationTime.After(time.Now())
+	if a.iamToken == "" || isTokenExpired {
 		token, expiresIn, err := a.getIAMTokenFromMetadata()
 		if err != nil {
 			return err
 		}
-		a.IamTokenExpirationTime = time.Now().Add(time.Duration(expiresIn) * time.Second)
-		a.IAMToken = token
+		a.iamTokenExpirationTime = time.Now().Add(time.Duration(expiresIn) * time.Second)
+		a.iamToken = token
 	}
-	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
+	req.Header.Set("Authorization", "Bearer "+a.iamToken)
 
 	a.Log.Debugf("sending metrics to %s", req.URL.String())
 	a.Log.Debugf("body: %s", body)
