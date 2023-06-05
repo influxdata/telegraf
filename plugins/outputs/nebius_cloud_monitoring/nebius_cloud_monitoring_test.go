@@ -123,18 +123,15 @@ func TestWrite(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				tt.handler(t, w, r)
 			})
-			tt.plugin.Log = testutil.Logger{}
-			tt.plugin.Endpoint = url
-			tt.plugin.metadataTokenURL = metadataTokenURL
-			tt.plugin.metadataFolderURL = metadataFolderURL
-			err := tt.plugin.Init()
-			require.NoError(t, err)
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
-
-			err = tt.plugin.Write(tt.metrics)
-
-			require.NoError(t, err)
+			tt.plugin = &NebiusCloudMonitoring{
+				Endpoint:          url,
+				metadataTokenURL:  metadataTokenURL,
+				metadataFolderURL: metadataFolderURL,
+				Log:               testutil.Logger{},
+			}
+			require.NoError(t, tt.plugin.Init())
+			require.NoError(t, tt.plugin.Connect())
+			require.NoError(t, tt.plugin.Write(tt.metrics))
 		})
 	}
 }

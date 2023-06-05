@@ -105,7 +105,15 @@ func (a *NebiusCloudMonitoring) Init() error {
 // Connect initializes the plugin and validates connectivity
 func (a *NebiusCloudMonitoring) Connect() error {
 	var err error
-	a.folderID, err = a.getFolderIDFromMetadata()
+	a.Log.Infof("getting folder ID in %s", a.metadataFolderURL)
+	body, err := a.getResponseFromMetadata(a.client, a.metadataFolderURL)
+	if err != nil {
+		return err
+	}
+	folderID := string(body)
+	if folderID == "" {
+		return fmt.Errorf("unable to fetch folder id from URL %s: %w", a.metadataFolderURL, err)
+	}
 	if err != nil {
 		return err
 	}
@@ -155,7 +163,7 @@ func (a *NebiusCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	return a.send(body)
 }
 
-func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error) {
+func (a *NebiusCloudMonitoring) getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error) {
 	req, err := http.NewRequest("GET", metadataURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
@@ -178,22 +186,9 @@ func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error)
 	return body, nil
 }
 
-func (a *NebiusCloudMonitoring) getFolderIDFromMetadata() (string, error) {
-	a.Log.Infof("getting folder ID in %s", a.metadataFolderURL)
-	body, err := getResponseFromMetadata(a.client, a.metadataFolderURL)
-	if err != nil {
-		return "", err
-	}
-	folderID := string(body)
-	if folderID == "" {
-		return "", fmt.Errorf("unable to fetch folder id from URL %s: %w", a.metadataFolderURL, err)
-	}
-	return folderID, nil
-}
-
 func (a *NebiusCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 	a.Log.Debugf("getting new IAM token in %s", a.metadataTokenURL)
-	body, err := getResponseFromMetadata(a.client, a.metadataTokenURL)
+	body, err := a.getResponseFromMetadata(a.client, a.metadataTokenURL)
 	if err != nil {
 		return "", 0, err
 	}
@@ -218,7 +213,7 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
-	isTokenExpired := !a.iamTokenExpirationTime.After(time.Now())
+	isTokenExpired := a.iamTokenExpirationTime.Before(time.Now())
 	if a.iamToken == "" || isTokenExpired {
 		token, expiresIn, err := a.getIAMTokenFromMetadata()
 		if err != nil {
