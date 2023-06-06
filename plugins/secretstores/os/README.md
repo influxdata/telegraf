@@ -45,8 +45,8 @@ are assumed to be static and are only read once at startup of Telegraf.
   ## * macOS: keyring specifies the macOS' Keychain name and collection is an
   ##     optional Keychain service name
   ## * Windows: keys follow a fixed pattern in the form
-  ##     `<keyring>:<collection>:<key>`. Please keep this in mind when creating
-  ##     secrets with the Windows credential tool.
+  ##     `<collection>:<keyring>:<key_name>`. Please keep this in mind when
+  ##     creating secrets with the Windows credential tool.
   # keyring = "telegraf"
   # collection = ""
 
@@ -75,11 +75,21 @@ If `password` is omitted, you will be prompted for the password on startup.
 
 ### Windows
 
-On Windows you can use the Credential Manager Control panel or
+On Windows you can use the Credential Manager in the Control Panel or
 [Telegraf](../../../cmd/telegraf/README.md) to manage your secrets.
-Please use _generic credentials_ and respect the special
-`<keyring>:<collection>:<key>` format of the secret key. The
-secret value needs to be stored in the `Password` field.
+
+If using the Credential Manager, click "Windows Credentials" and then
+"Add a generic credential" with the following:
+
+* _Internet or network address_: Enter the secret name in the format of:
+  `<collection>:<keyring>:<key_name>`
+* _User name_: Use `telegraf`. This field is not used, but needs something
+  entered.
+* _Password_: The actual secret value
+
+If using Telegraf, see the help output of `telegraf secrets set` to add
+secrets. Again use the `<collection>:<keyring>:<key_name>` format of the secret
+key name.
 
 ### Docker
 
