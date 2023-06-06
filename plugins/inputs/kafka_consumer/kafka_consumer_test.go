@@ -484,9 +484,12 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}{
 		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
 		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
-		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
+		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(0)},
+		{"topic regexp with refresh", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
 	}
 
+	// FIXME: I don't see how to inject a new topic into the broker
+	// with the docker container, needed for testing refresh end-to-end.
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("rt: starting network")

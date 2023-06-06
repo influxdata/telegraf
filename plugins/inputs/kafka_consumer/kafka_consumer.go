@@ -344,6 +344,27 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		if err = k.refreshTopics(acc); err != nil {
 			return err
 		}
+		// If refresh interval is specified, start a goroutine
+		// to refresh topics periodically.  This only makes sense if
+		// TopicRegexps is set.
+		done := make(chan bool)
+		if k.TopicRefreshInterval > 0 {
+			k.ticker = time.NewTicker(time.Duration(k.TopicRefreshInterval))
+			k.wg.Add(1)
+			go func() {
+				defer k.wg.Done()
+				for {
+					select {
+					case <-done:
+						k.Log.Info("refresh ticker shutting down")
+						return
+					case <-k.ticker.C:
+						k.Log.Infof("received topic refresh request (every %v)", k.TopicRefreshInterval)
+						k.refreshTopics(acc)
+					}
+				}
+			}()
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
