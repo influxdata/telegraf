@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -536,6 +535,7 @@ type netflowDecoder struct {
 	mappingsIPFIX map[uint16]fieldMapping
 	mappingsPEN   map[string]fieldMapping
 
+	logged map[string]bool
 	sync.Mutex
 }
 
@@ -646,6 +646,8 @@ func (d *netflowDecoder) Init() error {
 	}
 	d.Log.Infof("Loaded %d PEN mappings...", len(d.mappingsPEN))
 
+	d.logged = make(map[string]bool)
+
 	return nil
 }
 
@@ -683,9 +685,11 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) []telegraf.Field
 	}
 
 	// Return the raw data if no mapping was found
-	d.Log.Debugf("unknown data field %v", field)
-	name := "type_" + strconv.FormatUint(uint64(elementID), 10)
-	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
+	key := fmt.Sprintf("type_%d", elementID)
+	if !d.logged[key] {
+		d.Log.Debugf("unknown Netflow v9 data field %v", field)
+	}
+	return []telegraf.Field{{Key: key, Value: decodeHex(raw)}}
 }
 
 func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Field {
@@ -706,7 +710,9 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 			name := prefix + m.name
 			return []telegraf.Field{{Key: name, Value: m.decoder(raw)}}
 		}
-		d.Log.Debugf("unknown IPFIX PEN data field %v", field)
+		if !d.logged[key] {
+			d.Log.Debugf("unknown IPFIX PEN data field %v", field)
+		}
 		name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
 		return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 	}
@@ -741,7 +747,9 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	}
 
 	// Return the raw data if no mapping was found
-	d.Log.Debugf("unknown data field %v", field)
-	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
-	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
+	key := fmt.Sprintf("type_%d", elementID)
+	if !d.logged[key] {
+		d.Log.Debugf("unknown IPFIX data field %v", field)
+	}
+	return []telegraf.Field{{Key: key, Value: decodeHex(raw)}}
 }
