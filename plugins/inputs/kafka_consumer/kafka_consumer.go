@@ -43,6 +43,7 @@ type KafkaConsumer struct {
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
 	TopicRegexps           []string        `toml:"topic_regexps"`
+	TopicRefreshInterval   config.Duration `toml:"topic_refresh_interval"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy     string          `toml:"connection_strategy"`
@@ -270,6 +271,44 @@ func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
 	}()
 }
 
+func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumulator) {
+	var err error
+	defer k.wg.Done()
+
+	if k.consumer == nil {
+		err = k.create()
+		if err != nil {
+			acc.AddError(fmt.Errorf("create consumer async: %w", err))
+			return
+		}
+	}
+
+	k.startErrorAdder(acc)
+
+	for ctx.Err() == nil {
+		handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
+		handler.MaxMessageLen = k.MaxMessageLen
+		handler.TopicTag = k.TopicTag
+		// We need to copy allWantedTopics; the Consume() is
+		// long-running and we can easily deadlock if our
+		// topic-update-checker fires.
+		topics := make([]string, len(k.allWantedTopics))
+		k.topicLock.Lock()
+		copy(topics, k.allWantedTopics)
+		k.topicLock.Unlock()
+		err := k.consumer.Consume(ctx, topics, handler)
+		if err != nil {
+			acc.AddError(fmt.Errorf("consume: %w", err))
+			internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
+		}
+	}
+	err = k.consumer.Close()
+	if err != nil {
+		acc.AddError(fmt.Errorf("close: %w", err))
+	}
+	return
+}
+
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
 
@@ -293,42 +332,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 
 	// Start consumer goroutine
 	k.wg.Add(1)
-	go func() {
-		var err error
-		defer k.wg.Done()
-
-		if k.consumer == nil {
-			err = k.create()
-			if err != nil {
-				acc.AddError(fmt.Errorf("create consumer async: %w", err))
-				return
-			}
-		}
-
-		k.startErrorAdder(acc)
-
-		for ctx.Err() == nil {
-			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
-			handler.MaxMessageLen = k.MaxMessageLen
-			handler.TopicTag = k.TopicTag
-			// We need to copy allWantedTopics; the Consume() is
-			// long-running and we can easily deadlock if our
-			// topic-update-checker fires.
-			topics := make([]string, len(k.allWantedTopics))
-			k.topicLock.Lock()
-			copy(topics, k.allWantedTopics)
-			k.topicLock.Unlock()
-			err := k.consumer.Consume(ctx, topics, handler)
-			if err != nil {
-				acc.AddError(fmt.Errorf("consume: %w", err))
-				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
-			}
-		}
-		err = k.consumer.Close()
-		if err != nil {
-			acc.AddError(fmt.Errorf("close: %w", err))
-		}
-	}()
+	go k.consumeTopics(ctx, acc)
 
 	return nil
 }
