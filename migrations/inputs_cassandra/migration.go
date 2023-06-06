@@ -1,6 +1,7 @@
 package inputs_cassandra
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"sort"
@@ -10,6 +11,7 @@ import (
 	"github.com/influxdata/toml/ast"
 
 	"github.com/influxdata/telegraf/migrations"
+	"github.com/influxdata/telegraf/migrations/common"
 )
 
 // Define "old" data structure
@@ -17,6 +19,7 @@ type cassandra struct {
 	Context string   `toml:"context"`
 	Servers []string `toml:"servers"`
 	Metrics []string `toml:"metrics"`
+	common.InputOptions
 }
 
 // Define "new" data structure(s)
@@ -28,12 +31,31 @@ type metricConfig struct {
 }
 
 type jolokiaAgent struct {
-	URLs       []string `toml:"urls"`
-	Username   string   `toml:"username,omitempty"`
-	Password   string   `toml:"password,omitempty"`
-	NamePrefix string   `toml:"name_prefix"`
+	URLs     []string       `toml:"urls"`
+	Username string         `toml:"username,omitempty"`
+	Password string         `toml:"password,omitempty"`
+	Metrics  []metricConfig `toml:"metric"`
 
-	Metrics []metricConfig `toml:"metric"`
+	// Common options
+	Interval         string            `toml:"interval,omitempty"`
+	Precision        string            `toml:"precision,omitempty"`
+	CollectionJitter string            `toml:"collection_jitter,omitempty"`
+	CollectionOffset string            `toml:"collection_offset,omitempty"`
+	NamePrefix       string            `toml:"name_prefix,omitempty"`
+	NameSuffix       string            `toml:"name_suffix,omitempty"`
+	NameOverride     string            `toml:"name_override,omitempty"`
+	Alias            string            `toml:"alias,omitempty"`
+	Tags             map[string]string `toml:"tags,omitempty"`
+
+	NamePass       []string            `toml:"namepass,omitempty"`
+	NameDrop       []string            `toml:"namedrop,omitempty"`
+	FieldPass      []string            `toml:"fieldpass,omitempty"`
+	FieldDrop      []string            `toml:"fielddrop,omitempty"`
+	TagPassFilters map[string][]string `toml:"tagpass,omitempty"`
+	TagDropFilters map[string][]string `toml:"tagdrop,omitempty"`
+	TagExclude     []string            `toml:"tagexclude,omitempty"`
+	TagInclude     []string            `toml:"taginclude,omitempty"`
+	MetricPass     string              `toml:"metricpass,omitempty"`
 }
 
 // Migration function
@@ -67,6 +89,7 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 				Username: user,
 				Password: passwd,
 			}
+			endpoint.fillCommon(old.InputOptions)
 		}
 		u.User = nil
 		endpoint.URLs = append(endpoint.URLs, u.String())
@@ -134,33 +157,96 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 	for _, endpoint := range endpoints {
 		if len(javaMetrics) > 0 {
 			plugin := jolokiaAgent{
-				URLs:       endpoint.URLs,
-				Username:   endpoint.Username,
-				Password:   endpoint.Password,
-				Metrics:    javaMetrics,
-				NamePrefix: "java",
+				URLs:     endpoint.URLs,
+				Username: endpoint.Username,
+				Password: endpoint.Password,
+				Metrics:  javaMetrics,
 			}
+			plugin.fillCommon(old.InputOptions)
+			plugin.NamePrefix = "java"
 			cfg.Add("inputs", "jolokia2_agent", plugin)
 		}
 		if len(cassandraMetrics) > 0 {
 			plugin := jolokiaAgent{
-				URLs:       endpoint.URLs,
-				Username:   endpoint.Username,
-				Password:   endpoint.Password,
-				Metrics:    cassandraMetrics,
-				NamePrefix: "cassandra",
+				URLs:     endpoint.URLs,
+				Username: endpoint.Username,
+				Password: endpoint.Password,
+				Metrics:  cassandraMetrics,
 			}
+			plugin.fillCommon(old.InputOptions)
+			plugin.NamePrefix = "cassandra"
+
 			cfg.Add("inputs", "jolokia2_agent", plugin)
 		}
 	}
-	buf, err := toml.Marshal(cfg)
+
+	var buf bytes.Buffer
+	err := toml.NewEncoder(&buf).Encode(cfg)
+
+	//		buf, err := toml.Marshal(cfg)
 	if err != nil {
 		return nil, err
 	}
-	buf = append(buf, []byte("\n")...)
+	//buf = append(buf, []byte("\n")...)
+	if _, err := buf.WriteString("\n"); err != nil {
+		return nil, err
+	}
 
 	// Create the new content to output
-	return buf, nil
+	//return buf, nil
+	return buf.Bytes(), nil
+}
+
+func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
+	j.Interval = o.Interval
+	j.Precision = o.Precision
+	j.CollectionJitter = o.CollectionJitter
+	j.CollectionOffset = o.CollectionOffset
+	j.NamePrefix = o.NamePrefix
+	j.NameSuffix = o.NameSuffix
+	j.NameOverride = o.NameOverride
+	j.Alias = o.Alias
+	if len(o.Tags) > 0 {
+		j.Tags = make(map[string]string, len(o.Tags))
+		for k, v := range o.Tags {
+			j.Tags[k] = v
+		}
+	}
+
+	if len(o.NamePass) > 0 {
+		j.NamePass = append(j.NamePass, o.NamePass...)
+
+	}
+	if len(o.NameDrop) > 0 {
+		j.NameDrop = append(j.NameDrop, o.NameDrop...)
+	}
+	if len(o.FieldPass) > 0 || len(o.FieldDropOld) > 0 {
+		j.FieldPass = append(j.FieldPass, o.FieldPass...)
+		j.FieldPass = append(j.FieldPass, o.FieldPassOld...)
+	}
+	if len(o.FieldDrop) > 0 || len(o.FieldDropOld) > 0 {
+		j.FieldDrop = append(j.FieldDrop, o.FieldDrop...)
+		j.FieldDrop = append(j.FieldDrop, o.FieldDropOld...)
+	}
+	if len(o.TagPassFilters) > 0 {
+		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
+		for k, v := range o.TagPassFilters {
+			j.TagPassFilters[k] = v
+		}
+	}
+	if len(o.TagDropFilters) > 0 {
+		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
+		for k, v := range o.TagDropFilters {
+			j.TagDropFilters[k] = v
+		}
+	}
+	if len(o.TagExclude) > 0 {
+		j.TagExclude = append(j.TagExclude, o.TagExclude...)
+	}
+	if len(o.TagInclude) > 0 {
+		j.TagInclude = append(j.TagInclude, o.TagInclude...)
+	}
+	j.MetricPass = o.MetricPass
 }
 
 // Register the migration function for the plugin type
