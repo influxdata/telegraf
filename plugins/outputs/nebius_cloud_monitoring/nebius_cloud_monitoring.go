@@ -234,6 +234,7 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+		a.Log.Debugf("Resp Body: %+v", resp.Body)
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
 
