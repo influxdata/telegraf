@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-//go:build linux
+//go:build linux && amd64
 
 package intel_baseband
 
