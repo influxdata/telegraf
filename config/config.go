@@ -696,6 +696,9 @@ func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
+// LoadConfigFile loads the content of a configuration file and returns it
+// together with a flag denoting if the file is from a remote location such
+// as a web server.
 func LoadConfigFile(config string) ([]byte, bool, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
