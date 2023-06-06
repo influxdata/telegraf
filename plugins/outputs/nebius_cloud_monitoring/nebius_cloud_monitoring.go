@@ -110,8 +110,8 @@ func (a *NebiusCloudMonitoring) Connect() error {
 	if err != nil {
 		return err
 	}
-	folderID := string(body)
-	if folderID == "" {
+	a.folderID = string(body)
+	if a.folderID == "" {
 		return fmt.Errorf("unable to fetch folder id from URL %s: %w", a.metadataFolderURL, err)
 	}
 	if err != nil {
@@ -234,7 +234,6 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-		a.Log.Debugf("Resp Body: %+v", resp.Body)
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
 
