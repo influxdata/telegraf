@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/config"
-	_ "github.com/influxdata/telegraf/migrations/inputs_cassandra" // register migration
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	_ "github.com/influxdata/telegraf/migrations/inputs_cassandra"   // register migration
+	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia2_agent" // register plugin
 )
 
 func TestCases(t *testing.T) {
@@ -27,10 +29,9 @@ func TestCases(t *testing.T) {
 			expectedFile := filepath.Join(testcasePath, "expected.conf")
 
 			// Read the expected output
-			expected, remote, err := config.LoadConfigFile(expectedFile)
-			require.NoError(t, err)
-			require.False(t, remote)
-			require.NotEmpty(t, expected)
+			expected := config.NewConfig()
+			require.NoError(t, expected.LoadConfig(expectedFile))
+			require.NotEmpty(t, expected.Inputs)
 
 			// Read the input data
 			input, remote, err := config.LoadConfigFile(inputFile)
@@ -43,9 +44,18 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, output)
 			require.GreaterOrEqual(t, n, uint64(1))
+			actual := config.NewConfig()
+			require.NoError(t, actual.LoadConfigData(output))
 
 			// Test the output
-			require.Equal(t, string(expected), string(output))
+			require.Len(t, actual.Inputs, len(expected.Inputs))
+			actualIDs := make([]string, 0, len(expected.Inputs))
+			expectedIDs := make([]string, 0, len(expected.Inputs))
+			for i := range actual.Inputs {
+				actualIDs = append(actualIDs, actual.Inputs[i].ID())
+				expectedIDs = append(expectedIDs, expected.Inputs[i].ID())
+			}
+			require.ElementsMatch(t, expectedIDs, actualIDs)
 		})
 	}
 }

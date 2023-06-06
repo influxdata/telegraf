@@ -1,7 +1,6 @@
 package inputs_cassandra
 
 import (
-	"bytes"
 	"fmt"
 	"net/url"
 	"sort"
@@ -180,21 +179,15 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 		}
 	}
 
-	var buf bytes.Buffer
-	err := toml.NewEncoder(&buf).Encode(cfg)
-
-	//		buf, err := toml.Marshal(cfg)
+	// Marshal the new configuration
+	buf, err := toml.Marshal(cfg)
 	if err != nil {
 		return nil, err
 	}
-	//buf = append(buf, []byte("\n")...)
-	if _, err := buf.WriteString("\n"); err != nil {
-		return nil, err
-	}
+	buf = append(buf, []byte("\n")...)
 
 	// Create the new content to output
-	//return buf, nil
-	return buf.Bytes(), nil
+	return buf, nil
 }
 
 func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
