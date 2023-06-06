@@ -208,7 +208,6 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 
 	if len(o.NamePass) > 0 {
 		j.NamePass = append(j.NamePass, o.NamePass...)
-
 	}
 	if len(o.NameDrop) > 0 {
 		j.NameDrop = append(j.NameDrop, o.NameDrop...)
