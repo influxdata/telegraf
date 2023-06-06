@@ -21,7 +21,7 @@ require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
+	github.com/Mellanox/rdmamap v1.1.0
 	github.com/Shopify/sarama v1.38.1
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
