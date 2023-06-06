@@ -645,8 +645,6 @@ func (d *netflowDecoder) Init() error {
 		}
 	}
 	d.Log.Infof("Loaded %d PEN mappings...", len(d.mappingsPEN))
-	//REMOVE
-	d.Log.Debugf("PEN mappings: %+v", d.mappingsPEN)
 
 	return nil
 }
@@ -704,8 +702,6 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	// Handle messages with Private Enterprise Numbers (PENs)
 	if field.PenProvided {
 		key := fmt.Sprintf("%d.%d", field.Pen, elementID)
-		// REMOVE
-		d.Log.Debugf("decoding PEN field %+v (eid: %d; key: %q)", field, elementID, key)
 		if m, found := d.mappingsPEN[key]; found {
 			name := prefix + m.name
 			return []telegraf.Field{{Key: name, Value: m.decoder(raw)}}
