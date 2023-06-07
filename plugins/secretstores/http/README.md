@@ -16,6 +16,11 @@ to get more information on how to do this.
 ```toml @sample.conf
 # Read secrets from a HTTP endpoint
 [[secretstores.http]]
+  ## Unique identifier for the secret-store.
+  ## This id can later be used in plugins to reference the secrets
+  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  id = "secretstore"
+
   ## URLs from which to read the secrets
   url = "http://localhost/secrets"
 
