@@ -170,6 +170,10 @@ func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
 }
 
 func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
+	// Parallel Gzip is only faster for larger data chunks. According to the
+	// project's documentation the trade-off size is at about 1MB, so we switch
+	// to parallel Gzip if the data is larger and run the built-in version
+	// otherwise.
 	if len(data) > 1024*1024 {
 		return e.encodeBig(data)
 	}
@@ -275,6 +279,10 @@ func NewGzipDecoder() *GzipDecoder {
 func (*GzipDecoder) SetEncoding(string) {}
 
 func (d *GzipDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, error) {
+	// Parallel Gzip is only faster for larger data chunks. According to the
+	// project's documentation the trade-off size is at about 1MB, so we switch
+	// to parallel Gzip if the data is larger and run the built-in version
+	// otherwise.
 	if len(data) > 1024*1024 {
 		return d.decodeBig(data, maxDecompressionSize)
 	}
