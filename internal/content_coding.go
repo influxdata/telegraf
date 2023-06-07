@@ -3,12 +3,13 @@ package internal
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
 
 	"github.com/klauspost/compress/zlib"
-	gzip "github.com/klauspost/pgzip"
+	"github.com/klauspost/pgzip"
 )
 
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
@@ -43,7 +44,7 @@ func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
 // GzipReader is similar to gzip.Reader but reads only a single gzip stream per read.
 type GzipReader struct {
 	r           io.Reader
-	z           *gzip.Reader
+	z           *pgzip.Reader
 	endOfStream bool
 }
 
@@ -53,7 +54,7 @@ func NewGzipReader(r io.Reader) (io.Reader, error) {
 	br := bufio.NewReader(r)
 
 	// Reads the first gzip stream header.
-	z, err := gzip.NewReader(br)
+	z, err := pgzip.NewReader(br)
 	if err != nil {
 		return nil, err
 	}
@@ -148,25 +149,34 @@ type ContentEncoder interface {
 
 // GzipEncoder compresses the buffer using gzip at the default level.
 type GzipEncoder struct {
-	writer *gzip.Writer
-	buf    *bytes.Buffer
+	pwriter *pgzip.Writer
+	writer  *gzip.Writer
+	buf     *bytes.Buffer
 }
 
 func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
-	cfg := encoderConfig{level: gzip.DefaultCompression}
+	cfg := encoderConfig{level: pgzip.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
 	}
 
 	var buf bytes.Buffer
-	w, err := gzip.NewWriterLevel(&buf, cfg.level)
+	w, err := pgzip.NewWriterLevel(&buf, cfg.level)
 	return &GzipEncoder{
-		writer: w,
-		buf:    &buf,
+		pwriter: w,
+		writer:  gzip.NewWriter(&buf),
+		buf:     &buf,
 	}, err
 }
 
 func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
+	if len(data) > 1024*1024 {
+		return e.encodeBig(data)
+	}
+	return e.encodeSmall(data)
+}
+
+func (e *GzipEncoder) encodeSmall(data []byte) ([]byte, error) {
 	e.buf.Reset()
 	e.writer.Reset(e.buf)
 
@@ -175,6 +185,21 @@ func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	err = e.writer.Close()
+	if err != nil {
+		return nil, err
+	}
+	return e.buf.Bytes(), nil
+}
+
+func (e *GzipEncoder) encodeBig(data []byte) ([]byte, error) {
+	e.buf.Reset()
+	e.pwriter.Reset(e.buf)
+
+	_, err := e.pwriter.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	err = e.pwriter.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -234,20 +259,29 @@ type ContentDecoder interface {
 
 // GzipDecoder decompresses buffers with gzip compression.
 type GzipDecoder struct {
-	reader *gzip.Reader
-	buf    *bytes.Buffer
+	preader *pgzip.Reader
+	reader  *gzip.Reader
+	buf     *bytes.Buffer
 }
 
 func NewGzipDecoder() *GzipDecoder {
 	return &GzipDecoder{
-		reader: new(gzip.Reader),
-		buf:    new(bytes.Buffer),
+		preader: new(pgzip.Reader),
+		reader:  new(gzip.Reader),
+		buf:     new(bytes.Buffer),
 	}
 }
 
 func (*GzipDecoder) SetEncoding(string) {}
 
 func (d *GzipDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, error) {
+	if len(data) > 1024*1024 {
+		return d.decodeBig(data, maxDecompressionSize)
+	}
+	return d.decodeSmall(data, maxDecompressionSize)
+}
+
+func (d *GzipDecoder) decodeSmall(data []byte, maxDecompressionSize int64) ([]byte, error) {
 	err := d.reader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -262,6 +296,27 @@ func (d *GzipDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, e
 	}
 
 	err = d.reader.Close()
+	if err != nil {
+		return nil, err
+	}
+	return d.buf.Bytes(), nil
+}
+
+func (d *GzipDecoder) decodeBig(data []byte, maxDecompressionSize int64) ([]byte, error) {
+	err := d.preader.Reset(bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+	d.buf.Reset()
+
+	n, err := io.CopyN(d.buf, d.preader, maxDecompressionSize)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	} else if n == maxDecompressionSize {
+		return nil, fmt.Errorf("size of decoded data exceeds allowed size %d", maxDecompressionSize)
+	}
+
+	err = d.preader.Close()
 	if err != nil {
 		return nil, err
 	}
