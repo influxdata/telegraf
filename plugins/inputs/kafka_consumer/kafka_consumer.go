@@ -204,6 +204,11 @@ func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
 		return nil
 	}
 
+	// Refresh metadata for all topics.
+	err := k.topicClient.RefreshMetadata()
+	if err != nil {
+		return err
+	}
 	allDiscoveredTopics, err := k.topicClient.Topics()
 	if err != nil {
 		return err
