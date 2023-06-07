@@ -21,8 +21,6 @@ type encoderConfig struct {
 	level int
 }
 
-var defaultEncoderConfig = encoderConfig{level: 6}
-
 func EncoderCompressionLevel(level int) EncodingOption {
 	return func(cfg *encoderConfig) {
 		cfg.level = level
