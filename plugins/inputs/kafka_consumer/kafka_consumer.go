@@ -262,6 +262,8 @@ func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
 			k.cancel = cancel
 			k.consumeTopics(ctx, acc)
 		}
+	} else {
+		k.Log.Debugf("topic list unchanged on refresh")
 	}
 	return nil
 }
@@ -353,13 +355,15 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			k.wg.Add(1)
 			go func() {
 				defer k.wg.Done()
+				dstr := time.Duration(k.TopicRefreshInterval).String()
+				k.Log.Infof("starting refresh ticker: scanning topics every %s", dstr)
 				for {
 					select {
 					case <-done:
 						k.Log.Info("refresh ticker shutting down")
 						return
 					case <-k.ticker.C:
-						k.Log.Infof("received topic refresh request (every %v)", k.TopicRefreshInterval)
+						k.Log.Debugf("received topic refresh request (every %s)", dstr)
 						k.refreshTopics(acc)
 					}
 				}
