@@ -3,7 +3,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
+	"github.com/klauspost/compress/gzip"
 	"errors"
 	"fmt"
 	"io"
