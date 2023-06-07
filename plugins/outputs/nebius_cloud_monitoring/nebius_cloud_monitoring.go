@@ -65,7 +65,7 @@ const (
 	defaultEndpoint       = "https://monitoring.api.il.nebius.cloud/monitoring/v2/data/write"
 	/*
 		There is no DNS for metadata endpoint in Nebius Cloud yet.
-		So the only way is to hardcode reserved IP.
+		So the only way is to hardcode reserved IP (https://en.wikipedia.org/wiki/Link-local_address)
 	*/
 	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
