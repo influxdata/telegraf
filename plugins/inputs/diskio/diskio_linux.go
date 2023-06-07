@@ -1,5 +1,3 @@
-//go:build linux
-
 package diskio
 
 import (
@@ -13,25 +11,7 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
-
-type DiskIO struct {
-	Devices          []string `toml:"devices"`
-	DeviceTags       []string `toml:"device_tags"`
-	NameTemplates    []string `toml:"name_templates"`
-	SkipSerialNumber bool     `toml:"skip_serial_number"`
-
-	Log telegraf.Logger `toml:"-"`
-
-	infoCache    map[string]diskInfoCache
-	deviceFilter filter.Filter
-
-	ps system.PS
-}
 
 type diskInfoCache struct {
 	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache

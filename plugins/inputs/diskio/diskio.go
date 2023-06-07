@@ -20,6 +20,25 @@ var (
 	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
 )
 
+type DiskIO struct {
+	ps system.PS
+
+	Devices          []string
+	DeviceTags       []string
+	NameTemplates    []string
+	SkipSerialNumber bool
+
+	Log telegraf.Logger
+
+	infoCache    map[string]diskInfoCache
+	deviceFilter filter.Filter
+}
+
+// hasMeta reports whether s contains any special glob characters.
+func hasMeta(s string) bool {
+	return strings.ContainsAny(s, "*?[")
+}
+
 func (*DiskIO) SampleConfig() string {
 	return sampleConfig
 }
@@ -164,11 +183,6 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 	}
 
 	return tags
-}
-
-// hasMeta reports whether s contains any special glob characters.
-func hasMeta(s string) bool {
-	return strings.ContainsAny(s, "*?[")
 }
 
 func init() {
