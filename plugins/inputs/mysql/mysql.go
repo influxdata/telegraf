@@ -274,7 +274,7 @@ const (
         EXECUTE IMMEDIATE CONCAT("
             SELECT NAME, COUNT
             FROM information_schema.INNODB_METRICS
-            WHERE ", IF(version() REGEXP '10\.[1-4].*',"status='enabled'", "ENABLED=1"), "
+            WHERE ", IF(version() REGEXP '10\.[1-4]\\..*',"status='enabled'", "ENABLED=1"), "
         ");
 	`
 	perfTableIOWaitsQuery = `

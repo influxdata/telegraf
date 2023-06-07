@@ -22,6 +22,8 @@ func TestGraphiteError(t *testing.T) {
 		Prefix:  "my.prefix",
 		Log:     testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
+
 	// Init metrics
 	m1 := metric.New(
 		"mymeasurement",
@@ -56,6 +58,7 @@ func TestGraphiteReconnect(t *testing.T) {
 		Log:                 testutil.Logger{},
 		GraphiteStrictRegex: `[^a-zA-Z0-9-:._=|\p{L}]`,
 	}
+	require.NoError(t, g.Init())
 
 	t.Log("Writing metric, without any server up, expected to fail")
 	require.NoError(t, g.Connect())
@@ -98,6 +101,7 @@ func TestGraphiteOK(t *testing.T) {
 		Servers: []string{"localhost:12003"},
 		Log:     testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(
@@ -179,6 +183,7 @@ func TestGraphiteStrictRegex(t *testing.T) {
 		Log:                 testutil.Logger{},
 		GraphiteStrictRegex: `[^a-zA-Z0-9-:._=|\p{L}]`,
 	}
+	require.NoError(t, g.Init())
 	require.NoError(t, g.Connect())
 	require.NoError(t, g.Write([]telegraf.Metric{m}))
 
@@ -200,6 +205,7 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 		Servers:           []string{"localhost:12003"},
 		Log:               testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(
@@ -263,6 +269,7 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 		Servers:           []string{"localhost:12003"},
 		Log:               testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(
@@ -330,6 +337,7 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 		Servers: []string{"localhost:12003"},
 		Log:     testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(
@@ -393,6 +401,7 @@ func TestGraphiteOkWithTags(t *testing.T) {
 		Servers:            []string{"localhost:12003"},
 		Log:                testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(
@@ -457,6 +466,7 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 		Servers:            []string{"localhost:12003"},
 		Log:                testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(
@@ -521,6 +531,7 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 		Servers:            []string{"localhost:12003"},
 		Log:                testutil.Logger{},
 	}
+	require.NoError(t, g.Init())
 
 	// Init metrics
 	m1 := metric.New(

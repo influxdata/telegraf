@@ -98,12 +98,14 @@ linters-settings:
       - builtinShadowDecl
       - caseOrder
       - codegenComment
+      - deferInLoop
       - dupBranchBody
       - dupCase
       - dupSubExpr
       - dynamicFmtString
       - emptyDecl
       - evalOrder
+      - exitAfterDefer
       - externalErrorReassign
       - nilValReturn
       - regexpPattern
@@ -112,6 +114,7 @@ linters-settings:
       - sprintfQuotedString
       - sqlQuery
       - uncheckedInlineErr
+      - unnecessaryDefer
       - weakCond
   gosec:
     # To select a subset of rules to run.

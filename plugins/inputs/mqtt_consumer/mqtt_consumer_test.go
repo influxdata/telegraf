@@ -7,7 +7,6 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -48,8 +47,8 @@ func (c *FakeClient) Disconnect(quiesce uint) {
 type FakeParser struct {
 }
 
-// FakeParser satisfies parsers.Parser
-var _ parsers.Parser = &FakeParser{}
+// FakeParser satisfies telegraf.Parser
+var _ telegraf.Parser = &FakeParser{}
 
 func (p *FakeParser) Parse(_ []byte) ([]telegraf.Metric, error) {
 	panic("not implemented")

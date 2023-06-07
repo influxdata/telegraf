@@ -54,7 +54,7 @@ type Tail struct {
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
-	parserFunc parsers.ParserFunc
+	parserFunc telegraf.ParserFunc
 	wg         sync.WaitGroup
 
 	acc telegraf.TrackingAccumulator
@@ -246,7 +246,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 }
 
 // ParseLine parses a line of text.
-func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
+func parseLine(parser telegraf.Parser, line string) ([]telegraf.Metric, error) {
 	m, err := parser.Parse([]byte(line))
 	if err != nil {
 		if errors.Is(err, parsers.ErrEOF) {
@@ -259,7 +259,7 @@ func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 
 // Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
-func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
+func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 	// holds the individual lines of multi-line log entries.
 	var buffer bytes.Buffer
 
@@ -393,7 +393,7 @@ func (t *Tail) Stop() {
 	offsetsMutex.Unlock()
 }
 
-func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {
+func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
 	t.parserFunc = fn
 }
 

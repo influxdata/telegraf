@@ -1,6 +1,59 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## next
+
+### **BREAKING CHANGES**
+
+- Fix parsing of timezone abbreviations such as `MST`. Up to now, when parsing
+  times with abbreviated timezones (i.e. the format ) the timezone information
+  is ignored completely and the _timestamp_ is located in UTC. This is a golang
+  issue (see [#9617](https://github.com/golang/go/issues/9617) or
+  [#56528](https://github.com/golang/go/issues/56528)). If you worked around
+  that issue, please remove the workaround before using v1.27+. In case you
+  experience issues with abbreviated timezones please file an issue!
+- Removal of old-style parser creation. This should not directly affect users as
+  it is an API change. All parsers in Telegraf are already ported to the new
+  framework. If you experience any issues with not being able to create parsers
+  let us know!
+
+## v1.26.3 [2023-05-22]
+
+### Bugfixes
+
+- [#13149](https://github.com/influxdata/telegraf/pull/13149) `inputs.gnmi` Create selfstat to track connection state
+- [#13139](https://github.com/influxdata/telegraf/pull/13139) `inputs.intel_pmu` Fix handling of the json perfmon format
+- [#13056](https://github.com/influxdata/telegraf/pull/13056) `inputs.socket_listener` Fix loss of connection tracking
+- [#13300](https://github.com/influxdata/telegraf/pull/13300) `inputs.socket_listener` Fix race in tests
+- [#13286](https://github.com/influxdata/telegraf/pull/13286) `inputs.vsphere` Specify the correct option for disconnected_servers_behavior
+- [#13239](https://github.com/influxdata/telegraf/pull/13239) `outputs.graphite` Fix logic to reconnect with servers that were not up on agent startup
+- [#13169](https://github.com/influxdata/telegraf/pull/13169) `outputs.prometheus_client` Fix export_timestamp for v1 metric type
+- [#13168](https://github.com/influxdata/telegraf/pull/13168) `outputs.stackdriver` Allow for custom metric type prefix
+- [#12994](https://github.com/influxdata/telegraf/pull/12994) `outputs.stackdriver` Group batches by timestamp
+- [#13126](https://github.com/influxdata/telegraf/pull/13126) `outputs.warp10` Support Infinity/-Infinity/NaN values
+- [#13156](https://github.com/influxdata/telegraf/pull/13156) `processors.starlark` Do not reject tracking metrics twice
+
+### Dependency Updates
+
+- [#13256](https://github.com/influxdata/telegraf/pull/13256) `deps` Bump cloud.google.com/go/pubsub from 1.30.0 to 1.30.1
+- [#13258](https://github.com/influxdata/telegraf/pull/13258) `deps` Bump github.com/aerospike/aerospike-client-go/v5 from 5.10.0 to 5.11.0
+- [#13242](https://github.com/influxdata/telegraf/pull/13242) `deps` Bump github.com/antchfx/xpath to latest master for string-join()
+- [#13255](https://github.com/influxdata/telegraf/pull/13255) `deps` Bump github.com/aws/aws-sdk-go-v2 from 1.17.8 to 1.18.0
+- [#13215](https://github.com/influxdata/telegraf/pull/13215) `deps` Bump github.com/Azure/go-autorest/autorest/adal from 0.9.22 to 0.9.23
+- [#13254](https://github.com/influxdata/telegraf/pull/13254) `deps` Bump github.com/benbjohnson/clock from 1.3.0 to 1.3.3
+- [#13269](https://github.com/influxdata/telegraf/pull/13269) `deps` Bump github.com/docker/distribution from 2.8.1 to 2.8.2
+- [#13216](https://github.com/influxdata/telegraf/pull/13216) `deps` Bump github.com/fatih/color from 1.13.0 to 1.15.0
+- [#13104](https://github.com/influxdata/telegraf/pull/13104) `deps` Bump github.com/netsampler/goflow2 from 1.1.1 to 1.3.3
+- [#13138](https://github.com/influxdata/telegraf/pull/13138) `deps` Bump github.com/yuin/goldmark from 1.5.3 to 1.5.4
+- [#13257](https://github.com/influxdata/telegraf/pull/13257) `deps` Bump go.opentelemetry.io/collector/pdata from 1.0.0-rc7 to 1.0.0-rcv0011
+- [#13137](https://github.com/influxdata/telegraf/pull/13137) `deps` Bump golang.org/x/net from 0.8.0 to 0.9.0
+- [#13276](https://github.com/influxdata/telegraf/pull/13276) `deps` Bump golang.org/x/net from 0.9.0 to 0.10.0
+- [#13217](https://github.com/influxdata/telegraf/pull/13217) `deps` Bump golang.org/x/oauth2 from 0.5.0 to 0.7.0
+- [#13170](https://github.com/influxdata/telegraf/pull/13170) `deps` Bump google.golang.org/api from 0.106.0 to 0.120.0
+- [#13223](https://github.com/influxdata/telegraf/pull/13223) `deps` Bump govulncheck-action from 0.10.0 to 0.10.1
+- [#13225](https://github.com/influxdata/telegraf/pull/13225) `deps` Bump prometheus from v1.8.2 to v2.42.0
+- [#13230](https://github.com/influxdata/telegraf/pull/13230) `deps` Bump signalfx/golib from 3.3.46 to 3.3.50
+
 ## v1.26.2 [2023-04-24]
 
 ### Bugfixes

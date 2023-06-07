@@ -56,6 +56,12 @@ to use them.
   # connection_max_open = 0
   # connection_max_idle = auto
 
+  ## Specifies plugin behavior regarding disconnected servers
+  ## Available choices :
+  ##   - error: telegraf will return an error on startup if one the servers is unreachable
+  ##   - ignore: telegraf will ignore unreachable servers on both startup and gather
+  # disconnected_servers_behavior = "error"
+
   [[inputs.sql.query]]
     ## Query to perform on the server
     query="SELECT user,state,latency,score FROM Scoreboard WHERE application > 0"

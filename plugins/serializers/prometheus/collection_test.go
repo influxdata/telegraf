@@ -830,7 +830,7 @@ func TestExportTimestamps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewCollection(FormatConfig{TimestampExport: ExportTimestamp})
+			c := NewCollection(FormatConfig{ExportTimestamp: true})
 			for _, item := range tt.input {
 				c.Add(item.metric, item.addtime)
 			}

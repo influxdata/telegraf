@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
@@ -33,7 +32,7 @@ type Execd struct {
 
 	process      *process.Process
 	acc          telegraf.Accumulator
-	parser       parsers.Parser
+	parser       telegraf.Parser
 	outputReader func(io.Reader)
 }
 
@@ -41,7 +40,7 @@ func (*Execd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (e *Execd) SetParser(parser parsers.Parser) {
+func (e *Execd) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 	e.outputReader = e.cmdReadOut
 

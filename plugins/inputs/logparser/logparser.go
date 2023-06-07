@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 )
 
@@ -64,7 +63,7 @@ type LogParserPlugin struct {
 
 	sync.Mutex
 
-	GrokParser parsers.Parser
+	GrokParser telegraf.Parser
 	GrokConfig GrokConfig `toml:"grok"`
 }
 
