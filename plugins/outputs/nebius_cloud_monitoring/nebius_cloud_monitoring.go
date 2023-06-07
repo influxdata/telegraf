@@ -37,8 +37,6 @@ type NebiusCloudMonitoring struct {
 
 	client *http.Client
 
-	timeFunc func() time.Time
-
 	MetricOutsideWindow selfstat.Stat
 }
 
@@ -65,6 +63,10 @@ type metadataIamToken struct {
 const (
 	defaultRequestTimeout = time.Second * 20
 	defaultEndpoint       = "https://monitoring.api.il.nebius.cloud/monitoring/v2/data/write"
+	/*
+		There is no DNS for metadata endpoint in Nebius Cloud yet.
+		So the only way is to hardcode reserved IP.
+	*/
 	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
@@ -104,7 +106,6 @@ func (a *NebiusCloudMonitoring) Init() error {
 
 // Connect initializes the plugin and validates connectivity
 func (a *NebiusCloudMonitoring) Connect() error {
-	var err error
 	a.Log.Infof("getting folder ID in %s", a.metadataFolderURL)
 	body, err := a.getResponseFromMetadata(a.client, a.metadataFolderURL)
 	if err != nil {
@@ -113,9 +114,6 @@ func (a *NebiusCloudMonitoring) Connect() error {
 	a.folderID = string(body)
 	if a.folderID == "" {
 		return fmt.Errorf("unable to fetch folder id from URL %s: %w", a.metadataFolderURL, err)
-	}
-	if err != nil {
-		return err
 	}
 	a.Log.Infof("Writing to Nebius.Cloud Monitoring URL: %s", a.Endpoint)
 
@@ -225,7 +223,6 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 	req.Header.Set("Authorization", "Bearer "+a.iamToken)
 
 	a.Log.Debugf("sending metrics to %s", req.URL.String())
-	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err
@@ -242,8 +239,6 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 
 func init() {
 	outputs.Add("nebius_cloud_monitoring", func() telegraf.Output {
-		return &NebiusCloudMonitoring{
-			timeFunc: time.Now,
-		}
+		return &NebiusCloudMonitoring{}
 	})
 }

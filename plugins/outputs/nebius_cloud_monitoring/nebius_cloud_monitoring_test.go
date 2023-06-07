@@ -14,15 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWrite(t *testing.T) {
-	readBody := func(r *http.Request) nebiusCloudMonitoringMessage {
-		decoder := json.NewDecoder(r.Body)
-		var message nebiusCloudMonitoringMessage
-		err := decoder.Decode(&message)
-		require.NoError(t, err)
-		return message
-	}
+func readBody(r *http.Request) (nebiusCloudMonitoringMessage, error) {
+	decoder := json.NewDecoder(r.Body)
+	var message nebiusCloudMonitoringMessage
+	err := decoder.Decode(&message)
+	return message, err
+}
 
+func TestWrite(t *testing.T) {
 	testMetadataHTTPServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/token") {
@@ -68,7 +67,8 @@ func TestWrite(t *testing.T) {
 				),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				message := readBody(r)
+				message, err := readBody(r)
+				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_cpu", message.Metrics[0].Name)
 				require.Equal(t, 42.0, message.Metrics[0].Value)
@@ -89,7 +89,8 @@ func TestWrite(t *testing.T) {
 				),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				message := readBody(r)
+				message, err := readBody(r)
+				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
 				require.Equal(t, float64(9.223372036854776e+18), message.Metrics[0].Value)
@@ -110,7 +111,8 @@ func TestWrite(t *testing.T) {
 				),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				message := readBody(r)
+				message, err := readBody(r)
+				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
 				require.Equal(t, float64(9226), message.Metrics[0].Value)
