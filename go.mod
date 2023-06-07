@@ -21,7 +21,7 @@ require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
+	github.com/Mellanox/rdmamap v1.1.0
 	github.com/Shopify/sarama v1.38.1
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
@@ -39,13 +39,13 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.20
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.2
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.25.9
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.20.9
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.80.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.17.8
-	github.com/aws/aws-sdk-go-v2/service/sts v1.18.9
+	github.com/aws/aws-sdk-go-v2/service/sts v1.19.0
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.16.0
 	github.com/aws/smithy-go v1.13.5
 	github.com/benbjohnson/clock v1.3.3
@@ -147,7 +147,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.1.0
 	github.com/prometheus/client_golang v1.15.1
 	github.com/prometheus/client_model v0.4.0
-	github.com/prometheus/common v0.43.0
+	github.com/prometheus/common v0.44.0
 	github.com/prometheus/procfs v0.9.0
 	github.com/prometheus/prometheus v0.42.0
 	github.com/rabbitmq/amqp091-go v1.8.1
@@ -156,7 +156,7 @@ require (
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
-	github.com/shirou/gopsutil/v3 v3.23.4
+	github.com/shirou/gopsutil/v3 v3.23.5
 	github.com/showwin/speedtest-go v1.6.2
 	github.com/signalfx/golib/v3 v3.3.50
 	github.com/sirupsen/logrus v1.9.0
@@ -168,7 +168,7 @@ require (
 	github.com/thomasklein94/packer-plugin-libvirt v0.3.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tinylib/msgp v1.1.8
-	github.com/urfave/cli/v2 v2.23.5
+	github.com/urfave/cli/v2 v2.25.5
 	github.com/vapourismo/knx-go v0.0.0-20220829185957-fb5458a5389d
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.28.1-0.20220921224932-b4b508abf208
@@ -252,13 +252,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.7.1 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.26 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.33 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.27 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.23 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.26 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.27 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.19.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.12.8 // indirect
@@ -410,7 +410,7 @@ require (
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e // indirect
-	github.com/shoenig/go-m1cpu v0.1.5 // indirect
+	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/sapm-proto v0.12.0 // indirect
@@ -433,7 +433,7 @@ require (
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
