@@ -59,8 +59,10 @@ func (n *NetFlow) Init() error {
 		n.decoder = &netflowDecoder{Log: n.Log}
 	case "netflow v5":
 		n.decoder = &netflowv5Decoder{}
+	case "sflow", "sflow v5":
+		n.decoder = &sflowv5Decoder{Log: n.Log}
 	default:
-		return fmt.Errorf("invalid protocol %q, only supports 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)
+		return fmt.Errorf("invalid protocol %q, only supports 'sflow', 'netflow v5', 'netflow v9' and 'ipfix'", n.Protocol)
 	}
 	return n.decoder.Init()
 }
@@ -123,7 +125,8 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 		}
 		metrics, err := n.decoder.Decode(src.IP, buf[:count])
 		if err != nil {
-			acc.AddError(err)
+			errWithData := fmt.Errorf("%w; raw data: %s", err, hex.EncodeToString(buf[:count]))
+			acc.AddError(errWithData)
 			continue
 		}
 		for _, m := range metrics {

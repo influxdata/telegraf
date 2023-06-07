@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/temporary/xpath"
 )
 
 type dataNode interface{}
@@ -40,18 +39,43 @@ type Parser struct {
 	PrintDocument       bool              `toml:"xpath_print_document"`
 	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
 	NativeTypes         bool              `toml:"xpath_native_types"`
-	Configs             []xpath.Config    `toml:"xpath"`
+	Configs             []Config          `toml:"xpath"`
 	DefaultMetricName   string            `toml:"-"`
 	DefaultTags         map[string]string `toml:"-"`
 	Log                 telegraf.Logger   `toml:"-"`
 
 	// Required for backward compatibility
-	ConfigsXML     []xpath.Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []xpath.Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsMsgPack []xpath.Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsProto   []xpath.Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
 
 	document dataDocument
+}
+
+type Config struct {
+	MetricQuery  string            `toml:"metric_name"`
+	Selection    string            `toml:"metric_selection"`
+	Timestamp    string            `toml:"timestamp"`
+	TimestampFmt string            `toml:"timestamp_format"`
+	Timezone     string            `toml:"timezone"`
+	Tags         map[string]string `toml:"tags"`
+	Fields       map[string]string `toml:"fields"`
+	FieldsInt    map[string]string `toml:"fields_int"`
+	FieldsHex    []string          `toml:"fields_bytes_as_hex"`
+
+	FieldSelection  string `toml:"field_selection"`
+	FieldNameQuery  string `toml:"field_name"`
+	FieldValueQuery string `toml:"field_value"`
+	FieldNameExpand bool   `toml:"field_name_expansion"`
+
+	TagSelection  string `toml:"tag_selection"`
+	TagNameQuery  string `toml:"tag_name"`
+	TagValueQuery string `toml:"tag_value"`
+	TagNameExpand bool   `toml:"tag_name_expansion"`
+
+	FieldsHexFilter filter.Filter
+	Location        *time.Location
 }
 
 func (p *Parser) Init() error {
@@ -211,7 +235,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config xpath.Config) (telegraf.Metric, error) {
+func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config Config) (telegraf.Metric, error) {
 	var timestamp time.Time
 	var metricname string
 
@@ -595,24 +619,4 @@ func init() {
 			}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Format = config.DataFormat
-	if p.Format == "xpath_protobuf" {
-		p.ProtobufMessageDef = config.XPathProtobufFile
-		p.ProtobufMessageType = config.XPathProtobufType
-	}
-	p.PrintDocument = config.XPathPrintDocument
-	p.DefaultMetricName = config.MetricName
-	p.DefaultTags = config.DefaultTags
-
-	// Convert the config formats which is a one-to-one copy
-	if len(config.XPathConfig) > 0 {
-		p.Configs = make([]xpath.Config, 0, len(config.XPathConfig))
-		p.Configs = append(p.Configs, config.XPathConfig...)
-	}
-
-	return p.Init()
 }

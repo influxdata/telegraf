@@ -1,0 +1,1 @@
+interface,name=ethernet-1/1,source=127.0.0.1 interface=1i,transceiver=2i,ethernet=3i,ethernet/flow_control="false",sflow="disable" 1679648530391910312

@@ -62,10 +62,11 @@ type HealthMetric struct {
 const defaultServer = "Server=.;app name=telegraf;log=1;"
 
 const (
-	typeAzureSQLDB              = "AzureSQLDB"
-	typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
-	typeAzureSQLPool            = "AzureSQLPool"
-	typeSQLServer               = "SQLServer"
+	typeAzureSQLDB                 = "AzureSQLDB"
+	typeAzureSQLManagedInstance    = "AzureSQLManagedInstance"
+	typeAzureSQLPool               = "AzureSQLPool"
+	typeSQLServer                  = "SQLServer"
+	typeAzureArcSQLManagedInstance = "AzureArcSQLManagedInstance"
 )
 
 const (
@@ -93,6 +94,7 @@ func (s *SQLServer) initQueries() error {
 	// Constant definitions for type "AzureSQLDB" start with sqlAzureDB
 	// Constant definitions for type "AzureSQLManagedInstance" start with sqlAzureMI
 	// Constant definitions for type "AzureSQLPool" start with sqlAzurePool
+	// Constant definitions for type "AzureArcSQLManagedInstance" start with sqlAzureArcMI
 	// Constant definitions for type "SQLServer" start with sqlServer
 	if s.DatabaseType == typeAzureSQLDB {
 		queries["AzureSQLDBResourceStats"] = Query{ScriptName: "AzureSQLDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
@@ -125,6 +127,15 @@ func (s *SQLServer) initQueries() error {
 		queries["AzureSQLPoolPerformanceCounters"] =
 			Query{ScriptName: "AzureSQLPoolPerformanceCounters", Script: sqlAzurePoolPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLPoolSchedulers"] = Query{ScriptName: "AzureSQLPoolSchedulers", Script: sqlAzurePoolSchedulers, ResultByRow: false}
+	} else if s.DatabaseType == typeAzureArcSQLManagedInstance {
+		queries["AzureArcSQLMIDatabaseIO"] = Query{ScriptName: "AzureArcSQLMIDatabaseIO", Script: sqlAzureArcMIDatabaseIO, ResultByRow: false}
+		queries["AzureArcSQLMIServerProperties"] = Query{ScriptName: "AzureArcSQLMIServerProperties", Script: sqlAzureArcMIProperties, ResultByRow: false}
+		queries["AzureArcSQLMIOsWaitstats"] = Query{ScriptName: "AzureArcSQLMIOsWaitstats", Script: sqlAzureArcMIOsWaitStats, ResultByRow: false}
+		queries["AzureArcSQLMIMemoryClerks"] = Query{ScriptName: "AzureArcSQLMIMemoryClerks", Script: sqlAzureArcMIMemoryClerks, ResultByRow: false}
+		queries["AzureArcSQLMIPerformanceCounters"] =
+			Query{ScriptName: "AzureArcSQLMIPerformanceCounters", Script: sqlAzureArcMIPerformanceCounters, ResultByRow: false}
+		queries["AzureArcSQLMIRequests"] = Query{ScriptName: "AzureArcSQLMIRequests", Script: sqlAzureArcMIRequests, ResultByRow: false}
+		queries["AzureArcSQLMISchedulers"] = Query{ScriptName: "AzureArcSQLMISchedulers", Script: sqlAzureArcMISchedulers, ResultByRow: false}
 	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}

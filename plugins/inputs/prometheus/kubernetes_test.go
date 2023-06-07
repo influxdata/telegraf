@@ -20,6 +20,7 @@ func initPrometheus() *Prometheus {
 	prom.MonitorKubernetesPodsPort = 9102
 	prom.MonitorKubernetesPodsPath = "/metrics"
 	prom.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
+	prom.kubernetesPods = map[PodID]URLAndAddress{}
 	return prom
 }
 
@@ -129,7 +130,7 @@ func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
 }
 
 func TestAddPod(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -148,7 +149,7 @@ func TestAddPodScrapeConfig(t *testing.T) {
 }
 
 func TestAddMultipleDuplicatePods(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -161,7 +162,7 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 }
 
 func TestAddMultiplePods(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -173,7 +174,7 @@ func TestAddMultiplePods(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -185,7 +186,7 @@ func TestDeletePods(t *testing.T) {
 }
 
 func TestKeepDefaultNamespaceLabelName(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -197,7 +198,7 @@ func TestKeepDefaultNamespaceLabelName(t *testing.T) {
 }
 
 func TestChangeNamespaceLabelName(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}, PodNamespaceLabelName: "pod_namespace"}
+	prom := &Prometheus{Log: testutil.Logger{}, PodNamespaceLabelName: "pod_namespace", kubernetesPods: map[PodID]URLAndAddress{}}
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -296,7 +297,7 @@ func TestAnnotationFilters(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			prom := &Prometheus{Log: testutil.Logger{}}
+			prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 			prom.PodAnnotationInclude = tc.include
 			prom.PodAnnotationExclude = tc.exclude
 			require.NoError(t, prom.initFilters())
@@ -341,7 +342,7 @@ func TestLabelFilters(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			prom := &Prometheus{Log: testutil.Logger{}}
+			prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[PodID]URLAndAddress{}}
 			prom.PodLabelInclude = tc.include
 			prom.PodLabelExclude = tc.exclude
 			require.NoError(t, prom.initFilters())

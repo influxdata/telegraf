@@ -2,6 +2,7 @@ package netflow
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -83,8 +84,8 @@ var fieldMappingsNetflowCommon = map[uint16][]fieldMapping{
 	53: {{"max_ttl", decodeUint}},         // MAX_TTL / maximumTTL
 	54: {{"fragment_id", decodeHex}},      // IPV4_IDENT / fragmentIdentification
 	55: {{"dst_tos", decodeHex}},          // DST_TOS / postIpClassOfService
-	56: {{"in_src_mac", decodeHex}},       // IN_SRC_MAC / sourceMacAddress
-	57: {{"out_dst_mac", decodeHex}},      // OUT_DST_MAC / postDestinationMacAddress
+	56: {{"in_src_mac", decodeMAC}},       // IN_SRC_MAC / sourceMacAddress
+	57: {{"out_dst_mac", decodeMAC}},      // OUT_DST_MAC / postDestinationMacAddress
 	58: {{"vlan_src", decodeUint}},        // SRC_VLAN / vlanId
 	59: {{"vlan_dst", decodeUint}},        // DST_VLAN / postVlanId
 	60: {{"ip_version", decodeIPVersion}}, // IP_PROTOCOL_VERSION / ipVersion
@@ -103,8 +104,8 @@ var fieldMappingsNetflowCommon = map[uint16][]fieldMapping{
 	77: {{"mpls_label_8", decodeHex}},      // MPLS_LABEL_8 / mplsLabelStackSection8
 	78: {{"mpls_label_9", decodeHex}},      // MPLS_LABEL_9 / mplsLabelStackSection9
 	79: {{"mpls_label_10", decodeHex}},     // MPLS_LABEL_10 / mplsLabelStackSection10
-	80: {{"in_dst_mac", decodeHex}},        // IN_DST_MAC / destinationMacAddress
-	81: {{"out_src_mac", decodeHex}},       // OUT_SRC_MAC / postSourceMacAddress
+	80: {{"in_dst_mac", decodeMAC}},        // IN_DST_MAC / destinationMacAddress
+	81: {{"out_src_mac", decodeMAC}},       // OUT_SRC_MAC / postSourceMacAddress
 	82: {{"interface", decodeString}},      // IF_NAME / interfaceName
 	83: {{"interface_desc", decodeString}}, // IF_DESC / interfaceDescription
 	84: {{"sampler_name", decodeString}},   // SAMPLER_NAME / samplerName
@@ -196,8 +197,8 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	// 148: common
 	149: {{"observation_domain_id", decodeUint}}, // observationDomainId
 	150: {{"flow_start", decodeUint}},            // flowStartSeconds
-	// 151 - 152: common
-	153: {{"flow_end_ms", decodeUint}},              // flowEndMilliseconds
+	151: {{"flow_end", decodeUint}},              // flowEndSeconds
+	// 152 - 153: common
 	154: {{"flow_start_us", decodeUint}},            // flowStartMicroseconds
 	155: {{"flow_end_us", decodeUint}},              // flowEndMicroseconds
 	156: {{"flow_start_ns", decodeUint}},            // flowStartNanoseconds
@@ -238,7 +239,7 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	194: {{"mpls_payload_len", decodeUint}},         // mplsPayloadLength
 	195: {{"dscp", decodeUint}},                     // ipDiffServCodePoint
 	196: {{"precedence", decodeUint}},               // ipPrecedence
-	197: {{"fragement_flags", decodeFragmentFlags}}, // fragmentFlags
+	197: {{"fragment_flags", decodeFragmentFlags}},  // fragmentFlags
 	198: {{"bytes_sqr_sum", decodeUint}},            // octetDeltaSumOfSquares
 	199: {{"bytes_sqr_sum_total", decodeUint}},      // octetTotalSumOfSquares
 	200: {{"mpls_top_label_ttl", decodeUint}},       // mplsTopLabelTTL
@@ -255,10 +256,10 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	211: {{"collector", decodeIP}},                  // collectorIPv4Address
 	212: {{"collector", decodeIP}},                  // collectorIPv6Address
 	213: {{"export_interface", decodeUint}},         // exportInterface
-	214: {{"export_proto_version", decodeUint}},     //exportProtocolVersion
-	215: {{"export_transport_proto", decodeUint}},   //exportTransportProtocol
-	216: {{"collector_transport_port", decodeUint}}, //collectorTransportPort
-	217: {{"exporter_transport_port", decodeUint}},  //exporterTransportPort
+	214: {{"export_proto_version", decodeUint}},     // exportProtocolVersion
+	215: {{"export_transport_proto", decodeUint}},   // exportTransportProtocol
+	216: {{"collector_transport_port", decodeUint}}, // collectorTransportPort
+	217: {{"exporter_transport_port", decodeUint}},  // exporterTransportPort
 	218: {{"tcp_syn_total", decodeUint}},            // tcpSynTotalCount
 	219: {{"tcp_fin_total", decodeUint}},            // tcpFinTotalCount
 	220: {{"tcp_rst_total", decodeUint}},            // tcpRstTotalCount
@@ -394,9 +395,9 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	362: {{"port_range_end", decodeUint}},                   // portRangeEnd
 	363: {{"port_range_step_size", decodeUint}},             // portRangeStepSize
 	364: {{"port_range_ports", decodeUint}},                 // portRangeNumPorts
-	365: {{"station_mac", decodeHex}},                       // staMacAddress
+	365: {{"station_mac", decodeMAC}},                       // staMacAddress
 	366: {{"station", decodeIP}},                            // staIPv4Address
-	367: {{"wtp_mac", decodeHex}},                           // wtpMacAddress
+	367: {{"wtp_mac", decodeMAC}},                           // wtpMacAddress
 	368: {{"in_interface_type", decodeUint}},                // ingressInterfaceType
 	369: {{"out_interface_type", decodeUint}},               // egressInterfaceType
 	370: {{"rtp_seq_number", decodeUint}},                   // rtpSequenceNumber
@@ -530,6 +531,7 @@ type netflowDecoder struct {
 	templates     map[string]*netflow.BasicTemplateSystem
 	mappingsV9    map[uint16]fieldMapping
 	mappingsIPFIX map[uint16]fieldMapping
+	mappingsPEN   map[string]fieldMapping
 
 	sync.Mutex
 }
@@ -552,7 +554,12 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	buf := bytes.NewBuffer(payload)
 	packet, err := netflow.DecodeMessage(buf, templates)
 	if err != nil {
-		return nil, err
+		var terr *netflow.ErrorTemplateNotFound
+		if errors.As(err, &terr) {
+			d.Log.Warnf("%v; skipping packet", err)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("decoding message failed: %w", err)
 	}
 
 	// Extract metrics
@@ -571,7 +578,13 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					}
 					fields := make(map[string]interface{})
 					for _, value := range record.Values {
-						for _, field := range d.decodeValueV9(value) {
+						var extracted []telegraf.Field
+						if value.PenProvided {
+							extracted = d.decodeValuePEN(value)
+						} else {
+							extracted = d.decodeValueV9(value)
+						}
+						for _, field := range extracted {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -594,7 +607,13 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					fields := make(map[string]interface{})
 					t := time.Now()
 					for _, value := range record.Values {
-						for _, field := range d.decodeValueIPFIX(value) {
+						var extracted []telegraf.Field
+						if value.PenProvided {
+							extracted = d.decodeValuePEN(value)
+						} else {
+							extracted = d.decodeValueIPFIX(value)
+						}
+						for _, field := range extracted {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -620,6 +639,7 @@ func (d *netflowDecoder) Init() error {
 	d.templates = make(map[string]*netflow.BasicTemplateSystem)
 	d.mappingsV9 = make(map[uint16]fieldMapping)
 	d.mappingsIPFIX = make(map[uint16]fieldMapping)
+	d.mappingsPEN = make(map[string]fieldMapping)
 
 	return nil
 }
@@ -705,5 +725,26 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 	// Return the raw data if no mapping was found
 	d.Log.Debugf("unknown data field %v", field)
 	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
+	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
+}
+
+func (d *netflowDecoder) decodeValuePEN(field netflow.DataField) []telegraf.Field {
+	raw := field.Value.([]byte)
+
+	var prefix string
+	elementID := field.Type
+	if field.Type&0x4000 != 0 {
+		prefix = "rev_"
+		elementID = field.Type & (0x4000 ^ 0xffff)
+	}
+
+	key := fmt.Sprintf("%d.%d", field.Pen, elementID)
+	if m, found := d.mappingsPEN[key]; found {
+		return []telegraf.Field{{Key: m.name, Value: m.decoder(raw)}}
+	}
+
+	// Return the raw data if no mapping was found
+	d.Log.Debugf("unknown PEN data field %v", field)
+	name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
 	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
 }

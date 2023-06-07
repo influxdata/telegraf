@@ -94,8 +94,10 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			serializer := &carbon2.Serializer{
+				Format: "field_separate",
+			}
+			require.NoError(t, serializer.Init())
 
 			plugin := tt.plugin()
 			plugin.SetSerializer(serializer)
@@ -171,8 +173,10 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			serializer := &carbon2.Serializer{
+				Format: "field_separate",
+			}
+			require.NoError(t, serializer.Init())
 
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
@@ -197,9 +201,11 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-				require.NoError(t, err)
-				s.SetSerializer(sr)
+				serializer := &carbon2.Serializer{
+					Format: "field_separate",
+				}
+				require.NoError(t, serializer.Init())
+				s.SetSerializer(serializer)
 				return s
 			},
 			expectedBody: []byte("metric=cpu field=value  42 0\n"),
@@ -211,9 +217,11 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatMetricIncludesField), carbon2.DefaultSanitizeReplaceChar)
-				require.NoError(t, err)
-				s.SetSerializer(sr)
+				serializer := &carbon2.Serializer{
+					Format: "metric_includes_field",
+				}
+				require.NoError(t, serializer.Init())
+				s.SetSerializer(serializer)
 				return s
 			},
 			expectedBody: []byte("metric=cpu_value  42 0\n"),
@@ -225,7 +233,9 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: graphiteContentType,
 				}
-				s.SetSerializer(&graphite.GraphiteSerializer{})
+				serializer := &graphite.GraphiteSerializer{}
+				require.NoError(t, serializer.Init())
+				s.SetSerializer(serializer)
 				return s
 			},
 		},
@@ -316,8 +326,10 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			serializer := &carbon2.Serializer{
+				Format: "field_separate",
+			}
+			require.NoError(t, serializer.Init())
 
 			plugin := tt.plugin()
 
@@ -349,8 +361,10 @@ func TestDefaultUserAgent(t *testing.T) {
 			MaxRequstBodySize: Default().MaxRequstBodySize,
 		}
 
-		serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-		require.NoError(t, err)
+		serializer := &carbon2.Serializer{
+			Format: "field_separate",
+		}
+		require.NoError(t, serializer.Init())
 
 		plugin.SetSerializer(serializer)
 		err = plugin.Connect()
@@ -598,8 +612,10 @@ func TestMaxRequestBodySize(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-			require.NoError(t, err)
+			serializer := &carbon2.Serializer{
+				Format: "field_separate",
+			}
+			require.NoError(t, serializer.Init())
 
 			plugin := tt.plugin()
 			plugin.SetSerializer(serializer)
@@ -631,8 +647,10 @@ func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
 	plugin := Default()
 	plugin.URL = u.String()
 
-	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
-	require.NoError(t, err)
+	serializer := &carbon2.Serializer{
+		Format: "field_separate",
+	}
+	require.NoError(t, serializer.Init())
 	plugin.SetSerializer(serializer)
 
 	err = plugin.Connect()

@@ -1,0 +1,79 @@
+[
+    {
+        "update": {
+            "timestamp": "1673608605875353770",
+            "prefix": {
+                "origin": "openconfig-interfaces",
+                "elem": [
+                    {
+                        "name": "interfaces"
+                    },
+                    {
+                        "name": "interface",
+                        "key":{"name":"eth42"}
+                    }
+                ],
+                "target": "subscription"
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "descr"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "eth42"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "config"
+                            },
+                            {
+                                "name": "id"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "42425"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "in-pkts"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "5678"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "out-pkts"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "5125"
+                    }
+                }
+            ]
+        }
+    }
+]

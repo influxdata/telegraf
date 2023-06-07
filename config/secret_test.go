@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/secretstores"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSecretConstantManually(t *testing.T) {
@@ -96,7 +97,7 @@ func TestUninitializedEnclave(t *testing.T) {
 	retrieved, err := s.Get()
 	require.NoError(t, err)
 	require.Empty(t, retrieved)
-	defer ReleaseSecret(retrieved)
+	ReleaseSecret(retrieved)
 }
 
 func TestEnclaveOpenError(t *testing.T) {

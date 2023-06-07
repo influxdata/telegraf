@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
@@ -53,7 +53,7 @@ func TestCSVGZImport(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			HeaderRowCount: 1,
 		}
@@ -119,7 +119,7 @@ func TestCSVGZImportWithHeader(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			HeaderRowCount: 1,
 			SkipRows:       1,
@@ -189,7 +189,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		p := &json.Parser{NameKey: "Name"}
 		err := p.Init()
 		return p, err
@@ -240,7 +240,7 @@ func TestFileTag(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		p := &json.Parser{NameKey: "Name"}
 		err := p.Init()
 		return p, err
@@ -292,7 +292,7 @@ func TestCSVNoSkipRows(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			HeaderRowCount: 1,
 			SkipRows:       0,
@@ -361,7 +361,7 @@ func TestCSVSkipRows(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			HeaderRowCount: 1,
 			SkipRows:       2,
@@ -432,7 +432,7 @@ func TestCSVMultiHeader(t *testing.T) {
 	err := r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
 			HeaderRowCount: 2,
 			TagColumns:     []string{"line1"},
@@ -501,7 +501,7 @@ func TestParseCompleteFile(t *testing.T) {
 	require.NoError(t, err)
 	r.Log = testutil.Logger{}
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := &json.Parser{
 			NameKey: "name",
 			TagKeys: []string{"tag1"},
@@ -553,7 +553,7 @@ func TestParseSubdirectories(t *testing.T) {
 	require.NoError(t, err)
 	r.Log = testutil.Logger{}
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := &json.Parser{
 			NameKey: "name",
 			TagKeys: []string{"tag1"},
@@ -631,7 +631,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	require.NoError(t, err)
 	r.Log = testutil.Logger{}
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := &json.Parser{
 			NameKey: "name",
 			TagKeys: []string{"tag1"},
@@ -655,7 +655,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	err = f.Close()
 	require.NoError(t, err)
 
-	// Write json file to process into a subdirectory in the the 'process' directory.
+	// Write json file to process into a subdirectory in the 'process' directory.
 	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
 	require.NoError(t, err)
 	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))

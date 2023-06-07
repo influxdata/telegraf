@@ -36,7 +36,7 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                       string            `toml:"url" deprecated:"0.1.9;2.0.0;use 'urls' instead"`
+	URL                       string            `toml:"url" deprecated:"0.1.9;1.30.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
 	Username                  config.Secret     `toml:"username"`
 	Password                  config.Secret     `toml:"password"`

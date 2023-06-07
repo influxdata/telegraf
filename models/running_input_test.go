@@ -273,6 +273,81 @@ func TestMetricErrorCounters(t *testing.T) {
 	require.GreaterOrEqual(t, int64(1), GlobalGatherErrors.Get())
 }
 
+func TestMakeMetricWithAlwaysKeepingPluginTagsDisabled(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
+		},
+		Filter: Filter{
+			TagInclude: []string{"b"},
+		},
+		AlwaysIncludeLocalTags: false,
+	})
+	require.NoError(t, ri.Config.Filter.Compile())
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{
+			"b": "test",
+		},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now,
+		telegraf.Untyped)
+	m = ri.MakeMetric(m)
+
+	expected := metric.New("RITest",
+		map[string]string{
+			"b": "test",
+		},
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
+	)
+	require.Equal(t, expected, m)
+}
+
+func TestMakeMetricWithAlwaysKeepingPluginTagsEnabled(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
+		},
+		Filter: Filter{
+			TagInclude: []string{"b"},
+		},
+		AlwaysIncludeLocalTags: true,
+	})
+	require.NoError(t, ri.Config.Filter.Compile())
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{
+			"b": "test",
+		},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now,
+		telegraf.Untyped)
+	m = ri.MakeMetric(m)
+
+	expected := metric.New("RITest",
+		map[string]string{
+			"b":   "test",
+			"foo": "bar",
+		},
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
+	)
+	require.Equal(t, expected, m)
+}
+
 type testInput struct{}
 
 func (t *testInput) Description() string                 { return "" }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type Serializer struct {
@@ -23,39 +24,32 @@ type Serializer struct {
 	writer *csv.Writer
 }
 
-func NewSerializer(timestampFormat, separator string, header, prefix bool) (*Serializer, error) {
+func (s *Serializer) Init() error {
 	// Setting defaults
-	if separator == "" {
-		separator = ","
+	if s.Separator == "" {
+		s.Separator = ","
 	}
 
 	// Check inputs
-	if len(separator) > 1 {
-		return nil, fmt.Errorf("invalid separator %q", separator)
+	if len(s.Separator) > 1 {
+		return fmt.Errorf("invalid separator %q", s.Separator)
 	}
-	switch timestampFormat {
+	switch s.TimestampFormat {
 	case "":
-		timestampFormat = "unix"
+		s.TimestampFormat = "unix"
 	case "unix", "unix_ms", "unix_us", "unix_ns":
 	default:
-		if time.Now().Format(timestampFormat) == timestampFormat {
-			return nil, fmt.Errorf("invalid timestamp format %q", timestampFormat)
+		if time.Now().Format(s.TimestampFormat) == s.TimestampFormat {
+			return fmt.Errorf("invalid timestamp format %q", s.TimestampFormat)
 		}
-	}
-
-	s := &Serializer{
-		TimestampFormat: timestampFormat,
-		Separator:       separator,
-		Header:          header,
-		Prefix:          prefix,
 	}
 
 	// Initialize the writer
 	s.writer = csv.NewWriter(&s.buffer)
-	s.writer.Comma = []rune(separator)[0]
+	s.writer.Comma = []rune(s.Separator)[0]
 	s.writer.UseCRLF = runtime.GOOS == "windows"
 
-	return s, nil
+	return nil
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -173,4 +167,22 @@ func (s *Serializer) writeData(metric telegraf.Metric) error {
 	}
 
 	return s.writer.Write(columns)
+}
+
+func init() {
+	serializers.Add("csv",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.TimestampFormat = cfg.TimestampFormat
+	s.Separator = cfg.CSVSeparator
+	s.Header = cfg.CSVHeader
+	s.Prefix = cfg.CSVPrefix
+
+	return nil
 }

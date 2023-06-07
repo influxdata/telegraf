@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-type serializer struct {
-	TimestampUnits time.Duration
-}
+type Serializer struct{}
 
 /*
 Example for the JSON generated and pushed to the MID
@@ -38,12 +37,7 @@ type OIMetric struct {
 
 type OIMetrics []OIMetric
 
-func NewSerializer() (*serializer, error) {
-	s := &serializer{}
-	return s, nil
-}
-
-func (s *serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
+func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 	serialized, err := s.createObject(metric)
 	if err != nil {
 		return []byte{}, err
@@ -51,7 +45,7 @@ func (s *serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 	return serialized, nil
 }
 
-func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
 	objects := make([]byte, 0)
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
@@ -65,7 +59,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err 
 	return replaced, nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
+func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
 	** Following elements accepted in the request body:
 		 ** metric_type: 	The name of the metric
@@ -131,4 +125,17 @@ func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 func verifyValue(v interface{}) bool {
 	_, ok := v.(string)
 	return !ok
+}
+
+func init() {
+	serializers.Add("nowmetric",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(_ *serializers.Config) error {
+	return nil
 }

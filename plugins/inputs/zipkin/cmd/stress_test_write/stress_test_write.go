@@ -61,12 +61,12 @@ func main() {
 
 	endpoint, err := zipkin.NewEndpoint("Trivial", "127.0.0.1:0")
 	if err != nil {
-		log.Fatalf("Error: %v\n", err)
+		log.Panicf("Error: %v\n", err)
 	}
 
 	nativeTracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(endpoint))
 	if err != nil {
-		log.Fatalf("Error: %v\n", err)
+		log.Panicf("Error: %v\n", err)
 	}
 
 	tracer := zipkinot.Wrap(nativeTracer)
