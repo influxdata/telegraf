@@ -143,7 +143,7 @@ func TestRunGzipDecode(t *testing.T) {
 	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
-	enc, err := internal.NewGzipEncoder(1)
+	enc, err := internal.NewGzipEncoder()
 	require.NoError(t, err)
 	gzippedMsg, err := enc.Encode([]byte(msgInflux))
 	require.NoError(t, err)

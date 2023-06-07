@@ -68,7 +68,7 @@ func (sw *SocketWriter) Connect() error {
 		sw.Log.Debugf("Unable to configure keep alive (%s): %s", sw.Address, err)
 	}
 	//set encoder
-	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding, 1)
+	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding)
 	if err != nil {
 		return err
 	}

@@ -12,7 +12,7 @@ import (
 const maxDecompressionSize = 1024
 
 func TestGzipEncodeDecode(t *testing.T) {
-	enc, err := NewGzipEncoder(-1)
+	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
 	dec := NewGzipDecoder()
 
@@ -26,7 +26,7 @@ func TestGzipEncodeDecode(t *testing.T) {
 }
 
 func TestGzipReuse(t *testing.T) {
-	enc, err := NewGzipEncoder(-1)
+	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
 	dec := NewGzipDecoder()
 
@@ -48,7 +48,7 @@ func TestGzipReuse(t *testing.T) {
 }
 
 func TestZlibEncodeDecode(t *testing.T) {
-	enc, err := NewZlibEncoder(-1)
+	enc, err := NewZlibEncoder()
 	require.NoError(t, err)
 	dec := NewZlibDecoder()
 
@@ -62,7 +62,7 @@ func TestZlibEncodeDecode(t *testing.T) {
 }
 
 func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
-	enc, err := NewZlibEncoder(-1)
+	enc, err := NewZlibEncoder()
 	require.NoError(t, err)
 	dec := NewZlibDecoder()
 
@@ -102,7 +102,7 @@ func TestStreamIdentityDecode(t *testing.T) {
 }
 
 func TestStreamGzipDecode(t *testing.T) {
-	enc, err := NewGzipEncoder(-1)
+	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
 	written, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestStreamGzipDecode(t *testing.T) {
 
 func BenchmarkGzipEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
-	enc, err := NewGzipEncoder(-1)
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
 	dec := NewGzipDecoder()
 	payload, err := enc.Encode(data)
@@ -142,7 +142,7 @@ func BenchmarkGzipEncodeDecode(b *testing.B) {
 
 func BenchmarkZlibEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
-	enc, err := NewZlibEncoder(-1)
+	enc, err := NewZlibEncoder()
 	require.NoError(b, err)
 	dec := NewZlibDecoder()
 	payload, err := enc.Encode(data)

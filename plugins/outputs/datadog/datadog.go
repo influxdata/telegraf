@@ -138,7 +138,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	c := strings.ToLower(d.Compression)
 	switch c {
 	case "zlib":
-		encoder, err := internal.NewContentEncoder(c, 1)
+		encoder, err := internal.NewContentEncoder(c)
 		if err != nil {
 			return err
 		}

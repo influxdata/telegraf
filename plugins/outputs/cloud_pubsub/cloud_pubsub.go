@@ -270,7 +270,7 @@ func (ps *PubSub) Init() error {
 		ps.ContentEncoding = "identity"
 	case "gzip":
 		var err error
-		ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding, 1)
+		ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
 		if err != nil {
 			return err
 		}

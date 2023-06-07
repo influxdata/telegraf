@@ -99,7 +99,7 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 	}
 
 	require.NoError(tT, ps.Init())
-	ps.encoder, _ = internal.NewContentEncoder(ps.ContentEncoding, 1)
+	ps.encoder, _ = internal.NewContentEncoder(ps.ContentEncoding)
 	ps.SetSerializer(s)
 
 	return ps, t, metrics

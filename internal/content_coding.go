@@ -13,6 +13,22 @@ import (
 
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
 
+// EncodingOption provide methods to change the encoding from the standard
+// configuration.
+type EncodingOption func(*encoderConfig)
+
+type encoderConfig struct {
+	level int
+}
+
+var defaultEncoderConfig = encoderConfig{level: 6}
+
+func EncoderCompressionLevel(level int) EncodingOption {
+	return func(cfg *encoderConfig) {
+		cfg.level = level
+	}
+}
+
 // NewStreamContentDecoder returns a reader that will decode the stream
 // according to the encoding type.
 func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
@@ -73,12 +89,12 @@ func (r *GzipReader) Read(b []byte) (int, error) {
 }
 
 // NewContentEncoder returns a ContentEncoder for the encoding type.
-func NewContentEncoder(encoding string, level int) (ContentEncoder, error) {
+func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncoder, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipEncoder(level)
+		return NewGzipEncoder(options...)
 	case "zlib":
-		return NewZlibEncoder(level)
+		return NewZlibEncoder(options...)
 	case "identity", "":
 		return NewIdentityEncoder(), nil
 	default:
@@ -138,9 +154,14 @@ type GzipEncoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewGzipEncoder(level int) (*GzipEncoder, error) {
+func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
+	cfg := encoderConfig{level: gzip.DefaultCompression}
+	for _, o := range options {
+		o(&cfg)
+	}
+
 	var buf bytes.Buffer
-	w, err := gzip.NewWriterLevel(&buf, level)
+	w, err := gzip.NewWriterLevel(&buf, cfg.level)
 	return &GzipEncoder{
 		writer: w,
 		buf:    &buf,
@@ -167,9 +188,14 @@ type ZlibEncoder struct {
 	buf    *bytes.Buffer
 }
 
-func NewZlibEncoder(level int) (*ZlibEncoder, error) {
+func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
+	cfg := encoderConfig{level: zlib.DefaultCompression}
+	for _, o := range options {
+		o(&cfg)
+	}
+
 	var buf bytes.Buffer
-	w, err := zlib.NewWriterLevel(&buf, level)
+	w, err := zlib.NewWriterLevel(&buf, cfg.level)
 	return &ZlibEncoder{
 		writer: w,
 		buf:    &buf,
