@@ -497,7 +497,7 @@ func validateInterval(interval int32) error {
 func splitMeasurementLine(line string) ([]string, error) {
 	values := strings.Split(line, ",")
 	if len(values) < 8 {
-		return nil, fmt.Errorf("not valid line format from pqos: %q", values)
+		return nil, fmt.Errorf("not valid line format from pqos: %s", values)
 	}
 	return values, nil
 }
