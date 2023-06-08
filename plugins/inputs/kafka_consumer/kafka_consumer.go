@@ -285,12 +285,15 @@ func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
 			oldConsumer := k.consumer
 			k.consumer = newConsumer
 			k.cancel = cancel
-			k.Log.Debug("closing old consumer group")
-			err = oldConsumer.Close()
-			if err != nil {
-				acc.AddError(err)
-				return err
-			}
+			// Do this in the background
+			go func() {
+				k.Log.Debug("closing old consumer group")
+				err = oldConsumer.Close()
+				if err != nil {
+					acc.AddError(err)
+					return
+				}
+			}()
 			k.Log.Info("starting new consumer group")
 			// Lock would end here.
 			k.consumeTopics(ctx, acc)
