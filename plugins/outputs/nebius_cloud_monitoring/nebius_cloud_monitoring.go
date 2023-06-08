@@ -25,7 +25,6 @@ var sampleConfig string
 type NebiusCloudMonitoring struct {
 	Timeout  config.Duration `toml:"timeout"`
 	Endpoint string          `toml:"endpoint"`
-	Service  string          `toml:"service"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -34,6 +33,7 @@ type NebiusCloudMonitoring struct {
 	folderID               string
 	iamToken               string
 	iamTokenExpirationTime time.Time
+	service                string
 
 	client *http.Client
 
@@ -83,8 +83,8 @@ func (a *NebiusCloudMonitoring) Init() error {
 	if a.Endpoint == "" {
 		a.Endpoint = defaultEndpoint
 	}
-	if a.Service == "" {
-		a.Service = "custom"
+	if a.service == "" {
+		a.service = "custom"
 	}
 	if a.metadataTokenURL == "" {
 		a.metadataTokenURL = defaultMetadataTokenURL
@@ -116,6 +116,7 @@ func (a *NebiusCloudMonitoring) Connect() error {
 		return fmt.Errorf("unable to fetch folder id from URL %s: %w", a.metadataFolderURL, err)
 	}
 	a.Log.Infof("Writing to Nebius.Cloud Monitoring URL: %s", a.Endpoint)
+	a.Log.Infof("FolderID: %s", a.folderID)
 
 	return nil
 }
@@ -207,7 +208,7 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 	}
 	q := req.URL.Query()
 	q.Add("folderId", a.folderID)
-	q.Add("service", a.Service)
+	q.Add("service", a.service)
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
@@ -222,7 +223,6 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+a.iamToken)
 
-	a.Log.Debugf("sending metrics to %s", req.URL.String())
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err
