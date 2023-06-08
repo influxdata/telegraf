@@ -267,8 +267,6 @@ func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
 		// calling consumeTopics() on the new consumer group.
 		if k.consumer != nil {
 			k.Log.Info("restarting")
-			k.Log.Debug("getting new context before swapping consumers")
-			ctx, cancel := context.WithCancel(context.Background())
 			k.Log.Debug("creating new consumer group")
 			newConsumer, err := k.ConsumerCreator.Create(
 				k.Brokers,
@@ -279,6 +277,8 @@ func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return err
 			}
+			k.Log.Debug("getting new context before swapping consumers")
+			ctx, cancel := context.WithCancel(context.Background())
 			// Do we need to protect this with a lock?
 			// Do the switcheroo.
 			k.Log.Debug("replacing consumer group")
@@ -333,29 +333,15 @@ func (k *KafkaConsumer) getNewHandler(acc telegraf.Accumulator) *ConsumerGroupHa
 	return handler
 }
 
-func (k *KafkaConsumer) startConsumingTopics(ctx context.Context, acc telegraf.Accumulator) {
-	var err error
-
-	if k.consumer == nil {
-		err = k.create()
-		if err != nil {
-			acc.AddError(fmt.Errorf("create consumer async: %w", err))
-			return
-		}
-	}
-
-	k.startErrorAdder(acc)
-	k.consumeTopics(ctx, acc)
-}
-
 func (k *KafkaConsumer) handleTicker(acc telegraf.Accumulator) {
 	dstr := time.Duration(k.TopicRefreshInterval).String()
 	k.Log.Infof("starting refresh ticker: scanning topics every %s", dstr)
 	for {
-		select {
-		case <-k.ticker.C:
-			k.Log.Debugf("received topic refresh request (every %s)", dstr)
-			k.refreshTopics(acc)
+		<-k.ticker.C
+		k.Log.Debugf("received topic refresh request (every %s)", dstr)
+		err := k.refreshTopics(acc)
+		if err != nil {
+			acc.AddError(err)
 		}
 	}
 }
@@ -383,7 +369,6 @@ func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumula
 		if err != nil {
 			acc.AddError(fmt.Errorf("close: %w", err))
 		}
-		return
 	}()
 }
 
