@@ -33,6 +33,7 @@ This plugin currently only supports Compute metadata based authentication
 in Nebius Cloud Platform.
 
 When plugin is working inside a Compute instance it will take IAM token and
-Folder ID from instance metadata. In this plugin we use Google Cloud
-[notation](https://nebius.com/il/docs/compute/operations/vm-info/get-info).
+Folder ID from instance metadata. In this plugin we use [Google Cloud notation]
 This internal metadata endpoint is only accessible for VMs from the cloud.
+
+[Google Cloud notation]: https://nebius.com/il/docs/compute/operations/vm-info/get-info#gce-metadata
