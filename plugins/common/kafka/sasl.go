@@ -9,10 +9,11 @@ import (
 )
 
 type SASLAuth struct {
-	SASLUsername  config.Secret `toml:"sasl_username"`
-	SASLPassword  config.Secret `toml:"sasl_password"`
-	SASLMechanism string        `toml:"sasl_mechanism"`
-	SASLVersion   *int          `toml:"sasl_version"`
+	SASLUsername   config.Secret     `toml:"sasl_username"`
+	SASLPassword   config.Secret     `toml:"sasl_password"`
+	SASLExtentions map[string]string `toml:"sasl_extensions"`
+	SASLMechanism  string            `toml:"sasl_mechanism"`
+	SASLVersion    *int              `toml:"sasl_version"`
 
 	// GSSAPI config
 	SASLGSSAPIServiceName        string `toml:"sasl_gssapi_service_name"`
@@ -91,7 +92,7 @@ func (k *SASLAuth) Token() (*sarama.AccessToken, error) {
 	defer config.ReleaseSecret(token)
 	return &sarama.AccessToken{
 		Token:      string(token),
-		Extensions: map[string]string{},
+		Extensions: k.SASLExtentions,
 	}, nil
 }
 
