@@ -33,13 +33,13 @@ func TestValidatePath(t *testing.T) {
 	t.Run("with correct file extensions checkFile shouldn't return any errors", func(t *testing.T) {
 		testCases := []struct {
 			path         string
-			ft           FileType
+			ft           fileType
 			expectedPath string
 		}{
-			{"/tmp/socket.sock", Socket, "/tmp/socket.sock"},
-			{"/foo/../tmp/socket.sock", Socket, "/tmp/socket.sock"},
-			{"/tmp/file.log", Log, "/tmp/file.log"},
-			{"/foo/../tmp/file.log", Log, "/tmp/file.log"},
+			{"/tmp/socket.sock", socket, "/tmp/socket.sock"},
+			{"/foo/../tmp/socket.sock", socket, "/tmp/socket.sock"},
+			{"/tmp/file.log", log, "/tmp/file.log"},
+			{"/foo/../tmp/file.log", log, "/tmp/file.log"},
 		}
 
 		for _, tc := range testCases {
@@ -51,11 +51,11 @@ func TestValidatePath(t *testing.T) {
 	t.Run("with empty path specified validate path should return an error", func(t *testing.T) {
 		testCases := []struct {
 			path                  string
-			ft                    FileType
+			ft                    fileType
 			expectedErrorContains string
 		}{
-			{"", Socket, "required path not specified"},
-			{"", Log, "required path not specified"},
+			{"", socket, "required path not specified"},
+			{"", log, "required path not specified"},
 		}
 
 		for _, tc := range testCases {
@@ -67,13 +67,13 @@ func TestValidatePath(t *testing.T) {
 	t.Run("with wrong extension file validatePath should return an error", func(t *testing.T) {
 		testCases := []struct {
 			path                  string
-			ft                    FileType
+			ft                    fileType
 			expectedErrorContains string
 		}{
-			{"/tmp/socket.foo", Socket, "wrong file extension"},
-			{"/tmp/file.foo", Log, "wrong file extension"},
-			{"/tmp/socket.sock", Log, "wrong file extension"},
-			{"/tmp/file.log", Socket, "wrong file extension"},
+			{"/tmp/socket.foo", socket, "wrong file extension"},
+			{"/tmp/file.foo", log, "wrong file extension"},
+			{"/tmp/socket.sock", log, "wrong file extension"},
+			{"/tmp/file.log", socket, "wrong file extension"},
 		}
 
 		for _, tc := range testCases {
@@ -85,11 +85,11 @@ func TestValidatePath(t *testing.T) {
 	t.Run("with not absolute path validatePath should return the error", func(t *testing.T) {
 		testCases := []struct {
 			path                  string
-			ft                    FileType
+			ft                    fileType
 			expectedErrorContains string
 		}{
-			{"foo/tmp/socket.sock", Socket, "path is not absolute"},
-			{"foo/tmp/file.log", Log, "path is not absolute"},
+			{"foo/tmp/socket.sock", socket, "path is not absolute"},
+			{"foo/tmp/file.log", log, "path is not absolute"},
 		}
 
 		for _, tc := range testCases {
@@ -107,10 +107,10 @@ func TestCheckFile(t *testing.T) {
 
 		testCases := []struct {
 			path string
-			ft   FileType
+			ft   fileType
 		}{
-			{"testdata/logfiles/example.log", Log},
-			{tempSocket.pathToSocket, Socket},
+			{"testdata/logfiles/example.log", log},
+			{tempSocket.pathToSocket, socket},
 		}
 
 		for _, tc := range testCases {
@@ -124,11 +124,11 @@ func TestCheckFile(t *testing.T) {
 
 		testCases := []struct {
 			path                  string
-			ft                    FileType
+			ft                    fileType
 			expectedErrorContains string
 		}{
-			{"testdata/logfiles/example.log", Socket, "provided path does not point to a socket file"},
-			{tempSocket.pathToSocket, Log, "provided path does not point to a log file:"},
+			{"testdata/logfiles/example.log", socket, "provided path does not point to a socket file"},
+			{tempSocket.pathToSocket, log, "provided path does not point to a log file:"},
 		}
 
 		for _, tc := range testCases {
@@ -140,11 +140,11 @@ func TestCheckFile(t *testing.T) {
 	t.Run("with path to non existing file checkFile should return the error", func(t *testing.T) {
 		testCases := []struct {
 			path                  string
-			ft                    FileType
+			ft                    fileType
 			expectedErrorContains string
 		}{
-			{"/foo/example.log", Log, "provided path does not exist"},
-			{"/foo/example.sock", Socket, "provided path does not exist"},
+			{"/foo/example.log", log, "provided path does not exist"},
+			{"/foo/example.sock", socket, "provided path does not exist"},
 		}
 
 		for _, tc := range testCases {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,11 +33,9 @@ const (
 	unreachableSocketBehaviorError  = "error"
 	unreachableSocketBehaviorIgnore = "ignore"
 
-	defaultAccessSocketTimeout   = config.Duration(time.Second)
-	defaultWaitForTelemetryDelay = config.Duration(50 * time.Millisecond)
+	defaultAccessSocketTimeout     = config.Duration(time.Second)
+	defaultWaitForTelemetryTimeout = config.Duration(time.Second)
 )
-
-var unreachableSocketBehaviors = []string{unreachableSocketBehaviorError, unreachableSocketBehaviorIgnore}
 
 //go:embed sample.conf
 var sampleConfig string
@@ -51,11 +48,11 @@ type Baseband struct {
 	//optional params
 	UnreachableSocketBehavior string          `toml:"unreachable_socket_behavior"`
 	SocketAccessTimeout       config.Duration `toml:"socket_access_timeout"`
-	WaitForTelemetryDelay     config.Duration `toml:"wait_for_telemetry_delay"`
+	WaitForTelemetryTimeout   config.Duration `toml:"wait_for_telemetry_timeout"`
 
 	Log      telegraf.Logger `toml:"-"`
-	logConn  *LogConnector
-	sockConn *SocketConnector
+	logConn  *logConnector
+	sockConn *socketConnector
 }
 
 func (b *Baseband) SampleConfig() string {
@@ -64,38 +61,42 @@ func (b *Baseband) SampleConfig() string {
 
 // Init performs one time setup of the plugin
 func (b *Baseband) Init() error {
-	var err error
-
 	if b.SocketAccessTimeout < 0 {
 		return fmt.Errorf("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")
 	}
-	if b.WaitForTelemetryDelay < 0 {
-		return fmt.Errorf("wait_for_telemetry_delay should be positive number or equal to 0 (to disable delay)")
+
+	waitForTelemetryDuration := time.Duration(b.WaitForTelemetryTimeout)
+	if waitForTelemetryDuration < 50*time.Millisecond {
+		return fmt.Errorf("wait_for_telemetry_timeout should be equal or larger than 50ms")
 	}
 
 	// Filling default values
 	// Check UnreachableSocketBehavior
-	if len(b.UnreachableSocketBehavior) == 0 {
+	switch b.UnreachableSocketBehavior {
+	case "":
 		b.UnreachableSocketBehavior = unreachableSocketBehaviorError
-	} else if err = choice.Check(b.UnreachableSocketBehavior, unreachableSocketBehaviors); err != nil {
-		return fmt.Errorf("unreachable_socket_behavior: %w", err)
+	case unreachableSocketBehaviorError, unreachableSocketBehaviorIgnore:
+		// Valid options, do nothing
+	default:
+		return fmt.Errorf("unknown choice for unreachable_socket_behavior: %q", b.UnreachableSocketBehavior)
 	}
 
+	var err error
 	// Validate Socket path
-	if b.SocketPath, err = b.checkFilePath(b.SocketPath, Socket); err != nil {
+	if b.SocketPath, err = b.checkFilePath(b.SocketPath, socket); err != nil {
 		return fmt.Errorf("socket_path: %w", err)
 	}
 
 	// Validate log file path
-	if b.FileLogPath, err = b.checkFilePath(b.FileLogPath, Log); err != nil {
+	if b.FileLogPath, err = b.checkFilePath(b.FileLogPath, log); err != nil {
 		return fmt.Errorf("log_file_path: %w", err)
 	}
 
 	// Create Log Connector
-	b.logConn = newLogConnector(b.FileLogPath)
+	b.logConn = newLogConnector(b.FileLogPath, waitForTelemetryDuration)
 
 	// Create Socket Connector
-	b.sockConn = newSocketConnector(b.SocketPath, b.SocketAccessTimeout, b.WaitForTelemetryDelay)
+	b.sockConn = newSocketConnector(b.SocketPath, time.Duration(b.SocketAccessTimeout))
 	return nil
 }
 
@@ -154,13 +155,15 @@ func (b *Baseband) gatherVFMetric(acc telegraf.Accumulator, metricName string) e
 			if err != nil {
 				return err
 			}
-			fields := map[string]interface{}{}
-			tags := map[string]string{}
 
-			tags["operation"] = metric.operationName
-			tags["metric"] = metricNameToTagName(metricName)
-			tags["vf"] = fmt.Sprintf("%v", i)
-			fields["value"] = value
+			fields := map[string]interface{}{
+				"value": value,
+			}
+			tags := map[string]string{
+				"operation": metric.operationName,
+				"metric":    metricNameToTagName(metricName),
+				"vf":        fmt.Sprintf("%v", i),
+			}
 			acc.AddGauge(pluginName, fields, tags)
 		}
 	}
@@ -179,13 +182,15 @@ func (b *Baseband) gatherEngineMetric(acc telegraf.Accumulator, metricName strin
 			if err != nil {
 				return err
 			}
-			fields := map[string]interface{}{}
-			tags := map[string]string{}
 
-			tags["operation"] = metric.operationName
-			tags["metric"] = metricNameToTagName(metricName)
-			tags["engine"] = fmt.Sprintf("%v", i)
-			fields["value"] = value
+			fields := map[string]interface{}{
+				"value": value,
+			}
+			tags := map[string]string{
+				"operation": metric.operationName,
+				"metric":    metricNameToTagName(metricName),
+				"engine":    fmt.Sprintf("%v", i),
+			}
 			acc.AddGauge(pluginName, fields, tags)
 		}
 	}
@@ -194,7 +199,7 @@ func (b *Baseband) gatherEngineMetric(acc telegraf.Accumulator, metricName strin
 
 // Validate the provided path and return the clean version of it
 // if UnreachableSocketBehavior = error -> return error, otherwise ignore the error
-func (b *Baseband) checkFilePath(path string, fileType FileType) (resultPath string, err error) {
+func (b *Baseband) checkFilePath(path string, fileType fileType) (resultPath string, err error) {
 	if resultPath, err = validatePath(path, fileType); err != nil {
 		return "", err
 	}
@@ -210,8 +215,8 @@ func (b *Baseband) checkFilePath(path string, fileType FileType) (resultPath str
 
 func newBaseband() *Baseband {
 	return &Baseband{
-		SocketAccessTimeout:   defaultAccessSocketTimeout,
-		WaitForTelemetryDelay: defaultWaitForTelemetryDelay,
+		SocketAccessTimeout:     defaultAccessSocketTimeout,
+		WaitForTelemetryTimeout: defaultWaitForTelemetryTimeout,
 	}
 }
 

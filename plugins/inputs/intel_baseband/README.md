@@ -77,10 +77,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Setting the value to 0 disables the timeout (not recommended).
   # socket_access_timeout = "1s"
 
-  ## Duration that defines the time needed for pf-bb-config to write telemetry to the log file.
-  ## Delay may differ depending on the environment.
-  ## Setting the value to 0 disables the delay (NOT RECOMMENDED).
-  # wait_for_telemetry_delay = "50ms"
+  ## Duration that defines maximum time plugin will wait for pf-bb-config to write telemetry to the log file.
+  ## Timeout may differ depending on the environment.
+  ## Must be equal or larger than 50ms.
+  # wait_for_telemetry_timeout = "1s"
 ```
 
 ## Metrics
@@ -104,24 +104,24 @@ subset of following measurements may be exposed:
 ## Example Output
 
 ```text
-{"fields":{"value":54},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"code_blocks","operation":"5GUL","vf":"0"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"code_blocks","operation":"5GDL","vf":"0"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"code_blocks","operation":"FFT","vf":"0"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"code_blocks","operation":"5GUL","vf":"1"},"timestamp":1685695885000000000}
-{"fields":{"value":32},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"code_blocks","operation":"5GDL","vf":"1"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"code_blocks","operation":"FFT","vf":"1"},"timestamp":1685695885000000000}
-{"fields":{"value":18560},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"data_bytes","operation":"5GUL","vf":"0"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"data_bytes","operation":"5GDL","vf":"0"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"data_bytes","operation":"FFT","vf":"0"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"data_bytes","operation":"5GUL","vf":"1"},"timestamp":1685695885000000000}
-{"fields":{"value":86368},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"data_bytes","operation":"5GDL","vf":"1"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"host":"ubuntu","metric":"data_bytes","operation":"FFT","vf":"1"},"timestamp":1685695885000000000}
-{"fields":{"value":72},"name":"intel_baseband","tags":{"engine":"0","host":"ubuntu","metric":"per_engine","operation":"5GUL"},"timestamp":1685695885000000000}
-{"fields":{"value":72},"name":"intel_baseband","tags":{"engine":"1","host":"ubuntu","metric":"per_engine","operation":"5GUL"},"timestamp":1685695885000000000}
-{"fields":{"value":72},"name":"intel_baseband","tags":{"engine":"2","host":"ubuntu","metric":"per_engine","operation":"5GUL"},"timestamp":1685695885000000000}
-{"fields":{"value":72},"name":"intel_baseband","tags":{"engine":"3","host":"ubuntu","metric":"per_engine","operation":"5GUL"},"timestamp":1685695885000000000}
-{"fields":{"value":72},"name":"intel_baseband","tags":{"engine":"4","host":"ubuntu","metric":"per_engine","operation":"5GUL"},"timestamp":1685695885000000000}
-{"fields":{"value":132},"name":"intel_baseband","tags":{"engine":"0","host":"ubuntu","metric":"per_engine","operation":"5GDL"},"timestamp":1685695885000000000}
-{"fields":{"value":130},"name":"intel_baseband","tags":{"engine":"1","host":"ubuntu","metric":"per_engine","operation":"5GDL"},"timestamp":1685695885000000000}
-{"fields":{"value":0},"name":"intel_baseband","tags":{"engine":"0","host":"ubuntu","metric":"per_engine","operation":"FFT"},"timestamp":1685695885000000000}
+intel_baseband,host=ubuntu,metric=code_blocks,operation=5GUL,vf=0 value=54i 1685695885000000000
+intel_baseband,host=ubuntu,metric=code_blocks,operation=5GDL,vf=0 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=code_blocks,operation=FFT,vf=0 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=code_blocks,operation=5GUL,vf=1 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=code_blocks,operation=5GDL,vf=1 value=32i 1685695885000000000
+intel_baseband,host=ubuntu,metric=code_blocks,operation=FFT,vf=1 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=data_bytes,operation=5GUL,vf=0 value=18560i 1685695885000000000
+intel_baseband,host=ubuntu,metric=data_bytes,operation=5GDL,vf=0 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=data_bytes,operation=FFT,vf=0 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=data_bytes,operation=5GUL,vf=1 value=0i 1685695885000000000
+intel_baseband,host=ubuntu,metric=data_bytes,operation=5GDL,vf=1 value=86368i 1685695885000000000
+intel_baseband,host=ubuntu,metric=data_bytes,operation=FFT,vf=1 value=0i 1685695885000000000
+intel_baseband,engine=0,host=ubuntu,metric=per_engine,operation=5GUL value=72i 1685695885000000000
+intel_baseband,engine=1,host=ubuntu,metric=per_engine,operation=5GUL value=72i 1685695885000000000
+intel_baseband,engine=2,host=ubuntu,metric=per_engine,operation=5GUL value=72i 1685695885000000000
+intel_baseband,engine=3,host=ubuntu,metric=per_engine,operation=5GUL value=72i 1685695885000000000
+intel_baseband,engine=4,host=ubuntu,metric=per_engine,operation=5GUL value=72i 1685695885000000000
+intel_baseband,engine=0,host=ubuntu,metric=per_engine,operation=5GDL value=132i 1685695885000000000
+intel_baseband,engine=1,host=ubuntu,metric=per_engine,operation=5GDL value=130i 1685695885000000000
+intel_baseband,engine=0,host=ubuntu,metric=per_engine,operation=FFT value=0i 1685695885000000000
 ```

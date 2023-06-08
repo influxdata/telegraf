@@ -18,7 +18,7 @@ func TestReadLogFile(t *testing.T) {
 		err         error
 	}{
 		{"when file doesn't exist return the error", "testdata/logfiles/doesntexist", errors.New("no such file or directory")},
-		{"when the file is empty return the error", "testdata/logfiles/empty.log", errors.New("log file is empty or incomplete")},
+		{"when the file is empty return the error", "testdata/logfiles/empty.log", errors.New("log file is empty")},
 		{"when the log file is correct, error should be nil", "testdata/logfiles/example.log", nil},
 	}
 
@@ -251,8 +251,8 @@ func TestParseOperationName(t *testing.T) {
 	}
 }
 
-func prepareLogConnMock() *LogConnector {
-	return &LogConnector{
+func prepareLogConnMock() *logConnector {
+	return &logConnector{
 		path:        "",
 		numVFs:      -1,
 		lastModTime: time.Time{},

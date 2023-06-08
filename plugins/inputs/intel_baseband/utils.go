@@ -12,19 +12,19 @@ import (
 	"strings"
 )
 
-type FileType int
+type fileType int
 
 const (
-	Log FileType = iota
-	Socket
+	log fileType = iota
+	socket
 )
 
-func validatePath(pathToRead string, ft FileType) (string, error) {
+func validatePath(pathToRead string, ft fileType) (string, error) {
 	if pathToRead == "" {
 		return "", errors.New("required path not specified")
 	}
 	cleanPath := path.Clean(pathToRead)
-	if (ft == Log && path.Ext(cleanPath) != logFileExtension) || (ft == Socket && path.Ext(cleanPath) != socketExtension) {
+	if (ft == log && path.Ext(cleanPath) != logFileExtension) || (ft == socket && path.Ext(cleanPath) != socketExtension) {
 		return "", fmt.Errorf("wrong file extension: %q", cleanPath)
 	}
 	if !path.IsAbs(cleanPath) {
@@ -33,7 +33,7 @@ func validatePath(pathToRead string, ft FileType) (string, error) {
 	return cleanPath, nil
 }
 
-func checkFile(pathToFile string, fileType FileType) error {
+func checkFile(pathToFile string, fileType fileType) error {
 	pathInfo, err := os.Lstat(pathToFile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -48,11 +48,11 @@ func checkFile(pathToFile string, fileType FileType) error {
 
 	mode := pathInfo.Mode()
 	switch fileType {
-	case Socket:
+	case socket:
 		if mode&os.ModeSocket != os.ModeSocket {
 			return fmt.Errorf("provided path does not point to a socket file: %q", pathToFile)
 		}
-	case Log:
+	case log:
 		if !(mode.IsRegular()) {
 			return fmt.Errorf("provided path does not point to a log file: %q", pathToFile)
 		}

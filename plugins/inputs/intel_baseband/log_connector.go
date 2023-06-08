@@ -17,11 +17,13 @@ const (
 
 	deviceStatusStartPrefix = "Device Status::"
 	deviceStatusEndPrefix   = "VFs"
+
+	clearLogCmdText = "clear_log"
 )
 
 var errFindingSubstring = errors.New("couldn't find the substring in the log file")
 
-type LogConnector struct {
+type logConnector struct {
 	// path to log
 	path string
 
@@ -31,16 +33,17 @@ type LogConnector struct {
 	// Log file data
 	lines []string
 
-	lastModTime time.Time
+	waitForTelemetryTimeout time.Duration
+	lastModTime             time.Time
 }
 
-type LogMetric struct {
+type logMetric struct {
 	operationName string
 	data          []string
 }
 
 // Try to read file and fill the .lines field.
-func (lc *LogConnector) readLogFile() error {
+func (lc *logConnector) readLogFile() error {
 	err := lc.checkLogFreshness()
 	if err != nil {
 		return err
@@ -57,44 +60,76 @@ func (lc *LogConnector) readLogFile() error {
 	// - two lines for operation (counters name and metrics value)
 	lines := strings.Split(string(file), "\n")
 	if len(lines) < 3 {
-		return errors.New("log file is empty or incomplete, 'wait_for_telemetry_delay' may have been set to low, try to increase it")
+		return errors.New("log file is incomplete")
 	}
 
 	lc.lines = lines
 	return nil
 }
 
-// function checks whether the data in the log file were updated by checking the last modification date
-func (lc *LogConnector) checkLogFreshness() error {
-	fileInfo, err := os.Stat(lc.path)
+// function checks whether the data in the log file were updated by checking the last modification date and size
+func (lc *logConnector) checkLogFreshness() error {
+	start := time.Now()
+
+	// initial wait for telemetry being written to file
+	time.Sleep(50 * time.Millisecond)
+
+	// check if it was written completely
+	for {
+		fileInfo, err := os.Stat(lc.path)
+		if err != nil {
+			return fmt.Errorf("couldn't stat log file: %w", err)
+		}
+		currModTime := fileInfo.ModTime()
+
+		// pf-bb-config first performs log clearing (which will write clear_log line to this log just before it will be cleared),
+		// and then dumps the newest telemetry to this file.
+		// This checks if:
+		//  - modification time has been changed
+		//  - file is not empty
+		//  - file doesn't contain clear_log command (it may appear for few milliseconds, just before file is cleared)
+		if lc.lastModTime != currModTime && fileInfo.Size() != 0 && !lc.isClearLogContainedInFile() {
+			//refreshing succeed
+			lc.lastModTime = currModTime
+			return nil
+		}
+		if time.Since(start) >= lc.waitForTelemetryTimeout {
+			if fileInfo.Size() == 0 {
+				return errors.New("log file is empty")
+			}
+			return errors.New("failed to refresh telemetry data")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func (lc *logConnector) isClearLogContainedInFile() bool {
+	file, err := os.ReadFile(lc.path)
 	if err != nil {
-		return fmt.Errorf("couldn't stat log file: %w", err)
+		// for now, error means that "clear_log" line is not contained in log
+		return false
 	}
-	currModData := fileInfo.ModTime()
-	if lc.lastModTime == currModData {
-		return errors.New("failed to refresh telemetry data: 'wait_for_telemetry_delay' may have been set to low, try to increase it")
-	}
-	lc.lastModTime = currModData
-	return nil
+
+	return strings.Contains(string(file), clearLogCmdText)
 }
 
 // Try to read file and return lines from it
-func (lc *LogConnector) getLogLines() []string {
+func (lc *logConnector) getLogLines() []string {
 	return lc.lines
 }
 
 // Try to read file and return lines from it
-func (lc *LogConnector) getLogLinesNum() int {
+func (lc *logConnector) getLogLinesNum() int {
 	return len(lc.lines)
 }
 
 // Return the number of VFs in the log file
-func (lc *LogConnector) getNumVFs() int {
+func (lc *logConnector) getNumVFs() int {
 	return lc.numVFs
 }
 
 // find a line which contains Device Status. Example = Thu Apr 13 13:28:40 2023:INFO:Device Status:: 2 VFs
-func (lc *LogConnector) readNumVFs() error {
+func (lc *logConnector) readNumVFs() error {
 	for _, line := range lc.lines {
 		if !strings.Contains(line, deviceStatusStartPrefix) {
 			continue
@@ -113,7 +148,7 @@ func (lc *LogConnector) readNumVFs() error {
 }
 
 // Find a line which contains a substring in the log file
-func (lc *LogConnector) getSubstringLine(offsetLine int, substring string) (int, string, error) {
+func (lc *logConnector) getSubstringLine(offsetLine int, substring string) (int, string, error) {
 	if len(substring) == 0 {
 		return 0, "", fmt.Errorf("substring is empty")
 	}
@@ -128,26 +163,19 @@ func (lc *LogConnector) getSubstringLine(offsetLine int, substring string) (int,
 	return 0, "", fmt.Errorf("%q: %w", substring, errFindingSubstring)
 }
 
-func (lc *LogConnector) getMetrics(name string) (metrics []*LogMetric, err error) {
-	currOffset, offset := 0, 0
+func (lc *logConnector) getMetrics(name string) (metrics []*logMetric, err error) {
+	offset := 0
 	for {
-		var metric *LogMetric
-		currOffset, metric, err = lc.getMetric(offset, name)
+		currOffset, metric, err := lc.getMetric(offset, name)
 		if err != nil {
-			if errors.Is(err, errFindingSubstring) {
-				break
+			if !errors.Is(err, errFindingSubstring) || len(metrics) == 0 {
+				return nil, err
 			}
-			return nil, err
+			return metrics, nil
 		}
 		metrics = append(metrics, metric)
 		offset = currOffset
 	}
-
-	if len(metrics) == 0 {
-		return nil, err
-	}
-
-	return metrics, nil
 }
 
 // Example of log file:
@@ -155,7 +183,7 @@ func (lc *LogConnector) getMetrics(name string) (metrics []*LogMetric, err error
 // Thu May 18 08:45:15 2023:INFO:0 0
 // Input: offsetLine, metric name (Code Blocks)
 // Func will return: current offset after reading the metric (2), metric with operation name and data(5GUL, ["0", "0"]) and error
-func (lc *LogConnector) getMetric(offsetLine int, name string) (int, *LogMetric, error) {
+func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric, error) {
 	i, line, err := lc.getSubstringLine(offsetLine, name)
 	if err != nil {
 		return offsetLine, nil, err
@@ -189,11 +217,11 @@ func (lc *LogConnector) getMetric(offsetLine int, name string) (int, *LogMetric,
 			return offsetLine, nil, fmt.Errorf("the content of the log file is incorrect, metric's data is empty")
 		}
 	}
-	return i + 2, &LogMetric{operationName: operationName, data: data}, nil
+	return i + 2, &logMetric{operationName: operationName, data: data}, nil
 }
 
 // Example value = Thu Apr 13 13:28:40 2023:INFO:Device Status:: 2 VFs
-func (lc *LogConnector) parseNumVFs(s string) (int, error) {
+func (lc *logConnector) parseNumVFs(s string) (int, error) {
 	i := strings.LastIndex(s, deviceStatusStartPrefix)
 	if i == -1 {
 		return 0, fmt.Errorf("couldn't find device status prefix in line")
@@ -216,7 +244,7 @@ func (lc *LogConnector) parseNumVFs(s string) (int, error) {
 // Parse Operation name
 // Example = Thu Apr 13 13:28:40 2023:INFO:5GUL counters: Code Blocks
 // Output: 5GUL
-func (lc *LogConnector) parseOperationName(s string) string {
+func (lc *logConnector) parseOperationName(s string) string {
 	i := strings.Index(s, infoLine)
 	if i >= 0 {
 		j := strings.Index(s[i:], countersLine)
@@ -229,16 +257,17 @@ func (lc *LogConnector) parseOperationName(s string) string {
 	return ""
 }
 
-func newLogConnector(path string) *LogConnector {
+func newLogConnector(path string, waitForTelemetryTimeout time.Duration) *logConnector {
 	lastModTime := time.Time{}
 	fileInfo, err := os.Stat(path)
 	if err == nil {
 		lastModTime = fileInfo.ModTime()
 	}
 
-	return &LogConnector{
-		path:        path,
-		numVFs:      -1,
-		lastModTime: lastModTime,
+	return &logConnector{
+		path:                    path,
+		waitForTelemetryTimeout: waitForTelemetryTimeout,
+		numVFs:                  -1,
+		lastModTime:             lastModTime,
 	}
 }

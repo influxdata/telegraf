@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs/intel_baseband/mock"
 )
 
@@ -19,18 +18,18 @@ func TestWriteCommandToSocket(t *testing.T) {
 		conn := &mocks.Conn{}
 		conn.On("Write", mock.Anything).Return(2, nil)
 		conn.On("SetWriteDeadline", mock.Anything).Return(nil)
-		connector := SocketConnector{connection: conn}
+		connector := socketConnector{connection: conn}
 
-		err := connector.WriteCommandToSocket(0x00)
+		err := connector.writeCommandToSocket(0x00)
 		require.NoError(t, err)
 
 		defer conn.AssertExpectations(t)
 	})
 
 	t.Run("without setting up a connection it should return an error", func(t *testing.T) {
-		connector := SocketConnector{}
+		connector := socketConnector{}
 
-		err := connector.WriteCommandToSocket(0x00)
+		err := connector.writeCommandToSocket(0x00)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "connection had not been established before")
 	})
@@ -38,9 +37,9 @@ func TestWriteCommandToSocket(t *testing.T) {
 	t.Run("handling timeout setting error", func(t *testing.T) {
 		conn := &mocks.Conn{}
 		conn.On("SetWriteDeadline", mock.Anything).Return(fmt.Errorf("deadline set error"))
-		connector := SocketConnector{connection: conn}
+		connector := socketConnector{connection: conn}
 
-		err := connector.WriteCommandToSocket(0x00)
+		err := connector.writeCommandToSocket(0x00)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to set timeout for request")
@@ -53,9 +52,9 @@ func TestWriteCommandToSocket(t *testing.T) {
 		conn := &mocks.Conn{}
 		conn.On("Write", []byte{unsupportedCommand, 0x00}).Return(0, fmt.Errorf("unsupported command"))
 		conn.On("SetWriteDeadline", mock.Anything).Return(nil)
-		connector := SocketConnector{connection: conn}
+		connector := socketConnector{connection: conn}
 
-		err := connector.WriteCommandToSocket(unsupportedCommand)
+		err := connector.writeCommandToSocket(unsupportedCommand)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to send request to socket")
@@ -70,7 +69,7 @@ func TestDumpTelemetryToLog(t *testing.T) {
 		defer tempSocket.Close()
 		tempLogFile := newTempLogFile(t)
 		defer tempLogFile.Close()
-		connector := newSocketConnector(tempSocket.pathToSocket, config.Duration(5*time.Second), config.Duration(1*time.Second))
+		connector := newSocketConnector(tempSocket.pathToSocket, 5*time.Second)
 
 		err := connector.dumpTelemetryToLog()
 		require.NoError(t, err)
