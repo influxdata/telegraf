@@ -3,11 +3,11 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"github.com/klauspost/compress/gzip"
 	"errors"
 	"fmt"
 	"io"
 
+	"github.com/klauspost/compress/gzip"
 	"github.com/klauspost/compress/zlib"
 	"github.com/klauspost/pgzip"
 )
