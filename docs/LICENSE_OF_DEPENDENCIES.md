@@ -222,6 +222,7 @@ following works:
 - github.com/kballard/go-shellquote [MIT License](https://github.com/kballard/go-shellquote/blob/master/LICENSE)
 - github.com/klauspost/compress [BSD 3-Clause Clear License](https://github.com/klauspost/compress/blob/master/LICENSE)
 - github.com/klauspost/cpuid [MIT License](https://github.com/klauspost/cpuid/blob/master/LICENSE)
+- github.com/klauspost/pgzip [MIT License](https://github.com/klauspost/pgzip/blob/master/LICENSE)
 - github.com/kolo/xmlrpc [MIT License](https://github.com/kolo/xmlrpc/blob/master/LICENSE)
 - github.com/kylelemons/godebug [Apache License 2.0](https://github.com/kylelemons/godebug/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
