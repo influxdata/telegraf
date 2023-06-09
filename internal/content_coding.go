@@ -136,6 +136,8 @@ func NewContentDecoder(encoding string) (ContentDecoder, error) {
 		return NewGzipDecoder(), nil
 	case "zlib":
 		return NewZlibDecoder(), nil
+	case "zstd":
+		return NewZstdDecoder()
 	case "identity", "":
 		return NewIdentityDecoder(), nil
 	case "auto":

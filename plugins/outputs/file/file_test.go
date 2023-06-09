@@ -11,14 +11,13 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/klauspost/compress/zstd"
-	"github.com/klauspost/pgzip"
 )
 
 const (
 	expNewFile   = "test1,tag1=value1 value=1 1257894000000000000\n"
 	expExistFile = "cpu,cpu=cpu0 value=100 1455312810012459582\n" +
 		"test1,tag1=value1 value=1 1257894000000000000\n"
+	maxDecompressionSize = 1024 * 1024
 )
 
 func TestCompressionConfigErrors(t *testing.T) {
@@ -171,6 +170,31 @@ func TestNewGzipCompressedFiles(t *testing.T) {
 	require.NoError(t, f.Close())
 }
 
+func TestNewZlibCompressedFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	fh1 := tmpFile(t)
+	fh2 := tmpFile(t)
+	fh3 := tmpFile(t)
+	f := File{
+		Files:                []string{fh1, fh2, fh3},
+		serializer:           s,
+		CompressionAlgorithm: "zlib",
+		CompressionLevel:     -1,
+	}
+
+	require.NoError(t, f.Connect())
+
+	require.NoError(t, f.Write(testutil.MockMetrics()))
+
+	validateZlibCompressedFile(t, fh1, expNewFile)
+	validateZlibCompressedFile(t, fh2, expNewFile)
+	validateZlibCompressedFile(t, fh3, expNewFile)
+
+	require.NoError(t, f.Close())
+}
+
 func TestNewZstdCompressedFiles(t *testing.T) {
 	s := &influx.Serializer{}
 	require.NoError(t, s.Init())
@@ -315,10 +339,11 @@ func validateFile(t *testing.T, fileName, expS string) {
 }
 
 func validateZstdCompressedFile(t *testing.T, fileName, expS string) {
-	var decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
+	decoder, err := internal.NewContentDecoder("zstd")
+	require.NoError(t, err)
 	buf, err := os.ReadFile(fileName)
 	require.NoError(t, err)
-	buf, err = decoder.DecodeAll(buf, nil)
+	buf, err = decoder.Decode(buf, maxDecompressionSize)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }
@@ -326,10 +351,19 @@ func validateZstdCompressedFile(t *testing.T, fileName, expS string) {
 func validateGzipCompressedFile(t *testing.T, fileName, expS string) {
 	buf, err := os.ReadFile(fileName)
 	require.NoError(t, err)
-	rfr, err := pgzip.NewReader(bytes.NewReader(buf))
+	rfr, err := internal.NewContentDecoder("gzip")
 	require.NoError(t, err)
-	defer rfr.Close()
-	buf, err = io.ReadAll(rfr)
+	buf, err = rfr.Decode(buf, maxDecompressionSize)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
+}
+
+func validateZlibCompressedFile(t *testing.T, fileName, expS string) {
+	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	rfr, err := internal.NewContentDecoder("zlib")
+	require.NoError(t, err)
+	buf, err = rfr.Decode(buf, maxDecompressionSize)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }

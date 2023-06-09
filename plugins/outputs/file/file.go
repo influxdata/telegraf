@@ -10,11 +10,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/klauspost/compress/zstd"
-	gzip "github.com/klauspost/pgzip"
 )
 
 //go:embed sample.conf
@@ -22,7 +21,8 @@ var sampleConfig string
 
 var ValidCompressionAlgorithmLevels = map[string][]int{
 	"zstd": {1, 3, 7, 11},
-	"gzip": {-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+	"gzip": {-2, -1, 1, 9},
+	"zlib": {-2, -1, 1, 9},
 }
 
 type File struct {
@@ -33,7 +33,7 @@ type File struct {
 	UseBatchFormat       bool            `toml:"use_batch_format"`
 	CompressionAlgorithm string          `toml:"compression_algorithm"`
 	CompressionLevel     int             `toml:"compression_level"`
-	encoder              interface{}
+	encoder              internal.ContentEncoder
 	Log                  telegraf.Logger `toml:"-"`
 
 	writer     io.Writer
@@ -57,37 +57,6 @@ func validateCompressionLevel(algorithm string, level int) error {
 		}
 	}
 	return fmt.Errorf("unsupported compression level provided: %d. only %v are supported", level, ValidCompressionAlgorithmLevels[algorithm])
-}
-
-func compressZstd(encoder *zstd.Encoder, src []byte) []byte {
-	return encoder.EncodeAll(src, make([]byte, 0, len(src)))
-}
-
-func compressGzip(writer io.Writer, data []byte, level int) error {
-	gz, err := gzip.NewWriterLevel(writer, level)
-
-	if err != nil {
-		return err
-	}
-
-	_, err = gz.Write(data)
-	if err != nil {
-		return err
-	}
-
-	if err = gz.Flush(); err != nil {
-		return err
-	}
-
-	if err = gz.Close(); err != nil {
-		return err
-	}
-
-	return err
-}
-
-func closeZstdEncoder(encoder *zstd.Encoder) {
-	encoder.Close()
 }
 
 func (*File) SampleConfig() string {
@@ -126,11 +95,14 @@ func (f *File) Init() error {
 }
 
 func (f *File) Connect() error {
+	var err error
 	writers := []io.Writer{}
 
-	if f.CompressionAlgorithm == "zstd" {
-		f.encoder, _ = zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(f.CompressionLevel)))
+	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
+	if err != nil {
+		return err
 	}
+
 	for _, file := range f.Files {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
@@ -157,9 +129,6 @@ func (f *File) Close() error {
 			err = errClose
 		}
 	}
-	if f.CompressionAlgorithm == "zstd" {
-		closeZstdEncoder(f.encoder.(*zstd.Encoder))
-	}
 	return err
 }
 
@@ -168,38 +137,36 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 	if f.UseBatchFormat {
 		octets, err := f.serializer.SerializeBatch(metrics)
-		if f.CompressionAlgorithm == "zstd" {
-			octets = compressZstd(f.encoder.(*zstd.Encoder), octets)
-		}
 		if err != nil {
 			f.Log.Errorf("Could not serialize metric: %v", err)
 		}
 
-		if f.CompressionAlgorithm == "gzip" {
-			err = compressGzip(f.writer, octets, f.CompressionLevel)
+		if f.CompressionAlgorithm != "" {
+			octets, err = f.encoder.Encode(octets)
 			if err != nil {
-				f.Log.Errorf("Error writing to file: %v", err)
+				f.Log.Errorf("Could not compress metrics: %v", err)
 			}
-		} else {
-			_, err = f.writer.Write(octets)
-			if err != nil {
-				f.Log.Errorf("Error writing to file: %v", err)
-			}
+		}
+
+		_, err = f.writer.Write(octets)
+		if err != nil {
+			f.Log.Errorf("Error writing to file: %v", err)
 		}
 	} else {
 		for _, metric := range metrics {
 			b, err := f.serializer.Serialize(metric)
-			if f.CompressionAlgorithm == "zstd" {
-				b = compressZstd(f.encoder.(*zstd.Encoder), b)
-			}
 			if err != nil {
 				f.Log.Debugf("Could not serialize metric: %v", err)
 			}
-			if f.CompressionAlgorithm == "gzip" {
-				err = compressGzip(f.writer, b, f.CompressionLevel)
-			} else {
-				_, err = f.writer.Write(b)
+
+			if f.CompressionAlgorithm != "" {
+				b, err = f.encoder.Encode(b)
+				if err != nil {
+					f.Log.Errorf("Could not compress metrics: %v", err)
+				}
 			}
+
+			_, err = f.writer.Write(b)
 			if err != nil {
 				writeErr = fmt.Errorf("failed to write message: %w", err)
 			}
