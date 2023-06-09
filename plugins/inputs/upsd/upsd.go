@@ -30,8 +30,6 @@ type Upsd struct {
 	ForceFloat bool   `toml:"force_float"`
 
 	Log telegraf.Logger `toml:"-"`
-
-	batteryRuntimeTypeWarningIssued bool
 }
 
 func (*Upsd) SampleConfig() string {
