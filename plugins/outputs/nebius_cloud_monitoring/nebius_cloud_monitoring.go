@@ -106,7 +106,7 @@ func (a *NebiusCloudMonitoring) Init() error {
 
 // Connect initializes the plugin and validates connectivity
 func (a *NebiusCloudMonitoring) Connect() error {
-	a.Log.Infof("getting folder ID in %s", a.metadataFolderURL)
+	a.Log.Debugf("Getting folder ID in %s", a.metadataFolderURL)
 	body, err := a.getResponseFromMetadata(a.client, a.metadataFolderURL)
 	if err != nil {
 		return err
