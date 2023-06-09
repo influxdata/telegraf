@@ -214,7 +214,7 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 		return false, err
 	}
 	sort.Strings(allDiscoveredTopics)
-	k.Log.Debugf("discovered topics: %v", allDiscoveredTopics)
+	k.Log.Debugf("discovered %d topics", len(allDiscoveredTopics))
 
 	extantTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range allDiscoveredTopics {
@@ -232,7 +232,6 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 	wantedTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range k.Topics {
 		// Get our pre-specified topics
-		k.Log.Debugf("adding literally-specified topic %s", t)
 		wantedTopicSet[t] = true
 	}
 	for _, t := range allDiscoveredTopics {
@@ -240,7 +239,6 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
 				wantedTopicSet[t] = true
-				k.Log.Debugf("adding regexp-matched topic %q", t)
 				break
 			}
 		}
@@ -350,7 +348,7 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 		// Fast exit if the consumer isn't running
 		return nil
 	}
-	k.Log.Info("restarting consumer")
+	k.Log.Info("restarting consumer group")
 	k.Log.Debug("creating new consumer group")
 	newConsumer, err := k.ConsumerCreator.Create(
 		k.Brokers,
@@ -361,7 +359,7 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 		acc.AddError(err)
 		return err
 	}
-	k.Log.Debug("acquiring new context before swapping consumers")
+	k.Log.Debug("acquiring new context before swapping consumer groups")
 	ctx, cancel := context.WithCancel(context.Background())
 	// Do we need to protect this with a lock?
 	// Do the switcheroo.
@@ -378,10 +376,10 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 			return
 		}
 	}()
-	k.Log.Info("starting new consumer group")
+	k.Log.Debug("starting new consumer group")
 	// Lock would end here.
 	k.consumeTopics(ctx, acc)
-	k.Log.Info("restarted with new topics")
+	k.Log.Info("restarted consumer group")
 	return nil
 }
 
