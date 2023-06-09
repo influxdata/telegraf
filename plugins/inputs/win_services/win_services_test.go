@@ -48,9 +48,8 @@ func (m *FakeSvcMgr) OpenService(name string) (WinService, error) {
 		if s.serviceName == name {
 			if s.serviceOpenError != nil {
 				return nil, s.serviceOpenError
-			} else {
-				return &FakeWinSvc{s}, nil
 			}
+			return &FakeWinSvc{s}, nil
 		}
 	}
 	return nil, fmt.Errorf("cannot find service %q", name)
@@ -59,9 +58,8 @@ func (m *FakeSvcMgr) OpenService(name string) (WinService, error) {
 func (m *FakeSvcMgr) ListServices() ([]string, error) {
 	if m.testData.mgrListServicesError != nil {
 		return nil, m.testData.mgrListServicesError
-	} else {
-		return m.testData.queryServiceList, nil
 	}
+	return m.testData.queryServiceList, nil
 }
 
 type FakeMgProvider struct {
@@ -71,9 +69,8 @@ type FakeMgProvider struct {
 func (m *FakeMgProvider) Connect() (WinServiceManager, error) {
 	if m.testData.mgrConnectError != nil {
 		return nil, m.testData.mgrConnectError
-	} else {
-		return &FakeSvcMgr{m.testData}, nil
 	}
+	return &FakeSvcMgr{m.testData}, nil
 }
 
 type FakeWinSvc struct {
@@ -86,33 +83,31 @@ func (m *FakeWinSvc) Close() error {
 func (m *FakeWinSvc) Config() (mgr.Config, error) {
 	if m.testData.serviceConfigError != nil {
 		return mgr.Config{}, m.testData.serviceConfigError
-	} else {
-		return mgr.Config{
-			ServiceType:      0,
-			StartType:        uint32(m.testData.startUpMode),
-			ErrorControl:     0,
-			BinaryPathName:   "",
-			LoadOrderGroup:   "",
-			TagId:            0,
-			Dependencies:     nil,
-			ServiceStartName: m.testData.serviceName,
-			DisplayName:      m.testData.displayName,
-			Password:         "",
-			Description:      "",
-		}, nil
 	}
+	return mgr.Config{
+		ServiceType:      0,
+		StartType:        uint32(m.testData.startUpMode),
+		ErrorControl:     0,
+		BinaryPathName:   "",
+		LoadOrderGroup:   "",
+		TagId:            0,
+		Dependencies:     nil,
+		ServiceStartName: m.testData.serviceName,
+		DisplayName:      m.testData.displayName,
+		Password:         "",
+		Description:      "",
+	}, nil
 }
 func (m *FakeWinSvc) Query() (svc.Status, error) {
 	if m.testData.serviceQueryError != nil {
 		return svc.Status{}, m.testData.serviceQueryError
-	} else {
-		return svc.Status{
-			State:      svc.State(m.testData.state),
-			Accepts:    0,
-			CheckPoint: 0,
-			WaitHint:   0,
-		}, nil
 	}
+	return svc.Status{
+		State:      svc.State(m.testData.state),
+		Accepts:    0,
+		CheckPoint: 0,
+		WaitHint:   0,
+	}, nil
 }
 
 var testErrors = []testData{
