@@ -208,6 +208,7 @@ func (c *httpClient) Database() string {
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context, database string) error {
+	//nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 	query := fmt.Sprintf(`CREATE DATABASE "%s"`, escapeIdentifier.Replace(database))
 
 	req, err := c.makeQueryRequest(query)

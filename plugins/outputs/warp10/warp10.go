@@ -4,6 +4,7 @@ package warp10
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -142,14 +143,14 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	if resp.StatusCode != http.StatusOK {
 		if w.PrintErrorBody {
 			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
+			return errors.New(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
 		}
 
 		if len(resp.Status) < w.MaxStringErrorSize {
-			return fmt.Errorf(w.WarpURL + ": " + resp.Status)
+			return errors.New(w.WarpURL + ": " + resp.Status)
 		}
 
-		return fmt.Errorf(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
+		return errors.New(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
 	}
 
 	return nil
