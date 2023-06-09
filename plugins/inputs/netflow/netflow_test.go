@@ -163,7 +163,7 @@ func TestWrongMapping(t *testing.T) {
 	plugin := &NetFlow{
 		ServiceAddress: "udp://127.0.0.1:0",
 		Protocol:       "ipfix",
-		PENFiles:       []string{"mappings_netflow/ntop.csv"},
+		PENFiles:       []string{"testcases/netflow_mapping.csv"},
 		Log:            &logger,
 	}
 	require.ErrorContains(t, plugin.Init(), "does not match pattern")
