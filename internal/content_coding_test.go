@@ -73,6 +73,44 @@ func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
 	require.ErrorContains(t, err, "size of decoded data exceeds allowed size 3")
 }
 
+func TestZstdEncodeDecode(t *testing.T) {
+	enc, err := NewZstdEncoder()
+	require.NoError(t, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(t, err)
+
+	payload, err := enc.Encode([]byte("howdy"))
+	require.NoError(t, err)
+
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(t, err)
+
+	require.Equal(t, "howdy", string(actual))
+}
+
+func TestZstdReuse(t *testing.T) {
+	enc, err := NewZstdEncoder()
+	require.NoError(t, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(t, err)
+
+	payload, err := enc.Encode([]byte("howdy"))
+	require.NoError(t, err)
+
+	actual, err := dec.Decode(payload, maxDecompressionSize)
+	require.NoError(t, err)
+
+	require.Equal(t, "howdy", string(actual))
+
+	payload, err = enc.Encode([]byte("doody"))
+	require.NoError(t, err)
+
+	actual, err = dec.Decode(payload, maxDecompressionSize)
+	require.NoError(t, err)
+
+	require.Equal(t, "doody", string(actual))
+}
+
 func TestIdentityEncodeDecode(t *testing.T) {
 	enc := NewIdentityEncoder()
 	dec := NewIdentityDecoder()
@@ -225,6 +263,132 @@ func BenchmarkGzipEncodeDecodeBig(b *testing.B) {
 	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
 	dec := NewGzipDecoder()
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, dataLen)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
+
+	for n := 0; n < b.N; n++ {
+		payload, err := enc.Encode(data)
+		require.NoError(b, err)
+
+		_, err = dec.Decode(payload, dataLen)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkZstdEncode(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 64))
+	dataLen := int64(len(data)) + 1
+
+	enc, err := NewZstdEncoder()
+	require.NoError(b, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(b, err)
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, dataLen)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
+
+	for n := 0; n < b.N; n++ {
+		_, err := enc.Encode(data)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkZstdDecode(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 64))
+	dataLen := int64(len(data)) + 1
+
+	enc, err := NewZstdEncoder()
+	require.NoError(b, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(b, err)
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, dataLen)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
+
+	for n := 0; n < b.N; n++ {
+		_, err = dec.Decode(payload, dataLen)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkZstdEncodeDecode(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 64))
+	dataLen := int64(len(data)) + 1
+
+	enc, err := NewZstdEncoder()
+	require.NoError(b, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(b, err)
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, dataLen)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
+
+	for n := 0; n < b.N; n++ {
+		payload, err := enc.Encode(data)
+		require.NoError(b, err)
+
+		_, err = dec.Decode(payload, dataLen)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkZstdEncodeBig(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
+	dataLen := int64(len(data)) + 1
+
+	enc, err := NewZstdEncoder()
+	require.NoError(b, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(b, err)
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, dataLen)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
+
+	for n := 0; n < b.N; n++ {
+		_, err := enc.Encode(data)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkZstdDecodeBig(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
+	dataLen := int64(len(data)) + 1
+
+	enc, err := NewZstdEncoder()
+	require.NoError(b, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(b, err)
+	payload, err := enc.Encode(data)
+	require.NoError(b, err)
+	actual, err := dec.Decode(payload, dataLen)
+	require.NoError(b, err)
+	require.Equal(b, data, actual)
+
+	for n := 0; n < b.N; n++ {
+		_, err = dec.Decode(payload, dataLen)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkZstdEncodeDecodeBig(b *testing.B) {
+	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
+	dataLen := int64(len(data)) + 1
+
+	enc, err := NewZstdEncoder()
+	require.NoError(b, err)
+	dec, err := NewZstdDecoder()
+	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload, dataLen)
