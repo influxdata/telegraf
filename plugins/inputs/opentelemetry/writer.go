@@ -24,8 +24,7 @@ func (w *writeToAccumulator) NewBatch() otel2influx.InfluxWriterBatch {
 	return w
 }
 
-func (w *writeToAccumulator) WritePoint(
-	_ context.Context,
+func (w *writeToAccumulator) EnqueuePoint(
 	measurement string,
 	tags map[string]string,
 	fields map[string]interface{},
@@ -49,6 +48,6 @@ func (w *writeToAccumulator) WritePoint(
 	return nil
 }
 
-func (w *writeToAccumulator) FlushBatch(_ context.Context) error {
+func (w *writeToAccumulator) WriteBatch(_ context.Context) error {
 	return nil
 }

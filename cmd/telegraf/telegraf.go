@@ -103,6 +103,7 @@ func (t *Telegraf) ListSecretStores() ([]string, error) {
 }
 
 func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
+	t.quiet = true
 	c, err := t.loadConfiguration()
 	if err != nil {
 		return nil, err

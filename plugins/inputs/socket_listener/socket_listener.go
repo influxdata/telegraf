@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -55,7 +54,7 @@ type SocketListener struct {
 	tlsint.ServerConfig
 
 	wg       sync.WaitGroup
-	parser   parsers.Parser
+	parser   telegraf.Parser
 	splitter bufio.SplitFunc
 
 	listener listener

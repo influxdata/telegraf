@@ -64,11 +64,12 @@ type InputConfig struct {
 	CollectionOffset time.Duration
 	Precision        time.Duration
 
-	NameOverride      string
-	MeasurementPrefix string
-	MeasurementSuffix string
-	Tags              map[string]string
-	Filter            Filter
+	NameOverride           string
+	MeasurementPrefix      string
+	MeasurementSuffix      string
+	Tags                   map[string]string
+	Filter                 Filter
+	AlwaysIncludeLocalTags bool
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
@@ -105,18 +106,32 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		return nil
 	}
 
+	tags := r.Config.Tags
+	if r.Config.AlwaysIncludeLocalTags {
+		tags = nil
+	}
+
 	m := makemetric(
 		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
-		r.Config.Tags,
+		tags,
 		r.defaultTags)
 
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
 		r.metricFiltered(metric)
 		return nil
+	}
+
+	if r.Config.AlwaysIncludeLocalTags {
+		// Apply plugin tags after filtering
+		for k, v := range r.Config.Tags {
+			if _, ok := metric.GetTag(k); !ok {
+				metric.AddTag(k, v)
+			}
+		}
 	}
 
 	r.MetricsGathered.Incr(1)

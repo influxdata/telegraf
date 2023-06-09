@@ -54,9 +54,18 @@ configuration files.
 ## Environment Variables
 
 Environment variables can be used anywhere in the config file, simply surround
-them with `${}`.  Replacement occurs before file parsing.   For strings
+them with `${}`.  Replacement occurs before file parsing. For strings
 the variable must be within quotes, e.g., `"${STR_VAR}"`, for numbers and booleans
 they should be unquoted, e.g., `${INT_VAR}`, `${BOOL_VAR}`.
+
+In addition to this, Telegraf also supports Shell parameter expansion for environment variables
+which allows syntax such as:
+
+- `${VARIABLE:-default}` evaluates to default if VARIABLE is unset or empty in the environment.
+- `${VARIABLE-default}` evaluates to default only if VARIABLE is unset in the environment.
+Similarly, the following syntax allows you to specify mandatory variables:
+- `${VARIABLE:?err}` exits with an error message containing err if VARIABLE is unset or empty in the environment.
+- `${VARIABLE?err}` exits with an error message containing err if VARIABLE is unset in the environment.
 
 When using the `.deb` or `.rpm` packages, you can define environment variables
 in the `/etc/default/telegraf` file.
@@ -312,6 +321,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   stateful plugins on termination of Telegraf. If the file exists on start,
   the state in the file will be restored for the plugins.
 
+- **always_include_local_tags**:
+  Ensure tags explicitly defined in a plugin will *always* pass tag-filtering
+  via `taginclude` or `tagexclude`. This removes the need to specify local tags
+  twice.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
@@ -393,7 +407,7 @@ Use the name_override parameter to emit measurements with the name `foobar`:
 Emit measurements with two additional tags: `tag1=foo` and `tag2=bar`
 
 > **NOTE**: With TOML, order matters.  Parameters belong to the last defined
-> table header, place `[inputs.cpu.tags]` table at the _end_ of the plugin
+> table header, place `[inputs.cpu.tags]` table at the *end* of the plugin
 > definition.
 
 ```toml
@@ -629,7 +643,7 @@ for time-based filtering. An introduction to the CEL language can be found
 are provided in the [language definition][CEL lang] as well as in the
 [extension documentation][CEL ext].
 
-> NOTE: As CEL is an _interpreted_ languguage, this type of filtering is much
+> NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
 > slower compared to `namepass`/`namedrop` and friends. So consider to use the
 > more restricted filter options where possible in case of high-throughput
 > scenarios.
@@ -642,7 +656,9 @@ are provided in the [language definition][CEL lang] as well as in the
 ### Modifiers
 
 Modifier filters remove tags and fields from a metric.  If all fields are
-removed the metric is removed.
+removed the metric is removed. Tags and fields are modified before a metric is
+passed to a processor, aggregator, or output plugin. When used with an input
+plugin the filter applies after the input runs.
 
 - **fieldpass**:
 An array of [glob pattern][] strings.  Only fields whose field key matches a

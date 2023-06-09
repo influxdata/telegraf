@@ -1,4 +1,4 @@
-// Command handling for secret-stores' "secret" command
+// Command handling for secret-stores' "secrets" command
 package main
 
 import (
@@ -236,7 +236,7 @@ you will be prompted to enter the value of the secret.
 						key := args.Get(1)
 						value := args.Get(2)
 						if value == "" {
-							fmt.Printf("enter secret: ")
+							fmt.Printf("Enter secret value: ")
 							b, err := term.ReadPassword(int(os.Stdin.Fd()))
 							if err != nil {
 								return err

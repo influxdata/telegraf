@@ -153,7 +153,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 					fieldName = "ProcessID"
 					// Look up Process Name from pid
 					if should, _ := w.shouldProcessField("ProcessName"); should {
-						_, _, processName, err := GetFromSnapProcess(fieldValue)
+						processName, err := GetFromSnapProcess(fieldValue)
 						if err == nil {
 							computedValues["ProcessName"] = processName
 						}
@@ -395,7 +395,7 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 
 	buf := make([]byte, bufferSize)
 	event := Event{}
-	err := _EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
+	err := _EvtRender(0, eventHandle, EvtRenderEventXML, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
 	if err != nil {
 		return event, err
 	}

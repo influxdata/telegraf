@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 //go:embed sample.conf
@@ -37,10 +37,30 @@ type Graphite struct {
 	conns []net.Conn
 	tlsint.ClientConfig
 	failedServers []string
+
+	serializer *graphite.GraphiteSerializer
 }
 
 func (*Graphite) SampleConfig() string {
 	return sampleConfig
+}
+
+func (g *Graphite) Init() error {
+	s := &graphite.GraphiteSerializer{
+		Prefix:          g.Prefix,
+		Template:        g.Template,
+		StrictRegex:     g.GraphiteStrictRegex,
+		TagSupport:      g.GraphiteTagSupport,
+		TagSanitizeMode: g.GraphiteTagSanitizeMode,
+		Separator:       g.GraphiteSeparator,
+		Templates:       g.Templates,
+	}
+	if err := s.Init(); err != nil {
+		return err
+	}
+	g.serializer = s
+
+	return nil
 }
 
 func (g *Graphite) Connect() error {
@@ -168,28 +188,15 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(
-		g.Prefix,
-		g.Template,
-		g.GraphiteStrictRegex,
-		g.GraphiteTagSupport,
-		g.GraphiteTagSanitizeMode,
-		g.GraphiteSeparator,
-		g.Templates,
-	)
-	if err != nil {
-		return err
-	}
-
 	for _, metric := range metrics {
-		buf, err := s.Serialize(metric)
+		buf, err := g.serializer.Serialize(metric)
 		if err != nil {
 			g.Log.Errorf("Error serializing some metrics to graphite: %s", err.Error())
 		}
 		batch = append(batch, buf...)
 	}
 
-	err = g.send(batch)
+	err := g.send(batch)
 
 	// If a send failed for a server, try to reconnect to that server
 	if len(g.failedServers) > 0 {

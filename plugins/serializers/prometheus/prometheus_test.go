@@ -141,7 +141,7 @@ http_request_duration_seconds_count 0
 		{
 			name: "simple with timestamp",
 			config: FormatConfig{
-				TimestampExport: ExportTimestamp,
+				ExportTimestamp: true,
 			},
 			metric: testutil.MustMetric(
 				"cpu",
@@ -182,12 +182,14 @@ cpu_time_idle{host="example.org"} 42
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSerializer(FormatConfig{
-				MetricSortOrder: SortMetrics,
-				TimestampExport: tt.config.TimestampExport,
-				StringHandling:  tt.config.StringHandling,
-				CompactEncoding: tt.config.CompactEncoding,
-			})
+			s := &Serializer{
+				FormatConfig{
+					SortMetrics:     true,
+					ExportTimestamp: tt.config.ExportTimestamp,
+					StringAsLabel:   tt.config.StringAsLabel,
+					CompactEncoding: tt.config.CompactEncoding,
+				},
+			}
 
 			actual, err := s.Serialize(tt.metric)
 			require.NoError(t, err)
@@ -536,7 +538,7 @@ cpu_time_idle 42
 		{
 			name: "string as label",
 			config: FormatConfig{
-				StringHandling: StringAsLabel,
+				StringAsLabel: true,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -558,7 +560,7 @@ cpu_time_idle{cpu="cpu0"} 42
 		{
 			name: "string as label duplicate tag",
 			config: FormatConfig{
-				StringHandling: StringAsLabel,
+				StringAsLabel: true,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -582,7 +584,7 @@ cpu_time_idle{cpu="cpu0"} 42
 		{
 			name: "replace characters when using string as label",
 			config: FormatConfig{
-				StringHandling: StringAsLabel,
+				StringAsLabel: true,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -698,11 +700,13 @@ rpc_duration_seconds_count 2693
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSerializer(FormatConfig{
-				MetricSortOrder: SortMetrics,
-				TimestampExport: tt.config.TimestampExport,
-				StringHandling:  tt.config.StringHandling,
-			})
+			s := &Serializer{
+				FormatConfig{
+					SortMetrics:     true,
+					ExportTimestamp: tt.config.ExportTimestamp,
+					StringAsLabel:   tt.config.StringAsLabel,
+				},
+			}
 			actual, err := s.SerializeBatch(tt.metrics)
 			require.NoError(t, err)
 

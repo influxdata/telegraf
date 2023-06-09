@@ -604,7 +604,7 @@ func TestConverter(t *testing.T) {
 					map[string]interface{}{
 						"a": 42.0,
 					},
-					time.Unix(1456799999, 0),
+					time.Unix(1456825199, 0),
 				),
 			},
 		},

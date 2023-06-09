@@ -95,7 +95,7 @@ func Test_jsonToArray(t *testing.T) {
 	t.Run("when got numeric array then string array should be returned", func(t *testing.T) {
 		firstValue := int64(0)
 		secondValue := int64(1)
-		jsonString := fmt.Sprintf(`{"%s": [%d, %d]}`, key, firstValue, secondValue)
+		jsonString := fmt.Sprintf(`{%q: [%d, %d]}`, key, firstValue, secondValue)
 
 		arr, err := jsonToArray([]byte(jsonString), key)
 
@@ -120,7 +120,7 @@ func Test_jsonToArray(t *testing.T) {
 	})
 
 	t.Run("when valid json with json-object is supplied as input then error should be returned", func(t *testing.T) {
-		jsonString := fmt.Sprintf(`{"%s": {"testKey": "testValue"}}`, key)
+		jsonString := fmt.Sprintf(`{%q: {"testKey": "testValue"}}`, key)
 
 		_, err := jsonToArray([]byte(jsonString), key)
 

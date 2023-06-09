@@ -13,6 +13,7 @@ linters:
     - errorlint
     - exportloopref
     - gocheckcompilerdirectives
+    - gocritic
     - goprintffuncname
     - gosec
     - gosimple
@@ -83,6 +84,38 @@ linters-settings:
       - "(*hash/maphash.Hash).Write"
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
+  gocritic:
+    # Which checks should be enabled; can't be combined with 'disabled-checks'.
+    # See https://go-critic.github.io/overview#checks-overview.
+    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
+    # By default, list of stable checks is used.
+    enabled-checks:
+      - argOrder
+      - badCall
+      - badCond
+      - badLock
+      - badSorting
+      - builtinShadowDecl
+      - caseOrder
+      - codegenComment
+      - deferInLoop
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - dynamicFmtString
+      - emptyDecl
+      - evalOrder
+      - exitAfterDefer
+      - externalErrorReassign
+      - nilValReturn
+      - regexpPattern
+      - sloppyTypeAssert
+      - sortSlice
+      - sprintfQuotedString
+      - sqlQuery
+      - uncheckedInlineErr
+      - unnecessaryDefer
+      - weakCond
   gosec:
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules

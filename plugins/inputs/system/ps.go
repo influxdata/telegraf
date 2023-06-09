@@ -218,7 +218,7 @@ func (s *SystemPS) Temperature() ([]host.TemperatureStat, error) {
 	temp, err := host.SensorsTemperatures()
 	if err != nil {
 		var hostWarnings *host.Warnings
-		if errors.As(err, &hostWarnings) {
+		if !errors.As(err, &hostWarnings) {
 			return temp, err
 		}
 	}

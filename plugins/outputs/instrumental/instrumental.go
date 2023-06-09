@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
@@ -39,7 +38,8 @@ type Instrumental struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	conn net.Conn
+	conn       net.Conn
+	serializer *graphite.GraphiteSerializer
 }
 
 const (
@@ -51,6 +51,22 @@ const (
 
 func (*Instrumental) SampleConfig() string {
 	return sampleConfig
+}
+
+func (i *Instrumental) Init() error {
+	s := &graphite.GraphiteSerializer{
+		Prefix:          i.Prefix,
+		Template:        i.Template,
+		TagSanitizeMode: "strict",
+		Separator:       ".",
+		Templates:       i.Templates,
+	}
+	if err := s.Init(); err != nil {
+		return err
+	}
+	i.serializer = s
+
+	return nil
 }
 
 func (i *Instrumental) Connect() error {
@@ -84,11 +100,6 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, "", false, "strict", ".", i.Templates)
-	if err != nil {
-		return err
-	}
-
 	var points []string
 	var metricType string
 
@@ -107,7 +118,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		metricType = m.Tags()["metric_type"]
 		m.RemoveTag("metric_type")
 
-		buf, err := s.Serialize(m)
+		buf, err := i.serializer.Serialize(m)
 		if err != nil {
 			i.Log.Debugf("Could not serialize metric: %v", err)
 			continue
@@ -146,9 +157,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	}
 
 	allPoints := strings.Join(points, "")
-	_, err = fmt.Fprint(i.conn, allPoints)
-
-	if err != nil {
+	if _, err := fmt.Fprint(i.conn, allPoints); err != nil {
 		if errors.Is(err, io.EOF) {
 			_ = i.Close()
 		}

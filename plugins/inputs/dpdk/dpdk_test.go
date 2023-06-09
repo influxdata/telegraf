@@ -238,7 +238,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 	t.Run("when 2 ethdev commands are enabled, then 2*numberOfIds new commands should be appended", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		response := fmt.Sprintf(`{"%s": [1, 123]}`, ethdevListCommand)
+		response := fmt.Sprintf(`{%q: [1, 123]}`, ethdevListCommand)
 		simulateResponse(mockConn, response, nil)
 		expectedCommands := []string{"/ethdev/stats,1", "/ethdev/stats,123", "/ethdev/xstats,1", "/ethdev/xstats,123"}
 
@@ -255,7 +255,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 	t.Run("when 1 rawdev command is enabled, then 2*numberOfIds new commands should be appended", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		response := fmt.Sprintf(`{"%s": [1, 123]}`, rawdevListCommand)
+		response := fmt.Sprintf(`{%q: [1, 123]}`, rawdevListCommand)
 		simulateResponse(mockConn, response, nil)
 		expectedCommands := []string{"/rawdev/xstats,1", "/rawdev/xstats,123"}
 
@@ -271,7 +271,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 	t.Run("when 2 ethdev commands are enabled but one command is disabled, then numberOfIds new commands should be appended", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		response := fmt.Sprintf(`{"%s": [1, 123]}`, ethdevListCommand)
+		response := fmt.Sprintf(`{%q: [1, 123]}`, ethdevListCommand)
 		simulateResponse(mockConn, response, nil)
 		expectedCommands := []string{"/ethdev/stats,1", "/ethdev/stats,123"}
 
