@@ -1,4 +1,4 @@
-// Command handling for secret-stores' "secret" command
+// Command handling for secret-stores' "secrets" command
 package main
 
 import (

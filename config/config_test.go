@@ -3,6 +3,8 @@ package config_test
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -439,6 +441,21 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, expectedPrefix[i], output.NamespacePrefix)
 	}
+}
+
+func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := config.NewConfig()
+	t.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
+	configPath, err := config.GetDefaultConfigPath()
+	require.NoError(t, err)
+	require.Equal(t, []string{ts.URL}, configPath)
+	err = c.LoadConfig("")
+	require.NoError(t, err)
 }
 
 func TestConfig_URLLikeFileName(t *testing.T) {
