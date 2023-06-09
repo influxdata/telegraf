@@ -158,6 +158,17 @@ func TestMissingTemplate(t *testing.T) {
 	require.True(t, found, "warning not found")
 }
 
+func TestWrongMapping(t *testing.T) {
+	var logger testutil.CaptureLogger
+	plugin := &NetFlow{
+		ServiceAddress: "udp://127.0.0.1:0",
+		Protocol:       "ipfix",
+		PENFiles:       []string{"mappings_netflow/ntop.csv"},
+		Log:            &logger,
+	}
+	require.ErrorContains(t, plugin.Init(), "does not match pattern")
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"sync"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
+
+var regexpIPFIXPENMapping = regexp.MustCompile(`\d+\.\d+`)
 
 type decoderFunc func([]byte) interface{}
 
@@ -638,6 +641,9 @@ func (d *netflowDecoder) Init() error {
 			return err
 		}
 		for k, v := range mappings {
+			if !regexpIPFIXPENMapping.MatchString(k) {
+				return fmt.Errorf("key %q in file %q does not match pattern <PEN>.<element-id>; maybe wrong file", k, fn)
+			}
 			if _, found := d.mappingsPEN[k]; found {
 				return fmt.Errorf("duplicate entries for ID %q", k)
 			}
