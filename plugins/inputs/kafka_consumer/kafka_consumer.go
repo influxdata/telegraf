@@ -189,29 +189,29 @@ func (k *KafkaConsumer) compileTopicRegexps() error {
 	return nil
 }
 
-func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
-	// We have instantiated a new generic Kafka client, so we can ask
+func (k *KafkaConsumer) changedTopics() (bool, error) {
+	// We have instantiated a generic Kafka client, so we can ask
 	// it for all the topics it knows about.  Then we build
 	// regexps from our strings, loop over those, loop over the
 	// topics, and if we find a match, add that topic to
 	// out topic set, which then we turn back into a list at the end.
 	//
-	// If our topics changed, and if we have a consumer already,
-	// we must then stop and restart that consumer in order to pick
-	// up the new topics.
+	// If our topics changed, we return true, to indicate that the
+	// consumer will need a restart in order to pick up the new
+	// topics.
 
 	if len(k.regexps) == 0 {
-		return nil
+		return false, nil
 	}
 
 	// Refresh metadata for all topics.
 	err := k.topicClient.RefreshMetadata()
 	if err != nil {
-		return err
+		return false, err
 	}
 	allDiscoveredTopics, err := k.topicClient.Topics()
 	if err != nil {
-		return err
+		return false, err
 	}
 	sort.Strings(allDiscoveredTopics)
 	k.Log.Debugf("discovered topics: %v", allDiscoveredTopics)
@@ -257,52 +257,10 @@ func (k *KafkaConsumer) refreshTopics(acc telegraf.Accumulator) error {
 		k.fingerprint = fingerprint
 		k.allWantedTopics = topicList
 		k.topicLock.Unlock()
-		// Having done that, we need to restart.
-		// This is tricky.  As soon as we call k.cancel() the old
-		// consumer group is no longer usable, so we need to get
-		// a new group and context ready and then pull a switcheroo
-		// quickly.
-		//
-		// I don't know if we lose messages between the cancel() and
-		// calling consumeTopics() on the new consumer group.
-		if k.consumer != nil {
-			k.Log.Info("restarting")
-			k.Log.Debug("creating new consumer group")
-			newConsumer, err := k.ConsumerCreator.Create(
-				k.Brokers,
-				k.ConsumerGroup,
-				k.config,
-			)
-			if err != nil {
-				acc.AddError(err)
-				return err
-			}
-			k.Log.Debug("getting new context before swapping consumers")
-			ctx, cancel := context.WithCancel(context.Background())
-			// Do we need to protect this with a lock?
-			// Do the switcheroo.
-			k.Log.Debug("replacing consumer group")
-			oldConsumer := k.consumer
-			k.consumer = newConsumer
-			k.cancel = cancel
-			// Do this in the background
-			go func() {
-				k.Log.Debug("closing old consumer group")
-				err = oldConsumer.Close()
-				if err != nil {
-					acc.AddError(err)
-					return
-				}
-			}()
-			k.Log.Info("starting new consumer group")
-			// Lock would end here.
-			k.consumeTopics(ctx, acc)
-			k.Log.Info("restarted with new topics")
-		}
-	} else {
-		k.Log.Debugf("topic list unchanged on refresh")
+		return true, nil
 	}
-	return nil
+	k.Log.Debugf("topic list unchanged on refresh")
+	return false, nil
 }
 
 func (k *KafkaConsumer) create() error {
@@ -339,9 +297,17 @@ func (k *KafkaConsumer) handleTicker(acc telegraf.Accumulator) {
 	for {
 		<-k.ticker.C
 		k.Log.Debugf("received topic refresh request (every %s)", dstr)
-		err := k.refreshTopics(acc)
+		changed, err := k.changedTopics()
 		if err != nil {
 			acc.AddError(err)
+			return
+		}
+		if changed {
+			err = k.restartConsumer(acc)
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
 		}
 	}
 }
@@ -372,13 +338,62 @@ func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumula
 	}()
 }
 
+func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
+	// This is tricky.  As soon as we call k.cancel() the old
+	// consumer group is no longer usable, so we need to get
+	// a new group and context ready and then pull a switcheroo
+	// quickly.
+	//
+	// I don't know if we lose messages between the cancel() and
+	// calling consumeTopics() on the new consumer group.
+	if k.consumer == nil {
+		// Fast exit if the consumer isn't running
+		return nil
+	}
+	k.Log.Info("restarting consumer")
+	k.Log.Debug("creating new consumer group")
+	newConsumer, err := k.ConsumerCreator.Create(
+		k.Brokers,
+		k.ConsumerGroup,
+		k.config,
+	)
+	if err != nil {
+		acc.AddError(err)
+		return err
+	}
+	k.Log.Debug("acquiring new context before swapping consumers")
+	ctx, cancel := context.WithCancel(context.Background())
+	// Do we need to protect this with a lock?
+	// Do the switcheroo.
+	k.Log.Debug("replacing consumer group")
+	oldConsumer := k.consumer
+	k.consumer = newConsumer
+	k.cancel = cancel
+	// Do this in the background
+	go func() {
+		k.Log.Debug("closing old consumer group")
+		err = oldConsumer.Close()
+		if err != nil {
+			acc.AddError(err)
+			return
+		}
+	}()
+	k.Log.Info("starting new consumer group")
+	// Lock would end here.
+	k.consumeTopics(ctx, acc)
+	k.Log.Info("restarted with new topics")
+	return nil
+}
+
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
 
-	k.Log.Debug("starting consumer")
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
-		if err = k.refreshTopics(acc); err != nil {
+		if _, err = k.changedTopics(); err != nil {
+			// We're starting, so we expect the list to change;
+			// all we care about is whether we got an error
+			// acquiring our topics.
 			return err
 		}
 		// If refresh interval is specified, start a goroutine
@@ -387,10 +402,11 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		if k.TopicRefreshInterval > 0 {
 			k.ticker = time.NewTicker(time.Duration(k.TopicRefreshInterval))
 			// Note that there's no waitgroup here.  That's because
-			// handleTicker calls refreshTopics which can tell us
-			// to stop and then start again, and the stop cancels
-			// all the waitgroup coroutines, which would include
-			// the restart if we were in it.
+			// handleTicker does care whether topics have changed,
+			// and if they have, it will invoke restartConsumer(),
+			// which tells the current consumer to stop.  That stop
+			// cancels goroutines in the waitgroup, and therefore
+			// the restart goroutine must not be in the waitgroup.
 			go k.handleTicker(acc)
 		}
 	}
@@ -425,7 +441,6 @@ func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 }
 
 func (k *KafkaConsumer) Stop() {
-	k.Log.Debug("starting consumer")
 	if k.ticker != nil {
 		k.ticker.Stop()
 	}
