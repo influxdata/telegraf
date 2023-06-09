@@ -161,10 +161,14 @@ func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
 	}
 
 	var buf bytes.Buffer
-	w, err := pgzip.NewWriterLevel(&buf, cfg.level)
+	pw, err := pgzip.NewWriterLevel(&buf, cfg.level)
+	if err != nil {
+		return nil, err
+	}
+	w, err := gzip.NewWriterLevel(&buf, cfg.level)
 	return &GzipEncoder{
-		pwriter: w,
-		writer:  gzip.NewWriter(&buf),
+		pwriter: pw,
+		writer:  w,
 		buf:     &buf,
 	}, err
 }
