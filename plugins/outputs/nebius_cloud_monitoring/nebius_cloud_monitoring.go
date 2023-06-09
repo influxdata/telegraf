@@ -186,7 +186,7 @@ func (a *NebiusCloudMonitoring) getResponseFromMetadata(c *http.Client, metadata
 }
 
 func (a *NebiusCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
-	a.Log.Debugf("getting new IAM token in %s", a.metadataTokenURL)
+	a.Log.Debugf("Getting new IAM token in %s", a.metadataTokenURL)
 	body, err := a.getResponseFromMetadata(a.client, a.metadataTokenURL)
 	if err != nil {
 		return "", 0, err
