@@ -42,6 +42,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
 
+  # Supervisor_unit name, specify the service name of the hypervisorctl management to be executed: webserver, proxy
+  # pid_finder = "pgrep" <- When you use it, this configuration may be necessary
+  # supervisor_unit = "webserver, proxy"
+
   ## Windows service name
   # win_service = ""
 

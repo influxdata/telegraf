@@ -54,6 +54,19 @@ ExecMainPID=11408
 		os.Exit(0)
 	}
 
+	if cmdline == "supervisorctl status TestGather_supervisorUnitPIDs" {
+		fmt.Printf(`TestGather_supervisorUnitPIDs                             RUNNING   pid 7311, uptime 0:00:19
+`)
+		os.Exit(0)
+	}
+
+	if cmdline == "supervisorctl status TestGather_STARTINGsupervisorUnitPIDs TestGather_FATALsupervisorUnitPIDs" {
+		fmt.Printf(`TestGather_FATALsupervisorUnitPIDs                       FATAL     Exited too quickly (process log may have details)
+TestGather_STARTINGsupervisorUnitPIDs                          STARTING
+`)
+		os.Exit(0)
+	}
+
 	fmt.Printf("command not found\n")
 	//nolint:revive // error code is important for this "test"
 	os.Exit(1)
@@ -91,6 +104,11 @@ func (pg *testPgrep) UID(_ string) ([]PID, error) {
 
 func (pg *testPgrep) FullPattern(_ string) ([]PID, error) {
 	return pg.pids, pg.err
+}
+
+func (pg *testPgrep) ChildPattern(_ string) ([]PID, error) {
+	pids := []PID{7311, 8111, 8112}
+	return pids, pg.err
 }
 
 type testProc struct {
@@ -437,4 +455,44 @@ func TestGather_SameTimestamps(t *testing.T) {
 	procstatLookup, _ := acc.Get("procstat_lookup")
 
 	require.Equal(t, procstat.Time, procstatLookup.Time)
+}
+
+func TestGather_supervisorUnitPIDs(t *testing.T) {
+	p := Procstat{
+		createPIDFinder: pidFinder([]PID{}),
+		SupervisorUnit:  "TestGather_supervisorUnitPIDs",
+	}
+	pidsTags := p.findPids()
+	for _, pidsTag := range pidsTags {
+		pids := pidsTag.PIDS
+		tags := pidsTag.Tags
+		err := pidsTag.Err
+		require.NoError(t, err)
+		require.Equal(t, []PID{7311, 8111, 8112}, pids)
+		require.Equal(t, "TestGather_supervisorUnitPIDs", tags["supervisor_unit"])
+	}
+}
+
+func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
+	p := Procstat{
+		createPIDFinder: pidFinder([]PID{}),
+		Pattern:         "7311",
+		SupervisorUnit:  "TestGather_STARTINGsupervisorUnitPIDs,TestGather_FATALsupervisorUnitPIDs",
+	}
+	pidsTags := p.findPids()
+	for _, pidsTag := range pidsTags {
+		pids := pidsTag.PIDS
+		tags := pidsTag.Tags
+		err := pidsTag.Err
+		require.Len(t, pids, 0)
+		require.Contains(t, []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"}, tags["supervisor_unit"])
+		if tags["supervisor_unit"] == "TestGather_STARTINGsupervisorUnitPIDs" {
+			require.Equal(t, "STARTING", tags["status"])
+			require.NoError(t, err)
+		} else if tags["supervisor_unit"] == "TestGather_FATALsupervisorUnitPIDs" {
+			require.Equal(t, "FATAL", tags["status"])
+			require.NoError(t, err)
+			require.Equal(t, "Exited too quickly (process log may have details)", tags["error"])
+		}
+	}
 }

@@ -4,6 +4,7 @@ package procstat
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/shirou/gopsutil/v3/process"
 
@@ -25,6 +27,7 @@ var sampleConfig string
 var (
 	defaultPIDFinder = NewPgrep
 	defaultProcess   = NewProc
+	MapDiffError     = errors.New("Type of map is different.")
 )
 
 type PID int32
@@ -39,6 +42,7 @@ type Procstat struct {
 	ProcessName            string
 	User                   string
 	SystemdUnit            string `toml:"systemd_unit"`
+	SupervisorUnit         string `toml:"supervisor_unit"`
 	IncludeSystemdChildren bool   `toml:"include_systemd_children"`
 	CGroup                 string `toml:"cgroup"`
 	PidTag                 bool
@@ -86,6 +90,9 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 	pidTags := p.findPids()
 	for _, pidTag := range pidTags {
+		if len(pidTag.PIDS) < 1 && p.SupervisorUnit != "" {
+			continue
+		}
 		pids := pidTag.PIDS
 		err := pidTag.Err
 		pidCount += len(pids)
@@ -334,11 +341,67 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 	return p.finder, nil
 }
 
+// Merge tags map
+func Mergetags(m, subm map[string]string) (map[string]string, error) {
+	var allm map[string]string
+	allm = m
+	for k, v := range subm {
+		_, ok := m[k]
+		if !ok {
+			allm[k] = v
+		}
+	}
+	return allm, nil
+}
+
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() []PidsTags {
 	var pidTags []PidsTags
 
-	if p.SystemdUnit != "" {
+	if p.SupervisorUnit != "" {
+		groups, groups_tags, err := p.supervisorPIDs()
+		if err != nil {
+			pidTags = append(pidTags, PidsTags{nil, nil, err})
+			return pidTags
+		}
+		// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
+		for _, group := range groups {
+			f, err := p.getPIDFinder()
+			if err != nil {
+				pidTags = append(pidTags, PidsTags{nil, nil, err})
+				return pidTags
+			}
+
+			p.Pattern = groups_tags[group].Map["pid"]
+			if p.Pattern == "" {
+				pidTags = append(pidTags, PidsTags{nil, groups_tags[group].Map, err})
+				return pidTags
+			}
+
+			pids, tags, err := p.SimpleFindPids(f)
+
+			if err != nil {
+				pidTags = append(pidTags, PidsTags{nil, nil, err})
+				return pidTags
+				// Handle situations where the PID does not exist
+			} else if len(pids) == 0 {
+				pidTags = append(pidTags, PidsTags{nil, groups_tags[group].Map, err})
+				continue
+			}
+			stats := groups_tags[group]
+			alltags, err := Mergetags(tags, stats.Map)
+			// Remove duplicate pid tags
+			delete(alltags, "pid")
+
+			if err != nil {
+				pidTags = append(pidTags, PidsTags{nil, nil, err})
+				return pidTags
+			}
+			pidTags = append(pidTags, PidsTags{pids, alltags, err})
+		}
+
+		return pidTags
+	} else if p.SystemdUnit != "" {
 		groups := p.systemdUnitPIDs()
 		return groups
 	} else if p.CGroup != "" {
@@ -369,6 +432,9 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 	} else if p.Exe != "" {
 		pids, err = f.Pattern(p.Exe)
 		tags = map[string]string{"exe": p.Exe}
+	} else if p.SupervisorUnit != "" && p.Pattern != "" {
+		pids, err = f.ChildPattern(p.Pattern)
+		tags = map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
 	} else if p.Pattern != "" {
 		pids, err = f.FullPattern(p.Pattern)
 		tags = map[string]string{"pattern": p.Pattern}
@@ -387,6 +453,62 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 
 // execCommand is so tests can mock out exec.Command usage.
 var execCommand = exec.Command
+
+type MainStatus struct {
+	Map map[string]string
+}
+
+func BytesToString(b []byte) string {
+	return unsafe.String(&b[0], len(b))
+}
+
+func (p *Procstat) supervisorPIDs() ([]string, map[string]MainStatus, error) {
+	var Services string
+	var servicelist []string
+
+	if p.SupervisorUnit != "" {
+		servicelist = strings.Split(p.SupervisorUnit, ",")
+		Services = strings.Join(servicelist, " ")
+	}
+
+	out, err := execCommand("supervisorctl", "status", Services).Output()
+	if err != nil {
+		if !strings.Contains(err.Error(), "exit status") {
+			return nil, nil, err
+		}
+	}
+	lines := strings.Split(BytesToString(out), "\n")
+	// Get the PID, running status, running time and boot time of the main process:
+	// pid 11779, uptime 17:41:16
+	// Exited too quickly (process log may have details)
+	Mainpids := make(map[string]MainStatus)
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		status := MainStatus{make(map[string]string)}
+
+		kv := strings.Fields(line)
+		name := kv[0]
+		status_map := status.Map
+		status_map["supervisor_unit"] = name
+
+		if kv[1] == "FATAL" || kv[1] == "EXITED" || kv[1] == "BACKOFF" || kv[1] == "STOPPING" {
+			status_map["status"] = kv[1]
+			status_map["error"] = strings.Join(kv[2:], " ")
+		} else if kv[1] == "RUNNING" {
+			status_map["status"] = kv[1]
+			status_map["pid"] = strings.ReplaceAll(kv[3], ",", "")
+			status_map["uptimes"] = kv[5]
+		} else if kv[1] == "STOPPED" || kv[1] == "UNKNOWN" || kv[1] == "STARTING" {
+			status_map["status"] = kv[1]
+		}
+
+		Mainpids[name] = status
+	}
+
+	return servicelist, Mainpids, nil
+}
 
 func (p *Procstat) systemdUnitPIDs() []PidsTags {
 	if p.IncludeSystemdChildren {

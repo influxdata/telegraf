@@ -36,11 +36,11 @@ func TestGather_RealUserIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	currentUser, err := user.Current()
+	user, err := user.Current()
 	require.NoError(t, err)
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
-	pids, err := pg.UID(currentUser.Username)
+	pids, err := pg.UID(user.Username)
 	require.NoError(t, err)
 	fmt.Println(pids)
 	require.NotEmpty(t, pids)

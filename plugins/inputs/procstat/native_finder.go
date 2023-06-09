@@ -80,6 +80,13 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	return pids, err
 }
 
+// Just to meet the requirements of the interface
+func (pg *NativeFinder) ChildPattern(pattern string) ([]PID, error) {
+	var pids []PID
+	var err error
+	return pids, err
+}
+
 func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
 	pids, err := process.Pids()
 	if err != nil {
