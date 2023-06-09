@@ -10,7 +10,7 @@ import (
 )
 
 type metric struct {
-	name   string
+	namer  *telegraf.Namer
 	tags   []*telegraf.Tag
 	fields []*telegraf.Field
 	tm     time.Time
@@ -33,7 +33,7 @@ func New(
 	}
 
 	m := &metric{
-		name:   name,
+		namer:  &telegraf.Namer{Name: name},
 		tags:   nil,
 		fields: nil,
 		tm:     tm,
@@ -67,7 +67,7 @@ func New(
 // removed.
 func FromMetric(other telegraf.Metric) telegraf.Metric {
 	m := &metric{
-		name:   other.Name(),
+		namer:  other.Namer(),
 		tags:   make([]*telegraf.Tag, len(other.TagList())),
 		fields: make([]*telegraf.Field, len(other.FieldList())),
 		tm:     other.Time(),
@@ -85,11 +85,15 @@ func FromMetric(other telegraf.Metric) telegraf.Metric {
 }
 
 func (m *metric) String() string {
-	return fmt.Sprintf("%s %v %v %d", m.name, m.Tags(), m.Fields(), m.tm.UnixNano())
+	return fmt.Sprintf("%s %v %v %d", m.Name(), m.Tags(), m.Fields(), m.tm.UnixNano())
 }
 
 func (m *metric) Name() string {
-	return m.name
+	return m.namer.Value()
+}
+
+func (m *metric) Namer() *telegraf.Namer {
+	return m.namer
 }
 
 func (m *metric) Tags() map[string]string {
@@ -126,15 +130,15 @@ func (m *metric) Type() telegraf.ValueType {
 }
 
 func (m *metric) SetName(name string) {
-	m.name = name
+	m.namer.SetName(name)
 }
 
 func (m *metric) AddPrefix(prefix string) {
-	m.name = prefix + m.name
+	m.namer.SetPrefix(prefix)
 }
 
 func (m *metric) AddSuffix(suffix string) {
-	m.name = m.name + suffix
+	m.namer.SetSuffix(suffix)
 }
 
 func (m *metric) AddTag(key, value string) {
@@ -243,7 +247,7 @@ func (m *metric) SetTime(t time.Time) {
 
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
-		name:   m.name,
+		namer:  m.namer,
 		tags:   make([]*telegraf.Tag, len(m.tags)),
 		fields: make([]*telegraf.Field, len(m.fields)),
 		tm:     m.tm,
@@ -262,7 +266,7 @@ func (m *metric) Copy() telegraf.Metric {
 
 func (m *metric) HashID() uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(m.name))
+	h.Write([]byte(m.Name()))
 	h.Write([]byte("\n"))
 	for _, tag := range m.tags {
 		h.Write([]byte(tag.Key))

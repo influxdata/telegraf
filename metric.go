@@ -17,6 +17,28 @@ const (
 	Histogram
 )
 
+type Namer struct {
+	Name   string
+	Prefix string
+	Suffix string
+}
+
+func (n *Namer) Value() string {
+	return n.Prefix + n.Name + n.Suffix
+}
+
+func (n *Namer) SetName(name string) {
+	n.Name = name
+}
+
+func (n *Namer) SetPrefix(prefix string) {
+	n.Prefix = prefix
+}
+
+func (n *Namer) SetSuffix(suffix string) {
+	n.Suffix = suffix
+}
+
 // Tag represents a single tag key and value.
 type Tag struct {
 	Key   string
@@ -37,7 +59,15 @@ type Field struct {
 type Metric interface {
 	// Name is the primary identifier for the Metric and corresponds to the
 	// measurement in the InfluxDB data model.
+	// The final name should be m.Name().Value().
+	//
+	// This method is deprecated, use Namer().Value() instead.
 	Name() string
+
+	// Namer is used to fetch the primary identifier for the Metric
+	// and corresponds to the measurement in the InfluxDB data model.
+	// The final name should be m.Namer().Value().
+	Namer() *Namer
 
 	// Tags returns the tags as a map.  This method is deprecated, use TagList instead.
 	Tags() map[string]string
@@ -62,19 +92,22 @@ type Metric interface {
 	// might interpret, aggregate the values. Used by prometheus and statsd.
 	Type() ValueType
 
-	// SetName sets the metric name.
+	// SetName sets the metric name
+	// equivalent to m.Namer().SetName(nameOverride).
+	//
+	// This method is deprecated, use Namer().SetName instead.
 	SetName(name string)
 
 	// AddPrefix adds a string to the front of the metric name.  It is
-	// equivalent to m.SetName(prefix + m.Name()).
+	// equivalent to m.Namer().SetPrefix(prefix).
 	//
-	// This method is deprecated, use SetName instead.
+	// This method is deprecated, use Namer().SetPrefix instead.
 	AddPrefix(prefix string)
 
 	// AddSuffix appends a string to the back of the metric name.  It is
-	// equivalent to m.SetName(m.Name() + suffix).
+	// equivalent to m.Namer().SetSuffix(suffix).
 	//
-	// This method is deprecated, use SetName instead.
+	// This method is deprecated, use Namer().SetSuffix instead.
 	AddSuffix(suffix string)
 
 	// GetTag returns the value of a tag and a boolean to indicate if it was set.

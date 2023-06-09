@@ -14,15 +14,15 @@ func makemetric(
 	tags map[string]string,
 	globalTags map[string]string,
 ) telegraf.Metric {
+	namer := metric.Namer()
 	if len(nameOverride) != 0 {
-		metric.SetName(nameOverride)
+		namer.SetName(nameOverride)
 	}
-
 	if len(namePrefix) != 0 {
-		metric.AddPrefix(namePrefix)
+		namer.SetPrefix(namePrefix)
 	}
 	if len(nameSuffix) != 0 {
-		metric.AddSuffix(nameSuffix)
+		namer.SetSuffix(nameSuffix)
 	}
 
 	// Apply plugin-wide tags

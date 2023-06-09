@@ -461,9 +461,9 @@ Parameters that can be used with any output plugin:
 - **metric_buffer_limit**: The maximum number of unsent metrics to buffer.
   Use this setting to override the agent `metric_buffer_limit` on a per plugin
   basis.
-- **name_override**: Override the original name of the measurement.
-- **name_prefix**: Specifies a prefix to attach to the measurement name.
-- **name_suffix**: Specifies a suffix to attach to the measurement name.
+- **name_override**: Override the original name of the measurement.  (Default is the name of input).
+- **name_prefix**: Specifies a prefix to attach to the measurement name.  (Default is the name prefix of input).
+- **name_suffix**: Specifies a suffix to attach to the measurement name.  (Default is the name suffix of input).
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the output plugin.
@@ -551,8 +551,10 @@ Parameters that can be used with any aggregator plugin:
   aggregator and will not get sent to the output plugins.
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
-- **name_prefix**: Specifies a prefix to attach to the measurement name.
-- **name_suffix**: Specifies a suffix to attach to the measurement name.
+- **name_prefix**: Specifies a prefix to attach to the measurement name.  (Default is
+  the name prefix of the input).
+- **name_suffix**: Specifies a suffix to attach to the measurement name.  (Default is
+  the name suffix of the input).
 - **tags**: A map of tags to apply to the measurement - behavior varies based on aggregator.
 
 The [metric filtering][] parameters can be used to limit what metrics are
