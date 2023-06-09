@@ -43,11 +43,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   data_format = "influx"
 
   ## For enabling the compression specify the algorithm. If empty, compression will be disabled and files will be plain text.
-  ## Supported algorithms are "zstd" and "gzip".
+  ## Supported algorithms are "zstd", "gzip" and "zlib".
   # compression_algorithm = ""
 
   ## For choosing a compression level.
   ## zstd supports levels 1,3,7 and 11. If specified 0, it defaults to 3.
-  ## gzip supports a range from -3 to 9. If specified 0, it defaults to -1.
+  ## gzip and zlib supports levels -2,-1,1, and 9. If specified 0, it defaults to -1.
   # compression_level = 0
 ```
