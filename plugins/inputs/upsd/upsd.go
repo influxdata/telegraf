@@ -67,10 +67,14 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	// For compatibility with the apcupsd plugin's output we map the status string status into a bit-format
 	status := u.mapStatus(metrics, tags)
 
-	timeLeftS, ok := metrics["battery.runtime"].(int64)
-	if !ok && !u.batteryRuntimeTypeWarningIssued {
-		u.Log.Warnf("'battery.runtime' type is not int64")
-		u.batteryRuntimeTypeWarningIssued = true
+	timeLeftS, err := internal.ToFloat64(metrics["battery.runtime"])
+	if err != nil {
+		u.Log.Warnf("'battery.runtime' type is not supported: %w", err)
+	}
+
+	timeLeftNS, err := internal.ToInt64(timeLeftS * 1_000_000_000)
+	if err != nil {
+		u.Log.Warnf("converting 'battery.runtime' to 'time_left_ns' failed: %w", err)
 	}
 
 	fields := map[string]interface{}{
@@ -80,7 +84,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"ups_status":       metrics["ups.status"],
 
 		//Compatibility with apcupsd metrics format
-		"time_left_ns": timeLeftS * 1_000_000_000,
+		"time_left_ns": timeLeftNS,
 	}
 
 	floatValues := map[string]string{
