@@ -485,11 +485,8 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
 		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
 		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(0)},
-		{"topic regexp with refresh", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
 	}
 
-	// FIXME: I don't see how to inject a new topic into the broker
-	// with the docker container, needed for testing refresh end-to-end.
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("rt: starting network")
@@ -573,6 +570,124 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			require.NoError(t, input.Start(&acc))
+
+			// Shove some metrics through
+			expected := testutil.MockMetrics()
+			t.Logf("rt: writing")
+			require.NoError(t, output.Write(expected))
+
+			// Check that they were received
+			t.Logf("rt: expecting")
+			acc.Wait(len(expected))
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+			t.Logf("rt: shutdown")
+			require.NoError(t, output.Close())
+			input.Stop()
+
+			t.Logf("rt: done")
+		})
+	}
+}
+
+func TestDynamicTopicRefresh(t *testing.T) {
+	var tests = []struct {
+		name                 string
+		connectionStrategy   string
+		topics               []string
+		topicRegexps         []string
+		topicRefreshInterval config.Duration
+	}{
+		{"topic regexp refresh", "startup", nil, []string{"T*"}, config.Duration(3)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("rt: starting network")
+			ctx := context.Background()
+			networkName := "telegraf-test-kafka-consumer-network"
+			network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
+				NetworkRequest: testcontainers.NetworkRequest{
+					Name:           networkName,
+					Attachable:     true,
+					CheckDuplicate: true,
+				},
+			})
+			require.NoError(t, err)
+			defer func() {
+				require.NoError(t, network.Remove(ctx), "terminating network failed")
+			}()
+
+			t.Logf("rt: starting zookeeper")
+			zookeeperName := "telegraf-test-kafka-consumer-zookeeper"
+			zookeeper := testutil.Container{
+				Image:        "wurstmeister/zookeeper",
+				ExposedPorts: []string{"2181:2181"},
+				Networks:     []string{networkName},
+				WaitingFor:   wait.ForLog("binding to port"),
+				Name:         zookeeperName,
+			}
+			require.NoError(t, zookeeper.Start(), "failed to start container")
+			defer zookeeper.Terminate()
+
+			t.Logf("rt: starting broker")
+			container := testutil.Container{
+				Name:         "telegraf-test-kafka-consumer",
+				Image:        "wurstmeister/kafka",
+				ExposedPorts: []string{"9092:9092"},
+				Env: map[string]string{
+					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
+					"KAFKA_ADVERTISED_PORT":      "9092",
+					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
+					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", "Test"),
+				},
+				Networks:   []string{networkName},
+				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			brokers := []string{
+				fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
+			}
+
+			// Make kafka output
+			t.Logf("rt: starting output plugin")
+			creator := outputs.Outputs["kafka"]
+			output, ok := creator().(*kafkaOutput.Kafka)
+			require.True(t, ok)
+
+			s := &influxSerializer.Serializer{}
+			require.NoError(t, s.Init())
+			output.SetSerializer(s)
+			output.Brokers = brokers
+			output.Topic = "Test"
+			output.Log = testutil.Logger{}
+
+			require.NoError(t, output.Init())
+			require.NoError(t, output.Connect())
+
+			// Make kafka input
+			t.Logf("rt: starting input plugin")
+			input := KafkaConsumer{
+				Brokers:                brokers,
+				Log:                    testutil.Logger{},
+				Topics:                 tt.topics,
+				TopicRegexps:           tt.topicRegexps,
+				MaxUndeliveredMessages: 1,
+				ConnectionStrategy:     tt.connectionStrategy,
+			}
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
+			require.NoError(t, input.Init())
+
+			acc := testutil.Accumulator{}
+			require.NoError(t, input.Start(&acc))
+
+			// FIXME here's where we need to manipulate our
+			// topic list and verify that the connector
+			// responds appropriately.
 
 			// Shove some metrics through
 			expected := testutil.MockMetrics()
