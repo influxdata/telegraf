@@ -78,6 +78,8 @@ func (f *File) Init() error {
 		switch f.CompressionAlgorithm {
 		case "zstd":
 			f.CompressionLevel = 3
+		case "zlib":
+			f.CompressionLevel = -1
 		case "gzip":
 			f.CompressionLevel = -1
 		}
