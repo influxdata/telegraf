@@ -70,7 +70,7 @@ type Ping struct {
 	Binary string
 
 	// Arguments for ping command. When arguments is not empty, system binary will be used and
-	// other options (ping_interval, timeout, etc) will be ignored
+	// other options (ping_interval, timeout, etc.) will be ignored
 	Arguments []string
 
 	// Whether to resolve addresses using ipv6 or not.
@@ -86,20 +86,6 @@ type Ping struct {
 
 	// Packet size
 	Size *int
-}
-
-type roundTripTimeStats struct {
-	min    float64
-	avg    float64
-	max    float64
-	stddev float64
-}
-
-type stats struct {
-	trans int
-	recv  int
-	ttl   int
-	roundTripTimeStats
 }
 
 func (*Ping) SampleConfig() string {

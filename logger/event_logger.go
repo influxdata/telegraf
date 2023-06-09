@@ -48,7 +48,7 @@ type eventLoggerCreator struct {
 	logger *eventlog.Log
 }
 
-func (e *eventLoggerCreator) CreateLogger(config LogConfig) (io.Writer, error) {
+func (e *eventLoggerCreator) CreateLogger(_ LogConfig) (io.Writer, error) {
 	return wlog.NewWriter(&eventLogger{logger: e.logger}), nil
 }
 

@@ -22,6 +22,8 @@ For client TLS support we have the following options:
 ## contain intermediate certificates.
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"
+# passphrase for encrypted private key, if it is in PKCS#8 format. Encrypted PKCS#1 private keys are not supported.
+# tls_key_pwd = "changeme"
 ## Skip TLS verification.
 # insecure_skip_verify = false
 ## Send the specified TLS server name via SNI.
@@ -47,6 +49,8 @@ The server TLS configuration provides support for TLS mutual authentication:
 ## Add service certificate and key.
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"
+# passphrase for encrypted private key, if it is in PKCS#8 format. Encrypted PKCS#1 private keys are not supported.
+# tls_key_pwd = "changeme"
 ```
 
 #### Advanced Configuration

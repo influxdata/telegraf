@@ -1,0 +1,10 @@
+{
+    "user.user_a": "user_1",
+    "passwd.password_a": "password A",
+    "user.user_b": "user 2",
+    "passwd.password_b": "password-B",
+    "user.user_c": "user@company.com",
+    "passwd.password_c": "my$3cR3T",
+    "user.user_d": "user %with% $trAng€ characters",
+    "passwd.password_d": ""
+  }

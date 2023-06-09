@@ -4,6 +4,7 @@ package elasticsearch
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -204,14 +205,14 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 				// Gather node ID
 				if info.nodeID, err = e.gatherNodeID(s + "/_nodes/_local/name"); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 
 				// get cat/master information here so NodeStats can determine
 				// whether this node is the Master
 				if info.masterID, err = e.getCatMaster(s + "/_cat/master"); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 
@@ -233,7 +234,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			// Always gather node stats
 			if err := e.gatherNodeStats(url, acc); err != nil {
-				acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+				acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 				return
 			}
 
@@ -243,14 +244,14 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 					url = url + "?level=" + e.ClusterHealthLevel
 				}
 				if err := e.gatherClusterHealth(url, acc); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
 
 			if e.ClusterStats && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
@@ -258,12 +259,12 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if len(e.IndicesInclude) > 0 && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if e.IndicesLevel != "shards" {
 					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats", acc); err != nil {
-						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 						return
 					}
 				} else {
 					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats?level=shards", acc); err != nil {
-						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 						return
 					}
 				}

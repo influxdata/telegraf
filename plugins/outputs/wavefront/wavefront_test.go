@@ -383,6 +383,8 @@ func TestSenderURLFromURLAndToken(t *testing.T) {
 func TestDefaults(t *testing.T) {
 	defaultWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
 	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
+	require.Equal(t, config.Duration(10*time.Second), defaultWavefront.Timeout)
+	require.Equal(t, "", defaultWavefront.TLSCA)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Sanitize

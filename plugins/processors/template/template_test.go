@@ -46,6 +46,43 @@ func TestName(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
+func TestNameTemplate(t *testing.T) {
+	plugin := TemplateProcessor{
+		Tag:      `{{ .Tag "foo" }}`,
+		Template: `{{ .Name }}`,
+	}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	input := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{"foo": "measurement"},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual := plugin.Apply(input...)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"foo":         "measurement",
+				"measurement": "cpu",
+			},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
 func TestTagTemplateConcatenate(t *testing.T) {
 	now := time.Now()
 

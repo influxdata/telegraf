@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -119,7 +120,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 
 // buildConsulAgent, it builds all the metrics and adds them to the accumulator)
 func buildConsulAgent(acc telegraf.Accumulator, agentInfo *AgentInfo) error {
-	t, err := time.Parse(timeLayout, agentInfo.Timestamp)
+	t, err := internal.ParseTimestamp(timeLayout, agentInfo.Timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %w", err)
 	}

@@ -32,7 +32,7 @@ func BenchmarkRemoteWrite(b *testing.B) {
 			time.Unix(0, 0),
 		)
 	}
-	s := NewSerializer(FormatConfig{})
+	s := &Serializer{}
 	for n := 0; n < b.N; n++ {
 		_, _ = s.SerializeBatch(batch)
 	}
@@ -41,7 +41,6 @@ func BenchmarkRemoteWrite(b *testing.B) {
 func TestRemoteWriteSerialize(t *testing.T) {
 	tests := []struct {
 		name     string
-		config   FormatConfig
 		metric   telegraf.Metric
 		expected []byte
 	}{
@@ -186,10 +185,9 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSerializer(FormatConfig{
-				MetricSortOrder: SortMetrics,
-				StringHandling:  tt.config.StringHandling,
-			})
+			s := &Serializer{
+				SortMetrics: true,
+			}
 			data, err := s.Serialize(tt.metric)
 			require.NoError(t, err)
 			actual, err := prompbToText(data)
@@ -203,10 +201,10 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 
 func TestRemoteWriteSerializeBatch(t *testing.T) {
 	tests := []struct {
-		name     string
-		config   FormatConfig
-		metrics  []telegraf.Metric
-		expected []byte
+		name          string
+		metrics       []telegraf.Metric
+		stringAsLabel bool
+		expected      []byte
 	}{
 		{
 			name: "simple",
@@ -515,11 +513,8 @@ cpu_time_idle 42
 `),
 		},
 		{
-			name: "string as label",
-			config: FormatConfig{
-				MetricSortOrder: SortMetrics,
-				StringHandling:  StringAsLabel,
-			},
+			name:          "string as label",
+			stringAsLabel: true,
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -536,11 +531,8 @@ cpu_time_idle{cpu="cpu0"} 42
 `),
 		},
 		{
-			name: "string as label duplicate tag",
-			config: FormatConfig{
-				MetricSortOrder: SortMetrics,
-				StringHandling:  StringAsLabel,
-			},
+			name:          "string as label duplicate tag",
+			stringAsLabel: true,
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -559,11 +551,8 @@ cpu_time_idle{cpu="cpu0"} 42
 `),
 		},
 		{
-			name: "replace characters when using string as label",
-			config: FormatConfig{
-				MetricSortOrder: SortMetrics,
-				StringHandling:  StringAsLabel,
-			},
+			name:          "replace characters when using string as label",
+			stringAsLabel: true,
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -666,11 +655,8 @@ rpc_duration_seconds_sum 17560473
 `),
 		},
 		{
-			name: "empty label string value",
-			config: FormatConfig{
-				MetricSortOrder: SortMetrics,
-				StringHandling:  StringAsLabel,
-			},
+			name:          "empty label string value",
+			stringAsLabel: true,
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"prometheus",
@@ -690,10 +676,10 @@ rpc_duration_seconds_sum 17560473
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSerializer(FormatConfig{
-				MetricSortOrder: SortMetrics,
-				StringHandling:  tt.config.StringHandling,
-			})
+			s := &Serializer{
+				SortMetrics:   true,
+				StringAsLabel: tt.stringAsLabel,
+			}
 			data, err := s.SerializeBatch(tt.metrics)
 			require.NoError(t, err)
 			actual, err := prompbToText(data)
