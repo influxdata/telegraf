@@ -100,7 +100,7 @@ func (f *File) Connect() error {
 	var err error
 	writers := []io.Writer{}
 
-	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
+	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, internal.EncoderCompressionLevel(f.CompressionLevel))
 	if err != nil {
 		return err
 	}
