@@ -19,10 +19,12 @@ import (
 )
 
 const servicePort = "9200"
+const imageVersion1 = "1.1.0"
+const imageVersion2 = "2.8.0"
 
-func launchTestContainer(t *testing.T) *testutil.Container {
+func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container {
 	container := testutil.Container{
-		Image:        "opensearchproject/opensearch:1.1.0",
+		Image:        "opensearchproject/opensearch:"+imageVersion,
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"discovery.type":              "single-node",
@@ -34,8 +36,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 			wait.ForLog("Init AD version hash ring successfully"),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 
 	return &container
 }
@@ -45,7 +46,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
 	defer container.Terminate()
 
 	urls := []string{
@@ -66,12 +67,42 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to Opensearch
-	err := e.Connect()
-	require.NoError(t, err)
+	require.NoError(t, e.Connect())
 
 	// Verify that we can successfully write data to Opensearch
-	err = e.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, e.Write(testutil.MockMetrics()))
+}
+
+func TestConnectAndWriteIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion2)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:                urls,
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
+		Timeout:             config.Duration(time.Second * 5),
+		EnableGzip:          false,
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		HealthCheckTimeout:  config.Duration(time.Second * 1),
+		Log:                 testutil.Logger{},
+	}
+
+	// Verify that we can connect to Opensearch
+	require.NoError(t, e.Connect())
+
+	// Verify that we can successfully write data to Opensearch
+	require.NoError(t, e.Write(testutil.MockMetrics()))
 }
 
 func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
@@ -79,7 +110,7 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
 	defer container.Terminate()
 
 	urls := []string{
@@ -105,8 +136,89 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 	}
 
 	// Verify that we can connect to Opensearch
-	initErr := e.Init()
-	require.NoError(t, initErr)
+	require.NoError(t, e.Init())
+	require.NoError(t, e.Connect())
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		require.Error(t, e.Write([]telegraf.Metric{m}), "error sending bulk request to Opensearch: " +
+			"json: unsupported value: NaN")
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueEmptyIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion2)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:                urls,
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		HealthCheckTimeout:  config.Duration(time.Second * 1),
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
+	}
+
+	// Verify that we can connect to Opensearch
+	require.NoError(t, e.Init())
+	require.NoError(t, e.Connect())
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		require.Error(t, e.Write([]telegraf.Metric{m}), "error sending bulk request to Opensearch: " +
+			"json: unsupported value: NaN")
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion1)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:                urls,
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		HealthCheckTimeout:  config.Duration(time.Second * 1),
+		FloatHandling:       "none",
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
+	}
+
+	// Verify that we can connect to Opensearch
 	err := e.Connect()
 	require.NoError(t, err)
 
@@ -117,12 +229,12 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 	}
 }
 
-func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
+func TestConnectAndWriteMetricWithNaNValueNoneIntegrationV2(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion2)
 	defer container.Terminate()
 
 	urls := []string{
@@ -164,7 +276,49 @@ func TestConnectAndWriteMetricWithNaNValueDropIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:                urls,
+		IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		HealthCheckTimeout:  config.Duration(time.Second * 1),
+		FloatHandling:       "drop",
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
+	}
+
+	// Verify that we can connect to Opensearch
+	err := e.Connect()
+	require.NoError(t, err)
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.NoError(t, err)
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueDropIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion2)
 	defer container.Terminate()
 
 	urls := []string{
@@ -228,7 +382,77 @@ func TestConnectAndWriteMetricWithNaNValueReplacementIntegration(t *testing.T) {
 		},
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	for _, test := range tests {
+		e := &Opensearch{
+			URLs:                urls,
+			IndexName:           `test-{{.Time.Format "2006-01-02"}}`,
+			Timeout:             config.Duration(time.Second * 5),
+			ManageTemplate:      true,
+			TemplateName:        "telegraf",
+			OverwriteTemplate:   false,
+			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
+			FloatHandling:       test.floatHandle,
+			FloatReplacement:    test.floatReplacement,
+			Log:                 testutil.Logger{},
+		}
+
+		metrics := []telegraf.Metric{
+			testutil.TestMetric(math.NaN()),
+			testutil.TestMetric(math.Inf(1)),
+			testutil.TestMetric(math.Inf(-1)),
+		}
+
+		err := e.Connect()
+		require.NoError(t, err)
+
+		for _, m := range metrics {
+			err = e.Write([]telegraf.Metric{m})
+
+			if test.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		}
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueReplacementIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		floatHandle      string
+		floatReplacement float64
+		expectError      bool
+	}{
+		{
+			"none",
+			0.0,
+			true,
+		},
+		{
+			"drop",
+			0.0,
+			false,
+		},
+		{
+			"replace",
+			0.0,
+			false,
+		},
+	}
+
+	container := launchTestContainer(t, imageVersion2)
 	defer container.Terminate()
 
 	urls := []string{
@@ -276,7 +500,34 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:              urls,
+		IndexName:         `test-{{.Time.Format "2006-01-02"}}`,
+		Timeout:           config.Duration(time.Second * 5),
+		EnableGzip:        false,
+		ManageTemplate:    true,
+		TemplateName:      "",
+		OverwriteTemplate: true,
+		Log:               testutil.Logger{},
+	}
+
+	err := e.Init()
+	require.Error(t, err)
+}
+
+func TestTemplateManagementEmptyTemplateIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion2)
 	defer container.Terminate()
 
 	urls := []string{
@@ -303,7 +554,40 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:              urls,
+		IndexName:         `test-{{.Time.Format "2006-01-02"}}`,
+		Timeout:           config.Duration(time.Second * 5),
+		EnableGzip:        false,
+		ManageTemplate:    true,
+		TemplateName:      "telegraf",
+		OverwriteTemplate: true,
+		Log:               testutil.Logger{},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	defer cancel()
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	err = e.manageTemplate(ctx)
+	require.NoError(t, err)
+}
+
+func TestTemplateManagementIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion2)
 	defer container.Terminate()
 
 	urls := []string{
@@ -336,7 +620,34 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	container := launchTestContainer(t, imageVersion1)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Opensearch{
+		URLs:              urls,
+		IndexName:         `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		Timeout:           config.Duration(time.Second * 5),
+		EnableGzip:        false,
+		ManageTemplate:    true,
+		TemplateName:      "telegraf",
+		OverwriteTemplate: true,
+		Log:               testutil.Logger{},
+	}
+
+	err := e.Connect()
+	require.Error(t, err)
+}
+
+func TestTemplateInvalidIndexPatternIntegrationV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t, imageVersion2)
 	defer container.Terminate()
 
 	urls := []string{

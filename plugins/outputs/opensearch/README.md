@@ -3,7 +3,9 @@
 This plugin writes to [Opensearch](https://opensearch.org/) via HTTP using
 [Elastic](http://olivere.github.io/elastic/) client API.
 
-It supports Opensearch releases from 1.x up to 2.x.
+It supports Opensearch releases from 1 and 2. Future comparability with 1.x is not
+guaranteed and instead will focus on 2.x support. Consider using the existing
+Elasticsearch plugin for 1.x.
 
 ## Opensearch indexes and templates
 
