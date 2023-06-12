@@ -217,7 +217,7 @@ func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
 	}
 
 	ps.decoderMutex.Lock()
-	data, err := ps.decoder.Decode(data, int64(ps.MaxDecompressionSize))
+	data, err := ps.decoder.Decode(data)
 	if err != nil {
 		ps.decoderMutex.Unlock()
 		return nil, err
@@ -322,7 +322,7 @@ func (ps *PubSub) Init() error {
 		ps.ContentEncoding = "identity"
 	case "gzip":
 		var err error
-		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
+		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, internal.DecoderMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
 		if err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func (ps *PubSub) Init() error {
 	}
 
 	if ps.MaxDecompressionSize <= 0 {
-		ps.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+		ps.MaxDecompressionSize = config.Size(internal.DefaultMaxDecompressionSize)
 	}
 
 	return nil

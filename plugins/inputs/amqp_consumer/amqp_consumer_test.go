@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -24,7 +25,7 @@ func TestAutoEncoding(t *testing.T) {
 	a.deliveries = make(map[telegraf.TrackingID]amqp091.Delivery)
 	a.parser = parser
 	a.decoder, err = internal.NewContentDecoder("auto")
-	a.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+	a.MaxDecompressionSize = config.Size(internal.DefaultMaxDecompressionSize)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}

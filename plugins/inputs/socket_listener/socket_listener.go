@@ -161,7 +161,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	}
 
 	if sl.MaxDecompressionSize <= 0 {
-		sl.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
+		sl.MaxDecompressionSize = config.Size(internal.DefaultMaxDecompressionSize)
 	}
 
 	switch u.Scheme {
