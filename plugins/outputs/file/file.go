@@ -95,16 +95,17 @@ func (f *File) Init() error {
 		return err
 	}
 
-	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, internal.EncoderCompressionLevel(f.CompressionLevel))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (f *File) Connect() error {
+	var err error
 	writers := []io.Writer{}
+
+	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, internal.EncoderCompressionLevel(f.CompressionLevel))
+	if err != nil {
+		return err
+	}
 
 	for _, file := range f.Files {
 		if file == "stdout" {
