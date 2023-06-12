@@ -119,9 +119,9 @@ func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncod
 }
 
 type AutoDecoder struct {
-	encoding             string
-	gzip                 *GzipDecoder
-	identity             *IdentityDecoder
+	encoding string
+	gzip     *GzipDecoder
+	identity *IdentityDecoder
 }
 
 func (a *AutoDecoder) SetEncoding(encoding string) {
