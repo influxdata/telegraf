@@ -15,10 +15,8 @@ import (
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
 
 var ValidCompressionAlgorithmLevels = map[string][]int{
-	"zstd":     {1, 3, 7, 11},
-	"gzip":     {-2, -1, 1, 9},
-	"zlib":     {-2, -1, 1, 9},
-	"identity": {0},
+	"gzip": {-2, -1, 1, 9},
+	"zlib": {-2, -1, 1, 9},
 }
 
 func validateCompressionLevel(algorithm string, level int) error {

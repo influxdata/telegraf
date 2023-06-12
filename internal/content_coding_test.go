@@ -11,6 +11,45 @@ import (
 
 const maxDecompressionSize = 1024
 
+func TestCompressionLevelValidationErrors(t *testing.T) {
+	var errorTests = []struct {
+		name      string
+		algorithm string
+		level     int
+		expected  string
+	}{
+		{"wrong-algorithm", "asda", 1, "invalid value for content_encoding"},
+		{"wrong-level", "gzip", 4, "unsupported compression level provided: 4. only [-2 -1 1 9] are supported"},
+		{"wrong-level-and-algorithm", "asdas", 15, "invalid value for content_encoding"},
+	}
+	var successTests = []struct {
+		name      string
+		algorithm string
+		level     int
+	}{
+		{"disabled", "", 0},
+		{"default", "gzip", -1},
+		{"enabled-0", "", 0},
+		{"enabled-9", "gzip", 9},
+		{"enabled-default", "zlib", -1},
+		{"enabled-2", "gzip", -2},
+		{"enabled-1", "gzip", 1},
+	}
+	for _, tt := range successTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewContentEncoder(tt.algorithm, EncoderCompressionLevel(tt.level))
+			require.NoError(t, err)
+		})
+	}
+
+	for _, tt := range errorTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewContentEncoder(tt.algorithm, EncoderCompressionLevel(tt.level))
+			require.ErrorContains(t, err, tt.expected)
+		})
+	}
+}
+
 func TestGzipEncodeDecode(t *testing.T) {
 	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
