@@ -704,7 +704,11 @@ func TestDynamicTopicRefresh(t *testing.T) {
 				return				
 			}
 			t.Logf("rt: creating new Kafkfa topic")
-			err = admin.CreateTopic("TestDynamic", new(sarama.TopicDetail), false)
+			detail := sarama.TopicDetail{
+				NumPartitions:1,
+				ReplicationFactor: 1,
+			}
+			err = admin.CreateTopic("TestDynamic", &detail, false)
 			if err != nil {
 				require.Error(t, err)
 				return				
