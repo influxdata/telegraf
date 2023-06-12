@@ -14,6 +14,22 @@ import (
 
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
 
+var ValidCompressionAlgorithmLevels = map[string][]int{
+	"zstd":     {1, 3, 7, 11},
+	"gzip":     {-2, -1, 1, 9},
+	"zlib":     {-2, -1, 1, 9},
+	"identity": {0},
+}
+
+func validateCompressionLevel(algorithm string, level int) error {
+	for _, validAlgorithmLevel := range ValidCompressionAlgorithmLevels[algorithm] {
+		if level == validAlgorithmLevel {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported compression level provided: %d. only %v are supported", level, ValidCompressionAlgorithmLevels[algorithm])
+}
+
 // EncodingOption provide methods to change the encoding from the standard
 // configuration.
 type EncodingOption func(*encoderConfig)
@@ -160,6 +176,11 @@ func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
 		o(&cfg)
 	}
 
+	err := validateCompressionLevel("gzip", cfg.level)
+	if err != nil {
+		return nil, err
+	}
+
 	var buf bytes.Buffer
 	pw, err := pgzip.NewWriterLevel(&buf, cfg.level)
 	if err != nil {
@@ -223,6 +244,11 @@ func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
 	cfg := encoderConfig{level: zlib.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
+	}
+
+	err := validateCompressionLevel("zlib", cfg.level)
+	if err != nil {
+		return nil, err
 	}
 
 	var buf bytes.Buffer
