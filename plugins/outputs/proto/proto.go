@@ -235,7 +235,11 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			}
 			influx.Lte = append(influx.Lte, &m)
 		case "gps":
-			m := GPS{}
+			m := GPS{
+				Fields: &GPS_Fields{
+					FusionMode: -1,
+				},
+			}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build gps")
 			}
@@ -274,6 +278,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 
 			m.Tags.Host, _ = metric.GetTag("host")
 			influx.Able = append(influx.Able, &m)
+		case "able_stats":
+			m := AbleStats{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build AbleStats")
+			}
+			influx.AbleStats = append(influx.AbleStats, &m)
 		case "camera_control_metrics":
 			m := CameraControl{
 				FieldsMap: map[string]string{},
