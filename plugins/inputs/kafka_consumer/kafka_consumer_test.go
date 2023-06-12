@@ -601,7 +601,8 @@ func TestDynamicTopicRefresh(t *testing.T) {
 		topicRegexps         []string
 		topicRefreshInterval config.Duration
 	}{
-		{"topic regexp refresh", "startup", nil, []string{"T*"}, config.Duration(3)},
+		// 3-second refresh interval
+		{"topic regexp refresh", "startup", nil, []string{"T*"}, config.Duration(3 * 1E9)},
 	}
 
 	for _, tt := range tests {
@@ -664,7 +665,7 @@ func TestDynamicTopicRefresh(t *testing.T) {
 			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers
-			output.Topic = "Test"
+			output.Topic = "TestDynamic"
 			output.Log = testutil.Logger{}
 
 			require.NoError(t, output.Init())
@@ -692,6 +693,26 @@ func TestDynamicTopicRefresh(t *testing.T) {
 			// topic list and verify that the connector
 			// responds appropriately.
 
+			// First we need an AdminClient, so that we can add
+			// a topic list.
+
+			newCfg := sarama.NewConfig()  // Defaults are OK.
+			t.Logf("rt: creating new Kafkfa ClusterAdmin")
+			admin, err := sarama.NewClusterAdmin(brokers, newCfg)
+			if err != nil {
+				require.Error(t, err)
+				return				
+			}
+			t.Logf("rt: creating new Kafkfa topic")
+			err = admin.CreateTopic("TestDynamic", new(sarama.TopicDetail), false)
+			if err != nil {
+				require.Error(t, err)
+				return				
+			}
+
+			t.Logf("rt: waiting for input plugin to see new topic")
+			time.Sleep(4 * 1E9) // Wait for new topic to be noticed
+			
 			// Shove some metrics through
 			expected := testutil.MockMetrics()
 			t.Logf("rt: writing")
