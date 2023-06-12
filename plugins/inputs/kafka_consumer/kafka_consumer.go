@@ -168,7 +168,6 @@ func (k *KafkaConsumer) Init() error {
 		}
 		k.topicClient = client
 	}
-
 	return nil
 }
 
@@ -311,6 +310,7 @@ func (k *KafkaConsumer) handleTicker(acc telegraf.Accumulator) {
 }
 
 func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumulator) {
+	k.Log.Debug("consumeTopics")
 	k.wg.Add(1)
 	defer k.wg.Done()
 	go func() {
@@ -386,6 +386,9 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
 
+	k.Log.Debugf("TopicRegexps: %v", k.TopicRegexps)
+	k.Log.Debugf("TopicRefreshInterval: %v", k.TopicRefreshInterval)
+	
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
 		if _, err = k.changedTopics(); err != nil {

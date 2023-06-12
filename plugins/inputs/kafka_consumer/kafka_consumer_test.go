@@ -480,11 +480,10 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 		connectionStrategy   string
 		topics               []string
 		topicRegexps         []string
-		topicRefreshInterval config.Duration
 	}{
-		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
-		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
-		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(0)},
+		{"connection strategy startup", "startup", []string{"Test"}, nil},
+		{"connection strategy defer", "defer", []string{"Test"}, nil},
+		{"topic regexp", "startup", nil, []string{"Test*"}},
 	}
 
 	for _, tt := range tests {
@@ -602,7 +601,7 @@ func TestDynamicTopicRefresh(t *testing.T) {
 		topicRefreshInterval config.Duration
 	}{
 		// 3-second refresh interval
-		{"topic regexp refresh", "startup", nil, []string{"T*"}, config.Duration(3 * 1E9)},
+		{"topic regexp refresh", "startup", nil, []string{"Test*"}, config.Duration(3 * time.Second)},
 	}
 
 	for _, tt := range tests {
@@ -678,6 +677,7 @@ func TestDynamicTopicRefresh(t *testing.T) {
 				Log:                    testutil.Logger{},
 				Topics:                 tt.topics,
 				TopicRegexps:           tt.topicRegexps,
+				TopicRefreshInterval:   tt.topicRefreshInterval,
 				MaxUndeliveredMessages: 1,
 				ConnectionStrategy:     tt.connectionStrategy,
 			}
@@ -688,6 +688,7 @@ func TestDynamicTopicRefresh(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			require.NoError(t, input.Start(&acc))
+			t.Logf("rt: input plugin started")
 
 			// FIXME here's where we need to manipulate our
 			// topic list and verify that the connector
@@ -696,27 +697,29 @@ func TestDynamicTopicRefresh(t *testing.T) {
 			// First we need an AdminClient, so that we can add
 			// a topic list.
 
-			newCfg := sarama.NewConfig()  // Defaults are OK.
+			newCfg := sarama.NewConfig() // Defaults are OK.
 			t.Logf("rt: creating new Kafkfa ClusterAdmin")
 			admin, err := sarama.NewClusterAdmin(brokers, newCfg)
 			if err != nil {
 				require.Error(t, err)
-				return				
+				return
 			}
 			t.Logf("rt: creating new Kafkfa topic")
 			detail := sarama.TopicDetail{
-				NumPartitions:1,
+				NumPartitions:     1,
 				ReplicationFactor: 1,
 			}
 			err = admin.CreateTopic("TestDynamic", &detail, false)
 			if err != nil {
 				require.Error(t, err)
-				return				
+				return
 			}
 
+			// Wait for new topic to be noticed and propagate.
+			time.Sleep(4 * time.Second)
 			t.Logf("rt: waiting for input plugin to see new topic")
-			time.Sleep(4 * 1E9) // Wait for new topic to be noticed
-			
+			t.Logf("rt: proceeding after wait")
+
 			// Shove some metrics through
 			expected := testutil.MockMetrics()
 			t.Logf("rt: writing")
