@@ -409,11 +409,15 @@ func NewZstdDecoder() (*ZstdDecoder, error) {
 func (*ZstdDecoder) SetEncoding(string) {}
 
 func (d *ZstdDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, error) {
-	size := int64(len(data))
+	decodedData, err := d.decoder.DecodeAll(data, nil)
+	if err != nil {
+		return nil, err
+	}
+	size := int64(len(decodedData))
 	if size > maxDecompressionSize {
 		return nil, fmt.Errorf("size of decoded data: %d exceeds allowed size %d", size, maxDecompressionSize)
 	}
-	return d.decoder.DecodeAll(data, nil)
+	return decodedData, nil
 }
 
 // IdentityDecoder is a null decoder that returns the input.
