@@ -34,6 +34,8 @@ func (s *UbloxDataCollector) Init() error {
 func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 	var lastPos *GPSPos
 
+	lastPos.FusionMode = None
+
 	// read all buffered messages and return last one
 	for {
 		pos, err := s.reader.Pop(false)
@@ -43,7 +45,14 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 			break
 		}
 
+		lastFusionMode := lastPos.FusionMode
+
 		lastPos = pos
+
+		// aggregate fusion mode
+		if pos.FusionMode == None {
+			lastPos.FusionMode = lastFusionMode
+		}
 	}
 
 	if lastPos != nil {
@@ -53,6 +62,11 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 		metrics["lat"] = lastPos.Lat
 		metrics["heading"] = lastPos.Heading
 		metrics["pdop"] = lastPos.Pdop
+
+		if lastPos.FusionMode != None {
+			metrics["fusion_mode"] = lastPos.FusionMode
+		}
+
 		acc.AddFields("ublox-data", metrics, nil)
 	}
 

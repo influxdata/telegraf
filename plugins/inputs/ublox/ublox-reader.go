@@ -8,12 +8,24 @@ void *ublox_reader_new();
 void ublox_reader_free(void *reader);
 bool ublox_reader_init(void *reader, const char *device, char **err);
 void ublox_reader_close(void *reader);
-int ublox_reader_read(void *reader, bool *is_active, double *lat, double *lon, double *heading, double *pdop, bool wait_for_data, char **err);
+int ublox_reader_read(void *reader, bool *is_active, double *lat, double *lon, double *heading, double *pdop, unsigned int *fusion_mode, bool wait_for_data, char **err);
 */
 import "C"
 import (
 	"errors"
 	"unsafe"
+)
+
+type FusionModeE uint8
+
+const (
+	// XXX match original ubx values
+	InitializationMode  FusionModeE = 0
+	FusionMode                      = 1
+	SuspendedFusionMode             = 2
+	DisabledFusionMode              = 3
+
+	None = 255
 )
 
 type GPSPos struct {
@@ -22,6 +34,8 @@ type GPSPos struct {
 	Lon     float64
 	Heading float64
 	Pdop    uint16
+
+	FusionMode FusionModeE
 }
 
 type UbloxReader struct {
@@ -65,7 +79,11 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	var lon C.double
 	var heading C.double
 	var pdop C.double
-	status := C.ublox_reader_read(unsafe.Pointer(reader.reader), &is_active, &lat, &lon, &heading, &pdop, C.bool(wait_for_data), &c_err)
+	var fusion_mode C.uint
+
+	fusion_mode = C.uint(None)
+
+	status := C.ublox_reader_read(unsafe.Pointer(reader.reader), &is_active, &lat, &lon, &heading, &pdop, &fusion_mode, C.bool(wait_for_data), &c_err)
 	if status == -1 {
 		err := C.GoString(c_err)
 		C.free(unsafe.Pointer(c_err))
@@ -81,6 +99,7 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	data.Lon = float64(lon)
 	data.Heading = float64(heading)
 	data.Pdop = uint16(pdop)
+	data.FusionMode = FusionModeE(fusion_mode)
 
 	return &data, nil
 }
