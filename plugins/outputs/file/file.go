@@ -20,9 +20,10 @@ import (
 var sampleConfig string
 
 var ValidCompressionAlgorithmLevels = map[string][]int{
-	"zstd": {1, 3, 7, 11},
-	"gzip": {-2, -1, 1, 9},
-	"zlib": {-2, -1, 1, 9},
+	"zstd":     {1, 3, 7, 11},
+	"gzip":     {-2, -1, 1, 9},
+	"zlib":     {-2, -1, 1, 9},
+	"identity": {0},
 }
 
 type File struct {
@@ -143,11 +144,9 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			f.Log.Errorf("Could not serialize metric: %v", err)
 		}
 
-		if f.CompressionAlgorithm != "" {
-			octets, err = f.encoder.Encode(octets)
-			if err != nil {
-				f.Log.Errorf("Could not compress metrics: %v", err)
-			}
+		octets, err = f.encoder.Encode(octets)
+		if err != nil {
+			f.Log.Errorf("Could not compress metrics: %v", err)
 		}
 
 		_, err = f.writer.Write(octets)
@@ -161,11 +160,9 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 				f.Log.Debugf("Could not serialize metric: %v", err)
 			}
 
-			if f.CompressionAlgorithm != "" {
-				b, err = f.encoder.Encode(b)
-				if err != nil {
-					f.Log.Errorf("Could not compress metrics: %v", err)
-				}
+			b, err = f.encoder.Encode(b)
+			if err != nil {
+				f.Log.Errorf("Could not compress metrics: %v", err)
 			}
 
 			_, err = f.writer.Write(b)
