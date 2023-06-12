@@ -591,6 +591,9 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 }
 
 func TestDynamicTopicRefresh(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	var tests = []struct {
 		name                 string
 		connectionStrategy   string
