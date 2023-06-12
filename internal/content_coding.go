@@ -408,7 +408,11 @@ func NewZstdDecoder() (*ZstdDecoder, error) {
 
 func (*ZstdDecoder) SetEncoding(string) {}
 
-func (d *ZstdDecoder) Decode(data []byte, _ int64) ([]byte, error) {
+func (d *ZstdDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, error) {
+	size := int64(len(data))
+	if size > maxDecompressionSize {
+		return nil, fmt.Errorf("size of decoded data: %d exceeds allowed size %d", size, maxDecompressionSize)
+	}
 	return d.decoder.DecodeAll(data, nil)
 }
 
