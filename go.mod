@@ -112,7 +112,7 @@ require (
 	github.com/jackc/pgconn v1.14.0
 	github.com/jackc/pgio v1.0.0
 	github.com/jackc/pgtype v1.14.0
-	github.com/jackc/pgx/v4 v4.17.1
+	github.com/jackc/pgx/v4 v4.18.1
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jhump/protoreflect v1.15.1
