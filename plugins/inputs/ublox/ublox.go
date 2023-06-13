@@ -43,7 +43,10 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 			break
 		}
 
-		lastFusionMode := lastPos.FusionMode
+		lastFusionMode := None
+		if lastPos != nil {
+			lastFusionMode = lastPos.FusionMode
+		}
 
 		lastPos = pos
 
