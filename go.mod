@@ -184,7 +184,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
 	go.opentelemetry.io/otel/sdk/metric v0.39.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
-	golang.org/x/crypto v0.8.0
+	golang.org/x/crypto v0.9.0
 	golang.org/x/mod v0.10.0
 	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.8.0
