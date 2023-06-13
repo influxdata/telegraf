@@ -21,11 +21,11 @@ type FusionModeE uint8
 const (
 	// XXX match original ubx values
 	InitializationMode  FusionModeE = 0
-	FusionMode                      = 1
-	SuspendedFusionMode             = 2
-	DisabledFusionMode              = 3
+	FusionMode          FusionModeE = 1
+	SuspendedFusionMode FusionModeE = 2
+	DisabledFusionMode  FusionModeE = 3
 
-	None = 255
+	None FusionModeE = 255
 )
 
 type GPSPos struct {
