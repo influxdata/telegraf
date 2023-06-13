@@ -25,6 +25,16 @@ func New(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
+	return FromNamer(telegraf.Namer{Name: name}, tags, fields, tm, tp...)
+}
+
+func FromNamer(
+	namer telegraf.Namer,
+	tags map[string]string,
+	fields map[string]interface{},
+	tm time.Time,
+	tp ...telegraf.ValueType,
+) telegraf.Metric {
 	var vtype telegraf.ValueType
 	if len(tp) > 0 {
 		vtype = tp[0]
@@ -33,7 +43,7 @@ func New(
 	}
 
 	m := &metric{
-		namer:  &telegraf.Namer{Name: name},
+		namer:  &namer,
 		tags:   nil,
 		fields: nil,
 		tm:     tm,
@@ -133,11 +143,11 @@ func (m *metric) SetName(name string) {
 	m.namer.SetName(name)
 }
 
-func (m *metric) AddPrefix(prefix string) {
+func (m *metric) SetPrefix(prefix string) {
 	m.namer.SetPrefix(prefix)
 }
 
-func (m *metric) AddSuffix(suffix string) {
+func (m *metric) SetSuffix(suffix string) {
 	m.namer.SetSuffix(suffix)
 }
 
@@ -247,7 +257,7 @@ func (m *metric) SetTime(t time.Time) {
 
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
-		namer:  m.namer,
+		namer:  m.namer.Copy(),
 		tags:   make([]*telegraf.Tag, len(m.tags)),
 		fields: make([]*telegraf.Field, len(m.fields)),
 		tm:     m.tm,

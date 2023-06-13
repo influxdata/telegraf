@@ -165,11 +165,11 @@ func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
 	}
 
 	if len(r.Config.NamePrefix) > 0 {
-		metric.AddPrefix(r.Config.NamePrefix)
+		metric.SetPrefix(r.Config.NamePrefix)
 	}
 
 	if len(r.Config.NameSuffix) > 0 {
-		metric.AddSuffix(r.Config.NameSuffix)
+		metric.SetSuffix(r.Config.NameSuffix)
 	}
 
 	dropped := r.buffer.Add(metric)

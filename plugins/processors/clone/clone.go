@@ -32,10 +32,10 @@ func (c *Clone) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			metric.SetName(c.NameOverride)
 		}
 		if len(c.NamePrefix) > 0 {
-			metric.AddPrefix(c.NamePrefix)
+			metric.SetPrefix(c.NamePrefix)
 		}
 		if len(c.NameSuffix) > 0 {
-			metric.AddSuffix(c.NameSuffix)
+			metric.SetSuffix(c.NameSuffix)
 		}
 		for key, value := range c.Tags {
 			metric.AddTag(key, value)

@@ -1,6 +1,7 @@
 package telegraf
 
 import (
+	"strings"
 	"time"
 )
 
@@ -31,12 +32,32 @@ func (n *Namer) SetName(name string) {
 	n.Name = name
 }
 
+// SetPrefix on name, if the prefix does not start with a `+` sign,
+// it directly overwrites the prefix setting of the metric, otherwise add it.
 func (n *Namer) SetPrefix(prefix string) {
-	n.Prefix = prefix
+	if strings.HasPrefix(prefix, "+") {
+		n.Prefix = prefix[1:] + n.Prefix
+	} else {
+		n.Prefix = prefix
+	}
 }
 
+// SetSuffix on name, if the suffix does not start with a `+` sign,
+// it directly overwrites the suffix setting of the metric, otherwise add it.
 func (n *Namer) SetSuffix(suffix string) {
-	n.Suffix = suffix
+	if strings.HasPrefix(suffix, "+") {
+		n.Suffix += suffix[1:]
+	} else {
+		n.Suffix = suffix
+	}
+}
+
+func (n *Namer) Copy() *Namer {
+	return &Namer{
+		Name:   n.Name,
+		Prefix: n.Prefix,
+		Suffix: n.Suffix,
+	}
 }
 
 // Tag represents a single tag key and value.
@@ -98,17 +119,21 @@ type Metric interface {
 	// This method is deprecated, use Namer().SetName instead.
 	SetName(name string)
 
-	// AddPrefix adds a string to the front of the metric name.  It is
-	// equivalent to m.Namer().SetPrefix(prefix).
+	// SetPrefix sets a string to the front of the metric name.  It is
+	// equivalent to m.Namer().SetPrefix(prefix). It is different with
+	// AddPrefix sets a string to the front of the prefixed metric name,
+	// which equivalent to m.Namer().SetPrefix("+" + prefix).
 	//
 	// This method is deprecated, use Namer().SetPrefix instead.
-	AddPrefix(prefix string)
+	SetPrefix(prefix string)
 
-	// AddSuffix appends a string to the back of the metric name.  It is
-	// equivalent to m.Namer().SetSuffix(suffix).
+	// SetSuffix sets a string to the back of the metric name.  It is
+	// equivalent to m.Namer().SetSuffix(suffix). It is different with
+	// AddSuffix sets a string to the back of the suffixed metric name,
+	// which equivalent to m.Namer().SetSuffix("+" + suffix).
 	//
 	// This method is deprecated, use Namer().SetSuffix instead.
-	AddSuffix(suffix string)
+	SetSuffix(suffix string)
 
 	// GetTag returns the value of a tag and a boolean to indicate if it was set.
 	GetTag(key string) (string, bool)

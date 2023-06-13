@@ -209,7 +209,7 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 		now,
 		telegraf.Untyped)
 	m = ri.MakeMetric(m)
-	expected := metric.New("foobar_RITest",
+	expected := metric.FromNamer(telegraf.Namer{Name: "RITest", Prefix: "foobar_"},
 		nil,
 		map[string]interface{}{
 			"value": 101,
@@ -234,7 +234,7 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		now,
 		telegraf.Untyped)
 	m = ri.MakeMetric(m)
-	expected := metric.New("RITest_foobar",
+	expected := metric.FromNamer(telegraf.Namer{Name: "RITest", Suffix: "_foobar"},
 		nil,
 		map[string]interface{}{
 			"value": 101,

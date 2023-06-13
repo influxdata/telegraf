@@ -376,8 +376,12 @@ Parameters that can be used with any input plugin:
   the name of the input).
 
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
+  If the prefix does not start with a `+` sign, directly overwrites the prefix
+  setting of the metric, otherwise appends it to the front of the prefixed name.
 
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
+  If the suffix does not start with a `+` sign, directly overwrites the suffix
+  setting of the metric, otherwise appends it to the back of the suffixed name.
 
 - **tags**: A map of tags to apply to a specific input's measurements.
 
@@ -463,7 +467,11 @@ Parameters that can be used with any output plugin:
   basis.
 - **name_override**: Override the original name of the measurement.  (Default is the name of input).
 - **name_prefix**: Specifies a prefix to attach to the measurement name.  (Default is the name prefix of input).
+  If the prefix does not start with a `+` sign, directly overwrites the prefix
+  setting of the metric, otherwise appends it to the front of the prefixed name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.  (Default is the name suffix of input).
+  If the suffix does not start with a `+` sign, directly overwrites the suffix
+  setting of the metric, otherwise appends it to the back of the suffixed name.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the output plugin.
@@ -553,8 +561,12 @@ Parameters that can be used with any aggregator plugin:
   the name of the input).
 - **name_prefix**: Specifies a prefix to attach to the measurement name.  (Default is
   the name prefix of the input).
+  If the prefix does not start with a `+` sign, directly overwrites the prefix
+  setting of the metric, otherwise appends it to the front of the prefixed name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.  (Default is
   the name suffix of the input).
+  If the suffix does not start with a `+` sign, directly overwrites the suffix
+  setting of the metric, otherwise appends it to the back of the suffixed name.
 - **tags**: A map of tags to apply to the measurement - behavior varies based on aggregator.
 
 The [metric filtering][] parameters can be used to limit what metrics are
@@ -806,6 +818,56 @@ select the output.  The tag is removed in the outputs before writing.
 [[inputs.disk]]
   [inputs.disk.tags]
     influxdb_database = "other"
+```
+
+Metrics are prefixed in the input, which is then used to select the output.
+The metric name will be removed/overrode/appended in the outputs before writing.
+
+```toml
+[[inputs.exec]]
+# ...
+name_prefix = "exec1_"
+
+[[inputs.exec]]
+# ...
+name_prefix = "exec2_"
+
+[[inputs.exec]]
+# ...
+name_prefix = "exec3_"
+
+[[inputs.exec]]
+# ...
+name_prefix = "exec4_"
+
+# this will only get exec1
+[[outputs.influxdb]]
+# ...
+namepass = "exec1_*"
+
+# this will only get exec2
+[[outputs.influxdb]]
+# ...
+namepass = "exec2_*"
+# this will remove the previously set prefix
+# so final metric name will be first input name
+name_prefix = ""
+
+# this will only get exec3
+[[outputs.influxdb]]
+# ...
+namepass = "exec3_*"
+# this will override the previously set prefix
+# so final metric name will start with exec3v1_
+name_prefix = "exec3v1_"
+
+# this will only get exec4
+[[outputs.influxdb]]
+# ...
+namepass = "exec4_*"
+# this will appends to the front of the previously set prefix
+# so final metric name will start with telegraf_exec4_
+name_prefix = "+telegraf_"
 ```
 
 ## Transport Layer Security (TLS)

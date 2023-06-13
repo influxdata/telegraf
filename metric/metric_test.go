@@ -299,20 +299,38 @@ func TestSetName(t *testing.T) {
 	require.Equal(t, "foo", m.Name())
 }
 
+func TestSetPrefix(t *testing.T) {
+	m := baseMetric()
+	m.SetPrefix("foo_")
+	require.Equal(t, "foo_cpu", m.Name())
+	m.Namer().SetPrefix("bar_")
+	require.Equal(t, "bar_cpu", m.Name())
+}
+
+func TestSetSuffix(t *testing.T) {
+	m := baseMetric()
+	m.Namer().SetSuffix("_foo")
+	require.Equal(t, "cpu_foo", m.Name())
+	m.Namer().SetSuffix("_bar")
+	require.Equal(t, "cpu_bar", m.Name())
+}
+
 func TestAddPrefix(t *testing.T) {
 	m := baseMetric()
-	m.AddPrefix("foo_")
+	m.SetPrefix("foo_")
 	require.Equal(t, "foo_cpu", m.Name())
-	m.AddPrefix("foo_")
-	require.Equal(t, "foo_foo_cpu", m.Name())
+	// append to the front of foo_cpu
+	m.Namer().SetPrefix("+bar_")
+	require.Equal(t, "bar_foo_cpu", m.Name())
 }
 
 func TestAddSuffix(t *testing.T) {
 	m := baseMetric()
-	m.AddSuffix("_foo")
+	m.Namer().SetSuffix("_foo")
 	require.Equal(t, "cpu_foo", m.Name())
-	m.AddSuffix("_foo")
-	require.Equal(t, "cpu_foo_foo", m.Name())
+	// append to the back of cpu_bar
+	m.Namer().SetSuffix("+_bar")
+	require.Equal(t, "cpu_foo_bar", m.Name())
 }
 
 func TestValueType(t *testing.T) {

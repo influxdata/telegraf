@@ -28,10 +28,10 @@ func (p *Override) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			metric.SetName(p.NameOverride)
 		}
 		if len(p.NamePrefix) > 0 {
-			metric.AddPrefix(p.NamePrefix)
+			metric.SetPrefix(p.NamePrefix)
 		}
 		if len(p.NameSuffix) > 0 {
-			metric.AddSuffix(p.NameSuffix)
+			metric.SetSuffix(p.NameSuffix)
 		}
 		for key, value := range p.Tags {
 			metric.AddTag(key, value)
