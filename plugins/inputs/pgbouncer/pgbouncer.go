@@ -20,10 +20,12 @@ var sampleConfig string
 
 type PgBouncer struct {
 	postgresql.Service
+	ShowCommands []string `toml:"show_commands"`
 }
 
 var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode": true,
 	"avg_req": true, "avg_recv": true, "avg_sent": true, "avg_query": true,
+	"force_user": true, "host": true, "port": true, "name": true,
 }
 
 func (*PgBouncer) SampleConfig() string {
@@ -31,105 +33,38 @@ func (*PgBouncer) SampleConfig() string {
 }
 
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
-	var (
-		err     error
-		query   string
-		columns []string
-	)
-
-	query = `SHOW STATS`
-
-	rows, err := p.DB.Query(query)
-	if err != nil {
-		return err
-	}
-
-	defer rows.Close()
-
-	// grab the column information from the result
-	if columns, err = rows.Columns(); err != nil {
-		return err
-	}
-
-	for rows.Next() {
-		tags, columnMap, err := p.accRow(rows, columns)
-
-		if err != nil {
+	if len(p.ShowCommands) == 0 {
+		if err := p.showStats(acc); err != nil {
 			return err
 		}
 
-		fields := make(map[string]interface{})
-		for col, val := range columnMap {
-			_, ignore := ignoredColumns[col]
-			if ignore {
-				continue
-			}
-
-			switch v := (*val).(type) {
-			case int64:
-				// Integer fields are returned in pgbouncer 1.5 through 1.9
-				fields[col] = v
-			case string:
-				// Integer fields are returned in pgbouncer 1.12
-				integer, err := strconv.ParseInt(v, 10, 64)
-				if err != nil {
+		if err := p.showPools(acc); err != nil {
+			return err
+		}
+	} else {
+		for _, cmd := range p.ShowCommands {
+			switch {
+			case cmd == "stats":
+				if err := p.showStats(acc); err != nil {
 					return err
 				}
-
-				fields[col] = integer
+			case cmd == "pools":
+				if err := p.showPools(acc); err != nil {
+					return err
+				}
+			case cmd == "lists":
+				if err := p.showLists(acc); err != nil {
+					return err
+				}
+			case cmd == "databases":
+				if err := p.showDatabase(acc); err != nil {
+					return err
+				}
 			}
 		}
-		acc.AddFields("pgbouncer", fields, tags)
 	}
 
-	err = rows.Err()
-	if err != nil {
-		return err
-	}
-
-	query = `SHOW POOLS`
-
-	poolRows, err := p.DB.Query(query)
-	if err != nil {
-		return err
-	}
-
-	defer poolRows.Close()
-
-	// grab the column information from the result
-	if columns, err = poolRows.Columns(); err != nil {
-		return err
-	}
-
-	for poolRows.Next() {
-		tags, columnMap, err := p.accRow(poolRows, columns)
-		if err != nil {
-			return err
-		}
-
-		if user, ok := columnMap["user"]; ok {
-			if s, ok := (*user).(string); ok && s != "" {
-				tags["user"] = s
-			}
-		}
-
-		if poolMode, ok := columnMap["pool_mode"]; ok {
-			if s, ok := (*poolMode).(string); ok && s != "" {
-				tags["pool_mode"] = s
-			}
-		}
-
-		fields := make(map[string]interface{})
-		for col, val := range columnMap {
-			_, ignore := ignoredColumns[col]
-			if !ignore {
-				fields[col] = *val
-			}
-		}
-		acc.AddFields("pgbouncer_pools", fields, tags)
-	}
-
-	return poolRows.Err()
+	return nil
 }
 
 type scanner interface {
@@ -178,6 +113,208 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 
 	// Return basic tags and the mapped columns
 	return map[string]string{"server": tagAddress, "db": dbname.String()}, columnMap, nil
+}
+
+func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
+	// STATS
+	var (
+		err     error
+		query   string
+		columns []string
+	)
+	query = `SHOW STATS`
+
+	rows, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	// grab the column information from the result
+	columns, err = rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		tags, columnMap, err := p.accRow(rows, columns)
+
+		if err != nil {
+			return err
+		}
+
+		fields := make(map[string]interface{})
+		for col, val := range columnMap {
+			_, ignore := ignoredColumns[col]
+			if ignore {
+				continue
+			}
+
+			switch v := (*val).(type) {
+			case int64:
+				// Integer fields are returned in pgbouncer 1.5 through 1.9
+				fields[col] = v
+			case string:
+				// Integer fields are returned in pgbouncer 1.12
+				integer, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return err
+				}
+
+				fields[col] = integer
+			}
+		}
+		acc.AddFields("pgbouncer", fields, tags)
+	}
+
+	return rows.Err()
+}
+
+func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
+	// POOLS
+	var (
+		err     error
+		query   string
+		columns []string
+	)
+	query = `SHOW POOLS`
+
+	poolRows, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer poolRows.Close()
+
+	// grab the column information from the result
+	columns, err = poolRows.Columns()
+	if err != nil {
+		return err
+	}
+
+	for poolRows.Next() {
+		tags, columnMap, err := p.accRow(poolRows, columns)
+		if err != nil {
+			return err
+		}
+
+		if user, ok := columnMap["user"]; ok {
+			if s, ok := (*user).(string); ok && s != "" {
+				tags["user"] = s
+			}
+		}
+
+		if poolMode, ok := columnMap["pool_mode"]; ok {
+			if s, ok := (*poolMode).(string); ok && s != "" {
+				tags["pool_mode"] = s
+			}
+		}
+
+		fields := make(map[string]interface{})
+		for col, val := range columnMap {
+			_, ignore := ignoredColumns[col]
+			if !ignore {
+				fields[col] = *val
+			}
+		}
+		acc.AddFields("pgbouncer_pools", fields, tags)
+	}
+
+	return poolRows.Err()
+}
+
+func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
+	// LISTS
+	var (
+		err     error
+		query   string
+		columns []string
+	)
+	query = `SHOW LISTS`
+
+	rows, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	// grab the column information from the result
+	columns, err = rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for rows.Next() {
+		tag, columnMap, err := p.accRow(rows, columns)
+		if err != nil {
+			return err
+		}
+
+		if (*columnMap["list"]).(string) != "dns_pending" {
+			fields[(*columnMap["list"]).(string)] = (*columnMap["items"]).(int64)
+			tags = tag
+		}
+	}
+	acc.AddFields("pgbouncer_lists", fields, tags)
+
+	return rows.Err()
+}
+
+func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
+	// DATABASES
+	var (
+		err     error
+		query   string
+		columns []string
+	)
+	query = `SHOW DATABASES`
+	rows, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// grab the column information from the result
+	columns, err = rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		tags, columnMap, err := p.accRow(rows, columns)
+		if err != nil {
+			return err
+		}
+
+		// SHOW DATABASES displays pgbouncer database name under name column,
+		// while using database column to store Postgres database name.
+		if database, ok := columnMap["database"]; ok {
+			if s, ok := (*database).(string); ok && s != "" {
+				tags["pg_dbname"] = s
+			}
+		}
+
+		// pass it under db tag to be compatible with the rest of the measurements
+		if name, ok := columnMap["name"]; ok {
+			if s, ok := (*name).(string); ok && s != "" {
+				tags["db"] = s
+			}
+		}
+
+		fields := make(map[string]interface{})
+		for col, val := range columnMap {
+			_, ignore := ignoredColumns[col]
+			if !ignore {
+				fields[col] = *val
+			}
+		}
+		acc.AddFields("pgbouncer_databases", fields, tags)
+	}
+	return rows.Err()
 }
 
 func init() {
