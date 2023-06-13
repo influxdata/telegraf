@@ -219,7 +219,6 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 	}
 
 	for _, metric := range intMetricsPgBouncerDatabases {
-		fmt.Println(acc)
 		require.True(t, acc.HasInt64Field("pgbouncer_databases", metric))
 		metricsCounted++
 	}
