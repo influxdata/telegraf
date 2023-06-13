@@ -34,8 +34,6 @@ func (s *UbloxDataCollector) Init() error {
 func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 	var lastPos *GPSPos
 
-	lastPos.FusionMode = None
-
 	// read all buffered messages and return last one
 	for {
 		pos, err := s.reader.Pop(false)
