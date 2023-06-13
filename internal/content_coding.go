@@ -447,26 +447,14 @@ func (d *ZstdDecoder) Decode(data []byte) ([]byte, error) {
 
 // IdentityDecoder is a null decoder that returns the input.
 type IdentityDecoder struct {
-	maxDecompressionSize int64
 }
 
-func NewIdentityDecoder(options ...DecodingOption) *IdentityDecoder {
-	cfg := decoderConfig{maxDecompressionSize: DefaultMaxDecompressionSize}
-	for _, o := range options {
-		o(&cfg)
-	}
-
-	return &IdentityDecoder{
-		maxDecompressionSize: cfg.maxDecompressionSize,
-	}
+func NewIdentityDecoder(_ ...DecodingOption) *IdentityDecoder {
+	return &IdentityDecoder{}
 }
 
 func (*IdentityDecoder) SetEncoding(string) {}
 
-func (d *IdentityDecoder) Decode(data []byte) ([]byte, error) {
-	size := int64(len(data))
-	if size > d.maxDecompressionSize {
-		return nil, fmt.Errorf("size of decoded data: %d exceeds allowed size %d", size, d.maxDecompressionSize)
-	}
+func (*IdentityDecoder) Decode(data []byte) ([]byte, error) {
 	return data, nil
 }
