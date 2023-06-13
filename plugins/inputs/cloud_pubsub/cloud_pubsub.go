@@ -317,6 +317,10 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
+	if ps.MaxDecompressionSize <= 0 {
+		ps.MaxDecompressionSize = config.Size(internal.DefaultMaxDecompressionSize)
+	}
+
 	switch ps.ContentEncoding {
 	case "", "identity":
 		ps.ContentEncoding = "identity"
@@ -328,10 +332,6 @@ func (ps *PubSub) Init() error {
 		}
 	default:
 		return fmt.Errorf("invalid value %q for content_encoding", ps.ContentEncoding)
-	}
-
-	if ps.MaxDecompressionSize <= 0 {
-		ps.MaxDecompressionSize = config.Size(internal.DefaultMaxDecompressionSize)
 	}
 
 	return nil

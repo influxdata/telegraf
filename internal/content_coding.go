@@ -334,23 +334,23 @@ func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
 	// to parallel Gzip if the data is larger and run the built-in version
 	// otherwise.
 	if len(data) > 1024*1024 {
-		return d.decodeBig(data, d.maxDecompressionSize)
+		return d.decodeBig(data)
 	}
-	return d.decodeSmall(data, d.maxDecompressionSize)
+	return d.decodeSmall(data)
 }
 
-func (d *GzipDecoder) decodeSmall(data []byte, maxDecompressionSize int64) ([]byte, error) {
+func (d *GzipDecoder) decodeSmall(data []byte) ([]byte, error) {
 	err := d.reader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
 	}
 	d.buf.Reset()
 
-	n, err := io.CopyN(d.buf, d.reader, maxDecompressionSize)
+	n, err := io.CopyN(d.buf, d.reader, d.maxDecompressionSize)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
-	} else if n == maxDecompressionSize {
-		return nil, fmt.Errorf("size of decoded data exceeds allowed size %d", maxDecompressionSize)
+	} else if n == d.maxDecompressionSize {
+		return nil, fmt.Errorf("size of decoded data exceeds allowed size %d", d.maxDecompressionSize)
 	}
 
 	err = d.reader.Close()
@@ -360,18 +360,18 @@ func (d *GzipDecoder) decodeSmall(data []byte, maxDecompressionSize int64) ([]by
 	return d.buf.Bytes(), nil
 }
 
-func (d *GzipDecoder) decodeBig(data []byte, maxDecompressionSize int64) ([]byte, error) {
+func (d *GzipDecoder) decodeBig(data []byte) ([]byte, error) {
 	err := d.preader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
 	}
 	d.buf.Reset()
 
-	n, err := io.CopyN(d.buf, d.preader, maxDecompressionSize)
+	n, err := io.CopyN(d.buf, d.preader, d.maxDecompressionSize)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
-	} else if n == maxDecompressionSize {
-		return nil, fmt.Errorf("size of decoded data exceeds allowed size %d", maxDecompressionSize)
+	} else if n == d.maxDecompressionSize {
+		return nil, fmt.Errorf("size of decoded data exceeds allowed size %d", d.maxDecompressionSize)
 	}
 
 	err = d.preader.Close()
