@@ -654,6 +654,15 @@ func TestParseTimestamp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Ensure any one-time warnings are printed for each test
+			once = sync.Once{}
+
+			// Ensure the warnings are captured and not to stdout
+			var buf bytes.Buffer
+			backup := log.Writer()
+			log.SetOutput(&buf)
+			defer log.SetOutput(backup)
+
 			var loc *time.Location
 			if tt.location != "" {
 				var err error
@@ -725,6 +734,15 @@ func TestParseTimestampInvalid(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Ensure any one-time warnings are printed for each test
+			once = sync.Once{}
+
+			// Ensure the warnings are captured and not to stdout
+			var buf bytes.Buffer
+			backup := log.Writer()
+			log.SetOutput(&buf)
+			defer log.SetOutput(backup)
+
 			_, err := ParseTimestamp(tt.format, tt.timestamp, nil)
 			require.ErrorContains(t, err, tt.expected)
 		})
@@ -732,15 +750,18 @@ func TestParseTimestampInvalid(t *testing.T) {
 }
 
 func TestTimestampAbbrevWarning(t *testing.T) {
+	// Ensure any one-time warnings are printed for each test
+	once = sync.Once{}
+
+	// Ensure the warnings are captured and not to stdout
 	var buf bytes.Buffer
 	backup := log.Writer()
 	log.SetOutput(&buf)
 	defer log.SetOutput(backup)
 
-	once = sync.Once{}
-	ts, err := ParseTimestamp("RFC1123", "Mon, 02 Jan 2006 15:04:05 MST", nil)
+	ts, err := ParseTimestamp("RFC1123", "Mon, 02 Jan 2006 15:04:05 EST", nil)
 	require.NoError(t, err)
-	require.EqualValues(t, 1136239445, ts.Unix())
+	require.EqualValues(t, 1136232245, ts.Unix())
 
 	require.Contains(t, buf.String(), "Your config is using abbreviated timezones and parsing was changed in v1.27.0")
 }
