@@ -850,9 +850,9 @@ message Able {
 
 message AbleStats {
   message Fields {
-    int64 fps_main = 1;
-    int64 fps_synchronizer = 2;
-    int64 fps_observation = 3;
+    double fps_main = 1;
+    double fps_synchronizer = 2;
+    double fps_observation = 3;
     int64 plates_detected = 4;
     int64 events_created = 5;
   }
