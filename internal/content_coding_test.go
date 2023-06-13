@@ -120,6 +120,93 @@ func TestStreamGzipDecode(t *testing.T) {
 	require.Equal(t, []byte("howdy"), b[:n])
 }
 
+func TestCompressionLevel(t *testing.T) {
+	tests := []struct {
+		algorithm   string
+		compression string
+		errormsg    string
+	}{
+		{
+			algorithm:   "gzip",
+			compression: "default",
+		},
+		{
+			algorithm:   "gzip",
+			compression: "none",
+		},
+		{
+			algorithm:   "gzip",
+			compression: "best compression",
+		},
+		{
+			algorithm:   "gzip",
+			compression: "best speed",
+		},
+		{
+			algorithm:   "gzip",
+			compression: "invalid",
+			errormsg:    "invalid compression level",
+		},
+		{
+			algorithm:   "zlib",
+			compression: "default",
+		},
+		{
+			algorithm:   "zlib",
+			compression: "none",
+		},
+		{
+			algorithm:   "zlib",
+			compression: "best compression",
+		},
+		{
+			algorithm:   "zlib",
+			compression: "best speed",
+		},
+		{
+			algorithm:   "zlib",
+			compression: "invalid",
+			errormsg:    "invalid compression level",
+		},
+		{
+			algorithm:   "identity",
+			compression: "default",
+		},
+		{
+			algorithm:   "identity",
+			compression: "none",
+		},
+		{
+			algorithm:   "identity",
+			compression: "best compression",
+		},
+		{
+			algorithm:   "identity",
+			compression: "best speed",
+		},
+		{
+			algorithm:   "identity",
+			compression: "invalid",
+			errormsg:    "invalid compression level",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.algorithm+" "+tt.compression, func(t *testing.T) {
+			level, err := ToCompressionLevel(tt.compression)
+			if tt.errormsg != "" {
+				require.ErrorContains(t, err, tt.errormsg)
+				return
+			}
+			require.NoError(t, err)
+
+			enc, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(level))
+			require.NoError(t, err)
+			require.NotNil(t, enc)
+		})
+	}
+}
+
 func BenchmarkGzipEncode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1

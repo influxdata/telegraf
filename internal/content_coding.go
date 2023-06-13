@@ -14,15 +14,38 @@ import (
 
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
 
+type CompressionLevel int
+
+const (
+	None CompressionLevel = iota
+	Default
+	BestSpeed
+	BestCompression
+)
+
+func ToCompressionLevel(level string) (CompressionLevel, error) {
+	switch level {
+	case "", "default":
+		return Default, nil
+	case "none":
+		return None, nil
+	case "best speed":
+		return BestSpeed, nil
+	case "best compression":
+		return BestCompression, nil
+	}
+	return -1, errors.New("invalid compression level")
+}
+
+type encoderConfig struct {
+	level CompressionLevel
+}
+
 // EncodingOption provide methods to change the encoding from the standard
 // configuration.
 type EncodingOption func(*encoderConfig)
 
-type encoderConfig struct {
-	level int
-}
-
-func EncoderCompressionLevel(level int) EncodingOption {
+func WithCompressionLevel(level CompressionLevel) EncodingOption {
 	return func(cfg *encoderConfig) {
 		cfg.level = level
 	}
@@ -155,17 +178,44 @@ type GzipEncoder struct {
 }
 
 func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
-	cfg := encoderConfig{level: pgzip.DefaultCompression}
+	cfg := encoderConfig{level: Default}
 	for _, o := range options {
 		o(&cfg)
 	}
 
+	var plevel int
+	switch cfg.level {
+	case None:
+		plevel = pgzip.NoCompression
+	case Default:
+		plevel = pgzip.DefaultCompression
+	case BestSpeed:
+		plevel = pgzip.BestSpeed
+	case BestCompression:
+		plevel = pgzip.BestCompression
+	default:
+		return nil, fmt.Errorf("invalid compression level %d", cfg.level)
+	}
 	var buf bytes.Buffer
-	pw, err := pgzip.NewWriterLevel(&buf, cfg.level)
+	pw, err := pgzip.NewWriterLevel(&buf, plevel)
 	if err != nil {
 		return nil, err
 	}
-	w, err := gzip.NewWriterLevel(&buf, cfg.level)
+
+	var level int
+	switch cfg.level {
+	case None:
+		level = gzip.NoCompression
+	case Default:
+		level = gzip.DefaultCompression
+	case BestSpeed:
+		level = gzip.BestSpeed
+	case BestCompression:
+		level = gzip.BestCompression
+	default:
+		return nil, fmt.Errorf("invalid compression level %d", cfg.level)
+	}
+	w, err := gzip.NewWriterLevel(&buf, level)
 	return &GzipEncoder{
 		pwriter: pw,
 		writer:  w,
@@ -220,13 +270,27 @@ type ZlibEncoder struct {
 }
 
 func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
-	cfg := encoderConfig{level: zlib.DefaultCompression}
+	cfg := encoderConfig{level: Default}
 	for _, o := range options {
 		o(&cfg)
 	}
 
+	var level int
+	switch cfg.level {
+	case None:
+		level = zlib.NoCompression
+	case Default:
+		level = zlib.DefaultCompression
+	case BestSpeed:
+		level = zlib.BestSpeed
+	case BestCompression:
+		level = zlib.BestCompression
+	default:
+		return nil, fmt.Errorf("invalid compression level %d", cfg.level)
+	}
+
 	var buf bytes.Buffer
-	w, err := zlib.NewWriterLevel(&buf, cfg.level)
+	w, err := zlib.NewWriterLevel(&buf, level)
 	return &ZlibEncoder{
 		writer: w,
 		buf:    &buf,
