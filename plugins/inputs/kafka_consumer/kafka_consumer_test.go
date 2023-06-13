@@ -476,10 +476,10 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}
 
 	var tests = []struct {
-		name                 string
-		connectionStrategy   string
-		topics               []string
-		topicRegexps         []string
+		name               string
+		connectionStrategy string
+		topics             []string
+		topicRegexps       []string
 	}{
 		{"connection strategy startup", "startup", []string{"Test"}, nil},
 		{"connection strategy defer", "defer", []string{"Test"}, nil},

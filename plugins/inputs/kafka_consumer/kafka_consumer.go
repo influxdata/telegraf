@@ -388,7 +388,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 
 	k.Log.Debugf("TopicRegexps: %v", k.TopicRegexps)
 	k.Log.Debugf("TopicRefreshInterval: %v", k.TopicRefreshInterval)
-	
+
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
 		if _, err = k.changedTopics(); err != nil {
