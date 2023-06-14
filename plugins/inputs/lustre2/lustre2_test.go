@@ -132,11 +132,15 @@ const mdtJobStatsContents = `job_stats:
 `
 
 func TestLustre2GeneratesMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName, 0750)
+	err = os.MkdirAll(mdtdir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	osddir := tempdir + "/osd-ldiskfs/"
@@ -198,17 +202,18 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2GeneratesClientMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre-client")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 	clientName := "10.2.4.27@o2ib1"
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0750)
+	err = os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
@@ -261,18 +266,19 @@ func TestLustre2GeneratesClientMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre-jobstats")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 	jobNames := []string{"cluster-testjob1", "testjob2"}
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName, 0750)
+	err = os.MkdirAll(mdtdir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
@@ -389,11 +395,6 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	for index := 0; index < len(fields); index++ {
 		acc.AssertContainsTaggedFields(t, "lustre2", fields[index], tags[index])
 	}
-
-	// run this over both tags
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2CanParseConfiguration(t *testing.T) {
