@@ -42,7 +42,12 @@
         "IndexesAllocatedDataFileInMb": 464,
         "IndexesUsedDataFileInMb": 278,
         "TotalAllocatedStorageFileInMb": 1496,
-        "TotalFreeSpaceInMb": 52074
+        "TotalFreeSpaceInMb": 52074,
+        "IoReadOperations": 0.5,
+        "IoWriteOperations": 0.7,
+        "ReadThroughputInKb": 2137,
+        "WriteThroughputInKb": 2115,
+        "QueueLength": 15
       }
     }
   ]
