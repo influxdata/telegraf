@@ -343,6 +343,7 @@ func (o *OpenStack) gatherCinderServices(acc telegraf.Accumulator) error {
 	for _, cinderService := range cinderServices {
 		tags := map[string]string{
 			"name":         cinderService.Binary,
+			"cluster":      cinderService.Cluster,
 			"host_machine": cinderService.Host,
 			"state":        cinderService.State,
 			"status":       strings.ToLower(cinderService.Status),
@@ -350,7 +351,6 @@ func (o *OpenStack) gatherCinderServices(acc telegraf.Accumulator) error {
 		}
 		fields := map[string]interface{}{
 			"id":                 cinderService.ActiveBackendID,
-			"cluster":            cinderService.Cluster,
 			"disabled_reason":    cinderService.DisabledReason,
 			"frozen":             cinderService.Frozen,
 			"replication_status": cinderService.ReplicationStatus,
