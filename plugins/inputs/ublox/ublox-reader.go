@@ -16,16 +16,14 @@ import (
 	"unsafe"
 )
 
-type FusionModeE uint8
-
 const (
 	// XXX match original ubx values
-	InitializationMode  FusionModeE = 0
-	FusionMode          FusionModeE = 1
-	SuspendedFusionMode FusionModeE = 2
-	DisabledFusionMode  FusionModeE = 3
+	InitializationMode  uint8 = 0
+	FusionMode          uint8 = 1
+	SuspendedFusionMode uint8 = 2
+	DisabledFusionMode  uint8 = 3
 
-	None FusionModeE = 255
+	None uint8 = 255
 )
 
 type GPSPos struct {
@@ -35,7 +33,7 @@ type GPSPos struct {
 	Heading float64
 	Pdop    uint16
 
-	FusionMode FusionModeE
+	FusionMode uint8
 }
 
 type UbloxReader struct {
@@ -99,7 +97,7 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	data.Lon = float64(lon)
 	data.Heading = float64(heading)
 	data.Pdop = uint16(pdop)
-	data.FusionMode = FusionModeE(fusion_mode)
+	data.FusionMode = uint8(fusion_mode)
 
 	return &data, nil
 }
