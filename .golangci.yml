@@ -44,6 +44,7 @@ linters-settings:
           - pkg: log
             desc: 'Use injected telegraf.Logger instead'
         files:
+          - "$all"
           - "!**/agent/**"
           - "!**/cmd/**"
           - "!**/config/**"
