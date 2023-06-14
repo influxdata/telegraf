@@ -141,22 +141,40 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 		for name, data := range categoryTbl.Fields {
 			(*s)[category][name] = true
 
-			// We need to check the data_format field to get all required parsers
-			switch category {
-			case "inputs", "processors":
-				pluginTables, ok := data.([]*ast.Table)
-				if !ok {
+			// We need to check the data_format field to get all required
+			// parsers and serializers
+			pluginTables, ok := data.([]*ast.Table)
+			if !ok {
+				continue
+			}
+
+			for _, subsubtbl := range pluginTables {
+				var dataformat string
+				for field, fieldData := range subsubtbl.Fields {
+					if field != "data_format" {
+						continue
+					}
+					kv := fieldData.(*ast.KeyValue)
+					option := kv.Value.(*ast.String)
+					dataformat = option.Value
+				}
+
+				// No data-format given
+				if dataformat == "" {
 					continue
 				}
-				for _, subsubtbl := range pluginTables {
-					for field, fieldData := range subsubtbl.Fields {
-						if field != "data_format" {
-							continue
-						}
-						kv := fieldData.(*ast.KeyValue)
-						name := kv.Value.(*ast.String)
-						(*s)["parsers"][name.Value] = true
+
+				switch category {
+				case "inputs":
+					(*s)["parsers"][dataformat] = true
+				case "processors":
+					(*s)["parsers"][dataformat] = true
+					// The execd processor requires both a parser and serializer
+					if subsubtbl.Name == "execd" {
+						(*s)["serializers"]["influx"] = true
 					}
+				case "outputs":
+					(*s)["serializers"][dataformat] = true
 				}
 			}
 		}

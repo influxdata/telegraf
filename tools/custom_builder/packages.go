@@ -105,18 +105,28 @@ func (p *packageCollection) collectPackagesForCategory(category string) error {
 			// as well as serializers for the output package
 			var defaultParser, defaultSerializer string
 			switch category {
-			case "inputs", "processors":
-				var err error
-				defaultParser, err = extractDefaultParser(path)
+			case "inputs":
+				dataformat, err := extractDefaultDataFormat(path)
 				if err != nil {
-					log.Printf("Getting default parser for %s.%s failed: %v", category, name, err)
+					log.Printf("Getting default data-format for %s.%s failed: %v", category, name, err)
+				}
+				defaultParser = dataformat
+			case "processors":
+				dataformat, err := extractDefaultDataFormat(path)
+				if err != nil {
+					log.Printf("Getting default data-format for %s.%s failed: %v", category, name, err)
+				}
+				defaultParser = dataformat
+				// The execd processor requires both a parser and serializer
+				if name == "execd" {
+					defaultSerializer = dataformat
 				}
 			case "outputs":
-				var err error
-				defaultSerializer, err = extractDefaultSerializer(path)
+				dataformat, err := extractDefaultDataFormat(path)
 				if err != nil {
-					log.Printf("Getting default serializer for %s.%s failed: %v", category, name, err)
+					log.Printf("Getting default data-format for %s.%s failed: %v", category, name, err)
 				}
+				defaultSerializer = dataformat
 			}
 
 			for _, plugin := range registeredNames {
@@ -166,7 +176,7 @@ func (p *packageCollection) FillDefaultSerializers() {
 	// Iterate over all plugins that may have parsers and collect
 	// the defaults
 	p.defaultSerializers = make([]string, 0)
-	for _, category := range []string{"outputs"} {
+	for _, category := range []string{"outputs", "processors"} {
 		for _, pkg := range p.packages[category] {
 			name := pkg.DefaultSerializer
 			if seen := serializers[name]; seen {
@@ -347,45 +357,13 @@ func extractRegisteredNames(pkg *ast.Package, pluginType string) []string {
 	return registeredNames
 }
 
-func extractDefaultParser(pluginDir string) (string, error) {
+func extractDefaultDataFormat(pluginDir string) (string, error) {
 	re := regexp.MustCompile(`^\s*#?\s*data_format\s*=\s*"(.*)"\s*$`)
 
-	// Exception for exec which uses JSON by default
-	if filepath.Base(pluginDir) == "exec" {
+	// Exception for exec input which uses JSON by default
+	if filepath.ToSlash(pluginDir) == "plugins/inputs/exec" {
 		return "json", nil
 	}
-
-	// Walk all config files in the package directory
-	elements, err := os.ReadDir(pluginDir)
-	if err != nil {
-		return "", err
-	}
-
-	for _, element := range elements {
-		path := filepath.Join(pluginDir, element.Name())
-		if element.IsDir() || filepath.Ext(element.Name()) != ".conf" {
-			continue
-		}
-
-		// Read the config and search for a "data_format" entry
-		file, err := os.Open(path)
-		if err != nil {
-			return "", err
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			match := re.FindStringSubmatch(scanner.Text())
-			if len(match) == 2 {
-				return match[1], nil
-			}
-		}
-	}
-
-	return "", nil
-}
-
-func extractDefaultSerializer(pluginDir string) (string, error) {
-	re := regexp.MustCompile(`^\s*#?\s*data_format\s*=\s*"(.*)"\s*$`)
 
 	// Walk all config files in the package directory
 	elements, err := os.ReadDir(pluginDir)
