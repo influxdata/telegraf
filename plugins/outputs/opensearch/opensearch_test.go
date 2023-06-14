@@ -24,7 +24,7 @@ const imageVersion2 = "2.8.0"
 
 func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container {
 	container := testutil.Container{
-		Image:        "opensearchproject/opensearch:"+imageVersion,
+		Image:        "opensearchproject/opensearch:" + imageVersion,
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"discovery.type":              "single-node",
@@ -141,7 +141,7 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 
 	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
 	for _, m := range metrics {
-		require.Error(t, e.Write([]telegraf.Metric{m}), "error sending bulk request to Opensearch: " +
+		require.Error(t, e.Write([]telegraf.Metric{m}), "error sending bulk request to Opensearch: "+
 			"json: unsupported value: NaN")
 	}
 }
@@ -182,7 +182,7 @@ func TestConnectAndWriteMetricWithNaNValueEmptyIntegrationV2(t *testing.T) {
 
 	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
 	for _, m := range metrics {
-		require.Error(t, e.Write([]telegraf.Metric{m}), "error sending bulk request to Opensearch: " +
+		require.Error(t, e.Write([]telegraf.Metric{m}), "error sending bulk request to Opensearch: "+
 			"json: unsupported value: NaN")
 	}
 }
