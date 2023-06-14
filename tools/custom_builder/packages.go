@@ -36,9 +36,7 @@ type packageInfo struct {
 }
 
 type packageCollection struct {
-	packages           map[string][]packageInfo
-	defaultParsers     []string
-	defaultSerializers []string
+	packages map[string][]packageInfo
 }
 
 // Define the package exceptions
@@ -148,46 +146,6 @@ func (p *packageCollection) collectPackagesForCategory(category string) error {
 	return nil
 }
 
-func (p *packageCollection) FillDefaultParsers() {
-	// Make sure we ignore all empty-named parsers which indicate
-	// that there is no parser used by the plugin.
-	parsers := map[string]bool{"": true}
-
-	// Iterate over all plugins that may have parsers and collect
-	// the defaults
-	p.defaultParsers = make([]string, 0)
-	for _, category := range []string{"inputs", "processors"} {
-		for _, pkg := range p.packages[category] {
-			name := pkg.DefaultParser
-			if seen := parsers[name]; seen {
-				continue
-			}
-			p.defaultParsers = append(p.defaultParsers, name)
-			parsers[name] = true
-		}
-	}
-}
-
-func (p *packageCollection) FillDefaultSerializers() {
-	// Make sure we ignore all empty-named parsers which indicate
-	// that there is no parser used by the plugin.
-	serializers := map[string]bool{"": true}
-
-	// Iterate over all plugins that may have parsers and collect
-	// the defaults
-	p.defaultSerializers = make([]string, 0)
-	for _, category := range []string{"outputs", "processors"} {
-		for _, pkg := range p.packages[category] {
-			name := pkg.DefaultSerializer
-			if seen := serializers[name]; seen {
-				continue
-			}
-			p.defaultSerializers = append(p.defaultSerializers, name)
-			serializers[name] = true
-		}
-	}
-}
-
 func (p *packageCollection) CollectAvailable() error {
 	p.packages = make(map[string][]packageInfo)
 
@@ -196,9 +154,6 @@ func (p *packageCollection) CollectAvailable() error {
 			return err
 		}
 	}
-
-	p.FillDefaultParsers()
-	p.FillDefaultSerializers()
 
 	return nil
 }
