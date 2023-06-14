@@ -690,10 +690,6 @@ func TestDynamicTopicRefresh(t *testing.T) {
 			require.NoError(t, input.Start(&acc))
 			t.Logf("rt: input plugin started")
 
-			// FIXME here's where we need to manipulate our
-			// topic list and verify that the connector
-			// responds appropriately.
-
 			// First we need an AdminClient, so that we can add
 			// a topic list.
 
@@ -704,31 +700,42 @@ func TestDynamicTopicRefresh(t *testing.T) {
 				require.Error(t, err)
 				return
 			}
-			t.Logf("rt: creating new Kafkfa topic")
+			newTopic := "TestDynamic"
+			t.Logf("rt: creating new Kafkfa topic %s", newTopic)
 			detail := sarama.TopicDetail{
 				NumPartitions:     1,
 				ReplicationFactor: 1,
 			}
-			err = admin.CreateTopic("TestDynamic", &detail, false)
+			// Add the topic
+			err = admin.CreateTopic(newTopic, &detail, false)
 			if err != nil {
 				require.Error(t, err)
 				return
 			}
-
-			// Wait for new topic to be noticed and propagate.
-			time.Sleep(4 * time.Second)
-			t.Logf("rt: waiting for input plugin to see new topic")
-			t.Logf("rt: proceeding after wait")
-
+			// FIXME it should not be necessary to delay.  If we
+			// push a metric through and THEN a consumer comes
+			// online, that should be OK.  But maybe it isn't?
+			delay := 4 * time.Second // For easy experimentation
+			// Wait for new consumer group to come online
+			if delay > 0 {
+				t.Logf("rt: waiting %v ns for consumer group", delay)
+				time.Sleep(delay)
+			}
 			// Shove some metrics through
+			// The writing seems to work...
 			expected := testutil.MockMetrics()
-			t.Logf("rt: writing")
+			t.Logf("rt: writing %v to %s", expected, output.Topic)
 			require.NoError(t, output.Write(expected))
 
 			// Check that they were received
 			t.Logf("rt: expecting")
+			// FIXME And this usually hangs and we never read.
+			// Sometimes, though, we do read the expected data.
+			// Why?
 			acc.Wait(len(expected))
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+			q := acc.GetTelegrafMetrics()
+			t.Logf("rt: received metrics %v", q)
+			testutil.RequireMetricsEqual(t, expected, q)
 
 			t.Logf("rt: shutdown")
 			require.NoError(t, output.Close())
