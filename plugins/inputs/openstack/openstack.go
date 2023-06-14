@@ -23,6 +23,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/schedulerstats"
+	cinder_services "github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/services"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/volumetenants"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/aggregates"
@@ -201,19 +202,20 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	// Gather resources.  Note service harvesting must come first as the other
 	// gatherers are dependant on this information.
 	gatherers := map[string]func(telegraf.Accumulator) error{
-		"projects":      o.gatherProjects,
-		"hypervisors":   o.gatherHypervisors,
-		"flavors":       o.gatherFlavors,
-		"servers":       o.gatherServers,
-		"volumes":       o.gatherVolumes,
-		"storage_pools": o.gatherStoragePools,
-		"subnets":       o.gatherSubnets,
-		"ports":         o.gatherPorts,
-		"networks":      o.gatherNetworks,
-		"aggregates":    o.gatherAggregates,
-		"nova_services": o.gatherNovaServices,
-		"agents":        o.gatherAgents,
-		"stacks":        o.gatherStacks,
+		"projects":        o.gatherProjects,
+		"hypervisors":     o.gatherHypervisors,
+		"flavors":         o.gatherFlavors,
+		"servers":         o.gatherServers,
+		"volumes":         o.gatherVolumes,
+		"storage_pools":   o.gatherStoragePools,
+		"subnets":         o.gatherSubnets,
+		"ports":           o.gatherPorts,
+		"networks":        o.gatherNetworks,
+		"aggregates":      o.gatherAggregates,
+		"nova_services":   o.gatherNovaServices,
+		"cinder_services": o.gatherCinderServices,
+		"agents":          o.gatherAgents,
+		"stacks":          o.gatherStacks,
 	}
 
 	callDuration := map[string]interface{}{}
@@ -323,6 +325,38 @@ func (o *OpenStack) gatherNovaServices(acc telegraf.Accumulator) error {
 			"updated_at":      o.convertTimeFormat(novaService.UpdatedAt),
 		}
 		acc.AddFields("openstack_nova_service", fields, tags)
+	}
+
+	return nil
+}
+
+// gatherCinderServices collects and accumulates cinder_services data from the OpenStack API.
+func (o *OpenStack) gatherCinderServices(acc telegraf.Accumulator) error {
+	page, err := cinder_services.List(o.volume, &cinder_services.ListOpts{}).AllPages()
+	if err != nil {
+		return fmt.Errorf("unable to list cinder_services: %w", err)
+	}
+	cinderServices, err := cinder_services.ExtractServices(page)
+	if err != nil {
+		return fmt.Errorf("unable to extract cinder_services: %w", err)
+	}
+	for _, cinderService := range cinderServices {
+		tags := map[string]string{
+			"name":         cinderService.Binary,
+			"host_machine": cinderService.Host,
+			"state":        cinderService.State,
+			"status":       strings.ToLower(cinderService.Status),
+			"zone":         cinderService.Zone,
+		}
+		fields := map[string]interface{}{
+			"id":                 cinderService.ActiveBackendID,
+			"cluster":            cinderService.Cluster,
+			"disabled_reason":    cinderService.DisabledReason,
+			"frozen":             cinderService.Frozen,
+			"replication_status": cinderService.ReplicationStatus,
+			"updated_at":         o.convertTimeFormat(cinderService.UpdatedAt),
+		}
+		acc.AddFields("openstack_cinder_service", fields, tags)
 	}
 
 	return nil
