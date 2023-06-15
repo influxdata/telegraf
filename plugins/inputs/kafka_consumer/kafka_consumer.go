@@ -66,6 +66,7 @@ type KafkaConsumer struct {
 
 	parser    telegraf.Parser
 	topicLock sync.Mutex
+	groupLock sync.Mutex
 	wg        sync.WaitGroup
 	cancel    context.CancelFunc
 }
@@ -342,8 +343,11 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 	// a new group and context ready and then pull a switcheroo
 	// quickly.
 	//
-	// I don't know if we lose messages between the cancel() and
-	// calling consumeTopics() on the new consumer group.
+	// Up to 100Hz, at least, we do not lose messages on consumer group
+	// restart.  Since the group name is the same, it seems very likely
+	// that we just pick up at the offset we left off at: that is the
+	// producer does not see this as a new consumer, but as an old one
+	// that's just missed a couple beats.
 	if k.consumer == nil {
 		// Fast exit if the consumer isn't running
 		return nil
@@ -361,7 +365,9 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 	}
 	k.Log.Debug("acquiring new context before swapping consumer groups")
 	ctx, cancel := context.WithCancel(context.Background())
-	// Do we need to protect this with a lock?
+	// I am not sure we really need this lock, but if it hurts we're
+	// already refreshing way too frequently.
+	k.groupLock.Lock()
 	// Do the switcheroo.
 	k.Log.Debug("replacing consumer group")
 	oldConsumer := k.consumer
@@ -376,8 +382,8 @@ func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
 			return
 		}
 	}()
+	k.groupLock.Unlock()
 	k.Log.Debug("starting new consumer group")
-	// Lock would end here.
 	k.consumeTopics(ctx, acc)
 	k.Log.Info("restarted consumer group")
 	return nil
