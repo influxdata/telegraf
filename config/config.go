@@ -40,12 +40,21 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// envVarPattern is a regex to determine environment variables in the
+// config file for substitution. Those should start with a dollar signs.
+// Expression modified from
+// https://github.com/compose-spec/compose-go/blob/v1.14.0/template/template.go
+const envVarPattern = `\\(?P<escaped>\$)|\$(?i:(?P<named>[_a-z][_a-z0-9]*)|\${(?:(?P<braced>[_a-z][_a-z0-9]*(?::?[-+?](.*))?)}|(?P<invalid>)))`
+
 var (
 	httpLoadConfigRetryInterval = 10 * time.Second
 
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
+
+	// envVarRe is the compiled regex of envVarPattern
+	envVarRe = regexp.MustCompile(envVarPattern)
 
 	// Password specified via command-line
 	Password Secret
@@ -850,12 +859,12 @@ func removeComments(contents []byte) ([]byte, error) {
 
 func substituteEnvironment(contents []byte) ([]byte, error) {
 	envMap := utils.GetAsEqualsMap(os.Environ())
-	retVal, err := template.Substitute(string(contents), func(k string) (string, bool) {
+	retVal, err := template.SubstituteWith(string(contents), func(k string) (string, bool) {
 		if v, ok := envMap[k]; ok {
 			return v, ok
 		}
 		return "", false
-	})
+	}, envVarRe)
 	var invalidTmplError *template.InvalidTemplateError
 	if err != nil && !errors.As(err, &invalidTmplError) {
 		return nil, err
