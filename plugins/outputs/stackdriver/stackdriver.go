@@ -32,6 +32,8 @@ type Stackdriver struct {
 	ResourceType     string            `toml:"resource_type"`
 	ResourceLabels   map[string]string `toml:"resource_labels"`
 	MetricTypePrefix string            `toml:"metric_type_prefix"`
+	MetricNameFormat string            `toml:"metric_name_format"`
+	MetricDataType   string            `toml:"metric_data_type"`
 	Log              telegraf.Logger   `toml:"-"`
 
 	client       *monitoring.MetricClient
@@ -60,6 +62,22 @@ const (
 func (s *Stackdriver) Init() error {
 	if s.MetricTypePrefix == "" {
 		s.MetricTypePrefix = "custom.googleapis.com"
+	}
+
+	switch s.MetricNameFormat {
+	case "":
+		s.MetricNameFormat = "path"
+	case "path", "official":
+	default:
+		return fmt.Errorf("unrecognized metric name format: %s", s.MetricNameFormat)
+	}
+
+	switch s.MetricDataType {
+	case "":
+		s.MetricDataType = "source"
+	case "source", "float64":
+	default:
+		return fmt.Errorf("unrecognized metric data type: %s", s.MetricDataType)
 	}
 
 	return nil
@@ -175,7 +193,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	buckets := make(timeSeriesBuckets)
 	for _, m := range batch {
 		for _, f := range m.FieldList() {
-			value, err := getStackdriverTypedValue(f.Value)
+			value, err := s.getStackdriverTypedValue(f.Value)
 			if err != nil {
 				s.Log.Errorf("Get type failed: %q", err)
 				continue
@@ -208,7 +226,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
-					Type:   path.Join(s.MetricTypePrefix, s.Namespace, m.Name(), f.Key),
+					Type:   s.generateMetricName(m, f.Key),
 					Labels: s.getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,
@@ -273,6 +291,28 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	return nil
 }
 
+func (s *Stackdriver) generateMetricName(m telegraf.Metric, key string) string {
+	if s.MetricNameFormat == "path" {
+		return path.Join(s.MetricTypePrefix, s.Namespace, m.Name(), key)
+	}
+
+	name := s.Namespace + "_" + m.Name() + "_" + key
+
+	var kind string
+	switch m.Type() {
+	case telegraf.Gauge, telegraf.Untyped:
+		kind = "gauge"
+	case telegraf.Counter:
+		kind = "counter"
+	case telegraf.Histogram:
+		kind = "histogram"
+	default:
+		kind = ""
+	}
+
+	return path.Join(s.MetricTypePrefix, name, kind)
+}
+
 func getStackdriverIntervalEndpoints(
 	kind metricpb.MetricDescriptor_MetricKind,
 	value *monitoringpb.TypedValue,
@@ -328,7 +368,20 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 	}
 }
 
-func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
+func (s *Stackdriver) getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
+	if s.MetricDataType == "float64" {
+		v, err := internal.ToFloat64(value)
+		if err != nil {
+			return nil, err
+		}
+
+		return &monitoringpb.TypedValue{
+			Value: &monitoringpb.TypedValue_DoubleValue{
+				DoubleValue: v,
+			},
+		}, nil
+	}
+
 	switch v := value.(type) {
 	case uint64:
 		if v <= uint64(MaxInt) {

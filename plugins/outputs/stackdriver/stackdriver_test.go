@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -540,7 +542,7 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 
 	for idx, m := range metrics {
 		for _, f := range m.FieldList() {
-			value, err := getStackdriverTypedValue(f.Value)
+			value, err := s.getStackdriverTypedValue(f.Value)
 			require.NoError(t, err)
 			require.NotNilf(t, value, "Got nil value for metric %q field %q", m, f)
 
@@ -569,4 +571,222 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestStackdriverTypedValuesSource(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "foo",
+		MetricDataType:   "source",
+	}
+
+	tests := []struct {
+		name     string
+		key      string
+		expected string
+		value    any
+	}{
+		{
+			name:     "float",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    float64(44.0),
+		},
+		{
+			name:     "int64",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_Int64Value",
+			value:    int64(46),
+		},
+		{
+			name:     "uint",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_Int64Value",
+			value:    uint64(46),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			typedValue, err := s.getStackdriverTypedValue(tt.value)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, reflect.TypeOf(typedValue.Value).String())
+		})
+	}
+}
+
+func TestStackdriverTypedValuesInt64(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "foo",
+		MetricDataType:   "float64",
+	}
+
+	tests := []struct {
+		name     string
+		key      string
+		expected string
+		value    any
+	}{
+		{
+			name:     "int",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    42,
+		},
+		{
+			name:     "float",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    float64(44.0),
+		},
+		{
+			name:     "int64",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    int64(46),
+		},
+		{
+			name:     "uint",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    uint64(46),
+		},
+		{
+			name:     "numeric string",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    "3.2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			typedValue, err := s.getStackdriverTypedValue(tt.value)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, reflect.TypeOf(typedValue.Value).String())
+		})
+	}
+}
+
+func TestStackdriverMetricNamePath(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "foo",
+		MetricNameFormat: "path",
+	}
+	m := testutil.MustMetric("uptime",
+		map[string]string{
+			"foo": "bar",
+		},
+		map[string]interface{}{
+			"value": 42,
+		},
+		time.Now(),
+		telegraf.Gauge,
+	)
+	require.Equal(t, "foo/namespace/uptime/key", s.generateMetricName(m, "key"))
+}
+
+func TestStackdriverMetricNameOfficial(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "prometheus.googleapis.com",
+		MetricNameFormat: "official",
+	}
+
+	tests := []struct {
+		name     string
+		key      string
+		expected string
+		metric   telegraf.Metric
+	}{
+		{
+			name:     "gauge",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/gauge",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Gauge,
+			),
+		},
+		{
+			name:     "untyped",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/gauge",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Untyped,
+			),
+		},
+		{
+			name:     "histogram",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/histogram",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:     "counter",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/counter",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		},
+		{
+			name:     "summary",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Summary,
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, s.generateMetricName(tt.metric, tt.key))
+		})
+	}
+}
+
+func TestStackdriverValueInvalid(t *testing.T) {
+	s := &Stackdriver{
+		MetricDataType: "foobar",
+	}
+	require.Error(t, s.Init())
+}
+
+func TestStackdriverMetricNameInvalid(t *testing.T) {
+	s := &Stackdriver{
+		MetricNameFormat: "foobar",
+	}
+	require.Error(t, s.Init())
 }
