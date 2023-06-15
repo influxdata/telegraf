@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -74,7 +75,8 @@ func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
 }
 
 func TestIdentityEncodeDecode(t *testing.T) {
-	enc := NewIdentityEncoder()
+	enc, err := NewIdentityEncoder()
+	require.NoError(t, err)
 	dec := NewIdentityDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -123,87 +125,60 @@ func TestStreamGzipDecode(t *testing.T) {
 func TestCompressionLevel(t *testing.T) {
 	tests := []struct {
 		algorithm   string
-		compression string
+		validLevels []int
 		errormsg    string
 	}{
 		{
 			algorithm:   "gzip",
-			compression: "default",
-		},
-		{
-			algorithm:   "gzip",
-			compression: "none",
-		},
-		{
-			algorithm:   "gzip",
-			compression: "best compression",
-		},
-		{
-			algorithm:   "gzip",
-			compression: "best speed",
-		},
-		{
-			algorithm:   "gzip",
-			compression: "invalid",
+			validLevels: []int{0, 1, 9},
 			errormsg:    "invalid compression level",
 		},
 		{
 			algorithm:   "zlib",
-			compression: "default",
-		},
-		{
-			algorithm:   "zlib",
-			compression: "none",
-		},
-		{
-			algorithm:   "zlib",
-			compression: "best compression",
-		},
-		{
-			algorithm:   "zlib",
-			compression: "best speed",
-		},
-		{
-			algorithm:   "zlib",
-			compression: "invalid",
+			validLevels: []int{0, 1, 9},
 			errormsg:    "invalid compression level",
 		},
 		{
-			algorithm:   "identity",
-			compression: "default",
-		},
-		{
-			algorithm:   "identity",
-			compression: "none",
-		},
-		{
-			algorithm:   "identity",
-			compression: "best compression",
-		},
-		{
-			algorithm:   "identity",
-			compression: "best speed",
-		},
-		{
-			algorithm:   "identity",
-			compression: "invalid",
-			errormsg:    "invalid compression level",
+			algorithm: "identity",
+			errormsg:  "does not support options",
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.algorithm+" "+tt.compression, func(t *testing.T) {
-			level, err := ToCompressionLevel(tt.compression)
-			if tt.errormsg != "" {
-				require.ErrorContains(t, err, tt.errormsg)
-				return
-			}
-			require.NoError(t, err)
-
-			enc, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(level))
+		// Check default i.e. without specifying level
+		t.Run(tt.algorithm+" default", func(t *testing.T) {
+			enc, err := NewContentEncoder(tt.algorithm)
 			require.NoError(t, err)
 			require.NotNil(t, enc)
 		})
+
+		// Check invalid level
+		t.Run(tt.algorithm+" invalid", func(t *testing.T) {
+			_, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(11))
+			require.ErrorContains(t, err, tt.errormsg)
+		})
+
+		// Check known levels 0..9
+		for level := 0; level < 10; level++ {
+			name := fmt.Sprintf("%s level %d", tt.algorithm, level)
+			t.Run(name, func(t *testing.T) {
+				var valid bool
+				for _, l := range tt.validLevels {
+					if l == level {
+						valid = true
+						break
+					}
+				}
+
+				enc, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(level))
+				if valid {
+					require.NoError(t, err)
+					require.NotNil(t, enc)
+				} else {
+					require.ErrorContains(t, err, tt.errormsg)
+				}
+			})
+		}
 	}
 }
 
@@ -391,7 +366,8 @@ func BenchmarkIdentityEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc := NewIdentityEncoder()
+	enc, err := NewIdentityEncoder()
+	require.NoError(b, err)
 	dec := NewIdentityDecoder()
 
 	payload, err := enc.Encode(data)

@@ -14,38 +14,15 @@ import (
 
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
 
-type CompressionLevel int
-
-const (
-	None CompressionLevel = iota
-	Default
-	BestSpeed
-	BestCompression
-)
-
-func ToCompressionLevel(level string) (CompressionLevel, error) {
-	switch level {
-	case "", "default":
-		return Default, nil
-	case "none":
-		return None, nil
-	case "best speed":
-		return BestSpeed, nil
-	case "best compression":
-		return BestCompression, nil
-	}
-	return -1, errors.New("invalid compression level")
-}
-
 type encoderConfig struct {
-	level CompressionLevel
+	level int
 }
 
 // EncodingOption provide methods to change the encoding from the standard
 // configuration.
 type EncodingOption func(*encoderConfig)
 
-func WithCompressionLevel(level CompressionLevel) EncodingOption {
+func WithCompressionLevel(level int) EncodingOption {
 	return func(cfg *encoderConfig) {
 		cfg.level = level
 	}
@@ -118,7 +95,7 @@ func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncod
 	case "zlib":
 		return NewZlibEncoder(options...)
 	case "identity", "":
-		return NewIdentityEncoder(), nil
+		return NewIdentityEncoder(options...)
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -178,44 +155,26 @@ type GzipEncoder struct {
 }
 
 func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
-	cfg := encoderConfig{level: Default}
+	cfg := encoderConfig{level: gzip.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
 	}
 
-	var plevel int
+	// Check if the compression level is supported
 	switch cfg.level {
-	case None:
-		plevel = pgzip.NoCompression
-	case Default:
-		plevel = pgzip.DefaultCompression
-	case BestSpeed:
-		plevel = pgzip.BestSpeed
-	case BestCompression:
-		plevel = pgzip.BestCompression
+	case gzip.NoCompression, gzip.DefaultCompression, gzip.BestSpeed, gzip.BestCompression:
+		// Do nothing as those are valid levels
 	default:
-		return nil, fmt.Errorf("invalid compression level %d", cfg.level)
+		return nil, fmt.Errorf("invalid compression level, only 0, 1 and 9 are supported")
 	}
+
 	var buf bytes.Buffer
-	pw, err := pgzip.NewWriterLevel(&buf, plevel)
+	pw, err := pgzip.NewWriterLevel(&buf, cfg.level)
 	if err != nil {
 		return nil, err
 	}
 
-	var level int
-	switch cfg.level {
-	case None:
-		level = gzip.NoCompression
-	case Default:
-		level = gzip.DefaultCompression
-	case BestSpeed:
-		level = gzip.BestSpeed
-	case BestCompression:
-		level = gzip.BestCompression
-	default:
-		return nil, fmt.Errorf("invalid compression level %d", cfg.level)
-	}
-	w, err := gzip.NewWriterLevel(&buf, level)
+	w, err := gzip.NewWriterLevel(&buf, cfg.level)
 	return &GzipEncoder{
 		pwriter: pw,
 		writer:  w,
@@ -270,27 +229,20 @@ type ZlibEncoder struct {
 }
 
 func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
-	cfg := encoderConfig{level: Default}
+	cfg := encoderConfig{level: zlib.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
 	}
 
-	var level int
 	switch cfg.level {
-	case None:
-		level = zlib.NoCompression
-	case Default:
-		level = zlib.DefaultCompression
-	case BestSpeed:
-		level = zlib.BestSpeed
-	case BestCompression:
-		level = zlib.BestCompression
+	case zlib.NoCompression, zlib.DefaultCompression, zlib.BestSpeed, zlib.BestCompression:
+		// Do nothing as those are valid levels
 	default:
-		return nil, fmt.Errorf("invalid compression level %d", cfg.level)
+		return nil, fmt.Errorf("invalid compression level, only 0, 1 and 9 are supported")
 	}
 
 	var buf bytes.Buffer
-	w, err := zlib.NewWriterLevel(&buf, level)
+	w, err := zlib.NewWriterLevel(&buf, cfg.level)
 	return &ZlibEncoder{
 		writer: w,
 		buf:    &buf,
@@ -315,8 +267,12 @@ func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
 // IdentityEncoder is a null encoder that applies no transformation.
 type IdentityEncoder struct{}
 
-func NewIdentityEncoder() *IdentityEncoder {
-	return &IdentityEncoder{}
+func NewIdentityEncoder(options ...EncodingOption) (*IdentityEncoder, error) {
+	if len(options) > 0 {
+		return nil, errors.New("identity encoder does not support options")
+	}
+
+	return &IdentityEncoder{}, nil
 }
 
 func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {
