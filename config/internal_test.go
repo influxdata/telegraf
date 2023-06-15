@@ -25,17 +25,17 @@ func TestEnvironmentSubstitution(t *testing.T) {
 				t.Setenv("TEST_ENV1", "VALUE1")
 				t.Setenv("TEST_ENV2", "VALUE2")
 			},
-			contents: "A string with ${TEST_ENV1}, $TEST_ENV2 and $TEST_ENV1 as repeated",
+			contents: "A string with $${TEST_ENV1}, $TEST_ENV2 and $TEST_ENV1 as repeated",
 			expected: "A string with VALUE1, VALUE2 and VALUE1 as repeated",
 		},
 		{
 			name:     "Env not set",
-			contents: "Env variable ${NOT_SET} will be empty",
+			contents: "Env variable $${NOT_SET} will be empty",
 			expected: "Env variable  will be empty", // Two spaces present
 		},
 		{
 			name:     "Env not set, fallback to default",
-			contents: "Env variable ${THIS_IS_ABSENT:-Fallback}",
+			contents: "Env variable $${THIS_IS_ABSENT:-Fallback}",
 			expected: "Env variable Fallback",
 		},
 		{
@@ -43,7 +43,7 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			setEnv: func(t *testing.T) {
 				t.Setenv("MY_ENV1", "VALUE1")
 			},
-			contents: "Env variable ${MY_ENV1:-Fallback}",
+			contents: "Env variable $${MY_ENV1:-Fallback}",
 			expected: "Env variable VALUE1",
 		},
 		{
@@ -52,17 +52,17 @@ func TestEnvironmentSubstitution(t *testing.T) {
 				t.Setenv("MY_VAR", "VALUE")
 				t.Setenv("MY_VAR2", "VALUE2")
 			},
-			contents: "Env var ${MY_VAR} is set, with $MY_VAR syntax and default on this ${MY_VAR1:-Substituted}, no default on this ${MY_VAR2:-NoDefault}",
+			contents: "Env var $${MY_VAR} is set, with $MY_VAR syntax and default on this $${MY_VAR1:-Substituted}, no default on this $${MY_VAR2:-NoDefault}",
 			expected: "Env var VALUE is set, with VALUE syntax and default on this Substituted, no default on this VALUE2",
 		},
 		{
 			name:     "Default has special chars",
-			contents: `Not recommended but supported ${MY_VAR:-Default with special chars Supported#$\"}`,
+			contents: `Not recommended but supported $${MY_VAR:-Default with special chars Supported#$\"}`,
 			expected: `Not recommended but supported Default with special chars Supported#$\"`, // values are escaped
 		},
 		{
 			name:         "unset error",
-			contents:     "Contains ${THIS_IS_NOT_SET?unset-error}",
+			contents:     "Contains $${THIS_IS_NOT_SET?unset-error}",
 			wantErr:      true,
 			errSubstring: "unset-error",
 		},
@@ -71,7 +71,7 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			setEnv: func(t *testing.T) {
 				t.Setenv("ENV_EMPTY", "")
 			},
-			contents:     "Contains ${ENV_EMPTY:?empty-error}",
+			contents:     "Contains $${ENV_EMPTY:?empty-error}",
 			wantErr:      true,
 			errSubstring: "empty-error",
 		},
@@ -80,8 +80,16 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			setEnv: func(t *testing.T) {
 				t.Setenv("FALLBACK", "my-fallback")
 			},
-			contents: "Should output ${NOT_SET:-${FALLBACK}}",
+			contents: "Should output $${NOT_SET:-${FALLBACK}}",
 			expected: "Should output my-fallback",
+		},
+		{
+			name: "leave alone single dollar expressions #13432",
+			setEnv: func(t *testing.T) {
+				t.Setenv("MYVAR", "my-variable")
+			},
+			contents: "Should output ${MYVAR}",
+			expected: "Should output ${MYVAR}",
 		},
 	}
 
