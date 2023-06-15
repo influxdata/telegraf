@@ -1,40 +1,180 @@
-# Opensearch Output Plugin
+# OpenSearch Output Plugin
 
-This plugin writes to [Opensearch](https://opensearch.org/) via HTTP using
-[Elastic](http://olivere.github.io/elastic/) client API.
+This plugin writes to [OpenSearch](https://opensearch.org/) via HTTP
 
-It supports Opensearch releases from 1 and 2. Future comparability with 1.x is
+It supports OpenSearch releases from 1 and 2. Future comparability with 1.x is
 not guaranteed and instead will focus on 2.x support. Consider using the
 existing Elasticsearch plugin for 1.x.
 
-## Opensearch indexes and templates
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Configuration
+
+```toml @sample.conf
+# Configuration for OpenSearch to send metrics to.
+[[outputs.OpenSearch]]
+  ## URLs
+  ## The full HTTP endpoint URL for your OpenSearch instance. Multiple URLs can
+  ## be specified as part of the same cluster, but only one URLs is used to
+  ## write during each interval.
+  urls = [""]
+
+  ## Index Name
+  ## The target index for metrics (OpenSearch will create if it not exists).
+  ## You can use the date specifiers below to create indexes per time frame.
+  ## The metric timestamp will be used to decide the destination index name
+  ##   %Y - year (2016)
+  ##   %y - last two digits of year (00..99)
+  ##   %m - month (01..12)
+  ##   %d - day of month (e.g., 01)
+  ##   %H - hour (00..23)
+  ##   %V - week of the year (ISO week) (01..53)
+  ## For example: telegraf-%Y.%m.%d would set it to telegraf-2006-01-02
+  index_name = ""
+
+  ## Default Index Tag Value
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the index name: "telegraf-{{host}}-%Y.%m.%d"
+  ## If the tag does not exist, the default tag value will be used.
+  # default_tag_value = ""
+
+  ## Timeout
+  ## OpenSearch client timeout
+  # timeout = "5s"
+
+  ## Sniffer
+  ## Set to true to ask OpenSearch a list of all cluster nodes,
+  ## thus it is not necessary to list all nodes in the urls config option
+  # enable_sniffer = false
+
+  ## GZIP Compression
+  ## Set to true to enable gzip compression
+  # enable_gzip = false
+
+  ## Health Check Interval
+  ## Set the interval to check if the OpenSearch nodes are available
+  ## Setting to "0s" will disable the health check (not recommended in production)
+  # health_check_interval = "10s"
+
+  ## Set the timeout for periodic health checks.
+  # health_check_timeout = "1s"
+  ## HTTP basic authentication details.
+  # username = ""
+  # password = ""
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = ""
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ## Template Config
+  ## Manage templates
+  ## Set to true if you want telegraf to manage its index template.
+  ## If enabled it will create a recommended index template for telegraf indexes
+  # manage_template = true
+
+  ## Template Name
+  ## The template name used for telegraf indexes
+  # template_name = "telegraf"
+
+  ## Overwrite Templates
+  ## Set to true if you want telegraf to overwrite an existing template
+  # overwrite_template = false
+
+  ## Document ID
+  ## If set to true a unique ID hash will be sent as
+  ## sha256(concat(timestamp,measurement,series-hash)) string. It will enable
+  ## data resend and update metric points avoiding duplicated metrics with
+  ## different id's
+  # force_document_id = false
+
+  ## Value Handling
+  ## Specifies the handling of NaN and Inf values.
+  ## This option can have the following values:
+  ##    none    -- do not modify field-values (default); will produce an error
+  ##               if NaNs or infs are encountered
+  ##    drop    -- drop fields containing NaNs or infs
+  ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
+  ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
+  # float_handling = "none"
+  # float_replacement_value = 0.0
+
+  ## Pipeline Config
+  ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
+  # use_pipeline = "my_pipeline"
+
+  ## Pipeline Name
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the pipeline name (e.g. "{{es_pipeline}}").
+  ## If the tag does not exist, the default pipeline will be used as the
+  ## pipeline. If no default pipeline is set, no pipeline is used for the
+  ## metric.
+  # default_pipeline = ""
+```
+
+### Required parameters
+
+* `urls`: A list containing the full HTTP URL of one or more nodes from your
+  OpenSearch instance.
+* `index_name`: The target index for metrics. You can use the date specifiers
+  below to create indexes per time frame.
+
+```   %Y - year (2017)
+  %y - last two digits of year (00..99)
+  %m - month (01..12)
+  %d - day of month (e.g., 01)
+  %H - hour (00..23)
+  %V - week of the year (ISO week) (01..53)
+```
+
+Additionally, you can specify dynamic index names by using tags with the
+notation ```{{tag_name}}```. This will store the metrics with different tag
+values in different indices. If the tag does not exist in a particular metric,
+the `default_tag_value` will be used instead.
+
+## Permissions
+
+If you are using authentication within your OpenSearch cluster, you need to
+create an account and create a role with at least the manage role in the Cluster
+Privileges category. Otherwise, your account will not be able to connect to your
+OpenSearch cluster and send logs to your cluster.  After that, you need to
+add "create_index" and "write" permission to your specific index pattern.
+
+## OpenSearch indexes and templates
 
 ### Indexes per time-frame
 
 This plugin can manage indexes per time-frame, as commonly done in other tools
-with Opensearch.
-
-The timestamp of the metric collected will be used to decide the index
-destination.
-
-For more information about this usage on Opensearch, check [the
-docs][1].
+with OpenSearch. The timestamp of the metric collected will be used to decide
+the index destination. For more information about this usage on OpenSearch,
+check [the docs][1].
 
 [1]: https://opensearch.org/docs/latest/
 
 ### Template management
 
-Index templates are used in Opensearch to define settings and mappings for
+Index templates are used in OpenSearch to define settings and mappings for
 the indexes and how the fields should be analyzed.  For more information on how
 this works, see [the docs][2].
 
 This plugin can create a working template for use with telegraf metrics. It uses
-Opensearch dynamic templates feature to set proper types for the tags and
+OpenSearch dynamic templates feature to set proper types for the tags and
 metrics fields.  If the template specified already exists, it will not overwrite
 unless you configure this plugin to do so. Thus you can customize this template
 after its creation if necessary.
 
-Example of an index template created by telegraf on Opensearch 2.x:
+Example of an index template created by telegraf on OpenSearch 2.x:
 
 ```json
 {
@@ -195,189 +335,36 @@ This plugin will format the events in the following way:
 }
 ```
 
-## Global configuration options <!-- @/docs/includes/plugin_config.md -->
-
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
-
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
-
-## Configuration
-
-```toml @sample.conf
-# Configuration for Opensearch to send metrics to.
-[[outputs.opensearch]]
-  ## The full HTTP endpoint URL for your Opensearch instance
-  ## Multiple urls can be specified as part of the same cluster,
-  ## this means that only ONE of the urls will be written to each interval
-  urls = [ "http://node1.os.example.com:9200" ] # required.
-  ## Opensearch client timeout, defaults to "5s" if not set.
-  timeout = "5s"
-  ## Set to true to ask Opensearch a list of all cluster nodes,
-  ## thus it is not necessary to list all nodes in the urls config option
-  enable_sniffer = false
-  ## Set to true to enable gzip compression
-  enable_gzip = false
-  ## Set the interval to check if the Opensearch nodes are available
-  ## Setting to "0s" will disable the health check (not recommended in production)
-  health_check_interval = "10s"
-  ## Set the timeout for periodic health checks.
-  # health_check_timeout = "1s"
-  ## HTTP basic authentication details.
-  ## HTTP basic authentication details
-  # username = "telegraf"
-  # password = "mypassword"
-  ## HTTP bearer token authentication details
-  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-
-  ## Index Name
-  ## The target index for metrics (Opensearch will create if it not exists).
-  ## You can use the date specifiers below to create indexes per time frame.
-  ## The metric timestamp will be used to decide the destination index name
-  ##   %Y - year (2016)
-  ##   %y - last two digits of year (00..99)
-  ##   %m - month (01..12)
-  ##   %d - day of month (e.g., 01)
-  ##   %H - hour (00..23)
-  ##   %V - week of the year (ISO week) (01..53)
-  index_name = "telegraf-%Y.%m.%d"
-  
-  ## Default Index Tag Value
-  ## Additionally, you can specify a tag name using the notation {{tag_name}}
-  ## which will be used as part of the index name. If the tag does not exist,
-  ## the default tag value will be used.
-  # index_name = "telegraf-{{host}}-%Y.%m.%d"
-  # default_tag_value = "none"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Template Config
-  ## Set to true if you want telegraf to manage its index template.
-  ## If enabled it will create a recommended index template for telegraf indexes
-  # manage_template = true
-
-  ## The template name used for telegraf indexes
-  # template_name = "telegraf"
-
-  ## Set to true if you want telegraf to overwrite an existing template
-  # overwrite_template = false
-
-  ## If set to true a unique ID hash will be sent as 
-  ## sha256(concat(timestamp,measurement,series-hash)) string. It will enable 
-  ## data resend and update metric points avoiding duplicated metrics with 
-  ## diferent id's
-  # force_document_id = false
-
-  ## Specifies the handling of NaN and Inf values.
-  ## This option can have the following values:
-  ##    none    -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
-  ##    drop    -- drop fields containing NaNs or infs
-  ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
-  ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
-  # float_handling = "none"
-  # float_replacement_value = 0.0
-
-  ## Pipeline Config
-  ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
-  # use_pipeline = "my_pipeline"
-
-  ## Additionally, you can specify a tag name using the notation {{tag_name}}
-  ## which will be used as part of the pipeline name. If the tag does not exist,
-  ## the default pipeline will be used as the pipeline. If no default pipeline is set,
-  ## no pipeline is used for the metric.
-  # use_pipeline = "{{es_pipeline}}"
-  # default_pipeline = "my_pipeline"
-```
-
-### Permissions
-
-If you are using authentication within your Opensearch cluster, you need to
-create an account and create a role with at least the manage role in the Cluster
-Privileges category. Otherwise, your account will not be able to connect to your
-Opensearch cluster and send logs to your cluster.  After that, you need to
-add "create_index" and "write" permission to your specific index pattern.
-
-### Required parameters
-
-* `urls`: A list containing the full HTTP URL of one or more nodes from your
-  Opensearch instance.
-* `index_name`: The target index for metrics. You can use the date specifiers
-  below to create indexes per time frame.
-
-```   %Y - year (2017)
-  %y - last two digits of year (00..99)
-  %m - month (01..12)
-  %d - day of month (e.g., 01)
-  %H - hour (00..23)
-  %V - week of the year (ISO week) (01..53)
-```
-
-Additionally, you can specify dynamic index names by using tags with the
-notation ```{{tag_name}}```. This will store the metrics with different tag
-values in different indices. If the tag does not exist in a particular metric,
-the `default_tag_value` will be used instead.
-
-### Optional parameters
-
-* `timeout`: Opensearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to ask Opensearch a list of all cluster
-  nodes, thus it is not necessary to list all nodes in the urls config option.
-* `health_check_interval`: Set the interval to check if the nodes are available,
-  in seconds. Setting to 0 will disable the health check (not recommended in
-  production).
-* `username`: The username for HTTP basic authentication details (eg. when using
-  Shield).
-* `password`: The password for HTTP basic authentication details (eg. when using
-  Shield).
-* `manage_template`: Set to true if you want telegraf to manage its index
-  template. If enabled it will create a recommended index template for telegraf
-  indexes.
-* `template_name`: The template name used for telegraf indexes.
-* `overwrite_template`: Set to true if you want telegraf to overwrite an
-  existing template.
-* `force_document_id`: Set to true will compute a unique hash from as
-  sha256(concat(timestamp,measurement,series-hash)),enables resend or update
-  data withoud ES duplicated documents.
-* `float_handling`: Specifies how to handle `NaN` and infinite field
-  values. `"none"` (default) will do nothing, `"drop"` will drop the field and
-  `replace` will replace the field value by the number in
-  `float_replacement_value`
-* `float_replacement_value`: Value (defaulting to `0.0`) to replace `NaN`s and
-  `inf`s if `float_handling` is set to `replace`. Negative `inf` will be
-  replaced by the negative value in this number to respect the sign of the
-  field's original value.
-* `use_pipeline`: If set, the set value will be used as the pipeline to call
-  when sending events to opensearch. Additionally, you can specify dynamic
-  pipeline names by using tags with the notation ```{{tag_name}}```.  If the tag
-  does not exist in a particular metric, the `default_pipeline` will be used
-  instead.
-* `default_pipeline`: If dynamic pipeline names the tag does not exist in a
-  particular metric, this value will be used instead.
-
 ## Known issues
 
 Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in
 this exact same window of their negative counterparts) are encoded by golang
-JSON encoder in decimal format and that is not fully supported by Opensearch
+JSON encoder in decimal format and that is not fully supported by OpenSearch
 dynamic field mapping. This causes the metrics with such values to be dropped in
 case a field mapping has not been created yet on the telegraf index. If that's
-the case you will see an exception on Opensearch side like this:
+the case you will see an exception on OpenSearch side like this:
 
 ```json
-{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}
+{
+  "error": {
+    "root_cause": [
+      {"type": "mapper_parsing_exception", "reason": "failed to parse"}
+    ],
+    "type": "mapper_parsing_exception",
+    "reason": "failed to parse",
+    "caused_by": {
+      "type": "illegal_state_exception",
+      "reason": "No matching token for number_type [BIG_INTEGER]"
+    }
+  },
+  "status": 400
+}
 ```
 
 The correct field mapping will be created on the telegraf index as soon as a
-supported JSON value is received by Opensearch, and subsequent insertions
+supported JSON value is received by OpenSearch, and subsequent insertions
 will work because the field mapping will already exist.
 
-This issue is caused by the way Opensearch tries to detect integer fields,
+This issue is caused by the way OpenSearch tries to detect integer fields,
 and by how golang encodes numbers in JSON. There is no clear workaround for this
 at the moment.
