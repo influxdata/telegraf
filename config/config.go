@@ -44,7 +44,7 @@ import (
 // config file for substitution. Those should start with a dollar signs.
 // Expression modified from
 // https://github.com/compose-spec/compose-go/blob/v1.14.0/template/template.go
-const envVarPattern = `\$(?i:(?P<escaped>\\)|(?P<named>[_a-z][_a-z0-9]*)|\${(?:(?P<braced>[_a-z][_a-z0-9]*(?::?[-+?](.*))?)}|(?P<invalid>)))`
+const envVarPattern = `\\(?P<escaped>\$)|\$(?i:(?P<named>[_a-z][_a-z0-9]*)|\${(?:(?P<braced>[_a-z][_a-z0-9]*(?::?[-+?](.*))?)}|(?P<invalid>)))`
 
 var (
 	httpLoadConfigRetryInterval = 10 * time.Second
