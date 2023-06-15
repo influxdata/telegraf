@@ -90,7 +90,6 @@ func (i *Icinga2) Init() error {
 	i.client = client
 
 	// For backward config compatibility
-	// should be removed in 2.0.0
 	if i.ObjectType != "" {
 		i.Objects = []string{i.ObjectType}
 	}

@@ -53,6 +53,11 @@ func ToFloat64(value interface{}) (float64, error) {
 		return strconv.ParseFloat(string(v), 64)
 	case fmt.Stringer:
 		return strconv.ParseFloat(v.String(), 64)
+	case bool:
+		if v {
+			return float64(1), nil
+		}
+		return float64(0), nil
 	case int:
 		return float64(v), nil
 	case int8:
@@ -91,6 +96,11 @@ func ToInt64(value interface{}) (int64, error) {
 		return strconv.ParseInt(string(v), 10, 64)
 	case fmt.Stringer:
 		return strconv.ParseInt(v.String(), 10, 64)
+	case bool:
+		if v {
+			return int64(1), nil
+		}
+		return int64(0), nil
 	case int:
 		return int64(v), nil
 	case int8:
@@ -129,6 +139,11 @@ func ToUint64(value interface{}) (uint64, error) {
 		return strconv.ParseUint(string(v), 10, 64)
 	case fmt.Stringer:
 		return strconv.ParseUint(v.String(), 10, 64)
+	case bool:
+		if v {
+			return uint64(1), nil
+		}
+		return uint64(0), nil
 	case int:
 		return uint64(v), nil
 	case int8:

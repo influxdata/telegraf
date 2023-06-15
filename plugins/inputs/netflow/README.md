@@ -40,7 +40,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Netflow v5, Netflow v9 and IPFIX collector
 [[inputs.netflow]]
-  ## Address to listen for netflow/ipfix packets.
+  ## Address to listen for netflow,ipfix or sflow packets.
   ##   example: service_address = "udp://:2055"
   ##            service_address = "udp4://:2055"
   ##            service_address = "udp6://:2055"
@@ -53,16 +53,52 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Protocol version to use for decoding.
   ## Available options are
+  ##   "ipfix"      -- IPFIX / Netflow v10 protocol (also works for Netflow v9)
   ##   "netflow v5" -- Netflow v5 protocol
   ##   "netflow v9" -- Netflow v9 protocol (also works for IPFIX)
-  ##   "ipfix"      -- IPFIX / Netflow v10 protocol (also works for Netflow v9)
+  ##   "sflow v5"   -- sFlow v5 protocol
   # protocol = "ipfix"
+
+  ## Private Enterprise Numbers (PEN) mappings for decoding
+  ## This option allows to specify vendor-specific mapping files to use during
+  ## decoding.
+  # private_enterprise_number_files = []
 
   ## Dump incoming packets to the log
   ## This can be helpful to debug parsing issues. Only active if
   ## Telegraf is in debug mode.
   # dump_packets = false
 ```
+
+## Private Enterprise Number mapping
+
+Using the `private_enterprise_number_files` option you can specify mappings for
+vendor-specific element-IDs with a PEN specification. The mapping has to be a
+comma-separated-file (CSV) containing the element's `ID`, its `name` and the
+`data-type`. A comma (`,`) is used as separator and comments are allowed using
+the hash (`#`) prefix.
+The element `ID` has the form `<pen-number>.<element-id>`, the `name` has to be
+a valid field-name and `data-type` denotes the mapping of the raw-byte value to
+the field's type. For example
+
+```csv
+# PEN.ID, name, data type
+35632.349,in_src_osi_sap,hex
+35632.471,nprobe_ipv4_address,ip
+35632.1028,protocol_ntop,string
+35632.1036,l4_srv_port,uint
+```
+
+specify four elements (`349`, `471`, `1028` and `1036`) for PEN `35632` (ntop)
+with the corresponding name and data-type.
+
+Currently the following `data-type`s are supported:
+
+- `uint`   unsigned integer with 8, 16, 32 or 64 bit
+- `hex`    hex-encoding of the raw byte sequence with `0x` prefix
+- `string` string interpretation of the raw byte sequence
+- `ip`     IPv4 or IPv6 address
+- `proto`  mapping of layer-4 protocol numbers to names
 
 ## Metrics
 
@@ -92,6 +128,16 @@ following information
 The specific fields vary for the different protocol versions, here are some
 examples
 
+### IPFIX
+
+```text
+netflow,source=127.0.0.1,version=IPFIX protocol="tcp",vlan_src=0u,src_tos="0x00",flow_end_ms=1666345513807u,src="192.168.119.100",dst="44.233.90.52",src_port=51008u,total_bytes_exported=0u,flow_end_reason="end of flow",flow_start_ms=1666345513807u,in_total_bytes=52u,in_total_packets=1u,dst_port=443u
+netflow,source=127.0.0.1,version=IPFIX src_tos="0x00",src_port=54330u,rev_total_bytes_exported=0u,last_switched=9u,vlan_src=0u,flow_start_ms=1666345513807u,in_total_packets=1u,flow_end_reason="end of flow",flow_end_ms=1666345513816u,in_total_bytes=40u,dst_port=443u,src="192.168.119.100",dst="104.17.240.92",total_bytes_exported=0u,protocol="tcp"
+netflow,source=127.0.0.1,version=IPFIX flow_start_ms=1666345513807u,flow_end_ms=1666345513977u,src="192.168.119.100",dst_port=443u,total_bytes_exported=0u,last_switched=170u,src_tos="0x00",in_total_bytes=40u,dst="44.233.90.52",src_port=51024u,protocol="tcp",flow_end_reason="end of flow",in_total_packets=1u,rev_total_bytes_exported=0u,vlan_src=0u
+netflow,source=127.0.0.1,version=IPFIX src_port=58246u,total_bytes_exported=1u,flow_start_ms=1666345513806u,flow_end_ms=1666345513806u,in_total_bytes=156u,src="192.168.119.100",rev_total_bytes_exported=0u,last_switched=0u,flow_end_reason="forced end",dst="192.168.119.17",dst_port=53u,protocol="udp",in_total_packets=2u,vlan_src=0u,src_tos="0x00"
+netflow,source=127.0.0.1,version=IPFIX protocol="udp",vlan_src=0u,src_port=58879u,dst_port=53u,flow_end_ms=1666345513832u,src_tos="0x00",src="192.168.119.100",total_bytes_exported=1u,rev_total_bytes_exported=0u,flow_end_reason="forced end",last_switched=33u,in_total_bytes=221u,in_total_packets=2u,flow_start_ms=1666345513799u,dst="192.168.119.17"
+```
+
 ### Netflow v5
 
 ```text
@@ -118,12 +164,11 @@ netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="192.168.119.100",
 netflow,source=127.0.0.1,version=NetFlowV9 protocol="tcp",src="192.168.119.100",src_port=49398u,dst="140.82.114.26",dst_port=443u,in_bytes=697u,in_packets=4u,flow_start_ms=1666350481030u,flow_end_ms=1666350481362u,tcp_flags="...PA...",engine_type="17",engine_id="0x01",icmp_type=0u,icmp_code=0u,fwd_status="unknown",fwd_reason="unknown",src_tos="0x00"
 ```
 
-### IPFIX
+### sFlow v5
 
 ```text
-netflow,source=127.0.0.1,version=IPFIX protocol="tcp",vlan_src=0u,src_tos="0x00",flow_end_ms=1666345513807u,src="192.168.119.100",dst="44.233.90.52",src_port=51008u,total_bytes_exported=0u,flow_end_reason="end of flow",flow_start_ms=1666345513807u,in_total_bytes=52u,in_total_packets=1u,dst_port=443u
-netflow,source=127.0.0.1,version=IPFIX src_tos="0x00",src_port=54330u,rev_total_bytes_exported=0u,last_switched=9u,vlan_src=0u,flow_start_ms=1666345513807u,in_total_packets=1u,flow_end_reason="end of flow",flow_end_ms=1666345513816u,in_total_bytes=40u,dst_port=443u,src="192.168.119.100",dst="104.17.240.92",total_bytes_exported=0u,protocol="tcp"
-netflow,source=127.0.0.1,version=IPFIX flow_start_ms=1666345513807u,flow_end_ms=1666345513977u,src="192.168.119.100",dst_port=443u,total_bytes_exported=0u,last_switched=170u,src_tos="0x00",in_total_bytes=40u,dst="44.233.90.52",src_port=51024u,protocol="tcp",flow_end_reason="end of flow",in_total_packets=1u,rev_total_bytes_exported=0u,vlan_src=0u
-netflow,source=127.0.0.1,version=IPFIX src_port=58246u,total_bytes_exported=1u,flow_start_ms=1666345513806u,flow_end_ms=1666345513806u,in_total_bytes=156u,src="192.168.119.100",rev_total_bytes_exported=0u,last_switched=0u,flow_end_reason="forced end",dst="192.168.119.17",dst_port=53u,protocol="udp",in_total_packets=2u,vlan_src=0u,src_tos="0x00"
-netflow,source=127.0.0.1,version=IPFIX protocol="udp",vlan_src=0u,src_port=58879u,dst_port=53u,flow_end_ms=1666345513832u,src_tos="0x00",src="192.168.119.100",total_bytes_exported=1u,rev_total_bytes_exported=0u,flow_end_reason="forced end",last_switched=33u,in_total_bytes=221u,in_total_packets=2u,flow_start_ms=1666345513799u,dst="192.168.119.17"
+netflow,source=127.0.0.1,version=sFlowV5 out_errors=0i,out_bytes=3946i,status="up",in_unknown_protocol=4294967295i,out_unicast_packets_total=29i,agent_subid=100000i,interface_type=6i,in_unicast_packets_total=28i,out_dropped_packets=0i,in_bytes=3910i,in_broadcast_packets_total=4294967295i,ip_version="IPv4",agent_ip="192.168.119.184",in_snmp=3i,in_errors=0i,promiscuous=0i,interface=3i,in_mcast_packets_total=4294967295i,in_dropped_packets=0i,sys_uptime=12414i,seq_number=2i,speed=1000000000i,out_mcast_packets_total=4294967295i,out_broadcast_packets_total=4294967295i 12414000000
+netflow,source=127.0.0.1,version=sFlowV5 sys_uptime=17214i,agent_ip="192.168.119.184",agent_subid=100000i,seq_number=2i,in_phy_interface=1i,ip_version="IPv4" 17214000000
+netflow,source=127.0.0.1,version=sFlowV5 in_errors=0i,out_unicast_packets_total=36i,interface=3i,in_broadcast_packets_total=4294967295i,ip_version="IPv4",speed=1000000000i,out_bytes=4408i,out_mcast_packets_total=4294967295i,status="up",in_snmp=3i,in_mcast_packets_total=4294967295i,out_broadcast_packets_total=4294967295i,promiscuous=0i,in_bytes=5568i,out_dropped_packets=0i,sys_uptime=22014i,agent_subid=100000i,in_unknown_protocol=4294967295i,interface_type=6i,in_dropped_packets=0i,in_unicast_packets_total=37i,out_errors=0i,agent_ip="192.168.119.184",seq_number=3i 22014000000
+
 ```

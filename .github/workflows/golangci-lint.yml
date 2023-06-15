@@ -35,7 +35,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         timeout-minutes: 60
         with:
-          version: v1.52.2
+          version: v1.53.2
           args: --timeout 60m0s --verbose --out-${NO_FUTURE}format tab
       - name: golangci-lint windows
         if: runner.os == 'Windows'
@@ -44,5 +44,5 @@ jobs:
         env:
           nofuture: out-format
         with:
-          version: v1.52.2
+          version: v1.53.2
           args: --timeout 60m0s --verbose --%nofuture% tab

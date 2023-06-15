@@ -17,7 +17,7 @@ import (
 var sysDrive = fmt.Sprintf(`%s\`, os.Getenv("SystemDrive")) // C:\
 
 // include Name as a tag, FreeSpace as a field, and Purpose as a known-null class property
-var testQuery Query = Query{
+var testQuery = Query{
 	Namespace:            "ROOT\\cimv2",
 	ClassName:            "Win32_Volume",
 	Properties:           []string{"Name", "FreeSpace", "Purpose"},

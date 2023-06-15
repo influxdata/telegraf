@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -140,7 +141,7 @@ func (c *LXDClient) Exec(name string, command ...string) error {
 	rc := int(opAPI.Metadata["return"].(float64))
 
 	if rc != 0 {
-		return fmt.Errorf(output.String())
+		return errors.New(output.String())
 	}
 
 	fmt.Println(output.String())

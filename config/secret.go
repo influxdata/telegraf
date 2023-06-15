@@ -184,6 +184,7 @@ func (s *Secret) Set(value []byte) error {
 	// Set the new secret
 	s.enclave = memguard.NewEnclave(secret)
 	s.resolvers = res
+	s.notempty = len(value) > 0
 
 	return nil
 }

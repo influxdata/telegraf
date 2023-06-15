@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -103,7 +104,7 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 
 // buildNomadMetrics, it builds all the metrics and adds them to the accumulator)
 func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary) error {
-	t, err := time.Parse(timeLayout, summaryMetrics.Timestamp)
+	t, err := internal.ParseTimestamp(timeLayout, summaryMetrics.Timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %w", err)
 	}

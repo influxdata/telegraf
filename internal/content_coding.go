@@ -3,14 +3,30 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
-	"compress/zlib"
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/klauspost/compress/gzip"
+	"github.com/klauspost/compress/zlib"
+	"github.com/klauspost/pgzip"
 )
 
 const DefaultMaxDecompressionSize = 500 * 1024 * 1024 //500MB
+
+// EncodingOption provide methods to change the encoding from the standard
+// configuration.
+type EncodingOption func(*encoderConfig)
+
+type encoderConfig struct {
+	level int
+}
+
+func EncoderCompressionLevel(level int) EncodingOption {
+	return func(cfg *encoderConfig) {
+		cfg.level = level
+	}
+}
 
 // NewStreamContentDecoder returns a reader that will decode the stream
 // according to the encoding type.
@@ -28,7 +44,7 @@ func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
 // GzipReader is similar to gzip.Reader but reads only a single gzip stream per read.
 type GzipReader struct {
 	r           io.Reader
-	z           *gzip.Reader
+	z           *pgzip.Reader
 	endOfStream bool
 }
 
@@ -38,7 +54,7 @@ func NewGzipReader(r io.Reader) (io.Reader, error) {
 	br := bufio.NewReader(r)
 
 	// Reads the first gzip stream header.
-	z, err := gzip.NewReader(br)
+	z, err := pgzip.NewReader(br)
 	if err != nil {
 		return nil, err
 	}
@@ -72,12 +88,12 @@ func (r *GzipReader) Read(b []byte) (int, error) {
 }
 
 // NewContentEncoder returns a ContentEncoder for the encoding type.
-func NewContentEncoder(encoding string) (ContentEncoder, error) {
+func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncoder, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipEncoder(), nil
+		return NewGzipEncoder(options...)
 	case "zlib":
-		return NewZlibEncoder(), nil
+		return NewZlibEncoder(options...)
 	case "identity", "":
 		return NewIdentityEncoder(), nil
 	default:
@@ -133,19 +149,42 @@ type ContentEncoder interface {
 
 // GzipEncoder compresses the buffer using gzip at the default level.
 type GzipEncoder struct {
-	writer *gzip.Writer
-	buf    *bytes.Buffer
+	pwriter *pgzip.Writer
+	writer  *gzip.Writer
+	buf     *bytes.Buffer
 }
 
-func NewGzipEncoder() *GzipEncoder {
-	var buf bytes.Buffer
-	return &GzipEncoder{
-		writer: gzip.NewWriter(&buf),
-		buf:    &buf,
+func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
+	cfg := encoderConfig{level: pgzip.DefaultCompression}
+	for _, o := range options {
+		o(&cfg)
 	}
+
+	var buf bytes.Buffer
+	pw, err := pgzip.NewWriterLevel(&buf, cfg.level)
+	if err != nil {
+		return nil, err
+	}
+	w, err := gzip.NewWriterLevel(&buf, cfg.level)
+	return &GzipEncoder{
+		pwriter: pw,
+		writer:  w,
+		buf:     &buf,
+	}, err
 }
 
 func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
+	// Parallel Gzip is only faster for larger data chunks. According to the
+	// project's documentation the trade-off size is at about 1MB, so we switch
+	// to parallel Gzip if the data is larger and run the built-in version
+	// otherwise.
+	if len(data) > 1024*1024 {
+		return e.encodeBig(data)
+	}
+	return e.encodeSmall(data)
+}
+
+func (e *GzipEncoder) encodeSmall(data []byte) ([]byte, error) {
 	e.buf.Reset()
 	e.writer.Reset(e.buf)
 
@@ -160,17 +199,38 @@ func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
 	return e.buf.Bytes(), nil
 }
 
+func (e *GzipEncoder) encodeBig(data []byte) ([]byte, error) {
+	e.buf.Reset()
+	e.pwriter.Reset(e.buf)
+
+	_, err := e.pwriter.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	err = e.pwriter.Close()
+	if err != nil {
+		return nil, err
+	}
+	return e.buf.Bytes(), nil
+}
+
 type ZlibEncoder struct {
 	writer *zlib.Writer
 	buf    *bytes.Buffer
 }
 
-func NewZlibEncoder() *ZlibEncoder {
-	var buf bytes.Buffer
-	return &ZlibEncoder{
-		writer: zlib.NewWriter(&buf),
-		buf:    &buf,
+func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
+	cfg := encoderConfig{level: zlib.DefaultCompression}
+	for _, o := range options {
+		o(&cfg)
 	}
+
+	var buf bytes.Buffer
+	w, err := zlib.NewWriterLevel(&buf, cfg.level)
+	return &ZlibEncoder{
+		writer: w,
+		buf:    &buf,
+	}, err
 }
 
 func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
@@ -207,20 +267,33 @@ type ContentDecoder interface {
 
 // GzipDecoder decompresses buffers with gzip compression.
 type GzipDecoder struct {
-	reader *gzip.Reader
-	buf    *bytes.Buffer
+	preader *pgzip.Reader
+	reader  *gzip.Reader
+	buf     *bytes.Buffer
 }
 
 func NewGzipDecoder() *GzipDecoder {
 	return &GzipDecoder{
-		reader: new(gzip.Reader),
-		buf:    new(bytes.Buffer),
+		preader: new(pgzip.Reader),
+		reader:  new(gzip.Reader),
+		buf:     new(bytes.Buffer),
 	}
 }
 
 func (*GzipDecoder) SetEncoding(string) {}
 
 func (d *GzipDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, error) {
+	// Parallel Gzip is only faster for larger data chunks. According to the
+	// project's documentation the trade-off size is at about 1MB, so we switch
+	// to parallel Gzip if the data is larger and run the built-in version
+	// otherwise.
+	if len(data) > 1024*1024 {
+		return d.decodeBig(data, maxDecompressionSize)
+	}
+	return d.decodeSmall(data, maxDecompressionSize)
+}
+
+func (d *GzipDecoder) decodeSmall(data []byte, maxDecompressionSize int64) ([]byte, error) {
 	err := d.reader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -235,6 +308,27 @@ func (d *GzipDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, e
 	}
 
 	err = d.reader.Close()
+	if err != nil {
+		return nil, err
+	}
+	return d.buf.Bytes(), nil
+}
+
+func (d *GzipDecoder) decodeBig(data []byte, maxDecompressionSize int64) ([]byte, error) {
+	err := d.preader.Reset(bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+	d.buf.Reset()
+
+	n, err := io.CopyN(d.buf, d.preader, maxDecompressionSize)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	} else if n == maxDecompressionSize {
+		return nil, fmt.Errorf("size of decoded data exceeds allowed size %d", maxDecompressionSize)
+	}
+
+	err = d.preader.Close()
 	if err != nil {
 		return nil, err
 	}

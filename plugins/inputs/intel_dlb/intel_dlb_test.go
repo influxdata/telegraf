@@ -11,11 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDLB_Init(t *testing.T) {
@@ -310,7 +311,7 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/dev_xstats"},
 		}
-		response := fmt.Sprintf(`{"%s": [0, 1]}`, eventdevListCommand)
+		response := fmt.Sprintf(`{%q: [0, 1]}`, eventdevListCommand)
 		simulateResponse(mockConn, response, nil)
 
 		expectedCommands := []string{"/eventdev/dev_xstats,0", "/eventdev/dev_xstats,1"}
@@ -330,7 +331,7 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/queue_links"},
 		}
-		responseDevList := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
+		responseDevList := fmt.Sprintf(`{%q: [0]}`, eventdevListCommand)
 		simulateResponse(mockConn, responseDevList, nil)
 		responseQueueLinks := `{"0": [0]}`
 		simulateResponse(mockConn, responseQueueLinks, nil)
@@ -352,7 +353,7 @@ func TestDLB_gatherCommandsWithDeviceIndex(t *testing.T) {
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/dev_xstats", "/eventdev/wrong"},
 		}
-		response := fmt.Sprintf(`{"%s": [0, 1]}`, eventdevListCommand)
+		response := fmt.Sprintf(`{%q: [0, 1]}`, eventdevListCommand)
 		mockConn.On("Write", mock.Anything).Return(0, nil).Once()
 		mockConn.On("Read", mock.Anything).Run(func(arg mock.Arguments) {
 			elem := arg.Get(0).([]byte)
@@ -443,7 +444,7 @@ func TestDLB_gatherSecondDeviceIndex(t *testing.T) {
 			EventdevCommands:     []string{"/eventdev/port_xstats"},
 		}
 		eventdevListWithSecondIndex := []string{"/eventdev/port_list", "/eventdev/queue_list"}
-		response := fmt.Sprintf(`{"%s": [0, 1]}`, eventdevListWithSecondIndex[0])
+		response := fmt.Sprintf(`{%q: [0, 1]}`, eventdevListWithSecondIndex[0])
 		simulateResponse(mockConn, response, nil)
 
 		expectedCommands := []string{"/eventdev/port_xstats,0,0", "/eventdev/port_xstats,0,1"}
@@ -468,7 +469,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 			maxInitMessageLength: 1024,
 			EventdevCommands:     []string{"/eventdev/dev_xstats"},
 		}
-		response := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
+		response := fmt.Sprintf(`{%q: [0]}`, eventdevListCommand)
 		simulateResponse(mockConn, response, nil)
 
 		response = `{"/eventdev/dev_xstats": {"dev_rx_ok": 0}}`
@@ -506,7 +507,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 			rasReader:            fileMock,
 			maxInitMessageLength: 1024,
 		}
-		responseGather := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
+		responseGather := fmt.Sprintf(`{%q: [0]}`, eventdevListCommand)
 		mockConn.On("Write", mock.Anything).Return(0, nil).Twice()
 		mockConn.On("Read", mock.Anything).Run(func(arg mock.Arguments) {
 			elem := arg.Get(0).([]byte)
@@ -537,7 +538,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 			Log:              testutil.Logger{},
 			EventdevCommands: []string{"/eventdev/dev_xstats"},
 		}
-		response := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
+		response := fmt.Sprintf(`{%q: [0]}`, eventdevListCommand)
 		simulateResponse(mockConn, response, nil)
 
 		simulateResponse(mockConn, "/wrong/json", nil)
@@ -622,7 +623,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 		}
 		mockConn.On("Close").Return(nil)
 
-		responseGather := fmt.Sprintf(`{"%s": [0]}`, eventdevListCommand)
+		responseGather := fmt.Sprintf(`{%q: [0]}`, eventdevListCommand)
 		mockConn.On("Write", mock.Anything).Return(0, nil).Once().
 			On("Read", mock.Anything).Run(func(arg mock.Arguments) {
 			elem := arg.Get(0).([]byte)
@@ -949,7 +950,7 @@ func simulateSocketResponseForGather(socket net.Listener, t *testing.T) {
 
 	require.NoError(t, err)
 	eventdevListWithSecondIndex := []string{"/eventdev/port_list", "/eventdev/queue_list"}
-	_, err = conn.Write([]byte(fmt.Sprintf(`{"%s": [0, 1]}`, eventdevListWithSecondIndex[0])))
+	_, err = conn.Write([]byte(fmt.Sprintf(`{%q: [0, 1]}`, eventdevListWithSecondIndex[0])))
 	require.NoError(t, err)
 }
 

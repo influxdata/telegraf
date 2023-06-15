@@ -77,7 +77,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	err := is.server.PingTest()
+	err := is.server.PingTest(nil)
 	if err != nil {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
@@ -129,11 +129,8 @@ func (is *InternetSpeed) findClosestServer() error {
 		client.SetNThread(is.Connections)
 	}
 
-	user, err := client.FetchUserInfo()
-	if err != nil {
-		return fmt.Errorf("fetching user info failed: %w", err)
-	}
-	is.servers, err = client.FetchServers(user)
+	var err error
+	is.servers, err = client.FetchServers()
 	if err != nil {
 		return fmt.Errorf("fetching server list failed: %w", err)
 	}

@@ -2,20 +2,9 @@ package serializers
 
 import (
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
-	"github.com/influxdata/telegraf/plugins/serializers/csv"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
-	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
-	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
-	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
-	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 // Creator is the function to create a new serializer
@@ -164,178 +153,18 @@ type Config struct {
 
 // NewSerializer a Serializer interface based on the given config.
 func NewSerializer(config *Config) (Serializer, error) {
-	var err error
-	var serializer Serializer
-	switch config.DataFormat {
-	case "csv":
-		serializer, err = NewCSVSerializer(config)
-	case "graphite":
-		serializer, err = NewGraphiteSerializer(
-			config.Prefix,
-			config.Template,
-			config.GraphiteStrictRegex,
-			config.GraphiteTagSupport,
-			config.GraphiteTagSanitizeMode,
-			config.GraphiteSeparator,
-			config.Templates,
-		)
-	case "json":
-		serializer, err = NewJSONSerializer(config)
-	case "splunkmetric":
-		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric, config.SplunkmetricOmitEventTag), nil
-	case "nowmetric":
-		serializer, err = NewNowSerializer()
-	case "carbon2":
-		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
-	case "wavefront":
-		serializer, err = NewWavefrontSerializer(
-			config.Prefix,
-			config.WavefrontUseStrict,
-			config.WavefrontSourceOverride,
-			config.WavefrontDisablePrefixConversion,
-		), nil
-	case "prometheus":
-		serializer, err = NewPrometheusSerializer(config), nil
-	case "prometheusremotewrite":
-		serializer, err = NewPrometheusRemoteWriteSerializer(config), nil
-	case "msgpack":
-		serializer, err = NewMsgpackSerializer(), nil
-	default:
-		creator, found := Serializers[config.DataFormat]
-		if !found {
-			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
-		}
-
-		// Try to create new-style serializers the old way...
-		serializer := creator()
-		p, ok := serializer.(SerializerCompatibility)
-		if !ok {
-			return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
-		}
-		err := p.InitFromConfig(config)
-
-		return serializer, err
+	creator, found := Serializers[config.DataFormat]
+	if !found {
+		return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
+
+	// Try to create new-style serializers the old way...
+	serializer := creator()
+	p, ok := serializer.(SerializerCompatibility)
+	if !ok {
+		return nil, fmt.Errorf("serializer for %q cannot be created the old way", config.DataFormat)
+	}
+	err := p.InitFromConfig(config)
+
 	return serializer, err
-}
-
-func NewCSVSerializer(config *Config) (Serializer, error) {
-	return csv.NewSerializer(config.TimestampFormat, config.CSVSeparator, config.CSVHeader, config.CSVPrefix)
-}
-
-func NewPrometheusRemoteWriteSerializer(config *Config) Serializer {
-	sortMetrics := prometheusremotewrite.NoSortMetrics
-	if config.PrometheusExportTimestamp {
-		sortMetrics = prometheusremotewrite.SortMetrics
-	}
-
-	stringAsLabels := prometheusremotewrite.DiscardStrings
-	if config.PrometheusStringAsLabel {
-		stringAsLabels = prometheusremotewrite.StringAsLabel
-	}
-
-	return prometheusremotewrite.NewSerializer(prometheusremotewrite.FormatConfig{
-		MetricSortOrder: sortMetrics,
-		StringHandling:  stringAsLabels,
-	})
-}
-
-func NewPrometheusSerializer(config *Config) Serializer {
-	exportTimestamp := prometheus.NoExportTimestamp
-	if config.PrometheusExportTimestamp {
-		exportTimestamp = prometheus.ExportTimestamp
-	}
-
-	sortMetrics := prometheus.NoSortMetrics
-	if config.PrometheusExportTimestamp {
-		sortMetrics = prometheus.SortMetrics
-	}
-
-	stringAsLabels := prometheus.DiscardStrings
-	if config.PrometheusStringAsLabel {
-		stringAsLabels = prometheus.StringAsLabel
-	}
-
-	return prometheus.NewSerializer(prometheus.FormatConfig{
-		TimestampExport: exportTimestamp,
-		MetricSortOrder: sortMetrics,
-		StringHandling:  stringAsLabels,
-		CompactEncoding: config.PrometheusCompactEncoding,
-	})
-}
-
-func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) Serializer {
-	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
-}
-
-func NewJSONSerializer(config *Config) (Serializer, error) {
-	return json.NewSerializer(json.FormatConfig{
-		TimestampUnits:      config.TimestampUnits,
-		TimestampFormat:     config.TimestampFormat,
-		Transformation:      config.Transformation,
-		NestedFieldsInclude: config.JSONNestedFieldInclude,
-		NestedFieldsExclude: config.JSONNestedFieldExclude,
-	})
-}
-
-func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {
-	return carbon2.NewSerializer(carbon2format, carbon2SanitizeReplaceChar)
-}
-
-func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool, splunkmetricOmitEventTag bool) Serializer {
-	return splunkmetric.NewSerializer(splunkmetricHecRouting, splunkmetricMultimetric, splunkmetricOmitEventTag)
-}
-
-func NewNowSerializer() (Serializer, error) {
-	return nowmetric.NewSerializer()
-}
-
-//nolint:revive //argument-limit conditionally more arguments allowed
-func NewGraphiteSerializer(
-	prefix,
-	template string,
-	strictRegex string,
-	tagSupport bool,
-	tagSanitizeMode string,
-	separator string,
-	templates []string,
-) (Serializer, error) {
-	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
-	if err != nil {
-		return nil, err
-	}
-
-	if defaultTemplate != "" {
-		template = defaultTemplate
-	}
-
-	if tagSanitizeMode == "" {
-		tagSanitizeMode = "strict"
-	}
-
-	if separator == "" {
-		separator = "."
-	}
-
-	strictAllowedChars := regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	if strictRegex != "" {
-		strictAllowedChars, err = regexp.Compile(strictRegex)
-		if err != nil {
-			return nil, fmt.Errorf("invalid regex provided %q: %w", strictRegex, err)
-		}
-	}
-
-	return &graphite.GraphiteSerializer{
-		Prefix:             prefix,
-		Template:           template,
-		StrictAllowedChars: strictAllowedChars,
-		TagSupport:         tagSupport,
-		TagSanitizeMode:    tagSanitizeMode,
-		Separator:          separator,
-		Templates:          graphiteTemplates,
-	}, nil
-}
-
-func NewMsgpackSerializer() Serializer {
-	return msgpack.NewSerializer()
 }

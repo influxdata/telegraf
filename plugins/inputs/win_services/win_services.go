@@ -81,9 +81,8 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 	scmgr, err := mgr.Connect()
 	if err != nil {
 		return nil, err
-	} else {
-		return &WinSvcMgr{scmgr}, nil
 	}
+	return &WinSvcMgr{scmgr}, nil
 }
 
 // WinServices is an implementation if telegraf.Input interface, providing info about Windows Services

@@ -25,6 +25,7 @@ func TestWrite(t *testing.T) {
 		APIToken: config.NewSecret([]byte("abc123token")),
 		Prefix:   "my.prefix",
 	}
+	require.NoError(t, i.Init())
 
 	// Default to gauge
 	m1 := metric.New(

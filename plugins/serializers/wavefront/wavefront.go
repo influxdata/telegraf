@@ -6,16 +6,17 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-// WavefrontSerializer : WavefrontSerializer struct
-type WavefrontSerializer struct {
-	Prefix                   string
-	UseStrict                bool
-	SourceOverride           []string
-	DisablePrefixConversions bool
-	scratch                  buffer
-	mu                       sync.Mutex // buffer mutex
+type Serializer struct {
+	Prefix                   string   `toml:"prefix"`
+	UseStrict                bool     `toml:"wavefront_use_strict"`
+	SourceOverride           []string `toml:"wavefront_source_override"`
+	DisablePrefixConversions bool     `toml:"wavefront_disable_prefix_conversion"`
+
+	scratch buffer
+	mu      sync.Mutex // buffer mutex
 }
 
 type MetricPoint struct {
@@ -26,17 +27,7 @@ type MetricPoint struct {
 	Tags      map[string]string
 }
 
-func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) *WavefrontSerializer {
-	s := &WavefrontSerializer{
-		Prefix:                   prefix,
-		UseStrict:                useStrict,
-		SourceOverride:           sourceOverride,
-		DisablePrefixConversions: disablePrefixConversion,
-	}
-	return s
-}
-
-func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
+func (s *Serializer) serializeMetric(m telegraf.Metric) {
 	const metricSeparator = "."
 
 	for fieldName, value := range m.Fields() {
@@ -59,7 +50,7 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 			// bad value continue to next metric
 			continue
 		}
-		source, tags := buildTags(m.Tags(), s)
+		source, tags := s.buildTags(m.Tags())
 		metric := MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
@@ -72,7 +63,7 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 }
 
 // Serialize : Serialize based on Wavefront format
-func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
+func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	s.mu.Lock()
 	s.scratch.Reset()
 	s.serializeMetric(m)
@@ -81,7 +72,7 @@ func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	return out, nil
 }
 
-func (s *WavefrontSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	s.mu.Lock()
 	s.scratch.Reset()
 	for _, m := range metrics {
@@ -92,7 +83,7 @@ func (s *WavefrontSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte,
 	return out, nil
 }
 
-func findSourceTag(mTags map[string]string, s *WavefrontSerializer) string {
+func (s *Serializer) findSourceTag(mTags map[string]string) string {
 	if src, ok := mTags["source"]; ok {
 		delete(mTags, "source")
 		return src
@@ -107,14 +98,14 @@ func findSourceTag(mTags map[string]string, s *WavefrontSerializer) string {
 	return mTags["host"]
 }
 
-func buildTags(mTags map[string]string, s *WavefrontSerializer) (string, map[string]string) {
+func (s *Serializer) buildTags(mTags map[string]string) (string, map[string]string) {
 	// Remove all empty tags.
 	for k, v := range mTags {
 		if v == "" {
 			delete(mTags, k)
 		}
 	}
-	source := findSourceTag(mTags, s)
+	source := s.findSourceTag(mTags)
 	delete(mTags, "host")
 	return tagValueReplacer.Replace(source), mTags
 }
@@ -143,7 +134,7 @@ func buildValue(v interface{}, name string) (val float64, valid bool) {
 	}
 }
 
-func formatMetricPoint(b *buffer, metricPoint *MetricPoint, s *WavefrontSerializer) []byte {
+func formatMetricPoint(b *buffer, metricPoint *MetricPoint, s *Serializer) []byte {
 	b.WriteChar('"')
 	b.WriteString(metricPoint.Metric)
 	b.WriteString(`" `)
@@ -194,4 +185,22 @@ func (b *buffer) WriteUint64(val uint64) {
 
 func (b *buffer) WriteFloat64(val float64) {
 	*b = strconv.AppendFloat(*b, val, 'f', 6, 64)
+}
+
+func init() {
+	serializers.Add("wavefront",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.Prefix = cfg.Prefix
+	s.UseStrict = cfg.WavefrontUseStrict
+	s.SourceOverride = cfg.WavefrontSourceOverride
+	s.DisablePrefixConversions = cfg.WavefrontDisablePrefixConversion
+
+	return nil
 }

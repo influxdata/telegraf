@@ -68,7 +68,7 @@ func TestWriteWithDefaults(t *testing.T) {
 	err := i.Write([]telegraf.Metric{intMetric})
 	require.NoError(t, err)
 
-	defer server.Close()
+	server.Close()
 }
 
 func TestWriteWithFields(t *testing.T) {
@@ -120,7 +120,7 @@ func TestWriteWithFields(t *testing.T) {
 	err := i.Write([]telegraf.Metric{floatMetric})
 	require.NoError(t, err)
 
-	defer server.Close()
+	server.Close()
 }
 
 func TestWriteWithTags(t *testing.T) {
@@ -189,5 +189,5 @@ func TestWriteWithTags(t *testing.T) {
 	err := i.Write([]telegraf.Metric{floatMetric})
 	require.NoError(t, err)
 
-	defer server.Close()
+	server.Close()
 }

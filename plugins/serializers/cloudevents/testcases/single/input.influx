@@ -1,0 +1,1 @@
+cpu,cpu=cpu-total,host=Hugin usage_idle=99.62546816517232,usage_irq=0.12484394506911513,usage_softirq=0,usage_guest_nice=0,usage_steal=0,usage_guest=0,usage_user=0.12484394507124409,usage_system=0.12484394506840547,usage_nice=0,usage_iowait=0 1682613051000000000
