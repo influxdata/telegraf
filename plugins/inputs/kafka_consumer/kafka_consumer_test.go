@@ -678,7 +678,7 @@ func TestDynamicTopicRefresh(t *testing.T) {
 				Topics:                 tt.topics,
 				TopicRegexps:           tt.topicRegexps,
 				TopicRefreshInterval:   tt.topicRefreshInterval,
-				MaxUndeliveredMessages: 1000,  // Default
+				MaxUndeliveredMessages: 1000, // Default
 				ConnectionStrategy:     tt.connectionStrategy,
 			}
 			parser := &influx.Parser{}
