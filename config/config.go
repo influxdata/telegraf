@@ -864,6 +864,7 @@ func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte
 			}
 			return result, err
 		}),
+		template.WithoutLogging,
 	}
 	if oldReplacementBehavior {
 		options = append(options, template.WithPattern(oldVarRe))
