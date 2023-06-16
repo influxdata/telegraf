@@ -32,9 +32,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   address = "host=localhost user=pgbouncer sslmode=disable"
 
   ## Specify which "show" commands to gather metrics for.
-  ## Valid options: "stats", "pools", "lists", "databases"
-  ## If the parameter is not specified, the "stats" and "pools" metrics will be collected
-  # show_commands = ["stats", "pools", "lists", "databases"]
+  ## Choose from: "stats", "pools", "lists", "databases"
+  # show_commands = ["stats", "pools"]
 ```
 
 ### `address`

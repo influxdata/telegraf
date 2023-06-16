@@ -71,13 +71,11 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
-	map[string]*interface{}, error) {
+func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string, map[string]*interface{}, error) {
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
 	columnMap := make(map[string]*interface{})
-
 	for _, column := range columns {
 		columnMap[column] = new(interface{})
 	}
@@ -90,17 +88,18 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 
 	// deconstruct array of variables and send to Scan
 	err := row.Scan(columnVars...)
-
 	if err != nil {
 		return nil, nil, err
 	}
 	if columnMap["database"] != nil {
 		// extract the database name from the column map
-		if _, err := dbname.WriteString((*columnMap["database"]).(string)); err != nil {
+		_, err := dbname.WriteString((*columnMap["database"]).(string))
+		if err != nil {
 			return nil, nil, err
 		}
 	} else {
-		if _, err := dbname.WriteString("postgres"); err != nil {
+		_, err := dbname.WriteString("postgres")
+		if err != nil {
 			return nil, nil, err
 		}
 	}
@@ -117,14 +116,7 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 
 func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 	// STATS
-	var (
-		err     error
-		query   string
-		columns []string
-	)
-	query = `SHOW STATS`
-
-	rows, err := p.DB.Query(query)
+	rows, err := p.DB.Query(`SHOW STATS`)
 	if err != nil {
 		return err
 	}
@@ -132,7 +124,7 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 	defer rows.Close()
 
 	// grab the column information from the result
-	columns, err = rows.Columns()
+	columns, err := rows.Columns()
 	if err != nil {
 		return err
 	}
@@ -173,14 +165,7 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 
 func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 	// POOLS
-	var (
-		err     error
-		query   string
-		columns []string
-	)
-	query = `SHOW POOLS`
-
-	poolRows, err := p.DB.Query(query)
+	poolRows, err := p.DB.Query(`SHOW POOLS`)
 	if err != nil {
 		return err
 	}
@@ -188,7 +173,7 @@ func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 	defer poolRows.Close()
 
 	// grab the column information from the result
-	columns, err = poolRows.Columns()
+	columns, err := poolRows.Columns()
 	if err != nil {
 		return err
 	}
@@ -226,14 +211,7 @@ func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 
 func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 	// LISTS
-	var (
-		err     error
-		query   string
-		columns []string
-	)
-	query = `SHOW LISTS`
-
-	rows, err := p.DB.Query(query)
+	rows, err := p.DB.Query(`SHOW LISTS`)
 	if err != nil {
 		return err
 	}
@@ -241,7 +219,7 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 	defer rows.Close()
 
 	// grab the column information from the result
-	columns, err = rows.Columns()
+	columns, err := rows.Columns()
 	if err != nil {
 		return err
 	}
@@ -266,20 +244,14 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 
 func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 	// DATABASES
-	var (
-		err     error
-		query   string
-		columns []string
-	)
-	query = `SHOW DATABASES`
-	rows, err := p.DB.Query(query)
+	rows, err := p.DB.Query(`SHOW DATABASES`)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
 	// grab the column information from the result
-	columns, err = rows.Columns()
+	columns, err := rows.Columns()
 	if err != nil {
 		return err
 	}
