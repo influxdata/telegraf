@@ -71,7 +71,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
-	input.Command = `Raw command which may or may not contain # or ${var} in it
+	input.Command = `Raw command which may or may not contain # in it
 # is unique`
 
 	filter := models.Filter{
