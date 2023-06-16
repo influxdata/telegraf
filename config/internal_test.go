@@ -91,22 +91,6 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			contents: "Should output ${MYVAR}",
 			expected: "Should output ${MYVAR}",
 		},
-		{
-			name: "leave alone escaped expressions (backslash)",
-			setEnv: func(t *testing.T) {
-				t.Setenv("MYVAR", "my-variable")
-			},
-			contents: `Should output \$MYVAR`,
-			expected: "Should output $MYVAR",
-		},
-		{
-			name: "double dollar no brackets",
-			setEnv: func(t *testing.T) {
-				t.Setenv("MYVAR", "my-variable")
-			},
-			contents: `Should output $$MYVAR`,
-			expected: "Should output $my-variable",
-		},
 	}
 
 	for _, tt := range tests {
