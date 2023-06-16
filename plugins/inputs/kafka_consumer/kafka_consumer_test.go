@@ -672,6 +672,13 @@ func TestDynamicTopicRefresh(t *testing.T) {
 
 			// Make kafka input
 			t.Logf("rt: starting input plugin")
+			// If MaxUndeliveredMessages is 1 here (as it is
+			// for the other end-to-end tests) the test fails
+			// more often than not (but not always).  We suspect
+			// this is something to do with internal messages
+			// about new topics and rebalancing getting in the
+			// way.  At any rate, at 1000 (the default value),
+			// the tests pass reliably.
 			input := KafkaConsumer{
 				Brokers:                brokers,
 				Log:                    testutil.Logger{},
@@ -712,37 +719,7 @@ func TestDynamicTopicRefresh(t *testing.T) {
 				require.Error(t, err)
 				return
 			}
-			// FIXME: more often than not, we do not see
-			// the injected metrics.  Having tested on a
-			// live installation, where I receive all the
-			// messages at up to 100Hz reliably, I'm
-			// pretty sure it's a fault in the test
-			// harness rather than the implementation, but
-			// I do not understand what is going on.  I
-			// wonder if this is the same thing as in line
-			// 316 (search for 'flappy').  Help would be
-			// greatly appreciated.
-
-			// Whether or not we consume a backlog is
-			// dependent on the "offset" configuration
-			// setting.  The default is "oldest", so we
-			// shouldn't need a delay.  But since the test
-			// case isn't working consistently, I put one
-			// in.  It doesn't seem to matter, but it will
-			// make iterating on this a little easier if
-			// someone decides to tackle this later on.
-			// Delay or not, or length of delay, does not
-			// seem to make a difference in testing.  Nor does
-			// varying offset between "oldest" and "newest".
-			delay := 4 * time.Second // For easy experimentation
-			// Wait for new consumer group to come online
-			if delay > 0 {
-				t.Logf("rt: waiting %v ns for consumer group", delay)
-				time.Sleep(delay)
-				t.Logf("rt: consumer group delay complete")
-			}
 			// Shove some metrics through
-			// The writing claims to always work...
 			expected := testutil.MockMetrics()
 			t.Logf("rt: writing %v to %s", expected, output.Topic)
 			require.NoError(t, output.Write(expected))
