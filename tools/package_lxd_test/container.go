@@ -195,7 +195,7 @@ func (c *Container) configureYum() error {
 	err := c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
-		fmt.Sprintf("echo %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
+		fmt.Sprintf("echo -e %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
