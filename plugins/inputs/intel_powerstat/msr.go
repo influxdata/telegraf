@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/influxdata/telegraf"
 )
 
@@ -196,43 +194,25 @@ func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) 
 }
 
 func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error {
-	g, ctx := errgroup.WithContext(context.Background())
+	// Create and populate a map that contains msr offsets along with their respective values
+	msrOffsets := make(map[int64]uint64)
 
-	// Create and populate a map that contains msr offsets along with their respective channels
-	msrOffsetsWithChannels := make(map[int64]chan uint64)
 	for _, offset := range m.msrOffsets {
-		msrOffsetsWithChannels[offset] = make(chan uint64)
+		value, err := m.fs.readFileAtOffsetToUint64(reader, offset)
+		if err != nil {
+			return fmt.Errorf("error reading MSR value %x: %w", offset, err)
+		}
+		msrOffsets[offset] = value
 	}
 
-	// Start a goroutine for each msr offset
-	for offset, channel := range msrOffsetsWithChannels {
-		// Wrap around function to avoid race on loop counter
-		func(off int64, ch chan uint64) {
-			g.Go(func() error {
-				defer close(ch)
-
-				err := m.readValueFromFileAtOffset(ctx, ch, reader, off)
-				if err != nil {
-					return fmt.Errorf("error reading MSR file: %w", err)
-				}
-
-				return nil
-			})
-		}(offset, channel)
-	}
-
-	newC3 := <-msrOffsetsWithChannels[c3StateResidencyLocation]
-	newC6 := <-msrOffsetsWithChannels[c6StateResidencyLocation]
-	newC7 := <-msrOffsetsWithChannels[c7StateResidencyLocation]
-	newMperf := <-msrOffsetsWithChannels[maximumFrequencyClockCountLocation]
-	newAperf := <-msrOffsetsWithChannels[actualFrequencyClockCountLocation]
-	newTsc := <-msrOffsetsWithChannels[timestampCounterLocation]
-	newThrottleTemp := <-msrOffsetsWithChannels[throttleTemperatureLocation]
-	newTemp := <-msrOffsetsWithChannels[temperatureLocation]
-
-	if err := g.Wait(); err != nil {
-		return fmt.Errorf("received error during reading MSR values in goroutines: %w", err)
-	}
+	newC3 := msrOffsets[c3StateResidencyLocation]
+	newC6 := msrOffsets[c6StateResidencyLocation]
+	newC7 := msrOffsets[c7StateResidencyLocation]
+	newMperf := msrOffsets[maximumFrequencyClockCountLocation]
+	newAperf := msrOffsets[actualFrequencyClockCountLocation]
+	newTsc := msrOffsets[timestampCounterLocation]
+	newThrottleTemp := msrOffsets[throttleTemperatureLocation]
+	newTemp := msrOffsets[temperatureLocation]
 
 	m.cpuCoresData[core].c3Delta = newC3 - m.cpuCoresData[core].c3
 	m.cpuCoresData[core].c6Delta = newC6 - m.cpuCoresData[core].c6
