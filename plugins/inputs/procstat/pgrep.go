@@ -56,6 +56,9 @@ func (pg *Pgrep) FullPattern(pattern string) ([]PID, error) {
 func (pg *Pgrep) ChildPattern(pattern string) ([]PID, error) {
 	args := []string{"-P", pattern}
 	out, err := run(pg.path, args)
+	if err != nil {
+		return nil, err
+	}
 	pids, err := appendOutput(pattern, out)
 	if err != nil {
 		return nil, err

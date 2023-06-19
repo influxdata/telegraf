@@ -62,8 +62,7 @@ ExecMainPID=11408
 
 	if cmdline == "supervisorctl status TestGather_STARTINGsupervisorUnitPIDs TestGather_FATALsupervisorUnitPIDs" {
 		fmt.Printf(`TestGather_FATALsupervisorUnitPIDs                       FATAL     Exited too quickly (process log may have details)
-TestGather_STARTINGsupervisorUnitPIDs                          STARTING
-`)
+TestGather_STARTINGsupervisorUnitPIDs                          STARTING`)
 		os.Exit(0)
 	}
 
@@ -460,7 +459,7 @@ func TestGather_SameTimestamps(t *testing.T) {
 func TestGather_supervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{}),
-		SupervisorUnit:  "TestGather_supervisorUnitPIDs",
+		SupervisorUnit:  []string{"TestGather_supervisorUnitPIDs"},
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
@@ -477,7 +476,7 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{}),
 		Pattern:         "7311",
-		SupervisorUnit:  "TestGather_STARTINGsupervisorUnitPIDs,TestGather_FATALsupervisorUnitPIDs",
+		SupervisorUnit:  []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
