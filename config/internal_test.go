@@ -176,6 +176,11 @@ func TestEnvironmentSubstitutionOldBehavior(t *testing.T) {
 			contents: `my-da${ta:-${FALLBACK}}base`,
 			expected: `my-dadefaultbase`,
 		},
+		{
+			name:     "regex substitution",
+			contents: `${1}`,
+			expected: `${1}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -264,6 +269,11 @@ func TestEnvironmentSubstitutionNewBehavior(t *testing.T) {
 			name:     "fallback env",
 			contents: `my-da${ta:-${FALLBACK}}base`,
 			expected: `my-dadefaultbase`,
+		},
+		{
+			name:     "regex substitution",
+			contents: `${1}`,
+			expected: `${1}`,
 		},
 	}
 

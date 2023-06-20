@@ -860,6 +860,13 @@ func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte
 		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
 			result, err := template.DefaultReplacementFunc(s, m, cfg)
 			if err == nil && result == "" {
+				// Keep undeclared environment-variable patterns to reproduce
+				// pre-v1.27 behavior
+				return s, nil
+			}
+			if err != nil && strings.HasPrefix(err.Error(), "Invalid template:") {
+				// Keep invalid template patterns to ignore regexp substitutions
+				// like ${1}
 				return s, nil
 			}
 			return result, err
