@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -74,7 +75,8 @@ func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
 }
 
 func TestIdentityEncodeDecode(t *testing.T) {
-	enc := NewIdentityEncoder()
+	enc, err := NewIdentityEncoder()
+	require.NoError(t, err)
 	dec := NewIdentityDecoder()
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -118,6 +120,66 @@ func TestStreamGzipDecode(t *testing.T) {
 	require.Equal(t, 5, n)
 
 	require.Equal(t, []byte("howdy"), b[:n])
+}
+
+func TestCompressionLevel(t *testing.T) {
+	tests := []struct {
+		algorithm   string
+		validLevels []int
+		errormsg    string
+	}{
+		{
+			algorithm:   "gzip",
+			validLevels: []int{0, 1, 9},
+			errormsg:    "invalid compression level",
+		},
+		{
+			algorithm:   "zlib",
+			validLevels: []int{0, 1, 9},
+			errormsg:    "invalid compression level",
+		},
+		{
+			algorithm: "identity",
+			errormsg:  "does not support options",
+		},
+	}
+
+	for _, tt := range tests {
+		// Check default i.e. without specifying level
+		t.Run(tt.algorithm+" default", func(t *testing.T) {
+			enc, err := NewContentEncoder(tt.algorithm)
+			require.NoError(t, err)
+			require.NotNil(t, enc)
+		})
+
+		// Check invalid level
+		t.Run(tt.algorithm+" invalid", func(t *testing.T) {
+			_, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(11))
+			require.ErrorContains(t, err, tt.errormsg)
+		})
+
+		// Check known levels 0..9
+		for level := 0; level < 10; level++ {
+			name := fmt.Sprintf("%s level %d", tt.algorithm, level)
+			t.Run(name, func(t *testing.T) {
+				var valid bool
+				for _, l := range tt.validLevels {
+					if l == level {
+						valid = true
+						break
+					}
+				}
+
+				enc, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(level))
+				if valid {
+					require.NoError(t, err)
+					require.NotNil(t, enc)
+				} else {
+					require.ErrorContains(t, err, tt.errormsg)
+				}
+			})
+		}
+	}
 }
 
 func BenchmarkGzipEncode(b *testing.B) {
@@ -304,7 +366,8 @@ func BenchmarkIdentityEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc := NewIdentityEncoder()
+	enc, err := NewIdentityEncoder()
+	require.NoError(b, err)
 	dec := NewIdentityDecoder()
 
 	payload, err := enc.Encode(data)
