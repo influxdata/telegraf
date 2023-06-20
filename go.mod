@@ -46,7 +46,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.80.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.17.8
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.2
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.16.0
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.17.2
 	github.com/aws/smithy-go v1.13.5
 	github.com/benbjohnson/clock v1.3.3
 	github.com/blues/jsonata-go v1.5.4
@@ -259,7 +259,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.19.0 // indirect
