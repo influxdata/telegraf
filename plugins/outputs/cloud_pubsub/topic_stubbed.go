@@ -195,7 +195,7 @@ func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	err := p.Init()
 	require.NoError(t, err)
 
-	decoder, _ := internal.NewContentDecoder(t.ContentEncoding, internal.DecoderMaxDecompressionSize(t.MaxDecompressionSize))
+	decoder, _ := internal.NewContentDecoder(t.ContentEncoding, internal.WithMaxDecompressionSize(t.MaxDecompressionSize))
 	d, err := decoder.Decode(msg.Data)
 	if err != nil {
 		t.Errorf("unable to decode message: %v", err)

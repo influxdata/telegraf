@@ -326,7 +326,7 @@ func (ps *PubSub) Init() error {
 		ps.ContentEncoding = "identity"
 	case "gzip":
 		var err error
-		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, internal.DecoderMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
+		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, internal.WithMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
 		if err != nil {
 			return err
 		}

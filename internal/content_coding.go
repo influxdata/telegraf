@@ -23,7 +23,7 @@ type decoderConfig struct {
 	maxDecompressionSize int64
 }
 
-func DecoderMaxDecompressionSize(maxDecompressionSize int64) DecodingOption {
+func WithMaxDecompressionSize(maxDecompressionSize int64) DecodingOption {
 	return func(cfg *decoderConfig) {
 		cfg.maxDecompressionSize = maxDecompressionSize
 	}

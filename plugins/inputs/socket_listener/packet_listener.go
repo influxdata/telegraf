@@ -82,7 +82,7 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
 	}
 
 	// Create a decoder for the given encoding
-	decoder, err := internal.NewContentDecoder(l.Encoding, internal.DecoderMaxDecompressionSize(l.MaxDecompressionSize))
+	decoder, err := internal.NewContentDecoder(l.Encoding, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}
@@ -126,7 +126,7 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 	l.conn = conn
 
 	// Create a decoder for the given encoding
-	decoder, err := internal.NewContentDecoder(l.Encoding, internal.DecoderMaxDecompressionSize(l.MaxDecompressionSize))
+	decoder, err := internal.NewContentDecoder(l.Encoding, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}
@@ -143,7 +143,7 @@ func (l *packetListener) setupIP(u *url.URL) error {
 	l.conn = conn
 
 	// Create a decoder for the given encoding
-	decoder, err := internal.NewContentDecoder(l.Encoding, internal.DecoderMaxDecompressionSize(l.MaxDecompressionSize))
+	decoder, err := internal.NewContentDecoder(l.Encoding, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}

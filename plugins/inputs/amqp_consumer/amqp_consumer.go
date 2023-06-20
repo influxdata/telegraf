@@ -163,7 +163,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding, internal.DecoderMaxDecompressionSize(int64(a.MaxDecompressionSize)))
+	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding, internal.WithMaxDecompressionSize(int64(a.MaxDecompressionSize)))
 	if err != nil {
 		return err
 	}
