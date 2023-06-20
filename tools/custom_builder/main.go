@@ -93,6 +93,12 @@ func main() {
 		log.Fatalln("No configuration specified!")
 	}
 
+	// Collect all available plugins
+	packages := packageCollection{}
+	if err := packages.CollectAvailable(); err != nil {
+		log.Fatalf("Collecting plugins failed: %v", err)
+	}
+
 	// Import the plugin list from Telegraf configuration files
 	log.Println("Importing configuration file(s)...")
 	cfg, nfiles, err := ImportConfigurations(configFiles, configDirs)
@@ -106,12 +112,6 @@ func main() {
 	// Check if we do have a config
 	if nfiles == 0 {
 		log.Fatalln("No configuration files loaded!")
-	}
-
-	// Collect all available plugins
-	packages := packageCollection{}
-	if err := packages.CollectAvailable(); err != nil {
-		log.Fatalf("Collecting plugins failed: %v", err)
 	}
 
 	// Process the plugin list with the given config. This will
