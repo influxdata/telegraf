@@ -3,6 +3,7 @@ package ublox
 
 import (
 	_ "embed"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -66,6 +67,11 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 
 		if lastPos.FusionMode != None {
 			metrics["fusion_mode"] = lastPos.FusionMode
+		}
+
+		if lastPos.Active {
+			now := time.Now()
+			metrics["system_gps_time_diff_ms"] = now.Sub(lastPos.Ts).Milliseconds()
 		}
 
 		acc.AddFields("ublox-data", metrics, nil)

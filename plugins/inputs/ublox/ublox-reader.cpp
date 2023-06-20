@@ -25,8 +25,8 @@ void ublox_reader_close(void *reader) { ((UbloxReader *)reader)->close(); }
 
 // note you must free err if error happened
 int ublox_reader_read(void *reader, bool *is_active, double *lat, double *lon,
-                      double *heading, uint16_t *pdop,
-                      unsigned int *fusion_mode, bool wait_for_data,
+                      double *heading, unsigned int *pdop,
+                      unsigned int *fusion_mode, long long *sec, long long *nsec, bool wait_for_data,
                       char **err) {
   UbloxReader *ublox_reader = (UbloxReader *)reader;
 
@@ -61,6 +61,13 @@ int ublox_reader_read(void *reader, bool *is_active, double *lat, double *lon,
         if (pdop) {
           *pdop = nav_pvt->payload.pDOP;
         }
+        if (sec) {
+          *sec = ubx::getUtcSec(nav_pvt);
+        }
+        if (nsec) {
+          *nsec = nav_pvt->payload.nano;
+        }
+
         return 1;
       } else if (ubx::messageCId(msg, len) == ubx::ESF_STATUS) {
         const ubx::EsfStatus *esf_status = (const ubx::EsfStatus *)msg;
