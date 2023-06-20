@@ -94,7 +94,7 @@ func (s *Stackdriver) Connect() error {
 	}
 
 	if s.Namespace == "" {
-		s.Log.Warn("plugin-level namespace is empty")
+		return fmt.Errorf("namespace is a required field for stackdriver output")
 	}
 
 	if s.ResourceType == "" {
@@ -296,10 +296,7 @@ func (s *Stackdriver) generateMetricName(m telegraf.Metric, key string) string {
 		return path.Join(s.MetricTypePrefix, s.Namespace, m.Name(), key)
 	}
 
-	name := m.Name() + "_" + key
-	if s.Namespace != "" {
-		name = s.Namespace + "_" + m.Name() + "_" + key
-	}
+	name := s.Namespace + "_" + m.Name() + "_" + key
 
 	var kind string
 	switch m.Type() {
