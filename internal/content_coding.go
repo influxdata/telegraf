@@ -293,6 +293,13 @@ func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
 		o(&cfg)
 	}
 
+	switch cfg.level {
+	case int(zstd.SpeedFastest), int(zstd.SpeedDefault), int(zstd.SpeedBetterCompression), int(zstd.SpeedBestCompression):
+		// Do nothing as those are valid levels
+	default:
+		return nil, fmt.Errorf("invalid compression level, only 1, 3, 7 and 11 are supported")
+	}
+
 	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(cfg.level)))
 	return &ZstdEncoder{
 		encoder: e,
