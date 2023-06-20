@@ -23,15 +23,17 @@ const (
 	cacheReadaheads     = "2"
 )
 
-var (
-	testBcachePath           = os.TempDir() + "/telegraf/sys/fs/bcache"
-	testBcacheUUIDPath       = testBcachePath + "/663955a3-765a-4737-a9fd-8250a7a78411"
-	testBcacheDevPath        = os.TempDir() + "/telegraf/sys/devices/virtual/block/bcache0"
-	testBcacheBackingDevPath = os.TempDir() + "/telegraf/sys/devices/virtual/block/md10"
-)
-
 func TestBcacheGeneratesMetrics(t *testing.T) {
-	err := os.MkdirAll(testBcacheUUIDPath, 0750)
+	tmpDir, err := os.MkdirTemp("", "telegraf-bcache")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testBcachePath := tmpDir + "/telegraf-bcache/sys/fs/bcache"
+	testBcacheUUIDPath := testBcachePath + "/663955a3-765a-4737-a9fd-8250a7a78411"
+	testBcacheDevPath := tmpDir + "/telegraf/sys/devices/virtual/block/bcache0"
+	testBcacheBackingDevPath := tmpDir + "/telegraf/sys/devices/virtual/block/md10"
+
+	err = os.MkdirAll(testBcacheUUIDPath, 0750)
 	require.NoError(t, err)
 
 	err = os.MkdirAll(testBcacheDevPath, 0750)
@@ -108,7 +110,4 @@ func TestBcacheGeneratesMetrics(t *testing.T) {
 	err = b.Gather(&acc)
 	require.NoError(t, err)
 	acc.AssertContainsTaggedFields(t, "bcache", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }

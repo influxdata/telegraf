@@ -38,7 +38,7 @@ func TestAutoEncoding(t *testing.T) {
 	require.NoError(t, err)
 	acc.AssertContainsFields(t, "measurementName", map[string]interface{}{"fieldKey": "gzip"})
 
-	encIdentity := internal.NewIdentityEncoder()
+	encIdentity, err := internal.NewIdentityEncoder()
 	require.NoError(t, err)
 	payload, err = encIdentity.Encode([]byte(`measurementName2 fieldKey="identity" 1556813561098000000`))
 	require.NoError(t, err)

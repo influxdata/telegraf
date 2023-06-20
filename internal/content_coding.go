@@ -29,15 +29,15 @@ func WithMaxDecompressionSize(maxDecompressionSize int64) DecodingOption {
 	}
 }
 
-// EncodingOption provide methods to change the encoding from the standard
-// configuration.
-type EncodingOption func(*encoderConfig)
-
 type encoderConfig struct {
 	level int
 }
 
-func EncoderCompressionLevel(level int) EncodingOption {
+// EncodingOption provide methods to change the encoding from the standard
+// configuration.
+type EncodingOption func(*encoderConfig)
+
+func WithCompressionLevel(level int) EncodingOption {
 	return func(cfg *encoderConfig) {
 		cfg.level = level
 	}
@@ -112,7 +112,7 @@ func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncod
 	case "zstd":
 		return NewZstdEncoder(options...)
 	case "identity", "":
-		return NewIdentityEncoder(), nil
+		return NewIdentityEncoder(options...)
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -174,9 +174,17 @@ type GzipEncoder struct {
 }
 
 func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
-	cfg := encoderConfig{level: pgzip.DefaultCompression}
+	cfg := encoderConfig{level: gzip.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
+	}
+
+	// Check if the compression level is supported
+	switch cfg.level {
+	case gzip.NoCompression, gzip.DefaultCompression, gzip.BestSpeed, gzip.BestCompression:
+		// Do nothing as those are valid levels
+	default:
+		return nil, fmt.Errorf("invalid compression level, only 0, 1 and 9 are supported")
 	}
 
 	var buf bytes.Buffer
@@ -184,6 +192,7 @@ func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	w, err := gzip.NewWriterLevel(&buf, cfg.level)
 	return &GzipEncoder{
 		pwriter: pw,
@@ -244,6 +253,13 @@ func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
 		o(&cfg)
 	}
 
+	switch cfg.level {
+	case zlib.NoCompression, zlib.DefaultCompression, zlib.BestSpeed, zlib.BestCompression:
+		// Do nothing as those are valid levels
+	default:
+		return nil, fmt.Errorf("invalid compression level, only 0, 1 and 9 are supported")
+	}
+
 	var buf bytes.Buffer
 	w, err := zlib.NewWriterLevel(&buf, cfg.level)
 	return &ZlibEncoder{
@@ -290,8 +306,12 @@ func (e *ZstdEncoder) Encode(data []byte) ([]byte, error) {
 // IdentityEncoder is a null encoder that applies no transformation.
 type IdentityEncoder struct{}
 
-func NewIdentityEncoder() *IdentityEncoder {
-	return &IdentityEncoder{}
+func NewIdentityEncoder(options ...EncodingOption) (*IdentityEncoder, error) {
+	if len(options) > 0 {
+		return nil, errors.New("identity encoder does not support options")
+	}
+
+	return &IdentityEncoder{}, nil
 }
 
 func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {

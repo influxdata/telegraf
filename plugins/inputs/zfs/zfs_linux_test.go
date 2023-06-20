@@ -193,10 +193,13 @@ scatter_page_alloc_retry        4    99311
 scatter_sg_table_retry          4    99221
 `
 
-var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
-
 func TestZfsPoolMetrics(t *testing.T) {
-	err := os.MkdirAll(testKstatPath, 0750)
+	tmpDir, err := os.MkdirTemp("", "telegraf-zfs-pool")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testKstatPath := tmpDir + "/telegraf/proc/spl/kstat/zfs"
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
 	err = os.MkdirAll(testKstatPath+"/HOME", 0750)
@@ -242,13 +245,18 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	poolMetrics = getPoolMetricsNewFormat()
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestZfsGeneratesMetrics(t *testing.T) {
-	err := os.MkdirAll(testKstatPath, 0750)
+	tmpDir, err := os.MkdirTemp("", "telegraf-zfs-generates")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testKstatPath := tmpDir + "/telegraf/proc/spl/kstat/zfs"
+	err = os.MkdirAll(testKstatPath, 0750)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
 	err = os.MkdirAll(testKstatPath+"/HOME", 0750)
@@ -319,9 +327,6 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	acc3.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestGetTags(t *testing.T) {
