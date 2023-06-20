@@ -245,6 +245,7 @@ SELECT
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
 	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
+	,SERVERPROPERTY(''IsHadrEnabled'') AS [is_hadr_enabled]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,@ForceEncryption AS [ForceEncryption]
 	,COALESCE(@DynamicportNo,@StaticportNo) AS [Port]
