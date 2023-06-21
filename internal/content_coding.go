@@ -303,7 +303,7 @@ func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
 	case 6:
 		level = zstd.SpeedBetterCompression
 	case 9:
-		level = zlib.BestSpeed
+		level = zstd.SpeedBestCompression
 	default:
 		return nil, fmt.Errorf("invalid compression level, only 1, 3, 6 and 9 are supported")
 	}
