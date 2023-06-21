@@ -288,7 +288,7 @@ type ZstdEncoder struct {
 }
 
 func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
-	cfg := encoderConfig{level: -1}
+	cfg := encoderConfig{level: 3}
 	for _, o := range options {
 		o(&cfg)
 	}
@@ -298,14 +298,14 @@ func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
 	switch cfg.level {
 	case 1:
 		level = zstd.SpeedFastest
-	case -1, 3:
+	case 3:
 		level = zstd.SpeedDefault
-	case 6:
+	case 7:
 		level = zstd.SpeedBetterCompression
-	case 9:
+	case 11:
 		level = zstd.SpeedBestCompression
 	default:
-		return nil, fmt.Errorf("invalid compression level, only 1, 3, 6 and 9 are supported")
+		return nil, fmt.Errorf("invalid compression level, only 1, 3, 7 and 11 are supported")
 	}
 
 	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(level))

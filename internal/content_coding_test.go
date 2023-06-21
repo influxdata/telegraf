@@ -178,7 +178,7 @@ func TestCompressionLevel(t *testing.T) {
 		},
 		{
 			algorithm:   "zstd",
-			validLevels: []int{1, 3, 6, 9},
+			validLevels: []int{1, 3, 7, 11},
 			errormsg:    "invalid compression level",
 		},
 		{
@@ -197,7 +197,7 @@ func TestCompressionLevel(t *testing.T) {
 
 		// Check invalid level
 		t.Run(tt.algorithm+" invalid", func(t *testing.T) {
-			_, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(11))
+			_, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(12))
 			require.ErrorContains(t, err, tt.errormsg)
 		})
 
