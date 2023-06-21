@@ -1,6 +1,27 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.27.1 [2023-06-21]
+
+### Bugfixes
+
+- [#13434](https://github.com/influxdata/telegraf/pull/13434) Handle compression level correctly for different algorithms
+- [#13457](https://github.com/influxdata/telegraf/pull/13457) `config` Restore old environment var behavior with option
+- [#13446](https://github.com/influxdata/telegraf/pull/13446) `custom_builder` Correctly handle serializers and parsers
+
+### Dependency Updates
+
+- [#13469](https://github.com/influxdata/telegraf/pull/13469) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.13.20 to 1.13.26
+- [#13468](https://github.com/influxdata/telegraf/pull/13468) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.25.9 to 1.26.2
+- [#13465](https://github.com/influxdata/telegraf/pull/13465) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.16.0 to 1.17.2
+- [#13466](https://github.com/influxdata/telegraf/pull/13466) `deps` Bump github.com/go-sql-driver/mysql from 1.6.0 to 1.7.1
+- [#13427](https://github.com/influxdata/telegraf/pull/13427) `deps` Bump github.com/jackc/pgx/v4 from 4.17.1 to 4.18.1
+- [#13429](https://github.com/influxdata/telegraf/pull/13429) `deps` Bump github.com/nats-io/nats.go from 1.24.0 to 1.27.0
+- [#13467](https://github.com/influxdata/telegraf/pull/13467) `deps` Bump github.com/prometheus-community/pro-bing from 0.1.0 to 0.2.0
+- [#13428](https://github.com/influxdata/telegraf/pull/13428) `deps` Bump golang.org/x/crypto from 0.8.0 to 0.9.0
+- [#13431](https://github.com/influxdata/telegraf/pull/13431) `deps` Bump golang.org/x/term from 0.8.0 to 0.9.0
+- [#13430](https://github.com/influxdata/telegraf/pull/13430) `deps` Bump modernc.org/sqlite from 1.21.0 to 1.23.1
+
 ## v1.27.0 [2023-06-12]
 
 ### Important Changes
