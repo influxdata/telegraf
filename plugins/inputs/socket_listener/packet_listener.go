@@ -82,7 +82,11 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
 	}
 
 	// Create a decoder for the given encoding
-	decoder, err := internal.NewContentDecoder(l.Encoding, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
+	var options []internal.DecodingOption
+	if l.MaxDecompressionSize > 0 {
+		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
+	}
+	decoder, err := internal.NewContentDecoder(l.Encoding, options...)
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}
@@ -126,7 +130,11 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 	l.conn = conn
 
 	// Create a decoder for the given encoding
-	decoder, err := internal.NewContentDecoder(l.Encoding, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
+	var options []internal.DecodingOption
+	if l.MaxDecompressionSize > 0 {
+		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
+	}
+	decoder, err := internal.NewContentDecoder(l.Encoding, options...)
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}
@@ -143,7 +151,11 @@ func (l *packetListener) setupIP(u *url.URL) error {
 	l.conn = conn
 
 	// Create a decoder for the given encoding
-	decoder, err := internal.NewContentDecoder(l.Encoding, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
+	var options []internal.DecodingOption
+	if l.MaxDecompressionSize > 0 {
+		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
+	}
+	decoder, err := internal.NewContentDecoder(l.Encoding, options...)
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}

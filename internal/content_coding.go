@@ -13,7 +13,7 @@ import (
 	"github.com/klauspost/pgzip"
 )
 
-const DefaultMaxDecompressionSize int64 = 500 * 1024 * 1024 //500MB
+const defaultMaxDecompressionSize int64 = 500 * 1024 * 1024 //500MB
 
 // DecodingOption provide methods to change the decoding from the standard
 // configuration.
@@ -348,7 +348,7 @@ type GzipDecoder struct {
 }
 
 func NewGzipDecoder(options ...DecodingOption) *GzipDecoder {
-	cfg := decoderConfig{maxDecompressionSize: DefaultMaxDecompressionSize}
+	cfg := decoderConfig{maxDecompressionSize: defaultMaxDecompressionSize}
 	for _, o := range options {
 		o(&cfg)
 	}
@@ -422,7 +422,7 @@ type ZlibDecoder struct {
 }
 
 func NewZlibDecoder(options ...DecodingOption) *ZlibDecoder {
-	cfg := decoderConfig{maxDecompressionSize: DefaultMaxDecompressionSize}
+	cfg := decoderConfig{maxDecompressionSize: defaultMaxDecompressionSize}
 	for _, o := range options {
 		o(&cfg)
 	}
@@ -463,7 +463,7 @@ type ZstdDecoder struct {
 }
 
 func NewZstdDecoder(options ...DecodingOption) (*ZstdDecoder, error) {
-	cfg := decoderConfig{maxDecompressionSize: DefaultMaxDecompressionSize}
+	cfg := decoderConfig{maxDecompressionSize: defaultMaxDecompressionSize}
 	for _, o := range options {
 		o(&cfg)
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -132,7 +131,6 @@ func TestRunGzipDecode(t *testing.T) {
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		ContentEncoding:        "gzip",
-		MaxDecompressionSize:   config.Size(internal.DefaultMaxDecompressionSize),
 		decoder:                decoder,
 	}
 

@@ -317,16 +317,16 @@ func (ps *PubSub) Init() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.MaxDecompressionSize <= 0 {
-		ps.MaxDecompressionSize = config.Size(internal.DefaultMaxDecompressionSize)
-	}
-
 	switch ps.ContentEncoding {
 	case "", "identity":
 		ps.ContentEncoding = "identity"
 	case "gzip":
 		var err error
-		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, internal.WithMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
+		var options []internal.DecodingOption
+		if ps.MaxDecompressionSize > 0 {
+			options = append(options, internal.WithMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
+		}
+		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, options...)
 		if err != nil {
 			return err
 		}
