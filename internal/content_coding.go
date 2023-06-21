@@ -107,12 +107,12 @@ func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncod
 	switch encoding {
 	case "gzip":
 		return NewGzipEncoder(options...)
+	case "identity", "":
+		return NewIdentityEncoder(options...)
 	case "zlib":
 		return NewZlibEncoder(options...)
 	case "zstd":
 		return NewZstdEncoder(options...)
-	case "identity", "":
-		return NewIdentityEncoder(options...)
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -146,16 +146,16 @@ func NewAutoContentDecoder(options ...DecodingOption) *AutoDecoder {
 // NewContentDecoder returns a ContentDecoder for the encoding type.
 func NewContentDecoder(encoding string, options ...DecodingOption) (ContentDecoder, error) {
 	switch encoding {
+	case "auto":
+		return NewAutoContentDecoder(options...), nil
 	case "gzip":
 		return NewGzipDecoder(options...), nil
+	case "identity", "":
+		return NewIdentityDecoder(options...), nil
 	case "zlib":
 		return NewZlibDecoder(options...), nil
 	case "zstd":
 		return NewZstdDecoder(options...)
-	case "identity", "":
-		return NewIdentityDecoder(options...), nil
-	case "auto":
-		return NewAutoContentDecoder(options...), nil
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -288,19 +288,27 @@ type ZstdEncoder struct {
 }
 
 func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
-	cfg := encoderConfig{level: int(zstd.SpeedDefault)}
+	cfg := encoderConfig{level: -1}
 	for _, o := range options {
 		o(&cfg)
 	}
 
+	// Map the levels
+	var level zstd.EncoderLevel
 	switch cfg.level {
-	case int(zstd.SpeedFastest), int(zstd.SpeedDefault), int(zstd.SpeedBetterCompression), int(zstd.SpeedBestCompression):
-		// Do nothing as those are valid levels
+	case 1:
+		level = zstd.SpeedFastest
+	case -1, 3:
+		level = zstd.SpeedDefault
+	case 6:
+		level = zstd.SpeedBetterCompression
+	case 9:
+		level = zlib.BestSpeed
 	default:
-		return nil, fmt.Errorf("invalid compression level, only 1, 3, 7 and 11 are supported")
+		return nil, fmt.Errorf("invalid compression level, only 1, 3, 6 and 9 are supported")
 	}
 
-	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(cfg.level)))
+	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(level))
 	return &ZstdEncoder{
 		encoder: e,
 	}, err

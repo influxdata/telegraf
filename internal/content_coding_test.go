@@ -177,6 +177,11 @@ func TestCompressionLevel(t *testing.T) {
 			errormsg:    "invalid compression level",
 		},
 		{
+			algorithm:   "zstd",
+			validLevels: []int{1, 3, 6, 9},
+			errormsg:    "invalid compression level",
+		},
+		{
 			algorithm: "identity",
 			errormsg:  "does not support options",
 		},
