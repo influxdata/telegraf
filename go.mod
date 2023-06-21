@@ -55,7 +55,7 @@ require (
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.2.4
-	github.com/compose-spec/compose-go v1.13.4
+	github.com/compose-spec/compose-go v1.15.0
 	github.com/coocood/freecache v1.2.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
@@ -188,7 +188,7 @@ require (
 	golang.org/x/mod v0.10.0
 	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.8.0
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/sys v0.9.0
 	golang.org/x/term v0.9.0
 	golang.org/x/text v0.9.0
@@ -207,11 +207,6 @@ require (
 	k8s.io/client-go v0.27.2
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.23.1
-)
-
-require (
-	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 )
 
 require (
@@ -455,6 +450,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	gopkg.in/errgo.v1 v1.0.1 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
@@ -483,5 +480,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/compose-spec/compose-go => github.com/srebhan/compose-go v0.0.0-20230616150619-65110f67a70a
