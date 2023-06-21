@@ -10,20 +10,20 @@
 # file would generate.
 #
 # Environment variables can be used anywhere in this config file, simply surround
-# them with $${}. For strings the variable must be within quotes (ie, "$${STR_VAR}"),
-# for numbers and booleans they should be plain (ie, $${INT_VAR}, $${BOOL_VAR})
+# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
+# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
 
 [[inputs.memcached]]
   # this comment line will be ignored by the parser
   servers = ["$MY_TEST_SERVER"]
-  namepass = ["metricname1", "ip_$${MY_TEST_SERVER}_name"] # this comment will be ignored as well
+  namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"] # this comment will be ignored as well
   namedrop = ["metricname2"]
   fieldpass = ["some", "strings"]
   fielddrop = ["other", "stuff"]
   interval = "$TEST_INTERVAL"
    ##### this input is provided to test multiline strings
   command = """
-Raw command which may or may not contain # or ${var} in it
+Raw command which may or may not contain # in it
 # is unique""" # Multiline comment black starting with #
   [inputs.memcached.tagpass]
     goodtag = ["mytag", """tagwith#value""",
