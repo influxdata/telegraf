@@ -219,17 +219,18 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		filters := processFilterFlags(cCtx)
 
 		g := GlobalFlags{
-			config:      cCtx.StringSlice("config"),
-			configDir:   cCtx.StringSlice("config-directory"),
-			testWait:    cCtx.Int("test-wait"),
-			watchConfig: cCtx.String("watch-config"),
-			pidFile:     cCtx.String("pidfile"),
-			plugindDir:  cCtx.String("plugin-directory"),
-			password:    cCtx.String("password"),
-			test:        cCtx.Bool("test"),
-			debug:       cCtx.Bool("debug"),
-			once:        cCtx.Bool("once"),
-			quiet:       cCtx.Bool("quiet"),
+			config:         cCtx.StringSlice("config"),
+			configDir:      cCtx.StringSlice("config-directory"),
+			testWait:       cCtx.Int("test-wait"),
+			watchConfig:    cCtx.String("watch-config"),
+			pidFile:        cCtx.String("pidfile"),
+			plugindDir:     cCtx.String("plugin-directory"),
+			password:       cCtx.String("password"),
+			oldEnvBehavior: cCtx.Bool("old-env-behavior"),
+			test:           cCtx.Bool("test"),
+			debug:          cCtx.Bool("debug"),
+			once:           cCtx.Bool("once"),
+			quiet:          cCtx.Bool("quiet"),
 		}
 
 		w := WindowFlags{
@@ -294,6 +295,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				//
 				// Bool flags
+				&cli.BoolFlag{
+					Name:  "old-env-behavior",
+					Usage: "switch back to pre v1.27 environment replacement behavior",
+				},
 				&cli.BoolFlag{
 					Name:  "once",
 					Usage: "run one gather and exit",

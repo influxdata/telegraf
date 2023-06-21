@@ -25,17 +25,17 @@ func TestEnvironmentSubstitution(t *testing.T) {
 				t.Setenv("TEST_ENV1", "VALUE1")
 				t.Setenv("TEST_ENV2", "VALUE2")
 			},
-			contents: "A string with $${TEST_ENV1}, $TEST_ENV2 and $TEST_ENV1 as repeated",
+			contents: "A string with ${TEST_ENV1}, $TEST_ENV2 and $TEST_ENV1 as repeated",
 			expected: "A string with VALUE1, VALUE2 and VALUE1 as repeated",
 		},
 		{
 			name:     "Env not set",
-			contents: "Env variable $${NOT_SET} will be empty",
-			expected: "Env variable  will be empty", // Two spaces present
+			contents: "Env variable ${NOT_SET} will be empty",
+			expected: "Env variable ${NOT_SET} will be empty",
 		},
 		{
 			name:     "Env not set, fallback to default",
-			contents: "Env variable $${THIS_IS_ABSENT:-Fallback}",
+			contents: "Env variable ${THIS_IS_ABSENT:-Fallback}",
 			expected: "Env variable Fallback",
 		},
 		{
@@ -43,7 +43,7 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			setEnv: func(t *testing.T) {
 				t.Setenv("MY_ENV1", "VALUE1")
 			},
-			contents: "Env variable $${MY_ENV1:-Fallback}",
+			contents: "Env variable ${MY_ENV1:-Fallback}",
 			expected: "Env variable VALUE1",
 		},
 		{
@@ -52,17 +52,17 @@ func TestEnvironmentSubstitution(t *testing.T) {
 				t.Setenv("MY_VAR", "VALUE")
 				t.Setenv("MY_VAR2", "VALUE2")
 			},
-			contents: "Env var $${MY_VAR} is set, with $MY_VAR syntax and default on this $${MY_VAR1:-Substituted}, no default on this $${MY_VAR2:-NoDefault}",
+			contents: "Env var ${MY_VAR} is set, with $MY_VAR syntax and default on this ${MY_VAR1:-Substituted}, no default on this ${MY_VAR2:-NoDefault}",
 			expected: "Env var VALUE is set, with VALUE syntax and default on this Substituted, no default on this VALUE2",
 		},
 		{
 			name:     "Default has special chars",
-			contents: `Not recommended but supported $${MY_VAR:-Default with special chars Supported#$\"}`,
+			contents: `Not recommended but supported ${MY_VAR:-Default with special chars Supported#$\"}`,
 			expected: `Not recommended but supported Default with special chars Supported#$\"`, // values are escaped
 		},
 		{
 			name:         "unset error",
-			contents:     "Contains $${THIS_IS_NOT_SET?unset-error}",
+			contents:     "Contains ${THIS_IS_NOT_SET?unset-error}",
 			wantErr:      true,
 			errSubstring: "unset-error",
 		},
@@ -71,7 +71,7 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			setEnv: func(t *testing.T) {
 				t.Setenv("ENV_EMPTY", "")
 			},
-			contents:     "Contains $${ENV_EMPTY:?empty-error}",
+			contents:     "Contains ${ENV_EMPTY:?empty-error}",
 			wantErr:      true,
 			errSubstring: "empty-error",
 		},
@@ -80,32 +80,8 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			setEnv: func(t *testing.T) {
 				t.Setenv("FALLBACK", "my-fallback")
 			},
-			contents: "Should output $${NOT_SET:-${FALLBACK}}",
+			contents: "Should output ${NOT_SET:-${FALLBACK}}",
 			expected: "Should output my-fallback",
-		},
-		{
-			name: "leave alone single dollar expressions #13432",
-			setEnv: func(t *testing.T) {
-				t.Setenv("MYVAR", "my-variable")
-			},
-			contents: "Should output ${MYVAR}",
-			expected: "Should output ${MYVAR}",
-		},
-		{
-			name: "leave alone escaped expressions (backslash)",
-			setEnv: func(t *testing.T) {
-				t.Setenv("MYVAR", "my-variable")
-			},
-			contents: `Should output \$MYVAR`,
-			expected: "Should output $MYVAR",
-		},
-		{
-			name: "double dollar no brackets",
-			setEnv: func(t *testing.T) {
-				t.Setenv("MYVAR", "my-variable")
-			},
-			contents: `Should output $$MYVAR`,
-			expected: "Should output $my-variable",
 		},
 	}
 
@@ -114,11 +90,199 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			if tt.setEnv != nil {
 				tt.setEnv(t)
 			}
-			actual, err := substituteEnvironment([]byte(tt.contents))
+			actual, err := substituteEnvironment([]byte(tt.contents), false)
 			if tt.wantErr {
 				require.ErrorContains(t, err, tt.errSubstring)
 				return
 			}
+			require.EqualValues(t, tt.expected, string(actual))
+		})
+	}
+}
+
+func TestEnvironmentSubstitutionOldBehavior(t *testing.T) {
+	tests := []struct {
+		name     string
+		contents string
+		expected string
+	}{
+		{
+			name:     "not defined no brackets",
+			contents: `my-da$tabase`,
+			expected: `my-da$tabase`,
+		},
+		{
+			name:     "not defined brackets",
+			contents: `my-da${ta}base`,
+			expected: `my-da${ta}base`,
+		},
+		{
+			name:     "not defined no brackets double dollar",
+			contents: `my-da$$tabase`,
+			expected: `my-da$$tabase`,
+		},
+		{
+			name:     "not defined no brackets backslash",
+			contents: `my-da\$tabase`,
+			expected: `my-da\$tabase`,
+		},
+		{
+			name:     "not defined brackets backslash",
+			contents: `my-da\${ta}base`,
+			expected: `my-da\${ta}base`,
+		},
+		{
+			name:     "no brackets and suffix",
+			contents: `my-da$VARbase`,
+			expected: `my-da$VARbase`,
+		},
+		{
+			name:     "no brackets",
+			contents: `my-da$VAR`,
+			expected: `my-dafoobar`,
+		},
+		{
+			name:     "brackets",
+			contents: `my-da${VAR}base`,
+			expected: `my-dafoobarbase`,
+		},
+		{
+			name:     "no brackets double dollar",
+			contents: `my-da$$VAR`,
+			expected: `my-da$foobar`,
+		},
+		{
+			name:     "brackets double dollar",
+			contents: `my-da$${VAR}`,
+			expected: `my-da$foobar`,
+		},
+		{
+			name:     "no brackets backslash",
+			contents: `my-da\$VAR`,
+			expected: `my-da\foobar`,
+		},
+		{
+			name:     "brackets backslash",
+			contents: `my-da\${VAR}base`,
+			expected: `my-da\foobarbase`,
+		},
+		{
+			name:     "fallback",
+			contents: `my-da${ta:-omg}base`,
+			expected: `my-daomgbase`,
+		},
+		{
+			name:     "fallback env",
+			contents: `my-da${ta:-${FALLBACK}}base`,
+			expected: `my-dadefaultbase`,
+		},
+		{
+			name:     "regex substitution",
+			contents: `${1}`,
+			expected: `${1}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("VAR", "foobar")
+			t.Setenv("FALLBACK", "default")
+			actual, err := substituteEnvironment([]byte(tt.contents), true)
+			require.NoError(t, err)
+			require.EqualValues(t, tt.expected, string(actual))
+		})
+	}
+}
+
+func TestEnvironmentSubstitutionNewBehavior(t *testing.T) {
+	tests := []struct {
+		name     string
+		contents string
+		expected string
+	}{
+		{
+			name:     "not defined no brackets",
+			contents: `my-da$tabase`,
+			expected: `my-da$tabase`,
+		},
+		{
+			name:     "not defined brackets",
+			contents: `my-da${ta}base`,
+			expected: `my-da${ta}base`,
+		},
+		{
+			name:     "not defined no brackets double dollar",
+			contents: `my-da$$tabase`,
+			expected: `my-da$tabase`,
+		},
+		{
+			name:     "not defined no brackets backslash",
+			contents: `my-da\$tabase`,
+			expected: `my-da\$tabase`,
+		},
+		{
+			name:     "not defined brackets backslash",
+			contents: `my-da\${ta}base`,
+			expected: `my-da\${ta}base`,
+		},
+		{
+			name:     "no brackets and suffix",
+			contents: `my-da$VARbase`,
+			expected: `my-da$VARbase`,
+		},
+		{
+			name:     "no brackets",
+			contents: `my-da$VAR`,
+			expected: `my-dafoobar`,
+		},
+		{
+			name:     "brackets",
+			contents: `my-da${VAR}base`,
+			expected: `my-dafoobarbase`,
+		},
+		{
+			name:     "no brackets double dollar",
+			contents: `my-da$$VAR`,
+			expected: `my-da$VAR`,
+		},
+		{
+			name:     "brackets double dollar",
+			contents: `my-da$${VAR}`,
+			expected: `my-da${VAR}`,
+		},
+		{
+			name:     "no brackets backslash",
+			contents: `my-da\$VAR`,
+			expected: `my-da\foobar`,
+		},
+		{
+			name:     "brackets backslash",
+			contents: `my-da\${VAR}base`,
+			expected: `my-da\foobarbase`,
+		},
+		{
+			name:     "fallback",
+			contents: `my-da${ta:-omg}base`,
+			expected: `my-daomgbase`,
+		},
+		{
+			name:     "fallback env",
+			contents: `my-da${ta:-${FALLBACK}}base`,
+			expected: `my-dadefaultbase`,
+		},
+		{
+			name:     "regex substitution",
+			contents: `${1}`,
+			expected: `${1}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("VAR", "foobar")
+			t.Setenv("FALLBACK", "default")
+			actual, err := substituteEnvironment([]byte(tt.contents), false)
+			require.NoError(t, err)
 			require.EqualValues(t, tt.expected, string(actual))
 		})
 	}
