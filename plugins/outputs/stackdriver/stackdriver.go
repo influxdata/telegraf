@@ -240,6 +240,28 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			}
 
 			buckets.Add(m, f, timeSeries)
+
+			// If the metirc is untyped, it will end with unknown. We will also
+			// send another metric with the unknown:counter suffix. Google will
+			// do some heuristics to know which one to use for queries. This
+			// only occurs when using the official name format.
+			if s.MetricNameFormat == "official" && strings.HasSuffix(timeSeries.Metric.Type, "unknown") {
+				counterTimeSeries := &monitoringpb.TimeSeries{
+					Metric: &metricpb.Metric{
+						Type:   s.generateMetricName(m, f.Key) + ":counter",
+						Labels: s.getStackdriverLabels(m.TagList()),
+					},
+					MetricKind: metricKind,
+					Resource: &monitoredrespb.MonitoredResource{
+						Type:   s.ResourceType,
+						Labels: s.ResourceLabels,
+					},
+					Points: []*monitoringpb.Point{
+						dataPoint,
+					},
+				}
+				buckets.Add(m, f, counterTimeSeries)
+			}
 		}
 	}
 
@@ -303,8 +325,10 @@ func (s *Stackdriver) generateMetricName(m telegraf.Metric, key string) string {
 
 	var kind string
 	switch m.Type() {
-	case telegraf.Gauge, telegraf.Untyped:
+	case telegraf.Gauge:
 		kind = "gauge"
+	case telegraf.Untyped:
+		kind = "unknown"
 	case telegraf.Counter:
 		kind = "counter"
 	case telegraf.Histogram:

@@ -716,7 +716,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 		{
 			name:     "untyped",
 			key:      "key",
-			expected: "prometheus.googleapis.com/namespace_uptime_key/gauge",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/unknown",
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
