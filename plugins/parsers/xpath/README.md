@@ -11,12 +11,13 @@ lib]. The only exception are _integer_ fields that need to be specified in a
 
 ## Supported data formats
 
-| name                                    | `data_format` setting | comment |
-| --------------------------------------- | --------------------- | ------- |
-| [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
-| [JSON][json]                            | `"xpath_json"`        |         |
-| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol-buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
+| name                                         | `data_format` setting | comment |
+| -------------------------------------------- | --------------------- | ------- |
+| [Extensible Markup Language (XML)][xml]      | `"xml"`               |         |
+| [Concise Binary Object Representation][cbor] | `"xpath_cbor"`        |         |
+| [JSON][json]                                 | `"xpath_json"`        |         |
+| [MessagePack][msgpack]                       | `"xpath_msgpack"`     |         |
+| [Protocol-buffers][protobuf]                 | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
 ### Protocol-buffers additional settings
 
@@ -607,13 +608,14 @@ respectively. The `field_name` derives the name of the first attribute of the
 node, while `field_value` derives the value of the first attribute and converts
 the result to a number.
 
-[xpath lib]:    https://github.com/antchfx/xpath
+[cbor]:         https://cbor.io/
 [json]:         https://www.json.org/
 [msgpack]:      https://msgpack.org/
 [protobuf]:     https://developers.google.com/protocol-buffers
-[xml]:          https://www.w3.org/XML/
-[xpath]:        https://www.w3.org/TR/xpath/
-[xpather]:      http://xpather.com/
-[xpath tester]: https://codebeautify.org/Xpath-Tester
 [time const]:   https://golang.org/pkg/time/#pkg-constants
 [time parse]:   https://golang.org/pkg/time/#Parse
+[xml]:          https://www.w3.org/XML/
+[xpath]:        https://www.w3.org/TR/xpath/
+[xpath lib]:    https://github.com/antchfx/xpath
+[xpath tester]: https://codebeautify.org/Xpath-Tester
+[xpather]:      http://xpather.com/
