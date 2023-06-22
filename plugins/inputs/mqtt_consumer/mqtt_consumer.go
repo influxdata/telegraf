@@ -246,7 +246,7 @@ func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 		return
 	}
 
-	if track.Delivered() {
+	if track.Delivered() && m.PersistentSession {
 		msg.Ack()
 	}
 
@@ -262,8 +262,18 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
-		msg.Ack()
+		if m.PersistentSession {
+			msg.Ack()
+		}
 		m.acc.AddError(err)
+		<-m.sem
+		return
+	}
+	if len(metrics) == 0 {
+		if m.PersistentSession {
+			msg.Ack()
+		}
+		<-m.sem
 		return
 	}
 
@@ -283,16 +293,22 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 			if p.Tags != "" {
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
-					msg.Ack()
+					if m.PersistentSession {
+						msg.Ack()
+					}
 					m.acc.AddError(err)
+					<-m.sem
 					return
 				}
 			}
 			if p.Fields != "" {
 				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
 				if err != nil {
-					msg.Ack()
+					if m.PersistentSession {
+						msg.Ack()
+					}
 					m.acc.AddError(err)
+					<-m.sem
 					return
 				}
 			}
