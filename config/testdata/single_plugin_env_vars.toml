@@ -15,7 +15,7 @@
 
 [[inputs.memcached]]
   # this comment line will be ignored by the parser
-  servers = ["$MY_TEST_SERVER"] 
+  servers = ["$MY_TEST_SERVER"]
   namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"] # this comment will be ignored as well
   namedrop = ["metricname2"]
   fieldpass = ["some", "strings"]
@@ -26,11 +26,10 @@
 Raw command which may or may not contain # in it
 # is unique""" # Multiline comment black starting with #
   [inputs.memcached.tagpass]
-    goodtag = ["mytag", """tagwith#value""", 
+    goodtag = ["mytag", """tagwith#value""",
       # comment in between array items
       # should ignore "quotes" in comments
       '''TagWithMultilineSyntax''', ## ignore this comment
     ] # hastag
   [inputs.memcached.tagdrop]
     badtag = ["othertag"]
- 

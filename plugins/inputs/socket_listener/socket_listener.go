@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -158,10 +157,6 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	u, err := url.Parse(sl.ServiceAddress)
 	if err != nil {
 		return fmt.Errorf("parsing address failed: %w", err)
-	}
-
-	if sl.MaxDecompressionSize <= 0 {
-		sl.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
 	}
 
 	switch u.Scheme {

@@ -7,10 +7,9 @@ import (
 	"time"
 )
 
-const influxDataRPMRepo = `
-[influxdata]
+const influxDataRPMRepo = `[influxdata]
 name = InfluxData Repository - Stable
-baseurl = https://repos.influxdata.com/stable/\$basearch/main
+baseurl = https://repos.influxdata.com/stable/x86_64/main
 enabled = 1
 gpgcheck = 1
 gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
@@ -177,6 +176,12 @@ func (c *Container) configureApt() error {
 		return err
 	}
 
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/apt/sources.list.d/influxdata.list",
+	)
+
 	err = c.client.Exec(c.Name, "apt-get", "update")
 	if err != nil {
 		return err
@@ -190,11 +195,17 @@ func (c *Container) configureYum() error {
 	err := c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
-		fmt.Sprintf("echo %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
+		fmt.Sprintf("echo -e %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
 	}
+
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/yum.repos.d/influxdata.repo",
+	)
 
 	// will return a non-zero return code if there are packages to update
 	return c.client.Exec(c.Name, "bash", "-c", "yum check-update || true")
@@ -205,11 +216,17 @@ func (c *Container) configureDnf() error {
 	err := c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
-		fmt.Sprintf("echo %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
+		fmt.Sprintf("echo -e %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
 	}
+
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/yum.repos.d/influxdata.repo",
+	)
 
 	// will return a non-zero return code if there are packages to update
 	return c.client.Exec(c.Name, "bash", "-c", "dnf check-update || true")
@@ -224,6 +241,12 @@ func (c *Container) configureZypper() error {
 	if err != nil {
 		return err
 	}
+
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/zypp/repos.d/influxdata.repo",
+	)
 
 	return c.client.Exec(c.Name, "zypper", "refresh")
 }

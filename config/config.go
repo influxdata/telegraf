@@ -47,6 +47,13 @@ var (
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
 
+	// oldVarRe is a regex to reproduce pre v1.27.0 environment variable
+	// replacement behavior
+	oldVarRe = regexp.MustCompile(`\$(?i:(?P<named>[_a-z][_a-z0-9]*)|{(?:(?P<braced>[_a-z][_a-z0-9]*(?::?[-+?](.*))?)}|(?P<invalid>)))`)
+	// OldEnvVarReplacement is a switch to allow going back to pre v1.27.0
+	// environment variable replacement behavior
+	OldEnvVarReplacement = false
+
 	// Password specified via command-line
 	Password Secret
 )
@@ -785,7 +792,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputBytes, err := substituteEnvironment(contents)
+	outputBytes, err := substituteEnvironment(contents, OldEnvVarReplacement)
 	if err != nil {
 		return nil, err
 	}
@@ -848,19 +855,36 @@ func removeComments(contents []byte) ([]byte, error) {
 	return output.Bytes(), nil
 }
 
-func substituteEnvironment(contents []byte) ([]byte, error) {
+func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
+	options := []template.Option{
+		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
+			result, err := template.DefaultReplacementFunc(s, m, cfg)
+			if err == nil && result == "" {
+				// Keep undeclared environment-variable patterns to reproduce
+				// pre-v1.27 behavior
+				return s, nil
+			}
+			if err != nil && strings.HasPrefix(err.Error(), "Invalid template:") {
+				// Keep invalid template patterns to ignore regexp substitutions
+				// like ${1}
+				return s, nil
+			}
+			return result, err
+		}),
+		template.WithoutLogging,
+	}
+	if oldReplacementBehavior {
+		options = append(options, template.WithPattern(oldVarRe))
+	}
+
 	envMap := utils.GetAsEqualsMap(os.Environ())
-	retVal, err := template.Substitute(string(contents), func(k string) (string, bool) {
+	retVal, err := template.SubstituteWithOptions(string(contents), func(k string) (string, bool) {
 		if v, ok := envMap[k]; ok {
 			return v, ok
 		}
 		return "", false
-	})
-	var invalidTmplError *template.InvalidTemplateError
-	if err != nil && !errors.As(err, &invalidTmplError) {
-		return nil, err
-	}
-	return []byte(retVal), nil
+	}, options...)
+	return []byte(retVal), err
 }
 
 func (c *Config) addAggregator(name string, table *ast.Table) error {

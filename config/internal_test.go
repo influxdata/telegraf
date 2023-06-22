@@ -31,7 +31,7 @@ func TestEnvironmentSubstitution(t *testing.T) {
 		{
 			name:     "Env not set",
 			contents: "Env variable ${NOT_SET} will be empty",
-			expected: "Env variable  will be empty", // Two spaces present
+			expected: "Env variable ${NOT_SET} will be empty",
 		},
 		{
 			name:     "Env not set, fallback to default",
@@ -90,11 +90,199 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			if tt.setEnv != nil {
 				tt.setEnv(t)
 			}
-			actual, err := substituteEnvironment([]byte(tt.contents))
+			actual, err := substituteEnvironment([]byte(tt.contents), false)
 			if tt.wantErr {
 				require.ErrorContains(t, err, tt.errSubstring)
 				return
 			}
+			require.EqualValues(t, tt.expected, string(actual))
+		})
+	}
+}
+
+func TestEnvironmentSubstitutionOldBehavior(t *testing.T) {
+	tests := []struct {
+		name     string
+		contents string
+		expected string
+	}{
+		{
+			name:     "not defined no brackets",
+			contents: `my-da$tabase`,
+			expected: `my-da$tabase`,
+		},
+		{
+			name:     "not defined brackets",
+			contents: `my-da${ta}base`,
+			expected: `my-da${ta}base`,
+		},
+		{
+			name:     "not defined no brackets double dollar",
+			contents: `my-da$$tabase`,
+			expected: `my-da$$tabase`,
+		},
+		{
+			name:     "not defined no brackets backslash",
+			contents: `my-da\$tabase`,
+			expected: `my-da\$tabase`,
+		},
+		{
+			name:     "not defined brackets backslash",
+			contents: `my-da\${ta}base`,
+			expected: `my-da\${ta}base`,
+		},
+		{
+			name:     "no brackets and suffix",
+			contents: `my-da$VARbase`,
+			expected: `my-da$VARbase`,
+		},
+		{
+			name:     "no brackets",
+			contents: `my-da$VAR`,
+			expected: `my-dafoobar`,
+		},
+		{
+			name:     "brackets",
+			contents: `my-da${VAR}base`,
+			expected: `my-dafoobarbase`,
+		},
+		{
+			name:     "no brackets double dollar",
+			contents: `my-da$$VAR`,
+			expected: `my-da$foobar`,
+		},
+		{
+			name:     "brackets double dollar",
+			contents: `my-da$${VAR}`,
+			expected: `my-da$foobar`,
+		},
+		{
+			name:     "no brackets backslash",
+			contents: `my-da\$VAR`,
+			expected: `my-da\foobar`,
+		},
+		{
+			name:     "brackets backslash",
+			contents: `my-da\${VAR}base`,
+			expected: `my-da\foobarbase`,
+		},
+		{
+			name:     "fallback",
+			contents: `my-da${ta:-omg}base`,
+			expected: `my-daomgbase`,
+		},
+		{
+			name:     "fallback env",
+			contents: `my-da${ta:-${FALLBACK}}base`,
+			expected: `my-dadefaultbase`,
+		},
+		{
+			name:     "regex substitution",
+			contents: `${1}`,
+			expected: `${1}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("VAR", "foobar")
+			t.Setenv("FALLBACK", "default")
+			actual, err := substituteEnvironment([]byte(tt.contents), true)
+			require.NoError(t, err)
+			require.EqualValues(t, tt.expected, string(actual))
+		})
+	}
+}
+
+func TestEnvironmentSubstitutionNewBehavior(t *testing.T) {
+	tests := []struct {
+		name     string
+		contents string
+		expected string
+	}{
+		{
+			name:     "not defined no brackets",
+			contents: `my-da$tabase`,
+			expected: `my-da$tabase`,
+		},
+		{
+			name:     "not defined brackets",
+			contents: `my-da${ta}base`,
+			expected: `my-da${ta}base`,
+		},
+		{
+			name:     "not defined no brackets double dollar",
+			contents: `my-da$$tabase`,
+			expected: `my-da$tabase`,
+		},
+		{
+			name:     "not defined no brackets backslash",
+			contents: `my-da\$tabase`,
+			expected: `my-da\$tabase`,
+		},
+		{
+			name:     "not defined brackets backslash",
+			contents: `my-da\${ta}base`,
+			expected: `my-da\${ta}base`,
+		},
+		{
+			name:     "no brackets and suffix",
+			contents: `my-da$VARbase`,
+			expected: `my-da$VARbase`,
+		},
+		{
+			name:     "no brackets",
+			contents: `my-da$VAR`,
+			expected: `my-dafoobar`,
+		},
+		{
+			name:     "brackets",
+			contents: `my-da${VAR}base`,
+			expected: `my-dafoobarbase`,
+		},
+		{
+			name:     "no brackets double dollar",
+			contents: `my-da$$VAR`,
+			expected: `my-da$VAR`,
+		},
+		{
+			name:     "brackets double dollar",
+			contents: `my-da$${VAR}`,
+			expected: `my-da${VAR}`,
+		},
+		{
+			name:     "no brackets backslash",
+			contents: `my-da\$VAR`,
+			expected: `my-da\foobar`,
+		},
+		{
+			name:     "brackets backslash",
+			contents: `my-da\${VAR}base`,
+			expected: `my-da\foobarbase`,
+		},
+		{
+			name:     "fallback",
+			contents: `my-da${ta:-omg}base`,
+			expected: `my-daomgbase`,
+		},
+		{
+			name:     "fallback env",
+			contents: `my-da${ta:-${FALLBACK}}base`,
+			expected: `my-dadefaultbase`,
+		},
+		{
+			name:     "regex substitution",
+			contents: `${1}`,
+			expected: `${1}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("VAR", "foobar")
+			t.Setenv("FALLBACK", "default")
+			actual, err := substituteEnvironment([]byte(tt.contents), false)
+			require.NoError(t, err)
 			require.EqualValues(t, tt.expected, string(actual))
 		})
 	}
