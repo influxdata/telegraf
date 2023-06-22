@@ -92,6 +92,8 @@ func (p *Parser) Init() error {
 				Notice:    "use 'xpath' instead",
 			})
 		}
+	case "xpath_cbor":
+		p.document = &cborDocument{}
 	case "xpath_json":
 		p.document = &jsonDocument{}
 
@@ -591,6 +593,14 @@ func init() {
 		func(defaultMetricName string) telegraf.Parser {
 			return &Parser{
 				Format:            "xml",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_cbor",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_cbor",
 				DefaultMetricName: defaultMetricName,
 			}
 		},

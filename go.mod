@@ -164,6 +164,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.13
+	github.com/srebhan/cborquery v0.0.0-20230622142053-3fdc8215ca5f
 	github.com/stretchr/testify v1.8.4
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.18.0
@@ -208,6 +209,8 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.23.1
 )
+
+require github.com/fxamacker/cbor v1.5.1 // indirect
 
 require (
 	cloud.google.com/go v0.110.1 // indirect
