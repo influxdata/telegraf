@@ -184,7 +184,7 @@ func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
 	case gzip.NoCompression, gzip.DefaultCompression, gzip.BestSpeed, gzip.BestCompression:
 		// Do nothing as those are valid levels
 	default:
-		return nil, fmt.Errorf("invalid compression level, only 0, 1 and 9 are supported")
+		return nil, errors.New("invalid compression level, only 0, 1 and 9 are supported")
 	}
 
 	var buf bytes.Buffer
@@ -257,7 +257,7 @@ func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
 	case zlib.NoCompression, zlib.DefaultCompression, zlib.BestSpeed, zlib.BestCompression:
 		// Do nothing as those are valid levels
 	default:
-		return nil, fmt.Errorf("invalid compression level, only 0, 1 and 9 are supported")
+		return nil, errors.New("invalid compression level, only 0, 1 and 9 are supported")
 	}
 
 	var buf bytes.Buffer
@@ -305,7 +305,7 @@ func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
 	case 11:
 		level = zstd.SpeedBestCompression
 	default:
-		return nil, fmt.Errorf("invalid compression level, only 1, 3, 7 and 11 are supported")
+		return nil, errors.New("invalid compression level, only 1, 3, 7 and 11 are supported")
 	}
 
 	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(level))
