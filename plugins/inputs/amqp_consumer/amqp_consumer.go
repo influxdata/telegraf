@@ -114,10 +114,6 @@ func (a *AMQPConsumer) Init() error {
 		a.MaxUndeliveredMessages = 1000
 	}
 
-	if a.MaxDecompressionSize <= 0 {
-		a.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
-	}
-
 	return nil
 }
 
@@ -163,7 +159,11 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding)
+	var options []internal.DecodingOption
+	if a.MaxDecompressionSize > 0 {
+		options = append(options, internal.WithMaxDecompressionSize(int64(a.MaxDecompressionSize)))
+	}
+	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding, options...)
 	if err != nil {
 		return err
 	}
@@ -417,7 +417,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	}
 
 	a.decoder.SetEncoding(d.ContentEncoding)
-	body, err := a.decoder.Decode(d.Body, int64(a.MaxDecompressionSize))
+	body, err := a.decoder.Decode(d.Body)
 	if err != nil {
 		onError()
 		return err

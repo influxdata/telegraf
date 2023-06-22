@@ -131,7 +131,6 @@ func TestRunGzipDecode(t *testing.T) {
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		ContentEncoding:        "gzip",
-		MaxDecompressionSize:   internal.DefaultMaxDecompressionSize,
 		decoder:                decoder,
 	}
 
