@@ -251,7 +251,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 						Type:   s.generateMetricName(m, f.Key) + ":counter",
 						Labels: s.getStackdriverLabels(m.TagList()),
 					},
-					MetricKind: metricKind,
+					MetricKind: metricpb.MetricDescriptor_CUMULATIVE,
 					Resource: &monitoredrespb.MonitoredResource{
 						Type:   s.ResourceType,
 						Labels: s.ResourceLabels,
