@@ -20,59 +20,6 @@ const (
 	maxDecompressionSize = 1024 * 1024
 )
 
-func TestCompressionConfigErrors(t *testing.T) {
-	fh := createFile(t)
-
-	s := &influx.Serializer{}
-	require.NoError(t, s.Init())
-	var errorTests = []struct {
-		name      string
-		algorithm string
-		level     int
-		expected  string
-	}{
-		{"wrong-algorithm", "asda", 1, "unknown or unsupported algorithm provided: asda"},
-		{"wrong-level", "zstd", 4, "unsupported compression level provided: 4. only [1 3 7 11] are supported"},
-		{"wrong-level-and-algorithm", "asdas", 15, "unknown or unsupported algorithm provided: asdas"},
-	}
-	var successTests = []struct {
-		name      string
-		algorithm string
-		level     int
-	}{
-		{"disabled", "", 0},
-		{"default", "zstd", 3},
-		{"enabled-0", "", 0},
-		{"enabled-1", "zstd", 1},
-		{"enabled-default", "zstd", 3},
-		{"enabled-7", "zstd", 7},
-		{"enabled-11", "zstd", 11},
-	}
-	for _, tt := range successTests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := File{
-				Files:                []string{fh.Name()},
-				serializer:           s,
-				CompressionAlgorithm: tt.algorithm,
-				CompressionLevel:     tt.level,
-			}
-			require.NoError(t, f.Init())
-		})
-	}
-
-	for _, tt := range errorTests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := File{
-				Files:                []string{fh.Name()},
-				serializer:           s,
-				CompressionAlgorithm: tt.algorithm,
-				CompressionLevel:     tt.level,
-			}
-			require.ErrorContains(t, f.Init(), tt.expected)
-		})
-	}
-}
-
 func TestFileExistingFile(t *testing.T) {
 	fh := createFile(t)
 
@@ -339,11 +286,11 @@ func validateFile(t *testing.T, fileName, expS string) {
 }
 
 func validateZstdCompressedFile(t *testing.T, fileName, expS string) {
-	decoder, err := internal.NewContentDecoder("zstd")
+	decoder, err := internal.NewContentDecoder("zstd", internal.WithMaxDecompressionSize(maxDecompressionSize))
 	require.NoError(t, err)
 	buf, err := os.ReadFile(fileName)
 	require.NoError(t, err)
-	buf, err = decoder.Decode(buf, maxDecompressionSize)
+	buf, err = decoder.Decode(buf)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }
@@ -351,9 +298,9 @@ func validateZstdCompressedFile(t *testing.T, fileName, expS string) {
 func validateGzipCompressedFile(t *testing.T, fileName, expS string) {
 	buf, err := os.ReadFile(fileName)
 	require.NoError(t, err)
-	rfr, err := internal.NewContentDecoder("gzip")
+	rfr, err := internal.NewContentDecoder("gzip", internal.WithMaxDecompressionSize(maxDecompressionSize))
 	require.NoError(t, err)
-	buf, err = rfr.Decode(buf, maxDecompressionSize)
+	buf, err = rfr.Decode(buf)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }
@@ -361,9 +308,9 @@ func validateGzipCompressedFile(t *testing.T, fileName, expS string) {
 func validateZlibCompressedFile(t *testing.T, fileName, expS string) {
 	buf, err := os.ReadFile(fileName)
 	require.NoError(t, err)
-	rfr, err := internal.NewContentDecoder("zlib")
+	rfr, err := internal.NewContentDecoder("zlib", internal.WithMaxDecompressionSize(maxDecompressionSize))
 	require.NoError(t, err)
-	buf, err = rfr.Decode(buf, maxDecompressionSize)
+	buf, err = rfr.Decode(buf)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }

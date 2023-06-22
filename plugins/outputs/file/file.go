@@ -19,13 +19,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var ValidCompressionAlgorithmLevels = map[string][]int{
-	"zstd":     {1, 3, 7, 11},
-	"gzip":     {-2, -1, 1, 9},
-	"zlib":     {-2, -1, 1, 9},
-	"identity": {0},
-}
-
 type File struct {
 	Files                []string        `toml:"files"`
 	RotationInterval     config.Duration `toml:"rotation_interval"`
@@ -40,24 +33,6 @@ type File struct {
 	writer     io.Writer
 	closers    []io.Closer
 	serializer serializers.Serializer
-}
-
-func validateCompressionAlgorithm(algorithm string) error {
-	for validAlgorithm := range ValidCompressionAlgorithmLevels {
-		if algorithm == validAlgorithm {
-			return nil
-		}
-	}
-	return fmt.Errorf("unknown or unsupported algorithm provided: %s", algorithm)
-}
-
-func validateCompressionLevel(algorithm string, level int) error {
-	for _, validAlgorithmLevel := range ValidCompressionAlgorithmLevels[algorithm] {
-		if level == validAlgorithmLevel {
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported compression level provided: %d. only %v are supported", level, ValidCompressionAlgorithmLevels[algorithm])
 }
 
 func (*File) SampleConfig() string {
@@ -86,15 +61,6 @@ func (f *File) Init() error {
 		}
 	}
 
-	err := validateCompressionAlgorithm(f.CompressionAlgorithm)
-	if err != nil {
-		return err
-	}
-	err = validateCompressionLevel(f.CompressionAlgorithm, f.CompressionLevel)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -102,7 +68,11 @@ func (f *File) Connect() error {
 	var err error
 	writers := []io.Writer{}
 
-	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, internal.EncoderCompressionLevel(f.CompressionLevel))
+	if f.CompressionAlgorithm == "" || f.CompressionAlgorithm == "identity" {
+		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
+	} else {
+		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, internal.WithCompressionLevel(f.CompressionLevel))
+	}
 	if err != nil {
 		return err
 	}
