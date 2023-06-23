@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -4936,4 +4937,62 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
 	// is now too large (beyond max-coils-per-read) after zero enforcement.
 	require.Equal(t, maxQuantityCoils, plugin.requests[1].coil[1].address)
 	require.Equal(t, uint16(1), plugin.requests[1].coil[1].length)
+}
+
+func TestRequestsOverlap(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               logger,
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:           1,
+			RegisterType:      "holding",
+			Optimization:      "max_insert",
+			MaxExtraRegisters: 16,
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "field-1",
+					InputType: "UINT32",
+					Address:   uint16(1),
+				},
+				{
+					Name:      "field-2",
+					InputType: "UINT64",
+					Address:   uint16(3),
+				},
+				{
+					Name:      "field-3",
+					InputType: "UINT32",
+					Address:   uint16(5),
+				},
+				{
+					Name:      "field-4",
+					InputType: "UINT32",
+					Address:   uint16(7),
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	require.Eventually(t, func() bool {
+		return len(logger.Warnings()) > 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	var found bool
+	for _, w := range logger.Warnings() {
+		if strings.Contains(w, "Request at 3 with length 4 overlaps with next request at 5") {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "Overlap warning not found!")
+
+	require.Len(t, plugin.requests, 1)
+	require.Len(t, plugin.requests[1].holding, 1)
 }

@@ -3,6 +3,8 @@ package modbus
 import (
 	_ "embed"
 	"fmt"
+
+	"github.com/influxdata/telegraf"
 )
 
 //go:embed sample_register.conf
@@ -24,6 +26,7 @@ type ConfigurationOriginal struct {
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
 	workarounds      ModbusWorkarounds
+	logger           telegraf.Logger
 }
 
 func (c *ConfigurationOriginal) SampleConfigPart() string {
@@ -99,6 +102,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 		MaxBatchSize:    maxQuantity,
 		Optimization:    "none",
 		EnforceFromZero: c.workarounds.ReadCoilsStartingAtZero,
+		Log:             c.logger,
 	}
 
 	return groupFieldsToRequests(fields, params), nil

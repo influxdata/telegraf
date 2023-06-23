@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
+
+	"github.com/influxdata/telegraf"
 )
 
 //go:embed sample_request.conf
@@ -34,6 +36,7 @@ type requestDefinition struct {
 type ConfigurationPerRequest struct {
 	Requests    []requestDefinition `toml:"request"`
 	workarounds ModbusWorkarounds
+	logger      telegraf.Logger
 }
 
 func (c *ConfigurationPerRequest) SampleConfigPart() string {
@@ -191,6 +194,7 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 			MaxExtraRegisters: def.MaxExtraRegisters,
 			Optimization:      def.Optimization,
 			Tags:              def.Tags,
+			Log:               c.logger,
 		}
 		switch def.RegisterType {
 		case "coil":
