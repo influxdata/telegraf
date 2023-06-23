@@ -369,6 +369,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 }
 
 func main() {
+	// #13481: disables gh:99designs/keyring kwallet.go from connecting to dbus
+	os.Setenv("DISABLE_KWALLET", "1")
+
 	agent := Telegraf{}
 	pprof := NewPprofServer()
 	c := config.NewConfig()
