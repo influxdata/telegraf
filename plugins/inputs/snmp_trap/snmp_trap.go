@@ -31,11 +31,11 @@ type wrapLog struct {
 }
 
 func (l wrapLog) Printf(format string, args ...interface{}) {
-	l.Infof(format, args...)
+	l.Debugf(format, args...)
 }
 
 func (l wrapLog) Print(args ...interface{}) {
-	l.Info(args...)
+	l.Debug(args...)
 }
 
 type SnmpTrap struct {
