@@ -99,4 +99,7 @@ type Logger interface {
 	Infof(format string, args ...interface{})
 	// Info logs an information message, patterned after log.Print.
 	Info(args ...interface{})
+
+	Print(args ...interface{})
+	Printf(format string, args ...interface{})
 }

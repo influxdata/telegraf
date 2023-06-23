@@ -72,6 +72,16 @@ func (l *Logger) Info(args ...interface{}) {
 	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
 }
 
+// Satisfy gosnmp.Logger interface
+func (l *Logger) Print(args ...interface{}) {
+        l.Info(args)
+}
+
+func (l *Logger) Printf(format string, args ...interface{}) {
+        l.Infof(format,args)
+}
+
+
 // logName returns the log-friendly name/type.
 func logName(pluginType, name, alias string) string {
 	if alias == "" {
