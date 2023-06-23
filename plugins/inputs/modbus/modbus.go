@@ -137,9 +137,11 @@ func (m *Modbus) Init() error {
 	switch m.ConfigurationType {
 	case "", "register":
 		m.ConfigurationOriginal.workarounds = m.Workarounds
+		m.ConfigurationOriginal.logger = m.Log
 		cfg = &m.ConfigurationOriginal
 	case "request":
 		m.ConfigurationPerRequest.workarounds = m.Workarounds
+		m.ConfigurationPerRequest.logger = m.Log
 		cfg = &m.ConfigurationPerRequest
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
