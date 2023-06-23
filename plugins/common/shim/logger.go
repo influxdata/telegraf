@@ -63,15 +63,6 @@ func (l *Logger) Info(args ...interface{}) {
 	log.Print("I! ", fmt.Sprint(args...))
 }
 
-// satisfy gosnmp.Logger interface
-func (l *Logger) Print(args ...interface{}) {
-	l.Info(args)
-}
-
-func (l *Logger) Printf(format string, args ...interface{}) {
-	l.Infof(format,args)
-}
-
 // setLoggerOnPlugin injects the logger into the plugin,
 // if it defines Log telegraf.Logger. This is sort of like SetLogger but using
 // reflection instead of forcing the plugin author to define the function for it
