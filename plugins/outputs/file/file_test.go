@@ -31,7 +31,9 @@ func TestFileExistingFile(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -53,7 +55,9 @@ func TestFileNewFile(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -78,7 +82,9 @@ func TestFileExistingFiles(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -106,6 +112,7 @@ func TestNewGzipCompressedFiles(t *testing.T) {
 		CompressionLevel:     -1,
 	}
 
+	require.NoError(t, f.Init())
 	require.NoError(t, f.Connect())
 
 	require.NoError(t, f.Write(testutil.MockMetrics()))
@@ -131,6 +138,7 @@ func TestNewZlibCompressedFiles(t *testing.T) {
 		CompressionLevel:     -1,
 	}
 
+	require.NoError(t, f.Init())
 	require.NoError(t, f.Connect())
 
 	require.NoError(t, f.Write(testutil.MockMetrics()))
@@ -156,6 +164,7 @@ func TestNewZstdCompressedFiles(t *testing.T) {
 		CompressionLevel:     3,
 	}
 
+	require.NoError(t, f.Init())
 	require.NoError(t, f.Connect())
 
 	require.NoError(t, f.Write(testutil.MockMetrics()))
@@ -179,7 +188,9 @@ func TestFileNewFiles(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -205,7 +216,9 @@ func TestFileBoth(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -232,7 +245,9 @@ func TestFileStdout(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())

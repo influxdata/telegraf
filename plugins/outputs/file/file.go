@@ -44,29 +44,19 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Init() error {
+	var err error
 	if len(f.Files) == 0 {
 		f.Files = []string{"stdout"}
 	}
 
-	if f.CompressionAlgorithm == "" {
-		return nil
-	} else if f.CompressionLevel == 0 {
+	if f.CompressionLevel == 0 {
 		switch f.CompressionAlgorithm {
 		case "zstd":
 			f.CompressionLevel = 3
-		case "zlib":
-			f.CompressionLevel = -1
-		case "gzip":
+		default:
 			f.CompressionLevel = -1
 		}
 	}
-
-	return nil
-}
-
-func (f *File) Connect() error {
-	var err error
-	writers := []io.Writer{}
 
 	if f.CompressionAlgorithm == "" || f.CompressionAlgorithm == "identity" {
 		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
@@ -76,6 +66,12 @@ func (f *File) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (f *File) Connect() error {
+	writers := []io.Writer{}
 
 	for _, file := range f.Files {
 		if file == "stdout" {
