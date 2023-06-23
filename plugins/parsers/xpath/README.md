@@ -123,7 +123,7 @@ This is a list of known headers and the corresponding values for
   # xpath_allow_empty_selection = false
 
   ## Get native data-types for all data-format that contain type information.
-  ## Currently, protobuf, msgpack and JSON support native data-types
+  ## Currently, CBOR, protobuf, msgpack and JSON support native data-types.
   # xpath_native_types = false
 
   ## Multiple parsing sections are allowed

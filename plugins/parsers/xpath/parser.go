@@ -11,6 +11,7 @@ import (
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
 	"github.com/doclambda/protobufquery"
+	"github.com/srebhan/cborquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -493,6 +494,8 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 		// enabled, we should return the native type of the data
 		if p.NativeTypes {
 			switch nn := current.(type) {
+			case *cborquery.NodeNavigator:
+				return nn.GetValue(), nil
 			case *jsonquery.NodeNavigator:
 				return nn.GetValue(), nil
 			case *protobufquery.NodeNavigator:
