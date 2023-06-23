@@ -9,8 +9,11 @@ costs.
 
 Requires `project` to specify where Stackdriver metrics will be delivered to.
 
-Metrics are grouped by the `namespace` variable and metric key - eg:
-`custom.googleapis.com/telegraf/system/load5`
+By default, Metrics are grouped by the `namespace` variable and metric key -
+eg: `custom.googleapis.com/telegraf/system/load5`. However, this is not the
+best practice. Setting `metric_name_format = "official"` will produce a more
+easily queried format of: `metric_type_prefix/[namespace_]name_key/kind`. If
+the global namespace is not set, it is omitted as well.
 
 [Resource type](https://cloud.google.com/monitoring/api/resources) is configured
 by the `resource_type` variable (default `global`).
@@ -36,6 +39,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   project = "erudite-bloom-151019"
 
   ## The namespace for the metric descriptor
+  ## This is optional and users are encouraged to set the namespace as a
+  ## resource label instead. If omitted it is not included in the metric name.
   namespace = "telegraf"
 
   ## Metric Type Prefix
@@ -52,7 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## By default, telegraf will use whatever type the metric comes in as.
   ## However, for some use cases, forcing int64, may be preferred for values:
   ##   * source: use whatever was passed in
-  ##   * float64: preferred datatype to allow queries by PromQL.
+  ##   * double: preferred datatype to allow queries by PromQL.
   # metric_data_type = "source"
 
   ## Custom resource type

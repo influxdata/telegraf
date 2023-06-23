@@ -75,7 +75,7 @@ func (s *Stackdriver) Init() error {
 	switch s.MetricDataType {
 	case "":
 		s.MetricDataType = "source"
-	case "source", "float64":
+	case "source", "double":
 	default:
 		return fmt.Errorf("unrecognized metric data type: %s", s.MetricDataType)
 	}
@@ -396,7 +396,7 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 }
 
 func (s *Stackdriver) getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
-	if s.MetricDataType == "float64" {
+	if s.MetricDataType == "double" {
 		v, err := internal.ToFloat64(value)
 		if err != nil {
 			return nil, err

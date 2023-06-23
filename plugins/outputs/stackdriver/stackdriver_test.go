@@ -618,7 +618,7 @@ func TestStackdriverTypedValuesInt64(t *testing.T) {
 	s := &Stackdriver{
 		Namespace:        "namespace",
 		MetricTypePrefix: "foo",
-		MetricDataType:   "float64",
+		MetricDataType:   "double",
 	}
 
 	tests := []struct {
