@@ -235,7 +235,7 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 			case "UINT64", "INT64", "FLOAT64-IEEE":
 				requiredAddresses = 4
 			}
-			if len(item.Address) != requiredAddresses {
+			if requiredAddresses > 0 && len(item.Address) != requiredAddresses {
 				return fmt.Errorf(
 					"invalid address '%v' length '%v'in %q - %q, expecting %d entries for datatype",
 					item.Address, len(item.Address), registerType, item.Name, requiredAddresses,
