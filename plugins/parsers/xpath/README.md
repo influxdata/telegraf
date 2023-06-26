@@ -14,7 +14,7 @@ lib]. The only exception are _integer_ fields that need to be specified in a
 | name                                         | `data_format` setting | comment |
 | -------------------------------------------- | --------------------- | ------- |
 | [Extensible Markup Language (XML)][xml]      | `"xml"`               |         |
-| [Concise Binary Object Representation][cbor] | `"xpath_cbor"`        |         |
+| [Concise Binary Object Representation][cbor] | `"xpath_cbor"`        | [see additional notes](#concise-binary-object-representation-notes)|
 | [JSON][json]                                 | `"xpath_json"`        |         |
 | [MessagePack][msgpack]                       | `"xpath_msgpack"`     |         |
 | [Protocol-buffers][protobuf]                 | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
@@ -90,6 +90,15 @@ This is a list of known headers and the corresponding values for
 
 [GRPC]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 [PDNS]: https://docs.powerdns.com/recursor/lua-config/protobuf.html
+
+### Concise Binary Object Representation notes
+
+Concise Binary Object Representation support numeric keys in the data. However,
+XML (and this parser) expects node names to be strings starting with a letter.
+To be compatible with these requirements, numeric nodes will be prefixed with
+a lower case `n` and converted to strings. This means that if you for example
+have a node with the key `123` in CBOR you will need to query `n123` in your
+XPath expressions.
 
 ## Configuration
 
