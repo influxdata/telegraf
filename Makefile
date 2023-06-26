@@ -364,10 +364,10 @@ $(include_packages):
 			--after-remove scripts/rpm/post-remove.sh \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
-			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--rpm-os ${GOOS} \
+			--rpm-tag "Requires(post): /usr/sbin/useradd" \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
