@@ -214,7 +214,7 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 		return false, err
 	}
 	sort.Strings(allDiscoveredTopics)
-	k.Log.Debugf("discovered %d topics", len(allDiscoveredTopics))
+	k.Log.Debugf("discovered %d topics in total", len(allDiscoveredTopics))
 
 	extantTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range allDiscoveredTopics {
@@ -249,6 +249,7 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 	}
 	sort.Strings(topicList)
 	fingerprint := strings.Join(topicList, ";")
+	k.Log.Debugf("Regular expression list %q matched %d topics", k.TopicRegexps, len(topicList))
 	if fingerprint != k.fingerprint {
 		k.Log.Infof("updating topics: replacing %q with %q", k.allWantedTopics, topicList)
 		k.topicLock.Lock()
