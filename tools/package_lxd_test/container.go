@@ -82,7 +82,7 @@ func (c *Container) Install(packageName ...string) error {
 	case "dnf":
 		cmd = append([]string{"dnf", "install", "-y"}, packageName...)
 	case "zypper":
-		cmd = append([]string{"zypper", "install", "-y"}, packageName...)
+		cmd = append([]string{"zypper", "--gpg-auto-import-keys", "install", "-y"}, packageName...)
 	}
 
 	err := c.client.Exec(c.Name, cmd...)
@@ -236,7 +236,8 @@ func (c *Container) configureDnf() error {
 func (c *Container) configureZypper() error {
 	err := c.client.Exec(
 		c.Name,
-		"echo", fmt.Sprintf("%q", influxDataRPMRepo), ">", "/etc/zypp/repos.d/influxdata.repo",
+		"bash", "-c", "--",
+		fmt.Sprintf("echo -e %q > /etc/zypp/repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
@@ -248,7 +249,7 @@ func (c *Container) configureZypper() error {
 		"cat /etc/zypp/repos.d/influxdata.repo",
 	)
 
-	return c.client.Exec(c.Name, "zypper", "refresh")
+	return c.client.Exec(c.Name, "zypper", "--no-gpg-checks", "refresh")
 }
 
 // Determine if the system uses yum or apt for software
@@ -271,6 +272,12 @@ func (c *Container) detectPackageManager() error {
 	err = c.client.Exec(c.Name, "yum", "version")
 	if err == nil {
 		c.packageManager = "yum"
+		return nil
+	}
+
+	err = c.client.Exec(c.Name, "which", "zypper")
+	if err == nil {
+		c.packageManager = "zypper"
 		return nil
 	}
 

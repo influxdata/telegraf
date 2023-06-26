@@ -10,13 +10,13 @@ import (
 )
 
 var imagesRPM = []string{
+	"fedora/38",
 	"fedora/37",
-	"fedora/36",
-	"centos/7",
 	"centos/9-Stream",
+	"centos/7",
 	"amazonlinux/current",
-	//"opensuse/15.3", 			// shadow-utils dependency bug see #3833
 	//"opensuse/tumbleweed", 	// shadow-utils dependency bug see #3833
+	//"opensuse/15.5",			// shadow-utils dependency bug see #3833
 }
 
 var imagesDEB = []string{

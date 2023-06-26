@@ -367,7 +367,7 @@ $(include_packages):
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--rpm-os ${GOOS} \
-			--rpm-tag "Requires(post): /usr/sbin/useradd" \
+			--rpm-tag "Requires(pre): /usr/sbin/useradd" \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
