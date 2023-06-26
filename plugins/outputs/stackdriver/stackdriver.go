@@ -241,7 +241,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 
 			buckets.Add(m, f, timeSeries)
 
-			// If the metirc is untyped, it will end with unknown. We will also
+			// If the metric is untyped, it will end with unknown. We will also
 			// send another metric with the unknown:counter suffix. Google will
 			// do some heuristics to know which one to use for queries. This
 			// only occurs when using the official name format.
