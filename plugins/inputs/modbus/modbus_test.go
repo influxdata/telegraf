@@ -3094,11 +3094,11 @@ func TestConfigurationPerRequestWithTags(t *testing.T) {
 		"second": "bb",
 		"third":  "ccc",
 	}
-	require.Equal(t, expectedTags, modbus.requests[1].coil[0].tags)
-	require.Equal(t, expectedTags, modbus.requests[1].coil[1].tags)
-	require.Equal(t, expectedTags, modbus.requests[1].discrete[0].tags)
-	require.Equal(t, expectedTags, modbus.requests[1].holding[0].tags)
-	require.Equal(t, expectedTags, modbus.requests[1].input[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].coil[0].fields[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].coil[1].fields[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].discrete[0].fields[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].holding[0].fields[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].input[0].fields[0].tags)
 }
 
 func TestConfigurationPerRequestFail(t *testing.T) {

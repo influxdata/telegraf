@@ -10,7 +10,6 @@ type request struct {
 	address uint16
 	length  uint16
 	fields  []field
-	tags    map[string]string
 }
 
 func countRegisters(requests []request) uint64 {
@@ -203,6 +202,14 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 	var groups []request
 	var current request
 	for _, f := range fields {
+		// Add tags from higher up
+		if f.tags == nil {
+			f.tags = make(map[string]string, len(params.Tags))
+		}
+		for k, v := range params.Tags {
+			f.tags[k] = v
+		}
+
 		// Check if we need to interrupt the current chunk and require a new one
 		if current.length > 0 && f.address == current.address+current.length {
 			// Still safe to add the field to the current request
@@ -285,12 +292,5 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 		}
 	}
 
-	// Copy the tags
-	for i := range requests {
-		requests[i].tags = make(map[string]string)
-		for k, v := range params.Tags {
-			requests[i].tags[k] = v
-		}
-	}
 	return requests
 }

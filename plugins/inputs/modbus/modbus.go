@@ -97,6 +97,7 @@ type field struct {
 	omit        bool
 	converter   fieldConverterFunc
 	value       interface{}
+	tags        map[string]string
 }
 
 const (
@@ -503,16 +504,16 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
-		// Collect tags from global and per-request
-		rtags := map[string]string{}
-		for k, v := range tags {
-			rtags[k] = v
-		}
-		for k, v := range request.tags {
-			rtags[k] = v
-		}
 
 		for _, field := range request.fields {
+			// Collect tags from global and per-request
+			ftags := map[string]string{}
+			for k, v := range tags {
+				ftags[k] = v
+			}
+			for k, v := range field.tags {
+				ftags[k] = v
+			}
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
 			if field.measurement != "" {
@@ -520,7 +521,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
+			grouper.Add(measurement, ftags, timestamp, field.name, field.value)
 		}
 	}
 
