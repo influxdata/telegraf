@@ -63,6 +63,7 @@ type Modbus struct {
 	// Configuration type specific settings
 	ConfigurationOriginal
 	ConfigurationPerRequest
+	ConfigurationPerMetric
 
 	// Connection handling
 	client      mb.Client
@@ -109,10 +110,11 @@ const (
 
 // SampleConfig returns a basic configuration for the plugin
 func (m *Modbus) SampleConfig() string {
-	configs := []Configuration{}
-	cfgOriginal := m.ConfigurationOriginal
-	cfgPerRequest := m.ConfigurationPerRequest
-	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+	configs := []Configuration{
+		&m.ConfigurationOriginal,
+		&m.ConfigurationPerRequest,
+		&m.ConfigurationPerMetric,
+	}
 
 	totalConfig := sampleConfigStart
 	for _, c := range configs {
@@ -144,6 +146,10 @@ func (m *Modbus) Init() error {
 		m.ConfigurationPerRequest.workarounds = m.Workarounds
 		m.ConfigurationPerRequest.logger = m.Log
 		cfg = &m.ConfigurationPerRequest
+	case "metric":
+		m.ConfigurationPerMetric.workarounds = m.Workarounds
+		m.ConfigurationPerMetric.logger = m.Log
+		cfg = &m.ConfigurationPerMetric
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
@@ -504,7 +510,6 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
-
 		for _, field := range request.fields {
 			// Collect tags from global and per-request
 			ftags := map[string]string{}
