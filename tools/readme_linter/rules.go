@@ -14,13 +14,14 @@ func firstSection(t *T, root ast.Node) error {
 	n = root.FirstChild()
 
 	// Ignore HTML comments such as linter ignore sections
-	if _, ok := n.(*ast.HTMLBlock); ok {
-		for n != nil {
-			n = n.NextSibling()
-			if _, ok := n.(*ast.HTMLBlock); !ok {
-				break
-			}
+	for {
+		if n == nil {
+			break
 		}
+		if _, ok := n.(*ast.HTMLBlock); !ok {
+			break
+		}
+		n = n.NextSibling()
 	}
 
 	t.assertKind(ast.KindHeading, n)
