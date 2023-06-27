@@ -40,10 +40,10 @@ type AMQPConsumer struct {
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
 	// Queue Name
-	Queue           string `toml:"queue"`
-	QueueDurability string `toml:"queue_durability"`
-	QueuePassive    bool   `toml:"queue_passive"`
-	QueueConsumeArguments  map[string]string `toml:"queue_consume_arguments"`
+	Queue                 string            `toml:"queue"`
+	QueueDurability       string            `toml:"queue_durability"`
+	QueuePassive          bool              `toml:"queue_passive"`
+	QueueConsumeArguments map[string]string `toml:"queue_consume_arguments"`
 
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
@@ -286,9 +286,9 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	}
 
 	consumeArgs := make(amqp.Table, len(a.QueueConsumeArguments))
-		for k, v := range a.QueueConsumeArguments {
-			consumeArgs[k] = v
-		}
+	for k, v := range a.QueueConsumeArguments {
+		consumeArgs[k] = v
+	}
 
 	msgs, err := ch.Consume(
 		q.Name,      // queue
