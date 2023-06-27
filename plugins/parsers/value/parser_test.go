@@ -46,6 +46,42 @@ func TestParseValidValues(t *testing.T) {
 			input:    []byte(`55 45 223 12 999`),
 			expected: int64(999),
 		},
+		{
+			name:     "auto integer",
+			dtype:    "auto_integer",
+			input:    []byte("55"),
+			expected: int64(55),
+		},
+		{
+			name:     "auto integer with string",
+			dtype:    "auto_integer",
+			input:    []byte("foobar"),
+			expected: "foobar",
+		},
+		{
+			name:     "auto integer with float",
+			dtype:    "auto_integer",
+			input:    []byte("55.0"),
+			expected: "55.0",
+		},
+		{
+			name:     "auto float",
+			dtype:    "auto_float",
+			input:    []byte("64.2"),
+			expected: float64(64.2),
+		},
+		{
+			name:     "auto float with string",
+			dtype:    "auto_float",
+			input:    []byte("foobar"),
+			expected: "foobar",
+		},
+		{
+			name:     "auto float with integer",
+			dtype:    "auto_float",
+			input:    []byte("64"),
+			expected: float64(64),
+		},
 	}
 
 	for _, tt := range tests {
@@ -253,4 +289,12 @@ func TestParseValuesWithNullCharacter(t *testing.T) {
 		"value": int64(55),
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
+}
+
+func TestInvalidDatatype(t *testing.T) {
+	parser := Parser{
+		MetricName: "value_test",
+		DataType:   "foo",
+	}
+	require.ErrorContains(t, parser.Init(), "unknown datatype")
 }
