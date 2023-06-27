@@ -13,6 +13,16 @@ func firstSection(t *T, root ast.Node) error {
 	var n ast.Node
 	n = root.FirstChild()
 
+	// Ignore HTML comments such as linter ignore sections
+	if _, ok := n.(*ast.HTMLBlock); ok {
+		for n != nil {
+			n = n.NextSibling()
+			if _, ok := n.(*ast.HTMLBlock); !ok {
+				break
+			}
+		}
+	}
+
 	t.assertKind(ast.KindHeading, n)
 	t.assertHeadingLevel(1, n)
 	t.assertFirstChildRegexp(` Plugin$`, n)
