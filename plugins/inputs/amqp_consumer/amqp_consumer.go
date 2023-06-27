@@ -40,9 +40,10 @@ type AMQPConsumer struct {
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
 	// Queue Name
-	Queue           string `toml:"queue"`
-	QueueDurability string `toml:"queue_durability"`
-	QueuePassive    bool   `toml:"queue_passive"`
+	Queue                 string            `toml:"queue"`
+	QueueDurability       string            `toml:"queue_durability"`
+	QueuePassive          bool              `toml:"queue_passive"`
+	QueueConsumeArguments map[string]string `toml:"queue_consume_arguments"`
 
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
@@ -284,14 +285,19 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, fmt.Errorf("failed to set QoS: %w", err)
 	}
 
+	consumeArgs := make(amqp.Table, len(a.QueueConsumeArguments))
+	for k, v := range a.QueueConsumeArguments {
+		consumeArgs[k] = v
+	}
+
 	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // arguments
+		q.Name,      // queue
+		"",          // consumer
+		false,       // auto-ack
+		false,       // exclusive
+		false,       // no-local
+		false,       // no-wait
+		consumeArgs, // arguments
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed establishing connection to queue: %w", err)
