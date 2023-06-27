@@ -41,9 +41,8 @@ You **must** tell Telegraf what type of metric to collect by using the
              will treat integers as floating-point values and produces an error
              on data that cannot be converted (e.g. strings).
 - `string`:  outputs the data as a string.
-- `boolean`: converts the received data to a floating-point value. This setting
-             will produce an error on any data except for `true` and `false`
-             strings.
+- `boolean`: converts the received data to a boolean value. This setting will
+             produce an error on any data except for `true` and `false` strings.
 - `auto_integer`: converts the received data to an integer value if possible and
                   will return the data as string otherwise. This is helpful for
                   mixed-type data.
