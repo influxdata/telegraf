@@ -178,6 +178,7 @@ func TestRequest(t *testing.T) {
 	require.Len(t, modbus.requests[1].holding, 1)
 	require.Len(t, modbus.requests[1].input, 1)
 }
+
 func TestRequestWithTags(t *testing.T) {
 	modbus := Modbus{
 		Name:              "Test",
