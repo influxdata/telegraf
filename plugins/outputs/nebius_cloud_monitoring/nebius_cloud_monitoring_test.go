@@ -119,6 +119,31 @@ func TestWrite(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 		},
+		{
+			name:   "label with name 'name' is replaced with 'label_name'",
+			plugin: &NebiusCloudMonitoring{},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cluster",
+					map[string]string{
+						"name": "accounts-daemon.service",
+					},
+					map[string]interface{}{
+						"value": 9226,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				message, err := readBody(r)
+				require.NoError(t, err)
+				require.Len(t, message.Metrics, 1)
+				require.Equal(t, "cluster_value", message.Metrics[0].Name)
+				require.Equal(t, "accounts-daemon.service", message.Metrics[0].Labels["label_name"])
+				require.Equal(t, float64(9226), message.Metrics[0].Value)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
