@@ -219,17 +219,18 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		filters := processFilterFlags(cCtx)
 
 		g := GlobalFlags{
-			config:      cCtx.StringSlice("config"),
-			configDir:   cCtx.StringSlice("config-directory"),
-			testWait:    cCtx.Int("test-wait"),
-			watchConfig: cCtx.String("watch-config"),
-			pidFile:     cCtx.String("pidfile"),
-			plugindDir:  cCtx.String("plugin-directory"),
-			password:    cCtx.String("password"),
-			test:        cCtx.Bool("test"),
-			debug:       cCtx.Bool("debug"),
-			once:        cCtx.Bool("once"),
-			quiet:       cCtx.Bool("quiet"),
+			config:         cCtx.StringSlice("config"),
+			configDir:      cCtx.StringSlice("config-directory"),
+			testWait:       cCtx.Int("test-wait"),
+			watchConfig:    cCtx.String("watch-config"),
+			pidFile:        cCtx.String("pidfile"),
+			plugindDir:     cCtx.String("plugin-directory"),
+			password:       cCtx.String("password"),
+			oldEnvBehavior: cCtx.Bool("old-env-behavior"),
+			test:           cCtx.Bool("test"),
+			debug:          cCtx.Bool("debug"),
+			once:           cCtx.Bool("once"),
+			quiet:          cCtx.Bool("quiet"),
 		}
 
 		w := WindowFlags{
@@ -244,6 +245,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		m.Init(pprof.ErrChan(), filters, g, w)
 		return m.Run()
 	}
+
+	commands := append(
+		getConfigCommands(pluginFilterFlags, outputBuffer),
+		getSecretStoreCommands(m)...,
+	)
 
 	app := &cli.App{
 		Name:   "Telegraf",
@@ -289,6 +295,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				//
 				// Bool flags
+				&cli.BoolFlag{
+					Name:  "old-env-behavior",
+					Usage: "switch back to pre v1.27 environment replacement behavior",
+				},
 				&cli.BoolFlag{
 					Name:  "once",
 					Usage: "run one gather and exit",
@@ -342,19 +352,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		Action: action,
 		Commands: append([]*cli.Command{
 			{
-				Name:  "config",
-				Usage: "print out full sample configuration to stdout",
-				Flags: pluginFilterFlags,
-				Action: func(cCtx *cli.Context) error {
-					// The sub_Filters are populated when the filter flags are set after the subcommand config
-					// e.g. telegraf config --section-filter inputs
-					filters := processFilterFlags(cCtx)
-
-					printSampleConfig(outputBuffer, filters)
-					return nil
-				},
-			},
-			{
 				Name:  "version",
 				Usage: "print current version to stdout",
 				Action: func(cCtx *cli.Context) error {
@@ -362,9 +359,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					return nil
 				},
 			},
-		},
-			getSecretStoreCommands(m)...,
-		),
+		}, commands...),
 	}
 
 	// Make sure we safely erase secrets
@@ -374,6 +369,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 }
 
 func main() {
+	// #13481: disables gh:99designs/keyring kwallet.go from connecting to dbus
+	os.Setenv("DISABLE_KWALLET", "1")
+
 	agent := Telegraf{}
 	pprof := NewPprofServer()
 	c := config.NewConfig()

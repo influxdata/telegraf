@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -30,7 +31,7 @@ func TestConnectAndWrite(t *testing.T) {
 	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
 
 	s := &json.Serializer{
-		TimestampUnits:  10 * time.Second,
+		TimestampUnits:  config.Duration(10 * time.Second),
 		TimestampFormat: "yyy-dd-mmThh:mm:ss",
 	}
 	require.NoError(t, s.Init())

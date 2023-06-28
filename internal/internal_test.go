@@ -8,6 +8,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -349,38 +350,14 @@ func TestParseTimestamp(t *testing.T) {
 		return tm
 	}
 
-	unixdate := func(value string) time.Time {
-		tm, err := time.Parse(time.UnixDate, value)
-		require.NoError(t, err)
-		return tm
-	}
-
 	rubydate := func(value string) time.Time {
 		tm, err := time.Parse(time.RubyDate, value)
 		require.NoError(t, err)
 		return tm
 	}
 
-	rfc822 := func(value string) time.Time {
-		tm, err := time.Parse(time.RFC822, value)
-		require.NoError(t, err)
-		return tm
-	}
-
 	rfc822z := func(value string) time.Time {
 		tm, err := time.Parse(time.RFC822Z, value)
-		require.NoError(t, err)
-		return tm
-	}
-
-	rfc850 := func(value string) time.Time {
-		tm, err := time.Parse(time.RFC850, value)
-		require.NoError(t, err)
-		return tm
-	}
-
-	rfc1123 := func(value string) time.Time {
-		tm, err := time.Parse(time.RFC1123, value)
 		require.NoError(t, err)
 		return tm
 	}
@@ -580,7 +557,7 @@ func TestParseTimestamp(t *testing.T) {
 			name:      "UnixDate",
 			format:    "UnixDate",
 			timestamp: "Mon Jan 2 15:04:05 MST 2006",
-			expected:  unixdate("Mon Jan 2 15:04:05 MST 2006"),
+			expected:  time.Unix(1136239445, 0),
 			location:  "Local",
 		},
 
@@ -596,7 +573,7 @@ func TestParseTimestamp(t *testing.T) {
 			name:      "RFC822",
 			format:    "RFC822",
 			timestamp: "02 Jan 06 15:04 MST",
-			expected:  rfc822("02 Jan 06 15:04 MST"),
+			expected:  time.Unix(1136239440, 0),
 			location:  "Local",
 		},
 
@@ -612,7 +589,7 @@ func TestParseTimestamp(t *testing.T) {
 			name:      "RFC850",
 			format:    "RFC850",
 			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
-			expected:  rfc850("Monday, 02-Jan-06 15:04:05 MST"),
+			expected:  time.Unix(1136239445, 0),
 			location:  "Local",
 		},
 
@@ -620,7 +597,7 @@ func TestParseTimestamp(t *testing.T) {
 			name:      "RFC1123",
 			format:    "RFC1123",
 			timestamp: "Mon, 02 Jan 2006 15:04:05 MST",
-			expected:  rfc1123("Mon, 02 Jan 2006 15:04:05 MST"),
+			expected:  time.Unix(1136239445, 0),
 			location:  "Local",
 		},
 
@@ -667,9 +644,25 @@ func TestParseTimestamp(t *testing.T) {
 			timestamp: "Jan 2 15:04:05.000000000",
 			expected:  stampnano("Jan 2 15:04:05.000000000"),
 		},
+
+		{
+			name:      "RFC850",
+			format:    "RFC850",
+			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
+			expected:  time.Unix(1136239445, 0),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Ensure any one-time warnings are printed for each test
+			once = sync.Once{}
+
+			// Ensure the warnings are captured and not to stdout
+			var buf bytes.Buffer
+			backup := log.Writer()
+			log.SetOutput(&buf)
+			defer log.SetOutput(backup)
+
 			var loc *time.Location
 			if tt.location != "" {
 				var err error
@@ -678,7 +671,7 @@ func TestParseTimestamp(t *testing.T) {
 			}
 			tm, err := ParseTimestamp(tt.format, tt.timestamp, loc, tt.separator...)
 			require.NoError(t, err)
-			require.Equal(t, tt.expected, tm)
+			require.Equal(t, tt.expected.Unix(), tm.Unix())
 		})
 	}
 }
@@ -732,13 +725,45 @@ func TestParseTimestampInvalid(t *testing.T) {
 			timestamp: "1,568,338,208.500",
 			expected:  "invalid number",
 		},
+		{
+			name:      "invalid timezone abbreviation",
+			format:    "RFC850",
+			timestamp: "Monday, 02-Jan-06 15:04:05 CDT",
+			expected:  "cannot resolve timezone abbreviation",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Ensure any one-time warnings are printed for each test
+			once = sync.Once{}
+
+			// Ensure the warnings are captured and not to stdout
+			var buf bytes.Buffer
+			backup := log.Writer()
+			log.SetOutput(&buf)
+			defer log.SetOutput(backup)
+
 			_, err := ParseTimestamp(tt.format, tt.timestamp, nil)
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}
+}
+
+func TestTimestampAbbrevWarning(t *testing.T) {
+	// Ensure any one-time warnings are printed for each test
+	once = sync.Once{}
+
+	// Ensure the warnings are captured and not to stdout
+	var buf bytes.Buffer
+	backup := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(backup)
+
+	ts, err := ParseTimestamp("RFC1123", "Mon, 02 Jan 2006 15:04:05 EST", nil)
+	require.NoError(t, err)
+	require.EqualValues(t, 1136232245, ts.Unix())
+
+	require.Contains(t, buf.String(), "Your config is using abbreviated timezones and parsing was changed in v1.27.0")
 }
 
 func TestProductToken(t *testing.T) {

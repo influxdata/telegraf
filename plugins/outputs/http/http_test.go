@@ -590,7 +590,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				authHeader := fmt.Sprintf(`{"id_token":"%s"}`, token)
+				authHeader := fmt.Sprintf(`{"id_token":%q}`, token)
 				_, err = w.Write([]byte(authHeader))
 				require.NoError(t, err)
 			},
@@ -666,7 +666,7 @@ func TestBatchedUnbatched(t *testing.T) {
 	influxSerializer := &influx.Serializer{}
 	require.NoError(t, influxSerializer.Init())
 
-	jsonSerializer := &json.Serializer{TimestampUnits: time.Second}
+	jsonSerializer := &json.Serializer{}
 	require.NoError(t, jsonSerializer.Init())
 
 	s := map[string]serializers.Serializer{

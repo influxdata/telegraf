@@ -13,15 +13,20 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-type pluginState map[string]bool
-type selection map[string]pluginState
+type instance struct {
+	category   string
+	name       string
+	enabled    bool
+	dataformat string
+}
+
+type selection struct {
+	plugins map[string][]instance
+}
 
 func ImportConfigurations(files, dirs []string) (*selection, int, error) {
-	sel := selection(make(map[string]pluginState))
-
-	// Initialize the categories
-	for _, category := range categories {
-		sel[category] = make(map[string]bool)
+	sel := &selection{
+		plugins: make(map[string][]instance),
 	}
 
 	// Gather all configuration files
@@ -44,12 +49,12 @@ func ImportConfigurations(files, dirs []string) (*selection, int, error) {
 		}
 	}
 	if len(filenames) == 0 {
-		return &sel, 0, errors.New("no configuration files given or found")
+		return sel, 0, errors.New("no configuration files given or found")
 	}
 
 	// Do the actual import
 	err := sel.importFiles(filenames)
-	return &sel, len(filenames), err
+	return sel, len(filenames), err
 }
 
 func (s *selection) Filter(p packageCollection) *packageCollection {
@@ -57,51 +62,68 @@ func (s *selection) Filter(p packageCollection) *packageCollection {
 		packages: map[string][]packageInfo{},
 	}
 
+	implicitlyConfigured := make(map[string]bool)
 	for category, pkgs := range p.packages {
-		var categoryEnabledPackages []packageInfo
-		settings := (*s)[category]
 		for _, pkg := range pkgs {
-			if _, found := settings[pkg.Plugin]; found {
-				categoryEnabledPackages = append(categoryEnabledPackages, pkg)
+			key := category + "." + pkg.Plugin
+			instances, found := s.plugins[key]
+			if !found {
+				continue
 			}
-		}
-		enabled.packages[category] = categoryEnabledPackages
-	}
 
-	// Make sure we update the list of default parsers and serializers used by
-	// the remaining packages
-	enabled.FillDefaultParsers()
-	enabled.FillDefaultSerializers()
+			// The package was configured so add it to the enabled list
+			enabled.packages[category] = append(enabled.packages[category], pkg)
 
-	// If the user did not configure any parser, we want to include
-	// the default parsers if any to preserve a functional set of
-	// plugins.
-	if len(enabled.packages["parsers"]) == 0 && len(enabled.defaultParsers) > 0 {
-		var parsers []packageInfo
-		for _, pkg := range p.packages["parsers"] {
-			for _, name := range enabled.defaultParsers {
-				if pkg.Plugin == name {
-					parsers = append(parsers, pkg)
-					break
+			// Check if the instances configured a data-format and decide if it
+			// is a parser or serializer depending on the plugin type.
+			// If no data-format was configured, check the default settings in
+			// case this plugin supports a data-format setting but the user
+			// didn't set it.
+			for _, instance := range instances {
+				parser := pkg.DefaultParser
+				serializer := pkg.DefaultSerializer
+				if instance.dataformat != "" {
+					switch category {
+					case "inputs":
+						parser = instance.dataformat
+					case "processors":
+						parser = instance.dataformat
+						// The execd processor requires both a parser and serializer
+						if pkg.Plugin == "execd" {
+							serializer = instance.dataformat
+						}
+					case "outputs":
+						serializer = instance.dataformat
+					}
+				}
+				if parser != "" {
+					implicitlyConfigured["parsers."+parser] = true
+				}
+				if serializer != "" {
+					implicitlyConfigured["serializers."+serializer] = true
 				}
 			}
 		}
-		enabled.packages["parsers"] = parsers
 	}
 
-	// If the user did not configure any serializer, we want to include
-	// the default one if any to preserve a functional set of plugins.
-	if len(enabled.packages["serializers"]) == 0 && len(enabled.defaultSerializers) > 0 {
-		var serializers []packageInfo
-		for _, pkg := range p.packages["serializers"] {
-			for _, name := range enabled.defaultSerializers {
-				if pkg.Plugin == name {
-					serializers = append(serializers, pkg)
-					break
-				}
+	// Iterate over all plugins AGAIN to add the implicitly configured packages
+	// such as parsers and serializers
+	for category, pkgs := range p.packages {
+		for _, pkg := range pkgs {
+			key := category + "." + pkg.Plugin
+
+			// Skip the plugins that were explicitly configured as we already
+			// added them above.
+			if _, found := s.plugins[key]; found {
+				continue
+			}
+
+			// Add the package if it was implicitly configured e.g. by a
+			// 'data_format' setting or by a default value for the data-format
+			if _, implicit := implicitlyConfigured[key]; implicit {
+				enabled.packages[category] = append(enabled.packages[category], pkg)
 			}
 		}
-		enabled.packages["serializers"] = serializers
 	}
 
 	return &enabled
@@ -109,7 +131,7 @@ func (s *selection) Filter(p packageCollection) *packageCollection {
 
 func (s *selection) importFiles(configurations []string) error {
 	for _, cfg := range configurations {
-		buf, err := config.LoadConfigFile(cfg)
+		buf, _, err := config.LoadConfigFile(cfg)
 		if err != nil {
 			return fmt.Errorf("reading %q failed: %w", cfg, err)
 		}
@@ -134,31 +156,32 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 			continue
 		}
 
-		if _, found := (*s)[category]; !found {
-			continue
-		}
-
 		for name, data := range categoryTbl.Fields {
-			(*s)[category][name] = true
+			key := category + "." + name
+			cfg := instance{
+				category: category,
+				name:     name,
+				enabled:  true,
+			}
 
-			// We need to check the data_format field to get all required parsers
-			switch category {
-			case "inputs", "processors":
-				pluginTables, ok := data.([]*ast.Table)
-				if !ok {
-					continue
-				}
+			// We need to check the data_format field to get all required
+			// parsers and serializers
+			pluginTables, ok := data.([]*ast.Table)
+			if ok {
 				for _, subsubtbl := range pluginTables {
+					var dataformat string
 					for field, fieldData := range subsubtbl.Fields {
 						if field != "data_format" {
 							continue
 						}
 						kv := fieldData.(*ast.KeyValue)
-						name := kv.Value.(*ast.String)
-						(*s)["parsers"][name.Value] = true
+						option := kv.Value.(*ast.String)
+						dataformat = option.Value
 					}
+					cfg.dataformat = dataformat
 				}
 			}
+			s.plugins[key] = append(s.plugins[key], cfg)
 		}
 	}
 

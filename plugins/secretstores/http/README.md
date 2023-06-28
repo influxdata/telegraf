@@ -11,11 +11,26 @@ telegraf secrets help
 
 to get more information on how to do this.
 
+## Usage <!-- @/docs/includes/secret_usage.md -->
+
+Secrets defined by a store are referenced with `@{<store-id>:<secret_key>}`
+the Telegraf configuration. Only certain Telegraf plugins and options of
+support secret stores. To see which plugins and options support
+secrets, see their respective documentation (e.g.
+`plugins/outputs/influxdb/README.md`). If the plugin's README has the
+`Secret-store support` section, it will detail which options support secret
+store usage.
+
 ## Configuration
 
 ```toml @sample.conf
 # Read secrets from a HTTP endpoint
 [[secretstores.http]]
+  ## Unique identifier for the secret-store.
+  ## This id can later be used in plugins to reference the secrets
+  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  id = "secretstore"
+
   ## URLs from which to read the secrets
   url = "http://localhost/secrets"
 

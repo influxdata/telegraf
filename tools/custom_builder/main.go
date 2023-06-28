@@ -63,7 +63,7 @@ func usage() {
 }
 
 func main() {
-	var dryrun, showtags, quiet bool
+	var dryrun, showtags, migrations, quiet bool
 	var configFiles, configDirs []string
 
 	flag.Func("config",
@@ -82,6 +82,7 @@ func main() {
 	)
 	flag.BoolVar(&dryrun, "dry-run", false, "Skip the actual building step")
 	flag.BoolVar(&quiet, "quiet", false, "Print fewer log messages")
+	flag.BoolVar(&migrations, "migrations", false, "Include configuration migrations")
 	flag.BoolVar(&showtags, "tags", false, "Show build-tags used")
 
 	flag.Usage = usage
@@ -90,6 +91,12 @@ func main() {
 	// Check configuration options
 	if len(configFiles) == 0 && len(configDirs) == 0 {
 		log.Fatalln("No configuration specified!")
+	}
+
+	// Collect all available plugins
+	packages := packageCollection{}
+	if err := packages.CollectAvailable(); err != nil {
+		log.Fatalf("Collecting plugins failed: %v", err)
 	}
 
 	// Import the plugin list from Telegraf configuration files
@@ -107,12 +114,6 @@ func main() {
 		log.Fatalln("No configuration files loaded!")
 	}
 
-	// Collect all available plugins
-	packages := packageCollection{}
-	if err := packages.CollectAvailable(); err != nil {
-		log.Fatalf("Collecting plugins failed: %v", err)
-	}
-
 	// Process the plugin list with the given config. This will
 	// only keep the plugins that adhere to the filtering criteria.
 	enabled := cfg.Filter(packages)
@@ -125,7 +126,11 @@ func main() {
 	if len(tagset) == 0 {
 		log.Fatalln("Nothing selected!")
 	}
-	tags := "custom," + strings.Join(tagset, ",")
+	tags := "custom,"
+	if migrations {
+		tags += "migrations,"
+	}
+	tags += strings.Join(tagset, ",")
 	if showtags {
 		fmt.Printf("Build tags: %s\n", tags)
 	}

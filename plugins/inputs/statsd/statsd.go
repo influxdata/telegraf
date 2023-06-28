@@ -75,7 +75,7 @@ type Statsd struct {
 	DeleteCounters  bool     `toml:"delete_counters"`
 	DeleteSets      bool     `toml:"delete_sets"`
 	DeleteTimings   bool     `toml:"delete_timings"`
-	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
+	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;1.30.0;use 'metric_separator' instead"`
 
 	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 

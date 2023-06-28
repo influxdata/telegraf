@@ -47,6 +47,13 @@ var (
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
 
+	// oldVarRe is a regex to reproduce pre v1.27.0 environment variable
+	// replacement behavior
+	oldVarRe = regexp.MustCompile(`\$(?i:(?P<named>[_a-z][_a-z0-9]*)|{(?:(?P<braced>[_a-z][_a-z0-9]*(?::?[-+?](.*))?)}|(?P<invalid>)))`)
+	// OldEnvVarReplacement is a switch to allow going back to pre v1.27.0
+	// environment variable replacement behavior
+	OldEnvVarReplacement = false
+
 	// Password specified via command-line
 	Password Secret
 )
@@ -203,7 +210,7 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;2.0.0;option is ignored"`
+	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;1.30.0;option is ignored"`
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
@@ -376,7 +383,7 @@ func WalkDirectory(path string) ([]string, error) {
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
 //  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf
-func getDefaultConfigPath() ([]string, error) {
+func GetDefaultConfigPath() ([]string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
@@ -434,7 +441,7 @@ func (c *Config) LoadConfig(path string) error {
 	paths := []string{}
 
 	if path == "" {
-		if paths, err = getDefaultConfigPath(); err != nil {
+		if paths, err = GetDefaultConfigPath(); err != nil {
 			return err
 		}
 	} else {
@@ -446,7 +453,7 @@ func (c *Config) LoadConfig(path string) error {
 			log.Printf("I! Loading config: %s", path)
 		}
 
-		data, err := LoadConfigFile(path)
+		data, _, err := LoadConfigFile(path)
 		if err != nil {
 			return fmt.Errorf("error loading config file %s: %w", path, err)
 		}
@@ -696,33 +703,37 @@ func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
-func LoadConfigFile(config string) ([]byte, error) {
+// LoadConfigFile loads the content of a configuration file and returns it
+// together with a flag denoting if the file is from a remote location such
+// as a web server.
+func LoadConfigFile(config string) ([]byte, bool, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
 		if err != nil {
-			return nil, err
+			return nil, true, err
 		}
 
 		switch u.Scheme {
 		case "https", "http":
-			return fetchConfig(u)
+			data, err := fetchConfig(u)
+			return data, true, err
 		default:
-			return nil, fmt.Errorf("scheme %q not supported", u.Scheme)
+			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}
 	}
 
 	// If it isn't a https scheme, try it as a file
 	buffer, err := os.ReadFile(config)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	mimeType := http.DetectContentType(buffer)
 	if !strings.Contains(mimeType, "text/plain") {
-		return nil, fmt.Errorf("provided config is not a TOML file: %s", config)
+		return nil, false, fmt.Errorf("provided config is not a TOML file: %s", config)
 	}
 
-	return buffer, nil
+	return buffer, false, nil
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -781,7 +792,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputBytes, err := substituteEnvironment(contents)
+	outputBytes, err := substituteEnvironment(contents, OldEnvVarReplacement)
 	if err != nil {
 		return nil, err
 	}
@@ -844,19 +855,36 @@ func removeComments(contents []byte) ([]byte, error) {
 	return output.Bytes(), nil
 }
 
-func substituteEnvironment(contents []byte) ([]byte, error) {
+func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
+	options := []template.Option{
+		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
+			result, err := template.DefaultReplacementFunc(s, m, cfg)
+			if err == nil && result == "" {
+				// Keep undeclared environment-variable patterns to reproduce
+				// pre-v1.27 behavior
+				return s, nil
+			}
+			if err != nil && strings.HasPrefix(err.Error(), "Invalid template:") {
+				// Keep invalid template patterns to ignore regexp substitutions
+				// like ${1}
+				return s, nil
+			}
+			return result, err
+		}),
+		template.WithoutLogging,
+	}
+	if oldReplacementBehavior {
+		options = append(options, template.WithPattern(oldVarRe))
+	}
+
 	envMap := utils.GetAsEqualsMap(os.Environ())
-	retVal, err := template.Substitute(string(contents), func(k string) (string, bool) {
+	retVal, err := template.SubstituteWithOptions(string(contents), func(k string) (string, bool) {
 		if v, ok := envMap[k]; ok {
 			return v, ok
 		}
 		return "", false
-	})
-	var invalidTmplError *template.InvalidTemplateError
-	if err != nil && !errors.As(err, &invalidTmplError) {
-		return nil, err
-	}
-	return []byte(retVal), nil
+	}, options...)
+	return []byte(retVal), err
 }
 
 func (c *Config) addAggregator(name string, table *ast.Table) error {
@@ -1069,7 +1097,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if err != nil {
 		return err
 	}
-	processorBefore, hasParser, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
+	processorBefore, count, err := c.setupProcessor(processorBeforeConfig.Name, creator, table)
 	if err != nil {
 		return err
 	}
@@ -1088,10 +1116,9 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	rf = models.NewRunningProcessor(processorAfter, processorAfterConfig)
 	c.fileAggProcessors = append(c.fileAggProcessors, &OrderedPlugin{table.Line, rf})
 
-	// Check the number of misses against the threshold
-	if hasParser {
-		missCountThreshold = 2
-	}
+	// Check the number of misses against the threshold. We need to double
+	// the count as the processor setup is executed twice.
+	missCountThreshold = 2 * count
 	for key, count := range missCount {
 		if count <= missCountThreshold {
 			continue
@@ -1104,13 +1131,13 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) setupProcessor(name string, creator processors.StreamingCreator, table *ast.Table) (telegraf.StreamingProcessor, bool, error) {
-	var hasParser bool
+func (c *Config) setupProcessor(name string, creator processors.StreamingCreator, table *ast.Table) (telegraf.StreamingProcessor, int, error) {
+	var optionTestCount int
 
 	streamingProcessor := creator()
 
 	var processor interface{}
-	if p, ok := streamingProcessor.(unwrappable); ok {
+	if p, ok := streamingProcessor.(processors.HasUnwrap); ok {
 		processor = p.Unwrap()
 	} else {
 		processor = streamingProcessor
@@ -1122,28 +1149,39 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	if t, ok := processor.(telegraf.ParserPlugin); ok {
 		parser, err := c.addParser("processors", name, table)
 		if err != nil {
-			return nil, true, fmt.Errorf("adding parser failed: %w", err)
+			return nil, 0, fmt.Errorf("adding parser failed: %w", err)
 		}
 		t.SetParser(parser)
-		hasParser = true
+		optionTestCount++
 	}
 
 	if t, ok := processor.(telegraf.ParserFuncPlugin); ok {
 		if !c.probeParser("processors", name, table) {
-			return nil, false, errors.New("parser not found")
+			return nil, 0, errors.New("parser not found")
 		}
 		t.SetParserFunc(func() (telegraf.Parser, error) {
 			return c.addParser("processors", name, table)
 		})
-		hasParser = true
+		optionTestCount++
+	}
+
+	// If the (underlying) processor has a SetSerializer function it can accept
+	// arbitrary data-formats, so build the requested serializer and set it.
+	if t, ok := processor.(telegraf.SerializerPlugin); ok {
+		serializer, err := c.addSerializer(name, table)
+		if err != nil {
+			return nil, 0, fmt.Errorf("adding serializer failed: %w", err)
+		}
+		t.SetSerializer(serializer)
+		optionTestCount++
 	}
 
 	if err := c.toml.UnmarshalTable(table, processor); err != nil {
-		return nil, hasParser, fmt.Errorf("unmarshalling failed: %w", err)
+		return nil, 0, fmt.Errorf("unmarshalling failed: %w", err)
 	}
 
 	err := c.printUserDeprecation("processors", name, processor)
-	return streamingProcessor, hasParser, err
+	return streamingProcessor, optionTestCount, err
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -1177,32 +1215,20 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// arbitrary types of output, so build the serializer and set it.
 	if t, ok := output.(telegraf.SerializerPlugin); ok {
 		missThreshold = 1
-		if serializer, err := c.addSerializer(name, table); err == nil {
-			t.SetSerializer(serializer)
-		} else {
-			missThreshold = 0
-			// Fallback to the old way of instantiating the parsers.
-			serializer, err := c.buildSerializerOld(table)
-			if err != nil {
-				return err
-			}
-			t.SetSerializer(serializer)
+		serializer, err := c.addSerializer(name, table)
+		if err != nil {
+			return err
 		}
+		t.SetSerializer(serializer)
 	} else if t, ok := output.(serializers.SerializerOutput); ok {
 		// Keep the old interface for backward compatibility
 		// DEPRECATED: Please switch your plugin to telegraf.Serializers
 		missThreshold = 1
-		if serializer, err := c.addSerializer(name, table); err == nil {
-			t.SetSerializer(serializer)
-		} else {
-			missThreshold = 0
-			// Fallback to the old way of instantiating the parsers.
-			serializer, err := c.buildSerializerOld(table)
-			if err != nil {
-				return err
-			}
-			t.SetSerializer(serializer)
+		serializer, err := c.addSerializer(name, table)
+		if err != nil {
+			return err
 		}
+		t.SetSerializer(serializer)
 	}
 
 	outputConfig, err := c.buildOutput(name, table)
@@ -1469,29 +1495,6 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	return cp, err
 }
 
-// buildSerializerOld grabs the necessary entries from the ast.Table for creating
-// a serializers.Serializer object, and creates it, which can then be added onto
-// an Output object.
-func (c *Config) buildSerializerOld(tbl *ast.Table) (telegraf.Serializer, error) {
-	sc := &serializers.Config{TimestampUnits: 1 * time.Second}
-
-	c.getFieldString(tbl, "data_format", &sc.DataFormat)
-
-	if sc.DataFormat == "" {
-		sc.DataFormat = "influx"
-	}
-
-	c.getFieldString(tbl, "prefix", &sc.Prefix)
-	c.getFieldString(tbl, "template", &sc.Template)
-	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
-
-	if c.hasErrs() {
-		return nil, c.firstErr()
-	}
-
-	return serializers.NewSerializer(sc)
-}
-
 // buildOutput parses output specific items from the ast.Table,
 // builds the filter and returns a
 // models.OutputConfig to be inserted into models.RunningInput
@@ -1546,11 +1549,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	// Secret-store options to ignore
 	case "id":
 
-	// Parser options to ignore
+	// Parser and serializer options to ignore
 	case "data_type", "influx_parser_type":
 
-	// Serializer options to ignore
-	case "prefix", "template", "templates":
 	default:
 		c.unusedFieldsMutex.Lock()
 		c.UnusedFields[key] = true
@@ -1572,6 +1573,7 @@ func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Output)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Aggregator)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Processor)(nil)).Elem())
+		root = root || pt.Implements(reflect.TypeOf((*telegraf.StreamingProcessor)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Parser)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Serializer)(nil)).Elem())
 
@@ -1746,11 +1748,4 @@ func (c *Config) firstErr() error {
 
 func (c *Config) addError(tbl *ast.Table, err error) {
 	c.errs = append(c.errs, fmt.Errorf("line %d:%d: %w", tbl.Line, tbl.Position, err))
-}
-
-// unwrappable lets you retrieve the original telegraf.Processor from the
-// StreamingProcessor. This is necessary because the toml Unmarshaller won't
-// look inside composed types.
-type unwrappable interface {
-	Unwrap() telegraf.Processor
 }
