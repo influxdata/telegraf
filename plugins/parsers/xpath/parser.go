@@ -11,6 +11,7 @@ import (
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
 	"github.com/doclambda/protobufquery"
+	"github.com/srebhan/cborquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -92,6 +93,8 @@ func (p *Parser) Init() error {
 				Notice:    "use 'xpath' instead",
 			})
 		}
+	case "xpath_cbor":
+		p.document = &cborDocument{}
 	case "xpath_json":
 		p.document = &jsonDocument{}
 
@@ -491,6 +494,8 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 		// enabled, we should return the native type of the data
 		if p.NativeTypes {
 			switch nn := current.(type) {
+			case *cborquery.NodeNavigator:
+				return nn.GetValue(), nil
 			case *jsonquery.NodeNavigator:
 				return nn.GetValue(), nil
 			case *protobufquery.NodeNavigator:
@@ -591,6 +596,14 @@ func init() {
 		func(defaultMetricName string) telegraf.Parser {
 			return &Parser{
 				Format:            "xml",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_cbor",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_cbor",
 				DefaultMetricName: defaultMetricName,
 			}
 		},
