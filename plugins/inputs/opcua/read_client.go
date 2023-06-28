@@ -90,7 +90,6 @@ func (o *ReadClient) Connect() error {
 }
 
 func (o *ReadClient) ensureConnected() error {
-	o.Log.Debugf("connection state: %v (disconnected: %v)", o.State(), o.State() == opcua.Disconnected)
 	if o.State() == opcua.Disconnected {
 		return o.Connect()
 	}
@@ -130,8 +129,6 @@ func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
 }
 
 func (o *ReadClient) read() error {
-	o.Log.Debugf("client: %+v", o.Client)
-	o.Log.Debugf("request: %+v", o.req)
 	resp, err := o.Client.Read(o.req)
 	if err != nil {
 		o.ReadError.Incr(1)
