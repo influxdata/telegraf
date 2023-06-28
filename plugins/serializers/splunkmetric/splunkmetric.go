@@ -10,7 +10,7 @@ import (
 
 type Serializer struct {
 	HecRouting   bool `toml:"splunkmetric_hec_routing"`
-	MultiMetric  bool `toml:"splunkmetric_multi_metric"`
+	MultiMetric  bool `toml:"splunkmetric_multimetric"`
 	OmitEventTag bool `toml:"splunkmetric_omit_event_tag"`
 }
 

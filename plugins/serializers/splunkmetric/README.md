@@ -66,42 +66,43 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 
 ```toml
 [[outputs.http]]
-   ## URL is the address to send metrics to
-   url = "https://localhost:8088/services/collector"
+  ## URL is the address to send metrics to
+  url = "https://localhost:8088/services/collector"
 
-   ## Timeout for HTTP message
-   # timeout = "5s"
+  ## Timeout for HTTP message
+  # timeout = "5s"
 
-   ## HTTP method, one of: "POST" or "PUT"
-   # method = "POST"
+  ## HTTP method, one of: "POST" or "PUT"
+  # method = "POST"
 
-   ## HTTP Basic Auth credentials
-   # username = "username"
-   # password = "pa$$word"
+  ## HTTP Basic Auth credentials
+  # username = "username"
+  # password = "pa$$word"
 
-   ## Optional TLS Config
-   # tls_ca = "/etc/telegraf/ca.pem"
-   # tls_cert = "/etc/telegraf/cert.pem"
-   # tls_key = "/etc/telegraf/key.pem"
-   ## Use TLS but skip chain & host verification
-   # insecure_skip_verify = false
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
-   ## Data format to output.
-   ## Each data format has it's own unique set of configuration options, read
-   ## more about them here:
-   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-   data_format = "splunkmetric"
-    ## Provides time, index, source overrides for the HEC
-   splunkmetric_hec_routing = true
-   # splunkmetric_multimetric = true
-   # splunkmetric_omit_event_tag = false
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "splunkmetric"
 
-   ## Additional HTTP headers
-    [outputs.http.headers]
-   # Should be set manually to "application/json" for json data_format
-      Content-Type = "application/json"
-      Authorization = "Splunk xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      X-Splunk-Request-Channel = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  ## Provides time, index, source overrides for the HEC
+  splunkmetric_hec_routing = true
+  # splunkmetric_multimetric = true
+  # splunkmetric_omit_event_tag = false
+
+  ## Additional HTTP headers
+  [outputs.http.headers]
+    # Should be set manually to "application/json" for json data_format
+    Content-Type = "application/json"
+    Authorization = "Splunk xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    X-Splunk-Request-Channel = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
 ## Overrides
