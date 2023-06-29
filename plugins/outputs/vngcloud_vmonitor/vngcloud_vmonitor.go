@@ -116,6 +116,8 @@ type VNGCloudvMonitor struct {
 
 	dropCount int
 	dropTime  time.Time
+
+	dropByIam bool
 }
 
 func (h *VNGCloudvMonitor) SetSerializer(serializer serializers.Serializer) {
@@ -123,7 +125,7 @@ func (h *VNGCloudvMonitor) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (h *VNGCloudvMonitor) initHTTPClient() error {
-	log.Println("[vMonitor] Init client-iam")
+	log.Println("[vMonitor] Init client-iam ...")
 	h.Oauth2ClientConfig = &clientcredentials.Config{
 		ClientID:     h.ClientId,
 		ClientSecret: h.ClientSecret,
@@ -132,14 +134,18 @@ func (h *VNGCloudvMonitor) initHTTPClient() error {
 
 	token, err := h.Oauth2ClientConfig.TokenSource(context.Background()).Token()
 	if err != nil {
+		h.dropByIam = true
 		return fmt.Errorf("[vMonitor] Failed to get token: %s", err.Error())
 	}
 
 	_, err = json.Marshal(token)
 	if err != nil {
+		h.dropByIam = true
 		return fmt.Errorf("[vMonitor] Failed to Marshal token: %s", err.Error())
 	}
 	h.client_iam = h.Oauth2ClientConfig.Client(context.TODO())
+	log.Println("[vMonitor] Init client-iam successfully")
+	h.dropByIam = false
 	return nil
 }
 
@@ -276,6 +282,7 @@ func (h *VNGCloudvMonitor) Connect() error {
 	// h.client_iam = client_iam
 	err := h.initHTTPClient()
 	if err != nil {
+		log.Print(err)
 		return err
 	}
 
@@ -350,6 +357,15 @@ func (h *VNGCloudvMonitor) setPlugins(metrics []telegraf.Metric) error {
 func (h *VNGCloudvMonitor) Write(metrics []telegraf.Metric) error {
 	if h.dropCount > 0 && time.Now().Before(h.dropTime) {
 		log.Printf("[vMonitor] Drop %d metrics because OUT_OF_QUOTA.", len(metrics))
+		return nil
+	}
+
+	if h.dropByIam {
+		err := h.initHTTPClient()
+		if err != nil {
+			log.Print(err)
+		}
+		log.Printf("[vMonitor] Drop %d metrics because of IAM.", len(metrics))
 		return nil
 	}
 
@@ -428,12 +444,15 @@ func (h *VNGCloudvMonitor) handleResponse(respCode int) error {
 	} else if respCode == 400 {
 		return fmt.Errorf("[vMonitor] Bad request")
 	} else if respCode == 401 {
+		log.Printf("[vMonitor] IAM Unauthorized")
 		err := h.initHTTPClient()
 		if err != nil {
+			log.Print(err)
 			return err
 		}
 		return fmt.Errorf("[vMonitor] IAM Unauthorized")
 	} else if respCode == 403 {
+		h.dropByIam = true
 		return fmt.Errorf("[vMonitor] IAM Forbidden")
 	} else if respCode == 428 {
 		if err := h.checkQuota(); err != nil {
@@ -540,6 +559,8 @@ func init() {
 
 			dropCount: 0,
 			dropTime:  time.Now(),
+
+			dropByIam: false,
 		}
 	})
 }
