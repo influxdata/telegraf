@@ -249,23 +249,23 @@ func (g *Graphite) send(batch []byte) error {
 			g.connections[n].connected = false
 			continue
 		}
-		if _, err := server.conn.Write(batch); err != nil {
-			g.Log.Errorf("Writing to %q failed: %v", server.name, err)
-			if i < len(p)-1 {
-				g.Log.Info("Trying next server...")
-			}
-			// Mark server as failed so a new connection will be made
-			if server.conn != nil {
-				if err := server.conn.Close(); err != nil {
-					g.Log.Debugf("Failed to close connection to %q: %v", server.name, err)
-				}
-			}
-			g.connections[n].connected = false
-			continue
-		} else {
-			// Sent the data successfully
+		_, err := server.conn.Write(batch)
+		if err == nil {
+			// Sending the data was successfully
 			return nil
 		}
+
+		g.Log.Errorf("Writing to %q failed: %v", server.name, err)
+		if i < len(p)-1 {
+			g.Log.Info("Trying next server...")
+		}
+		// Mark server as failed so a new connection will be made
+		if server.conn != nil {
+			if err := server.conn.Close(); err != nil {
+				g.Log.Debugf("Failed to close connection to %q: %v", server.name, err)
+			}
+		}
+		g.connections[n].connected = false
 	}
 
 	// If we end here, none of the writes were successful
