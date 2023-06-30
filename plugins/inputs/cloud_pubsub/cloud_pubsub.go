@@ -217,12 +217,11 @@ func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
 	}
 
 	ps.decoderMutex.Lock()
+	defer ps.decoderMutex.Unlock()
 	data, err := ps.decoder.Decode(data)
 	if err != nil {
-		ps.decoderMutex.Unlock()
 		return nil, err
 	}
-	ps.decoderMutex.Unlock()
 
 	decompressedData := make([]byte, len(data))
 	copy(decompressedData, data)
