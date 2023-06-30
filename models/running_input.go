@@ -10,6 +10,7 @@ import (
 var (
 	GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", map[string]string{})
 	GlobalGatherErrors    = selfstat.Register("agent", "gather_errors", map[string]string{})
+	GlobalGatherTimeouts  = selfstat.Register("agent", "gather_timeouts", map[string]string{})
 )
 
 type RunningInput struct {
@@ -21,6 +22,7 @@ type RunningInput struct {
 
 	MetricsGathered selfstat.Stat
 	GatherTime      selfstat.Stat
+	GatherTimeouts  selfstat.Stat
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
@@ -48,6 +50,11 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		GatherTime: selfstat.RegisterTiming(
 			"gather",
 			"gather_time_ns",
+			tags,
+		),
+		GatherTimeouts: selfstat.Register(
+			"gather",
+			"gather_timeouts",
 			tags,
 		),
 		log: logger,
@@ -153,4 +160,9 @@ func (r *RunningInput) SetDefaultTags(tags map[string]string) {
 
 func (r *RunningInput) Log() telegraf.Logger {
 	return r.log
+}
+
+func (r *RunningInput) IncrGatherTimeouts() {
+	GlobalGatherTimeouts.Incr(1)
+	r.GatherTimeouts.Incr(1)
 }
