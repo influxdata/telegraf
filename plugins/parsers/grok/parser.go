@@ -585,7 +585,7 @@ func (p *Parser) Init() error {
 	}
 
 	if p.Timezone == "" {
-		p.Timezone = "Canada/Eastern"
+		p.Timezone = "UTC"
 	}
 
 	return p.Compile()
