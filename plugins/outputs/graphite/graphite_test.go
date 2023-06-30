@@ -32,14 +32,12 @@ func TestGraphiteError(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list
-	var metrics []telegraf.Metric
-	metrics = append(metrics, m1)
-	// Error
-	err1 := g.Connect()
-	require.NoError(t, err1)
-	err2 := g.Write(metrics)
-	require.Error(t, err2)
-	require.Equal(t, "could not write to any Graphite server in cluster", err2.Error())
+	metrics := []telegraf.Metric{m1}
+
+	require.NoError(t, g.Connect())
+	err := g.Write(metrics)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotConnected)
 }
 
 func TestGraphiteReconnect(t *testing.T) {
