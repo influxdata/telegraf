@@ -41,7 +41,6 @@ var defaultConfig = &VNGCloudvMonitor{
 	Timeout:         config.Duration(10 * time.Second),
 	Method:          http.MethodPost,
 	IamURL:          "https://hcm-3.console.vngcloud.vn/iam/accounts-api/v2/auth/token",
-	OutOfQuotaRetry: config.Duration(30 * time.Second),
 	CheckQuotaRetry: config.Duration(30 * time.Second),
 }
 
@@ -101,8 +100,6 @@ type VNGCloudvMonitor struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	Insecure        bool              `toml:"insecure_skip_verify"`
 	ProxyStr        string            `toml:"proxy_url"`
-	CheckQuotaRetry config.Duration   `toml:"check_quota_retry"`
-	OutOfQuotaRetry config.Duration   `toml:"out_of_quota_retry"`
 
 	IamURL       string `toml:"iam_url"`
 	ClientId     string `toml:"client_id"`
@@ -114,10 +111,14 @@ type VNGCloudvMonitor struct {
 	client_iam         *http.Client
 	Oauth2ClientConfig *clientcredentials.Config
 
+	CheckQuotaRetry config.Duration
+
 	dropCount int
+	retryTime int
 	dropTime  time.Time
 
-	dropByIam bool
+	dropMode        bool
+	checkQuotaFirst bool
 }
 
 func (h *VNGCloudvMonitor) SetSerializer(serializer serializers.Serializer) {
@@ -134,18 +135,18 @@ func (h *VNGCloudvMonitor) initHTTPClient() error {
 
 	token, err := h.Oauth2ClientConfig.TokenSource(context.Background()).Token()
 	if err != nil {
-		h.dropByIam = true
+		h.dropMode = true
 		return fmt.Errorf("[vMonitor] Failed to get token: %s", err.Error())
 	}
 
 	_, err = json.Marshal(token)
 	if err != nil {
-		h.dropByIam = true
+		h.dropMode = true
 		return fmt.Errorf("[vMonitor] Failed to Marshal token: %s", err.Error())
 	}
 	h.client_iam = h.Oauth2ClientConfig.Client(context.TODO())
 	log.Println("[vMonitor] Init client-iam successfully")
-	h.dropByIam = false
+	h.dropMode = false
 	return nil
 }
 
@@ -356,21 +357,19 @@ func (h *VNGCloudvMonitor) setPlugins(metrics []telegraf.Metric) error {
 
 func (h *VNGCloudvMonitor) Write(metrics []telegraf.Metric) error {
 	if h.dropCount > 0 && time.Now().Before(h.dropTime) {
-		log.Printf("[vMonitor] Drop %d metrics because OUT_OF_QUOTA.", len(metrics))
-		return nil
-	}
-
-	if h.dropByIam {
-		err := h.initHTTPClient()
-		if err != nil {
-			log.Print(err)
-		}
-		log.Printf("[vMonitor] Drop %d metrics because of IAM.", len(metrics))
+		log.Printf("[vMonitor] Drop %d metrics. Send request again at %s", len(metrics), h.dropTime.Format("15:04:05"))
 		return nil
 	}
 
 	if err := h.setPlugins(metrics); err != nil {
 		return err
+	}
+
+	if h.checkQuotaFirst {
+		err := h.checkQuota()
+		if err != nil {
+			return err
+		}
 	}
 
 	reqBody, err := h.serializer.SerializeBatch(metrics)
@@ -420,7 +419,12 @@ func (h *VNGCloudvMonitor) write(reqBody []byte) error {
 
 	resp, err := h.client_iam.Do(req)
 	if err != nil {
-		return err
+		er := h.initHTTPClient()
+		if er != nil {
+			log.Printf("[vMonitor] Drop metrics because can't init IAM: %s", er.Error())
+			return nil
+		}
+		return fmt.Errorf("[vMonitor] IAM request fail: %s", err.Error())
 	}
 	defer resp.Body.Close()
 	dataRsp, err := io.ReadAll(resp.Body)
@@ -431,44 +435,51 @@ func (h *VNGCloudvMonitor) write(reqBody []byte) error {
 
 	log.Printf("[vMonitor] Request-ID: %s with body length %d byte and response body %s", resp.Header.Get("Api-Request-ID"), len(reqBody), dataRsp)
 
-	if err := h.handleResponse(resp.StatusCode); err != nil {
+	if err := h.handleResponse(resp.StatusCode, dataRsp); err != nil {
+		if h.dropMode {
+			log.Printf("[vMonitor] Drop metrics because of %s", err.Error())
+			return nil
+		}
 		return err
 	}
 
 	return nil
 }
 
-func (h *VNGCloudvMonitor) handleResponse(respCode int) error {
-	if respCode == 201 {
+func (h *VNGCloudvMonitor) handleResponse(respCode int, dataRsp []byte) error {
+	h.setDropMode(false)
+
+	switch respCode {
+	case 201:
 		return nil
-	} else if respCode == 400 {
+	case 400:
 		return fmt.Errorf("[vMonitor] Bad request")
-	} else if respCode == 401 {
-		log.Printf("[vMonitor] IAM Unauthorized")
-		err := h.initHTTPClient()
-		if err != nil {
-			log.Print(err)
-			return err
-		}
+	case 401:
+		h.setDropMode(true)
 		return fmt.Errorf("[vMonitor] IAM Unauthorized")
-	} else if respCode == 403 {
-		h.dropByIam = true
+	case 403:
+		h.setDropMode(true)
 		return fmt.Errorf("[vMonitor] IAM Forbidden")
-	} else if respCode == 428 {
+	case 428:
 		if err := h.checkQuota(); err != nil {
 			return err
 		}
 		return fmt.Errorf("[vMonitor] Checking quota success, try to send metric again")
-	} else if respCode == 503 || respCode == 504 {
+	case 409:
+		h.doubleCheckTime()
+		return fmt.Errorf("[vMonitor] Drop this point because of (%d - %s)", respCode, dataRsp)
+	case 503, 504:
 		return fmt.Errorf("[vMonitor] Gateway Timeout or Service Unavailable (%d)", respCode)
-	} else if respCode == 408 {
+	case 408:
 		return fmt.Errorf("[vMonitor] Request Time-out (%d)", respCode)
-	} else {
+	default:
 		return fmt.Errorf("[vMonitor] Unhandled Status Code %d", respCode)
 	}
 }
 
 func (h *VNGCloudvMonitor) checkQuota() error {
+	log.Printf("[vMonitor] Start check quota ...")
+	h.checkQuotaFirst = true
 
 	quotaStruct := &QuotaInfo{
 		Checksum: h.infoHost.HashID,
@@ -476,62 +487,45 @@ func (h *VNGCloudvMonitor) checkQuota() error {
 	}
 	quotaJson, err := json.Marshal(quotaStruct)
 	if err != nil {
-		return fmt.Errorf("[vMonitor] Can not marshal quota struct: %s", err)
+		return fmt.Errorf("[vMonitor] Can not marshal quota struct: %s", err.Error())
 	}
 
-	const retryTime = 8
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", h.URL, quotaPath), bytes.NewBuffer(quotaJson))
+	if err != nil {
+		return fmt.Errorf("[vMonitor] Error create new request: %s", err.Error())
+	}
+	req.Header.Set("checksum", h.infoHost.HashID)
+	req.Header.Set("Content-Type", defaultContentType)
+	req.Header.Set("User-Agent", h.infoHost.UserAgent)
+	resp, err := h.client_iam.Do(req)
 
-	for i := 0; i < retryTime; i++ {
+	if err != nil {
+		return fmt.Errorf("[vMonitor] Send request checking quota failed: (%s)", err.Error())
+	}
+	defer resp.Body.Close()
+	dataRsp, err := io.ReadAll(resp.Body)
 
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", h.URL, quotaPath), bytes.NewBuffer(quotaJson))
-		if err != nil {
-			log.Println("[vMonitor] Error create new request: ", err)
-			continue
-		}
-		req.Header.Set("checksum", h.infoHost.HashID)
-		req.Header.Set("Content-Type", defaultContentType)
-		req.Header.Set("User-Agent", h.infoHost.UserAgent)
-		resp, err := h.client_iam.Do(req)
+	if err != nil {
+		return fmt.Errorf("[vMonitor] Error occurred when reading response body: (%s)", err.Error())
+	}
 
-		if err != nil {
-			log.Printf("[vMonitor] Send request checking quota failed, error: (%s), try to send again", err)
-			continue
-		}
-		defer resp.Body.Close()
-		dataRsp, err := io.ReadAll(resp.Body)
-
-		if err != nil {
-			log.Printf("[vMonitor] Request-ID: %s. An error occurred when reading response body (%s), error: (%s), try to send again", resp.Header.Get("Api-Request-ID"), dataRsp, err.Error())
-			continue
-		}
-
-		if resp.StatusCode == 200 {
-			log.Printf("[vMonitor] Request-ID: %s. Checking quota success. Continue send metric.", resp.Header.Get("Api-Request-ID"))
-			h.dropCount = 0
-			h.dropTime = time.Now()
-			return nil
-		} else if resp.StatusCode == 409 {
-			if h.dropCount < retryTime {
-				h.dropCount++
-			}
-			dropDuration := time.Duration(int(math.Pow(2, float64(h.dropCount))) * int(h.OutOfQuotaRetry))
-			h.dropTime = time.Now().Add(dropDuration)
-			log.Printf("[vMonitor] Request-ID: %s. Package out of quota. Check quota again in %.0fm ", resp.Header.Get("Api-Request-ID"), dropDuration.Minutes())
-			return fmt.Errorf("OUT_OF_QUOTA")
-
-		} else if resp.StatusCode != 428 && resp.StatusCode != 503 && resp.StatusCode != 504 {
+	// handle check quota
+	switch resp.StatusCode {
+	case 200:
+		log.Printf("[vMonitor] Request-ID: %s. Checking quota success. Continue send metric.", resp.Header.Get("Api-Request-ID"))
+		h.dropCount = 0
+		h.dropTime = time.Now()
+		h.checkQuotaFirst = false
+		return nil
+	case 409:
+		h.doubleCheckTime()
+		return fmt.Errorf("[vMonitor] Conflict - %s", dataRsp)
+	default:
+		if resp.StatusCode != 503 && resp.StatusCode != 504 {
 			log.Printf("[vMonitor] Request-ID: %s. Receive an unhandled StatusCode = %d.", resp.Header.Get("Api-Request-ID"), resp.StatusCode)
 		}
-
-		if i == retryTime-1 {
-			return fmt.Errorf("[vMonitor] Can not check quota, max retry exceed")
-		} else {
-			log.Printf("[vMonitor] Request-ID: %s. Checking quota fail (%s), sleep in %.0fs and retry", resp.Header.Get("Api-Request-ID"), dataRsp, time.Duration(int(h.CheckQuotaRetry)*int(math.Pow(2, float64(i)))).Seconds())
-			time.Sleep(time.Duration(int(h.CheckQuotaRetry) * int(math.Pow(2, float64(i)))))
-		}
+		return fmt.Errorf("[vMonitor] Request-ID: %s. Checking quota fail (%s)", resp.Header.Get("Api-Request-ID"), dataRsp)
 	}
-
-	return nil
 }
 
 func init() {
@@ -553,14 +547,33 @@ func init() {
 			Method:          defaultConfig.Method,
 			URL:             defaultConfig.URL,
 			IamURL:          defaultConfig.IamURL,
-			OutOfQuotaRetry: defaultConfig.OutOfQuotaRetry,
 			CheckQuotaRetry: defaultConfig.CheckQuotaRetry,
 			infoHost:        infoHosts,
 
 			dropCount: 0,
+			retryTime: 8,
 			dropTime:  time.Now(),
 
-			dropByIam: false,
+			dropMode:        false,
+			checkQuotaFirst: true,
 		}
 	})
+}
+
+func (h *VNGCloudvMonitor) doubleCheckTime() {
+	h.setDropMode(true)
+	if h.dropCount < h.retryTime {
+		h.dropCount++
+	} else {
+		h.dropCount = 1
+	}
+	dropDuration := time.Duration(int(math.Pow(2, float64(h.dropCount))) * int(h.CheckQuotaRetry))
+	h.dropTime = time.Now().Add(dropDuration)
+}
+
+func (h *VNGCloudvMonitor) setDropMode(mode bool) {
+	h.dropMode = mode
+	// if !mode {
+	// 	h.dropCount = 0
+	// }
 }
