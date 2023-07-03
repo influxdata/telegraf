@@ -483,4 +483,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-replace golang.zx2c4.com/go118/netip v0.0.0-20211111135330-a4a02eeacf9d => git.zx2c4.com/go118-netip.git v0.0.0-20211111135330-a4a02eeacf9d
