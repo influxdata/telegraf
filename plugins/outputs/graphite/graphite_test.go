@@ -658,6 +658,7 @@ func TestIntegration(t *testing.T) {
 }
 
 func query(url string, data interface{}) error {
+	//nolint:gosec // Parameters are fixed in the above call
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println("response:", resp)
@@ -668,6 +669,7 @@ func query(url string, data interface{}) error {
 		fmt.Println("raw:", string(raw))
 		return err
 	}
+	resp.Body.Close()
 
 	return json.Unmarshal(raw, &data)
 }
