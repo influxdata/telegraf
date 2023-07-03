@@ -1409,6 +1409,20 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 					},
 					fakeTime,
 				),
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
 			},
 		},
 		//ordinary v3 coldStart SHA trap auth and AES256 priv
@@ -1473,7 +1487,20 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 					},
 					fakeTime,
 				),
-			},
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),			},
 		},
 		//ordinary v3 coldStart SHA trap auth and AES256C priv
 		{
@@ -1537,6 +1564,20 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 					},
 					fakeTime,
 				),
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
 			},
 		},
 	}
@@ -1547,51 +1588,23 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 			// doesn't have a way to return the autoselected port.
 			// Instead, we'll use an unusual port and hope it's
 			// unused.
-			const port = 12399
+			const port1 = 12399
+			const port2 = 12400
 
 			// Hook into the trap handler so the test knows when the
 			// trap has been received
-			received := make(chan int)
-			wrap := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
+			received1 := make(chan int)
+			wrap1 := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
 				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
 					f(p, a)
-					received <- 0
+					received1 <- 0
 				}
 			}
 
 			// Set up the service input plugin
-			s := &SnmpTrap{
-				ServiceAddress:     "udp://:" + strconv.Itoa(port),
-				makeHandlerWrapper: wrap,
-				timeFunc: func() time.Time {
-					return fakeTime
-				},
-				//if cold start be answer otherwise err
-				Log:          testutil.Logger{},
-				Version:      tt.version.String(),
-				SecName:      config.NewSecret([]byte(tt.secName)),
-				SecLevel:     tt.secLevel,
-				AuthProtocol: tt.authProto,
-				AuthPassword: config.NewSecret([]byte(tt.authPass)),
-				PrivProtocol: tt.privProto,
-				PrivPassword: config.NewSecret([]byte(tt.privPass)),
-				Translator:   "netsnmp",
-			}
-
-			// Hook into the trap handler so the test knows when the
-			// trap has been received
-			receiveds := make(chan int)
-			wraps := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
-				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
-					f(p, a)
-					receiveds <- 0
-				}
-			}
-
-			// Set up a second service input plugin
-			ss := &SnmpTrap{
-				ServiceAddress:     "udp://:" + strconv.Itoa(port+1),
-				makeHandlerWrapper: wraps,
+			s1 := &SnmpTrap{
+				ServiceAddress:     "udp://:" + strconv.Itoa(port1),
+				makeHandlerWrapper: wrap1,
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
@@ -1607,35 +1620,75 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 				Translator:   "netsnmp",
 			}
 
-			require.NoError(t, s.Init())
-			require.NoError(t, ss.Init())
-
-			//inject test translator
-			s.transl = newTestTranslator(tt.entries)
-			//s.transl = newTestTranslator(tt.entries)	// not sure if this needed
-
-			var acc testutil.Accumulator
-			require.NoError(t, s.Start(&acc))
-			require.NoError(t, ss.Start(&acc))
-
-			defer s.Stop()
-			defer ss.Stop()
-
-			var goSNMP gosnmp.GoSNMP
-			if tt.version == gosnmp.Version3 {
-				msgFlags := newMsgFlagsV3(tt.secLevel)
-				sp := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName, tt.privPass, tt.authPass)
-				goSNMP = newGoSNMPV3(port, tt.contextName, tt.engineID, msgFlags, sp)
-			} else {
-				goSNMP = newGoSNMP(tt.version, port)
+			// Hook into the trap handler so the test knows when the
+			// trap has been received
+			received2 := make(chan int)
+			wrap2 := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
+				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
+					f(p, a)
+					received2 <- 0
+				}
 			}
 
-			// Send the trap
-			sendTrap(t, goSNMP, tt.trap)
+			// Set up a second service input plugin
+			s2 := &SnmpTrap{
+				ServiceAddress:     "udp://:" + strconv.Itoa(port2),
+				makeHandlerWrapper: wrap2,
+				timeFunc: func() time.Time {
+					return fakeTime
+				},
+				//if cold start be answer otherwise err
+				Log:          testutil.Logger{},
+				Version:      tt.version.String(),
+				SecName:      config.NewSecret([]byte(tt.secName + "2")),
+				SecLevel:     tt.secLevel,
+				AuthProtocol: tt.authProto,
+				AuthPassword: config.NewSecret([]byte(tt.authPass + "2")),
+				PrivProtocol: tt.privProto,
+				PrivPassword: config.NewSecret([]byte(tt.privPass + "2")),
+				Translator:   "netsnmp",
+			}
 
-			// Wait for trap to be received
+			require.NoError(t, s1.Init())
+			require.NoError(t, s2.Init())
+
+			//inject test translator
+			s1.transl = newTestTranslator(tt.entries)
+			s2.transl = newTestTranslator(tt.entries)
+
+			var acc testutil.Accumulator
+			require.NoError(t, s1.Start(&acc))
+			require.NoError(t, s2.Start(&acc))
+
+			defer s1.Stop()
+			defer s2.Stop()
+
+			var goSNMP1 gosnmp.GoSNMP
+			var goSNMP2 gosnmp.GoSNMP
+			if tt.version == gosnmp.Version3 {
+				msgFlags := newMsgFlagsV3(tt.secLevel)
+				sp1 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName + "1", tt.privPass + "1", tt.authPass + "1")
+				sp2 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName + "2", tt.privPass + "2", tt.authPass + "2")
+				goSNMP1 = newGoSNMPV3(port1, tt.contextName, tt.engineID, msgFlags, sp1)
+				goSNMP2 = newGoSNMPV3(port2, tt.contextName, tt.engineID, msgFlags, sp2)
+			} else {
+				goSNMP1 = newGoSNMP(tt.version, port1)
+				goSNMP2 = newGoSNMP(tt.version, port2)
+			}
+
+			// Send the trap to both receivers
+			sendTrap(t, goSNMP1, tt.trap)
+			sendTrap(t, goSNMP2, tt.trap)
+
+			// Wait for trap to be received on receiver1
 			select {
-			case <-received:
+			case <-received1:
+			case <-time.After(2 * time.Second):
+				t.Fatal("timed out waiting for trap to be received")
+			}
+			// Wait for trap to be received on receiver2
+			select {
+			case <-received2:
 			case <-time.After(2 * time.Second):
 				t.Fatal("timed out waiting for trap to be received")
 			}
