@@ -1598,12 +1598,12 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 				//if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
-				SecName:      config.NewSecret([]byte(tt.secName+"1")),
+				SecName:      config.NewSecret([]byte(tt.secName + "1")),
 				SecLevel:     tt.secLevel,
 				AuthProtocol: tt.authProto,
-				AuthPassword: config.NewSecret([]byte(tt.authPass+"1")),
+				AuthPassword: config.NewSecret([]byte(tt.authPass + "1")),
 				PrivProtocol: tt.privProto,
-				PrivPassword: config.NewSecret([]byte(tt.privPass+"1")),
+				PrivPassword: config.NewSecret([]byte(tt.privPass + "1")),
 				Translator:   "netsnmp",
 			}
 
@@ -1617,7 +1617,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, s.Start(&acc))
 			require.NoError(t, ss.Start(&acc))
-			
+
 			defer s.Stop()
 			defer ss.Stop()
 
