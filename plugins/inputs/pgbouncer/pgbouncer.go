@@ -4,6 +4,7 @@ package pgbouncer
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"strconv"
 
 	// Required for SQL framework driver
@@ -89,25 +90,29 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string, ma
 	// deconstruct array of variables and send to Scan
 	err := row.Scan(columnVars...)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("couldn't copy the data: %w", err)
 	}
 	if columnMap["database"] != nil {
 		// extract the database name from the column map
-		_, err := dbname.WriteString((*columnMap["database"]).(string))
+		name, ok := (*columnMap["database"]).(string)
+		if !ok {
+			return nil, nil, fmt.Errorf("database not a string, but %T", *columnMap["database"])
+		}
+		_, err := dbname.WriteString(name)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("writing database name failed: %w", err)
 		}
 	} else {
 		_, err := dbname.WriteString("postgres")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("writing database name failed: %w", err)
 		}
 	}
 
 	var tagAddress string
 	tagAddress, err = p.SanitizedAddress()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("couldn't get connection data: %w", err)
 	}
 
 	// Return basic tags and the mapped columns
@@ -118,7 +123,7 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 	// STATS
 	rows, err := p.DB.Query(`SHOW STATS`)
 	if err != nil {
-		return err
+		return fmt.Errorf("execution error 'show stats': %w", err)
 	}
 
 	defer rows.Close()
@@ -126,12 +131,11 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 	// grab the column information from the result
 	columns, err := rows.Columns()
 	if err != nil {
-		return err
+		return fmt.Errorf("don't get column names 'show stats': %w", err)
 	}
 
 	for rows.Next() {
 		tags, columnMap, err := p.accRow(rows, columns)
-
 		if err != nil {
 			return err
 		}
@@ -151,7 +155,7 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 				// Integer fields are returned in pgbouncer 1.12
 				integer, err := strconv.ParseInt(v, 10, 64)
 				if err != nil {
-					return err
+					return fmt.Errorf("couldn't convert metrics 'show stats': %w", err)
 				}
 
 				fields[col] = integer
@@ -167,7 +171,7 @@ func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 	// POOLS
 	poolRows, err := p.DB.Query(`SHOW POOLS`)
 	if err != nil {
-		return err
+		return fmt.Errorf("execution error 'show pools': %w", err)
 	}
 
 	defer poolRows.Close()
@@ -175,7 +179,7 @@ func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 	// grab the column information from the result
 	columns, err := poolRows.Columns()
 	if err != nil {
-		return err
+		return fmt.Errorf("don't get column names 'show pools': %w", err)
 	}
 
 	for poolRows.Next() {
@@ -213,7 +217,7 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 	// LISTS
 	rows, err := p.DB.Query(`SHOW LISTS`)
 	if err != nil {
-		return err
+		return fmt.Errorf("execution error 'show lists': %w", err)
 	}
 
 	defer rows.Close()
@@ -221,7 +225,7 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 	// grab the column information from the result
 	columns, err := rows.Columns()
 	if err != nil {
-		return err
+		return fmt.Errorf("don't get column names 'show lists': %w", err)
 	}
 
 	fields := make(map[string]interface{})
@@ -232,8 +236,16 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		if (*columnMap["list"]).(string) != "dns_pending" {
-			fields[(*columnMap["list"]).(string)] = (*columnMap["items"]).(int64)
+		name, ok := (*columnMap["list"]).(string)
+		if !ok {
+			return fmt.Errorf("metric name(show lists) not a string, but %T", *columnMap["list"])
+		}
+		if name != "dns_pending" {
+			value, ok := (*columnMap["items"]).(int64)
+			if !ok {
+				return fmt.Errorf("metric value(show lists) not a int64, but %T", *columnMap["items"])
+			}
+			fields[name] = value
 			tags = tag
 		}
 	}
@@ -246,14 +258,14 @@ func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 	// DATABASES
 	rows, err := p.DB.Query(`SHOW DATABASES`)
 	if err != nil {
-		return err
+		return fmt.Errorf("execution error 'show database': %w", err)
 	}
 	defer rows.Close()
 
 	// grab the column information from the result
 	columns, err := rows.Columns()
 	if err != nil {
-		return err
+		return fmt.Errorf("don't get column names 'show database': %w", err)
 	}
 
 	for rows.Next() {
