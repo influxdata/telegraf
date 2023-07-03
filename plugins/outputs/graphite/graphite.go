@@ -103,7 +103,7 @@ func (g *Graphite) Connect() error {
 		newConnection = true
 
 		// Dialer with timeout
-		d := net.Dialer{Timeout: time.Duration(g.Timeout) * time.Second}
+		d := net.Dialer{Timeout: time.Duration(g.Timeout)}
 
 		// Get secure connection if tls config is set
 		var conn net.Conn
