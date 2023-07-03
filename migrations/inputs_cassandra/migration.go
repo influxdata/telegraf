@@ -58,11 +58,11 @@ type jolokiaAgent struct {
 }
 
 // Migration function
-func migrate(tbl *ast.Table) ([]byte, error) {
+func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
 	var old cassandra
 	if err := toml.UnmarshalTable(tbl, &old); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Collect servers that use the same credentials
@@ -70,10 +70,10 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 	for _, server := range old.Servers {
 		u, err := url.Parse("http://" + server)
 		if err != nil {
-			return nil, fmt.Errorf("invalid url %q: %w", server, err)
+			return nil, "", fmt.Errorf("invalid url %q: %w", server, err)
 		}
 		if u.Path != "" {
-			return nil, fmt.Errorf("unexpected path in %q: %w", server, err)
+			return nil, "", fmt.Errorf("unexpected path in %q: %w", server, err)
 		}
 		if u.Hostname() == "" {
 			u.Host = "localhost:" + u.Port()
@@ -110,7 +110,7 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 
 		name, found := params["type"]
 		if !found {
-			return nil, fmt.Errorf("cannot determine name for metric %q", metric)
+			return nil, "", fmt.Errorf("cannot determine name for metric %q", metric)
 		}
 		name = strings.SplitN(name, "/", 2)[0]
 
@@ -147,7 +147,7 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 				FieldPrefix: prefix,
 			})
 		default:
-			return nil, fmt.Errorf("unknown java metric %q", metric)
+			return nil, "", fmt.Errorf("unknown java metric %q", metric)
 		}
 	}
 
@@ -182,12 +182,12 @@ func migrate(tbl *ast.Table) ([]byte, error) {
 	// Marshal the new configuration
 	buf, err := toml.Marshal(cfg)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	buf = append(buf, []byte("\n")...)
 
 	// Create the new content to output
-	return buf, nil
+	return buf, "", nil
 }
 
 func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
