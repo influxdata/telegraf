@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/azure-kusto-go/kusto"
 	kustoerrors "github.com/Azure/azure-kusto-go/kusto/data/errors"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
-	"github.com/Azure/azure-kusto-go/kusto/unsafe"
+	"github.com/Azure/azure-kusto-go/kusto/kql"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -48,8 +48,8 @@ const (
 	maxBuffers = 5
 )
 
-const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", ` +
+const createTableCommand = `.create-merge table ['TABLE']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+const createTableMappingCommand = `.create-or-alter table ['TABLE'] ingestion json mapping 'TABLEMAPPING' '[{"column":"fields", ` +
 	`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", ` +
 	`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
 	`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", ` +
@@ -201,14 +201,18 @@ func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, 
 		adx.Log.Info("skipped table creation")
 		return nil
 	}
-	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createStmt); err != nil {
+
+	createStmt := kql.New(createTableCommand)
+	createParams := kusto.QueryParameters(kql.NewParameters().AddString("TABLE", tableName))
+	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createStmt, createParams); err != nil {
 		return err
 	}
 
-	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).
-		UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
+	createTableMappingStmt := kql.New(createTableMappingCommand)
+	createTableMappingParams := kusto.QueryParameters(
+		kql.NewParameters().AddString("TABLE", tableName).AddString("TABLEMAPPING", tableName+"_mapping"),
+	)
+	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingStmt, createTableMappingParams); err != nil {
 		return err
 	}
 
