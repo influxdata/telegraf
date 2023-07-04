@@ -517,14 +517,21 @@ func (h *VNGCloudvMonitor) checkQuota() error {
 		h.dropTime = time.Now()
 		h.checkQuotaFirst = false
 		return nil
+	case 400:
+		return fmt.Errorf("[vMonitor] Bad request")
+	case 401:
+		h.setDropMode(true)
+		return fmt.Errorf("[vMonitor] IAM Unauthorized")
+	case 403:
+		h.setDropMode(true)
+		return fmt.Errorf("[vMonitor] IAM Forbidden")
 	case 409:
 		h.doubleCheckTime()
 		return fmt.Errorf("[vMonitor] Conflict - %s", dataRsp)
+	case 503, 504:
+		return fmt.Errorf("[vMonitor] Gateway Timeout or Service Unavailable")
 	default:
-		if resp.StatusCode != 503 && resp.StatusCode != 504 {
-			log.Printf("[vMonitor] Request-ID: %s. Receive an unhandled StatusCode = %d.", resp.Header.Get("Api-Request-ID"), resp.StatusCode)
-		}
-		return fmt.Errorf("[vMonitor] Request-ID: %s. Checking quota fail (%s)", resp.Header.Get("Api-Request-ID"), dataRsp)
+		return fmt.Errorf("[vMonitor] Request-ID: %s. Checking quota fail (%d - %s)", resp.Header.Get("Api-Request-ID"), resp.StatusCode, dataRsp)
 	}
 }
 
