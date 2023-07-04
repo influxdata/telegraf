@@ -31,12 +31,10 @@ func TestFileExistingFile(t *testing.T) {
 		serializer: s,
 	}
 
-	err := f.Init()
-	require.NoError(t, err)
-	err = f.Connect()
-	require.NoError(t, err)
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Connect())
 
-	err = f.Write(testutil.MockMetrics())
+	err := f.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
 	validateFile(t, fh.Name(), expExistFile)

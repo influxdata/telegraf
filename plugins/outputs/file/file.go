@@ -49,19 +49,12 @@ func (f *File) Init() error {
 		f.Files = []string{"stdout"}
 	}
 
-	if f.CompressionLevel == 0 {
-		switch f.CompressionAlgorithm {
-		case "zstd":
-			f.CompressionLevel = 3
-		default:
-			f.CompressionLevel = -1
-		}
-	}
-
-	if f.CompressionAlgorithm == "" || f.CompressionAlgorithm == "identity" {
-		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
+	var options []internal.EncodingOption
+	if f.CompressionLevel >= 0 && f.CompressionAlgorithm != "" && f.CompressionAlgorithm != "identity" {
+		options = append(options, internal.WithCompressionLevel(f.CompressionLevel))
+		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, options...)
 	} else {
-		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, internal.WithCompressionLevel(f.CompressionLevel))
+		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
 	}
 	if err != nil {
 		return err
@@ -144,6 +137,8 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("file", func() telegraf.Output {
-		return &File{}
+		return &File{
+			CompressionLevel: -1,
+		}
 	})
 }
