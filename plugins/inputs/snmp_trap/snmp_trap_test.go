@@ -1500,7 +1500,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 						"sysUpTimeInstance": now,
 					},
 					fakeTime,
-				),			},
+				)},
 		},
 		//ordinary v3 coldStart SHA trap auth and AES256C priv
 		{
@@ -1667,8 +1667,8 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 			var goSNMP2 gosnmp.GoSNMP
 			if tt.version == gosnmp.Version3 {
 				msgFlags := newMsgFlagsV3(tt.secLevel)
-				sp1 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName + "1", tt.privPass + "1", tt.authPass + "1")
-				sp2 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName + "2", tt.privPass + "2", tt.authPass + "2")
+				sp1 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName+"1", tt.privPass+"1", tt.authPass+"1")
+				sp2 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName+"2", tt.privPass+"2", tt.authPass+"2")
 				goSNMP1 = newGoSNMPV3(port1, tt.contextName, tt.engineID, msgFlags, sp1)
 				goSNMP2 = newGoSNMPV3(port2, tt.contextName, tt.engineID, msgFlags, sp2)
 			} else {

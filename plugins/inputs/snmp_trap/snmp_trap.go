@@ -119,8 +119,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 
 	// gosnmp.Default is a pointer, using this more than once
 	// has side effects
-	var defaults gosnmp.GoSNMP
-	defaults = *gosnmp.Default
+	defaults := *gosnmp.Default
 	s.listener.Params = &defaults
 	s.listener.Params.Logger = gosnmp.NewLogger(wrapLog{s.Log})
 
