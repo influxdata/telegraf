@@ -239,10 +239,12 @@ func (p *PrometheusHttp) getExtraMetricTags(tags map[string]string, m *Prometheu
 		return tags
 	}
 	tgs := make(map[string]string)
-	for v, t := range m.templates {
-		s := p.setExtraMetricTag(t, tags, m.Tags)
+	for v, t := range m.Tags {
+		s := p.setExtraMetricTag(m.templates[v], tags, m.Tags)
 		if s != "" {
 			tgs[v] = s
+		} else {
+			tgs[v] = t
 		}
 	}
 	return tgs
