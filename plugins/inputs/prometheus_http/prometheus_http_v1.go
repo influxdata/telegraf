@@ -55,6 +55,7 @@ func (p *PrometheusHttpV1) httpDoRequest(method, query string, params url.Values
 		return nil, 0, err
 	}
 	req = req.WithContext(p.ctx)
+	//	req.Close = true
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connection", "close")
@@ -169,23 +170,23 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 
 	raw, code, err := p.httpDoRequest("GET", path, params, nil)
 	if err != nil {
-		return fmt.Errorf("%s prometheus HTTP error %s", p.name, err)
+		return fmt.Errorf("%s prometheus HTTP error %s [%s]", p.name, err, time.Since(when))
 	}
 
 	if code != 200 {
-		return fmt.Errorf("%s prometheus HTTP error %d: returns %s", p.name, code, raw)
+		return fmt.Errorf("%s prometheus HTTP error %d: returns %s [%s]", p.name, code, raw, time.Since(when))
 	}
 
 	var res PrometheusHttpV1Response
 	err = json.Unmarshal(raw, &res)
 	if err != nil {
-		return fmt.Errorf("%s prometheus unmarshall error %s", p.name, err)
+		return fmt.Errorf("%s prometheus unmarshall error %s [%s]", p.name, err, time.Since(when))
 	}
 	if res.Status != "success" {
-		return fmt.Errorf("%s prometheus status %s", p.name, res.Status)
+		return fmt.Errorf("%s prometheus status %s [%s]", p.name, res.Status, time.Since(when))
 	}
 	if res.Data == nil {
-		p.log.Debug("%s prometheus has no data", p.name)
+		p.log.Debugf("%s prometheus has no data [%s]", p.name, time.Since(when))
 		return nil
 	}
 
@@ -195,8 +196,9 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 	case "vector":
 		p.processVector(&res, when, push)
 	default:
-		return fmt.Errorf("%s prometheus result type %s is not supported", p.name, res.Data.ResultType)
+		return fmt.Errorf("%s prometheus result type %s is not supported [%s]", p.name, res.Data.ResultType, time.Since(when))
 	}
+	p.log.Debugf("%s processed successfully [%s]", p.name, time.Since(when))
 	return nil
 }
 
@@ -205,9 +207,10 @@ func NewPrometheusHttpV1(name string, log telegraf.Logger, ctx context.Context, 
 	t := time.Duration(timeout)
 
 	var transport = &http.Transport{
-		Dial:                (&net.Dialer{Timeout: t}).Dial,
+		Dial:                (&net.Dialer{}).Dial,
 		TLSHandshakeTimeout: t,
 		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		IdleConnTimeout:     t,
 	}
 
 	var client = &http.Client{

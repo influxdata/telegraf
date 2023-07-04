@@ -434,6 +434,21 @@ func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.Tex
 	return tpl
 }
 
+func (p *PrometheusHttp) ifTemplate(s string) bool {
+
+	if strings.TrimSpace(s) == "" {
+		return false
+	}
+	// find {{ }} to pass templates
+	l := len("{{")
+	idx := strings.Index(s, "{{")
+	if idx == -1 {
+		return false
+	}
+	s1 := s[idx+l+1:]
+	return strings.Contains(s1, "}}")
+}
+
 func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 
 	if m.Name == "" {
@@ -446,7 +461,9 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 		m.templates = make(map[string]*toolsRender.TextTemplate)
 	}
 	for k, v := range m.Tags {
-		m.templates[k] = p.getDefaultTemplate(fmt.Sprintf("%s_%s", m.Name, k), v)
+		if p.ifTemplate(v) {
+			m.templates[k] = p.getDefaultTemplate(fmt.Sprintf("%s_%s", m.Name, k), v)
+		}
 	}
 	if m.uniques == nil {
 		m.uniques = make(map[uint64]bool)

@@ -21,3 +21,7 @@ test.json
 /.config
 /.clusters
 /cmd/telegraf/__debug_bin
+heap.out
+profile*.png
+test.sh
+metrics
