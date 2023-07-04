@@ -224,6 +224,7 @@ following works:
 - github.com/logzio/azure-monitor-metrics-receiver [MIT License](https://github.com/logzio/azure-monitor-metrics-receiver/blob/master/LICENSE)
 - github.com/magiconair/properties [BSD 2-Clause "Simplified" License](https://github.com/magiconair/properties/blob/main/LICENSE.md)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
+- github.com/matishsiao/goInfo [MIT License](https://github.com/matishsiao/goInfo/blob/master/LICENSE)
 - github.com/mattn/go-colorable [MIT License](https://github.com/mattn/go-colorable/blob/master/LICENSE)
 - github.com/mattn/go-ieproxy [MIT License](https://github.com/mattn/go-ieproxy/blob/master/LICENSE)
 - github.com/mattn/go-isatty [MIT License](https://github.com/mattn/go-isatty/blob/master/LICENSE)

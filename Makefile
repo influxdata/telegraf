@@ -119,8 +119,16 @@ embed_readme_%:
 
 .PHONY: config
 config:
-	@echo "generating default config"
-	go run ./cmd/telegraf config > etc/telegraf.conf
+	@echo "generating default config $(GOOS)"
+	# go run ./cmd/telegraf config > etc/telegraf.conf
+
+	rm -rf etc/telegraf.conf
+	cp -rf etc/telegraf_linux.conf etc/telegraf.conf
+
+	@if [ $(GOOS) = "windows" ]; then \
+		rm -rf etc/telegraf.conf \
+		cp -rf etc/telegraf_windows.conf etc/telegraf.conf; \
+	fi
 
 .PHONY: docs
 docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
@@ -333,10 +341,11 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: docs config $(include_packages)
+package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
+	@$(MAKE) config
 	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
 
 	@$(MAKE) install

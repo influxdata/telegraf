@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
+	"github.com/influxdata/telegraf/plugins/serializers/vngcloud_vmonitor"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
@@ -186,6 +187,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewPrometheusRemoteWriteSerializer(config), nil
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer(), nil
+	case "vngcloud_vmonitor":
+		serializer, err = NewVNGCloudvMonitorSerializer(config.TimestampUnits)
 	default:
 		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
@@ -333,4 +336,7 @@ func NewGraphiteSerializer(
 
 func NewMsgpackSerializer() Serializer {
 	return msgpack.NewSerializer()
+}
+func NewVNGCloudvMonitorSerializer(timestampUnits time.Duration) (Serializer, error) {
+	return vngcloud_vmonitor.NewSerializer(timestampUnits)
 }
