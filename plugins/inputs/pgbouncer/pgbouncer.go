@@ -105,7 +105,7 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string, ma
 	} else {
 		_, err := dbname.WriteString("postgres")
 		if err != nil {
-			return nil, nil, fmt.Errorf("writing database name failed: %w", err)
+			return nil, nil, fmt.Errorf("writing 'postgres' failed: %w", err)
 		}
 	}
 
