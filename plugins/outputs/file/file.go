@@ -27,9 +27,9 @@ type File struct {
 	UseBatchFormat       bool            `toml:"use_batch_format"`
 	CompressionAlgorithm string          `toml:"compression_algorithm"`
 	CompressionLevel     int             `toml:"compression_level"`
-	encoder              internal.ContentEncoder
 	Log                  telegraf.Logger `toml:"-"`
 
+	encoder    internal.ContentEncoder
 	writer     io.Writer
 	closers    []io.Closer
 	serializer serializers.Serializer
@@ -56,11 +56,8 @@ func (f *File) Init() error {
 	} else {
 		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
 	}
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (f *File) Connect() error {
