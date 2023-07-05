@@ -632,7 +632,6 @@ is tested on metrics after they have passed the `tagpass` test.
 > must be defined at the **end** of the plugin definition, otherwise subsequent
 > plugin config options will be interpreted as part of the tagpass/tagdrop
 > tables.
-
 > NOTE: When using the inline table syntax (e.g. `{...}`) the table must exist
 > in the main plugin definition and not in any sub-table (e.g.
 > `[[inputs.win_perf_counters.object]]`).
