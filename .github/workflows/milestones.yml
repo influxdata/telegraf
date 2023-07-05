@@ -18,7 +18,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           bugfix-labels: 'fix,chore,docs,dependencies'
           minor-labels: 'feat'
-          major-labels: 'breaking'
+          major-labels: 'breaking change'
           fallback: 'minor'
       - name: Show milestone
         run: echo "Assigned milestone is ${{ steps.assign-milestone.outputs.milestone }}"
