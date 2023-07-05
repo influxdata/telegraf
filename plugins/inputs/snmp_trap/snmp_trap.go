@@ -26,6 +26,18 @@ type translator interface {
 	lookup(oid string) (snmp.MibEntry, error)
 }
 
+type wrapLog struct {
+	telegraf.Logger
+}
+
+func (l wrapLog) Printf(format string, args ...interface{}) {
+	l.Debugf(format, args...)
+}
+
+func (l wrapLog) Print(args ...interface{}) {
+	l.Debug(args...)
+}
+
 type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
 	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
@@ -104,7 +116,12 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.acc = acc
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
-	s.listener.Params = gosnmp.Default
+
+	// gosnmp.Default is a pointer, using this more than once
+	// has side effects
+	defaults := *gosnmp.Default
+	s.listener.Params = &defaults
+	s.listener.Params.Logger = gosnmp.NewLogger(wrapLog{s.Log})
 
 	switch s.Version {
 	case "3":
