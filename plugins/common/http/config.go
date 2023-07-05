@@ -3,6 +3,7 @@ package httpconfig
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -22,7 +23,7 @@ type HTTPClientConfig struct {
 	IdleConnTimeout     config.Duration `toml:"idle_conn_timeout"`
 	MaxIdleConns        int             `toml:"max_idle_conn"`
 	MaxIdleConnsPerHost int             `toml:"max_idle_conn_per_host"`
-
+	UnixSocketPath      string          `toml:"unix_socket_path"`
 	proxy.HTTPProxy
 	tls.ClientConfig
 	oauthConfig.OAuth2Config
@@ -46,6 +47,14 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		IdleConnTimeout:     time.Duration(h.IdleConnTimeout),
 		MaxIdleConns:        h.MaxIdleConns,
 		MaxIdleConnsPerHost: h.MaxIdleConnsPerHost,
+	}
+
+	// If `h.UnixSocketPath` is set to a non-empty value, dial using unix-socket.
+	if h.UnixSocketPath != "" {
+		var d net.Dialer
+		transport.DialContext = func(ctx context.Context, _ string, _ string) (net.Conn, error) {
+			return d.DialContext(ctx, "unix", h.UnixSocketPath)
+		}
 	}
 
 	timeout := h.Timeout

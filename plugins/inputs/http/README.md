@@ -34,6 +34,9 @@ to use them.
     "http://localhost/metrics"
   ]
 
+  ## Connect over unix-socket
+  # unix_socket_path = ""
+
   ## HTTP method
   # method = "GET"
 
