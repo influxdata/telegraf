@@ -52,10 +52,8 @@ func (f *File) Init() error {
 	var options []internal.EncodingOption
 	if f.CompressionLevel >= 0 && f.CompressionAlgorithm != "" && f.CompressionAlgorithm != "identity" {
 		options = append(options, internal.WithCompressionLevel(f.CompressionLevel))
-		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, options...)
-	} else {
-		f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm)
 	}
+	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, options...)
 
 	return err
 }

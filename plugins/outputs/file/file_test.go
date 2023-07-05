@@ -159,7 +159,7 @@ func TestNewZstdCompressedFiles(t *testing.T) {
 		Files:                []string{fh1, fh2, fh3},
 		serializer:           s,
 		CompressionAlgorithm: "zstd",
-		CompressionLevel:     3,
+		CompressionLevel:     -1,
 	}
 
 	require.NoError(t, f.Init())
