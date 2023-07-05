@@ -101,9 +101,9 @@ require (
 	github.com/hashicorp/consul/api v1.20.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.5.0
+	github.com/influxdata/influxdb-observability/common v0.5.2
 	github.com/influxdata/influxdb-observability/influx2otel v0.5.0
-	github.com/influxdata/influxdb-observability/otel2influx v0.5.0
+	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20230705233630-3cfabd1d00b9
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
@@ -181,7 +181,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.5.4
 	go.mongodb.org/mongo-driver v1.11.2
-	go.opentelemetry.io/collector/pdata v1.0.0-rcv0012
+	go.opentelemetry.io/collector/pdata v1.0.0-rcv0013
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
 	go.opentelemetry.io/otel/sdk/metric v0.39.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
@@ -434,8 +434,8 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/collector/consumer v0.79.0 // indirect
-	go.opentelemetry.io/collector/semconv v0.79.0 // indirect
+	go.opentelemetry.io/collector/consumer v0.81.0 // indirect
+	go.opentelemetry.io/collector/semconv v0.81.0 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.39.0 // indirect
