@@ -94,7 +94,7 @@ require (
 	github.com/gophercloud/gophercloud v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/gosnmp/gosnmp v1.35.0
+	github.com/gosnmp/gosnmp v1.35.1-0.20230602062452-f30602b8dad6
 	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
 	github.com/gwos/tcg/sdk v0.0.0-20220621192633-df0eac0a1a4c
 	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
