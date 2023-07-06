@@ -67,6 +67,14 @@ to use them.
   ## Enable or disable uint support for writing uints influxdb 2.0.
   # influx_uint_support = false
 
+  ## HTTP/2 Timeouts
+  ## The following values control the HTTP/2 client's timeouts. These settings
+  ## are generally not required unless a user is seeing issues with client
+  ## disconnects. If a user does see issues, then it is suggested to set these
+  ## values to TODO for ping timeout and TODO for read idle timeout and retry.
+  # ping_timeout = "0s"
+  # read_idle_timeout = "0s"
+
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

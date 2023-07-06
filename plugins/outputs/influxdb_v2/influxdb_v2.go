@@ -46,6 +46,8 @@ type InfluxDB struct {
 	UserAgent        string            `toml:"user_agent"`
 	ContentEncoding  string            `toml:"content_encoding"`
 	UintSupport      bool              `toml:"influx_uint_support"`
+	PingTimeout      config.Duration   `toml:"ping_timeout"`
+	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -144,6 +146,8 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, erro
 		ContentEncoding:  i.ContentEncoding,
 		TLSConfig:        tlsConfig,
 		Serializer:       serializer,
+		PingTimeout:      i.PingTimeout,
+		ReadIdleTimeout:  i.ReadIdleTimeout,
 		Log:              i.Log,
 	}
 
