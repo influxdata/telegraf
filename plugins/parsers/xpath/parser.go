@@ -394,6 +394,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		if err != nil {
 			return nil, fmt.Errorf("failed to query field %q: %w", name, err)
 		}
+
+		if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+			if b, ok := v.([]byte); ok {
+				v = hex.EncodeToString(b)
+			}
+		}
+
 		fields[name] = v
 	}
 
