@@ -55,6 +55,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Enable to get the canonical path as field-name
   # canonical_field_names = false
 
+  ## Remove leading slashes and dots in field-name
+  # trim_field_names = false
+
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"

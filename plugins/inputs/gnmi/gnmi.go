@@ -57,6 +57,7 @@ type GNMI struct {
 	MaxMsgSize          config.Size       `toml:"max_msg_size"`
 	Trace               bool              `toml:"dump_responses"`
 	CanonicalFieldNames bool              `toml:"canonical_field_names"`
+	TrimFieldNames      bool              `toml:"trim_field_names"`
 	EnableTLS           bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
 	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
@@ -222,6 +223,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				tagStore:            newTagStore(c.TagSubscriptions),
 				trace:               c.Trace,
 				canonicalFieldNames: c.CanonicalFieldNames,
+				trimSlash:           c.TrimFieldNames,
 				log:                 c.Log,
 			}
 			for ctx.Err() == nil {

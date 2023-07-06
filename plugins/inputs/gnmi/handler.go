@@ -37,6 +37,7 @@ type handler struct {
 	tagStore            *tagStore
 	trace               bool
 	canonicalFieldNames bool
+	trimSlash           bool
 	log                 telegraf.Logger
 }
 
@@ -254,7 +255,9 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 					key = path.Base(key)
 				}
 			}
-			key = strings.TrimLeft(key, "/.")
+			if h.trimSlash {
+				key = strings.TrimLeft(key, "/.")
+			}
 			if key == "" {
 				h.log.Errorf("invalid empty path: %q", k)
 				continue
