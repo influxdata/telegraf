@@ -298,7 +298,7 @@ func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
 	switch cfg.level {
 	case 1:
 		level = zstd.SpeedFastest
-	case -1, 3:
+	case 3:
 		level = zstd.SpeedDefault
 	case 7:
 		level = zstd.SpeedBetterCompression

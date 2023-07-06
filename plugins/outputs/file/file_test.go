@@ -27,8 +27,9 @@ func TestFileExistingFile(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	f := File{
-		Files:      []string{fh.Name()},
-		serializer: s,
+		Files:            []string{fh.Name()},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
 	require.NoError(t, f.Init())
@@ -49,8 +50,9 @@ func TestFileNewFile(t *testing.T) {
 
 	fh := tmpFile(t)
 	f := File{
-		Files:      []string{fh},
-		serializer: s,
+		Files:            []string{fh},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
 	err := f.Init()
@@ -76,8 +78,9 @@ func TestFileExistingFiles(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	f := File{
-		Files:      []string{fh1.Name(), fh2.Name(), fh3.Name()},
-		serializer: s,
+		Files:            []string{fh1.Name(), fh2.Name(), fh3.Name()},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
 	err := f.Init()
@@ -182,8 +185,9 @@ func TestFileNewFiles(t *testing.T) {
 	fh2 := tmpFile(t)
 	fh3 := tmpFile(t)
 	f := File{
-		Files:      []string{fh1, fh2, fh3},
-		serializer: s,
+		Files:            []string{fh1, fh2, fh3},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
 	err := f.Init()
@@ -210,8 +214,9 @@ func TestFileBoth(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	f := File{
-		Files:      []string{fh1.Name(), fh2},
-		serializer: s,
+		Files:            []string{fh1.Name(), fh2},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
 	err := f.Init()
@@ -239,8 +244,9 @@ func TestFileStdout(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	f := File{
-		Files:      []string{"stdout"},
-		serializer: s,
+		Files:            []string{"stdout"},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
 	err := f.Init()

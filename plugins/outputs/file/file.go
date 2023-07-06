@@ -50,7 +50,11 @@ func (f *File) Init() error {
 	}
 
 	var options []internal.EncodingOption
-	if f.CompressionLevel >= 0 && f.CompressionAlgorithm != "" && f.CompressionAlgorithm != "identity" {
+	if f.CompressionAlgorithm == "" {
+		f.CompressionAlgorithm = "identity"
+	}
+
+	if f.CompressionLevel >= 0 {
 		options = append(options, internal.WithCompressionLevel(f.CompressionLevel))
 	}
 	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, options...)
@@ -59,7 +63,7 @@ func (f *File) Init() error {
 }
 
 func (f *File) Connect() error {
-	writers := []io.Writer{}
+	var writers []io.Writer
 
 	for _, file := range f.Files {
 		if file == "stdout" {
