@@ -312,7 +312,6 @@ func (k *KafkaConsumer) handleTicker(acc telegraf.Accumulator) {
 }
 
 func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumulator) {
-	k.Log.Debug("consumeTopics")
 	k.wg.Add(1)
 	defer k.wg.Done()
 	go func() {
@@ -321,8 +320,8 @@ func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumula
 			// We need to copy allWantedTopics; the Consume() is
 			// long-running and we can easily deadlock if our
 			// topic-update-checker fires.
-			topics := make([]string, len(k.allWantedTopics))
 			k.topicLock.Lock()
+			topics := make([]string, len(k.allWantedTopics))
 			copy(topics, k.allWantedTopics)
 			k.topicLock.Unlock()
 			err := k.consumer.Consume(ctx, topics, handler)
