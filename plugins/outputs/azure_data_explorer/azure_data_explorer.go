@@ -13,8 +13,7 @@ import (
 	"github.com/Azure/azure-kusto-go/kusto"
 	kustoerrors "github.com/Azure/azure-kusto-go/kusto/data/errors"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
-	"github.com/Azure/azure-kusto-go/kusto/unsafe"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/Azure/azure-kusto-go/kusto/kql"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -49,12 +48,6 @@ const (
 	maxBuffers = 5
 )
 
-const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", ` +
-	`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", ` +
-	`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
-	`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", ` +
-	`"Properties":{"Path":"$[\'timestamp\']"}}]'`
 const managedIngestion = "managed"
 const queuedIngestion = "queued"
 
@@ -64,15 +57,8 @@ func (*AzureDataExplorer) SampleConfig() string {
 
 // Initialize the client and the ingestor
 func (adx *AzureDataExplorer) Connect() error {
-	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(adx.Endpoint)
-	if err != nil {
-		return err
-	}
-	authorization := kusto.Authorization{
-		Authorizer: authorizer,
-	}
-	client, err := kusto.New(adx.Endpoint, authorization)
-
+	conn := kusto.NewConnectionStringBuilder(adx.Endpoint).WithDefaultAzureCredential()
+	client, err := kusto.New(conn)
 	if err != nil {
 		return err
 	}
@@ -174,7 +160,7 @@ func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.Fil
 	}
 
 	length := len(metricsArray)
-	adx.Log.Debugf("Writing %s metrics to table %q", length, tableName)
+	adx.Log.Debugf("Writing %d metrics to table %q", length, tableName)
 	reader := bytes.NewReader(metricsArray)
 	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", tableName), ingest.JSON)
 	if metricIngestor != nil {
@@ -209,14 +195,12 @@ func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, 
 		adx.Log.Info("skipped table creation")
 		return nil
 	}
-	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createStmt); err != nil {
+
+	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableCommand(tableName)); err != nil {
 		return err
 	}
 
-	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).
-		UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
+	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingCommand(tableName)); err != nil {
 		return err
 	}
 
@@ -279,4 +263,23 @@ func createIngestorByTable(client *kusto.Client, database string, tableName stri
 		return qi, err
 	}
 	return nil, fmt.Errorf(`ingestion_type has to be one of %q or %q`, managedIngestion, queuedIngestion)
+}
+
+func createTableCommand(table string) kusto.Statement {
+	builder := kql.New(`.create-merge table ['`).AddTable(table).AddLiteral(`'] `)
+	builder.AddLiteral(`(['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`)
+
+	return builder
+}
+
+func createTableMappingCommand(table string) kusto.Statement {
+	builder := kql.New(`.create-or-alter table ['`).AddTable(table).AddLiteral(`'] `)
+	builder.AddLiteral(`ingestion json mapping '`).AddTable(table + "_mapping").AddLiteral(`' `)
+	builder.AddLiteral(`'[{"column":"fields", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'timestamp\']"}}]'`)
+
+	return builder
 }
