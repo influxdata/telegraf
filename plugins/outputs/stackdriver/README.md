@@ -60,6 +60,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   * double: preferred datatype to allow queries by PromQL.
   # metric_data_type = "source"
 
+  ## Tags as resource labels
+  ## Tags defined in this option, when they exist, are added as a resource
+  ## label and not included as a metric label. The values from tags override
+  ## the values defined under the resource_labels config options.
+  # tags_as_resource_label = []
+
   ## Custom resource type
   # resource_type = "generic_node"
 

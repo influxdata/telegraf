@@ -27,14 +27,15 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project          string            `toml:"project"`
-	Namespace        string            `toml:"namespace"`
-	ResourceType     string            `toml:"resource_type"`
-	ResourceLabels   map[string]string `toml:"resource_labels"`
-	MetricTypePrefix string            `toml:"metric_type_prefix"`
-	MetricNameFormat string            `toml:"metric_name_format"`
-	MetricDataType   string            `toml:"metric_data_type"`
-	Log              telegraf.Logger   `toml:"-"`
+	Project              string            `toml:"project"`
+	Namespace            string            `toml:"namespace"`
+	ResourceType         string            `toml:"resource_type"`
+	ResourceLabels       map[string]string `toml:"resource_labels"`
+	MetricTypePrefix     string            `toml:"metric_type_prefix"`
+	MetricNameFormat     string            `toml:"metric_name_format"`
+	MetricDataType       string            `toml:"metric_data_type"`
+	TagsAsResourceLabels []string          `toml:"tags_as_resource_label"`
+	Log                  telegraf.Logger   `toml:"-"`
 
 	client       *monitoring.MetricClient
 	counterCache *counterCache
@@ -223,6 +224,16 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 				Value:    value,
 			}
 
+			// Convert any declared tag to a resource label and remove it from
+			// the metric
+			resourceLabels := s.ResourceLabels
+			for _, tag := range s.TagsAsResourceLabels {
+				if val, ok := m.GetTag(tag); ok {
+					resourceLabels[tag] = val
+					m.RemoveTag(tag)
+				}
+			}
+
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
@@ -232,7 +243,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 				MetricKind: metricKind,
 				Resource: &monitoredrespb.MonitoredResource{
 					Type:   s.ResourceType,
-					Labels: s.ResourceLabels,
+					Labels: resourceLabels,
 				},
 				Points: []*monitoringpb.Point{
 					dataPoint,
@@ -254,7 +265,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 					MetricKind: metricpb.MetricDescriptor_CUMULATIVE,
 					Resource: &monitoredrespb.MonitoredResource{
 						Type:   s.ResourceType,
-						Labels: s.ResourceLabels,
+						Labels: resourceLabels,
 					},
 					Points: []*monitoringpb.Point{
 						dataPoint,
