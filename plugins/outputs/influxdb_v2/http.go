@@ -129,10 +129,12 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 			Proxy:           proxy,
 			TLSClientConfig: cfg.TLSConfig,
 		}
-		http2Trans, err := http2.ConfigureTransports(transport)
-		if err == nil {
-			http2Trans.ReadIdleTimeout = time.Duration(cfg.ReadIdleTimeout)
-			http2Trans.PingTimeout = time.Duration(cfg.PingTimeout)
+		if cfg.ReadIdleTimeout != 0 || cfg.PingTimeout != 0 {
+			http2Trans, err := http2.ConfigureTransports(transport)
+			if err == nil {
+				http2Trans.ReadIdleTimeout = time.Duration(cfg.ReadIdleTimeout)
+				http2Trans.PingTimeout = time.Duration(cfg.PingTimeout)
+			}
 		}
 	case "unix":
 		transport = &http.Transport{
