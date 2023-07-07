@@ -33,6 +33,9 @@ type Lustre2 struct {
 	OstProcfiles []string `toml:"ost_procfiles"`
 	MdsProcfiles []string `toml:"mds_procfiles"`
 
+	// used by the testsuite to generate mock sysfs and procfs files
+	rootdir string
+
 	// allFields maps an OST name to the metric fields associated with that OST
 	allFields map[tags]map[string]interface{}
 }
@@ -377,7 +380,7 @@ func (*Lustre2) SampleConfig() string {
 }
 
 func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) error {
-	files, err := filepath.Glob(fileglob)
+	files, err := filepath.Glob(filepath.Join(l.rootdir, fileglob))
 	if err != nil {
 		return err
 	}

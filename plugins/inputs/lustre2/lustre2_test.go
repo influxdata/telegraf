@@ -174,7 +174,8 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
+	rootdir := tmpDir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre/"
 	ostName := "OST0001"
 
 	mdtdir := tempdir + "/mdt/"
@@ -199,10 +200,7 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Begin by testing standard Lustre stats
-	m := &Lustre2{
-		OstProcfiles: []string{obddir + "/*/stats", osddir + "/*/stats"},
-		MdsProcfiles: []string{mdtdir + "/*/md_stats"},
-	}
+	m := &Lustre2{rootdir: rootdir}
 
 	var acc testutil.Accumulator
 
@@ -247,7 +245,8 @@ func TestLustre2GeneratesClientMetrics(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
+	rootdir := tmpDir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre/"
 	ostName := "OST0001"
 	clientName := "10.2.4.27@o2ib1"
 	mdtdir := tempdir + "/mdt/"
@@ -311,7 +310,8 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
+	rootdir := tmpDir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre/"
 	ostName := "OST0001"
 	jobNames := []string{"cluster-testjob1", "testjob2"}
 
@@ -330,10 +330,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test Lustre Jobstats
-	m := &Lustre2{
-		OstProcfiles: []string{obddir + "/*/job_stats"},
-		MdsProcfiles: []string{mdtdir + "/*/job_stats"},
-	}
+	m := &Lustre2{rootdir: rootdir}
 
 	var acc testutil.Accumulator
 
