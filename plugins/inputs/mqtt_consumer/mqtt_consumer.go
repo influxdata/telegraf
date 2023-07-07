@@ -261,18 +261,11 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.messagesRecv.Incr(1)
 
 	metrics, err := m.parser.Parse(msg.Payload())
-	if err != nil {
+	if err != nil || len(metrics) == 0 {
 		if m.PersistentSession {
 			msg.Ack()
 		}
 		m.acc.AddError(err)
-		<-m.sem
-		return
-	}
-	if len(metrics) == 0 {
-		if m.PersistentSession {
-			msg.Ack()
-		}
 		<-m.sem
 		return
 	}
