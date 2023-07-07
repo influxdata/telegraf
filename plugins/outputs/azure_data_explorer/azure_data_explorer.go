@@ -48,12 +48,6 @@ const (
 	maxBuffers = 5
 )
 
-const createTableCommand = `.create-merge table ['TABLE']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create-or-alter table ['TABLE'] ingestion json mapping 'TABLEMAPPING' '[{"column":"fields", ` +
-	`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", ` +
-	`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
-	`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", ` +
-	`"Properties":{"Path":"$[\'timestamp\']"}}]'`
 const managedIngestion = "managed"
 const queuedIngestion = "queued"
 
@@ -166,7 +160,7 @@ func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.Fil
 	}
 
 	length := len(metricsArray)
-	adx.Log.Debugf("Writing %s metrics to table %q", length, tableName)
+	adx.Log.Debugf("Writing %d metrics to table %q", length, tableName)
 	reader := bytes.NewReader(metricsArray)
 	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", tableName), ingest.JSON)
 	if metricIngestor != nil {
@@ -202,17 +196,11 @@ func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, 
 		return nil
 	}
 
-	createStmt := kql.New(createTableCommand)
-	createParams := kusto.QueryParameters(kql.NewParameters().AddString("TABLE", tableName))
-	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createStmt, createParams); err != nil {
+	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableCommand(tableName)); err != nil {
 		return err
 	}
 
-	createTableMappingStmt := kql.New(createTableMappingCommand)
-	createTableMappingParams := kusto.QueryParameters(
-		kql.NewParameters().AddString("TABLE", tableName).AddString("TABLEMAPPING", tableName+"_mapping"),
-	)
-	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingStmt, createTableMappingParams); err != nil {
+	if _, err := adx.kustoClient.Mgmt(ctx, adx.Database, createTableMappingCommand(tableName)); err != nil {
 		return err
 	}
 
@@ -275,4 +263,23 @@ func createIngestorByTable(client *kusto.Client, database string, tableName stri
 		return qi, err
 	}
 	return nil, fmt.Errorf(`ingestion_type has to be one of %q or %q`, managedIngestion, queuedIngestion)
+}
+
+func createTableCommand(table string) kusto.Statement {
+	builder := kql.New(`.create-merge table ['`).AddTable(table).AddLiteral(`'] `)
+	builder.AddLiteral(`(['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`)
+
+	return builder
+}
+
+func createTableMappingCommand(table string) kusto.Statement {
+	builder := kql.New(`.create-or-alter table ['`).AddTable(table).AddLiteral(`'] `)
+	builder.AddLiteral(`ingestion json mapping '`).AddTable(table + "_mapping").AddLiteral(`' `)
+	builder.AddLiteral(`'[{"column":"fields", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'name\']"}},{"column":"tags", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", `)
+	builder.AddLiteral(`"Properties":{"Path":"$[\'timestamp\']"}}]'`)
+
+	return builder
 }
