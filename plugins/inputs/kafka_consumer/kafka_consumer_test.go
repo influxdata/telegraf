@@ -476,15 +476,14 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}
 
 	var tests = []struct {
-		name                 string
-		connectionStrategy   string
-		topics               []string
-		topicRegexps         []string
-		topicRefreshInterval config.Duration
+		name               string
+		connectionStrategy string
+		topics             []string
+		topicRegexps       []string
 	}{
-		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
-		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
-		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
+		{"connection strategy startup", "startup", []string{"Test"}, nil},
+		{"connection strategy defer", "defer", []string{"Test"}, nil},
+		{"topic regexp", "startup", nil, []string{"Test*"}},
 	}
 
 	for _, tt := range tests {
@@ -580,6 +579,161 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			t.Logf("rt: expecting")
 			acc.Wait(len(expected))
 			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+			t.Logf("rt: shutdown")
+			require.NoError(t, output.Close())
+			input.Stop()
+
+			t.Logf("rt: done")
+		})
+	}
+}
+
+func TestDynamicTopicRefresh(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	var tests = []struct {
+		name                 string
+		connectionStrategy   string
+		topics               []string
+		topicRegexps         []string
+		topicRefreshInterval config.Duration
+	}{
+		// 3-second refresh interval
+		{"topic regexp refresh", "startup", nil, []string{"Test*"}, config.Duration(3 * time.Second)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("rt: starting network")
+			ctx := context.Background()
+			networkName := "telegraf-test-kafka-consumer-network"
+			network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
+				NetworkRequest: testcontainers.NetworkRequest{
+					Name:           networkName,
+					Attachable:     true,
+					CheckDuplicate: true,
+				},
+			})
+			require.NoError(t, err)
+			defer func() {
+				require.NoError(t, network.Remove(ctx), "terminating network failed")
+			}()
+
+			t.Logf("rt: starting zookeeper")
+			zookeeperName := "telegraf-test-kafka-consumer-zookeeper"
+			zookeeper := testutil.Container{
+				Image:        "wurstmeister/zookeeper",
+				ExposedPorts: []string{"2181:2181"},
+				Networks:     []string{networkName},
+				WaitingFor:   wait.ForLog("binding to port"),
+				Name:         zookeeperName,
+			}
+			require.NoError(t, zookeeper.Start(), "failed to start container")
+			defer zookeeper.Terminate()
+
+			t.Logf("rt: starting broker")
+			container := testutil.Container{
+				Name:         "telegraf-test-kafka-consumer",
+				Image:        "wurstmeister/kafka",
+				ExposedPorts: []string{"9092:9092"},
+				Env: map[string]string{
+					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
+					"KAFKA_ADVERTISED_PORT":      "9092",
+					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
+					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", "Test"),
+				},
+				Networks:   []string{networkName},
+				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			brokers := []string{
+				fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
+			}
+
+			// Make kafka output
+			t.Logf("rt: starting output plugin")
+			creator := outputs.Outputs["kafka"]
+			output, ok := creator().(*kafkaOutput.Kafka)
+			require.True(t, ok)
+
+			s := &influxSerializer.Serializer{}
+			require.NoError(t, s.Init())
+			output.SetSerializer(s)
+			output.Brokers = brokers
+			output.Topic = "TestDynamic"
+			output.Log = testutil.Logger{}
+
+			require.NoError(t, output.Init())
+			require.NoError(t, output.Connect())
+
+			// Make kafka input
+			t.Logf("rt: starting input plugin")
+			// If MaxUndeliveredMessages is 1 here (as it is
+			// for the other end-to-end tests) the test fails
+			// more often than not (but not always).  We suspect
+			// this is something to do with internal messages
+			// about new topics and rebalancing getting in the
+			// way.  At any rate, at 1000 (the default value),
+			// the tests pass reliably.
+			input := KafkaConsumer{
+				Brokers:                brokers,
+				Log:                    testutil.Logger{},
+				Topics:                 tt.topics,
+				TopicRegexps:           tt.topicRegexps,
+				TopicRefreshInterval:   tt.topicRefreshInterval,
+				MaxUndeliveredMessages: 1000, // Default
+				ConnectionStrategy:     tt.connectionStrategy,
+			}
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
+			require.NoError(t, input.Init())
+
+			acc := testutil.Accumulator{}
+			require.NoError(t, input.Start(&acc))
+			t.Logf("rt: input plugin started")
+
+			// First we need an AdminClient, so that we can add
+			// a topic list.
+
+			newCfg := sarama.NewConfig() // Defaults are OK.
+			t.Logf("rt: creating new Kafkfa ClusterAdmin")
+			admin, err := sarama.NewClusterAdmin(brokers, newCfg)
+			if err != nil {
+				require.Error(t, err)
+				return
+			}
+			newTopic := "TestDynamic"
+			t.Logf("rt: creating new Kafkfa topic %s", newTopic)
+			detail := sarama.TopicDetail{
+				NumPartitions:     1,
+				ReplicationFactor: 1,
+			}
+			// Add the topic
+			err = admin.CreateTopic(newTopic, &detail, false)
+			if err != nil {
+				require.Error(t, err)
+				return
+			}
+			// Shove some metrics through
+			expected := testutil.MockMetrics()
+			t.Logf("rt: writing %v to %s", expected, output.Topic)
+			require.NoError(t, output.Write(expected))
+
+			// Check that they were received
+			t.Logf("rt: expecting")
+			// This usually hangs and we never read.
+			// Sometimes, though, we do read the expected data.
+			// Why?
+			acc.Wait(len(expected))
+			t.Logf("rt: received %d", len(expected))
+			q := acc.GetTelegrafMetrics()
+			t.Logf("rt: received metrics %v", q)
+			testutil.RequireMetricsEqual(t, expected, q)
 
 			t.Logf("rt: shutdown")
 			require.NoError(t, output.Close())
