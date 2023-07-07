@@ -63,7 +63,7 @@ func (*AzureDataExplorer) SampleConfig() string {
 
 // Initialize the client and the ingestor
 func (adx *AzureDataExplorer) Connect() error {
-	conn := kusto.NewConnectionStringBuilder(adx.Endpoint)
+	conn := kusto.NewConnectionStringBuilder(adx.Endpoint).WithDefaultAzureCredential()
 	client, err := kusto.New(conn)
 	if err != nil {
 		return err
