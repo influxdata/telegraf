@@ -128,7 +128,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
-	github.com/microsoft/go-mssqldb v1.3.0
+	github.com/microsoft/go-mssqldb v1.3.1-0.20230630170514-78ad89164253
 	github.com/miekg/dns v1.1.51
 	github.com/moby/ipvs v1.1.0
 	github.com/multiplay/go-ts3 v1.1.0
@@ -484,5 +484,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/microsoft/go-mssqldb v1.3.0 => github.com/powersj/go-mssqldb v1.3.0-fix2
