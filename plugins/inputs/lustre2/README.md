@@ -43,6 +43,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
+From `/sys/fs/lustre/health_check`:
+- lustre2
+  - tags:
+  - fields:
+    - health
+
 From `/proc/fs/lustre/obdfilter/*/stats` and
 `/proc/fs/lustre/osd-ldiskfs/*/stats`:
 

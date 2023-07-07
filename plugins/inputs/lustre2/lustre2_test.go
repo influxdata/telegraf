@@ -169,6 +169,36 @@ disk I/O size          ios   % cum % |  ios         % cum %
 1M:               43866371  99 100   | 850248  57 100
 `
 
+func TestLustre2GeneratesHealth(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	rootdir := tmpDir + "/telegraf"
+	sysdir := rootdir + "/sys/fs/lustre/"
+	err = os.MkdirAll(sysdir, 0750)
+	require.NoError(t, err)
+
+	err = os.WriteFile(sysdir+"health_check", []byte("healthy\n"), 0640)
+	require.NoError(t, err)
+
+	m := &Lustre2{rootdir: rootdir}
+
+	var acc testutil.Accumulator
+
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"lustre2",
+		map[string]interface{}{
+			"health": uint64(1),
+		},
+		map[string]string{},
+	)
+}
+
 func TestLustre2GeneratesMetrics(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "telegraf-lustre")
 	require.NoError(t, err)

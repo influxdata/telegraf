@@ -379,6 +379,39 @@ func (*Lustre2) SampleConfig() string {
 	return sampleConfig
 }
 
+func (l *Lustre2) GetLustreHealth() error {
+	filename := filepath.Join(l.rootdir, "/sys/fs/lustre/health_check")
+	if _, err := os.Stat(filename); err != nil {
+		// try falling back to the old procfs location
+		// it was moved in https://github.com/lustre/lustre-release/commit/5d368bd0b2
+		filename = filepath.Join(l.rootdir, "/proc/fs/lustre/health_check")
+		if _, err = os.Stat(filename); err != nil {
+			return nil
+		}
+	}
+	contents, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	value := strings.TrimSpace(string(contents))
+	var health uint64 = 0
+	if value == "healthy" {
+		health = 1
+	}
+
+	t := tags{}
+	var fields map[string]interface{}
+	fields, ok := l.allFields[t]
+	if !ok {
+		fields = make(map[string]interface{})
+		l.allFields[t] = fields
+	}
+
+	fields["health"] = health
+	return nil
+}
+
 func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) error {
 	files, err := filepath.Glob(filepath.Join(l.rootdir, fileglob))
 	if err != nil {
@@ -563,6 +596,11 @@ func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	l.allFields = make(map[tags]map[string]interface{})
 
+	err := l.GetLustreHealth()
+	if err != nil {
+		return err
+	}
+
 	if len(l.OstProcfiles) == 0 {
 		l.OstProcfiles = []string{
 			// read/write bytes are in obdfilter/<ost_name>/stats
@@ -625,8 +663,9 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for tgs, fields := range l.allFields {
-		tags := map[string]string{
-			"name": tgs.name,
+		tags := map[string]string{}
+		if len(tgs.name) > 0 {
+			tags["name"] = tgs.name
 		}
 		if len(tgs.brwSection) > 0 {
 			tags["brw_section"] = tgs.brwSection
