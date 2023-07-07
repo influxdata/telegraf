@@ -22,6 +22,7 @@ func TestWrite(t *testing.T) {
 
 	i := Instrumental{
 		Host:     "127.0.0.1",
+		Port:     "8887",
 		APIToken: config.NewSecret([]byte("abc123token")),
 		Prefix:   "my.prefix",
 	}
@@ -81,7 +82,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, err := net.Listen("tcp", "127.0.0.1:8000")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:8887")
 	require.NoError(t, err)
 
 	go func() {
