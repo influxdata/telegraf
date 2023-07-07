@@ -71,7 +71,11 @@ to use them.
   ## The following values control the HTTP/2 client's timeouts. These settings
   ## are generally not required unless a user is seeing issues with client
   ## disconnects. If a user does see issues, then it is suggested to set these
-  ## values to TODO for ping timeout and TODO for read idle timeout and retry.
+  ## values to "15s" for ping timeout and "30s" for read idle timeout and
+  ## retry.
+  ##
+  ## Note that the timer for read_idle_timeout begins at the end of the last
+  ## successful write and not at the beginning of the next write.
   # ping_timeout = "0s"
   # read_idle_timeout = "0s"
 
