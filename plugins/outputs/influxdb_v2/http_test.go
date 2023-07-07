@@ -214,7 +214,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		Host:   ts.Listener.Addr().String(),
 	}
 
-	config := &influxdb.HTTPConfig{
+	cfg := &influxdb.HTTPConfig{
 		URL:              addr,
 		Bucket:           "telegraf",
 		BucketTag:        "bucket",
@@ -222,7 +222,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		Log:              testutil.Logger{},
 	}
 
-	client, err := influxdb.NewHTTPClient(config)
+	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
 
 	// Together the metric batch size is too big, split up, we get success
