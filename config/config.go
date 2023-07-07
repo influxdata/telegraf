@@ -858,8 +858,8 @@ func removeComments(contents []byte) ([]byte, error) {
 func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
 	options := []template.Option{
 		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
-			result, err := template.DefaultReplacementFunc(s, m, cfg)
-			if err == nil && result == "" {
+			result, applied, err := template.DefaultReplacementAppliedFunc(s, m, cfg)
+			if err == nil && !applied {
 				// Keep undeclared environment-variable patterns to reproduce
 				// pre-v1.27 behavior
 				return s, nil
