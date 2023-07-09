@@ -160,9 +160,12 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 		}
 
 		log.Printf("D!   migrating plugin %q in line %d...", s.name, s.begin)
-		result, err := migrate(s.content)
+		result, msg, err := migrate(s.content)
 		if err != nil {
 			return nil, 0, fmt.Errorf("migrating %q (line %d) failed: %w", s.name, s.begin, err)
+		}
+		if msg != "" {
+			log.Printf("I! Plugin %q in line %d: %s", s.name, s.begin, msg)
 		}
 		s.raw = bytes.NewBuffer(result)
 		sections[idx] = s

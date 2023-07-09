@@ -1,0 +1,9 @@
+{
+    "a": 0.5,
+    "b": {
+        "c": "some text",
+        "d": 0.1,
+        "e": 5
+    },
+    "service": "service01"
+}

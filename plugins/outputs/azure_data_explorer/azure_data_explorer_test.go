@@ -303,6 +303,17 @@ func TestInitBlankEndpointData(t *testing.T) {
 	require.Equal(t, "endpoint configuration cannot be empty", errorInit.Error())
 }
 
+func TestQueryConstruction(t *testing.T) {
+	const tableName = "mytable"
+	const expectedCreate = `.create-merge table ['mytable'] (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+	const expectedMapping = `` +
+		`.create-or-alter table ['mytable'] ingestion json mapping 'mytable_mapping' '[{"column":"fields", ` +
+		`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
+		`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+	require.Equal(t, expectedCreate, createTableCommand(tableName).String())
+	require.Equal(t, expectedMapping, createTableMappingCommand(tableName).String())
+}
+
 type fakeIngestor struct {
 	actualOutputMetric map[string]interface{}
 }

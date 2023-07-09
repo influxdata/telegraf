@@ -1,0 +1,1 @@
+interfaces,name=eth42,path=openconfig-interfaces:/interfaces/interface,source=127.0.0.1 descr="eth42",id=42425u,in_pkts=5678u,out_pkts=5125u 1673608605875353770

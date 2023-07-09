@@ -619,9 +619,9 @@ is tested on metrics after they have passed the `namepass` test.
 - **tagpass**:
 A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
-patterns is emitted. This can either use the explicit table synax (e.g.
+patterns is emitted. This can either use the explicit table syntax (e.g.
 a subsection using a `[...]` header) or inline table syntax (e.g like
-a JSON table with `{...}`.
+a JSON table with `{...}`). Please see the below notes on specifying the table.
 
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
@@ -631,8 +631,10 @@ is tested on metrics after they have passed the `tagpass` test.
 > syntax (with `[...]`) for `tagpass` and `tagdrop` parameters, they
 > must be defined at the **end** of the plugin definition, otherwise subsequent
 > plugin config options will be interpreted as part of the tagpass/tagdrop
-> tables. This limitation does not apply when using the inline table
-> syntax (`{...}`).
+> tables.
+> NOTE: When using the inline table syntax (e.g. `{...}`) the table must exist
+> in the main plugin definition and not in any sub-table (e.g.
+> `[[inputs.win_perf_counters.object]]`).
 
 - **metricpass**:
 A ["Common Expression Language"][CEL] (CEL) expression with boolean result where
@@ -712,9 +714,10 @@ tags and the agent `host` tag.
       "Bytes Sent/sec"
     ]
     Measurement = "win_net"
-  # Don't send metrics where the Windows interface name (instance) begins with isatap or Local
-  # This illustrates the inline table syntax
-  tagdrop = {instance = ["isatap*", "Local*"]}
+  # Do not send metrics where the Windows interface name (instance) begins with
+  # 'isatap' or 'Local'
+  [inputs.win_perf_counters.tagdrop]
+    instance = ["isatap*", "Local*"]
 ```
 
 #### Using fieldpass and fielddrop

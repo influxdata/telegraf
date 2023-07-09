@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -57,7 +58,7 @@ func ImportConfigurations(files, dirs []string) (*selection, int, error) {
 	return sel, len(filenames), err
 }
 
-func (s *selection) Filter(p packageCollection) *packageCollection {
+func (s *selection) Filter(p packageCollection) (*packageCollection, error) {
 	enabled := packageCollection{
 		packages: map[string][]packageInfo{},
 	}
@@ -126,7 +127,30 @@ func (s *selection) Filter(p packageCollection) *packageCollection {
 		}
 	}
 
-	return &enabled
+	// Check if all packages in the config were covered
+	available := make(map[string]bool)
+	for category, pkgs := range p.packages {
+		for _, pkg := range pkgs {
+			available[category+"."+pkg.Plugin] = true
+		}
+	}
+
+	var unknown []string
+	for pkg := range s.plugins {
+		if !available[pkg] {
+			unknown = append(unknown, pkg)
+		}
+	}
+	for pkg := range implicitlyConfigured {
+		if !available[pkg] {
+			unknown = append(unknown, pkg)
+		}
+	}
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("configured but unknown packages %q", strings.Join(unknown, ","))
+	}
+
+	return &enabled, nil
 }
 
 func (s *selection) importFiles(configurations []string) error {

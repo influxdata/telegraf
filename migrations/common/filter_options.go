@@ -1,15 +1,15 @@
 package common
 
 type FilterOptions struct {
-	NamePass       []string            `toml:"namepass"`
-	NameDrop       []string            `toml:"namedrop"`
-	FieldPassOld   []string            `toml:"pass"`
-	FieldPass      []string            `toml:"fieldpass"`
-	FieldDropOld   []string            `toml:"drop"`
-	FieldDrop      []string            `toml:"fielddrop"`
-	TagPassFilters map[string][]string `toml:"tagpass"`
-	TagDropFilters map[string][]string `toml:"tagdrop"`
-	TagExclude     []string            `toml:"tagexclude"`
-	TagInclude     []string            `toml:"taginclude"`
-	MetricPass     string              `toml:"metricpass"`
+	NamePass       []string            `toml:"namepass,omitempty"`
+	NameDrop       []string            `toml:"namedrop,omitempty"`
+	FieldPassOld   []string            `toml:"pass,omitempty"`
+	FieldPass      []string            `toml:"fieldpass,omitempty"`
+	FieldDropOld   []string            `toml:"drop,omitempty"`
+	FieldDrop      []string            `toml:"fielddrop,omitempty"`
+	TagPassFilters map[string][]string `toml:"tagpass,omitempty"`
+	TagDropFilters map[string][]string `toml:"tagdrop,omitempty"`
+	TagExclude     []string            `toml:"tagexclude,omitempty"`
+	TagInclude     []string            `toml:"taginclude,omitempty"`
+	MetricPass     string              `toml:"metricpass,omitempty"`
 }
