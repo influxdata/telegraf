@@ -5,20 +5,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/secretstores"
 	"io"
 	"net/http"
-	"github.com/influxdata/telegraf/plugins/secretstores"
-	"github.com/influxdata/telegraf"
+	"net/url"
 )
 
 // JWTGenerator is a struct to handle JWT generation and storage for different users.
 type JWTGenerator struct {
-	ID        string   `toml:"id"`  // ID of the JWTGenerator
-	Dynamic   bool     `toml:"dynamic"`  // Flag to indicate if dynamic resolution is enabled
-	Users     []string `toml:"users"`  // List of users for which JWT tokens can be generated
-	Urls      []string `toml:"urls"`  // List of URLs where JWT tokens can be generated
-	Passwords []string `toml:"passwords"`  // List of passwords for the users
-	Tokens    map[string]string  // Store for JWT tokens indexed by user
+	ID        string            `toml:"id"`        // ID of the JWTGenerator
+	Dynamic   bool              `toml:"dynamic"`   // Flag to indicate if dynamic resolution is enabled
+	Users     []string          `toml:"users"`     // List of users for which JWT tokens can be generated
+	Urls      []string          `toml:"urls"`      // List of URLs where JWT tokens can be generated
+	Passwords []string          `toml:"passwords"` // List of passwords for the users
+	Tokens    map[string]string // Store for JWT tokens indexed by user
 }
 
 // Token is a struct to handle JWT access and refresh tokens.
@@ -44,7 +45,7 @@ func (j *JWTGenerator) Init() error {
 
 // SampleConfig returns a string with sample configuration for the JWTGenerator.
 func (j *JWTGenerator) SampleConfig() string {
-    return `
+	return `
     # Configuration for JWTGenerator
     # id = "jwt"
     # dynamic = false
@@ -99,28 +100,34 @@ func (j *JWTGenerator) GetResolver(key string) (telegraf.ResolveFunc, error) {
 }
 
 // getJWTToken generates and retrieves a JWT token for a specific user from a specific URL.
-func (j *JWTGenerator) getJWTToken(username, url, password string) (*Token, error) {
+func (j *JWTGenerator) getJWTToken(username, urlStr, password string) (*Token, error) {
+	// Validate URL
+	u, err := url.ParseRequestURI(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+
 	data := map[string]string{"username": username, "password": password}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error marshalling JSON: %w", err)
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData)) // Please ensure this URL is secure and trusted.
+	resp, err := http.Post(u.String(), "application/json", bytes.NewBuffer(jsonData)) // The provided URL should be secure and trusted.
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making POST request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, errors.New("error generating token: " + string(bodyBytes))
+		return nil, fmt.Errorf("error generating token: %s", string(bodyBytes))
 	}
 
 	var token Token
 	err = json.NewDecoder(resp.Body).Decode(&token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return &token, nil
