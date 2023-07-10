@@ -3,14 +3,16 @@ package tacacs
 import (
 	"context"
 	"net"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/nwaples/tacplus"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type testRequestHandler map[string]struct {
@@ -83,7 +85,7 @@ func TestTacacsLocal(t *testing.T) {
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`testpassword`)),
 		Secret:          config.NewSecret([]byte(`testsecret`)),
-		RemAddr:         "127.0.0.1",
+		RequestAddr:     "127.0.0.1",
 		ResponseTimeout: config.Duration(0),
 		Log:             testutil.Logger{},
 	}
@@ -97,30 +99,35 @@ func TestTacacsLocal(t *testing.T) {
 	require.Equal(t, true, acc.HasTag("tacacs", "source"))
 	require.Equal(t, "localhost:1049", acc.TagValue("tacacs", "source"))
 	require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
+	require.Equal(t, true, acc.HasTag("tacacs", "response_code"))
+	require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusPass), 10), acc.TagValue("tacacs", "response_code"))
 
 	plugin = &Tacacs{
 		Servers:         []string{"localhost:1049"},
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`WRONGPASSWORD`)),
 		Secret:          config.NewSecret([]byte(`testsecret`)),
-		RemAddr:         "127.0.0.1",
+		RequestAddr:     "127.0.0.1",
 		ResponseTimeout: config.Duration(time.Second * 5),
 		Log:             testutil.Logger{},
 	}
 	var acc2 testutil.Accumulator
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Gather(&acc2))
-	require.Len(t, acc2.Errors, 1)
-	require.ErrorContains(t, acc2.Errors[0], "second tacacs authentication continue password request to localhost:1049 : Unexpected response code 2")
-	require.Equal(t, false, acc2.HasTag("tacacs", "source"))
-	require.Equal(t, false, acc2.HasInt64Field("tacacs", "responsetime_ms"))
+	require.Len(t, acc2.Errors, 0)
+	require.Equal(t, true, acc2.HasTag("tacacs", "response_code"))
+	require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusFail), 10), acc2.TagValue("tacacs", "response_code"))
+	require.Equal(t, true, acc.HasTag("tacacs", "source"))
+	require.Equal(t, "localhost:1049", acc.TagValue("tacacs", "source"))
+	require.Equal(t, true, acc2.HasInt64Field("tacacs", "responsetime_ms"))
+	require.Equal(t, time.Duration(plugin.ResponseTimeout).Milliseconds(), acc2.Metrics[0].Fields["responsetime_ms"])
 
 	plugin = &Tacacs{
 		Servers:         []string{"localhost:1049"},
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`testpassword`)),
 		Secret:          config.NewSecret([]byte(`WRONGSECRET`)),
-		RemAddr:         "127.0.0.1",
+		RequestAddr:     "127.0.0.1",
 		ResponseTimeout: config.Duration(time.Second * 5),
 		Log:             testutil.Logger{},
 	}
@@ -137,7 +144,7 @@ func TestTacacsLocal(t *testing.T) {
 		Username:        config.NewSecret([]byte(`testusername`)),
 		Password:        config.NewSecret([]byte(`testpassword`)),
 		Secret:          config.NewSecret([]byte(`testsecret`)),
-		RemAddr:         "127.0.0.1",
+		RequestAddr:     "127.0.0.1",
 		ResponseTimeout: config.Duration(time.Nanosecond * 1),
 		Log:             testutil.Logger{},
 	}
@@ -208,7 +215,7 @@ func TestTacacsIntegration(t *testing.T) {
 				Username:        config.NewSecret([]byte(`iosadmin`)),
 				Password:        config.NewSecret([]byte(tt.usedPassword)),
 				Secret:          config.NewSecret([]byte(`ciscotacacskey`)),
-				RemAddr:         "127.0.0.1",
+				RequestAddr:     "127.0.0.1",
 				Log:             testutil.Logger{},
 			}
 			var acc testutil.Accumulator
@@ -236,8 +243,16 @@ func TestTacacsIntegration(t *testing.T) {
 				require.Len(t, acc.Errors, 1)
 			}
 
-			if tt.name == "unreachable" {
-				require.Equal(t, time.Duration(tt.testingTimeout).Milliseconds(), acc.Metrics[0].Fields["responsetime_ms"])
+			if tt.name == "wrong_pw" {
+				require.NoError(t, plugin.Init())
+				require.NoError(t, plugin.Gather(&acc))
+				require.Len(t, acc.Errors, 0)
+				require.Equal(t, true, acc.HasTag("tacacs", "response_code"))
+				require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusFail), 10), acc.TagValue("tacacs", "response_code"))
+				require.Equal(t, true, acc.HasTag("tacacs", "source"))
+				require.Equal(t, tt.serverToTest, acc.TagValue("tacacs", "source"))
+				require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
+				require.Equal(t, time.Duration(plugin.ResponseTimeout).Milliseconds(), acc.Metrics[0].Fields["responsetime_ms"])
 			}
 		})
 	}

@@ -1,6 +1,7 @@
 # Tacacs Input Plugin
 
-The Tacacs plugin collects successful tacacs authentication response times.
+The Tacacs plugin collects successful tacacs authentication response times
+from tacacs servers such as Aruba ClearPass, FreeRADIUS or tac_plus (TACACS+). 
 It is primarily meant to monitor how long it takes for the server to fully
 handle an auth request, including all potential dependent calls (for example
 to AD servers, or other sources of truth for auth the tacacs server uses).
@@ -38,6 +39,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - tacacs
   - tags:
+    - response_code
     - source
   - fields:
     - responsetime_ms (int64)
@@ -45,5 +47,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-tacacs,source=127.0.0.1:49 responsetime_ms=311i 1677526200000000000
+tacacs,response_code=1,source=127.0.0.1:49 responsetime_ms=311i 1677526200000000000
 ```

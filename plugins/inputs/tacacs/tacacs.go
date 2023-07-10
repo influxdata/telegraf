@@ -4,8 +4,10 @@ package tacacs
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -21,11 +23,11 @@ type Tacacs struct {
 	Username        config.Secret   `toml:"username"`
 	Password        config.Secret   `toml:"password"`
 	Secret          config.Secret   `toml:"secret"`
-	RemAddr         string          `toml:"request_ip"`
+	RequestAddr     string          `toml:"request_ip"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
 	clients         []tacplus.Client
-	testAuthStart   tacplus.AuthenStart
+	authStart       tacplus.AuthenStart
 }
 
 //go:embed sample.conf
@@ -39,23 +41,33 @@ func (t *Tacacs) Init() error {
 	if len(t.Servers) == 0 {
 		t.Servers = []string{"127.0.0.1:49"}
 	}
-	if net.ParseIP(t.RemAddr) == nil {
-		return fmt.Errorf("Invalid ip address provided for request_ip: %s", t.RemAddr)
+
+	if t.Username.Empty() || t.Password.Empty() || t.Secret.Empty() {
+		return errors.New("empty credentials were provided (username, password or secret)")
 	}
 
-	for index, serverValue := range t.Servers {
-		t.clients = append(t.clients, tacplus.Client{})
-		t.clients[index].Addr = serverValue
-		t.clients[index].ConnConfig = tacplus.ConnConfig{}
+	if t.RequestAddr == "" {
+		t.RequestAddr = "127.0.0.1"
+	}
+	if net.ParseIP(t.RequestAddr) == nil {
+		return fmt.Errorf("invalid ip address provided for request_ip: %s", t.RequestAddr)
 	}
 
-	t.testAuthStart = tacplus.AuthenStart{
+	t.clients = make([]tacplus.Client, 0, len(t.Servers))
+	for _, server := range t.Servers {
+		t.clients = append(t.clients, tacplus.Client{
+			Addr:       server,
+			ConnConfig: tacplus.ConnConfig{},
+		})
+	}
+
+	t.authStart = tacplus.AuthenStart{
 		Action:        tacplus.AuthenActionLogin,
 		AuthenType:    tacplus.AuthenTypeASCII,
 		AuthenService: tacplus.AuthenServiceLogin,
 		PrivLvl:       1,
 		Port:          "heartbeat",
-		RemAddr:       t.RemAddr,
+		RemAddr:       t.RequestAddr,
 	}
 
 	return nil
@@ -101,7 +113,6 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	defer config.ReleaseSecret(password)
 
-	// send the start request, the reply should be AuthenStatusGetUser
 	ctx := context.Background()
 	if t.ResponseTimeout > 0 {
 		var cancel context.CancelFunc
@@ -110,23 +121,27 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 
 	startTime := time.Now()
-	reply, session, err := client.SendAuthenStart(ctx, &t.testAuthStart)
+	reply, session, err := client.SendAuthenStart(ctx, &t.authStart)
 	if err != nil {
 		return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
 	}
 	defer session.Close()
-	// Check the returned status
 	if reply.Status != tacplus.AuthenStatusGetUser {
-		return fmt.Errorf("error on new tacacs authentication start request to %s : Unexpected response code %d", client.Addr, reply.Status)
+		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		acc.AddFields("tacacs", fields, tags)
+		return nil
 	}
 
-	// Send the first Continue request with the username, the reply should be AuthenStatusGetPass
 	reply, err = session.Continue(ctx, string(username))
 	if err != nil {
 		return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
 	}
 	if reply.Status != tacplus.AuthenStatusGetPass {
-		return fmt.Errorf("error on first tacacs authentication continue username request to %s : Unexpected response code %d", client.Addr, reply.Status)
+		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		acc.AddFields("tacacs", fields, tags)
+		return nil
 	}
 
 	reply, err = session.Continue(ctx, string(password))
@@ -135,16 +150,20 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	duration := time.Since(startTime)
 	if reply.Status != tacplus.AuthenStatusPass {
-		return fmt.Errorf("error on second tacacs authentication continue password request to %s : Unexpected response code %d", client.Addr, reply.Status)
+		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		acc.AddFields("tacacs", fields, tags)
+		return nil
 	}
 
 	fields["responsetime_ms"] = duration.Milliseconds()
+	tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
 	acc.AddFields("tacacs", fields, tags)
 	return nil
 }
 
 func init() {
 	inputs.Add("tacacs", func() telegraf.Input {
-		return &Tacacs{RemAddr: "127.0.0.1", ResponseTimeout: config.Duration(time.Second * 5)}
+		return &Tacacs{ResponseTimeout: config.Duration(time.Second * 5)}
 	})
 }
