@@ -18,11 +18,11 @@ import (
 func TestWrite(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	TCPServer(t, &wg)
+	port := TCPServer(t, &wg)
 
 	i := Instrumental{
 		Host:     "127.0.0.1",
-		Port:     "8887",
+		Port:     port,
 		APIToken: config.NewSecret([]byte("abc123token")),
 		Prefix:   "my.prefix",
 	}
@@ -81,7 +81,7 @@ func TestWrite(t *testing.T) {
 	wg.Wait()
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup) {
+func TCPServer(t *testing.T, wg *sync.WaitGroup) int {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:8887")
 	require.NoError(t, err)
 
@@ -133,4 +133,6 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 		err = conn.Close()
 		require.NoError(t, err)
 	}()
+
+	return tcpServer.Addr().(*net.TCPAddr).Port
 }
