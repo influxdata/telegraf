@@ -354,13 +354,14 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
-		if !reflect.DeepEqual(tags, p.Tags) {
+		if p.Measurement != measurement || !reflect.DeepEqual(tags, p.Tags) {
 			continue
 		}
 
-		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
-			return
+		if !reflect.DeepEqual(fields, p.Fields) {
+			assert.Fail(t, fmt.Sprintf("Measurement %q with tags %v has fields %v instead of %v", measurement, tags, p.Fields, fields))
 		}
+		return
 	}
 	// We've failed. spit out some debug logging
 	for _, p := range a.Metrics {
