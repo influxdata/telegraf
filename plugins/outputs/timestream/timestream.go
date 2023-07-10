@@ -38,6 +38,7 @@ type (
 		MeasureNameForMultiMeasureRecords string `toml:"measure_name_for_multi_measure_records"`
 
 		CreateTableIfNotExists                        bool              `toml:"create_table_if_not_exists"`
+		CreateTableCompositePartitionKey			  [][]string		`toml:"create_table_composite_partition_key"`
 		CreateTableMagneticStoreRetentionPeriodInDays int64             `toml:"create_table_magnetic_store_retention_period_in_days"`
 		CreateTableMemoryStoreRetentionPeriodInHours  int64             `toml:"create_table_memory_store_retention_period_in_hours"`
 		CreateTableTags                               map[string]string `toml:"create_table_tags"`
@@ -348,12 +349,20 @@ func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.Writ
 
 // createTable creates a Timestream table according to the configuration.
 func (t *Timestream) createTable(tableName *string) error {
+	compositePartitionKeyList, inputErr := t.getCompositePartitionKeyList()
+	if inputErr != nil {
+		return inputErr
+	}
+
 	createTableInput := &timestreamwrite.CreateTableInput{
 		DatabaseName: aws.String(t.DatabaseName),
 		TableName:    aws.String(*tableName),
 		RetentionProperties: &types.RetentionProperties{
 			MagneticStoreRetentionPeriodInDays: t.CreateTableMagneticStoreRetentionPeriodInDays,
 			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
+		},
+		Schema: &types.Schema{
+			CompositePartitionKey: compositePartitionKeyList,
 		},
 	}
 	tags := make([]types.Tag, 0, len(t.CreateTableTags))
@@ -375,6 +384,49 @@ func (t *Timestream) createTable(tableName *string) error {
 		return err
 	}
 	return nil
+}
+
+// Parse user input CreateTableCompositePartitionKey into Timestream partition key list
+// Dimension type partition key requires 3 string elements:
+//	1. "Dimension" to indicate its type
+//  2. User specified composite_partition_key_dimension_name
+//  3. Enforcement level can be "true" or "false"
+// Measure type partition key requires 1 string element:
+//  1. "Measure_name" to indicate its type
+func (t *Timestream) getCompositePartitionKeyList() ([]types.PartitionKey, error) {
+	compositePartitionKeyList := make([]types.PartitionKey, 0, len(t.CreateTableCompositePartitionKey))
+	if len(t.CreateTableCompositePartitionKey) > 0 {
+		for _, PartitionKey := range t.CreateTableCompositePartitionKey {
+			if len(PartitionKey) == 3 && PartitionKey[0] == "Dimension" {
+				var enforcementInRecord types.PartitionKeyEnforcementLevel
+				partitionKeyDimensionName := PartitionKey[1]
+				isEnforced := PartitionKey[2]
+				if isEnforced == "true" {
+					enforcementInRecord = types.PartitionKeyEnforcementLevelRequired
+				} else {
+					enforcementInRecord = types.PartitionKeyEnforcementLevelOptional
+				}
+				compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
+					Name:                aws.String(partitionKeyDimensionName),
+					EnforcementInRecord: enforcementInRecord,
+					Type:                types.PartitionKeyTypeDimension,
+				})
+			} else if len(PartitionKey) == 1 && PartitionKey[0] == "Measure_name" {
+				compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
+					Type:                types.PartitionKeyTypeMeasure,
+				})
+			} else {
+				return nil, fmt.Errorf("error parsing input for composite partition key %+q", PartitionKey)
+			}
+		}
+	}
+	if len(compositePartitionKeyList) == 0 {
+		t.Log.Info("no valid composite partition key provided, creating table with measure type partition key")
+		compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
+			Type:                types.PartitionKeyTypeMeasure,
+		})
+	}
+	return compositePartitionKeyList, nil
 }
 
 // TransformMetrics transforms a collection of Telegraf Metrics into write requests to Timestream.

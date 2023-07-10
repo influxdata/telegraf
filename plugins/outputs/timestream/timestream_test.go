@@ -221,6 +221,64 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	require.Contains(t, describeTableInvoked.Connect().Error(), "hello from DescribeDatabase")
 }
 
+func TestGetCompositePartitionKey(t *testing.T) {
+	compositePartitionKeyWithMeasure := [][]string {{"Measure_name"}}
+	compositePartitionKeyWithMeasurePlugin := Timestream{
+		DatabaseName: tsDbName,
+		MappingMode:  MappingModeMultiTable,
+		Log:          testutil.Logger{},
+		CreateTableCompositePartitionKey: compositePartitionKeyWithMeasure,
+	}
+	_, measureNoErr := compositePartitionKeyWithMeasurePlugin.getCompositePartitionKeyList()
+	require.NoError(t, measureNoErr)
+
+	compositePartitionKeyWithDimension := [][]string {{"Dimension", "pkDim1", "true"}}
+	compositePartitionKeyWithDimensionPlugin := Timestream{
+		DatabaseName: tsDbName,
+		MappingMode:  MappingModeMultiTable,
+		Log:          testutil.Logger{},
+		CreateTableCompositePartitionKey: compositePartitionKeyWithDimension,
+	}
+	_, dimensionNoErr := compositePartitionKeyWithDimensionPlugin.getCompositePartitionKeyList()
+	require.NoError(t, dimensionNoErr)
+
+	noCompositePartitionKey := [][]string {}
+	createTableWithNoCompositePartitionKeyPlugin := Timestream{
+		DatabaseName: tsDbName,
+		MappingMode:  MappingModeMultiTable,
+		Log:          testutil.Logger{},
+		CreateTableCompositePartitionKey: noCompositePartitionKey,
+	}
+	noPartitionKeyOutput, noPartitionKeyNoErr := createTableWithNoCompositePartitionKeyPlugin.getCompositePartitionKeyList()
+	compositePartitionKeyListWithMeasure := make([]types.PartitionKey, 0, 1)
+	compositePartitionKeyListWithMeasure = append(compositePartitionKeyListWithMeasure, types.PartitionKey{
+		Type: types.PartitionKeyTypeMeasure,
+	})
+	require.NoError(t, noPartitionKeyNoErr)
+	require.Equal(t, compositePartitionKeyListWithMeasure, noPartitionKeyOutput,
+		"If no partition key is specified we create table with measure partition key instead")
+
+	invalidTypeCompositePartitionKey := [][]string {{"invalid_type"}}
+	invalidTypeCompositePartitionKeyPlugin := Timestream{
+		DatabaseName: tsDbName,
+		MappingMode:  MappingModeMultiTable,
+		Log:          testutil.Logger{},
+		CreateTableCompositePartitionKey: invalidTypeCompositePartitionKey,
+	}
+	_, inValidTypeErr := invalidTypeCompositePartitionKeyPlugin.getCompositePartitionKeyList()
+	require.Contains(t, inValidTypeErr.Error(), "error parsing input for composite partition key")
+
+	missingFieldCompositePartitionKey := [][]string {{"Dimension", "pkDim1"}}
+	compositePartitionKeyMissingFieldPlugin := Timestream{
+		DatabaseName: tsDbName,
+		MappingMode:  MappingModeMultiTable,
+		Log:          testutil.Logger{},
+		CreateTableCompositePartitionKey: missingFieldCompositePartitionKey,
+	}
+	_, missingFieldErr := compositePartitionKeyMissingFieldPlugin.getCompositePartitionKeyList()
+	require.Contains(t, missingFieldErr.Error(), "error parsing input for composite partition key")
+}
+
 func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
