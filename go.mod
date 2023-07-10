@@ -55,7 +55,7 @@ require (
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.2.4
-	github.com/compose-spec/compose-go v1.15.0
+	github.com/compose-spec/compose-go v1.16.0
 	github.com/coocood/freecache v1.2.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
@@ -482,5 +482,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/compose-spec/compose-go => github.com/srebhan/compose-go v0.0.0-20230707065912-3e029310f734
