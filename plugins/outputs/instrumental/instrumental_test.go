@@ -82,7 +82,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) int {
-	tcpServer, err := net.Listen("tcp", "127.0.0.1:8887")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	go func() {
