@@ -24,6 +24,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 var (
 	// 30 Seconds is the default used by paho.mqtt.golang
 	defaultConnectionTimeout      = config.Duration(30 * time.Second)
@@ -262,6 +264,13 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil || len(metrics) == 0 {
+		if len(metrics) == 0 {
+			once.Do(func() {
+				const msg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
+				m.Log.Debug(msg)
+			})
+		}
+
 		if m.PersistentSession {
 			msg.Ack()
 		}
