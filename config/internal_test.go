@@ -56,6 +56,14 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			expected: "Env var VALUE is set, with VALUE syntax and default on this Substituted, no default on this VALUE2",
 		},
 		{
+			name: "empty but set",
+			setEnv: func(t *testing.T) {
+				t.Setenv("EMPTY", "")
+			},
+			contents: "Contains ${EMPTY} nothing",
+			expected: "Contains  nothing",
+		},
+		{
 			name:     "Default has special chars",
 			contents: `Not recommended but supported ${MY_VAR:-Default with special chars Supported#$\"}`,
 			expected: `Not recommended but supported Default with special chars Supported#$\"`, // values are escaped
@@ -181,12 +189,18 @@ func TestEnvironmentSubstitutionOldBehavior(t *testing.T) {
 			contents: `${1}`,
 			expected: `${1}`,
 		},
+		{
+			name:     "empty but set",
+			contents: "Contains ${EMPTY} nothing",
+			expected: "Contains  nothing",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("VAR", "foobar")
 			t.Setenv("FALLBACK", "default")
+			t.Setenv("EMPTY", "")
 			actual, err := substituteEnvironment([]byte(tt.contents), true)
 			require.NoError(t, err)
 			require.EqualValues(t, tt.expected, string(actual))
