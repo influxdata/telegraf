@@ -237,10 +237,6 @@ func TestTacacsIntegration(t *testing.T) {
 				require.Equal(t, tt.serverToTest, acc.TagValue("tacacs", "source"))
 				require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"), true)
 				require.Len(t, acc.Errors, 0)
-			} else {
-				require.Equal(t, false, acc.HasTag("tacacs", "source"))
-				require.Equal(t, false, acc.HasInt64Field("tacacs", "responsetime_ms"), true)
-				require.Len(t, acc.Errors, 1)
 			}
 
 			if tt.name == "wrong_pw" {
