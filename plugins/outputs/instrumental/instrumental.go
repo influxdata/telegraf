@@ -28,6 +28,7 @@ var (
 
 type Instrumental struct {
 	Host       string          `toml:"host"`
+	Port       int             `toml:"port"`
 	APIToken   config.Secret   `toml:"api_token"`
 	Prefix     string          `toml:"prefix"`
 	DataFormat string          `toml:"data_format"`
@@ -44,6 +45,7 @@ type Instrumental struct {
 
 const (
 	DefaultHost     = "collector.instrumentalapp.com"
+	DefaultPort     = 8000
 	HelloMessage    = "hello version go/telegraf/1.1\n"
 	AuthFormat      = "authenticate %s\n"
 	HandshakeFormat = HelloMessage + AuthFormat
@@ -70,7 +72,8 @@ func (i *Instrumental) Init() error {
 }
 
 func (i *Instrumental) Connect() error {
-	connection, err := net.DialTimeout("tcp", i.Host+":8000", time.Duration(i.Timeout))
+	addr := fmt.Sprintf("%s:%d", i.Host, i.Port)
+	connection, err := net.DialTimeout("tcp", addr, time.Duration(i.Timeout))
 
 	if err != nil {
 		i.conn = nil
@@ -203,6 +206,7 @@ func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
+			Port:     DefaultPort,
 			Template: graphite.DefaultTemplate,
 		}
 	})
