@@ -12,7 +12,7 @@ import (
 type UbloxDataCollector struct {
 	UbloxPTY string          `toml:"ublox_pty"`
 	Log      telegraf.Logger `toml:"-"`
-	posCh    chan *GPSPos
+	posCh    chan GPSPos
 	tdCh     chan int64
 	errCh    chan error
 }
@@ -30,7 +30,7 @@ func (*UbloxDataCollector) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (s *UbloxDataCollector) Init() error {
-	s.posCh = make(chan *GPSPos, 1)
+	s.posCh = make(chan GPSPos, 1)
 	s.tdCh = make(chan int64, 1)
 	s.errCh = make(chan error, 1)
 	go func() {
@@ -65,7 +65,7 @@ func (s *UbloxDataCollector) Init() error {
 			}
 
 			select {
-			case s.posCh <- pos:
+			case s.posCh <- *pos:
 			default:
 			}
 		}
