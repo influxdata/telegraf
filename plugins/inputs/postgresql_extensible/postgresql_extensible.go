@@ -186,6 +186,10 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		columnVars = append(columnVars, columnMap[columns[i]])
 	}
 
+	if tagAddress, err = p.SanitizedAddress(); err != nil {
+		return err
+	}
+
 	// deconstruct array of variables and send to Scan
 	if err = row.Scan(columnVars...); err != nil {
 		return err
@@ -199,18 +203,22 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 				return err
 			}
 		default:
-			if _, err := dbname.WriteString("postgres"); err != nil {
+			database, err := p.GetConnectDatabase(tagAddress)
+			if err != nil {
+				return err
+			}
+			if _, err := dbname.WriteString(database); err != nil {
 				return err
 			}
 		}
 	} else {
-		if _, err := dbname.WriteString("postgres"); err != nil {
+		database, err := p.GetConnectDatabase(tagAddress)
+		if err != nil {
 			return err
 		}
-	}
-
-	if tagAddress, err = p.SanitizedAddress(); err != nil {
-		return err
+		if _, err := dbname.WriteString(database); err != nil {
+			return err
+		}
 	}
 
 	// Process the additional tags
