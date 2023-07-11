@@ -48,6 +48,10 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	users, err := host.Users()
+	s.Log.Infof("Found %i number of users", len(users))
+	if err != nil {
+		s.Log.Errorf("Oops error, ", err.Error())
+	}
 	if err == nil {
 		fields["n_users"] = len(users)
 		fields["n_unique_users"] = findUniqueUsers(users)
