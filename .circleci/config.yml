@@ -66,6 +66,22 @@ commands:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
+      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - run: GOGC=20 /go/bin/golangci-lint run
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run: $HOME/go/bin/golangci-lint run
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: $HOME/go/bin/golangci-lint.exe run
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:

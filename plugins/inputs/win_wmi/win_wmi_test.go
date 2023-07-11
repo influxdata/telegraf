@@ -30,7 +30,7 @@ var testQuery = Query{
 //nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 var expectedWql = fmt.Sprintf(
 	`SELECT Name, FreeSpace, Purpose FROM Win32_Volume WHERE NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`,
-	regexp.QuoteMeta(sysDrive)
+	regexp.QuoteMeta(sysDrive),
 )
 
 // test buildWqlStatements
