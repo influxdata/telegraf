@@ -75,7 +75,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Specifies if the plugin should create the table, if the table does not exist.
   create_table_if_not_exists = true
-  
+
   ## Specifies if table should be created with composite partition key
   ## that determines how your data will be stored and distributed.
   ## create_table_composite_partition_key is an array of array with type string
