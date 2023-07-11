@@ -292,7 +292,7 @@ and store each field in a separate table row. In that case:
 
 You can organize data more efficiently obtaining significant query performance
 gains by specifying composite partition key when creating a new table.
-<https://docs.aws.amazon.com/timestream/latest/developerguide/customer-defined-partition-keys-using.html>
+[Developer Guide](https://docs.aws.amazon.com/timestream/latest/developerguide)
 
 To start, you need to specify this configuration with your desired input:
 
