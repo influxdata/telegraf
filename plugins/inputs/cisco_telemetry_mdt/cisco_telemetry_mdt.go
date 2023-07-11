@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -326,6 +327,8 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 			}
 			break
 		}
+
+		c.Log.Debugf("received packet: %s (errors: %s)", hex.EncodeToString(packet.Data), packet.Errors)
 
 		if len(packet.Data) == 0 && len(packet.Errors) != 0 {
 			c.acc.AddError(fmt.Errorf("GRPC dialout error: %s", packet.Errors))
