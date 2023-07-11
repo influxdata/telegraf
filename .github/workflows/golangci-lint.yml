@@ -16,14 +16,34 @@ permissions:
 jobs:
   golangci:
     name: lint-codebase
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360 #default
     steps:
-      - uses: actions/setup-go@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
           go-version: '1.20'
       - uses: actions/checkout@v3
       - name: golangci-lint
+        if: runner.os != 'Windows'
         uses: golangci/golangci-lint-action@v3
+        timeout-minutes: 60
         with:
           version: v1.53.2
-          args: --timeout 15m0s --verbose --out-${NO_FUTURE}format tab
+          args: --timeout 60m0s --verbose --out-${NO_FUTURE}format tab
+      - name: golangci-lint windows
+        if: runner.os == 'Windows'
+        uses: golangci/golangci-lint-action@v3
+        timeout-minutes: 60
+        env:
+          nofuture: out-format
+        with:
+          version: v1.53.2
+          args: --timeout 60m0s --verbose --%nofuture% tab
