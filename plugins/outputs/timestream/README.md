@@ -290,21 +290,22 @@ and store each field in a separate table row. In that case:
 
 ### Create Table With Composite Partition Key To Improve Query Performance
 
-You can organize data more efficiently obtaining significant query performance gains by specifying
-composite partition key when creating a new table.
+You can organize data more efficiently obtaining significant query performance
+gains by specifying composite partition key when creating a new table.
 [Using customer-defined partition keys](
 https://docs.aws.amazon.com/timestream/latest/developerguide/customer-defined-partition-keys-using.html)
 
 To start, you need to specify this configuration with your desired input:
 
-`create_table_composite_partition_key = [["Dimension", "composite_partition_key_dimension_name", "true"]]`
+`create_table_composite_partition_key =
+[["Dimension", "composite_partition_key_dimension_name", "true"]]`
 
-- `create_table_composite_partition_key` is an array of array that can contain either a partition key configuration 
+- `create_table_composite_partition_key` is an array of array that can contain either a partition key configuration
 with type dimension or type measure
   
   1. Dimension type partition key requires 3 elements:
       1. `"Dimension"` to indicate its type
-      2. Your composite_partition_key_dimension_name. We recommend using a dimension name that has high cardinality 
+      2. Your composite_partition_key_dimension_name. We recommend using a dimension name that has high cardinality
      for better query performance.
       3. Enforcement level can be `"true"` or `"false"`. If set to true dimension key must be specified
           during ingestion of new records or else they will be rejected. If set to false then records
