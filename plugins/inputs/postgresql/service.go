@@ -185,7 +185,7 @@ func (p *Service) GetConnectDatabase(connectionString string) (string, error) {
 	listMatch := databaseRegexp.FindStringSubmatch(connectionString)
 	if len(listMatch) > 1 {
 		return listMatch[1], nil
-	} else {
-		return "postgres", nil
 	}
+
+	return "postgres", nil
 }
