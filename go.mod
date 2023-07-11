@@ -146,7 +146,7 @@ require (
 	github.com/p4lang/p4runtime v1.3.0
 	github.com/pborman/ansi v1.0.0
 	github.com/pion/dtls/v2 v2.2.7
-	github.com/prometheus-community/pro-bing v0.2.0
+	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0
 	github.com/prometheus/common v0.44.0
