@@ -396,29 +396,27 @@ func (t *Timestream) createTable(tableName *string) error {
 //  1. "Measure_name" to indicate its type
 func (t *Timestream) getCompositePartitionKeyList() ([]types.PartitionKey, error) {
 	compositePartitionKeyList := make([]types.PartitionKey, 0, len(t.CreateTableCompositePartitionKey))
-	if len(t.CreateTableCompositePartitionKey) > 0 {
-		for _, PartitionKey := range t.CreateTableCompositePartitionKey {
-			if len(PartitionKey) == 3 && PartitionKey[0] == "Dimension" {
-				var enforcementInRecord types.PartitionKeyEnforcementLevel
-				partitionKeyDimensionName := PartitionKey[1]
-				isEnforced := PartitionKey[2]
-				if isEnforced == "true" {
-					enforcementInRecord = types.PartitionKeyEnforcementLevelRequired
-				} else {
-					enforcementInRecord = types.PartitionKeyEnforcementLevelOptional
-				}
-				compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
-					Name:                aws.String(partitionKeyDimensionName),
-					EnforcementInRecord: enforcementInRecord,
-					Type:                types.PartitionKeyTypeDimension,
-				})
-			} else if len(PartitionKey) == 1 && PartitionKey[0] == "Measure_name" {
-				compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
-					Type: types.PartitionKeyTypeMeasure,
-				})
+	for _, PartitionKey := range t.CreateTableCompositePartitionKey {
+		if len(PartitionKey) == 3 && PartitionKey[0] == "Dimension" {
+			var enforcementInRecord types.PartitionKeyEnforcementLevel
+			partitionKeyDimensionName := PartitionKey[1]
+			isEnforced := PartitionKey[2]
+			if isEnforced == "true" {
+				enforcementInRecord = types.PartitionKeyEnforcementLevelRequired
 			} else {
-				return nil, fmt.Errorf("error parsing input for composite partition key %+q", PartitionKey)
+				enforcementInRecord = types.PartitionKeyEnforcementLevelOptional
 			}
+			compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
+				Name:                aws.String(partitionKeyDimensionName),
+				EnforcementInRecord: enforcementInRecord,
+				Type:                types.PartitionKeyTypeDimension,
+			})
+		} else if len(PartitionKey) == 1 && PartitionKey[0] == "Measure_name" {
+			compositePartitionKeyList = append(compositePartitionKeyList, types.PartitionKey{
+				Type: types.PartitionKeyTypeMeasure,
+			})
+		} else {
+			return nil, fmt.Errorf("error parsing input for composite partition key %+q", PartitionKey)
 		}
 	}
 	if len(compositePartitionKeyList) == 0 {
