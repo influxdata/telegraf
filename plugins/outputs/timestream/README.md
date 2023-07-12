@@ -76,7 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Specifies if the plugin should create the table, if the table does not exist.
   create_table_if_not_exists = true
 
-  ## Specifies if table should be created with composite partition key
+  ## Specifies if the table should be created with composite partition key
   ## that determines how your data will be stored and distributed.
   ## create_table_composite_partition_key is an array of array with type string
   ## Dimension type partition key requires 3 elements:
@@ -92,7 +92,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   ## NOTES:
   ## You can't add or remove a partition key after the table has been created.
-  ## We currently only support using one partition key.
+  ## Timestream currently only support using one partition key.
   ##
   #  create_table_composite_partition_key = [["Dimension", "composite_partition_key_dimension_name", "true"]]
 
@@ -292,7 +292,7 @@ and store each field in a separate table row. In that case:
 
 You can organize data more efficiently obtaining significant query performance
 gains by specifying composite partition key when creating a new table.
-[Developer Guide](https://docs.aws.amazon.com/timestream/latest/developerguide)
+[Document](https://docs.aws.amazon.com/timestream/latest/developerguide/customer-defined-partition-keys)
 
 To start, you need to specify this configuration with your desired input:
 
@@ -300,23 +300,24 @@ To start, you need to specify this configuration with your desired input:
 [["Dimension", "composite_partition_key_dimension_name", "true"]]`
 
 - `create_table_composite_partition_key` is an array of array that can contain either a partition key configuration
-with type dimension or type measure
+with type dimension or type measure.
   
   1. Dimension type partition key requires 3 elements:
-      1. `"Dimension"` to indicate its type
-      2. Your composite_partition_key_dimension_name. We recommend using a dimension name that has high cardinality
-     for better query performance.
+      1. `"Dimension"` to indicate its type. Dimensions represent the metadata attributes 
+     of a time-series data point in a record.
+      2. Your composite_partition_key_dimension_name. Timestream recommend using a dimension name that has
+     high cardinality for better query performance.
       3. Enforcement level can be `"true"` or `"false"`. If set to true dimension key must be specified
           during ingestion of new records or else they will be rejected. If set to false then records
           without specifying the dimension key can still be ingested.
 
      Example: `["Dimension", "composite_partition_key_dimension_name", "true"]`
   2. Measure type partition key requires 1 element:
-      1. "Measure_name" to indicate its type
+      1. "Measure_name" to indicate its type. Measure name is the name of the measure being collected in a record.
   
       Example: `["Measure_name"]`
 
-- We currently support using one partition key.
+- Timestream currently support using one partition key.
 - You can't add or remove a partition key after the table has been created.
 
 ### References
