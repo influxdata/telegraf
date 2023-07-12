@@ -91,7 +91,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##    example: ["Measure_name"]
   ##
   ## NOTES:
-  ## You can't add or remove a partition key after the table has been created.
+  ## Users cannot add or remove a partition key after the table has been created.
   ## Timestream currently only support using one partition key.
   ##
   #  create_table_composite_partition_key = [["Dimension", "composite_partition_key_dimension_name", "true"]]
