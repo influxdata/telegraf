@@ -3,7 +3,6 @@ package influx
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
