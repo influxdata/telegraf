@@ -709,7 +709,7 @@ func TestParserInvalidTimestampPrecision(t *testing.T) {
 	for _, precision := range []string{"1h", "1d", "2s", "1m", "2ns"} {
 		require.NoError(t, d.UnmarshalText([]byte(precision)))
 		parser := Parser{InfluxTimestampPrecsion: d}
-		require.Error(t, parser.Init())
+		require.ErrorContains(t, parser.Init(), "invalid time precision")
 	}
 }
 
