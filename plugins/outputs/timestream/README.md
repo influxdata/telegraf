@@ -78,7 +78,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Specifies if the table should be created with composite partition key
   ## that determines how your data will be stored and distributed.
-  ## create_table_composite_partition_key is an array of array with type string
+  ## create_table_composite_partition_key is an array of arrays with type string
   ## Dimension type partition key requires 3 elements:
   ##    1. "Dimension" to indicate its type
   ##    2. Your composite_partition_key_dimension_name
