@@ -27,6 +27,7 @@ type Parser struct {
 	MetricName      string            `toml:"metric_name"`
 	SchemaRegistry  string            `toml:"avro_schema_registry"`
 	Schema          string            `toml:"avro_schema"`
+	Format          string            `toml:"avro_format"`
 	Measurement     string            `toml:"avro_measurement"`
 	Tags            []string          `toml:"avro_tags"`
 	Fields          []string          `toml:"avro_fields"`
@@ -40,6 +41,15 @@ type Parser struct {
 }
 
 func (p *Parser) Init() error {
+	switch p.Format {
+	case "":
+		p.Format = "binary"
+	case "binary", "json":
+		// Do nothing as those are valid settings
+	default:
+		return fmt.Errorf("unknown 'avro_format' %q", p.Format)
+	}
+
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
@@ -54,6 +64,7 @@ func (p *Parser) Init() error {
 	if p.SchemaRegistry != "" {
 		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
 	}
+
 	return nil
 }
 
@@ -93,7 +104,16 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 	}
-	native, _, err := codec.NativeFromBinary(message)
+
+	var native interface{}
+	switch p.Format {
+	case "binary":
+		native, _, err = codec.NativeFromBinary(message)
+	case "json":
+		native, _, err = codec.NativeFromTextual(message)
+	default:
+		return nil, fmt.Errorf("unknown format %q", p.Format)
+	}
 	if err != nil {
 		return nil, err
 	}
