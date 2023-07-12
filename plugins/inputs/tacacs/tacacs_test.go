@@ -310,7 +310,9 @@ func TestTacacsIntegration(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			if tt.expectSuccess {
-				require.Lenf(t, acc.Errors, 0, "error occurred in test where should be none, error was: %s", acc.Errors[0].Error())
+				if len(acc.Errors) > 0 {
+					t.Errorf("error occured in test where should be none, error was: %s", acc.Errors[0].Error())
+				}
 				if !acc.HasMeasurement("tacacs") {
 					t.Errorf("acc.HasMeasurement: expected tacacs")
 				}
