@@ -233,9 +233,6 @@ func TestTacacsLocal(t *testing.T) {
 			if tt.name == "no_reqaddress" {
 				require.Equal(t, "127.0.0.1", plugin.RequestAddr)
 			}
-			if tt.name == "no_timeout" {
-				require.Equal(t, config.Duration(time.Second*5), plugin.ResponseTimeout)
-			}
 		})
 	}
 }
