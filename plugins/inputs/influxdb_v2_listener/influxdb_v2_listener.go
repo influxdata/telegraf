@@ -272,7 +272,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			if precisionStr != "" {
 				precision := getPrecisionMultiplier(precisionStr)
 				if err = parser.SetTimePrecision(precision); err != nil {
-					h.Log.Debugf("Error setting precision of parser: %v", err.Error())
+					h.Log.Debugf("Error setting precision of parser: %v", err)
 					return
 				}
 			}
