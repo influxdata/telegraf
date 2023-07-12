@@ -55,8 +55,8 @@ func TestMakeMetricNoFields(t *testing.T) {
 		map[string]interface{}{},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
-	assert.Nil(t, m)
+	actual := ri.MakeMetric(m)
+	require.Nil(t, actual)
 }
 
 // nil fields should get dropped
@@ -74,7 +74,7 @@ func TestMakeMetricNilFields(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 
 	expected := metric.New("RITest",
 		map[string]string{},
@@ -84,7 +84,7 @@ func TestMakeMetricNilFields(t *testing.T) {
 		now,
 	)
 
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 func TestMakeMetricWithPluginTags(t *testing.T) {
@@ -103,7 +103,7 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 
 	expected := metric.New("RITest",
 		map[string]string{
@@ -114,7 +114,7 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 func TestMakeMetricFilteredOut(t *testing.T) {
@@ -136,8 +136,8 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
-	assert.Nil(t, m)
+	actual := ri.MakeMetric(m)
+	require.Nil(t, actual)
 }
 
 func TestMakeMetricWithDaemonTags(t *testing.T) {
@@ -156,7 +156,7 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 	expected := metric.New("RITest",
 		map[string]string{
 			"foo": "bar",
@@ -166,7 +166,7 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 func TestMakeMetricNameOverride(t *testing.T) {
@@ -183,7 +183,7 @@ func TestMakeMetricNameOverride(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 	expected := metric.New("foobar",
 		nil,
 		map[string]interface{}{
@@ -191,7 +191,7 @@ func TestMakeMetricNameOverride(t *testing.T) {
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 func TestMakeMetricNamePrefix(t *testing.T) {
@@ -208,7 +208,7 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 	expected := metric.New("foobar_RITest",
 		nil,
 		map[string]interface{}{
@@ -216,7 +216,7 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 func TestMakeMetricNameSuffix(t *testing.T) {
@@ -233,7 +233,7 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 	expected := metric.New("RITest_foobar",
 		nil,
 		map[string]interface{}{
@@ -241,7 +241,7 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 func TestMetricErrorCounters(t *testing.T) {
@@ -283,8 +283,8 @@ func TestMakeMetricWithAlwaysKeepingPluginTagsDisabled(t *testing.T) {
 		Filter: Filter{
 			TagInclude: []string{"b"},
 		},
-		AlwaysIncludeLocalTags: false,
 	})
+	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
 	require.NoError(t, ri.Config.Filter.Compile())
 
 	m := testutil.MustMetric("RITest",
@@ -296,7 +296,7 @@ func TestMakeMetricWithAlwaysKeepingPluginTagsDisabled(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 
 	expected := metric.New("RITest",
 		map[string]string{
@@ -307,7 +307,85 @@ func TestMakeMetricWithAlwaysKeepingPluginTagsDisabled(t *testing.T) {
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
+}
+
+func TestMakeMetricWithAlwaysKeepingLocalPluginTagsEnabled(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
+		},
+		Filter: Filter{
+			TagInclude: []string{"b"},
+		},
+		AlwaysIncludeLocalTags: true,
+	})
+	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
+	require.NoError(t, ri.Config.Filter.Compile())
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{
+			"b": "test",
+		},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now,
+		telegraf.Untyped)
+	actual := ri.MakeMetric(m)
+
+	expected := metric.New("RITest",
+		map[string]string{
+			"b":   "test",
+			"foo": "bar",
+		},
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
+	)
+	require.Equal(t, expected, actual)
+}
+
+func TestMakeMetricWithAlwaysKeepingGlobalPluginTagsEnabled(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
+		},
+		Filter: Filter{
+			TagInclude: []string{"b"},
+		},
+		AlwaysIncludeGlobalTags: true,
+	})
+	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
+	require.NoError(t, ri.Config.Filter.Compile())
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{
+			"b": "test",
+		},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now,
+		telegraf.Untyped)
+	actual := ri.MakeMetric(m)
+
+	expected := metric.New("RITest",
+		map[string]string{
+			"b":     "test",
+			"logic": "rulez",
+		},
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
+	)
+	require.Equal(t, expected, actual)
 }
 
 func TestMakeMetricWithAlwaysKeepingPluginTagsEnabled(t *testing.T) {
@@ -320,8 +398,10 @@ func TestMakeMetricWithAlwaysKeepingPluginTagsEnabled(t *testing.T) {
 		Filter: Filter{
 			TagInclude: []string{"b"},
 		},
-		AlwaysIncludeLocalTags: true,
+		AlwaysIncludeLocalTags:  true,
+		AlwaysIncludeGlobalTags: true,
 	})
+	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
 	require.NoError(t, ri.Config.Filter.Compile())
 
 	m := testutil.MustMetric("RITest",
@@ -333,19 +413,20 @@ func TestMakeMetricWithAlwaysKeepingPluginTagsEnabled(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	m = ri.MakeMetric(m)
+	actual := ri.MakeMetric(m)
 
 	expected := metric.New("RITest",
 		map[string]string{
-			"b":   "test",
-			"foo": "bar",
+			"b":     "test",
+			"foo":   "bar",
+			"logic": "rulez",
 		},
 		map[string]interface{}{
 			"value": 101,
 		},
 		now,
 	)
-	require.Equal(t, expected, m)
+	require.Equal(t, expected, actual)
 }
 
 type testInput struct{}

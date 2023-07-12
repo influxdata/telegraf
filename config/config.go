@@ -263,6 +263,10 @@ type AgentConfig struct {
 	// Flag to always keep tags explicitly defined in the plugin itself and
 	// ensure those tags always pass filtering.
 	AlwaysIncludeLocalTags bool `toml:"always_include_local_tags"`
+
+	// Flag to always keep tags explicitly defined in the global tags section
+	// and ensure those tags always pass filtering.
+	AlwaysIncludeGlobalTags bool `toml:"always_include_global_tags"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -1459,8 +1463,9 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 // models.InputConfig to be inserted into models.RunningInput
 func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp := &models.InputConfig{
-		Name:                   name,
-		AlwaysIncludeLocalTags: c.Agent.AlwaysIncludeLocalTags,
+		Name:                    name,
+		AlwaysIncludeLocalTags:  c.Agent.AlwaysIncludeLocalTags,
+		AlwaysIncludeGlobalTags: c.Agent.AlwaysIncludeGlobalTags,
 	}
 	c.getFieldDuration(tbl, "interval", &cp.Interval)
 	c.getFieldDuration(tbl, "precision", &cp.Precision)

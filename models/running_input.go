@@ -71,12 +71,13 @@ type InputConfig struct {
 	CollectionOffset time.Duration
 	Precision        time.Duration
 
-	NameOverride           string
-	MeasurementPrefix      string
-	MeasurementSuffix      string
-	Tags                   map[string]string
-	Filter                 Filter
-	AlwaysIncludeLocalTags bool
+	NameOverride            string
+	MeasurementPrefix       string
+	MeasurementSuffix       string
+	Tags                    map[string]string
+	Filter                  Filter
+	AlwaysIncludeLocalTags  bool
+	AlwaysIncludeGlobalTags bool
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
@@ -113,17 +114,12 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		return nil
 	}
 
-	tags := r.Config.Tags
-	if r.Config.AlwaysIncludeLocalTags {
-		tags = nil
-	}
-
-	m := makemetric(
+	makemetric(
 		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
-		tags,
+		r.Config.Tags,
 		r.defaultTags)
 
 	r.Config.Filter.Modify(metric)
@@ -132,18 +128,20 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		return nil
 	}
 
-	if r.Config.AlwaysIncludeLocalTags {
-		// Apply plugin tags after filtering
-		for k, v := range r.Config.Tags {
-			if _, ok := metric.GetTag(k); !ok {
-				metric.AddTag(k, v)
-			}
+	if r.Config.AlwaysIncludeLocalTags || r.Config.AlwaysIncludeGlobalTags {
+		var local, global map[string]string
+		if r.Config.AlwaysIncludeLocalTags {
+			local = r.Config.Tags
 		}
+		if r.Config.AlwaysIncludeGlobalTags {
+			global = r.defaultTags
+		}
+		makemetric(metric, "", "", "", local, global)
 	}
 
 	r.MetricsGathered.Incr(1)
 	GlobalMetricsGathered.Incr(1)
-	return m
+	return metric
 }
 
 func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
