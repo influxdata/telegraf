@@ -2,13 +2,21 @@ package template
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
+)
+
+var (
+	onceTagList   sync.Once
+	onceFieldList sync.Once
+	onceString    sync.Once
 )
 
 type TemplateMetric struct {
-	metric telegraf.Metric
+	metric telegraf.TemplateMetric
 }
 
 func (m *TemplateMetric) Name() string {
@@ -16,27 +24,63 @@ func (m *TemplateMetric) Name() string {
 }
 
 func (m *TemplateMetric) Tag(key string) string {
-	tagString, _ := m.metric.GetTag(key)
-	return tagString
+	return m.metric.Tag(key)
 }
 
 func (m *TemplateMetric) Field(key string) interface{} {
-	field, _ := m.metric.GetField(key)
-	return field
+	return m.metric.Field(key)
 }
 
 func (m *TemplateMetric) Time() time.Time {
 	return m.metric.Time()
 }
 
+func (m *TemplateMetric) Tags() map[string]string {
+	return m.metric.Tags()
+}
+
+func (m *TemplateMetric) Fields() map[string]interface{} {
+	return m.metric.Fields()
+}
+
 func (m *TemplateMetric) String() string {
+	onceString.Do(func() {
+		models.PrintOptionValueDeprecationNotice(
+			telegraf.Warn, "processors.template", "template", "{{.String}}",
+			telegraf.DeprecationInfo{
+				Since:     "1.28.0",
+				RemovalIn: "1.34.0",
+				Notice:    "avoid using this function",
+			},
+		)
+	})
 	return fmt.Sprint(m.metric)
 }
 
 func (m *TemplateMetric) TagList() map[string]string {
+	onceTagList.Do(func() {
+		models.PrintOptionValueDeprecationNotice(
+			telegraf.Warn, "processors.template", "template", "{{.TagList}}",
+			telegraf.DeprecationInfo{
+				Since:     "1.28.0",
+				RemovalIn: "1.34.0",
+				Notice:    "use '{{.Tags}}' instead",
+			},
+		)
+	})
 	return m.metric.Tags()
 }
 
 func (m *TemplateMetric) FieldList() map[string]interface{} {
+	onceFieldList.Do(func() {
+		models.PrintOptionValueDeprecationNotice(
+			telegraf.Warn, "processors.template", "template", "{{.FieldList}}",
+			telegraf.DeprecationInfo{
+				Since:     "1.28.0",
+				RemovalIn: "1.34.0",
+				Notice:    "use '{{.Fields}}' instead",
+			},
+		)
+	})
 	return m.metric.Fields()
 }

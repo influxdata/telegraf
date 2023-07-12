@@ -131,4 +131,7 @@ type TemplateMetric interface {
 	Name() string
 	Tag(key string) string
 	Field(key string) interface{}
+	Tags() map[string]string
+	Fields() map[string]interface{}
+	Time() time.Time
 }
