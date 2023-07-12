@@ -120,7 +120,7 @@ func TestWrite(t *testing.T) {
 			},
 		},
 		{
-			name:   "label with name 'name' is replaced with 'label_name'",
+			name:   "label with name 'name' is replaced with '_name'",
 			plugin: &NebiusCloudMonitoring{},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
