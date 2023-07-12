@@ -88,12 +88,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Sometimes it is usefull to pass all fields with their values into a single
 message for sending it to a monitoring system (e.g. Syslog, GroundWork), then
-you can use `.FieldList` or `.TagList`:
+you can use `.Fields` or `.Tags`:
 
 ```toml
 [[processors.template]]
   tag = "message"
-  template = 'Message about {{.Name}} fields: {{.FieldList}}'
+  template = 'Message about {{.Name}} fields: {{.Fields}}'
 ```
 
 ```diff
@@ -107,7 +107,7 @@ More advanced example, which might make more sense:
 [[processors.template]]
   tag = "message"
   template = '''Message about {{.Name}} fields:
-{{ range $field, $value := .FieldList -}}
+{{ range $field, $value := .Fields -}}
 {{$field}}:{{$value}}
 {{ end }}'''
 ```
