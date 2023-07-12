@@ -177,14 +177,13 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 
 // GetConnectDatabase utility function for getting the database to which the connection was made
 func (p *Service) GetConnectDatabase(connectionString string) (string, error) {
-	databaseRegexp, err := regexp.Compile(`dbname=(\w+)`)
+	connConfig, err := pgx.ParseConfig(connectionString)
 	if err != nil {
-		return "", fmt.Errorf("compiling a regular expression failed: %w", err)
+		return "", fmt.Errorf("connection string parsing failed: %w", err)
 	}
 
-	listMatch := databaseRegexp.FindStringSubmatch(connectionString)
-	if len(listMatch) > 1 {
-		return listMatch[1], nil
+	if len(connConfig.Database) != 0 {
+		return connConfig.Database, nil
 	}
 
 	return "postgres", nil
