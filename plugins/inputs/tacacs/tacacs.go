@@ -123,7 +123,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	startTime := time.Now()
 	reply, session, err := client.SendAuthenStart(ctx, &t.authStart)
 	if err != nil {
-		return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
+		}
+		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		tags["response_code"] = "timeout"
+		acc.AddFields("tacacs", fields, tags)
+		return nil
 	}
 	defer session.Close()
 	if reply.Status != tacplus.AuthenStatusGetUser {
@@ -135,7 +141,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 
 	reply, err = session.Continue(ctx, string(username))
 	if err != nil {
-		return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
+		}
+		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		tags["response_code"] = "timeout"
+		acc.AddFields("tacacs", fields, tags)
+		return nil
 	}
 	if reply.Status != tacplus.AuthenStatusGetPass {
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
@@ -146,7 +158,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 
 	reply, err = session.Continue(ctx, string(password))
 	if err != nil {
-		return fmt.Errorf("error on second tacacs authentication continue password request to %s : %w", client.Addr, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)
+		}
+		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		tags["response_code"] = "timeout"
+		acc.AddFields("tacacs", fields, tags)
+		return nil
 	}
 	duration := time.Since(startTime)
 	if reply.Status != tacplus.AuthenStatusPass {
