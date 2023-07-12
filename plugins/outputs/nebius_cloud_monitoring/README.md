@@ -79,7 +79,7 @@ will be replaced with:
 "active": "active",
 "host": "vm",
 "load": "loaded",
-"label_name": "accounts-daemon.service",
+"_name": "accounts-daemon.service",
 "sub": "running"
 },
 "ts": "2023-06-06T11:10:50Z",

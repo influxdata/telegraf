@@ -1,12 +1,10 @@
 package nebius_cloud_monitoring
 
 import (
-	_ "embed"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -141,7 +139,7 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
-				require.Equal(t, "accounts-daemon.service", message.Metrics[0].Labels["label_name"])
+				require.Equal(t, "accounts-daemon.service", message.Metrics[0].Labels["_name"])
 				require.Equal(t, float64(9226), message.Metrics[0].Value)
 				w.WriteHeader(http.StatusOK)
 			},
@@ -171,8 +169,8 @@ func Test_replaceReservedTagNames(t *testing.T) {
 		"other": "value",
 	}
 	wantTagMap := map[string]string{
-		"label_name": "value",
-		"other":      "value",
+		"_name": "value",
+		"other": "value",
 	}
 
 	type args struct {
@@ -195,7 +193,7 @@ func Test_replaceReservedTagNames(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := replaceReservedTagNames(tt.args.tagNames)
-			require.EqualValues(tt, tt.want, tt.got)
+			require.EqualValues(t, tt.want, got)
 		})
 	}
 }
