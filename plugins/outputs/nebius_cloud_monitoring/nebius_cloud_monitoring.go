@@ -244,11 +244,14 @@ func init() {
 }
 
 func replaceReservedTagNames(tagNames map[string]string) map[string]string {
+	newTags := make(map[string]string)
 	for tagName, tagValue := range tagNames {
+		newTags[tagName] = tagValue
 		if tagName == "name" {
-			tagNames["label_name"] = tagValue
-			delete(tagNames, "name")
+			newTags["label_name"] = tagValue
+		} else {
+			newTags[tagName] = tagValue
 		}
 	}
-	return tagNames
+	return newTags
 }
