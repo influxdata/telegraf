@@ -230,6 +230,25 @@ func TestTags(t *testing.T) {
 	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
 }
 
+func TestString(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{
+		Tag:      "tags",
+		Template: "{{.}}",
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("tags", "test1 map[tag1:value1] map[value:1.23] 1257894000000000000")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}
+
 func TestDot(t *testing.T) {
 	// Prepare
 	plugin := TemplateProcessor{Tag: "metric", Template: "{{.}}"}

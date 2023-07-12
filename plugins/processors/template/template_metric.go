@@ -1,7 +1,6 @@
 package template
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 var (
 	onceTagList   sync.Once
 	onceFieldList sync.Once
-	onceString    sync.Once
 )
 
 type TemplateMetric struct {
@@ -44,17 +42,7 @@ func (m *TemplateMetric) Fields() map[string]interface{} {
 }
 
 func (m *TemplateMetric) String() string {
-	onceString.Do(func() {
-		models.PrintOptionValueDeprecationNotice(
-			telegraf.Warn, "processors.template", "template", "{{.String}}",
-			telegraf.DeprecationInfo{
-				Since:     "1.28.0",
-				RemovalIn: "1.34.0",
-				Notice:    "avoid using this function",
-			},
-		)
-	})
-	return fmt.Sprint(m.metric)
+	return m.metric.String()
 }
 
 func (m *TemplateMetric) TagList() map[string]string {
