@@ -299,11 +299,11 @@ To start, you need to specify this configuration with your desired input:
 `create_table_composite_partition_key =
 [["Dimension", "composite_partition_key_dimension_name", "true"]]`
 
-- `create_table_composite_partition_key` is an array of array that can contain either a partition key configuration
+- `create_table_composite_partition_key` is an array of arrays that can contain either a partition key configuration
 with type dimension or type measure.
   
   1. Dimension type partition key requires 3 elements:
-      1. `"Dimension"` to indicate its type. Dimensions represent the metadata attributes 
+      1. `"Dimension"` to indicate its type. Dimensions represent the metadata attributes
      of a time-series data point in a record.
       2. Your composite_partition_key_dimension_name. Timestream recommend using a dimension name that has
      high cardinality for better query performance.
