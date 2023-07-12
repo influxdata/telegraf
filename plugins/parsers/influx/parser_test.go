@@ -697,8 +697,6 @@ func TestParserTimestampPrecision(t *testing.T) {
 			metrics, err := parser.Parse(tt.input)
 			require.NoError(t, err)
 
-			fmt.Println(metrics[0])
-			require.Equal(t, len(tt.metrics), len(metrics))
 			require.Equal(t, tt.metrics, metrics)
 		})
 	}
