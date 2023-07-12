@@ -40,13 +40,11 @@ This internal metadata endpoint is only accessible for VMs from the cloud.
 Nebius Monitoring backend using json format to receive the metrics:
 
 ```json
-
-```json
 {
 "name": "metric_name",
 "labels": {
 "key": "value",
-...
+"foo": "bar"
 },
 "ts": "2023-06-06T11:10:50Z",
 "value": 0
