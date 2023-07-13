@@ -43,7 +43,6 @@ type KafkaConsumer struct {
 	BalanceStrategy        string          `toml:"balance_strategy"`
 	Topics                 []string        `toml:"topics"`
 	TopicRegexps           []string        `toml:"topic_regexps"`
-	TopicRefreshInterval   config.Duration `toml:"topic_refresh_interval"`
 	TopicTag               string          `toml:"topic_tag"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy     string          `toml:"connection_strategy"`
@@ -66,7 +65,6 @@ type KafkaConsumer struct {
 
 	parser    telegraf.Parser
 	topicLock sync.Mutex
-	groupLock sync.Mutex
 	wg        sync.WaitGroup
 	cancel    context.CancelFunc
 }
@@ -169,14 +167,14 @@ func (k *KafkaConsumer) Init() error {
 		}
 		k.topicClient = client
 	}
+
 	return nil
 }
 
 func (k *KafkaConsumer) compileTopicRegexps() error {
 	// While we can add new topics matching extant regexps, we can't
 	// update that list on the fly.  We compile them once at startup.
-	// Changing them is a configuration change and requires us to cancel
-	// and relaunch our ConsumerGroup.
+	// Changing them is a configuration change and requires a restart.
 
 	k.regexps = make([]regexp.Regexp, 0, len(k.TopicRegexps))
 	for _, r := range k.TopicRegexps {
@@ -189,32 +187,22 @@ func (k *KafkaConsumer) compileTopicRegexps() error {
 	return nil
 }
 
-func (k *KafkaConsumer) changedTopics() (bool, error) {
-	// We have instantiated a generic Kafka client, so we can ask
+func (k *KafkaConsumer) refreshTopics() error {
+	// We have instantiated a new generic Kafka client, so we can ask
 	// it for all the topics it knows about.  Then we build
 	// regexps from our strings, loop over those, loop over the
 	// topics, and if we find a match, add that topic to
 	// out topic set, which then we turn back into a list at the end.
-	//
-	// If our topics changed, we return true, to indicate that the
-	// consumer will need a restart in order to pick up the new
-	// topics.
 
 	if len(k.regexps) == 0 {
-		return false, nil
+		return nil
 	}
 
-	// Refresh metadata for all topics.
-	err := k.topicClient.RefreshMetadata()
-	if err != nil {
-		return false, err
-	}
 	allDiscoveredTopics, err := k.topicClient.Topics()
 	if err != nil {
-		return false, err
+		return err
 	}
-	sort.Strings(allDiscoveredTopics)
-	k.Log.Debugf("discovered %d topics in total", len(allDiscoveredTopics))
+	k.Log.Debugf("discovered topics: %v", allDiscoveredTopics)
 
 	extantTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range allDiscoveredTopics {
@@ -232,6 +220,7 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 	wantedTopicSet := make(map[string]bool, len(allDiscoveredTopics))
 	for _, t := range k.Topics {
 		// Get our pre-specified topics
+		k.Log.Debugf("adding literally-specified topic %s", t)
 		wantedTopicSet[t] = true
 	}
 	for _, t := range allDiscoveredTopics {
@@ -239,6 +228,7 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 		for _, r := range k.regexps {
 			if r.MatchString(t) {
 				wantedTopicSet[t] = true
+				k.Log.Debugf("adding regexp-matched topic %q", t)
 				break
 			}
 		}
@@ -249,17 +239,14 @@ func (k *KafkaConsumer) changedTopics() (bool, error) {
 	}
 	sort.Strings(topicList)
 	fingerprint := strings.Join(topicList, ";")
-	k.Log.Debugf("Regular expression list %q matched %d topics", k.TopicRegexps, len(topicList))
 	if fingerprint != k.fingerprint {
 		k.Log.Infof("updating topics: replacing %q with %q", k.allWantedTopics, topicList)
-		k.topicLock.Lock()
-		k.fingerprint = fingerprint
-		k.allWantedTopics = topicList
-		k.topicLock.Unlock()
-		return true, nil
 	}
-	k.Log.Debugf("topic list unchanged on refresh")
-	return false, nil
+	k.topicLock.Lock()
+	k.fingerprint = fingerprint
+	k.allWantedTopics = topicList
+	k.topicLock.Unlock()
+	return nil
 }
 
 func (k *KafkaConsumer) create() error {
@@ -283,138 +270,13 @@ func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
 	}()
 }
 
-func (k *KafkaConsumer) getNewHandler(acc telegraf.Accumulator) *ConsumerGroupHandler {
-	handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
-	handler.MaxMessageLen = k.MaxMessageLen
-	handler.TopicTag = k.TopicTag
-	return handler
-}
-
-func (k *KafkaConsumer) handleTicker(acc telegraf.Accumulator) {
-	dstr := time.Duration(k.TopicRefreshInterval).String()
-	k.Log.Infof("starting refresh ticker: scanning topics every %s", dstr)
-	for {
-		<-k.ticker.C
-		k.Log.Debugf("received topic refresh request (every %s)", dstr)
-		changed, err := k.changedTopics()
-		if err != nil {
-			acc.AddError(err)
-			return
-		}
-		if changed {
-			err = k.restartConsumer(acc)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-		}
-	}
-}
-
-func (k *KafkaConsumer) consumeTopics(ctx context.Context, acc telegraf.Accumulator) {
-	k.wg.Add(1)
-	defer k.wg.Done()
-	go func() {
-		for ctx.Err() == nil {
-			handler := k.getNewHandler(acc)
-			// We need to copy allWantedTopics; the Consume() is
-			// long-running and we can easily deadlock if our
-			// topic-update-checker fires.
-			k.topicLock.Lock()
-			topics := make([]string, len(k.allWantedTopics))
-			copy(topics, k.allWantedTopics)
-			k.topicLock.Unlock()
-			err := k.consumer.Consume(ctx, topics, handler)
-			if err != nil {
-				acc.AddError(fmt.Errorf("consume: %w", err))
-				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
-			}
-		}
-		err := k.consumer.Close()
-		if err != nil {
-			acc.AddError(fmt.Errorf("close: %w", err))
-		}
-	}()
-}
-
-func (k *KafkaConsumer) restartConsumer(acc telegraf.Accumulator) error {
-	// This is tricky.  As soon as we call k.cancel() the old
-	// consumer group is no longer usable, so we need to get
-	// a new group and context ready and then pull a switcheroo
-	// quickly.
-	//
-	// Up to 100Hz, at least, we do not lose messages on consumer group
-	// restart.  Since the group name is the same, it seems very likely
-	// that we just pick up at the offset we left off at: that is the
-	// producer does not see this as a new consumer, but as an old one
-	// that's just missed a couple beats.
-	if k.consumer == nil {
-		// Fast exit if the consumer isn't running
-		return nil
-	}
-	k.Log.Info("restarting consumer group")
-	k.Log.Debug("creating new consumer group")
-	newConsumer, err := k.ConsumerCreator.Create(
-		k.Brokers,
-		k.ConsumerGroup,
-		k.config,
-	)
-	if err != nil {
-		acc.AddError(err)
-		return err
-	}
-	k.Log.Debug("acquiring new context before swapping consumer groups")
-	ctx, cancel := context.WithCancel(context.Background())
-	// I am not sure we really need this lock, but if it hurts we're
-	// already refreshing way too frequently.
-	k.groupLock.Lock()
-	// Do the switcheroo.
-	k.Log.Debug("replacing consumer group")
-	oldConsumer := k.consumer
-	k.consumer = newConsumer
-	k.cancel = cancel
-	// Do this in the background
-	go func() {
-		k.Log.Debug("closing old consumer group")
-		err = oldConsumer.Close()
-		if err != nil {
-			acc.AddError(err)
-			return
-		}
-	}()
-	k.groupLock.Unlock()
-	k.Log.Debug("starting new consumer group")
-	k.consumeTopics(ctx, acc)
-	k.Log.Info("restarted consumer group")
-	return nil
-}
-
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	var err error
 
-	k.Log.Debugf("TopicRegexps: %v", k.TopicRegexps)
-	k.Log.Debugf("TopicRefreshInterval: %v", k.TopicRefreshInterval)
-
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
-		if _, err = k.changedTopics(); err != nil {
-			// We're starting, so we expect the list to change;
-			// all we care about is whether we got an error
-			// acquiring our topics.
+		if err := k.refreshTopics(); err != nil {
 			return err
-		}
-		// If refresh interval is specified, start a goroutine
-		// to refresh topics periodically.  This only makes sense if
-		// TopicRegexps is set.
-		if k.TopicRefreshInterval > 0 {
-			k.ticker = time.NewTicker(time.Duration(k.TopicRefreshInterval))
-			// Note that there's no waitgroup here.  That's because
-			// handleTicker does care whether topics have changed,
-			// and if they have, it will invoke restartConsumer(),
-			// which tells the current consumer to stop.  That stop
-			// cancels goroutines in the waitgroup, and therefore
-			// the restart goroutine must not be in the waitgroup.
-			go k.handleTicker(acc)
 		}
 	}
 
@@ -429,16 +291,44 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		k.startErrorAdder(acc)
 	}
 
-	if k.consumer == nil {
-		err = k.create()
-		if err != nil {
-			acc.AddError(fmt.Errorf("create consumer async: %w", err))
-			return err
-		}
-	}
+	// Start consumer goroutine
+	k.wg.Add(1)
+	go func() {
+		var err error
+		defer k.wg.Done()
 
-	k.startErrorAdder(acc)
-	k.consumeTopics(ctx, acc) // Starts goroutine internally
+		if k.consumer == nil {
+			err = k.create()
+			if err != nil {
+				acc.AddError(fmt.Errorf("create consumer async: %w", err))
+				return
+			}
+		}
+
+		k.startErrorAdder(acc)
+
+		for ctx.Err() == nil {
+			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
+			handler.MaxMessageLen = k.MaxMessageLen
+			handler.TopicTag = k.TopicTag
+			// We need to copy allWantedTopics; the Consume() is
+			// long-running and we can easily deadlock if our
+			// topic-update-checker fires.
+			topics := make([]string, len(k.allWantedTopics))
+			k.topicLock.Lock()
+			copy(topics, k.allWantedTopics)
+			k.topicLock.Unlock()
+			err := k.consumer.Consume(ctx, topics, handler)
+			if err != nil {
+				acc.AddError(fmt.Errorf("consume: %w", err))
+				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
+			}
+		}
+		err = k.consumer.Close()
+		if err != nil {
+			acc.AddError(fmt.Errorf("close: %w", err))
+		}
+	}()
 
 	return nil
 }
@@ -496,7 +386,7 @@ type ConsumerGroupHandler struct {
 	log telegraf.Logger
 }
 
-// Setup is called once when a new session is opened.  It sets up the handler
+// Setup is called once when a new session is opened.  It setups up the handler
 // and begins processing delivered messages.
 func (h *ConsumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 	h.undelivered = make(map[telegraf.TrackingID]Message)
