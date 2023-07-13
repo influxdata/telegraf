@@ -73,6 +73,28 @@ func (t *Tacacs) Init() error {
 	return nil
 }
 
+func (t *Tacacs) AuthenReplyToString(code uint8) string {
+	switch code {
+	case tacplus.AuthenStatusPass:
+		return `AuthenStatusPass`
+	case tacplus.AuthenStatusFail:
+		return `AuthenStatusFail`
+	case tacplus.AuthenStatusGetData:
+		return `AuthenStatusGetData`
+	case tacplus.AuthenStatusGetUser:
+		return `AuthenStatusGetUser`
+	case tacplus.AuthenStatusGetPass:
+		return `AuthenStatusGetPass`
+	case tacplus.AuthenStatusRestart:
+		return `AuthenStatusRestart`
+	case tacplus.AuthenStatusError:
+		return `AuthenStatusError`
+	case tacplus.AuthenStatusFollow:
+		return `AuthenStatusFollow`
+	}
+	return "AuthenStatusUnknown(" + strconv.FormatUint(uint64(code), 10) + ")"
+}
+
 func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
@@ -134,7 +156,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	defer session.Close()
 	if reply.Status != tacplus.AuthenStatusGetUser {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		fields["response_code"] = t.AuthenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -151,7 +173,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	if reply.Status != tacplus.AuthenStatusGetPass {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		fields["response_code"] = t.AuthenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -168,13 +190,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	if reply.Status != tacplus.AuthenStatusPass {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		fields["response_code"] = t.AuthenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 
 	fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-	fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+	fields["response_code"] = t.AuthenReplyToString(reply.Status)
 	acc.AddFields("tacacs", fields, tags)
 	return nil
 }

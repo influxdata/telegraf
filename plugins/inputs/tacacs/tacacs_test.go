@@ -3,7 +3,6 @@ package tacacs
 import (
 	"context"
 	"net"
-	"strconv"
 	"testing"
 	"time"
 
@@ -241,10 +240,10 @@ func TestTacacsLocal(t *testing.T) {
 				require.Equal(t, false, acc.HasStringField("tacacs", "response_code"))
 			}
 			if tt.name == "success_timeout_0s" {
-				require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusPass), 10), acc.Metrics[0].Fields["response_code"])
+				require.Equal(t, "AuthenStatusPass", acc.Metrics[0].Fields["response_code"])
 			}
 			if tt.name == "wrongpw" {
-				require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusFail), 10), acc.Metrics[0].Fields["response_code"])
+				require.Equal(t, "AuthenStatusFail", acc.Metrics[0].Fields["response_code"])
 			}
 			if tt.name == "wrongsecret" {
 				require.ErrorContains(t, acc.Errors[0], "error on new tacacs authentication start request to "+srvLocal+" : bad secret or packet")
@@ -331,7 +330,7 @@ func TestTacacsIntegration(t *testing.T) {
 					t.Errorf("acc.HasMeasurement: expected tacacs")
 				}
 				require.Equal(t, true, acc.HasStringField("tacacs", "response_code"))
-				require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusPass), 10), acc.Metrics[0].Fields["response_code"])
+				require.Equal(t, "AuthenStatusPass", acc.Metrics[0].Fields["response_code"])
 				require.Equal(t, true, acc.HasTag("tacacs", "source"))
 				require.Equal(t, tt.serverToTest, acc.TagValue("tacacs", "source"))
 				require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"), true)
@@ -341,11 +340,10 @@ func TestTacacsIntegration(t *testing.T) {
 			if tt.name == "wrong_pw" {
 				require.Len(t, acc.Errors, 0)
 				require.Equal(t, true, acc.HasStringField("tacacs", "response_code"))
-				require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusFail), 10), acc.Metrics[0].Fields["response_code"])
+				require.Equal(t, "AuthenStatusFail", acc.Metrics[0].Fields["response_code"])
 				require.Equal(t, true, acc.HasTag("tacacs", "source"))
 				require.Equal(t, tt.serverToTest, acc.TagValue("tacacs", "source"))
 				require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
-				require.Equal(t, time.Duration(plugin.ResponseTimeout).Milliseconds(), acc.Metrics[0].Fields["responsetime_ms"])
 			}
 		})
 	}

@@ -46,20 +46,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### field `response_code`
 
-The field "response_code" is either returned by the tacacs server
-or filled by telegraf in case of a timeout.
+The field "response_code" is either a translated raw code returned
+by the tacacs server, or filled by telegraf in case of a timeout.
 
-| Field value | Meaning                   | From          | responsetime_ms
-| ----------- | ------------------------- | ------------- | ---------------
-| 1           | AuthenStatusPass          | tacacs server | real value
-| 2           | AuthenStatusFail          | tacacs server | real value
-| 3           | AuthenStatusGetData       | tacacs server | real value
-| 4           | AuthenStatusGetUser       | tacacs server | real value
-| 5           | AuthenStatusGetPass       | tacacs server | real value
-| 6           | AuthenStatusRestart       | tacacs server | real value
-| 7           | AuthenStatusError         | tacacs server | real value
-| 33          | AuthenStatusFollow        | tacacs server | real value
-| timeout     | timeout                   | telegraf      | eq. to response_timeout
+| Field Value          | Raw Code     | From          | responsetime_ms
+| -------------------- | ------------ | ------------- | ---------------
+| AuthenStatusPass     | 1 (0x1)      | tacacs server | real value
+| AuthenStatusFail     | 2 (0x2)      | tacacs server | real value
+| AuthenStatusGetData  | 3 (0x3)      | tacacs server | real value
+| AuthenStatusGetUser  | 4 (0x4)      | tacacs server | real value
+| AuthenStatusGetPass  | 5 (0x5)      | tacacs server | real value
+| AuthenStatusRestart  | 6 (0x6)      | tacacs server | real value
+| AuthenStatusError    | 7 (0x7)      | tacacs server | real value
+| AuthenStatusFollow   | 33 (0x21)    | tacacs server | real value
+| timeout              | timeout      | telegraf      | eq. to response_timeout
 
 ### field `responsetime_ms`
 
@@ -71,5 +71,5 @@ the configured response_timeout.
 ## Example Output
 
 ```text
-tacacs,source=127.0.0.1:49 responsetime_ms=311i,response_code="1" 1677526200000000000
+tacacs,source=127.0.0.1:49 responsetime_ms=311i,response_code="AuthenStatusPass" 1677526200000000000
 ```
