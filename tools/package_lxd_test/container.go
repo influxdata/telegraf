@@ -302,7 +302,7 @@ func (c *Container) setupRepo() error {
 
 // Wait for the network to come up on a container
 func (c *Container) waitForNetwork() error {
-	var exponentialBackoffCeilingSecs int64 = 16
+	var exponentialBackoffCeilingSecs int64 = 128
 
 	attempts := 0
 	for {
@@ -310,12 +310,13 @@ func (c *Container) waitForNetwork() error {
 			return nil
 		}
 
-		// uses exponetnial backoff to try after 1, 2, 4, 8, and 16 seconds
+		// uses exponetnial backoff to try after 1, 2, 4, 8, 16, etc. seconds
 		delaySecs := int64(math.Pow(2, float64(attempts)))
 		if delaySecs > exponentialBackoffCeilingSecs {
 			break
 		}
 
+		fmt.Printf("waiting for network, sleeping for %d second(s)\n", delaySecs)
 		time.Sleep(time.Duration(delaySecs) * time.Second)
 		attempts++
 	}
