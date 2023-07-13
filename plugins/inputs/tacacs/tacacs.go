@@ -127,14 +127,14 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		tags["response_code"] = "timeout"
+		fields["response_code"] = "timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 	defer session.Close()
 	if reply.Status != tacplus.AuthenStatusGetUser {
-		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
+		fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -145,13 +145,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		tags["response_code"] = "timeout"
+		fields["response_code"] = "timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 	if reply.Status != tacplus.AuthenStatusGetPass {
-		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
+		fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -162,20 +162,19 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		tags["response_code"] = "timeout"
+		fields["response_code"] = "timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
-	duration := time.Since(startTime)
 	if reply.Status != tacplus.AuthenStatusPass {
-		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
+		fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 
-	fields["responsetime_ms"] = duration.Milliseconds()
-	tags["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
+	fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
+	fields["response_code"] = strconv.FormatUint(uint64(reply.Status), 10)
 	acc.AddFields("tacacs", fields, tags)
 	return nil
 }

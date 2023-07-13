@@ -39,13 +39,37 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - tacacs
   - tags:
-    - response_code
     - source
   - fields:
-    - responsetime_ms (int64)
+    - response_code (string, [see below](#field-response_code)))
+    - responsetime_ms (int64 [see below](#field-responsetime_ms)))
+
+### field `response_code`
+
+The field "response_code" is either returned by the tacacs server
+or filled by telegraf in case of a timeout.
+
+| Field value | Meaning                   | From          | responsetime_ms
+| ----------- | ------------------------- | ------------- | ---------------
+| 1           | AuthenStatusPass          | tacacs server | real value
+| 2           | AuthenStatusFail          | tacacs server | real value
+| 3           | AuthenStatusGetData       | tacacs server | real value
+| 4           | AuthenStatusGetUser       | tacacs server | real value
+| 5           | AuthenStatusGetPass       | tacacs server | real value
+| 6           | AuthenStatusRestart       | tacacs server | real value
+| 7           | AuthenStatusError         | tacacs server | real value
+| 33          | AuthenStatusFollow        | tacacs server | real value
+| timeout     | timeout                   | telegraf      | eq. to response_timeout
+
+### field `responsetime_ms`
+
+The field responsetime_ms is responsetime of the tacacs server
+in miliseconds of the furthest achieved stage of auth.
+In case of timeout, its filled by telegraf to be the value of
+the configured response_timeout.
 
 ## Example Output
 
 ```text
-tacacs,response_code=1,source=127.0.0.1:49 responsetime_ms=311i 1677526200000000000
+tacacs,source=127.0.0.1:49 responsetime_ms=311i,response_code="1" 1677526200000000000
 ```
