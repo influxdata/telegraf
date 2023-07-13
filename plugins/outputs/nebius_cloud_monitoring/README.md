@@ -41,13 +41,13 @@ Nebius Monitoring backend using json format to receive the metrics:
 
 ```json
 {
-"name": "metric_name",
-"labels": {
-"key": "value",
-"foo": "bar"
-},
-"ts": "2023-06-06T11:10:50Z",
-"value": 0
+  "name": "metric_name",
+  "labels": {
+    "key": "value",
+    "foo": "bar"
+  },
+  "ts": "2023-06-06T11:10:50Z",
+  "value": 0
 }
 ```
 
@@ -57,16 +57,16 @@ So this payload:
 
 ```json
 {
-"name": "systemd_units_load_code",
-"labels": {
-"active": "active",
-"host": "vm",
-"load": "loaded",
-"name": "accounts-daemon.service",
-"sub": "running"
-},
-"ts": "2023-06-06T11:10:50Z",
-"value": 0
+  "name": "systemd_units_load_code",
+  "labels": {
+    "active": "active",
+    "host": "vm",
+    "load": "loaded",
+    "name": "accounts-daemon.service",
+    "sub": "running"
+  },
+  "ts": "2023-06-06T11:10:50Z",
+  "value": 0
 }
 ```
 
@@ -74,15 +74,15 @@ will be replaced with:
 
 ```json
 {
-"name": "systemd_units_load_code",
-"labels": {
-"active": "active",
-"host": "vm",
-"load": "loaded",
-"_name": "accounts-daemon.service",
-"sub": "running"
-},
-"ts": "2023-06-06T11:10:50Z",
-"value": 0
+  "name": "systemd_units_load_code",
+  "labels": {
+    "active": "active",
+    "host": "vm",
+    "load": "loaded",
+    "_name": "accounts-daemon.service",
+    "sub": "running"
+  },
+  "ts": "2023-06-06T11:10:50Z",
+  "value": 0
 }
 ```

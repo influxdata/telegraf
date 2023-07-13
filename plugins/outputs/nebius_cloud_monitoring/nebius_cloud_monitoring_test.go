@@ -163,7 +163,7 @@ func TestWrite(t *testing.T) {
 	}
 }
 
-func Test_replaceReservedTagNames(t *testing.T) {
+func TestReplaceReservedTagNames(t *testing.T) {
 	tagMap := map[string]string{
 		"name":  "value",
 		"other": "value",
@@ -181,7 +181,6 @@ func Test_replaceReservedTagNames(t *testing.T) {
 		args args
 		want map[string]string
 	}{
-		// TODO: Add test cases.
 		{
 			name: "tagReplacement",
 			args: args{
