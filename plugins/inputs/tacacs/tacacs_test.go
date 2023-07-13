@@ -82,7 +82,6 @@ func TestTacacsLocal(t *testing.T) {
 		require.NoError(t, err, "local srv.Serve failed to start serving on "+srvLocal)
 	}()
 
-	// Define the testset
 	var testset = []struct {
 		name                 string
 		testingTimeout       config.Duration
@@ -92,7 +91,6 @@ func TestTacacsLocal(t *testing.T) {
 		usedSecret           config.Secret
 		requestAddr          string
 		expectNoGatherErrors bool
-		expectNoInitErrors   bool
 	}{
 		{
 			name:                 "success_timeout_0s",
@@ -103,7 +101,6 @@ func TestTacacsLocal(t *testing.T) {
 			usedSecret:           config.NewSecret([]byte(`testsecret`)),
 			requestAddr:          "127.0.0.1",
 			expectNoGatherErrors: true,
-			expectNoInitErrors:   true,
 		},
 		{
 			name:                 "wrongpw",
@@ -114,7 +111,6 @@ func TestTacacsLocal(t *testing.T) {
 			usedSecret:           config.NewSecret([]byte(`testsecret`)),
 			requestAddr:          "127.0.0.1",
 			expectNoGatherErrors: true,
-			expectNoInitErrors:   true,
 		},
 		{
 			name:                 "wrongsecret",
@@ -125,7 +121,6 @@ func TestTacacsLocal(t *testing.T) {
 			usedSecret:           config.NewSecret([]byte(`WRONGSECRET`)),
 			requestAddr:          "127.0.0.1",
 			expectNoGatherErrors: false,
-			expectNoInitErrors:   true,
 		},
 		{
 			name:                 "unreachable",
@@ -136,39 +131,6 @@ func TestTacacsLocal(t *testing.T) {
 			usedSecret:           config.NewSecret([]byte(`testsecret`)),
 			requestAddr:          "127.0.0.1",
 			expectNoGatherErrors: false,
-			expectNoInitErrors:   true,
-		},
-		{
-			name:                 "empty_creds",
-			testingTimeout:       config.Duration(time.Second * 5),
-			serverToTest:         []string{srvLocal},
-			usedUsername:         config.NewSecret([]byte(``)),
-			usedPassword:         config.NewSecret([]byte(`testpassword`)),
-			usedSecret:           config.NewSecret([]byte(`testsecret`)),
-			requestAddr:          "127.0.0.1",
-			expectNoGatherErrors: false,
-			expectNoInitErrors:   false,
-		},
-		{
-			name:                 "wrong_reqaddress",
-			testingTimeout:       config.Duration(time.Second * 5),
-			serverToTest:         []string{srvLocal},
-			usedUsername:         config.NewSecret([]byte(`testusername`)),
-			usedPassword:         config.NewSecret([]byte(`testpassword`)),
-			usedSecret:           config.NewSecret([]byte(`testsecret`)),
-			requestAddr:          "257.257.257.257",
-			expectNoGatherErrors: false,
-			expectNoInitErrors:   false,
-		},
-		{
-			name:                 "no_reqaddress",
-			testingTimeout:       config.Duration(time.Second * 5),
-			serverToTest:         []string{srvLocal},
-			usedUsername:         config.NewSecret([]byte(`testusername`)),
-			usedPassword:         config.NewSecret([]byte(`testpassword`)),
-			usedSecret:           config.NewSecret([]byte(`testsecret`)),
-			expectNoGatherErrors: true,
-			expectNoInitErrors:   true,
 		},
 	}
 
@@ -186,19 +148,8 @@ func TestTacacsLocal(t *testing.T) {
 
 			var acc testutil.Accumulator
 
-			if tt.expectNoInitErrors {
-				require.NoError(t, plugin.Init())
-				require.NoError(t, plugin.Gather(&acc))
-			} else {
-				initErr := plugin.Init()
-				require.Error(t, initErr)
-				if tt.name == "empty_creds" {
-					require.ErrorContains(t, initErr, "empty credentials were provided (username, password or secret)")
-				}
-				if tt.name == "wrong_reqaddress" {
-					require.ErrorContains(t, initErr, "invalid ip address provided for request_ip")
-				}
-			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Gather(&acc))
 
 			if tt.expectNoGatherErrors {
 				require.Len(t, acc.Errors, 0)
@@ -210,14 +161,12 @@ func TestTacacsLocal(t *testing.T) {
 				require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
 				require.Equal(t, true, acc.HasTag("tacacs", "response_code"))
 			} else {
-				if tt.expectNoInitErrors {
-					require.Len(t, acc.Errors, 1)
-				}
+				require.Len(t, acc.Errors, 1)
 				require.Equal(t, false, acc.HasTag("tacacs", "source"))
 				require.Equal(t, false, acc.HasInt64Field("tacacs", "responsetime_ms"))
 				require.Equal(t, false, acc.HasTag("tacacs", "response_code"))
 			}
-			if tt.name == "success_timeout_0s" || tt.name == "no_reqaddress" {
+			if tt.name == "success_timeout_0s" {
 				require.Equal(t, strconv.FormatUint(uint64(tacplus.AuthenStatusPass), 10), acc.TagValue("tacacs", "response_code"))
 			}
 			if tt.name == "wrongpw" {
@@ -230,6 +179,77 @@ func TestTacacsLocal(t *testing.T) {
 			if tt.name == "unreachable" {
 				require.ErrorContains(t, acc.Errors[0], "error on new tacacs authentication start request to unreachable.hostname.com:404 : dial tcp")
 			}
+		})
+	}
+}
+
+func TestTacacsInit(t *testing.T) {
+	var testset = []struct {
+		name               string
+		testingTimeout     config.Duration
+		serverToTest       []string
+		usedUsername       config.Secret
+		usedPassword       config.Secret
+		usedSecret         config.Secret
+		requestAddr        string
+		expectNoInitErrors bool
+	}{
+		{
+			name:               "empty_creds",
+			testingTimeout:     config.Duration(time.Second * 5),
+			serverToTest:       []string{"foo.bar:80"},
+			usedUsername:       config.NewSecret([]byte(``)),
+			usedPassword:       config.NewSecret([]byte(`testpassword`)),
+			usedSecret:         config.NewSecret([]byte(`testsecret`)),
+			requestAddr:        "127.0.0.1",
+			expectNoInitErrors: false,
+		},
+		{
+			name:               "wrong_reqaddress",
+			testingTimeout:     config.Duration(time.Second * 5),
+			serverToTest:       []string{"foo.bar:80"},
+			usedUsername:       config.NewSecret([]byte(`testusername`)),
+			usedPassword:       config.NewSecret([]byte(`testpassword`)),
+			usedSecret:         config.NewSecret([]byte(`testsecret`)),
+			requestAddr:        "257.257.257.257",
+			expectNoInitErrors: false,
+		},
+		{
+			name:               "no_reqaddress",
+			testingTimeout:     config.Duration(time.Second * 5),
+			serverToTest:       []string{"foo.bar:80"},
+			usedUsername:       config.NewSecret([]byte(`testusername`)),
+			usedPassword:       config.NewSecret([]byte(`testpassword`)),
+			usedSecret:         config.NewSecret([]byte(`testsecret`)),
+			expectNoInitErrors: true,
+		},
+	}
+
+	for _, tt := range testset {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Tacacs{
+				ResponseTimeout: tt.testingTimeout,
+				Servers:         tt.serverToTest,
+				Username:        tt.usedUsername,
+				Password:        tt.usedPassword,
+				Secret:          tt.usedSecret,
+				RequestAddr:     tt.requestAddr,
+				Log:             testutil.Logger{},
+			}
+
+			if tt.expectNoInitErrors {
+				require.NoError(t, plugin.Init())
+			} else {
+				initErr := plugin.Init()
+				require.Error(t, initErr)
+				if tt.name == "empty_creds" {
+					require.ErrorContains(t, initErr, "empty credentials were provided (username, password or secret)")
+				}
+				if tt.name == "wrong_reqaddress" {
+					require.ErrorContains(t, initErr, "invalid ip address provided for request_ip")
+				}
+			}
+
 			if tt.name == "no_reqaddress" {
 				require.Equal(t, "127.0.0.1", plugin.RequestAddr)
 			}
