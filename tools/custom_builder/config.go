@@ -175,6 +175,19 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 	}
 
 	for category, subtbl := range table.Fields {
+		// Check if we should handle the category, i.e. it contains plugins
+		// to configure.
+		var valid bool
+		for _, c := range categories {
+			if c == category {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			continue
+		}
+
 		categoryTbl, ok := subtbl.(*ast.Table)
 		if !ok {
 			continue
