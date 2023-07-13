@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 
@@ -603,14 +602,16 @@ func (a *Agent) startProcessors(
 	dst chan<- telegraf.Metric,
 	processors models.RunningProcessors,
 ) (chan<- telegraf.Metric, []*processorUnit, error) {
-	// Sort from last to first
-	sort.SliceStable(processors, func(i, j int) bool {
-		return processors[i].Config.Order > processors[j].Config.Order
-	})
-
 	var src chan telegraf.Metric
 	units := make([]*processorUnit, 0, len(processors))
-	for _, processor := range processors {
+	// The processor chain is constructed from the output side starting from
+	// the output(s) and walking the way back to the input(s). However, the
+	// processor-list is sorted by order and/or by appearance in the config,
+	// i.e. in input-to-output direction. Therefore, reverse the processor list
+	// to reflect the order/definition order in the processing chain.
+	for i := len(processors) - 1; i >= 0; i-- {
+		processor := processors[i]
+
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)
 
