@@ -37,9 +37,9 @@ type Postgresql struct {
 type query []struct {
 	Sqlquery    string
 	Script      string
-	Version     int `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
-	MinVersion  int
-	MaxVersion  int
+	Version     int  `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
+	MinVersion  int  `toml:"min_version"`
+	MaxVersion  int  `toml:"max_version"`
 	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
