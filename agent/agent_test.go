@@ -1,14 +1,26 @@
 package agent
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestAgent_OmitHostname(t *testing.T) {
@@ -164,4 +176,87 @@ func TestWindow(t *testing.T) {
 			require.Equal(t, tt.until, until, "until")
 		})
 	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Make sure tests contains data
+	require.NotEmpty(t, folders)
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		fname := f.Name()
+		testdataPath := filepath.Join("testcases", fname)
+		configFilename := filepath.Join(testdataPath, "telegraf.conf")
+		expectedFilename := filepath.Join(testdataPath, "expected.out")
+
+		t.Run(fname, func(t *testing.T) {
+			// Get parser to parse input and expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+			require.NotEmpty(t, expected)
+
+			// Load the config and inject the mock output to be able to verify
+			// the resulting metrics
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadAll(configFilename))
+			require.Empty(t, cfg.Outputs, "No output(s) allowed in the config!")
+
+			// Setup the agent and run the agent in "once" mode
+			agent := NewAgent(cfg)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			actual, err := collect(ctx, agent, 0)
+			require.NoError(t, err)
+
+			// Process expected metrics and compare with resulting metrics
+			options := []cmp.Option{
+				testutil.IgnoreTags("host"),
+			}
+			if expected[0].Time().IsZero() {
+				options = append(options, testutil.IgnoreTime())
+			}
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+// Implement a "test-mode" like call but collect the metrics
+func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metric, error) {
+	var received []telegraf.Metric
+	var mu sync.Mutex
+
+	src := make(chan telegraf.Metric, 100)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for m := range src {
+			mu.Lock()
+			received = append(received, m)
+			mu.Unlock()
+			m.Reject()
+		}
+	}()
+
+	if err := a.runTest(ctx, wait, src); err != nil {
+		return nil, err
+	}
+	wg.Wait()
+
+	if models.GlobalGatherErrors.Get() != 0 {
+		return received, fmt.Errorf("input plugins recorded %d errors", models.GlobalGatherErrors.Get())
+	}
+	return received, nil
 }

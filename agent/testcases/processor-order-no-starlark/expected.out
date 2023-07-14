@@ -1,0 +1,2 @@
+new_metric_from_starlark,foo=bar baz=42i 1689252834197709713
+old_metric_from_mock,mood=good value=23i,timestamp="2023-07-13T13:10:34Z" 1689253834000000000
