@@ -23,15 +23,20 @@ import (
 var sampleConfig string
 
 type HTTP struct {
-	URLs               []string          `toml:"urls"`
-	Method             string            `toml:"method"`
-	Body               string            `toml:"body"`
-	ContentEncoding    string            `toml:"content_encoding"`
-	Username           config.Secret     `toml:"username"`
-	Password           config.Secret     `toml:"password"`
-	BearerToken        string            `toml:"bearer_token" deprecated:"1.28.0;use 'token_file' instead"`
-	Token              config.Secret     `toml:"token"`
-	TokenFile          string            `toml:"token_file"`
+	URLs            []string `toml:"urls"`
+	Method          string   `toml:"method"`
+	Body            string   `toml:"body"`
+	ContentEncoding string   `toml:"content_encoding"`
+
+	// Basic authentication
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
+
+	// Bearer authentication
+	BearerToken string        `toml:"bearer_token" deprecated:"1.28.0;use 'token_file' instead"`
+	Token       config.Secret `toml:"token"`
+	TokenFile   string        `toml:"token_file"`
+
 	Headers            map[string]string `toml:"headers"`
 	SuccessStatusCodes []int             `toml:"success_status_codes"`
 	Log                telegraf.Logger   `toml:"-"`
