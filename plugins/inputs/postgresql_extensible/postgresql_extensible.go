@@ -37,7 +37,8 @@ type Postgresql struct {
 type query []struct {
 	Sqlquery    string
 	Script      string
-	Version     int
+	Version     int `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
+	MinVersion  int
 	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
@@ -58,6 +59,9 @@ func (p *Postgresql) Init() error {
 			if err != nil {
 				return err
 			}
+		}
+		if p.Query[i].MinVersion == 0 {
+			p.Query[i].MinVersion = p.Query[i].Version
 		}
 	}
 	p.Service.IsPgBouncer = !p.PreparedStatements
@@ -120,7 +124,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		}
 		sqlQuery += queryAddon
 
-		if p.Query[i].Version <= dbVersion {
+		if p.Query[i].MinVersion <= dbVersion {
 			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
 		}
 	}
