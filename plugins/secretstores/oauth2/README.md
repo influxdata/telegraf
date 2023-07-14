@@ -54,7 +54,7 @@ store usage.
   ## Minimal remaining time until the token expires
   ## If a token expires less than the set duration in the future, the token is
   ## renewed. This is useful to avoid race-condition issues where a token is
-  ## still valid new, but isn't when the request reaches the API endpoint of
+  ## still valid, but isn't when the request reaches the API endpoint of
   ## your service using the token.
   # token_expiry_margin = "1s"
 
