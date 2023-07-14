@@ -126,7 +126,7 @@ func (o *OpenTelemetry) Close() error {
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	metricBatch := make(map[int64][]telegraf.Metric)
 	timestamps := []int64{}
-	for _, metric := range sorted(metrics) {
+	for _, metric := range metrics {
 		timestamp := metric.Time().UnixNano()
 		if existingSlice, ok := metricBatch[timestamp]; ok {
 			metricBatch[timestamp] = append(existingSlice, metric)
@@ -197,20 +197,6 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	defer cancel()
 	_, err := o.metricsServiceClient.Export(ctx, md, o.callOptions...)
 	return err
-}
-
-// Sorted returns a copy of the metrics in time ascending order.  A copy is
-// made to avoid modifying the input metric slice since doing so is not
-// allowed.
-func sorted(metrics []telegraf.Metric) []telegraf.Metric {
-	batch := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		batch = append(batch, metrics[i])
-	}
-	sort.Slice(batch, func(i, j int) bool {
-		return batch[i].Time().Before(batch[j].Time())
-	})
-	return batch
 }
 
 const (
