@@ -102,7 +102,7 @@ func (o *OAuth2) Init() error {
 		}
 
 		// Check service specific parameters
-		if strings.ToLower(o.Service) == "auth" {
+		if strings.ToLower(o.Service) == "auth0" {
 			if audience := c.Params["audience"]; audience == "" {
 				return fmt.Errorf("'audience' parameter in key %q missing for service Auth0", c.Key)
 			}
