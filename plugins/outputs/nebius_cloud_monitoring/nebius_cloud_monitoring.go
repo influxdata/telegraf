@@ -142,7 +142,7 @@ func (a *NebiusCloudMonitoring) Write(metrics []telegraf.Metric) error {
 				nebiusCloudMonitoringMetrics,
 				nebiusCloudMonitoringMetric{
 					Name:   m.Name() + "_" + field.Key,
-					Labels: m.Tags(),
+					Labels: replaceReservedTagNames(m.Tags()),
 					TS:     m.Time().Format(time.RFC3339),
 					Value:  value,
 				},
@@ -241,4 +241,16 @@ func init() {
 	outputs.Add("nebius_cloud_monitoring", func() telegraf.Output {
 		return &NebiusCloudMonitoring{}
 	})
+}
+
+func replaceReservedTagNames(tagNames map[string]string) map[string]string {
+	newTags := make(map[string]string, len(tagNames))
+	for tagName, tagValue := range tagNames {
+		if tagName == "name" {
+			newTags["_name"] = tagValue
+		} else {
+			newTags[tagName] = tagValue
+		}
+	}
+	return newTags
 }
