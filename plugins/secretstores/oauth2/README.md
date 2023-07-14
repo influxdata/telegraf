@@ -51,7 +51,7 @@ store usage.
   ## Tenant ID for the AzureAD service
   # tenant_id = ""
 
-  ## Minumal remaining time until the token expires
+  ## Minimal remaining time until the token expires
   ## If a token expires less than the set duration in the future, the token is
   ## renewed. This is useful to avoid race-condition issues where a token is
   ## still valid new, but isn't when the request reaches the API endpoint of
