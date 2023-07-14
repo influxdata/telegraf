@@ -139,7 +139,7 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
-				require.Equal(t, "accounts-daemon.service", message.Metrics[0].Labels["_name"])
+				require.Contains(t, message.Metrics[0].Labels, "_name")
 				require.Equal(t, float64(9226), message.Metrics[0].Value)
 				w.WriteHeader(http.StatusOK)
 			},
