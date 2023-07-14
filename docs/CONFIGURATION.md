@@ -326,6 +326,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   via `taginclude` or `tagexclude`. This removes the need to specify local tags
   twice.
 
+- **always_include_global_tags**:
+  Ensure tags explicitly defined in the `global_tags` section will *always* pass
+  tag-filtering   via `taginclude` or `tagexclude`. This removes the need to
+  specify those tags twice.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
