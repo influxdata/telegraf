@@ -1,5 +1,3 @@
-//go:build darwin || linux || windows
-
 package oauth2
 
 import (
