@@ -50,6 +50,7 @@ func TestOpenTelemetry(t *testing.T) {
 		metricsConverter:     metricsConverter,
 		grpcClientConn:       m.GrpcClient(),
 		metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		Log:                  testutil.Logger{},
 	}
 
 	input := testutil.MustMetric(

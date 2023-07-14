@@ -5,6 +5,7 @@ import (
 	"context"
 	ntls "crypto/tls"
 	_ "embed"
+	"sort"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -121,7 +122,34 @@ func (o *OpenTelemetry) Close() error {
 	return nil
 }
 
+// Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
+	metricBatch := make(map[int64][]telegraf.Metric)
+	timestamps := []int64{}
+	for _, metric := range metrics {
+		timestamp := metric.Time().UnixNano()
+		if existingSlice, ok := metricBatch[timestamp]; ok {
+			metricBatch[timestamp] = append(existingSlice, metric)
+		} else {
+			metricBatch[timestamp] = []telegraf.Metric{metric}
+			timestamps = append(timestamps, timestamp)
+		}
+	}
+
+	// sort the timestamps we collected
+	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
+
+	o.Log.Debugf("received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
+	for _, timestamp := range timestamps {
+		if err := o.sendBatch(metricBatch[timestamp]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	batch := o.metricsConverter.NewBatch()
 	for _, metric := range metrics {
 		var vType common.InfluxMetricValueType
