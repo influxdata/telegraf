@@ -111,7 +111,7 @@ To use the [Auth0 service][auth0] for retrieving the token you need to set the
 ### AzureAD
 
 To use the [AzureAD service][azuread] for retrieving the token you need to set
-the `tenant_id`. An example configuration look like
+the `tenant_id` and provide a valid `scope`. An example configuration look like
 
 ```toml
 [[secretstores.oauth2]]
@@ -123,6 +123,7 @@ the `tenant_id`. An example configuration look like
     key = "mytoken"
     client_id = "YOUR_CLIENT_ID"
     client_secret = "YOUR_CLIENT_SECRET"
+    scopes = ["YOUR_CLIENT_ID/.default"]
 ```
 
 ### Custom service
@@ -133,4 +134,3 @@ service is configured for the *2-legged client credentials* OAuth2 flow!
 
 [auth0]: https://auth0.com
 [azuread]: https://azure.microsoft.com/de-de/products/active-directory
-
