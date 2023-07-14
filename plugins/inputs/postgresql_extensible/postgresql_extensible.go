@@ -39,6 +39,7 @@ type query []struct {
 	Script      string
 	Version     int `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
 	MinVersion  int
+	MaxVersion  int
 	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
@@ -124,7 +125,9 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		}
 		sqlQuery += queryAddon
 
-		if p.Query[i].MinVersion <= dbVersion {
+		maxVer := p.Query[i].MaxVersion
+
+		if p.Query[i].MinVersion <= dbVersion && (maxVer == 0 || maxVer > dbVersion) {
 			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
 		}
 	}

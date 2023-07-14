@@ -68,27 +68,32 @@ to use them.
   # default, all rows inserted with current time. By setting a timestamp column,
   # the row will be inserted with that column's value.
   #
-  # The minversion field specifies minimal database version this query will run on.
-  # Datbase version is represented as single integer, for example:
+  # The minversion field specifies minimal database version this query
+  # will run on.
+  #
+  # The maxversion field when set specifies maximal database version
+  # this query will NOT run on.
+  #
+  # Database version in `minversion` and `maxversion` is represented as
+  # a single integer without last component, for example:
   # 9.6.2 -> 906
   # 15.2 -> 1500
   #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
   #   sqlquery string
-  #   minversion string
+  #   minversion int
+  #   maxversion int
   #   withdbname boolean
   #   tagvalue string (coma separated)
   #   timestamp string
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database where datname"
     minversion=901
-    withdbname=false
     tagvalue=""
   [[inputs.postgresql_extensible.query]]
     script="your_sql-filepath.sql"
     minversion=901
-    withdbname=false
     tagvalue=""
 ```
 
