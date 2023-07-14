@@ -139,8 +139,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	// sort the timestamps we collected
 	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
 
-	o.Log.Debugf("received %d metrics\n", len(metrics))
-	o.Log.Debugf("split into %d groups by timestamp\n", len(metricBatch))
+	o.Log.Debugf("received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
 	for _, timestamp := range timestamps {
 		if err := o.sendBatch(metricBatch[timestamp]); err != nil {
 			return err
