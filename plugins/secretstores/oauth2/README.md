@@ -133,4 +133,4 @@ If your service is not listed above, you can still use it setting
 service is configured for the *2-legged client credentials* OAuth2 flow!
 
 [auth0]: https://auth0.com
-[azuread]: https://azure.microsoft.com/de-de/products/active-directory
+[azuread]: https://azure.microsoft.com/en/products/active-directory
