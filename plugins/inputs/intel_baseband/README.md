@@ -21,7 +21,6 @@ Supported hardware:
   - 4th Gen Intel® Xeon® Scalable processor with Intel® vRAN Boost (also known as Sapphire Rapids Edge Enhanced / SPR-EE)
 - External expansion cards connected to the PCI bus:
   - Intel® vRAN Dedicated Accelerator ACC100 SoC (code named Mount Bryce)
-  - Intel® vRAN Dedicated Accelerator ACC101 SoC (code named Mount Cirrus)
 
 ## Prerequisites
 
@@ -33,10 +32,10 @@ For more information regarding system configuration, please follow DPDK
 installation guides:
 
 - [Intel® vRAN Boost Poll Mode Driver (PMD)][VRB1]
-- [Intel® ACC100 and ACC101 5G/4G FEC Poll Mode Drivers][ACC100/ACC101]
+- [Intel® ACC100 5G/4G FEC Poll Mode Drivers][ACC100]
 
 [VRB1]: https://doc.dpdk.org/guides/bbdevs/vrb1.html#installation
-[ACC100/ACC101]: https://doc.dpdk.org/guides/bbdevs/acc100.html#installation
+[ACC100]: https://doc.dpdk.org/guides/bbdevs/acc100.html#installation
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

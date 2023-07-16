@@ -129,6 +129,10 @@ type Metric interface {
 // e.g. '{{.Neasurement}}-{{.Tag "foo"}}-{{.Field "bar"}}'
 type TemplateMetric interface {
 	Name() string
-	Tag(key string) string
 	Field(key string) interface{}
+	Fields() map[string]interface{}
+	Tag(key string) string
+	Tags() map[string]string
+	Time() time.Time
+	String() string
 }

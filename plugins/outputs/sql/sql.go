@@ -10,9 +10,9 @@ import (
 
 	//Register sql drivers
 	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
-	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
 	_ "github.com/go-sql-driver/mysql"      // mysql
 	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
+	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
 	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
 	"github.com/influxdata/telegraf"

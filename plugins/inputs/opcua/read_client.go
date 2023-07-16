@@ -90,29 +90,26 @@ func (o *ReadClient) Connect() error {
 }
 
 func (o *ReadClient) ensureConnected() error {
-	if o.State == opcua.Disconnected {
-		err := o.Connect()
-		if err != nil {
-			return err
-		}
+	if o.State() == opcua.Disconnected {
+		return o.Connect()
 	}
-
 	return nil
 }
 
 func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
-	err := o.ensureConnected()
-	if err != nil {
+	if err := o.ensureConnected(); err != nil {
 		return nil, err
 	}
 
-	err = o.read()
-	if err != nil && o.State == opcua.Connected {
+	if state := o.State(); state != opcua.Connected {
+		return nil, fmt.Errorf("not connected, in state %q", state)
+	}
+
+	if err := o.read(); err != nil {
 		// We do not return the disconnect error, as this would mask the
 		// original problem, but we do log it
-		disconnectErr := o.Disconnect(context.Background())
-		if disconnectErr != nil {
-			o.Log.Debug("Error while disconnecting: ", disconnectErr)
+		if derr := o.Disconnect(context.Background()); derr != nil {
+			o.Log.Debug("Error while disconnecting: ", derr)
 		}
 
 		return nil, err

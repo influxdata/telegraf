@@ -1,6 +1,70 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.27.2 [2023-07-10]
+
+### Bugfixes
+
+- [#13570](https://github.com/influxdata/telegraf/pull/13570) `config` Replace environment variables if existing but empty
+- [#13525](https://github.com/influxdata/telegraf/pull/13525) `inputs.cloud_pubsub` Properly lock for decompression
+- [#13517](https://github.com/influxdata/telegraf/pull/13517) `inputs.gnmi` Add option to explicitly trim field-names
+- [#13497](https://github.com/influxdata/telegraf/pull/13497) `inputs.internet_speed` Add location as a field
+- [#13485](https://github.com/influxdata/telegraf/pull/13485) `inputs.modbus` Check number of register for datatype
+- [#13486](https://github.com/influxdata/telegraf/pull/13486) `inputs.modbus` Fix optimization of overlapping requests and add warning
+- [#13478](https://github.com/influxdata/telegraf/pull/13478) `inputs.mqtt_consumer` Correctly handle semaphores on messages
+- [#13574](https://github.com/influxdata/telegraf/pull/13574) `inputs.mqtt_consumer` Print warning on no metrics generated
+- [#13514](https://github.com/influxdata/telegraf/pull/13514) `inputs.opcua` Ensure connection after reconnect
+- [#13495](https://github.com/influxdata/telegraf/pull/13495) `inputs.phpfpm` Check address length to avoid crash
+- [#13542](https://github.com/influxdata/telegraf/pull/13542) `inputs.snmp_trap` Copy GoSNMP global defaults to prevent side-effects
+- [#13557](https://github.com/influxdata/telegraf/pull/13557) `inputs.vpshere` Compare versions as a string
+- [#13527](https://github.com/influxdata/telegraf/pull/13527) `outputs.graphite` Rework connection handling
+- [#13562](https://github.com/influxdata/telegraf/pull/13562) `outputs.influxdb_v2` Expose HTTP/2 client timeouts
+- [#13454](https://github.com/influxdata/telegraf/pull/13454) `outputs.stackdriver` Options to use official path and types
+- [#13522](https://github.com/influxdata/telegraf/pull/13522) `outputs.sumologic` Unwrap serializer for type check
+- [#13547](https://github.com/influxdata/telegraf/pull/13547) `parsers.binary` Fix binary parser example in README.md
+- [#13526](https://github.com/influxdata/telegraf/pull/13526) `parsers.grok` Use UTC as the default timezone
+- [#13550](https://github.com/influxdata/telegraf/pull/13550) `parsers.xpath` Handle explicitly defined fields correctly
+- [#13564](https://github.com/influxdata/telegraf/pull/13564) `processors.printer` Convert output to string
+- [#13489](https://github.com/influxdata/telegraf/pull/13489) `secretstores` Skip dbus connection with kwallet
+- [#13511](https://github.com/influxdata/telegraf/pull/13511) `serializers.splunkmetric` Fix TOML option name for multi-metric
+- [#13563](https://github.com/influxdata/telegraf/pull/13563) `tools.custom_builder` Error out for unknown plugins in configuration
+
+### Dependency Updates
+
+- [#13524](https://github.com/influxdata/telegraf/pull/13524) Replace github.com/denisenkom/go-mssqldb with github.com/microsoft/go-mssqldb
+- [#13501](https://github.com/influxdata/telegraf/pull/13501) `deps` Bump cloud.google.com/go/bigquery from 1.51.1 to 1.52.0
+- [#13500](https://github.com/influxdata/telegraf/pull/13500) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go from 1.62.337 to 1.62.389
+- [#13504](https://github.com/influxdata/telegraf/pull/13504) `deps` Bump github.com/aws/aws-sdk-go-v2/config from 1.18.8 to 1.18.27
+- [#13537](https://github.com/influxdata/telegraf/pull/13537) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.17.8 to 1.17.14
+- [#13509](https://github.com/influxdata/telegraf/pull/13509) `deps` Bump github.com/gopcua/opcua from 0.3.7 to 0.4.0
+- [#13502](https://github.com/influxdata/telegraf/pull/13502) `deps` Bump github.com/prometheus/client_golang from 1.15.1 to 1.16.0
+- [#13544](https://github.com/influxdata/telegraf/pull/13544) `deps` Bump github.com/snowflakedb/gosnowflake from 1.6.13 to 1.6.22
+- [#13541](https://github.com/influxdata/telegraf/pull/13541) `deps` Bump github.com/urfave/cli/v2 from 2.25.5 to 2.25.7
+- [#13538](https://github.com/influxdata/telegraf/pull/13538) `deps` Bump golang.org/x/text from 0.9.0 to 0.10.0
+- [#13554](https://github.com/influxdata/telegraf/pull/13554) `deps` Bump golang.org/x/text from 0.10.0 to 0.11.0
+- [#13540](https://github.com/influxdata/telegraf/pull/13540) `deps` Bump google.golang.org/api from 0.126.0 to 0.129.0
+
+## v1.27.1 [2023-06-21]
+
+### Bugfixes
+
+- [#13434](https://github.com/influxdata/telegraf/pull/13434) Handle compression level correctly for different algorithms
+- [#13457](https://github.com/influxdata/telegraf/pull/13457) `config` Restore old environment var behavior with option
+- [#13446](https://github.com/influxdata/telegraf/pull/13446) `custom_builder` Correctly handle serializers and parsers
+
+### Dependency Updates
+
+- [#13469](https://github.com/influxdata/telegraf/pull/13469) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.13.20 to 1.13.26
+- [#13468](https://github.com/influxdata/telegraf/pull/13468) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.25.9 to 1.26.2
+- [#13465](https://github.com/influxdata/telegraf/pull/13465) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.16.0 to 1.17.2
+- [#13466](https://github.com/influxdata/telegraf/pull/13466) `deps` Bump github.com/go-sql-driver/mysql from 1.6.0 to 1.7.1
+- [#13427](https://github.com/influxdata/telegraf/pull/13427) `deps` Bump github.com/jackc/pgx/v4 from 4.17.1 to 4.18.1
+- [#13429](https://github.com/influxdata/telegraf/pull/13429) `deps` Bump github.com/nats-io/nats.go from 1.24.0 to 1.27.0
+- [#13467](https://github.com/influxdata/telegraf/pull/13467) `deps` Bump github.com/prometheus-community/pro-bing from 0.1.0 to 0.2.0
+- [#13428](https://github.com/influxdata/telegraf/pull/13428) `deps` Bump golang.org/x/crypto from 0.8.0 to 0.9.0
+- [#13431](https://github.com/influxdata/telegraf/pull/13431) `deps` Bump golang.org/x/term from 0.8.0 to 0.9.0
+- [#13430](https://github.com/influxdata/telegraf/pull/13430) `deps` Bump modernc.org/sqlite from 1.21.0 to 1.23.1
+
 ## v1.27.0 [2023-06-12]
 
 ### Important Changes

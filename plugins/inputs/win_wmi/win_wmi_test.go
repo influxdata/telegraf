@@ -18,16 +18,20 @@ var sysDrive = fmt.Sprintf(`%s\`, os.Getenv("SystemDrive")) // C:\
 
 // include Name as a tag, FreeSpace as a field, and Purpose as a known-null class property
 var testQuery = Query{
-	Namespace:            "ROOT\\cimv2",
-	ClassName:            "Win32_Volume",
-	Properties:           []string{"Name", "FreeSpace", "Purpose"},
+	Namespace:  "ROOT\\cimv2",
+	ClassName:  "Win32_Volume",
+	Properties: []string{"Name", "FreeSpace", "Purpose"},
+	//nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 	Filter:               fmt.Sprintf(`NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`, regexp.QuoteMeta(sysDrive)),
 	TagPropertiesInclude: []string{"Name"},
 	tagFilter:            nil, // this is filled in by CompileInputs()
 }
+
+//nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 var expectedWql = fmt.Sprintf(
 	`SELECT Name, FreeSpace, Purpose FROM Win32_Volume WHERE NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`,
-	regexp.QuoteMeta(sysDrive))
+	regexp.QuoteMeta(sysDrive),
+)
 
 // test buildWqlStatements
 func TestWmi_buildWqlStatements(t *testing.T) {

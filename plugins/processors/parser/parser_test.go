@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/binary"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -624,6 +625,84 @@ func TestApply(t *testing.T) {
 					map[string]string{},
 					map[string]interface{}{
 						"value": float64(42.1),
+					},
+					time.Unix(1593287020, 0)),
+			},
+		},
+		{
+			name:        "non-string field with binary parser",
+			parseFields: []string{"value"},
+			merge:       "override",
+			parser: &binary.Parser{
+				Configs: []binary.Config{
+					{
+						MetricName: "parser",
+						Entries: []binary.Entry{
+							{
+								Name: "alarm_0",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_1",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_2",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_3",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_4",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_5",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_6",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_7",
+								Type: "bool",
+								Bits: 1,
+							},
+						},
+					},
+				},
+			},
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": uint8(13),
+				},
+				time.Unix(1593287020, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value":   uint8(13),
+						"alarm_0": false,
+						"alarm_1": false,
+						"alarm_2": false,
+						"alarm_3": false,
+						"alarm_4": true,
+						"alarm_5": true,
+						"alarm_6": false,
+						"alarm_7": true,
 					},
 					time.Unix(1593287020, 0)),
 			},

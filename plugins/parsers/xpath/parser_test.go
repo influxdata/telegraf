@@ -9,15 +9,15 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/influxdata/toml"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-
-	"github.com/stretchr/testify/require"
 )
 
 const invalidXML = `
@@ -1367,6 +1367,7 @@ func TestTestCases(t *testing.T) {
 			if len(expectedErrors) == 0 {
 				require.NoError(t, err)
 			}
+
 			// If no timestamp is given we cannot test it. So use the one of the output
 			if cfg.Timestamp == "" {
 				testutil.RequireMetricsEqual(t, expectedOutputs, outputs, testutil.IgnoreTime())

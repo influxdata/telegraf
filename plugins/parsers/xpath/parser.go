@@ -11,6 +11,7 @@ import (
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
 	"github.com/doclambda/protobufquery"
+	"github.com/srebhan/cborquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -92,6 +93,8 @@ func (p *Parser) Init() error {
 				Notice:    "use 'xpath' instead",
 			})
 		}
+	case "xpath_cbor":
+		p.document = &cborDocument{}
 	case "xpath_json":
 		p.document = &jsonDocument{}
 
@@ -394,6 +397,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		if err != nil {
 			return nil, fmt.Errorf("failed to query field %q: %w", name, err)
 		}
+
+		if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+			if b, ok := v.([]byte); ok {
+				v = hex.EncodeToString(b)
+			}
+		}
+
 		fields[name] = v
 	}
 
@@ -491,6 +501,8 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 		// enabled, we should return the native type of the data
 		if p.NativeTypes {
 			switch nn := current.(type) {
+			case *cborquery.NodeNavigator:
+				return nn.GetValue(), nil
 			case *jsonquery.NodeNavigator:
 				return nn.GetValue(), nil
 			case *protobufquery.NodeNavigator:
@@ -591,6 +603,14 @@ func init() {
 		func(defaultMetricName string) telegraf.Parser {
 			return &Parser{
 				Format:            "xml",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_cbor",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_cbor",
 				DefaultMetricName: defaultMetricName,
 			}
 		},

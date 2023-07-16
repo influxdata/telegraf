@@ -27,8 +27,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## On linux systems telegraf also collects protocol stats.
   ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
   ##
+  ## DEPRECATION NOTICE: A value of 'false' is deprecated and discouraged!
+  ##                     Please set this to `true` and use the 'inputs.nstat'
+  ##                     plugin instead.
   # ignore_protocol_stats = false
-  ##
 ```
 
 ## Metrics

@@ -1319,3 +1319,384 @@ func TestReceiveTrap(t *testing.T) {
 		})
 	}
 }
+func TestReceiveTrapMultipleConfig(t *testing.T) {
+	now := uint32(123123123)
+	fakeTime := time.Unix(456456456, 456)
+
+	// If the first pdu isn't type TimeTicks, gosnmp.SendTrap() will
+	// prepend one with time.Now()
+	var tests = []struct {
+		name string
+
+		// send
+		version gosnmp.SnmpVersion
+		trap    gosnmp.SnmpTrap // include pdus
+		// V3 auth and priv parameters
+		secName   string // v3 username
+		secLevel  string // v3 security level
+		authProto string // Auth protocol: "", MD5 or SHA
+		authPass  string // Auth passphrase
+		privProto string // Priv protocol: "", DES or AES
+		privPass  string // Priv passphrase
+
+		// V3 sender context
+		contextName string
+		engineID    string
+
+		// receive
+		entries []entry
+		metrics []telegraf.Metric
+	}{
+		//ordinary v3 coldStart SHA trap auth and AES priv
+		{
+			name:      "v3 coldStart authSHAPrivAES",
+			version:   gosnmp.Version3,
+			secName:   "authSHAPrivAES",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES",
+			privPass:  "passpass",
+			trap: gosnmp.SnmpTrap{
+				Variables: []gosnmp.SnmpPDU{
+					{
+						Name:  ".1.3.6.1.2.1.1.3.0",
+						Type:  gosnmp.TimeTicks,
+						Value: now,
+					},
+					{
+						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+						Type:  gosnmp.ObjectIdentifier,
+						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+					},
+				},
+			},
+			entries: []entry{
+				{
+					oid: ".1.3.6.1.6.3.1.1.4.1.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
+					},
+				},
+				{
+					oid: ".1.3.6.1.6.3.1.1.5.1",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
+					},
+				},
+				{
+					oid: ".1.3.6.1.2.1.1.3.0",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
+					},
+				},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
+			},
+		},
+		//ordinary v3 coldStart SHA trap auth and AES256 priv
+		{
+			name:      "v3 coldStart authSHAPrivAES256",
+			version:   gosnmp.Version3,
+			secName:   "authSHAPrivAES256",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES256",
+			privPass:  "passpass",
+			trap: gosnmp.SnmpTrap{
+				Variables: []gosnmp.SnmpPDU{
+					{
+						Name:  ".1.3.6.1.2.1.1.3.0",
+						Type:  gosnmp.TimeTicks,
+						Value: now,
+					},
+					{
+						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+						Type:  gosnmp.ObjectIdentifier,
+						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+					},
+				},
+			},
+			entries: []entry{
+				{
+					oid: ".1.3.6.1.6.3.1.1.4.1.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
+					},
+				},
+				{
+					oid: ".1.3.6.1.6.3.1.1.5.1",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
+					},
+				},
+				{
+					oid: ".1.3.6.1.2.1.1.3.0",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
+					},
+				},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				)},
+		},
+		//ordinary v3 coldStart SHA trap auth and AES256C priv
+		{
+			name:      "v3 coldStart authSHAPrivAES256C",
+			version:   gosnmp.Version3,
+			secName:   "authSHAPrivAES256C",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES256C",
+			privPass:  "passpass",
+			trap: gosnmp.SnmpTrap{
+				Variables: []gosnmp.SnmpPDU{
+					{
+						Name:  ".1.3.6.1.2.1.1.3.0",
+						Type:  gosnmp.TimeTicks,
+						Value: now,
+					},
+					{
+						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+						Type:  gosnmp.ObjectIdentifier,
+						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+					},
+				},
+			},
+			entries: []entry{
+				{
+					oid: ".1.3.6.1.6.3.1.1.4.1.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
+					},
+				},
+				{
+					oid: ".1.3.6.1.6.3.1.1.5.1",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
+					},
+				},
+				{
+					oid: ".1.3.6.1.2.1.1.3.0",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
+					},
+				},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
+				testutil.MustMetric(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					fakeTime,
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// We would prefer to specify port 0 and let the network
+			// stack choose an unused port for us but TrapListener
+			// doesn't have a way to return the autoselected port.
+			// Instead, we'll use an unusual port and hope it's
+			// unused.
+			const port1 = 12399
+			const port2 = 12400
+
+			// Hook into the trap handler so the test knows when the
+			// trap has been received
+			received1 := make(chan int)
+			wrap1 := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
+				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
+					f(p, a)
+					received1 <- 0
+				}
+			}
+
+			// Set up the service input plugin
+			s1 := &SnmpTrap{
+				ServiceAddress:     "udp://:" + strconv.Itoa(port1),
+				makeHandlerWrapper: wrap1,
+				timeFunc: func() time.Time {
+					return fakeTime
+				},
+				//if cold start be answer otherwise err
+				Log:          testutil.Logger{},
+				Version:      tt.version.String(),
+				SecName:      config.NewSecret([]byte(tt.secName + "1")),
+				SecLevel:     tt.secLevel,
+				AuthProtocol: tt.authProto,
+				AuthPassword: config.NewSecret([]byte(tt.authPass + "1")),
+				PrivProtocol: tt.privProto,
+				PrivPassword: config.NewSecret([]byte(tt.privPass + "1")),
+				Translator:   "netsnmp",
+			}
+
+			// Hook into the trap handler so the test knows when the
+			// trap has been received
+			received2 := make(chan int)
+			wrap2 := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
+				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
+					f(p, a)
+					received2 <- 0
+				}
+			}
+
+			// Set up a second service input plugin
+			s2 := &SnmpTrap{
+				ServiceAddress:     "udp://:" + strconv.Itoa(port2),
+				makeHandlerWrapper: wrap2,
+				timeFunc: func() time.Time {
+					return fakeTime
+				},
+				//if cold start be answer otherwise err
+				Log:          testutil.Logger{},
+				Version:      tt.version.String(),
+				SecName:      config.NewSecret([]byte(tt.secName + "2")),
+				SecLevel:     tt.secLevel,
+				AuthProtocol: tt.authProto,
+				AuthPassword: config.NewSecret([]byte(tt.authPass + "2")),
+				PrivProtocol: tt.privProto,
+				PrivPassword: config.NewSecret([]byte(tt.privPass + "2")),
+				Translator:   "netsnmp",
+			}
+
+			require.NoError(t, s1.Init())
+			require.NoError(t, s2.Init())
+
+			//inject test translator
+			s1.transl = newTestTranslator(tt.entries)
+			s2.transl = newTestTranslator(tt.entries)
+
+			var acc testutil.Accumulator
+			require.NoError(t, s1.Start(&acc))
+			require.NoError(t, s2.Start(&acc))
+
+			defer s1.Stop()
+			defer s2.Stop()
+
+			var goSNMP1 gosnmp.GoSNMP
+			var goSNMP2 gosnmp.GoSNMP
+			if tt.version == gosnmp.Version3 {
+				msgFlags := newMsgFlagsV3(tt.secLevel)
+				sp1 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName+"1", tt.privPass+"1", tt.authPass+"1")
+				sp2 := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName+"2", tt.privPass+"2", tt.authPass+"2")
+				goSNMP1 = newGoSNMPV3(port1, tt.contextName, tt.engineID, msgFlags, sp1)
+				goSNMP2 = newGoSNMPV3(port2, tt.contextName, tt.engineID, msgFlags, sp2)
+			} else {
+				goSNMP1 = newGoSNMP(tt.version, port1)
+				goSNMP2 = newGoSNMP(tt.version, port2)
+			}
+
+			// Send the trap to both receivers
+			sendTrap(t, goSNMP1, tt.trap)
+			sendTrap(t, goSNMP2, tt.trap)
+
+			// Wait for trap to be received on receiver1
+			select {
+			case <-received1:
+			case <-time.After(2 * time.Second):
+				t.Fatal("timed out waiting for trap to be received")
+			}
+			// Wait for trap to be received on receiver2
+			select {
+			case <-received2:
+			case <-time.After(2 * time.Second):
+				t.Fatal("timed out waiting for trap to be received")
+			}
+
+			// Verify plugin output
+			testutil.RequireMetricsEqual(t,
+				tt.metrics, acc.GetTelegrafMetrics(),
+				testutil.SortMetrics())
+		})
+	}
+}

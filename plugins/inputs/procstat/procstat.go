@@ -284,6 +284,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		fields[prefix+"ppid"] = ppid
 	}
 
+	status, err := proc.Status()
+	if err == nil {
+		fields[prefix+"status"] = status[0]
+	}
+
 	acc.AddFields("procstat", fields, proc.Tags(), t)
 }
 

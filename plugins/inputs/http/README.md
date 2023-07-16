@@ -17,8 +17,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` option.
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `token` option.
 See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
 
@@ -47,9 +47,10 @@ to use them.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Optional file with Bearer token
-  ## file content is added as an Authorization header
-  # bearer_token = "/path/to/file"
+  ## Optional Bearer token settings to use for the API calls.
+  ## Use either the token itself or the token file if you need a token.
+  # token = "eyJhbGc...Qssw5c"
+  # token_file = "/path/to/file"
 
   ## Optional HTTP Basic Auth Credentials
   # username = "username"

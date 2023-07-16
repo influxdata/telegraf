@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/mqtt"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/value"
 	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -597,13 +596,6 @@ func TestIntegrationMQTTLayoutHomieV4(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-
-	// Setup the parser / serializer pair
-	parser := &value.Parser{
-		MetricName: "test",
-		DataType:   "auto",
-	}
-	require.NoError(t, parser.Init())
 
 	// Setup the plugin
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])

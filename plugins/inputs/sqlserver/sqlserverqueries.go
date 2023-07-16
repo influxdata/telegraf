@@ -2,7 +2,7 @@
 package sqlserver
 
 import (
-	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
+	_ "github.com/microsoft/go-mssqldb" // go-mssqldb initialization
 )
 
 // The SQL scripts assemble the correct query based the version of SQL Server
@@ -245,6 +245,7 @@ SELECT
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
 	,SERVERPROPERTY(''IsClustered'') AS [instance_type]
+	,SERVERPROPERTY(''IsHadrEnabled'') AS [is_hadr_enabled]
 	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,@ForceEncryption AS [ForceEncryption]
 	,COALESCE(@DynamicportNo,@StaticportNo) AS [Port]

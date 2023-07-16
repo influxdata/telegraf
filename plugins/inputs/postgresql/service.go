@@ -174,3 +174,17 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 
 	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil
 }
+
+// GetConnectDatabase utility function for getting the database to which the connection was made
+func (p *Service) GetConnectDatabase(connectionString string) (string, error) {
+	connConfig, err := pgx.ParseConfig(connectionString)
+	if err != nil {
+		return "", fmt.Errorf("connection string parsing failed: %w", err)
+	}
+
+	if len(connConfig.Database) != 0 {
+		return connConfig.Database, nil
+	}
+
+	return "postgres", nil
+}

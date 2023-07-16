@@ -24,6 +24,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 var (
 	// 30 Seconds is the default used by paho.mqtt.golang
 	defaultConnectionTimeout      = config.Duration(30 * time.Second)
@@ -246,7 +248,7 @@ func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 		return
 	}
 
-	if track.Delivered() {
+	if track.Delivered() && m.PersistentSession {
 		msg.Ack()
 	}
 
@@ -261,9 +263,19 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.messagesRecv.Incr(1)
 
 	metrics, err := m.parser.Parse(msg.Payload())
-	if err != nil {
-		msg.Ack()
+	if err != nil || len(metrics) == 0 {
+		if len(metrics) == 0 {
+			once.Do(func() {
+				const msg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
+				m.Log.Debug(msg)
+			})
+		}
+
+		if m.PersistentSession {
+			msg.Ack()
+		}
 		m.acc.AddError(err)
+		<-m.sem
 		return
 	}
 
@@ -283,16 +295,22 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 			if p.Tags != "" {
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
-					msg.Ack()
+					if m.PersistentSession {
+						msg.Ack()
+					}
 					m.acc.AddError(err)
+					<-m.sem
 					return
 				}
 			}
 			if p.Fields != "" {
 				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
 				if err != nil {
-					msg.Ack()
+					if m.PersistentSession {
+						msg.Ack()
+					}
 					m.acc.AddError(err)
+					<-m.sem
 					return
 				}
 			}

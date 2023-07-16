@@ -119,6 +119,31 @@ func TestWrite(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 		},
+		{
+			name:   "label with name 'name' is replaced with '_name'",
+			plugin: &NebiusCloudMonitoring{},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cluster",
+					map[string]string{
+						"name": "accounts-daemon.service",
+					},
+					map[string]interface{}{
+						"value": 9226,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				message, err := readBody(r)
+				require.NoError(t, err)
+				require.Len(t, message.Metrics, 1)
+				require.Equal(t, "cluster_value", message.Metrics[0].Name)
+				require.Contains(t, message.Metrics[0].Labels, "_name")
+				require.Equal(t, float64(9226), message.Metrics[0].Value)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -134,6 +159,40 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, tt.plugin.Init())
 			require.NoError(t, tt.plugin.Connect())
 			require.NoError(t, tt.plugin.Write(tt.metrics))
+		})
+	}
+}
+
+func TestReplaceReservedTagNames(t *testing.T) {
+	tagMap := map[string]string{
+		"name":  "value",
+		"other": "value",
+	}
+	wantTagMap := map[string]string{
+		"_name": "value",
+		"other": "value",
+	}
+
+	type args struct {
+		tagNames map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]string
+	}{
+		{
+			name: "tagReplacement",
+			args: args{
+				tagNames: tagMap,
+			},
+			want: wantTagMap,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := replaceReservedTagNames(tt.args.tagNames)
+			require.EqualValues(t, tt.want, got)
 		})
 	}
 }

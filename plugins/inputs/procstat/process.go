@@ -28,6 +28,7 @@ type Process interface {
 	Username() (string, error)
 	CreateTime() (int64, error)
 	Ppid() (int32, error)
+	Status() ([]string, error)
 }
 
 type PIDFinder interface {

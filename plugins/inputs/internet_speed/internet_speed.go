@@ -107,6 +107,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		"upload":   is.server.ULSpeed,
 		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
 		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
+		"location": is.server.Name,
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,

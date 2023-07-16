@@ -6,7 +6,7 @@ import (
 	"github.com/influxdata/toml/ast"
 )
 
-type PluginMigrationFunc func(*ast.Table) ([]byte, error)
+type PluginMigrationFunc func(*ast.Table) ([]byte, string, error)
 
 var PluginMigrations = make(map[string]PluginMigrationFunc)
 

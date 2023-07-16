@@ -2,10 +2,13 @@
 package parser
 
 import (
+	"bytes"
 	_ "embed"
+	gobin "encoding/binary"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -50,34 +53,36 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		// parse fields
 		for _, key := range p.ParseFields {
 			for _, field := range metric.FieldList() {
-				if field.Key == key {
-					switch value := field.Value.(type) {
-					case string:
-						fromFieldMetric, err := p.parseValue(value)
-						if err != nil {
-							p.Log.Errorf("could not parse field %s: %v", key, err)
-						}
+				if field.Key != key {
+					continue
+				}
+				value, err := p.toBytes(field.Value)
+				if err != nil {
+					p.Log.Errorf("could not convert field %s: %v; skipping", key, err)
+					continue
+				}
+				fromFieldMetric, err := p.parser.Parse(value)
+				if err != nil {
+					p.Log.Errorf("could not parse field %s: %v", key, err)
+					continue
+				}
 
-						for _, m := range fromFieldMetric {
-							// The parser get the parent plugin's name as
-							// default measurement name. Thus, in case the
-							// parsed metric does not provide a name itself,
-							// the parser  will return 'parser' as we are in
-							// processors.parser. In those cases we want to
-							// keep the original metric name.
-							if m.Name() == "" || m.Name() == "parser" {
-								m.SetName(metric.Name())
-							}
-						}
-
-						// multiple parsed fields shouldn't create multiple
-						// metrics so we'll merge tags/fields down into one
-						// prior to returning.
-						newMetrics = append(newMetrics, fromFieldMetric...)
-					default:
-						p.Log.Errorf("field %q not a string, skipping", key)
+				for _, m := range fromFieldMetric {
+					// The parser get the parent plugin's name as
+					// default measurement name. Thus, in case the
+					// parsed metric does not provide a name itself,
+					// the parser  will return 'parser' as we are in
+					// processors.parser. In those cases we want to
+					// keep the original metric name.
+					if m.Name() == "" || m.Name() == "parser" {
+						m.SetName(metric.Name())
 					}
 				}
+
+				// multiple parsed fields shouldn't create multiple
+				// metrics so we'll merge tags/fields down into one
+				// prior to returning.
+				newMetrics = append(newMetrics, fromFieldMetric...)
 			}
 		}
 
@@ -151,6 +156,19 @@ func mergeWithTimestamp(base telegraf.Metric, metrics []telegraf.Metric) telegra
 
 func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
+}
+
+func (p *Parser) toBytes(value interface{}) ([]byte, error) {
+	if v, ok := value.(string); ok {
+		return []byte(v), nil
+	}
+
+	var buf bytes.Buffer
+	if err := gobin.Write(&buf, internal.HostEndianess, value); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func init() {
