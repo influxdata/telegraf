@@ -130,7 +130,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 * `index_name`: The target index for metrics. You can use the date specifiers
   below to create indexes per time frame.
 
-```   %Y - year (2017)
+```text
+  %Y - year (2017)
   %y - last two digits of year (00..99)
   %m - month (01..12)
   %d - day of month (e.g., 01)

@@ -31,37 +31,37 @@ import (
 var sampleConfig string
 
 type Opensearch struct {
-	AuthBearerToken     string          `toml:"auth_bearer_token"`
-	DefaultPipeline     string          `toml:"default_pipeline"`
-	DefaultTagValue     string          `toml:"default_tag_value"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
+	AuthBearerToken     config.Secret   `toml:"auth_bearer_token"`
 	EnableGzip          bool            `toml:"enable_gzip"`
 	EnableSniffer       bool            `toml:"enable_sniffer"`
 	FloatHandling       string          `toml:"float_handling"`
 	FloatReplacement    float64         `toml:"float_replacement_value"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
-	HealthCheckInterval config.Duration `toml:"health_check_interval"`
-	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	IndexName           string          `toml:"index_name"`
+	TemplateName        string          `toml:"template_name"`
 	ManageTemplate      bool            `toml:"manage_template"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
-	Password            config.Secret   `toml:"password"`
-	TemplateName        string          `toml:"template_name"`
-	Timeout             config.Duration `toml:"timeout"`
-	URLs                []string        `toml:"urls"`
-	UsePipeline         string          `toml:"use_pipeline"`
-	Username            config.Secret   `toml:"username"`
-	Log                 telegraf.Logger `toml:"-"`
 	pipelineName        string
+	DefaultPipeline     string          `toml:"default_pipeline"`
+	UsePipeline         string          `toml:"use_pipeline"`
 	pipelineTagKeys     []string
 	tagKeys             []string
+	DefaultTagValue     string          `toml:"default_tag_value"`
+	Timeout             config.Duration `toml:"timeout"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
+	URLs                []string        `toml:"urls"`
+	Log                 telegraf.Logger `toml:"-"`
 	onSucc              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
 	onFail              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
-	httpconfig.HTTPClientConfig
+	configOptions httpconfig.HTTPClientConfig
 	osClient *opensearch.Client
 }
 
-//go:embed telegrafTemplate.json
-var telegrafTemplate string
+//go:embed template.json
+var indexTemplate string
 
 type templatePart struct {
 	TemplatePattern string
@@ -72,7 +72,7 @@ func (*Opensearch) SampleConfig() string {
 }
 
 func (o *Opensearch) Init() error {
-	if o.URLs == nil || o.IndexName == "" {
+	if len(o.URLs) == 0 || o.IndexName == "" {
 		return fmt.Errorf("opensearch urls or index_name is not defined")
 	}
 
@@ -90,7 +90,7 @@ func (o *Opensearch) Init() error {
 	o.pipelineName, o.pipelineTagKeys = o.GetReplacementKeys(o.UsePipeline, "", "%s")
 
 	o.onSucc = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
-		o.Log.Debugf("Indexed to OpenSearch with status- [%d] Result- %s DocumentID- %s \n", res.Status, res.Result, res.DocumentID)
+		o.Log.Debugf("Indexed to OpenSearch with status- [%d] Result- %s DocumentID- %s ", res.Status, res.Result, res.DocumentID)
 	}
 	o.onFail = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
 		if err != nil {
@@ -101,7 +101,7 @@ func (o *Opensearch) Init() error {
 	}
 
 	if o.TemplateName == "" {
-		return fmt.Errorf("OpenSearch template_name configuration not defined")
+		return fmt.Errorf("template_name configuration not defined")
 	}
 
 	return nil
@@ -155,7 +155,7 @@ func (o *Opensearch) newClient() error {
 		Password:  string(password),
 	}
 
-	if o.InsecureSkipVerify {
+	if o.configOptions.InsecureSkipVerify {
 		clientConfig.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -167,8 +167,15 @@ func (o *Opensearch) newClient() error {
 		header.Add("Content-Type", "application/json")
 		header.Add("Accept-Encoding", "gzip")
 	}
-	if o.AuthBearerToken != "" {
-		header.Add("Authorization", "Bearer "+o.AuthBearerToken)
+
+	if !o.AuthBearerToken.Empty() {
+		token, err := o.AuthBearerToken.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		if string(token) != "" {
+			header.Add("Authorization", "Bearer "+string(token))
+		}
 	}
 	clientConfig.Header = header
 
@@ -197,7 +204,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("failed to instantiate OpenSearch bulkindexer")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5000000000))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
 
 	for _, metric := range metrics {
@@ -273,9 +280,9 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		// Report the indexer statistics
 		stats := bulkIndxr.Stats()
 		if stats.NumAdded < uint64(len(metrics)) {
-			return fmt.Errorf("OpenSearch indexed [%d] documents with [%d] errors", stats.NumAdded, stats.NumFailed)
+			return fmt.Errorf("indexed [%d] documents with [%d] errors", stats.NumAdded, stats.NumFailed)
 		}
-		o.Log.Debugf("OpenSearch successfully indexed [%d] documents\n", stats.NumAdded)
+		o.Log.Debugf("Successfully indexed [%d] documents", stats.NumAdded)
 	}
 
 	return nil
@@ -349,12 +356,12 @@ func (o *Opensearch) manageTemplate(ctx context.Context) error {
 		return fmt.Errorf("template cannot be created for dynamic index names without an index prefix")
 	}
 
-	if (o.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
+	if o.OverwriteTemplate || !templateExists || templatePattern != "" {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
 		}
 
-		t := template.Must(template.New("template").Parse(telegrafTemplate))
+		t := template.Must(template.New("template").Parse(indexTemplate))
 		var tmpl bytes.Buffer
 
 		if err := t.Execute(&tmpl, tp); err != nil {
@@ -365,13 +372,13 @@ func (o *Opensearch) manageTemplate(ctx context.Context) error {
 			Name: o.TemplateName,
 			Body: strings.NewReader(tmpl.String()),
 		}
-		indexTempResp, errCreateTemplate := indexTempReq.Do(ctx, o.osClient.Transport)
+		indexTempResp, err := indexTempReq.Do(ctx, o.osClient.Transport)
 
-		if errCreateTemplate != nil || indexTempResp.StatusCode != 200 {
-			return fmt.Errorf("OpenSearch failed to create index template %s : %w", o.TemplateName, errCreateTemplate)
+		if err != nil || indexTempResp.StatusCode != 200 {
+			return fmt.Errorf("creating index template %q failed: %w", o.TemplateName, err)
 		}
 
-		o.Log.Debugf("Template %s created or updated\n", o.TemplateName)
+		o.Log.Debugf("Template %s created or updated", o.TemplateName)
 	} else {
 		o.Log.Debug("Found existing OpenSearch template. Skipping template management")
 	}
@@ -387,19 +394,15 @@ func (o *Opensearch) GetReplacementKeys(indexName string, key string, replacemen
 		endTag := startTag + strings.Index(indexName[startTag:], "}}")
 
 		if endTag < 0 {
-			startTag = -1
-		} else {
-			tagName := indexName[startTag+len(startKey) : endTag]
-
-			var tagReplacer = strings.NewReplacer(
-				startKey+tagName+"}}", replacement,
-			)
-
-			indexName = tagReplacer.Replace(indexName)
-			tagKeys = append(tagKeys, strings.Trim(strings.TrimSpace(tagName), `"`))
-
-			startTag = strings.Index(indexName, startKey)
+			break
 		}
+		tagName := indexName[startTag+len(startKey) : endTag]
+		var tagReplacer = strings.NewReplacer(startKey+tagName+"}}", replacement,)
+
+		indexName = tagReplacer.Replace(indexName)
+		tagKeys = append(tagKeys, strings.Trim(strings.TrimSpace(tagName), `"`))
+
+		startTag = strings.Index(indexName, startKey)
 	}
 
 	return indexName, tagKeys
@@ -412,7 +415,7 @@ func (o *Opensearch) GetIndexName(indexName string, eventTime time.Time, tagKeys
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			o.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, o.DefaultTagValue)
+			o.Log.Debugf("Tag %q not found, using %q on index name instead", key, o.DefaultTagValue)
 			tagValues = append(tagValues, o.DefaultTagValue)
 		}
 	}
@@ -432,7 +435,7 @@ func (o *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, met
 		return pipelineInput
 	}
 
-	var tagValues []interface{}
+	tagValues := make([]interface{}, 0, len(tagKeys))
 
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {
