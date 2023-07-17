@@ -31,21 +31,21 @@ import (
 var sampleConfig string
 
 type Opensearch struct {
-	Username            config.Secret   `toml:"username"`
-	Password            config.Secret   `toml:"password"`
-	AuthBearerToken     config.Secret   `toml:"auth_bearer_token"`
-	EnableGzip          bool            `toml:"enable_gzip"`
-	EnableSniffer       bool            `toml:"enable_sniffer"`
-	FloatHandling       string          `toml:"float_handling"`
-	FloatReplacement    float64         `toml:"float_replacement_value"`
-	ForceDocumentID     bool            `toml:"force_document_id"`
-	IndexName           string          `toml:"index_name"`
-	TemplateName        string          `toml:"template_name"`
-	ManageTemplate      bool            `toml:"manage_template"`
-	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	Username            config.Secret `toml:"username"`
+	Password            config.Secret `toml:"password"`
+	AuthBearerToken     config.Secret `toml:"auth_bearer_token"`
+	EnableGzip          bool          `toml:"enable_gzip"`
+	EnableSniffer       bool          `toml:"enable_sniffer"`
+	FloatHandling       string        `toml:"float_handling"`
+	FloatReplacement    float64       `toml:"float_replacement_value"`
+	ForceDocumentID     bool          `toml:"force_document_id"`
+	IndexName           string        `toml:"index_name"`
+	TemplateName        string        `toml:"template_name"`
+	ManageTemplate      bool          `toml:"manage_template"`
+	OverwriteTemplate   bool          `toml:"overwrite_template"`
 	pipelineName        string
-	DefaultPipeline     string          `toml:"default_pipeline"`
-	UsePipeline         string          `toml:"use_pipeline"`
+	DefaultPipeline     string `toml:"default_pipeline"`
+	UsePipeline         string `toml:"use_pipeline"`
 	pipelineTagKeys     []string
 	tagKeys             []string
 	DefaultTagValue     string          `toml:"default_tag_value"`
@@ -56,8 +56,8 @@ type Opensearch struct {
 	Log                 telegraf.Logger `toml:"-"`
 	onSucc              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
 	onFail              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
-	configOptions httpconfig.HTTPClientConfig
-	osClient *opensearch.Client
+	configOptions       httpconfig.HTTPClientConfig
+	osClient            *opensearch.Client
 }
 
 //go:embed template.json
@@ -397,7 +397,7 @@ func (o *Opensearch) GetReplacementKeys(indexName string, key string, replacemen
 			break
 		}
 		tagName := indexName[startTag+len(startKey) : endTag]
-		var tagReplacer = strings.NewReplacer(startKey+tagName+"}}", replacement,)
+		var tagReplacer = strings.NewReplacer(startKey+tagName+"}}", replacement)
 
 		indexName = tagReplacer.Replace(indexName)
 		tagKeys = append(tagKeys, strings.Trim(strings.TrimSpace(tagName), `"`))
