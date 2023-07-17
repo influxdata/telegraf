@@ -102,7 +102,7 @@ require (
 	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.5.2
 	github.com/influxdata/influxdb-observability/influx2otel v0.5.0
-	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20230705233630-3cfabd1d00b9
+	github.com/influxdata/influxdb-observability/otel2influx v0.2.30
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
@@ -436,7 +436,6 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/collector/consumer v0.81.0 // indirect
 	go.opentelemetry.io/collector/semconv v0.81.0 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
