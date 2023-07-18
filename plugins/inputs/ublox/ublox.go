@@ -3,6 +3,7 @@ package ublox
 
 import (
 	_ "embed"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -12,9 +13,12 @@ import (
 type UbloxDataCollector struct {
 	UbloxPTY string          `toml:"ublox_pty"`
 	Log      telegraf.Logger `toml:"-"`
-	posCh    chan GPSPos
-	tdCh     chan int64
-	errCh    chan error
+
+	mut sync.Mutex
+
+	lastPos  *GPSPos
+	timeDiff *int64
+	err      error
 }
 
 func (*UbloxDataCollector) Description() string {
@@ -30,19 +34,15 @@ func (*UbloxDataCollector) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (s *UbloxDataCollector) Init() error {
-	s.posCh = make(chan GPSPos, 1)
-	s.tdCh = make(chan int64, 1)
-	s.errCh = make(chan error, 1)
 	go func() {
 		reader := NewUbloxReader(s.UbloxPTY)
 		lastFusionMode := None
 		for {
 			pos, err := reader.Pop(true)
 			if err != nil {
-				select {
-				case s.errCh <- err:
-				default:
-				}
+				s.mut.Lock()
+				s.err = err
+				s.mut.Unlock()
 				continue
 			} else if pos == nil {
 				time.Sleep(time.Second * 1)
@@ -58,45 +58,50 @@ func (s *UbloxDataCollector) Init() error {
 
 			if pos.Active {
 				now := time.Now()
-				select {
-				case s.tdCh <- now.Sub(pos.Ts).Milliseconds():
-				default:
-				}
+				td := now.Sub(pos.Ts).Milliseconds()
+
+				s.mut.Lock()
+				s.timeDiff = &td
+				s.mut.Unlock()
 			}
 
-			select {
-			case s.posCh <- *pos:
-			default:
-			}
+			s.mut.Lock()
+			s.lastPos = pos
+			s.mut.Unlock()
 		}
 	}()
 	return nil
 }
 
 func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
-	select {
-	case lastPos := <-s.posCh:
-		metrics := make(map[string]interface{})
-		metrics["active"] = lastPos.Active
-		metrics["lon"] = lastPos.Lon
-		metrics["lat"] = lastPos.Lat
-		metrics["heading"] = lastPos.Heading
-		metrics["pdop"] = lastPos.Pdop
+	s.mut.Lock()
+	defer s.mut.Unlock()
 
-		if lastPos.FusionMode != None {
-			metrics["fusion_mode"] = lastPos.FusionMode
+	if s.lastPos != nil {
+		metrics := make(map[string]interface{})
+		metrics["active"] = s.lastPos.Active
+		metrics["lon"] = s.lastPos.Lon
+		metrics["lat"] = s.lastPos.Lat
+		metrics["heading"] = s.lastPos.Heading
+		metrics["pdop"] = s.lastPos.Pdop
+
+		if s.lastPos.FusionMode != None {
+			metrics["fusion_mode"] = s.lastPos.FusionMode
 		}
 
-		select {
-		case timeDiff := <-s.tdCh:
-			metrics["system_gps_time_diff_ms"] = timeDiff
-		default:
+		s.lastPos = nil
+
+		if s.timeDiff != nil {
+			metrics["system_gps_time_diff_ms"] = s.timeDiff
+
+			s.timeDiff = nil
 		}
 
 		acc.AddFields("ublox-data", metrics, nil)
-	case err := <-s.errCh:
-		return err
-	default:
+	} else if s.err != nil {
+		retval := s.err
+		s.err = nil
+		return retval
 	}
 
 	return nil
