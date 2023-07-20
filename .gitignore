@@ -25,3 +25,4 @@ heap.out
 profile*.png
 test.sh
 metrics
+hosts.json

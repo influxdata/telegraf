@@ -209,10 +209,6 @@ func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]in
 
 func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, valueTags, metricTags map[string]string) string {
 
-	if t == nil {
-		return ""
-	}
-
 	tgs := make(map[string]interface{})
 	for k, v := range valueTags {
 		tgs[k] = v
@@ -240,9 +236,13 @@ func (p *PrometheusHttp) getExtraMetricTags(tags map[string]string, m *Prometheu
 	}
 	tgs := make(map[string]string)
 	for v, t := range m.Tags {
-		s := p.setExtraMetricTag(m.templates[v], tags, m.Tags)
-		if s != "" {
-			tgs[v] = s
+
+		tpl := m.templates[v]
+		if tpl != nil {
+			tgs[v] = p.setExtraMetricTag(m.templates[v], tags, m.Tags)
+			if !p.SkipEmptyTags && tgs[v] == "" {
+				tgs[v] = t
+			}
 		} else {
 			tgs[v] = t
 		}
