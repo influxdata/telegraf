@@ -68,7 +68,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## When set to true will add node labels as a comma-seperated tag. If none,
   ## are found, then a tag with the value of 'none' is used.
-  # node_lables_as_tag = false
+  # node_labels_as_tag = false
 ```
 
 ## Metrics
