@@ -42,7 +42,7 @@ type Jenkins struct {
 	MaxBuildAge       config.Duration `toml:"max_build_age"`
 	MaxSubJobDepth    int             `toml:"max_subjob_depth"`
 	MaxSubJobPerLayer int             `toml:"max_subjob_per_layer"`
-	NodeLabelsAsTag   bool            `toml:"node_lables_as_tag"`
+	NodeLabelsAsTag   bool            `toml:"node_labels_as_tag"`
 	JobExclude        []string        `toml:"job_exclude"`
 	JobInclude        []string        `toml:"job_include"`
 	jobFilter         filter.Filter
