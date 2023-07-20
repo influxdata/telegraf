@@ -41,12 +41,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - tags:
     - source
   - fields:
-    - response_code (string, [see below](#field-response_code)))
+    - response_status (string, [see below](#field-response_status)))
     - responsetime_ms (int64 [see below](#field-responsetime_ms)))
 
-### field `response_code`
+### field `response_status`
 
-The field "response_code" is either a translated raw code returned
+The field "response_status" is either a translated raw code returned
 by the tacacs server, or filled by telegraf in case of a timeout.
 
 | Field Value          | Raw Code     | From          | responsetime_ms
@@ -59,11 +59,11 @@ by the tacacs server, or filled by telegraf in case of a timeout.
 | AuthenStatusRestart  | 6 (0x6)      | tacacs server | real value
 | AuthenStatusError    | 7 (0x7)      | tacacs server | real value
 | AuthenStatusFollow   | 33 (0x21)    | tacacs server | real value
-| timeout              | timeout      | telegraf      | eq. to response_timeout
+| Timeout              | timeout      | telegraf      | eq. to response_timeout
 
 ### field `responsetime_ms`
 
-The field responsetime_ms is responsetime of the tacacs server
+The field responsetime_ms is response time of the tacacs server
 in miliseconds of the furthest achieved stage of auth.
 In case of timeout, its filled by telegraf to be the value of
 the configured response_timeout.
@@ -71,5 +71,5 @@ the configured response_timeout.
 ## Example Output
 
 ```text
-tacacs,source=127.0.0.1:49 responsetime_ms=311i,response_code="AuthenStatusPass" 1677526200000000000
+tacacs,source=127.0.0.1:49 responsetime_ms=311i,response_status="AuthenStatusPass" 1677526200000000000
 ```

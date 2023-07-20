@@ -149,14 +149,14 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		fields["response_code"] = "timeout"
+		fields["response_status"] = "timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 	defer session.Close()
 	if reply.Status != tacplus.AuthenStatusGetUser {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_code"] = t.AuthenReplyToString(reply.Status)
+		fields["response_status"] = t.AuthenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -167,13 +167,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		fields["response_code"] = "timeout"
+		fields["response_status"] = "timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 	if reply.Status != tacplus.AuthenStatusGetPass {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_code"] = t.AuthenReplyToString(reply.Status)
+		fields["response_status"] = t.AuthenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -184,19 +184,19 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		fields["response_code"] = "timeout"
+		fields["response_status"] = "timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 	if reply.Status != tacplus.AuthenStatusPass {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_code"] = t.AuthenReplyToString(reply.Status)
+		fields["response_status"] = t.AuthenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 
 	fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-	fields["response_code"] = t.AuthenReplyToString(reply.Status)
+	fields["response_status"] = t.AuthenReplyToString(reply.Status)
 	acc.AddFields("tacacs", fields, tags)
 	return nil
 }
