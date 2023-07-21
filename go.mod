@@ -28,7 +28,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.389
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.1
-	github.com/antchfx/xmlquery v1.3.15
+	github.com/antchfx/xmlquery v1.3.17
 	github.com/antchfx/xpath v1.2.4
 	github.com/apache/arrow/go/v13 v13.0.0-20230630125530-5a06b2ec2a8e
 	github.com/apache/iotdb-client-go v0.12.2-0.20220722111104-cd17da295b46
