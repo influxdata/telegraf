@@ -18,3 +18,16 @@ The `template` output data format outputs metrics using an user defined go templ
   ## Go template which defines output format
   template = '{{ .Tag "host" }} {{ .Field "available" }}'
 ```
+
+### Batch mode
+
+When an output plugin emits multiple metrics in a batch fashion the template receives the 
+array of metrics as the dot.
+
+```toml
+template = '''My metric names: 
+{{- range $index, $metric := . -}}
+{{if $index}}, {{ end }}{{ $metric.Name }}
+{{- end }}
+'''
+```
