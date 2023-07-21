@@ -79,8 +79,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## the value of this tag name.
   # retention_policy_tag = ""
 
-  ## Optional username and password to accept for HTTP basic authentication.
+  ## Optional username and password to accept for HTTP basic authentication
+  ## or authentication token.
   ## You probably want to make sure you have TLS configured above for this.
+  ## Use these options for the authentication token in the form
+  ##   Authentication: Token <basic_username>:<basic_password>
   # basic_username = "foobar"
   # basic_password = "barfoo"
 
