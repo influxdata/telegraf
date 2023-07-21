@@ -85,7 +85,7 @@ func (h *HTTP) Connect() error {
 		h.Method = http.MethodPost
 	}
 	h.Method = strings.ToUpper(h.Method)
-	if h.Method != http.MethodPost && h.Method != http.MethodPut {
+	if h.Method != http.MethodPost && h.Method != http.MethodPut && h.Method != http.MethodPatch {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
