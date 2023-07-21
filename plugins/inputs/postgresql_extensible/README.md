@@ -59,6 +59,9 @@ to use them.
   # The script option can be used to specify the .sql file path.
   # If script and sqlquery options specified at same time, sqlquery will be used
   #
+  # the measurement field defines measurement name for metrics produced
+  # by the query. Default is "postgresql".
+  #
   # the tagvalue field is used to define custom tags (separated by comas).
   # the query is expected to return columns which match the names of the
   # defined tags. The values in these columns must be of a string-type,
@@ -81,6 +84,7 @@ to use them.
   #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
+  #   measurement string
   #   sqlquery string
   #   min_version int
   #   max_version int
@@ -88,6 +92,7 @@ to use them.
   #   tagvalue string (coma separated)
   #   timestamp string
   [[inputs.postgresql_extensible.query]]
+    measurement="pg_stat_database"
     sqlquery="SELECT * FROM pg_stat_database where datname"
     min_version=901
     tagvalue=""
