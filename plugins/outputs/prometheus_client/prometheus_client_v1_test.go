@@ -389,6 +389,7 @@ rpc_duration_seconds_count 2693
 			})
 
 			input := &inputs.Prometheus{
+				Log:           logger,
 				URLs:          []string{address},
 				URLTag:        "",
 				MetricVersion: 1,
