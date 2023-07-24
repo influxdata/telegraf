@@ -1,6 +1,7 @@
 # Template Serializer
 
 The `template` output data format outputs metrics using an user defined go template.
+[Sprig](http://masterminds.github.io/sprig/) helper functions are also available.
 
 ## Configuration
 

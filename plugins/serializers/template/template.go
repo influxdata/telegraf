@@ -5,6 +5,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -22,14 +24,14 @@ func (s *Serializer) Init() error {
 	// Setting defaults
 	var err error
 
-	s.tmplMetric, err = template.New("template").Parse(s.Template)
+	s.tmplMetric, err = template.New("template").Funcs(sprig.TxtFuncMap()).Parse(s.Template)
 	if err != nil {
 		return fmt.Errorf("creating template failed: %w", err)
 	}
 	if s.BatchTemplate == "" {
 		s.BatchTemplate = fmt.Sprintf("{{range .}}%s{{end}}", s.Template)
 	}
-	s.tmplBatch, err = template.New("batch template").Parse(s.BatchTemplate)
+	s.tmplBatch, err = template.New("batch template").Funcs(sprig.TxtFuncMap()).Parse(s.BatchTemplate)
 	if err != nil {
 		return fmt.Errorf("creating batch template failed: %w", err)
 	}
