@@ -8,6 +8,7 @@ Wants=network-online.target
 Type=notify
 EnvironmentFile=-/etc/default/telegraf
 User=telegraf
+#LoadCredentialEncrypted=telegraf:/etc/telegraf/credentials
 ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
