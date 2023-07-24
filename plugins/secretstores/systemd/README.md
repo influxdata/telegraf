@@ -15,8 +15,7 @@ setup systemd credentials and how to add credentials
 ## Requirements and caveats
 
 This plugin requires **systemd version 250+** with a correctly set-up
-credentials via [systemd-creds][] (see
-[setup section](#setup-of-systemd-credentials)).
+credentials via [systemd-creds][] (see [setup section](#credential-management)).
 Furthermore, provisioning of the created credentials must by enabled
 via `LoadCredentialEncrypted` in the service file. This is the case for the
 Telegraf service provided in this repository. It expects encrypted credentials
@@ -89,7 +88,8 @@ partial
 +driver
 +system
 +subsystem
-``` 
+```
+
 The output should look similar to the above.
 
 Now setup the credentials by creating the root key.
@@ -144,7 +144,6 @@ TODO
 ### Troubleshooting
 
 TODO
-
 
 [systemd]: https://www.freedesktop.org/wiki/Software/systemd/
 [systemd-descr]: https://systemd.io/CREDENTIALS
