@@ -131,19 +131,117 @@ to interactively enter the password.
 
 ### Enabling credentials in the service
 
-TODO
+To actually provide credentials to the Telegraf service, you need to list them
+in the service file. You can use
+
+```shell
+# systemctl edit telegraf
+```
+
+to overwrite parts of the service file. The resulting override should be placed
+in `/etc/systemd/system/telegraf.service.d/override.conf`. The following is an
+example for the content of the file
+
+```text
+[Service]
+LoadCredentialEncrypted=http_user:/etc/telegraf/credentials/http_user
+LoadCredentialEncrypted=http_passwd:/etc/telegraf/credentials/http_passwd
+```
+
+This will load two credentials, named `http_user` and `http_passwd` which are
+then accessible by Telegraf with those names. Please note that the names have
+to match the names used during encryption of the credentials.
+
+You can add an arbitrary list of credentials to the service as long as the name
+is unique.
 
 ### Using credentials as secrets
 
-TODO
+To use the credentials as secrets you need to first instantiate a `systemd`
+secret-store by adding
+
+```toml
+[[secretstores.systemd]]
+  id = "systemd"
+```
+
+to your Telegraf configuration. Assuming the two example credentials
+`http_user` and `http_passwd` you can now use those as secrets via
+
+```toml
+[[inputs.http]]
+  urls = ["http://localhost/metrics"]
+  username = "@{systemd:http_user}"
+  password = "@{systemd:http_passwd}"
+
+```
+
+in your plugins.
 
 ### Chaining for unattended start
 
-TODO
+When using many secrets or when secrets need to be shared among hosts, listing
+all of them in the service file might be cumbersome. Additionally, it is hard
+to manually test Telegraf configurations with the `systemd` secret-store as
+those secrets are only available when started as a service.
+
+Here, secret-store chaining comes into play, denoting a setup where one
+secret-store, in our case `secretstores.systemd`, is used to unlock another
+secret-store (`secretstores.jose` in this example).
+
+```toml
+[[secretstores.systemd]]
+  id = "systemd"
+
+[[secretstores.jose]]
+  id = "mysecrets"
+  path = "/etc/telegraf/secrets"
+  password = "@{systemd:initial}"
+```
+
+Here we assume that an `initial` credential was injected through the service
+file. This `initial` secret is then used to unlock the `jose` secret-store
+which might provide many different secrets backed by encrypted files.
+
+Input and output plugins can the use the `jose` secrets (via `@{mysecrets:...}`)
+to fill sensitive data such as usernames, passwords or tokens.
 
 ### Troubleshooting
 
-TODO
+Please always make sure your systemd version matches Telegraf's requirements,
+i.e. you do have version 250 or later.
+
+When not being able to start the service please check the logs. A common issue
+is a mismatch between the name stored in the credential (given during
+`systemd-creds encrypt`) does not match the one used in the
+`LoadCredentialEncrypted` statement.
+
+In case you are having trouble to reference credentials in Telegraf, you should
+check what is available via
+
+```shell
+# CREDENTIALS_DIRECTORY=/etc/telegraf/credentials systemd-creds list
+NAME        SECURE   SIZE PATH
+---------------------------------------------------------------
+http_passwd insecure 146B /etc/telegraf/credentials/http_passwd
+http_user   insecure 142B /etc/telegraf/credentials/http_user
+```
+
+Please note that Telegraf's secret management functionality is not helpful here
+as credentials are *only* available to the systemd service, not via the command
+line.
+
+As you can see, the above list also provides the *name* of the credential which
+is the key you need to reference the secret.
+
+To get the actual value of a credential use
+
+```shell
+# systemd-creds decrypt /etc/telegraf/credentials/http_passwd -
+```
+
+Please use the above command(s) with care as they do reveal the secret value
+of the credential!
 
 [systemd]: https://www.freedesktop.org/wiki/Software/systemd/
 [systemd-descr]: https://systemd.io/CREDENTIALS
