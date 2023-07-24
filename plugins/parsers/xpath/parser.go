@@ -2,8 +2,10 @@ package xpath
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -457,11 +459,21 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 					}
 				}
 
-				if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
-					if b, ok := v.([]byte); ok {
-						v = hex.EncodeToString(b)
+				// Handle complex types which would be dropped otherwise for
+				// native type handling
+				if v != nil {
+					switch reflect.TypeOf(v).Kind() {
+					case reflect.Array, reflect.Slice, reflect.Map:
+						if b, ok := v.([]byte); ok {
+							if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+								v = hex.EncodeToString(b)
+							}
+						} else {
+							v = fmt.Sprintf("%v", v)
+						}
 					}
 				}
+
 				fields[name] = v
 			}
 		} else {
@@ -510,6 +522,23 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 			}
 		}
 		// Fallback to get the string value representation
+		if nn, ok := current.(*jsonquery.NodeNavigator); ok {
+			// For complex types such as arrays or maps, we cannot simply
+			// stringify the value as the upstream library does, but need to
+			// convert it to JSON again.
+			raw := nn.GetValue()
+			switch raw.(type) {
+			case string, bool:
+				// Fallthrough to the normal return
+			default:
+				v, err := json.Marshal(raw)
+				if err != nil {
+					return nil, err
+				}
+				return string(v), nil
+			}
+		}
+
 		return iter.Current().Value(), nil
 	}
 
