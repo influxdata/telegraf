@@ -45,7 +45,7 @@ type ReadWaitCloser struct {
 }
 
 func FormatFullVersion() string {
-	var parts = []string{"Telegraf"}
+	var parts = []string{"InfluxData Telegraf"}
 
 	if Version != "" {
 		parts = append(parts, Version)
