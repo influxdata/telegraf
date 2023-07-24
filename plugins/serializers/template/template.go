@@ -33,10 +33,8 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		s.Log.Errorf("metric of type %T is not a template metric", metric)
 		return nil, nil
 	}
-	newM := TemplateMetric{m}
-
 	var b strings.Builder
-	if err := s.outTemplate.Execute(&b, &newM); err != nil {
+	if err := s.outTemplate.Execute(&b, &m); err != nil {
 		s.Log.Errorf("failed to execute template: %v", err)
 		return nil, nil
 	}
@@ -48,7 +46,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	if len(metrics) < 1 {
 		return nil, nil
 	}
-	newMetrics := make([]TemplateMetric, 0, len(metrics))
+	newMetrics := make([]telegraf.TemplateMetric, 0, len(metrics))
 
 	for _, metric := range metrics {
 		m, ok := metric.(telegraf.TemplateMetric)
@@ -56,7 +54,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			s.Log.Errorf("metric of type %T is not a template metric", metric)
 			return nil, nil
 		}
-		newMetrics = append(newMetrics, TemplateMetric{m})
+		newMetrics = append(newMetrics, m)
 	}
 
 	var b strings.Builder
