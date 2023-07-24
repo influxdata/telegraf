@@ -21,7 +21,7 @@ The `template` output data format outputs metrics using an user defined go templ
 
 ### Batch mode
 
-When an output plugin emits multiple metrics in a batch fashion the template receives the 
+When an output plugin emits multiple metrics in a batch fashion the template receives the
 array of metrics as the dot.
 
 ```toml
