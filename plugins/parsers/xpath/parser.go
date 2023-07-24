@@ -2,7 +2,6 @@ package xpath
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -519,23 +518,6 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 				return nn.GetValue(), nil
 			case *protobufquery.NodeNavigator:
 				return nn.GetValue(), nil
-			}
-		}
-		// Fallback to get the string value representation
-		if nn, ok := current.(*jsonquery.NodeNavigator); ok {
-			// For complex types such as arrays or maps, we cannot simply
-			// stringify the value as the upstream library does, but need to
-			// convert it to JSON again.
-			raw := nn.GetValue()
-			switch raw.(type) {
-			case string, bool:
-				// Fallthrough to the normal return
-			default:
-				v, err := json.Marshal(raw)
-				if err != nil {
-					return nil, err
-				}
-				return string(v), nil
 			}
 		}
 
