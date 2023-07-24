@@ -62,9 +62,6 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	if len(metrics) < 1 {
-		return nil, nil
-	}
 	newMetrics := make([]telegraf.TemplateMetric, 0, len(metrics))
 
 	for _, metric := range metrics {
