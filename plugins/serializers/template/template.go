@@ -13,14 +13,14 @@ type Serializer struct {
 	Template string          `toml:"template"`
 	Log      telegraf.Logger `toml:"-"`
 
-	template *template.Template
+	outTemplate *template.Template
 }
 
 func (s *Serializer) Init() error {
 	// Setting defaults
 	var err error
 
-	s.template, err = template.New("template").Parse(s.Template)
+	s.outTemplate, err = template.New("template").Parse(s.Template)
 	if err != nil {
 		return fmt.Errorf("creating template failed: %w", err)
 	}
@@ -36,7 +36,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	newM := TemplateMetric{m}
 
 	var b strings.Builder
-	if err := s.template.Execute(&b, &newM); err != nil {
+	if err := s.outTemplate.Execute(&b, &newM); err != nil {
 		s.Log.Errorf("failed to execute template: %v", err)
 		return nil, nil
 	}
@@ -48,7 +48,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	if len(metrics) < 1 {
 		return nil, nil
 	}
-	var newMetrics []TemplateMetric
+	newMetrics := make([]TemplateMetric, 0, len(metrics))
 
 	for _, metric := range metrics {
 		m, ok := metric.(telegraf.TemplateMetric)
@@ -60,7 +60,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var b strings.Builder
-	if err := s.template.Execute(&b, &newMetrics); err != nil {
+	if err := s.outTemplate.Execute(&b, &newMetrics); err != nil {
 		s.Log.Errorf("failed to execute template: %v", err)
 		return nil, nil
 	}
