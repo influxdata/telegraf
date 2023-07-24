@@ -10,19 +10,28 @@ import (
 )
 
 type Serializer struct {
-	Template string          `toml:"template"`
-	Log      telegraf.Logger `toml:"-"`
+	Template      string          `toml:"template"`
+	BatchTemplate string          `toml:"batch_template"`
+	Log           telegraf.Logger `toml:"-"`
 
-	outTemplate *template.Template
+	tmplMetric *template.Template
+	tmplBatch  *template.Template
 }
 
 func (s *Serializer) Init() error {
 	// Setting defaults
 	var err error
 
-	s.outTemplate, err = template.New("template").Parse(s.Template)
+	s.tmplMetric, err = template.New("template").Parse(s.Template)
 	if err != nil {
 		return fmt.Errorf("creating template failed: %w", err)
+	}
+	if s.BatchTemplate == "" {
+		s.BatchTemplate = fmt.Sprintf("{{range .}}%s{{end}}", s.Template)
+	}
+	s.tmplBatch, err = template.New("batch template").Parse(s.BatchTemplate)
+	if err != nil {
+		return fmt.Errorf("creating batch template failed: %w", err)
 	}
 	return nil
 }
@@ -34,9 +43,19 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		return nil, nil
 	}
 	var b strings.Builder
-	if err := s.outTemplate.Execute(&b, &m); err != nil {
-		s.Log.Errorf("failed to execute template: %v", err)
-		return nil, nil
+	if s.Template == "" && s.BatchTemplate != "" {
+		// If the user has only defined a batch template, fall back to batches of 1
+		metrics := []telegraf.TemplateMetric{m}
+
+		if err := s.tmplBatch.Execute(&b, &metrics); err != nil {
+			s.Log.Errorf("failed to execute batch template: %v", err)
+			return nil, nil
+		}
+	} else {
+		if err := s.tmplMetric.Execute(&b, &m); err != nil {
+			s.Log.Errorf("failed to execute template: %v", err)
+			return nil, nil
+		}
 	}
 
 	return []byte(b.String()), nil
@@ -58,8 +77,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var b strings.Builder
-	if err := s.outTemplate.Execute(&b, &newMetrics); err != nil {
-		s.Log.Errorf("failed to execute template: %v", err)
+	if err := s.tmplBatch.Execute(&b, &newMetrics); err != nil {
+		s.Log.Errorf("failed to execute batch template: %v", err)
 		return nil, nil
 	}
 

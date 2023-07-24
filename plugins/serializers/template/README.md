@@ -21,13 +21,13 @@ The `template` output data format outputs metrics using an user defined go templ
 
 ### Batch mode
 
-When an output plugin emits multiple metrics in a batch fashion the template receives the
-array of metrics as the dot.
+When an output plugin emits multiple metrics in a batch fashion, by default the
+template will just be repeated for each metric. If you would like to specifically
+define how a batch should be formatted, you can use a `batch_template` instead.
+In this mode, the context of the template (the 'dot') will be a slice of metrics.
 
 ```toml
-template = '''My metric names: 
-{{- range $index, $metric := . -}}
+batch_template = '''My batch metric names: {{range $index, $metric := . -}}
 {{if $index}}, {{ end }}{{ $metric.Name }}
-{{- end }}
-'''
+{{- end }}'''
 ```

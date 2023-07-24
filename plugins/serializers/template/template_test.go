@@ -142,6 +142,13 @@ func TestSerializer(t *testing.T) {
 				require.Contains(t, err.Error(), tt.errReason)
 			}
 			require.Equal(t, string(tt.output), string(output))
+			// Ensure we get the same output in batch mode
+			batchOutput, err := serializer.SerializeBatch([]telegraf.Metric{tt.input})
+			if tt.errReason != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errReason)
+			}
+			require.Equal(t, string(tt.output), string(batchOutput))
 		})
 	}
 }
@@ -156,7 +163,7 @@ func TestSerializeBatch(t *testing.T) {
 		time.Unix(0, 0),
 	)
 	metrics := []telegraf.Metric{m, m}
-	s := &Serializer{Template: `{{ range $index, $metric := . }}{{$index}}: {{$metric.Name}} {{$metric.Field "value"}}
+	s := &Serializer{BatchTemplate: `{{ range $index, $metric := . }}{{$index}}: {{$metric.Name}} {{$metric.Field "value"}}
 {{end}}`}
 	require.NoError(t, s.Init())
 	buf, err := s.SerializeBatch(metrics)
@@ -168,4 +175,8 @@ func TestSerializeBatch(t *testing.T) {
 1: cpu 42
 `,
 	)
+	// A batch template should still work when serializing a single metric
+	single_buf, err := s.Serialize(m)
+	require.NoError(t, err)
+	require.Equal(t, string(single_buf), "0: cpu 42\n")
 }
