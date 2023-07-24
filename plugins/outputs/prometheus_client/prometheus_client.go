@@ -123,7 +123,7 @@ func (p *PrometheusClient) Init() error {
 		ipRange = append(ipRange, ipNet)
 	}
 
-	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
+	authHandler := internal.BasicAuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
