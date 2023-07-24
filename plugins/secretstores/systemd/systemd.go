@@ -21,7 +21,7 @@ import (
 const systemdMinimumVersion = 250
 
 // Required to be a variable to mock the version in tests
-var getSystemdVersion func() (int, error) = getSystemdMajorVersion
+var getSystemdVersion = getSystemdMajorVersion
 
 //go:embed sample.conf
 var sampleConfig string
