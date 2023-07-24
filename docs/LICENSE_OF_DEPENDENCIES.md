@@ -99,6 +99,7 @@ following works:
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
+- github.com/cpuguy83/dockercfg [MIT License](https://github.com/cpuguy83/dockercfg/blob/main/LICENSE)
 - github.com/cpuguy83/go-md2man [MIT License](https://github.com/cpuguy83/go-md2man/blob/master/LICENSE.md)
 - github.com/danieljoos/wincred [MIT License](https://github.com/danieljoos/wincred/blob/master/LICENSE)
 - github.com/davecgh/go-spew [ISC License](https://github.com/davecgh/go-spew/blob/master/LICENSE)
