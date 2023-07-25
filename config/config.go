@@ -949,6 +949,9 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 		return err
 	}
 
+	logger := models.NewLogger("secretstores", name, "")
+	models.SetLoggerOnPlugin(store, logger)
+
 	if err := store.Init(); err != nil {
 		return fmt.Errorf("error initializing secret-store %q: %w", storeid, err)
 	}
