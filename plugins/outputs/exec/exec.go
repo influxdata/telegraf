@@ -77,7 +77,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 
 		return e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer)
 	}
-	var errs []error
+	errs := make([]error, 0, len(metrics))
 	for _, metric := range metrics {
 		serializedMetric, err := e.serializer.Serialize(metric)
 		if err != nil {
