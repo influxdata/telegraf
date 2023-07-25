@@ -135,6 +135,7 @@ credentials through command-history or showing it on the screen we use
 ```shell
 $ systemd-ask-password -n | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_password
 Password: (press TAB for no echo)
+systemd-ask-password -n | systemd-creds encrypt - /etc/telegraf/credentials/http_password
 ```
 
 to interactively enter the password.
