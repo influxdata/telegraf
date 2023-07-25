@@ -32,6 +32,9 @@ func (d *msgpackDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator
 func (d *msgpackDocument) GetNodePath(node, relativeTo dataNode, sep string) string {
 	return (*jsonDocument)(d).GetNodePath(node, relativeTo, sep)
 }
+func (d *msgpackDocument) GetNodeName(node dataNode, sep string, withParent bool) string {
+	return (*jsonDocument)(d).GetNodeName(node, sep, withParent)
+}
 
 func (d *msgpackDocument) OutputXML(node dataNode) string {
 	return (*jsonDocument)(d).OutputXML(node)
