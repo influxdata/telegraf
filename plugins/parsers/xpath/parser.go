@@ -28,6 +28,7 @@ type dataDocument interface {
 	QueryAll(node dataNode, expr string) ([]dataNode, error)
 	CreateXPathNavigator(node dataNode) path.NodeNavigator
 	GetNodePath(node, relativeTo dataNode, sep string) string
+	GetNodeName(node dataNode, sep string, withParent bool) string
 	OutputXML(node dataNode) string
 }
 
@@ -324,16 +325,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if !ok {
 					return nil, fmt.Errorf("failed to query tag name with query %q: result is not a string (%v)", tagnamequery, n)
 				}
+				name = p.constructFieldName(selected, selectedtag, name, config.TagNameExpand)
+
 				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
 				if err != nil {
 					return nil, fmt.Errorf("failed to query tag value for %q: %w", name, err)
-				}
-
-				if config.TagNameExpand {
-					p := p.document.GetNodePath(selectedtag, selected, "_")
-					if len(p) > 0 {
-						name = p + "_" + name
-					}
 				}
 
 				// Check if field name already exists and if so, append an index number.
@@ -434,16 +430,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if !ok {
 					return nil, fmt.Errorf("failed to query field name with query %q: result is not a string (%v)", fieldnamequery, n)
 				}
+				name = p.constructFieldName(selected, selectedfield, name, config.FieldNameExpand)
+
 				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field value for %q: %w", name, err)
-				}
-
-				if config.FieldNameExpand {
-					p := p.document.GetNodePath(selectedfield, selected, "_")
-					if len(p) > 0 {
-						name = p + "_" + name
-					}
 				}
 
 				// Check if field name already exists and if so, append an index number.
@@ -565,6 +556,30 @@ func splitLastPathElement(query string) []string {
 	}
 
 	return elements
+}
+
+func (p *Parser) constructFieldName(root, node dataNode, name string, expand bool) string {
+	var expansion string
+
+	// In case the name is empty we should determine the current node's name.
+	// This involves array index expansion in case the parent of the node is
+	// and array. If we expanded here, we should skip our parent as this is
+	// already encoded in the name
+	if name == "" {
+		name = p.document.GetNodeName(node, "_", !expand)
+	}
+
+	// If name expansion is requested, construct a path between the current
+	// node and the root node of the selection. Concatenate the elements with
+	// an underscore.
+	if expand {
+		expansion = p.document.GetNodePath(node, root, "_")
+	}
+
+	if len(expansion) > 0 {
+		name = expansion + "_" + name
+	}
+	return name
 }
 
 func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {
