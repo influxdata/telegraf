@@ -29,6 +29,7 @@ type Exec struct {
 	Command     []string        `toml:"command"`
 	Environment []string        `toml:"environment"`
 	Timeout     config.Duration `toml:"timeout"`
+	BatchExec   bool            `toml:"batch_exec"`
 	Log         telegraf.Logger `toml:"-"`
 
 	runner     Runner
@@ -63,17 +64,32 @@ func (e *Exec) Close() error {
 // Write writes the metrics to the configured command.
 func (e *Exec) Write(metrics []telegraf.Metric) error {
 	var buffer bytes.Buffer
-	serializedMetrics, err := e.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return err
-	}
-	buffer.Write(serializedMetrics)
+	if e.BatchExec {
+		serializedMetrics, err := e.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return err
+		}
+		buffer.Write(serializedMetrics)
 
-	if buffer.Len() <= 0 {
-		return nil
-	}
+		if buffer.Len() <= 0 {
+			return nil
+		}
 
-	return e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer)
+		return e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer)
+	}
+	var errs []error
+	for _, metric := range metrics {
+		serializedMetric, err := e.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+		buffer.Reset()
+		buffer.Write(serializedMetric)
+
+		err = e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer)
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 // Runner provides an interface for running exec.Cmd.
@@ -149,7 +165,8 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
-			Timeout: config.Duration(time.Second * 5),
+			Timeout:   config.Duration(time.Second * 5),
+			BatchExec: true,
 		}
 	})
 }

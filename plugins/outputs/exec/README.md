@@ -37,6 +37,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Timeout for command to complete.
   # timeout = "5s"
+  
+  ## Whether the command gets executed once per metric, or once per metric batch
+  # batch_exec = true
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
