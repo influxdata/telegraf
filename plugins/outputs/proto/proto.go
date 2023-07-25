@@ -228,6 +228,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build smart_device")
 			}
 			influx.Smart = append(influx.Smart, &m)
+		case "smart_attribute":
+			m := SMARTAttribute{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build smart_attribute")
+			}
+			influx.SmartAttribute = append(influx.SmartAttribute, &m)
 		case "lte":
 			m := LTE{}
 			if err := json.Unmarshal(b, &m); err != nil {

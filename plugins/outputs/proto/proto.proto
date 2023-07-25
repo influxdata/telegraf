@@ -132,7 +132,6 @@ message SMART {
   double timestamp = 4;
 }
 
-
 message Tegrastats {
   message Fields {
     double ao_temp = 1;
@@ -922,6 +921,36 @@ message Recorder {
   map<string, string> fields_map = 4;
 }
 
+message SMARTAttribute {
+  message Fields {
+    double exit_status = 1;
+    int64 raw_value = 2;
+    int64 threshold = 3;
+    int64 value = 4;
+    int64 worst = 5;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message TAGS {
+    string host = 1;
+    string device = 2;
+    string enabled = 3;
+    string fail = 4;
+    string flags = 5;
+    string id = 6;
+    string model = 7;
+    string name = 8;
+    string serial_no = 9;
+    string wwn = 10;
+    string capacity = 11;
+  }
+
+  TAGS tags = 3;
+  double timestamp = 4;
+}
+
 message Influx {
   repeated Kernel kernel = 1;
   repeated LinuxSysctlFs linux_sysctl_fs = 2;
@@ -957,4 +986,5 @@ message Influx {
   repeated EventDataCutterStats eventDataCutterStats = 32;
   repeated Recorder recorder = 33;
   repeated AbleStats ableStats = 34;
+  repeated SMARTAttribute smartAttribute = 35;
 }
