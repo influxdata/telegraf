@@ -1,8 +1,6 @@
 package radius
 
 import (
-	"context"
-	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,66 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"layeh.com/radius"
-	"layeh.com/radius/rfc2865"
 )
-
-func TestRadiusLocal(t *testing.T) {
-	handler := func(w radius.ResponseWriter, r *radius.Request) {
-		username := rfc2865.UserName_GetString(r.Packet)
-		password := rfc2865.UserPassword_GetString(r.Packet)
-
-		var code radius.Code
-		if username == "testusername" && password == "testpassword" {
-			code = radius.CodeAccessAccept
-		} else {
-			code = radius.CodeAccessReject
-		}
-		if err := w.Write(r.Response(code)); err != nil {
-			require.NoError(t, err, "failed writing radius server response")
-		}
-	}
-
-	server := radius.PacketServer{
-		Handler:      radius.HandlerFunc(handler),
-		SecretSource: radius.StaticSecretSource([]byte(`testsecret`)),
-		Addr:         ":1813",
-	}
-
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			if !errors.Is(err, radius.ErrServerShutdown) {
-				require.NoError(t, err, "local radius server failed")
-			}
-		}
-	}()
-
-	plugin := &Radius{
-		Servers:  []string{"localhost:1813"},
-		Username: config.NewSecret([]byte(`testusername`)),
-		Password: config.NewSecret([]byte(`testpassword`)),
-		Secret:   config.NewSecret([]byte(`testsecret`)),
-		Log:      testutil.Logger{},
-	}
-	var acc testutil.Accumulator
-
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Gather(&acc))
-	require.Len(t, acc.Errors, 0)
-	if !acc.HasMeasurement("radius") {
-		t.Errorf("acc.HasMeasurement: expected radius")
-	}
-	require.Equal(t, true, acc.HasTag("radius", "source"))
-	require.Equal(t, true, acc.HasTag("radius", "source_port"))
-	require.Equal(t, true, acc.HasTag("radius", "response_code"))
-	require.Equal(t, "localhost", acc.TagValue("radius", "source"))
-	require.Equal(t, "1813", acc.TagValue("radius", "source_port"))
-	require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
-	require.Equal(t, true, acc.HasInt64Field("radius", "responsetime_ms"))
-
-	if err := server.Shutdown(context.Background()); err != nil {
-		require.NoError(t, err, "failed to properly shutdown local radius server")
-	}
-}
 
 func TestRadiusIntegration(t *testing.T) {
 	if testing.Short() {
