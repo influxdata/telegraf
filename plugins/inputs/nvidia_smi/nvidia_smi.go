@@ -24,8 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const measurement = "nvidia_smi"
-
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
 	BinPath string          `toml:"bin_path"`
