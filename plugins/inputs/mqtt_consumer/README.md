@@ -100,6 +100,12 @@ to use them.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Client trace messages
+  ## When set to true, and debug mode enabled in the agent settings, the MQTT
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
+  # client_trace = false
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
