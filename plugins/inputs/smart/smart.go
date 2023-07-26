@@ -28,6 +28,8 @@ var (
 	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
 	serialInfo = regexp.MustCompile("(?i)^Serial Number:\\s+(.*)$")
+	// Firmware Version: CXM09A1Q
+	firmwareInfo = regexp.MustCompile("(?i)^Firmware Version:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
 	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
@@ -715,11 +717,16 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 			deviceFields["health_ok"] = health[2] == "PASSED" || health[2] == "OK"
 		}
 
+		firmware := firmwareInfo.FindStringSubmatch(line)
+		if len(firmware) > 1 {
+			deviceTags["firmware_version"] = firmware[1]
+		}
+
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
 		if collectAttributes {
-			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled", "firmware_version"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
 					tags[key] = value

@@ -126,6 +126,7 @@ message SMART {
     string host = 2;
     string model = 3;
     string serial_no = 4;
+    string firmware_version = 5;
   }
 
   TAGS tags = 3;
@@ -945,6 +946,7 @@ message SMARTAttribute {
     string serial_no = 9;
     string wwn = 10;
     string capacity = 11;
+    string firmware_version = 12;
   }
 
   TAGS tags = 3;

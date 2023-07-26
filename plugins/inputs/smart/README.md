@@ -144,6 +144,7 @@ To run smartctl or nvme with `sudo` wrapper script can be created. `path_smartct
     - model
     - serial_no
     - wwn
+    - firmware_version
   - fields:
     - exit_status
     - health_ok
@@ -164,6 +165,7 @@ To run smartctl or nvme with `sudo` wrapper script can be created. `path_smartct
     - name
     - serial_no
     - wwn
+    - firmware_version
   - fields:
     - exit_status
     - raw_value
