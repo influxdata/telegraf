@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -762,6 +763,114 @@ func TestSeriesParser(t *testing.T) {
 				require.Equal(t, expected.Tags(), metrics[i].Tags())
 			}
 		})
+	}
+}
+
+func TestParserTimestampPrecision(t *testing.T) {
+	var tests = []struct {
+		name      string
+		precision string
+		input     []byte
+		metrics   []telegraf.Metric
+		err       error
+	}{
+		{
+			name:      "default - nanosecond",
+			precision: "",
+			input:     []byte("cpu value=1 1234567890123123123"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(1),
+					},
+					time.Unix(0, 1234567890123123123),
+				),
+			},
+		},
+		{
+			name:      "nanosecond",
+			precision: "1ns",
+			input:     []byte("cpu value=2 1234567890123123999"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(2),
+					},
+					time.Unix(0, 1234567890123123999),
+				),
+			},
+		},
+		{
+			name:      "microsecond",
+			precision: "1us",
+			input:     []byte("cpu value=3 1234567890123123"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(3),
+					},
+					time.Unix(0, 1234567890123123000),
+				),
+			},
+		},
+		{
+			name:      "millisecond",
+			precision: "1ms",
+			input:     []byte("cpu value=4 1234567890123"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(4),
+					},
+					time.Unix(0, 1234567890123000000),
+				),
+			},
+		},
+		{
+			name:      "second",
+			precision: "1s",
+			input:     []byte("cpu value=5 1234567890"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(5),
+					},
+					time.Unix(0, 1234567890000000000),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := config.Duration(0)
+			require.NoError(t, d.UnmarshalText([]byte(tt.precision)))
+			parser := Parser{InfluxTimestampPrecsion: d}
+			require.NoError(t, parser.Init())
+
+			metrics, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.metrics, metrics)
+		})
+	}
+}
+
+func TestParserInvalidTimestampPrecision(t *testing.T) {
+	d := config.Duration(0)
+	for _, precision := range []string{"1h", "1d", "2s", "1m", "2ns"} {
+		require.NoError(t, d.UnmarshalText([]byte(precision)))
+		parser := Parser{InfluxTimestampPrecsion: d}
+		require.ErrorContains(t, parser.Init(), "invalid time precision")
 	}
 }
 

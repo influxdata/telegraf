@@ -1,7 +1,6 @@
 linters:
   disable-all: true
   enable:
-    # - telegraflinter
     - asasalint
     - asciicheck
     - bidichk
@@ -39,44 +38,30 @@ linters:
 
 linters-settings:
   depguard:
-    # Kind of list is passed in.
-    # Allowed values: allowlist|denylist
-    # Default: denylist
-    list-type: denylist
-    # Check the list against standard lib.
-    # Default: false
-    include-go-root: true
-    # A list of packages for the list type specified.
-    # Can accept both string prefixes and string glob patterns.
-    # Default: []
-    packages:
-      - log
-    # A list of packages for the list type specified.
-    # Specify an error message to output when a denied package is used.
-    # Default: []
-    packages-with-error-message:
-      - log: 'Use injected telegraf.Logger instead'
-    # Specify rules by which the linter ignores certain files for consideration.
-    # Can accept both string prefixes and string glob patterns.
-    # The ! character in front of the rule is a special character
-    # which signals that the linter should negate the rule.
-    # This allows for more precise control, but it is only available for glob patterns.
-    # Default: []
-    ignore-file-rules:
-      - "**/agent/**"
-      - "**/cmd/**"
-      - "**/config/**"
-      - "**/filter/**"
-      - "**/internal/**"
-      - "**/logger/**"
-      - "**/metric/**"
-      - "**/models/**"
-      - "**/plugins/serializers/**"
-      - "**/scripts/**"
-      - "**/selfstat/**"
-      - "**/testutil/**"
-      - "**/tools/**"
-      - "**/*_test.go"
+    rules:
+      # Name of a rule.
+      main:
+        # Packages that are not allowed where the value is a suggestion.
+        deny:
+          - pkg: log
+            desc: 'Use injected telegraf.Logger instead'
+        # List of file globs that will match this list of settings to compare against.
+        # Default: $all
+        files:
+          - "!**/agent/**"
+          - "!**/cmd/**"
+          - "!**/config/**"
+          - "!**/filter/**"
+          - "!**/internal/**"
+          - "!**/logger/**"
+          - "!**/metric/**"
+          - "!**/models/**"
+          - "!**/plugins/serializers/**"
+          - "!**/scripts/**"
+          - "!**/selfstat/**"
+          - "!**/testutil/**"
+          - "!**/tools/**"
+          - "!**/*_test.go"
   errcheck:
     # List of functions to exclude from checking, where each entry is a single function to exclude.
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
@@ -102,6 +87,7 @@ linters-settings:
       - dupBranchBody
       - dupCase
       - dupSubExpr
+      - dynamicFmtString
       - emptyDecl
       - evalOrder
       - exitAfterDefer
@@ -110,6 +96,7 @@ linters-settings:
       - regexpPattern
       - sloppyTypeAssert
       - sortSlice
+      - sprintfQuotedString
       - sqlQuery
       - uncheckedInlineErr
       - unnecessaryDefer

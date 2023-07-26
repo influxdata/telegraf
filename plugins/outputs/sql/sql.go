@@ -10,12 +10,13 @@ import (
 
 	//Register sql drivers
 	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
-	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
 	_ "github.com/go-sql-driver/mysql"      // mysql
 	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
+	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
 	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -41,8 +42,8 @@ type SQL struct {
 	TableExistsTemplate   string
 	InitSQL               string `toml:"init_sql"`
 	Convert               ConvertStruct
-	ConnectionMaxIdleTime time.Duration
-	ConnectionMaxLifetime time.Duration
+	ConnectionMaxIdleTime config.Duration
+	ConnectionMaxLifetime config.Duration
 	ConnectionMaxIdle     int
 	ConnectionMaxOpen     int
 
@@ -66,8 +67,8 @@ func (p *SQL) Connect() error {
 		return err
 	}
 
-	db.SetConnMaxIdleTime(p.ConnectionMaxIdleTime)
-	db.SetConnMaxLifetime(p.ConnectionMaxLifetime)
+	db.SetConnMaxIdleTime(time.Duration(p.ConnectionMaxIdleTime))
+	db.SetConnMaxLifetime(time.Duration(p.ConnectionMaxLifetime))
 	db.SetMaxIdleConns(p.ConnectionMaxIdle)
 	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 

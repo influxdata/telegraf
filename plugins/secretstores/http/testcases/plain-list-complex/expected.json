@@ -1,0 +1,10 @@
+{
+    "test.user_a": "user_1",
+    "test.password_a": "password A",
+    "test.user_b": "user 2",
+    "test.password_b": "password-B",
+    "test.user_c": "user@company.com",
+    "test.password_c": "my$3cR3T",
+    "test.user_d": "user %with% $trAng€ characters",
+    "test.password_d": ""
+  }

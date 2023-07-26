@@ -112,10 +112,12 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/config_includer/generator$(EXEEXT) ./tools/config_includer/generator.go
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	go generate -run="tools/config_includer/generator" ./plugins/$*/...
+	go generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
 
 .PHONY: config
 config:
@@ -172,7 +174,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -247,8 +249,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.20.4 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.20.4
+	docker build -t quay.io/influxdb/telegraf-ci:1.20.5 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.20.5
 
 .PHONY: install
 install: $(buildbin)

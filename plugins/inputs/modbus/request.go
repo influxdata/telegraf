@@ -2,13 +2,14 @@ package modbus
 
 import (
 	"sort"
+
+	"github.com/influxdata/telegraf"
 )
 
 type request struct {
 	address uint16
 	length  uint16
 	fields  []field
-	tags    map[string]string
 }
 
 func countRegisters(requests []request) uint64 {
@@ -125,7 +126,7 @@ func optimizeGroup(g request, maxBatchSize uint16) []request {
 	return requests
 }
 
-func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegisters uint16) []request {
+func optimitzeGroupWithinLimits(g request, params groupingParams) []request {
 	if len(g.fields) == 0 {
 		return nil
 	}
@@ -139,8 +140,15 @@ func optimitzeGroupWithinLimits(g request, maxBatchSize uint16, maxExtraRegister
 	for i := 1; i <= len(g.fields)-1; i++ {
 		// Check if we need to interrupt the current chunk and require a new one
 		holeSize := g.fields[i].address - (g.fields[i-1].address + g.fields[i-1].length)
-		needInterrupt := holeSize > maxExtraRegisters                                                     // too far apart
-		needInterrupt = needInterrupt || currentRequest.length+holeSize+g.fields[i].length > maxBatchSize // too large
+		if g.fields[i].address < g.fields[i-1].address+g.fields[i-1].length {
+			params.Log.Warnf(
+				"Request at %d with length %d overlaps with next request at %d",
+				g.fields[i-1].address, g.fields[i-1].length, g.fields[i].address,
+			)
+			holeSize = 0
+		}
+		needInterrupt := holeSize > params.MaxExtraRegisters                                                     // too far apart
+		needInterrupt = needInterrupt || currentRequest.length+holeSize+g.fields[i].length > params.MaxBatchSize // too large
 		if !needInterrupt {
 			// Still safe to add the field to the current request
 			currentRequest.length = g.fields[i].address + g.fields[i].length - currentRequest.address
@@ -171,6 +179,8 @@ type groupingParams struct {
 	EnforceFromZero bool
 	// Tags to add for the requests
 	Tags map[string]string
+	// Log facility to inform the user
+	Log telegraf.Logger
 }
 
 func groupFieldsToRequests(fields []field, params groupingParams) []request {
@@ -192,6 +202,14 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 	var groups []request
 	var current request
 	for _, f := range fields {
+		// Add tags from higher up
+		if f.tags == nil {
+			f.tags = make(map[string]string, len(params.Tags))
+		}
+		for k, v := range params.Tags {
+			f.tags[k] = v
+		}
+
 		// Check if we need to interrupt the current chunk and require a new one
 		if current.length > 0 && f.address == current.address+current.length {
 			// Still safe to add the field to the current request
@@ -264,7 +282,7 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 				total.fields = append(total.fields, g.fields...)
 			}
 		}
-		requests = optimitzeGroupWithinLimits(total, params.MaxBatchSize, params.MaxExtraRegisters)
+		requests = optimitzeGroupWithinLimits(total, params)
 	default:
 		// no optimization
 		for _, g := range groups {
@@ -274,12 +292,5 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 		}
 	}
 
-	// Copy the tags
-	for i := range requests {
-		requests[i].tags = make(map[string]string)
-		for k, v := range params.Tags {
-			requests[i].tags[k] = v
-		}
-	}
 	return requests
 }

@@ -233,7 +233,9 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: graphiteContentType,
 				}
-				s.SetSerializer(&graphite.GraphiteSerializer{})
+				serializer := &graphite.GraphiteSerializer{}
+				require.NoError(t, serializer.Init())
+				s.SetSerializer(serializer)
 				return s
 			},
 		},

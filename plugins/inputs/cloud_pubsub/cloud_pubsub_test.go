@@ -131,7 +131,6 @@ func TestRunGzipDecode(t *testing.T) {
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		ContentEncoding:        "gzip",
-		MaxDecompressionSize:   internal.DefaultMaxDecompressionSize,
 		decoder:                decoder,
 	}
 
@@ -143,7 +142,8 @@ func TestRunGzipDecode(t *testing.T) {
 	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
-	enc := internal.NewGzipEncoder()
+	enc, err := internal.NewGzipEncoder()
+	require.NoError(t, err)
 	gzippedMsg, err := enc.Encode([]byte(msgInflux))
 	require.NoError(t, err)
 	msg := &testMsg{

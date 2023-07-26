@@ -30,7 +30,12 @@ func (*TemplateProcessor) SampleConfig() string {
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// for each metric in "in" array
 	for _, metric := range in {
-		newM := TemplateMetric{metric}
+		m, ok := metric.(telegraf.TemplateMetric)
+		if !ok {
+			r.Log.Errorf("metric of type %T is not a template metric", metric)
+			continue
+		}
+		newM := TemplateMetric{m}
 
 		var b strings.Builder
 		if err := r.tmplTag.Execute(&b, &newM); err != nil {

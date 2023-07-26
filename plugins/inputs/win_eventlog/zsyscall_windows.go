@@ -76,6 +76,7 @@ var (
 	procEvtUpdateBookmark        = modwevtapi.NewProc("EvtUpdateBookmark")
 )
 
+//nolint:revive //argument-limit conditionally more arguments allowed
 func _EvtSubscribe(
 	session EvtHandle,
 	signalEvent uintptr,
@@ -110,6 +111,7 @@ func _EvtSubscribe(
 	return handle, err
 }
 
+//nolint:revive //argument-limit conditionally more arguments allowed
 func _EvtRender(
 	context EvtHandle,
 	fragment EvtHandle,
@@ -176,6 +178,7 @@ func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle,
 	return err
 }
 
+//nolint:revive //argument-limit conditionally more arguments allowed
 func _EvtFormatMessage(
 	publisherMetadata EvtHandle,
 	event EvtHandle,

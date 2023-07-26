@@ -63,6 +63,7 @@ type Modbus struct {
 	// Configuration type specific settings
 	ConfigurationOriginal
 	ConfigurationPerRequest
+	ConfigurationPerMetric
 
 	// Connection handling
 	client      mb.Client
@@ -97,6 +98,7 @@ type field struct {
 	omit        bool
 	converter   fieldConverterFunc
 	value       interface{}
+	tags        map[string]string
 }
 
 const (
@@ -108,10 +110,11 @@ const (
 
 // SampleConfig returns a basic configuration for the plugin
 func (m *Modbus) SampleConfig() string {
-	configs := []Configuration{}
-	cfgOriginal := m.ConfigurationOriginal
-	cfgPerRequest := m.ConfigurationPerRequest
-	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+	configs := []Configuration{
+		&m.ConfigurationOriginal,
+		&m.ConfigurationPerRequest,
+		&m.ConfigurationPerMetric,
+	}
 
 	totalConfig := sampleConfigStart
 	for _, c := range configs {
@@ -137,10 +140,16 @@ func (m *Modbus) Init() error {
 	switch m.ConfigurationType {
 	case "", "register":
 		m.ConfigurationOriginal.workarounds = m.Workarounds
+		m.ConfigurationOriginal.logger = m.Log
 		cfg = &m.ConfigurationOriginal
 	case "request":
 		m.ConfigurationPerRequest.workarounds = m.Workarounds
+		m.ConfigurationPerRequest.logger = m.Log
 		cfg = &m.ConfigurationPerRequest
+	case "metric":
+		m.ConfigurationPerMetric.workarounds = m.Workarounds
+		m.ConfigurationPerMetric.logger = m.Log
+		cfg = &m.ConfigurationPerMetric
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
@@ -501,16 +510,15 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
-		// Collect tags from global and per-request
-		rtags := map[string]string{}
-		for k, v := range tags {
-			rtags[k] = v
-		}
-		for k, v := range request.tags {
-			rtags[k] = v
-		}
-
 		for _, field := range request.fields {
+			// Collect tags from global and per-request
+			ftags := map[string]string{}
+			for k, v := range tags {
+				ftags[k] = v
+			}
+			for k, v := range field.tags {
+				ftags[k] = v
+			}
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
 			if field.measurement != "" {
@@ -518,7 +526,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
+			grouper.Add(measurement, ftags, timestamp, field.name, field.value)
 		}
 	}
 

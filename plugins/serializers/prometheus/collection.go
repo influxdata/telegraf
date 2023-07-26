@@ -145,7 +145,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 		labels = append(labels, LabelPair{Name: name, Value: tag.Value})
 	}
 
-	if c.config.StringHandling != StringAsLabel {
+	if !c.config.StringAsLabel {
 		return labels
 	}
 
@@ -352,13 +352,13 @@ func (c *Collection) Expire(now time.Time, age time.Duration) {
 	}
 }
 
-func (c *Collection) GetEntries(order MetricSortOrder) []Entry {
+func (c *Collection) GetEntries() []Entry {
 	entries := make([]Entry, 0, len(c.Entries))
 	for _, entry := range c.Entries {
 		entries = append(entries, entry)
 	}
 
-	if order == SortMetrics {
+	if c.config.SortMetrics {
 		sort.Slice(entries, func(i, j int) bool {
 			lhs := entries[i].Family
 			rhs := entries[j].Family
@@ -372,13 +372,13 @@ func (c *Collection) GetEntries(order MetricSortOrder) []Entry {
 	return entries
 }
 
-func (c *Collection) GetMetrics(entry Entry, order MetricSortOrder) []*Metric {
+func (c *Collection) GetMetrics(entry Entry) []*Metric {
 	metrics := make([]*Metric, 0, len(entry.Metrics))
 	for _, metric := range entry.Metrics {
 		metrics = append(metrics, metric)
 	}
 
-	if order == SortMetrics {
+	if c.config.SortMetrics {
 		sort.Slice(metrics, func(i, j int) bool {
 			lhs := metrics[i].Labels
 			rhs := metrics[j].Labels
@@ -409,7 +409,7 @@ func (c *Collection) GetMetrics(entry Entry, order MetricSortOrder) []*Metric {
 func (c *Collection) GetProto() []*dto.MetricFamily {
 	result := make([]*dto.MetricFamily, 0, len(c.Entries))
 
-	for _, entry := range c.GetEntries(c.config.MetricSortOrder) {
+	for _, entry := range c.GetEntries() {
 		mf := &dto.MetricFamily{
 			Name: proto.String(entry.Family.Name),
 			Type: MetricType(entry.Family.Type),
@@ -419,7 +419,7 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 			mf.Help = proto.String(helpString)
 		}
 
-		for _, metric := range c.GetMetrics(entry, c.config.MetricSortOrder) {
+		for _, metric := range c.GetMetrics(entry) {
 			l := make([]*dto.LabelPair, 0, len(metric.Labels))
 			for _, label := range metric.Labels {
 				l = append(l, &dto.LabelPair{
@@ -432,7 +432,7 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 				Label: l,
 			}
 
-			if c.config.TimestampExport == ExportTimestamp {
+			if c.config.ExportTimestamp {
 				m.TimestampMs = proto.Int64(metric.Time.UnixNano() / int64(time.Millisecond))
 			}
 

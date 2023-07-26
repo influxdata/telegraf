@@ -13,7 +13,8 @@ import (
 )
 
 func TestAutoEncoding(t *testing.T) {
-	enc := internal.NewGzipEncoder()
+	enc, err := internal.NewGzipEncoder()
+	require.NoError(t, err)
 	payload, err := enc.Encode([]byte(`measurementName fieldKey="gzip" 1556813561098000000`))
 	require.NoError(t, err)
 
@@ -23,7 +24,6 @@ func TestAutoEncoding(t *testing.T) {
 	a.deliveries = make(map[telegraf.TrackingID]amqp091.Delivery)
 	a.parser = parser
 	a.decoder, err = internal.NewContentDecoder("auto")
-	a.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -36,7 +36,7 @@ func TestAutoEncoding(t *testing.T) {
 	require.NoError(t, err)
 	acc.AssertContainsFields(t, "measurementName", map[string]interface{}{"fieldKey": "gzip"})
 
-	encIdentity := internal.NewIdentityEncoder()
+	encIdentity, err := internal.NewIdentityEncoder()
 	require.NoError(t, err)
 	payload, err = encIdentity.Encode([]byte(`measurementName2 fieldKey="identity" 1556813561098000000`))
 	require.NoError(t, err)

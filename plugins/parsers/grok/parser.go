@@ -13,6 +13,7 @@ import (
 	"github.com/vjeantet/grok"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -317,7 +318,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				timestamp = time.Unix(0, iv)
 			}
 		case SyslogTimestamp:
-			ts, err := time.ParseInLocation(time.Stamp, v, p.loc)
+			ts, err := internal.ParseTimestamp(time.Stamp, v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {
 					ts = ts.AddDate(timestamp.Year(), 0, 0)
@@ -330,7 +331,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			var foundTs bool
 			// first try timestamp layouts that we've already found
 			for _, layout := range p.foundTsLayouts {
-				ts, err := time.ParseInLocation(layout, v, p.loc)
+				ts, err := internal.ParseTimestamp(layout, v, p.loc)
 				if err == nil {
 					timestamp = ts
 					foundTs = true
@@ -341,7 +342,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			// layouts.
 			if !foundTs {
 				for _, layout := range timeLayouts {
-					ts, err := time.ParseInLocation(layout, v, p.loc)
+					ts, err := internal.ParseTimestamp(layout, v, p.loc)
 					if err == nil {
 						timestamp = ts
 						foundTs = true
@@ -360,7 +361,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// goodbye!
 		default:
 			v = strings.ReplaceAll(v, ",", ".")
-			ts, err := time.ParseInLocation(t, v, p.loc)
+			ts, err := internal.ParseTimestamp(t, v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {
 					ts = ts.AddDate(timestamp.Year(), 0, 0)
@@ -584,7 +585,7 @@ func (p *Parser) Init() error {
 	}
 
 	if p.Timezone == "" {
-		p.Timezone = "Canada/Eastern"
+		p.Timezone = "UTC"
 	}
 
 	return p.Compile()

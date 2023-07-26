@@ -58,7 +58,7 @@ user-specified configurations.
     ##  timezone    --  Timezone of "time" entries. Only applies to "time" assignments.
     ##                  Can be "utc", "local" or any valid Golang timezone (e.g. "Europe/Berlin")
     entries = [
-      { type = "string", assignment = "measurement", terminator: "null" },
+      { type = "string", assignment = "measurement", terminator = "null" },
       { name = "address", type = "uint16", assignment = "tag" },
       { name = "value",   type = "float64" },
       { type = "unix", assignment = "time" },

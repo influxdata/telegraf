@@ -321,6 +321,16 @@ The agent table configures Telegraf and the defaults used across all plugins.
   stateful plugins on termination of Telegraf. If the file exists on start,
   the state in the file will be restored for the plugins.
 
+- **always_include_local_tags**:
+  Ensure tags explicitly defined in a plugin will *always* pass tag-filtering
+  via `taginclude` or `tagexclude`. This removes the need to specify local tags
+  twice.
+
+- **always_include_global_tags**:
+  Ensure tags explicitly defined in the `global_tags` section will *always* pass
+  tag-filtering   via `taginclude` or `tagexclude`. This removes the need to
+  specify those tags twice.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
@@ -402,7 +412,7 @@ Use the name_override parameter to emit measurements with the name `foobar`:
 Emit measurements with two additional tags: `tag1=foo` and `tag2=bar`
 
 > **NOTE**: With TOML, order matters.  Parameters belong to the last defined
-> table header, place `[inputs.cpu.tags]` table at the _end_ of the plugin
+> table header, place `[inputs.cpu.tags]` table at the *end* of the plugin
 > definition.
 
 ```toml
@@ -614,9 +624,9 @@ is tested on metrics after they have passed the `namepass` test.
 - **tagpass**:
 A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
-patterns is emitted. This can either use the explicit table synax (e.g.
+patterns is emitted. This can either use the explicit table syntax (e.g.
 a subsection using a `[...]` header) or inline table syntax (e.g like
-a JSON table with `{...}`.
+a JSON table with `{...}`). Please see the below notes on specifying the table.
 
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
@@ -626,8 +636,10 @@ is tested on metrics after they have passed the `tagpass` test.
 > syntax (with `[...]`) for `tagpass` and `tagdrop` parameters, they
 > must be defined at the **end** of the plugin definition, otherwise subsequent
 > plugin config options will be interpreted as part of the tagpass/tagdrop
-> tables. This limitation does not apply when using the inline table
-> syntax (`{...}`).
+> tables.
+> NOTE: When using the inline table syntax (e.g. `{...}`) the table must exist
+> in the main plugin definition and not in any sub-table (e.g.
+> `[[inputs.win_perf_counters.object]]`).
 
 - **metricpass**:
 A ["Common Expression Language"][CEL] (CEL) expression with boolean result where
@@ -638,7 +650,7 @@ for time-based filtering. An introduction to the CEL language can be found
 are provided in the [language definition][CEL lang] as well as in the
 [extension documentation][CEL ext].
 
-> NOTE: As CEL is an _interpreted_ languguage, this type of filtering is much
+> NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
 > slower compared to `namepass`/`namedrop` and friends. So consider to use the
 > more restricted filter options where possible in case of high-throughput
 > scenarios.
@@ -707,9 +719,10 @@ tags and the agent `host` tag.
       "Bytes Sent/sec"
     ]
     Measurement = "win_net"
-  # Don't send metrics where the Windows interface name (instance) begins with isatap or Local
-  # This illustrates the inline table syntax
-  tagdrop = {instance = ["isatap*", "Local*"]}
+  # Do not send metrics where the Windows interface name (instance) begins with
+  # 'isatap' or 'Local'
+  [inputs.win_perf_counters.tagdrop]
+    instance = ["isatap*", "Local*"]
 ```
 
 #### Using fieldpass and fielddrop

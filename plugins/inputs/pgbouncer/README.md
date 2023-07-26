@@ -30,6 +30,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## All connection parameters are optional.
   ##
   address = "host=localhost user=pgbouncer sslmode=disable"
+
+  ## Specify which "show" commands to gather metrics for.
+  ## Choose from: "stats", "pools", "lists", "databases"
+  # show_commands = ["stats", "pools"]
 ```
 
 ### `address`
@@ -89,9 +93,45 @@ the server and doesn't restrict the databases we are trying to grab metrics for.
     - sv_tested
     - sv_used
 
+- pgbouncer_lists
+  - tags:
+    - db
+    - server
+    - user
+  - fields:
+    - databases
+    - users
+    - pools
+    - free_clients
+    - used_clients
+    - login_clients
+    - free_servers
+    - used_servers
+    - dns_names
+    - dns_zones
+    - dns_queries
+
+- pgbouncer_databases
+  - tags:
+    - db
+    - pg_dbname
+    - server
+    - user
+  - fields:
+    - current_connections
+    - pool_size
+    - min_pool_size
+    - reserve_pool
+    - max_connections
+    - paused
+    - disabled
+
 ## Example Output
 
 ```text
 pgbouncer,db=pgbouncer,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\  avg_query_count=0i,avg_query_time=0i,avg_wait_time=0i,avg_xact_count=0i,avg_xact_time=0i,total_query_count=26i,total_query_time=0i,total_received=0i,total_sent=0i,total_wait_time=0i,total_xact_count=26i,total_xact_time=0i 1581569936000000000
 pgbouncer_pools,db=pgbouncer,pool_mode=statement,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\ ,user=pgbouncer cl_active=1i,cl_waiting=0i,maxwait=0i,maxwait_us=0i,sv_active=0i,sv_idle=0i,sv_login=0i,sv_tested=0i,sv_used=0i 1581569936000000000
+pgbouncer_lists,db=pgbouncer,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\ ,user=pgbouncer databases=1i,dns_names=0i,dns_queries=0i,dns_zones=0i,free_clients=47i,free_servers=0i,login_clients=0i,pools=1i,used_clients=3i,used_servers=0i,users=4i 1581569936000000000
+pgbouncer_databases,db=pgbouncer,pg_dbname=pgbouncer,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\ name=pgbouncer disabled=0i,pool_size=2i,current_connections=0i,min_pool_size=0i,reserve_pool=0i,max_connections=0i,paused=0i 1581569936000000000
+pgbouncer_databases,db=postgres,pg_dbname=postgres,server=host\=debian-buster-postgres\ user\=dbn\ port\=6432\ dbname\=pgbouncer\ name=postgres current_connections=0i,disabled=0i,pool_size=20i,min_pool_size=0i,reserve_pool=0i,paused=0i,max_connections=0i 1581569936000000000
 ```

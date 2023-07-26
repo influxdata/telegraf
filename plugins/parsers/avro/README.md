@@ -27,6 +27,10 @@ The message is supposed to be encoded as follows:
   ## Avro data format settings
   data_format = "avro"
 
+  ## Avro message format
+  ## Supported values are "binary" (default) and "json"
+  # avro_format = "binary"
+
   ## Url of the schema registry; exactly one of schema registry and
   ## schema must be set
   avro_schema_registry = "http://localhost:8081"
@@ -82,6 +86,11 @@ The message is supposed to be encoded as follows:
   # tags = { "application": "hermes", "region": "central" }
 
 ```
+
+### `avro_format`
+
+This optional setting specifies the format of the Avro messages. Currently, the
+parser supports the `binary` and `json` formats with `binary` being the default.
 
 ### `avro_timestamp` and `avro_timestamp_format`
 

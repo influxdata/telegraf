@@ -89,8 +89,8 @@ func TestWaitError(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -148,8 +148,8 @@ func TestUsernamePassword(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -1005,8 +1005,8 @@ func TestNotification(t *testing.T) {
 			gnmiLib.RegisterGNMIServer(grpcServer, tt.server)
 
 			var acc testutil.Accumulator
-			err = tt.plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Init())
+			require.NoError(t, tt.plugin.Start(&acc))
 
 			var wg sync.WaitGroup
 			wg.Add(1)
@@ -1069,8 +1069,8 @@ func TestRedial(t *testing.T) {
 	}()
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
 
 	acc.Wait(2)
 	grpcServer.Stop()
@@ -1205,6 +1205,7 @@ func TestCases(t *testing.T) {
 			}()
 
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Start(&acc))
 
 			require.Eventually(t,

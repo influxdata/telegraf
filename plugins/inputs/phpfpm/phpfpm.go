@@ -116,6 +116,9 @@ func (p *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 			return fmt.Errorf("unable parse server address %q: %w", addr, err)
 		}
 		socketAddr := strings.Split(u.Host, ":")
+		if len(socketAddr) < 2 {
+			return fmt.Errorf("url does not follow required 'address:port' format: %s", u.Host)
+		}
 		fcgiIP := socketAddr[0]
 		fcgiPort, _ := strconv.Atoi(socketAddr[1])
 		fcgi, err = newFcgiClient(fcgiIP, fcgiPort)

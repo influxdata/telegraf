@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/fields"
@@ -168,6 +169,41 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	require.True(t, acc.TagValue("test_metric", "url") == ts.URL)
 }
 
+func TestPrometheusWithTimestamp(t *testing.T) {
+	prommetric := `# HELP test_counter A sample test counter.
+# TYPE test_counter counter
+test_counter{label="test"} 1 1685443805885`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, prommetric)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		KubernetesServices: []string{ts.URL},
+	}
+	require.NoError(t, p.Init())
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	tsAddress := u.Hostname()
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"test_counter",
+			map[string]string{"address": tsAddress, "label": "test"},
+			map[string]interface{}{"counter": float64(1.0)},
+			time.UnixMilli(1685443805885),
+			telegraf.Counter,
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -316,6 +352,7 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,
@@ -349,6 +386,7 @@ go_gc_duration_seconds_count 42`
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "",
 		MetricVersion: 2,
@@ -408,6 +446,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,

@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Modbus Input Plugin
 
 The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding
@@ -14,7 +15,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-```toml @sample_general_begin.conf @sample_register.conf @sample_request.conf @sample_general_end.conf
+```toml @sample_general_begin.conf @sample_register.conf @sample_request.conf @sample_metric.conf @sample_general_end.conf
 # Retrieve data from MODBUS slave devices
 [[inputs.modbus]]
   ## Connection Configuration
@@ -66,6 +67,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Define the configuration schema
   ##  |---register -- define fields per register type in the original style (only supports one slave ID)
   ##  |---request  -- define fields on a requests base
+  ##  |---metric   -- define fields on a metric base
   configuration_type = "register"
 
   ## --- "register" configuration style ---
@@ -238,6 +240,74 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
       machine = "impresser"
       location = "main building"
 
+  ## --- "metric" configuration style ---
+
+  ## Per metric definition
+  ##
+
+  ## Request optimization algorithm across metrics
+  ##  |---none       -- Do not perform any optimization and just group requests
+  ##  |                 within metrics (default)
+  ##  |---max_insert -- Collate registers across all defined metrics and fill in
+  ##                    holes to optimize the number of requests.
+  # optimization = "none"
+
+  ## Maximum number of registers the optimizer is allowed to insert between
+  ## non-consecutive registers to save requests.
+  ## This option is only used for the 'max_insert' optimization strategy and
+  ## effectively denotes the hole size between registers to fill.
+  # optimization_max_register_fill = 50
+
+  ## Define a metric produced by the requests to the device
+  ## Multiple of those metrics can be defined. The referenced registers will
+  ## be collated into requests send to the device
+  [[inputs.modbus.metric]]
+    ## ID of the modbus slave device to query
+    ## If you need to query multiple slave-devices, create several "metric" definitions.
+    slave_id = 1
+
+    ## Byte order of the data
+    ##  |---ABCD -- Big Endian (Motorola)
+    ##  |---DCBA -- Little Endian (Intel)
+    ##  |---BADC -- Big Endian with byte swap
+    ##  |---CDAB -- Little Endian with byte swap
+    # byte_order = "ABCD"
+
+    ## Name of the measurement
+    # measurement = "modbus"
+
+    ## Field definitions
+    ## register   - type of the modbus register, can be "coil", "discrete",
+    ##              "holding" or "input". Defaults to "holding".
+    ## address    - address of the register to query. For coil and discrete inputs this is the bit address.
+    ## name       - field name
+    ## type *1    - type of the modbus field, can be
+    ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+    ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
+    ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
+    ## scale *1   - (optional) factor to scale the variable with
+    ## output *2  - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
+    ##              "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
+    ##
+    ## *1: These fields are ignored for both "coil" and "discrete"-input type of registers.
+    ## *2: This field can only be "UINT16" or "BOOL" if specified for both "coil"
+    ##     and "discrete"-input type of registers. By default the fields are
+    ##     output as zero or one in UINT16 format unless "BOOL" is used.
+    fields = [
+      { register="coil",    address=0, name="door_open"},
+      { register="coil",    address=1, name="status_ok"},
+      { register="holding", address=0, name="voltage",      type="INT16"   },
+      { address=1, name="current",      type="INT32",   scale=0.001 },
+      { address=5, name="energy",       type="FLOAT32", scale=0.001,},
+      { address=7, name="frequency",    type="UINT32",  scale=0.1   },
+      { address=8, name="power_factor", type="INT64",   scale=0.01  },
+    ]
+
+    ## Tags assigned to the metric
+    # [inputs.modbus.metric.tags]
+    #   machine = "impresser"
+    #   location = "main building"
+
   ## RS485 specific settings. Only take effect for serial controllers.
   ## Note: This has to be at the end of the modbus configuration due to
   ## TOML constraints.
@@ -304,6 +374,7 @@ Directly jump to the styles:
 
 - [original / register plugin style](#register-configuration-style)
 - [per-request style](#request-configuration-style)
+- [per-metrict style](#metric-configuration-style)
 
 ---
 
@@ -548,6 +619,143 @@ time.
 #### Tags definitions
 
 Each `request` can be accompanied by tags valid for this request.
+
+__Please note:__ These tags take precedence over predefined tags such as `name`,
+`type` or `slave_id`.
+
+---
+
+### `metric` configuration style
+
+This style can be used to specify the desired metrics directly instead of
+focusing on the modbus view. Multiple `[[inputs.modbus.metric]]` sections
+including multiple slave-devices can be specified. This way, _modbus_ gateway
+devices can be queried. The plugin automatically collects registers across
+the specified metrics, groups them per slave and register-type and (optionally)
+optimizes the resulting requests for non-consecutive addresses.
+
+#### Slave device
+
+You can use the `slave_id` setting to specify the ID of the slave device to
+query. It should be specified for each metric section, otherwise it defaults to
+zero. Please note, only one `slave_id` can be specified per metric section.
+
+#### Byte order of the registers
+
+The `byte_order` setting specifies the byte and word-order of the registers. It
+can be set to `ABCD` for _big endian (Motorola)_ or `DCBA` for _little endian
+(Intel)_ format as well as `BADC` and `CDAB` for _big endian_ or _little endian_
+with _byte swap_.
+
+#### Measurement name
+
+You can specify the name of the measurement for the fields defined in the
+given section using the `measurement` setting. If the setting is omitted
+`modbus` is used.
+
+#### Optimization setting
+
+__Please only use request optimization if you do understand the implications!__
+The `optimization` setting can specified globally, i.e. __NOT__ per metric
+section, and is used to optimize the actual requests sent to the device. Here,
+the optimization is applied across _all metric sections_! The following
+algorithms are available
+
+##### `none` (_default_)
+
+Do not perform any optimization. Please note that consecutive registers are
+still grouped into one requests while obeying the maximum request sizes. This
+setting should be used if you want to touch as less registers as possible at
+the cost of more requests sent to the device.
+
+##### `max_insert`
+
+Fields are assigned to the same request as long as the hole between the touched
+registers does not exceed the maximum fill size given via
+`optimization_max_register_fill`. This optimization might lead to a drastically
+reduced request number and thus an improved query time. The trade-off here is
+between the cost of reading additional registers trashed later and the cost of
+many requests.
+
+__Please note:__ The optimal value for `optimization_max_register_fill` depends
+on the network and the queried device. It is hence recommended to test several
+values and assess performance in order to find the best value. Use the
+`--test --debug` flags to monitor how may requests are sent and the number of
+touched registers.
+
+#### Field definitions
+
+Each `metric` can contain a list of fields to collect from the modbus device.
+The specified fields directly corresponds to the fields of the resulting metric.
+
+##### register
+
+The `register` setting specifies the modbus register-set to query and can be set
+to `coil`, `discrete`, `holding` or `input`.
+
+##### address
+
+A field is identified by an `address` that reflects the modbus register
+address. You can usually find the address values for the different data-points
+in the datasheet of your modbus device. This is a mandatory setting.
+
+For _coil_ and _discrete input_ registers this setting specifies the __bit__
+containing the value of the field.
+
+##### name
+
+Using the `name` setting you can specify the field-name in the metric as output
+by the plugin.
+
+__Please note:__ There cannot be multiple fields with the same `name` in one
+metric identified by `measurement`, `slave_id`, `register` and tag-set.
+
+##### register datatype
+
+The `type` setting specifies the datatype of the modbus register and can be
+set to `INT8L`, `INT8H`, `UINT8L`, `UINT8H` where `L` is the lower byte of the
+register and `H` is the higher byte.
+Furthermore, the types `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64`
+for integer types or `FLOAT16`, `FLOAT32` and `FLOAT64` for IEEE 754 binary
+representations of floating point values exist. `FLOAT16` denotes a
+half-precision float with a 16-bit representation.
+Usually the datatype of the register is listed in the datasheet of your modbus
+device in relation to the `address` described above.
+
+This setting is ignored if the `register` is a bit-type (`coil` or `discrete`)
+and can be omitted in these cases.
+
+##### scaling
+
+You can use the `scale` setting to scale the register values, e.g. if the
+register contains a fix-point values in `UINT32` format with two decimal places
+for example. To convert the read register value to the actual value you can set
+the `scale=0.01`. The scale is used as a factor e.g. `field_value * scale`.
+
+This setting is ignored if the `register` is a bit-type (`coil` or `discrete`)
+and can be omitted in these cases.
+
+__Please note:__ The resulting field-type will be set to `FLOAT64` if no output
+format is specified.
+
+##### output datatype
+
+Using the `output` setting you can explicitly specify the output
+field-datatype. The `output` type can be `INT64`, `UINT64` or `FLOAT64`. If not
+set explicitly, the output type is guessed as follows: If `scale` is set to a
+non-zero value, the output type is `FLOAT64`. Otherwise, the output type
+corresponds to the register datatype _class_, i.e. `INT*` will result in
+`INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
+
+In case the `register` is a bit-type (`coil` or `discrete`) only `UINT16` or
+`BOOL` are valid with the former being the default if omitted. For `coil` and
+`discrete` registers the field-value is output as zero or one in `UINT16` format
+or as `true` and `false` in `BOOL` format.
+
+#### Tags definitions
+
+Each `metric` can be accompanied by a set of tag. These tags directly correspond
+to the tags of the resulting metric.
 
 __Please note:__ These tags take precedence over predefined tags such as `name`,
 `type` or `slave_id`.

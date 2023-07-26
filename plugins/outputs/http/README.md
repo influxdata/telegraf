@@ -33,7 +33,7 @@ to use them.
   ## Timeout for HTTP message
   # timeout = "5s"
 
-  ## HTTP method, one of: "POST" or "PUT"
+  ## HTTP method, one of: "POST" or "PUT" or "PATCH"
   # method = "POST"
 
   ## HTTP Basic Auth credentials

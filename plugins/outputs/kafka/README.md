@@ -170,8 +170,12 @@ to use them.
   # sasl_gssapi_key_tab_path = ""
   # sasl_gssapi_disable_pafxfast = false
 
-  ## used if sasl_mechanism is OAUTHBEARER
+  ## Access token used if sasl_mechanism is OAUTHBEARER
   # sasl_access_token = ""
+
+  ## Arbitrary key value string pairs to pass as a TOML table. For example:
+  # {logicalCluster = "cluster-042", poolId = "pool-027"}
+  # sasl_extensions = {}
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1

@@ -24,6 +24,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 var (
 	// 30 Seconds is the default used by paho.mqtt.golang
 	defaultConnectionTimeout      = config.Duration(30 * time.Second)
@@ -71,7 +73,7 @@ type MQTTConsumer struct {
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	parser                 telegraf.Parser
 
-	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
+	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;1.30.0;option is ignored"`
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
 
@@ -84,13 +86,14 @@ type MQTTConsumer struct {
 	acc           telegraf.TrackingAccumulator
 	state         ConnectionState
 	sem           semaphore
-	messages      map[telegraf.TrackingID]bool
+	messages      map[telegraf.TrackingID]mqtt.Message
 	messagesMutex sync.Mutex
 	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
 	payloadSize   selfstat.Stat
 	messagesRecv  selfstat.Stat
+	wg            sync.WaitGroup
 }
 
 func (*MQTTConsumer) SampleConfig() string {
@@ -120,7 +123,7 @@ func (m *MQTTConsumer) Init() error {
 		return err
 	}
 	m.opts = opts
-	m.messages = map[telegraf.TrackingID]bool{}
+	m.messages = map[telegraf.TrackingID]mqtt.Message{}
 
 	for i, p := range m.TopicParsing {
 		splitMeasurement := strings.Split(p.Measurement, "/")
@@ -156,6 +159,20 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
+
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		for {
+			select {
+			case <-m.ctx.Done():
+				return
+			case track := <-m.acc.Delivered():
+				m.onDelivered(track)
+			}
+		}
+	}()
+
 	return m.connect()
 }
 func (m *MQTTConsumer) connect() error {
@@ -166,7 +183,7 @@ func (m *MQTTConsumer) connect() error {
 	// know where to dispatch persisted and new messages to.  In the alternate
 	// case that we need to create the subscriptions these will be replaced.
 	for _, topic := range m.Topics {
-		m.client.AddRoute(topic, m.recvMessage)
+		m.client.AddRoute(topic, m.onMessage)
 	}
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
@@ -189,7 +206,7 @@ func (m *MQTTConsumer) connect() error {
 	for _, topic := range m.Topics {
 		topics[topic] = byte(m.QoS)
 	}
-	subscribeToken := m.client.SubscribeMultiple(topics, m.recvMessage)
+	subscribeToken := m.client.SubscribeMultiple(topics, m.onMessage)
 	subscribeToken.Wait()
 	if subscribeToken.Error() != nil {
 		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics[:], ","), subscribeToken.Error()))
@@ -202,31 +219,6 @@ func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
-}
-func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
-	for {
-		// Drain anything that's been delivered
-		select {
-		case track := <-m.acc.Delivered():
-			m.onDelivered(track)
-			continue
-		default:
-		}
-
-		// Wait for room to accumulate metric, but make delivery progress if possible
-		// (Note that select will randomly pick a case if both are available)
-		select {
-		case track := <-m.acc.Delivered():
-			m.onDelivered(track)
-		case m.sem <- empty{}:
-			err := m.onMessage(m.acc, msg)
-			if err != nil {
-				m.acc.AddError(err)
-				<-m.sem
-			}
-			return
-		}
-	}
 }
 
 // compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
@@ -246,23 +238,45 @@ func compareTopics(expected []string, incoming []string) bool {
 
 func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 	<-m.sem
+
 	m.messagesMutex.Lock()
-	_, ok := m.messages[track.ID()]
-	if ok {
-		// No ack, MQTT does not support durable handling
-		delete(m.messages, track.ID())
+	defer m.messagesMutex.Unlock()
+
+	msg, ok := m.messages[track.ID()]
+	if !ok {
+		m.Log.Errorf("could not mark message delivered: %d", track.ID())
+		return
 	}
-	m.messagesMutex.Unlock()
+
+	if track.Delivered() && m.PersistentSession {
+		msg.Ack()
+	}
+
+	delete(m.messages, track.ID())
 }
 
-func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
+	m.sem <- empty{}
+
 	payloadBytes := len(msg.Payload())
 	m.payloadSize.Incr(int64(payloadBytes))
 	m.messagesRecv.Incr(1)
 
 	metrics, err := m.parser.Parse(msg.Payload())
-	if err != nil {
-		return err
+	if err != nil || len(metrics) == 0 {
+		if len(metrics) == 0 {
+			once.Do(func() {
+				const msg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
+				m.Log.Debug(msg)
+			})
+		}
+
+		if m.PersistentSession {
+			msg.Ack()
+		}
+		m.acc.AddError(err)
+		<-m.sem
+		return
 	}
 
 	for _, metric := range metrics {
@@ -281,22 +295,31 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			if p.Tags != "" {
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
-					return err
+					if m.PersistentSession {
+						msg.Ack()
+					}
+					m.acc.AddError(err)
+					<-m.sem
+					return
 				}
 			}
 			if p.Fields != "" {
 				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
 				if err != nil {
-					return err
+					if m.PersistentSession {
+						msg.Ack()
+					}
+					m.acc.AddError(err)
+					<-m.sem
+					return
 				}
 			}
 		}
 	}
-	id := acc.AddTrackingMetricGroup(metrics)
+	id := m.acc.AddTrackingMetricGroup(metrics)
 	m.messagesMutex.Lock()
-	m.messages[id] = true
+	m.messages[id] = msg
 	m.messagesMutex.Unlock()
-	return nil
 }
 func (m *MQTTConsumer) Stop() {
 	if m.state == Connected {
@@ -368,6 +391,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts.SetAutoReconnect(false)
 	opts.SetKeepAlive(time.Second * 60)
 	opts.SetCleanSession(!m.PersistentSession)
+	opts.SetAutoAckDisabled(m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
 	return opts, nil
 }

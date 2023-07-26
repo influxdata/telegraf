@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.20.4'
+      - image: 'quay.io/influxdb/telegraf-ci:1.20.5'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -540,10 +540,9 @@ jobs:
             case "${target}"
             in
               *.deb|*.dmg|*.rpm|*.tar.gz|*.zip)
-                # Combine the metadata from the *.DIGESTS and *.asc files into one
-                # listing. Since the gpg signature contains multiple lines which
-                # must be preserved, it is base64 encoded.
-                printf '%s %s %s\n' "${target}" "$(awk '{ print $1 }' "${target}.DIGESTS")" "$(base64 -w 0 <"${target}.asc")" >>"telegraf-${CIRCLE_TAG}-digests"
+                # Print sha256 hash and target for artifacts all in one file
+                # for use later during the release.
+                cat "${target}.DIGESTS" >> "telegraf-${CIRCLE_TAG}.DIGESTS"
               ;;
             esac
           done

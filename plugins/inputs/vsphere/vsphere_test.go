@@ -569,3 +569,53 @@ func mustContainAll(t *testing.T, tagMap map[string]string, mustHave []string) {
 		require.Contains(t, tagMap, tag)
 	}
 }
+
+func TestVersionLowerThan(t *testing.T) {
+	tests := []struct {
+		current string
+		major   int
+		minor   int
+		result  bool
+	}{
+		{
+			current: "7",
+			major:   6,
+			minor:   3,
+			result:  false,
+		},
+		{
+			current: "5",
+			major:   6,
+			minor:   3,
+			result:  true,
+		},
+		{
+			current: "6.0",
+			major:   6,
+			minor:   3,
+			result:  true,
+		},
+		{
+			current: "6.3",
+			major:   6,
+			minor:   3,
+			result:  false,
+		},
+		{
+			current: "6.2",
+			major:   6,
+			minor:   3,
+			result:  true,
+		},
+		{
+			current: "7.0.3.0",
+			major:   6,
+			minor:   7,
+			result:  false,
+		},
+	}
+	for _, tc := range tests {
+		result := versionLowerThan(tc.current, tc.major, tc.minor)
+		require.Equal(t, tc.result, result, fmt.Sprintf("%s < %d.%d", tc.current, tc.major, tc.minor))
+	}
+}

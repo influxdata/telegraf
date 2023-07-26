@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"golang.org/x/net/http2"
 )
 
 type APIError struct {
@@ -52,6 +53,8 @@ type HTTPConfig struct {
 	Proxy            *url.URL
 	UserAgent        string
 	ContentEncoding  string
+	PingTimeout      config.Duration
+	ReadIdleTimeout  config.Duration
 	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
@@ -125,6 +128,13 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 		transport = &http.Transport{
 			Proxy:           proxy,
 			TLSClientConfig: cfg.TLSConfig,
+		}
+		if cfg.ReadIdleTimeout != 0 || cfg.PingTimeout != 0 {
+			http2Trans, err := http2.ConfigureTransports(transport)
+			if err == nil {
+				http2Trans.ReadIdleTimeout = time.Duration(cfg.ReadIdleTimeout)
+				http2Trans.PingTimeout = time.Duration(cfg.PingTimeout)
+			}
 		}
 	case "unix":
 		transport = &http.Transport{

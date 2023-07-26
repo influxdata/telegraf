@@ -3,6 +3,8 @@ package modbus
 import (
 	_ "embed"
 	"fmt"
+
+	"github.com/influxdata/telegraf"
 )
 
 //go:embed sample_register.conf
@@ -24,6 +26,7 @@ type ConfigurationOriginal struct {
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
 	workarounds      ModbusWorkarounds
+	logger           telegraf.Logger
 }
 
 func (c *ConfigurationOriginal) SampleConfigPart() string {
@@ -99,6 +102,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 		MaxBatchSize:    maxQuantity,
 		Optimization:    "none",
 		EnforceFromZero: c.workarounds.ReadCoilsStartingAtZero,
+		Log:             c.logger,
 	}
 
 	return groupFieldsToRequests(fields, params), nil
@@ -224,12 +228,30 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 				return fmt.Errorf("invalid byte order %q and address '%v'  in %q - %q", item.ByteOrder, item.Address, registerType, item.Name)
 			}
 
+			// Check for the request size corresponding to the data-type
+			var requiredAddresses int
+			switch item.DataType {
+			case "INT8L", "INT8H", "UINT8L", "UINT8H", "UINT16", "INT16", "FLOAT16-IEEE":
+				requiredAddresses = 1
+			case "UINT32", "INT32", "FLOAT32-IEEE":
+				requiredAddresses = 2
+
+			case "UINT64", "INT64", "FLOAT64-IEEE":
+				requiredAddresses = 4
+			}
+			if requiredAddresses > 0 && len(item.Address) != requiredAddresses {
+				return fmt.Errorf(
+					"invalid address '%v' length '%v'in %q - %q, expecting %d entries for datatype",
+					item.Address, len(item.Address), registerType, item.Name, requiredAddresses,
+				)
+			}
+
 			// search duplicated
 			if len(item.Address) > len(removeDuplicates(item.Address)) {
 				return fmt.Errorf("duplicate address '%v'  in %q - %q", item.Address, registerType, item.Name)
 			}
 		} else if len(item.Address) != 1 {
-			return fmt.Errorf("invalid address'%v' length'%v' in %q - %q", item.Address, len(item.Address), registerType, item.Name)
+			return fmt.Errorf("invalid address '%v' length '%v'in %q - %q", item.Address, len(item.Address), registerType, item.Name)
 		}
 	}
 	return nil

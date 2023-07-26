@@ -40,9 +40,10 @@ type AMQPConsumer struct {
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
 	// Queue Name
-	Queue           string `toml:"queue"`
-	QueueDurability string `toml:"queue_durability"`
-	QueuePassive    bool   `toml:"queue_passive"`
+	Queue                 string            `toml:"queue"`
+	QueueDurability       string            `toml:"queue_durability"`
+	QueuePassive          bool              `toml:"queue_passive"`
+	QueueConsumeArguments map[string]string `toml:"queue_consume_arguments"`
 
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
@@ -114,10 +115,6 @@ func (a *AMQPConsumer) Init() error {
 		a.MaxUndeliveredMessages = 1000
 	}
 
-	if a.MaxDecompressionSize <= 0 {
-		a.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
-	}
-
 	return nil
 }
 
@@ -163,7 +160,11 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding)
+	var options []internal.DecodingOption
+	if a.MaxDecompressionSize > 0 {
+		options = append(options, internal.WithMaxDecompressionSize(int64(a.MaxDecompressionSize)))
+	}
+	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding, options...)
 	if err != nil {
 		return err
 	}
@@ -284,14 +285,19 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, fmt.Errorf("failed to set QoS: %w", err)
 	}
 
+	consumeArgs := make(amqp.Table, len(a.QueueConsumeArguments))
+	for k, v := range a.QueueConsumeArguments {
+		consumeArgs[k] = v
+	}
+
 	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // arguments
+		q.Name,      // queue
+		"",          // consumer
+		false,       // auto-ack
+		false,       // exclusive
+		false,       // no-local
+		false,       // no-wait
+		consumeArgs, // arguments
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed establishing connection to queue: %w", err)
@@ -417,7 +423,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	}
 
 	a.decoder.SetEncoding(d.ContentEncoding)
-	body, err := a.decoder.Decode(d.Body, int64(a.MaxDecompressionSize))
+	body, err := a.decoder.Decode(d.Body)
 	if err != nil {
 		onError()
 		return err

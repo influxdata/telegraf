@@ -34,6 +34,12 @@ database drivers use question marks as placeholders but postgres uses indexed
 dollar signs. The plugin chooses which placeholder style to use depending on the
 driver selected.
 
+Through the nature of the inputs plugins, the amounts of columns inserted within
+rows for a given metric may differ. Since the tables are created based on the
+tags and fields available within an input metric, it's possible the created
+table won't contain all the neccessary columns. You might need to initialize
+the schema yourself, to avoid this scenario.
+
 ## Advanced options
 
 When the plugin first connects it runs SQL from the init_sql setting, allowing
@@ -175,22 +181,34 @@ docs](https://modernc.org/sqlite) for details.
 
 ### clickhouse
 
-Use this metric type to SQL type conversion:
+#### DSN
+
+Currently, Telegraf's sql output plugin depends on
+[clickhouse-go v1.5.4](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4)
+which uses a [different DSN
+format](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4#dsn) than its
+newer `v2.*` version.
+
+#### Metric type to SQL type conversion
+
+The following configuration makes the mapping compatible with Clickhouse:
 
 ```toml
   [outputs.sql.convert]
+    conversion_style     = "literal"
     integer              = "Int64"
     text                 = "String"
     timestamp            = "DateTime"
     defaultvalue         = "String"
     unsigned             = "UInt64"
     bool                 = "UInt8"
+    real                 = "Float64"
 ```
 
 See [ClickHouse data
 types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 
-### denisenkom/go-mssqldb
+### microsoft/go-mssqldb
 
 Telegraf doesn't have unit tests for go-mssqldb so it should be treated as
 experimental.

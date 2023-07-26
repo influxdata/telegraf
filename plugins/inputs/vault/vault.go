@@ -123,7 +123,7 @@ func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 
 // buildVaultMetrics, it builds all the metrics and adds them to the accumulator
 func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
-	t, err := time.Parse(timeLayout, sysMetrics.Timestamp)
+	t, err := internal.ParseTimestamp(timeLayout, sysMetrics.Timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %w", err)
 	}
