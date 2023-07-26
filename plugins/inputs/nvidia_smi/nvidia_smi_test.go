@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -13,9 +14,10 @@ import (
 
 func TestGatherValidXML(t *testing.T) {
 	tests := []struct {
-		name     string
-		filename string
-		expected []telegraf.Metric
+		name         string
+		filename     string
+		expected     []telegraf.Metric
+		hasTimestamp bool
 	}{
 		{
 			name:     "GeForce GTX 1070 Ti",
@@ -267,8 +269,9 @@ func TestGatherValidXML(t *testing.T) {
 						"utilization_encoder":           0,
 						"utilization_decoder":           0,
 					},
-					time.Unix(0, 0)),
+					time.Unix(1689872450, 0)),
 			},
+			hasTimestamp: true,
 		},
 	}
 	for _, tt := range tests {
@@ -276,12 +279,15 @@ func TestGatherValidXML(t *testing.T) {
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
 
-			plugin := &NvidiaSMI{}
+			plugin := &NvidiaSMI{Log: &testutil.Logger{}}
 
+			var options []cmp.Option
+			if !tt.hasTimestamp {
+				options = append(options, testutil.IgnoreTime())
+			}
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.parse(&acc, octets))
-
-			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), options...)
 		})
 	}
 }
