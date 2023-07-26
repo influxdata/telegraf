@@ -1399,8 +1399,6 @@ github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5q
 github.com/spf13/viper v1.7.1/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
 github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316 h1:HVv8JjpX24FuI59aET1uInn0ItuEiyj8CZMuR9Uw+lE=
 github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316/go.mod h1:9vX3Dhehey14KFYwWo4K/4JOJRve6jvQf6R9Y8PymLI=
-github.com/srebhan/jsonquery v0.0.0-20230724130435-97fc5c5b79bf h1:0XE4sYreKTR5kpDmEBdbYV4+AVn+sNRdB/LiL9JBUHI=
-github.com/srebhan/jsonquery v0.0.0-20230724130435-97fc5c5b79bf/go.mod h1:1JG4DqRlRCHgVYDPY1ioYFAGSXGfWHzNgrbiGQHsWck=
 github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
 github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
