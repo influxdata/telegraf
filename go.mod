@@ -27,7 +27,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.389
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
-	github.com/antchfx/jsonquery v1.3.2
+	github.com/antchfx/jsonquery v1.3.3
 	github.com/antchfx/xmlquery v1.3.17
 	github.com/antchfx/xpath v1.2.4
 	github.com/apache/arrow/go/v13 v13.0.0-20230630125530-5a06b2ec2a8e
@@ -485,5 +485,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/antchfx/jsonquery => github.com/srebhan/jsonquery v0.0.0-20230724130435-97fc5c5b79bf
