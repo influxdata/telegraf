@@ -1,8 +1,8 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -44,23 +44,28 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		s.Log.Errorf("metric of type %T is not a template metric", metric)
 		return nil, nil
 	}
-	var b strings.Builder
-	if s.Template == "" && s.BatchTemplate != "" {
-		// If the user has only defined a batch template, fall back to batches of 1
-		metrics := []telegraf.TemplateMetric{m}
-
-		if err := s.tmplBatch.Execute(&b, &metrics); err != nil {
-			s.Log.Errorf("failed to execute batch template: %v", err)
-			return nil, nil
-		}
-	} else {
+	var b bytes.Buffer
+	// The template was defined for one metric, just execute it
+	if s.Template != "" {
 		if err := s.tmplMetric.Execute(&b, &m); err != nil {
 			s.Log.Errorf("failed to execute template: %v", err)
 			return nil, nil
 		}
+		return b.Bytes(), nil
 	}
 
-	return []byte(b.String()), nil
+	// The template was defined for a batch of metrics, so wrap the metric into a slice
+	if s.BatchTemplate != "" {
+		metrics := []telegraf.TemplateMetric{m}
+		if err := s.tmplBatch.Execute(&b, &metrics); err != nil {
+			s.Log.Errorf("failed to execute batch template: %v", err)
+			return nil, nil
+		}
+		return b.Bytes(), nil
+	}
+
+	// No template was defined
+	return nil, nil
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
@@ -75,13 +80,13 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		newMetrics = append(newMetrics, m)
 	}
 
-	var b strings.Builder
+	var b bytes.Buffer
 	if err := s.tmplBatch.Execute(&b, &newMetrics); err != nil {
 		s.Log.Errorf("failed to execute batch template: %v", err)
 		return nil, nil
 	}
 
-	return []byte(b.String()), nil
+	return b.Bytes(), nil
 }
 
 func init() {
@@ -90,11 +95,4 @@ func init() {
 			return &Serializer{}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
-	s.Template = cfg.Template
-
-	return nil
 }
