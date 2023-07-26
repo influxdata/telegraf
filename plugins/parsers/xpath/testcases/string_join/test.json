@@ -1,0 +1,20 @@
+{
+   "name": "PC1",
+   "cpus": [
+     "cpu1",
+     "cpu2",
+     "cpu3"
+   ],
+   "disks": {
+     "sata": [
+       "disk1",
+       "disk2"
+     ],
+     "nvme": [
+       "disk3",
+       "disk4",
+       "disk5"
+     ]
+   },
+   "timestamp": 1690218699
+ }
