@@ -101,8 +101,9 @@ to use them.
   # insecure_skip_verify = false
 
   ## Client trace messages
-  ## When set to true, the MQTT client's messages are printed to stdout. These
-  ## messages are very noisey, but essential for debugging issues.
+  ## When set to true, and debug mode enabled in the agent settings, the MQTT
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
   # client_trace = false
 
   ## Data format to consume.
