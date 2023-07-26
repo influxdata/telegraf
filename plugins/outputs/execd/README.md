@@ -34,12 +34,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Flag to determine whether execd should throw error when part of metrics is unserializable
   ## Setting this to true will skip the unserializable metrics and process the rest of metrics
   ## Setting this to false will throw error when encountering unserializable metrics and none will be processed
-  ## This setting is ignored if use_batch_format is true.
+  ## This setting does not apply when use_batch_format is set.
   # ignore_serialization_error = false
 
-  ## Use batch serialization format instead of line based delimiting.  The
-  ## batch format allows for the production of non line based output formats and
-  ## may more efficiently encode and write metrics.
+  ## Use batch serialization instead of per metric. The batch format allows for the
+  ## production of batch output formats and may more efficiently encode and write metrics.
   # use_batch_format = false
 
   ## Data format to export.
