@@ -807,8 +807,8 @@ func removeComments(contents []byte) ([]byte, error) {
 	tomlReader := bytes.NewReader(contents)
 
 	// Initialize variables for tracking state
-	var inQuote, inComment bool
-	var quoteChar, prevChar byte
+	var inQuote, inComment, escaped bool
+	var quoteChar byte
 
 	// Initialize buffer for modified TOML data
 	var output bytes.Buffer
@@ -825,6 +825,11 @@ func removeComments(contents []byte) ([]byte, error) {
 		}
 		char := buf[0]
 
+		// Toggle the escaped state at backslash to we have true every odd occurrence.
+		if char == '\\' {
+			escaped = !escaped
+		}
+
 		if inComment {
 			// If we're currently in a comment, check if this character ends the comment
 			if char == '\n' {
@@ -834,26 +839,30 @@ func removeComments(contents []byte) ([]byte, error) {
 			}
 		} else if inQuote {
 			// If we're currently in a quote, check if this character ends the quote
-			if char == quoteChar && prevChar != '\\' {
+			if char == quoteChar && !escaped {
 				// End of quote, we're no longer in a quote
 				inQuote = false
 			}
 			output.WriteByte(char)
 		} else {
 			// Not in a comment or a quote
-			if char == '"' || char == '\'' {
+			if (char == '"' || char == '\'') && !escaped {
 				// Start of quote
 				inQuote = true
 				quoteChar = char
 				output.WriteByte(char)
-			} else if char == '#' {
+			} else if char == '#' && !escaped {
 				// Start of comment
 				inComment = true
 			} else {
 				// Not a comment or a quote, just output the character
 				output.WriteByte(char)
 			}
-			prevChar = char
+		}
+
+		// Reset escaping if any other character occurred
+		if char != '\\' {
+			escaped = false
 		}
 	}
 	return output.Bytes(), nil
