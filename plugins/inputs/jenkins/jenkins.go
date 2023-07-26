@@ -177,7 +177,7 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	if j.NodeLabelsAsTag {
 		labels := make([]string, 0, len(n.AssignedLabels))
 		for _, label := range n.AssignedLabels {
-			labels = append(labels, label.Name)
+			labels = append(labels, strings.ReplaceAll(label.Name, ",", "_"))
 		}
 
 		if len(labels) == 0 {
