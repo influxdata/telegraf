@@ -279,25 +279,6 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 
 	// Query tags and add default ones
 	tags := make(map[string]string)
-	for name, query := range config.Tags {
-		// Execute the query and cast the returned values into strings
-		v, err := p.executeQuery(doc, selected, query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query tag %q: %w", name, err)
-		}
-		switch v := v.(type) {
-		case string:
-			tags[name] = v
-		case bool:
-			tags[name] = strconv.FormatBool(v)
-		case float64:
-			tags[name] = strconv.FormatFloat(v, 'G', -1, 64)
-		case nil:
-			continue
-		default:
-			return nil, fmt.Errorf("unknown format '%T' for tag %q", v, name)
-		}
-	}
 
 	// Handle the tag batch definitions if any.
 	if len(config.TagSelection) > 0 {
@@ -356,53 +337,34 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		}
 	}
 
+	// Handle explicitly defined tags
+	for name, query := range config.Tags {
+		// Execute the query and cast the returned values into strings
+		v, err := p.executeQuery(doc, selected, query)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query tag %q: %w", name, err)
+		}
+		switch v := v.(type) {
+		case string:
+			tags[name] = v
+		case bool:
+			tags[name] = strconv.FormatBool(v)
+		case float64:
+			tags[name] = strconv.FormatFloat(v, 'G', -1, 64)
+		case nil:
+			continue
+		default:
+			return nil, fmt.Errorf("unknown format '%T' for tag %q", v, name)
+		}
+	}
+
+	// Add default tags
 	for name, v := range p.DefaultTags {
 		tags[name] = v
 	}
 
 	// Query fields
 	fields := make(map[string]interface{})
-	for name, query := range config.FieldsInt {
-		// Execute the query and cast the returned values into integers
-		v, err := p.executeQuery(doc, selected, query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query field (int) %q: %w", name, err)
-		}
-		switch v := v.(type) {
-		case string:
-			fields[name], err = strconv.ParseInt(v, 10, 54)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse field (int) %q: %w", name, err)
-			}
-		case bool:
-			fields[name] = int64(0)
-			if v {
-				fields[name] = int64(1)
-			}
-		case float64:
-			fields[name] = int64(v)
-		case nil:
-			continue
-		default:
-			return nil, fmt.Errorf("unknown format '%T' for field (int) %q", v, name)
-		}
-	}
-
-	for name, query := range config.Fields {
-		// Execute the query and store the result in fields
-		v, err := p.executeQuery(doc, selected, query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query field %q: %w", name, err)
-		}
-
-		if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
-			if b, ok := v.([]byte); ok {
-				v = hex.EncodeToString(b)
-			}
-		}
-
-		fields[name] = v
-	}
 
 	// Handle the field batch definitions if any.
 	if len(config.FieldSelection) > 0 {
@@ -469,6 +431,59 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		} else {
 			p.debugEmptyQuery("field selection", selected, config.FieldSelection)
 		}
+	}
+
+	// Handle explicitly defined fields
+	for name, query := range config.FieldsInt {
+		// Execute the query and cast the returned values into integers
+		v, err := p.executeQuery(doc, selected, query)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query field (int) %q: %w", name, err)
+		}
+		switch v := v.(type) {
+		case string:
+			fields[name], err = strconv.ParseInt(v, 10, 54)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse field (int) %q: %w", name, err)
+			}
+		case bool:
+			fields[name] = int64(0)
+			if v {
+				fields[name] = int64(1)
+			}
+		case float64:
+			fields[name] = int64(v)
+		case nil:
+			continue
+		default:
+			return nil, fmt.Errorf("unknown format '%T' for field (int) %q", v, name)
+		}
+	}
+
+	for name, query := range config.Fields {
+		// Execute the query and store the result in fields
+		v, err := p.executeQuery(doc, selected, query)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query field %q: %w", name, err)
+		}
+
+		// Handle complex types which would be dropped otherwise for
+		// native type handling
+		fmt.Printf("explicit field %q: %v (%T)\n", name, v, v)
+		if v != nil {
+			switch reflect.TypeOf(v).Kind() {
+			case reflect.Array, reflect.Slice, reflect.Map:
+				if b, ok := v.([]byte); ok {
+					if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+						v = hex.EncodeToString(b)
+					}
+				} else {
+					v = fmt.Sprintf("%v", v)
+				}
+			}
+		}
+
+		fields[name] = v
 	}
 
 	return metric.New(metricname, tags, fields, timestamp), nil

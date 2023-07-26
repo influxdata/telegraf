@@ -280,7 +280,8 @@ in the metric.
 __Please note__: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of
-specifying fields.
+specifying fields. In this case _explicitly_ defined tags and fields take
+_precedence_ over the batch instances if both use the same tag/field name.
 
 ### metric_selection (optional)
 
