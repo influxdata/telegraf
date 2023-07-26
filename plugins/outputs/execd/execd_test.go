@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -33,7 +34,7 @@ func TestExternalOutputWorks(t *testing.T) {
 
 	e := &Execd{
 		Command:      []string{exe, "-testoutput"},
-		Environment:  []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
+		Environment:  []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu", "METRIC_NUM=1"},
 		RestartDelay: config.Duration(5 * time.Second),
 		serializer:   serializer,
 		Log:          testutil.Logger{},
@@ -67,6 +68,61 @@ func TestExternalOutputWorks(t *testing.T) {
 
 	require.NoError(t, e.Connect())
 	require.NoError(t, e.Write([]telegraf.Metric{m}))
+	require.NoError(t, e.Close())
+	wg.Wait()
+}
+
+func TestBatchOutputWorks(t *testing.T) {
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	e := &Execd{
+		Command:        []string{exe, "-testoutput"},
+		Environment:    []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu", "METRIC_NUM=2"},
+		RestartDelay:   config.Duration(5 * time.Second),
+		UseBatchFormat: true,
+		serializer:     serializer,
+		Log:            testutil.Logger{},
+	}
+
+	require.NoError(t, e.Init())
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	e.process.ReadStderrFn = func(rstderr io.Reader) {
+		scanner := bufio.NewScanner(rstderr)
+
+		for scanner.Scan() {
+			t.Errorf("stderr: %q", scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			if !strings.HasSuffix(err.Error(), "already closed") {
+				t.Errorf("error reading stderr: %v", err)
+			}
+		}
+		wg.Done()
+	}
+
+	m := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	m2 := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	require.NoError(t, e.Connect())
+	require.NoError(t, e.Write([]telegraf.Metric{m, m2}))
 	require.NoError(t, e.Close())
 	wg.Wait()
 }
@@ -161,13 +217,20 @@ func TestMain(m *testing.M) {
 
 func runOutputConsumerProgram() {
 	metricName := os.Getenv("METRIC_NAME")
+	expectedMetrics, err := strconv.Atoi(os.Getenv("METRIC_NUM"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not parse METRIC_NUM\n")
+		//nolint:revive // error code is important for this "test"
+		os.Exit(1)
+	}
 	parser := influx.NewStreamParser(os.Stdin)
+	numMetrics := 0
 
 	for {
 		m, err := parser.Next()
 		if err != nil {
 			if errors.Is(err, influx.EOF) {
-				return // stream ended
+				break // stream ended
 			}
 			var parseErr *influx.ParseError
 			if errors.As(err, &parseErr) {
@@ -179,6 +242,7 @@ func runOutputConsumerProgram() {
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)
 		}
+		numMetrics++
 
 		expected := testutil.MustMetric(metricName,
 			map[string]string{"name": "cpu1"},
@@ -191,5 +255,10 @@ func runOutputConsumerProgram() {
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)
 		}
+	}
+	if expectedMetrics != numMetrics {
+		fmt.Fprintf(os.Stderr, "number of metrics doesn't match expected: %v, %v\n", numMetrics, expectedMetrics)
+		//nolint:revive // error code is important for this "test"
+		os.Exit(1)
 	}
 }
