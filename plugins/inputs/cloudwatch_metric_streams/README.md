@@ -52,7 +52,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # access_key = "test-key"
 
   ## An optional flag to keep Metric Streams metrics compatible with
-  ## CloudWatch's API naming
+  ## Cloudwatch Input Plugin. When enabled, it'll store metrics in same 
+  ## format as with Cloudwatch API-based Input Plugin.
   # api_compatability = false
 
   ## Set one or more allowed client CA certificate file names to
