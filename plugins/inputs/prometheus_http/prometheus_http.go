@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
+	"gopkg.in/yaml.v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -196,7 +197,7 @@ func (p *PrometheusHttp) getTemplateValue(t *toolsRender.TextTemplate, value flo
 	return f, nil
 }
 
-func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]interface{} {
+/*func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]interface{} {
 
 	r := make(map[string]interface{})
 	for _, m := range maps {
@@ -205,7 +206,7 @@ func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]in
 		}
 	}
 	return r
-}
+}*/
 
 func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, valueTags, metricTags map[string]string) string {
 
@@ -489,7 +490,12 @@ func (p *PrometheusHttp) readToml(bytes []byte) (interface{}, error) {
 
 func (p *PrometheusHttp) readYaml(bytes []byte) (interface{}, error) {
 
-	return nil, fmt.Errorf("yaml is not implemented")
+	var v interface{}
+	err := yaml.Unmarshal(bytes, &v)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
 }
 
 func (p *PrometheusHttp) readFiles() map[string]interface{} {
@@ -518,7 +524,7 @@ func (p *PrometheusHttp) readFiles() map[string]interface{} {
 				obj, err = p.readJson(bytes)
 			case tp == "toml":
 				obj, err = p.readToml(bytes)
-			case tp == "yaml":
+			case (tp == "yaml") || (tp == "yml"):
 				obj, err = p.readYaml(bytes)
 			default:
 				obj, err = p.readJson(bytes)
