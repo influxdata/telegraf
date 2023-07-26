@@ -26,11 +26,11 @@ const maxStderrBytes = 512
 
 // Exec defines the exec output plugin.
 type Exec struct {
-	Command     []string        `toml:"command"`
-	Environment []string        `toml:"environment"`
-	Timeout     config.Duration `toml:"timeout"`
-	BatchExec   bool            `toml:"batch_exec"`
-	Log         telegraf.Logger `toml:"-"`
+	Command        []string        `toml:"command"`
+	Environment    []string        `toml:"environment"`
+	Timeout        config.Duration `toml:"timeout"`
+	UseBatchFormat bool            `toml:"use_batch_format"`
+	Log            telegraf.Logger `toml:"-"`
 
 	runner     Runner
 	serializer serializers.Serializer
@@ -64,7 +64,7 @@ func (e *Exec) Close() error {
 // Write writes the metrics to the configured command.
 func (e *Exec) Write(metrics []telegraf.Metric) error {
 	var buffer bytes.Buffer
-	if e.BatchExec {
+	if e.UseBatchFormat {
 		serializedMetrics, err := e.serializer.SerializeBatch(metrics)
 		if err != nil {
 			return err
@@ -165,8 +165,8 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
-			Timeout:   config.Duration(time.Second * 5),
-			BatchExec: true,
+			Timeout:        config.Duration(time.Second * 5),
+			UseBatchFormat: true,
 		}
 	})
 }

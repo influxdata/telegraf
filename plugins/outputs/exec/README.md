@@ -39,7 +39,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "5s"
   
   ## Whether the command gets executed once per metric, or once per metric batch
-  # batch_exec = true
+  ## The serializer will also run in batch mode when this is true.
+  # use_batch_format = true
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
