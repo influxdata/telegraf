@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -448,11 +449,21 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 					}
 				}
 
-				if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
-					if b, ok := v.([]byte); ok {
-						v = hex.EncodeToString(b)
+				// Handle complex types which would be dropped otherwise for
+				// native type handling
+				if v != nil {
+					switch reflect.TypeOf(v).Kind() {
+					case reflect.Array, reflect.Slice, reflect.Map:
+						if b, ok := v.([]byte); ok {
+							if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+								v = hex.EncodeToString(b)
+							}
+						} else {
+							v = fmt.Sprintf("%v", v)
+						}
 					}
 				}
+
 				fields[name] = v
 			}
 		} else {
@@ -500,7 +511,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 				return nn.GetValue(), nil
 			}
 		}
-		// Fallback to get the string value representation
+
 		return iter.Current().Value(), nil
 	}
 
