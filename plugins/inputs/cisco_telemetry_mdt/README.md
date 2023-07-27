@@ -60,11 +60,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 
  ## Include the delete field in every telemetry message.
-# include_delete_field = false
+ # include_delete_field = false
 
-## Specify custom name for incoming MDT source field.
-## Default is "mdt_source"
-# source_field_name = "custom_source"
+ ## Specify custom name for incoming MDT source field.
+ ## Default is "mdt_source"
+ # source_field_name = "custom_source"
 
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
