@@ -18,6 +18,19 @@ The `template` output data format outputs metrics using an user defined go templ
 
   ## Go template which defines output format
   template = '{{ .Tag "host" }} {{ .Field "available" }}'
+  
+  ## When used with output plugins that allow for batch serialisation
+  ## the template for the entire batch can be defined
+  # use_batch_format = true  # The 'file' plugin allows batch mode with this option
+  # batch_template = """
+<start of batch>
+{{range $metric := . -}}
+{{$metric.Tag \"host\"}}: {{range $metric.Fields | keys | initial -}}
+{{.}}={{get $metric.Fields .}}, {{end}}
+{{- $metric.Fields|keys|last}}={{$metric.Fields|values|last}}
+{{end -}}
+<end of batch>
+"""
 ```
 
 ### Batch mode
