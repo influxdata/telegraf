@@ -102,7 +102,8 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 
 	c.initLastReceivedValues()
 
-	return c, nil
+	err = c.InitNodeIDs()
+	return c, err
 }
 
 // NodeMetricMapping mapping from a single node to a metric
