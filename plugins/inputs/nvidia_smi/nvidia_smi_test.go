@@ -239,6 +239,7 @@ func TestGatherValidXML(t *testing.T) {
 						"compute_mode": "Default",
 						"index":        "0",
 						"name":         "NVIDIA GeForce RTX 3080",
+						"arch":         "Ampere",
 						"pstate":       "P8",
 						"uuid":         "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
