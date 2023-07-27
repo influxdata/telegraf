@@ -91,7 +91,7 @@ func main() {
 
 		newUnresolved := make(map[string]string)
 		for name, fn := range unresolved {
-			if strings.HasPrefix(fn, string(filepath.Separator)) || strings.HasPrefix(fn, "/") {
+			if strings.HasPrefix(filepath.ToSlash(fn), "/") {
 				fn = filepath.Join(root, fn)
 			}
 
