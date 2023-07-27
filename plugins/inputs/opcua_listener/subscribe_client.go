@@ -37,6 +37,11 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 	if err != nil {
 		return nil, err
 	}
+
+	if err := client.InitNodeIDs(); err != nil {
+		return nil, err
+	}
+
 	subClient := &SubscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
