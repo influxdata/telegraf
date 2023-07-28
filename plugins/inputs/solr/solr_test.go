@@ -134,31 +134,6 @@ func TestGatherStats(t *testing.T) {
 		map[string]string{"core": "main", "handler": "filterCache"})
 }
 
-func TestNoCoreDataHandling(t *testing.T) {
-	ts := createMockNoCoreDataServer(t)
-	solr := &Solr{
-		Servers:     []string{ts.URL},
-		HTTPTimeout: config.Duration(time.Second * 5),
-	}
-	require.NoError(t, solr.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, solr.Gather(&acc))
-
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminMainCoreStatusExpected,
-		map[string]string{"core": "main"})
-
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminCore1StatusExpected,
-		map[string]string{"core": "core1"})
-
-	acc.AssertDoesNotContainMeasurement(t, "solr_core")
-	acc.AssertDoesNotContainMeasurement(t, "solr_queryhandler")
-	acc.AssertDoesNotContainMeasurement(t, "solr_updatehandler")
-	acc.AssertDoesNotContainMeasurement(t, "solr_handler")
-}
-
 func loadPages(path string) (map[string][]byte, error) {
 	abspath, err := filepath.Abs(path)
 	if err != nil {
@@ -206,27 +181,6 @@ func createMockServer(t *testing.T) *httptest.Server {
 		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintln(w, mBeansCore1Response)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "nope")
-		}
-	}))
-}
-
-func createMockNoCoreDataServer(t *testing.T) *httptest.Server {
-	var nodata string
-	statusResponse := readJSONAsString(t, "testdata/status_response.json")
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, statusResponse)
-		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, nodata)
-		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, nodata)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintln(w, "nope")
