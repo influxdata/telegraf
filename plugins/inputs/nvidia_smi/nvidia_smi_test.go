@@ -227,17 +227,60 @@ func TestGatherValidXML(t *testing.T) {
 					time.Unix(0, 0)),
 			},
 		},
+		{
+			name:     "RTC 3080 schema v12",
+			filename: "rtx-3080-v12.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"compute_mode": "Default",
+						"index":        "0",
+						"name":         "NVIDIA GeForce RTX 3080",
+						"arch":         "Ampere",
+						"pstate":       "P8",
+						"uuid":         "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
+					},
+					map[string]interface{}{
+						"clocks_current_graphics":       210,
+						"clocks_current_memory":         405,
+						"clocks_current_sm":             210,
+						"clocks_current_video":          555,
+						"cuda_version":                  "12.2",
+						"driver_version":                "536.40",
+						"encoder_stats_average_fps":     0,
+						"encoder_stats_average_latency": 0,
+						"encoder_stats_session_count":   0,
+						"fbc_stats_average_fps":         0,
+						"fbc_stats_average_latency":     0,
+						"fbc_stats_session_count":       0,
+						"fan_speed":                     0,
+						"power_draw":                    22.78,
+						"memory_free":                   8938,
+						"memory_total":                  10240,
+						"memory_used":                   1128,
+						"memory_reserved":               173,
+						"pcie_link_gen_current":         4,
+						"pcie_link_width_current":       16,
+						"temperature_gpu":               31,
+						"utilization_gpu":               0,
+						"utilization_memory":            37,
+						"utilization_encoder":           0,
+						"utilization_decoder":           0,
+					},
+					time.Unix(1689872450, 0)),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
 
-			err = gatherNvidiaSMI(octets, &acc)
-			require.NoError(t, err)
+			plugin := &NvidiaSMI{Log: &testutil.Logger{}}
 
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.parse(&acc, octets))
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
