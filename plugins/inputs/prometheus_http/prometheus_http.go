@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,24 +24,26 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	toolsRender "github.com/devopsext/tools/render"
+	utils "github.com/devopsext/utils"
 )
 
 // PrometheusHttpMetric struct
 type PrometheusHttpMetric struct {
-	Name      string `toml:"name"`
-	Query     string `toml:"query"`
-	Transform string `toml:"transform"`
-	template  *toolsRender.TextTemplate
-	Duration  config.Duration   `toml:"duration"`
-	From      string            `toml:"from"`
-	Step      string            `toml:"step"`
-	Params    string            `toml:"params"`
-	Timeout   config.Duration   `toml:"timeout"`
-	Interval  config.Duration   `toml:"interval"`
-	Tags      map[string]string `toml:"tags"`
-	UniqueBy  []string          `toml:"unique_by"`
-	templates map[string]*toolsRender.TextTemplate
-	uniques   map[uint64]bool
+	Name        string `toml:"name"`
+	Query       string `toml:"query"`
+	Transform   string `toml:"transform"`
+	template    *toolsRender.TextTemplate
+	Duration    config.Duration   `toml:"duration"`
+	From        string            `toml:"from"`
+	Step        string            `toml:"step"`
+	Params      string            `toml:"params"`
+	Timeout     config.Duration   `toml:"timeout"`
+	Interval    config.Duration   `toml:"interval"`
+	Tags        map[string]string `toml:"tags"`
+	UniqueBy    []string          `toml:"unique_by"`
+	templates   map[string]*toolsRender.TextTemplate
+	dependecies map[string][]string
+	uniques     map[uint64]bool
 }
 
 // PrometheusHttpFile
@@ -208,16 +211,35 @@ func (p *PrometheusHttp) getTemplateValue(t *toolsRender.TextTemplate, value flo
 	return r
 }*/
 
-func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, valueTags, metricTags map[string]string) string {
+func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) interface{} {
+
+	t, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
+		Content: template,
+	}, p)
+	if err != nil {
+		p.Log.Error(err)
+		return err
+	}
+
+	b, err := t.RenderObject(obj)
+	if err != nil {
+		p.Log.Error(err)
+		return err
+	}
+	return string(b)
+}
+
+func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, values, metricTags, metricVars map[string]string) string {
 
 	tgs := make(map[string]interface{})
-	for k, v := range valueTags {
+	for k, v := range values {
 		tgs[k] = v
 	}
 
 	m := tgs
-	m["values"] = valueTags
+	m["values"] = values
 	m["tags"] = metricTags
+	m["vars"] = metricVars
 	m["files"] = p.files
 
 	b, err := t.RenderObject(&m)
@@ -230,25 +252,81 @@ func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, valueTag
 	return strings.ReplaceAll(r, "<no value>", "")
 }
 
-func (p *PrometheusHttp) getExtraMetricTags(tags map[string]string, m *PrometheusHttpMetric) map[string]string {
-
-	if m.templates == nil {
-		return tags
+func (p *PrometheusHttp) getKeys(arr map[string][]string) []string {
+	var keys []string
+	for k := range arr {
+		keys = append(keys, k)
 	}
-	tgs := make(map[string]string)
-	for v, t := range m.Tags {
+	return keys
+}
 
-		tpl := m.templates[v]
-		if tpl != nil {
-			tgs[v] = p.setExtraMetricTag(m.templates[v], tags, m.Tags)
-			if !p.SkipEmptyTags && tgs[v] == "" {
-				tgs[v] = t
-			}
-		} else {
-			tgs[v] = t
+func (p *PrometheusHttp) countDependecies(tags []string, deps []string) int {
+
+	cnt := 0
+	for _, k := range deps {
+		if !utils.Contains(tags, k) {
+			cnt++
 		}
 	}
-	return tgs
+	return cnt
+}
+
+func (p *PrometheusHttp) sortMetricTags(m *PrometheusHttpMetric) []string {
+
+	var tags []string
+	mm := make(map[string][]string)
+	for k := range m.Tags {
+		if m.dependecies[k] == nil {
+			if !utils.Contains(tags, k) {
+				tags = append(tags, k)
+			}
+		} else {
+			if len(m.dependecies[k]) > 0 {
+				mm[k] = m.dependecies[k]
+			}
+		}
+	}
+	keys := p.getKeys(mm)
+	// make it ordered
+	sort.SliceStable(keys, func(i, j int) bool {
+
+		l1 := p.countDependecies(tags, mm[keys[i]])
+		l2 := p.countDependecies(tags, mm[keys[j]])
+
+		return l1 < l2
+	})
+
+	for _, k := range keys {
+		if utils.Contains(tags, k) {
+			continue
+		}
+		tags = append(tags, k)
+	}
+
+	return tags
+}
+
+func (p *PrometheusHttp) getExtraMetricTags(values map[string]string, m *PrometheusHttpMetric) map[string]string {
+
+	if m.templates == nil {
+		return values
+	}
+
+	vars := make(map[string]string)
+	mTags := p.sortMetricTags(m)
+	for _, k := range mTags {
+
+		tpl := m.templates[k]
+		if tpl != nil {
+			vars[k] = p.setExtraMetricTag(tpl, values, m.Tags, vars)
+			if !p.SkipEmptyTags && vars[k] == "" {
+				vars[k] = m.Tags[k]
+			}
+		} else {
+			vars[k] = m.Tags[k]
+		}
+	}
+	return vars
 }
 
 func byteHash64(b []byte) uint64 {
@@ -397,24 +475,6 @@ func (p *PrometheusHttp) gatherMetrics(ds PrometheusHttpDatasource) error {
 	return nil
 }
 
-func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) interface{} {
-
-	t, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
-		Content: template,
-	}, p)
-	if err != nil {
-		p.Log.Error(err)
-		return err
-	}
-
-	b, err := t.RenderObject(obj)
-	if err != nil {
-		p.Log.Error(err)
-		return err
-	}
-	return string(b)
-}
-
 func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.TextTemplate {
 
 	if value == "" {
@@ -452,6 +512,32 @@ func (p *PrometheusHttp) ifTemplate(s string) bool {
 	return strings.Contains(s1, "}}")
 }
 
+func (p *PrometheusHttp) findTagsOnVars(ident, name, value string, tags map[string]string, stack []string) []string {
+
+	var r []string
+	if len(tags) == 0 {
+		return r
+	}
+	for k, v := range tags {
+		pattern := fmt.Sprintf(".vars.%s", k)
+		if strings.Contains(value, pattern) && !utils.Contains(r, k) {
+			if utils.Contains(stack, k) {
+				return append(r, k)
+			}
+			r = append(r, k)
+			d := p.findTagsOnVars(ident, k, v, tags, append(stack, r...))
+			if len(d) > 0 {
+				for _, k1 := range d {
+					if !utils.Contains(r, k1) {
+						r = append(r, k1)
+					}
+				}
+			}
+		}
+	}
+	return r
+}
+
 func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 
 	if m.Name == "" {
@@ -463,9 +549,20 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 	if len(m.Tags) > 0 {
 		m.templates = make(map[string]*toolsRender.TextTemplate)
 	}
+	m.dependecies = make(map[string][]string)
 	for k, v := range m.Tags {
 		if p.ifTemplate(v) {
-			m.templates[k] = p.getDefaultTemplate(fmt.Sprintf("%s_%s", m.Name, k), v)
+			n := fmt.Sprintf("%s_%s", m.Name, k)
+			d := p.findTagsOnVars(m.Name, k, v, m.Tags, []string{k})
+			if utils.Contains(d, k) {
+				p.Log.Errorf("%s: %s dependency error: contains in %s", m.Name, k, d)
+				continue
+			}
+			if len(d) > 0 {
+				p.Log.Debugf("%s: %s dependencies are %s", m.Name, k, d)
+			}
+			m.dependecies[k] = d
+			m.templates[k] = p.getDefaultTemplate(n, v)
 		}
 	}
 	if m.uniques == nil {
