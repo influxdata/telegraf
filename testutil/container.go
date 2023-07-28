@@ -26,6 +26,7 @@ type Container struct {
 	Entrypoint   []string
 	Env          map[string]string
 	ExposedPorts []string
+	Cmd          []string
 	Image        string
 	Name         string
 	Networks     []string
@@ -53,6 +54,7 @@ func (c *Container) Start() error {
 			Entrypoint:   c.Entrypoint,
 			Env:          c.Env,
 			ExposedPorts: c.ExposedPorts,
+			Cmd:          c.Cmd,
 			Image:        c.Image,
 			Name:         c.Name,
 			Networks:     c.Networks,
