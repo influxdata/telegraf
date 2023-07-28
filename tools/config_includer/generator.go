@@ -91,7 +91,7 @@ func main() {
 
 		newUnresolved := make(map[string]string)
 		for name, fn := range unresolved {
-			if filepath.IsAbs(fn) {
+			if strings.HasPrefix(filepath.ToSlash(fn), "/") {
 				fn = filepath.Join(root, fn)
 			}
 
@@ -121,7 +121,7 @@ func main() {
 			pwd = string(filepath.Separator) + pwd
 			for _, iname := range extractIncludes(tmpl) {
 				ifn := iname
-				if !filepath.IsAbs(ifn) {
+				if !strings.HasPrefix(ifn, "/") {
 					ifn = filepath.Join(pwd, ifn)
 				}
 				newUnresolved[iname] = ifn
