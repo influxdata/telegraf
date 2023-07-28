@@ -190,7 +190,7 @@ func loadPages(path string) (map[string][]byte, error) {
 		if err != nil {
 			return err
 		}
-		responses[relpath] = data
+		responses[filepath.ToSlash(relpath)] = data
 
 		return nil
 	})
