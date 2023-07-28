@@ -31,7 +31,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
 		common.SetTagIfUsed(tags, "name", gpu.ProductName)
 		common.SetTagIfUsed(tags, "arch", gpu.ProductArchitecture)
-		common.SetTagIfUsed(tags, "uuid", gpu.Uuid)
+		common.SetTagIfUsed(tags, "uuid", gpu.UUID)
 		common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
 
 		common.SetIfUsed("str", fields, "driver_version", s.DriverVersion)

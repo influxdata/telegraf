@@ -245,7 +245,7 @@ type smi struct {
 			MemoryUtil  string `xml:"memory_util"`
 			OfaUtil     string `xml:"ofa_util"`
 		} `xml:"utilization"`
-		Uuid         string `xml:"uuid"`
+		UUID         string `xml:"uuid"`
 		VbiosVersion string `xml:"vbios_version"`
 		Voltage      struct {
 			GraphicsVolt string `xml:"graphics_volt"`
