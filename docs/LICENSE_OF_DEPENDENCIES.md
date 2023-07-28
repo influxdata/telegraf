@@ -312,6 +312,7 @@ following works:
 - github.com/sirupsen/logrus [MIT License](https://github.com/sirupsen/logrus/blob/master/LICENSE)
 - github.com/sleepinggenius2/gosmi [MIT License](https://github.com/sleepinggenius2/gosmi/blob/master/LICENSE)
 - github.com/snowflakedb/gosnowflake [Apache License 2.0](https://github.com/snowflakedb/gosnowflake/blob/master/LICENSE)
+- github.com/spf13/cast [MIT License](https://github.com/spf13/cast/blob/master/LICENSE)
 - github.com/spf13/pflag [BSD 3-Clause "New" or "Revised" License](https://github.com/spf13/pflag/blob/master/LICENSE)
 - github.com/srebhan/cborquery [MIT License](https://github.com/srebhan/cborquery/blob/main/LICENSE)
 - github.com/stoewer/go-strcase [MIT License](https://github.com/stoewer/go-strcase/blob/master/LICENSE)
