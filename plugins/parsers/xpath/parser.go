@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -66,6 +67,7 @@ type Config struct {
 	Fields       map[string]string `toml:"fields"`
 	FieldsInt    map[string]string `toml:"fields_int"`
 	FieldsHex    []string          `toml:"fields_bytes_as_hex"`
+	FieldsBase64 []string          `toml:"fields_bytes_as_base64"`
 
 	FieldSelection  string `toml:"field_selection"`
 	FieldNameQuery  string `toml:"field_name"`
@@ -77,8 +79,9 @@ type Config struct {
 	TagValueQuery string `toml:"tag_value"`
 	TagNameExpand bool   `toml:"tag_name_expansion"`
 
-	FieldsHexFilter filter.Filter
-	Location        *time.Location
+	FieldsHexFilter    filter.Filter
+	FieldsBase64Filter filter.Filter
+	Location           *time.Location
 }
 
 func (p *Parser) Init() error {
@@ -174,6 +177,12 @@ func (p *Parser) Init() error {
 			return fmt.Errorf("creating hex-fields filter failed: %w", err)
 		}
 		config.FieldsHexFilter = f
+
+		bf, err := filter.Compile(config.FieldsBase64)
+		if err != nil {
+			return fmt.Errorf("creating base64-fields filter failed: %w", err)
+		}
+		config.FieldsBase64Filter = bf
 
 		p.Configs[i] = config
 	}
@@ -420,6 +429,9 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 							if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
 								v = hex.EncodeToString(b)
 							}
+							if config.FieldsBase64Filter != nil && config.FieldsBase64Filter.Match(name) {
+								v = base64.StdEncoding.EncodeToString(b)
+							}
 						} else {
 							v = fmt.Sprintf("%v", v)
 						}
@@ -476,6 +488,9 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if b, ok := v.([]byte); ok {
 					if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
 						v = hex.EncodeToString(b)
+					}
+					if config.FieldsBase64Filter != nil && config.FieldsBase64Filter.Match(name) {
+						v = base64.StdEncoding.EncodeToString(b)
 					}
 				} else {
 					v = fmt.Sprintf("%v", v)
