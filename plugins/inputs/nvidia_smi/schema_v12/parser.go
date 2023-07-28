@@ -17,7 +17,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 
 	timestamp := time.Now()
 	if s.Timestamp != "" {
-		if t, err := time.Parse(time.ANSIC, s.Timestamp); err == nil {
+		if t, err := time.ParseInLocation(time.ANSIC, s.Timestamp, time.Local); err == nil {
 			timestamp = t
 		}
 	}

@@ -277,6 +277,7 @@ func TestGatherValidXML(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			time.Local = time.UTC
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
 
