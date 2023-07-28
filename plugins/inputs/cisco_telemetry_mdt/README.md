@@ -63,8 +63,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  # include_delete_field = false
 
  ## Specify custom name for incoming MDT source field.
- ## Default is "mdt_source"
- # source_field_name = "custom_source"
+ # source_field_name = "mdt_source"
 
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
