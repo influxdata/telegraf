@@ -27,13 +27,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.solr]]
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]
-  ##
+
   ## specify a list of one or more Solr cores (default - all)
   # cores = ["main"]
-  ##
+  
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
+
+  ## Timeout for HTTP requests
+  # timeout = "5s"
 ```
 
 ## Metrics
