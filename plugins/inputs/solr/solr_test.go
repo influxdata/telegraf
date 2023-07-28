@@ -59,7 +59,7 @@ func TestCases(t *testing.T) {
 				Servers:     []string{server.URL},
 				HTTPTimeout: config.Duration(time.Second * 5),
 			}
-			//require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Init())
 
 			// Gather data and compare results
 			var acc testutil.Accumulator
@@ -73,8 +73,12 @@ func TestCases(t *testing.T) {
 
 func TestGatherStats(t *testing.T) {
 	ts := createMockServer(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
+	solr := &Solr{
+		Servers:     []string{ts.URL},
+		HTTPTimeout: config.Duration(time.Second * 5),
+	}
+	require.NoError(t, solr.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, solr.Gather(&acc))
 
@@ -105,8 +109,12 @@ func TestGatherStats(t *testing.T) {
 
 func TestSolr3GatherStats(t *testing.T) {
 	ts := createMockSolr3Server(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
+	solr := &Solr{
+		Servers:     []string{ts.URL},
+		HTTPTimeout: config.Duration(time.Second * 5),
+	}
+	require.NoError(t, solr.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, solr.Gather(&acc))
 
@@ -136,8 +144,12 @@ func TestSolr3GatherStats(t *testing.T) {
 }
 func TestNoCoreDataHandling(t *testing.T) {
 	ts := createMockNoCoreDataServer(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
+	solr := &Solr{
+		Servers:     []string{ts.URL},
+		HTTPTimeout: config.Duration(time.Second * 5),
+	}
+	require.NoError(t, solr.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, solr.Gather(&acc))
 

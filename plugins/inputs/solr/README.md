@@ -34,6 +34,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
+
+  ## Timeout for HTTP requests
+  # timeout = "5s"
 ```
 
 ## Metrics
