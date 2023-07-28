@@ -68,7 +68,7 @@ func TestCases(t *testing.T) {
 					w.WriteHeader(http.StatusNotFound)
 					return
 				}
-				w.Write(page)
+				_, _ = w.Write(page)
 			}))
 			require.NotNil(t, server)
 			defer server.Close()
