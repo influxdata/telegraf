@@ -5,13 +5,71 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Make sure tests contains data
+	require.NotEmpty(t, folders)
+
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		fname := f.Name()
+		t.Run(fname, func(t *testing.T) {
+			testdataPath := filepath.Join("testcases", fname)
+			expectedFilename := filepath.Join(testdataPath, "expected.out")
+
+			// Load the expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Create a HTTP server that delivers all files in the test-directory
+			handler, err := createRequestHandler(testdataPath)
+			require.NoError(t, err)
+			server := httptest.NewServer(handler)
+			require.NotNil(t, server)
+			defer server.Close()
+
+			plugin := &Solr{
+				Servers:     []string{server.URL},
+				HTTPTimeout: config.Duration(time.Second * 5),
+			}
+			//require.NoError(t, plugin.Init())
+
+			// Gather data and compare results
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
 
 func TestGatherStats(t *testing.T) {
 	ts := createMockServer(t)
@@ -43,17 +101,6 @@ func TestGatherStats(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "solr_cache",
 		solrCacheExpected,
 		map[string]string{"core": "main", "handler": "filterCache"})
-}
-
-func TestSolr7MbeansStats(t *testing.T) {
-	ts := createMockSolr7Server(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
-	var acc testutil.Accumulator
-	require.NoError(t, solr.Gather(&acc))
-	acc.AssertContainsTaggedFields(t, "solr_cache",
-		solr7CacheExpected,
-		map[string]string{"core": "main", "handler": "documentCache"})
 }
 
 func TestSolr3GatherStats(t *testing.T) {
@@ -106,6 +153,35 @@ func TestNoCoreDataHandling(t *testing.T) {
 	acc.AssertDoesNotContainMeasurement(t, "solr_queryhandler")
 	acc.AssertDoesNotContainMeasurement(t, "solr_updatehandler")
 	acc.AssertDoesNotContainMeasurement(t, "solr_handler")
+}
+
+func createRequestHandler(path string) (http.HandlerFunc, error) {
+	abspath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/solr/") {
+			w.WriteHeader(http.StatusNotFound)
+		}
+
+		// Construct the path
+		file := strings.TrimPrefix(r.URL.Path, "/solr/")
+		file = filepath.Join(abspath, filepath.FromSlash(file))
+		file, err = filepath.Abs(file)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		file += ".json"
+
+		// Prevent directory traversal
+		if !strings.HasPrefix(file, abspath) {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
+		http.ServeFile(w, r, file)
+	}, nil
 }
 
 func createMockServer(t *testing.T) *httptest.Server {
@@ -165,24 +241,6 @@ func createMockSolr3Server(t *testing.T) *httptest.Server {
 		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintln(w, data)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "nope")
-		}
-	}))
-}
-
-func createMockSolr7Server(t *testing.T) *httptest.Server {
-	statusResponse := readJSONAsString(t, "testdata/status_response.json")
-	mBeansSolr7Response := readJSONAsString(t, "testdata/m_beans_solr7_response.json")
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, statusResponse)
-		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, mBeansSolr7Response)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintln(w, "nope")
