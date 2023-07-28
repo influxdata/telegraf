@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJobRequest(t *testing.T) {
@@ -367,6 +369,97 @@ func TestGatherNodeData(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLabels(t *testing.T) {
+	input := mockHandler{
+		responseMap: map[string]interface{}{
+			"/api/json": struct{}{},
+			"/computer/api/json": nodeResponse{
+				BusyExecutors:  4,
+				TotalExecutors: 8,
+				Computers: []node{
+					{
+						DisplayName: "master",
+						AssignedLabels: []label{
+							{"project_a"},
+							{"testing"},
+						},
+						MonitorData: monitorData{
+							HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
+								Average: 54321,
+							},
+						},
+					},
+					{
+						DisplayName: "secondary",
+						MonitorData: monitorData{
+							HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
+								Average: 12345,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("jenkins",
+			map[string]string{
+				"source": "127.0.0.1",
+			},
+			map[string]interface{}{
+				"busy_executors":  4,
+				"total_executors": 8,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("jenkins_node",
+			map[string]string{
+				"node_name": "master",
+				"status":    "online",
+				"source":    "127.0.0.1",
+				"labels":    "project_a,testing",
+			},
+			map[string]interface{}{
+				"num_executors": int64(0),
+				"response_time": int64(54321),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("jenkins_node",
+			map[string]string{
+				"node_name": "secondary",
+				"status":    "online",
+				"source":    "127.0.0.1",
+				"labels":    "none",
+			},
+			map[string]interface{}{
+				"num_executors": int64(0),
+				"response_time": int64(12345),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	ts := httptest.NewServer(input)
+	defer ts.Close()
+	j := &Jenkins{
+		Log:             testutil.Logger{},
+		URL:             ts.URL,
+		ResponseTimeout: config.Duration(time.Microsecond),
+		NodeLabelsAsTag: true,
+	}
+	require.NoError(t, j.initialize(&http.Client{Transport: &http.Transport{}}))
+	acc := new(testutil.Accumulator)
+	j.gatherNodesData(acc)
+	require.NoError(t, acc.FirstError())
+	results := acc.GetTelegrafMetrics()
+	for _, metric := range results {
+		metric.RemoveTag("port")
+	}
+	testutil.RequireMetricsEqual(t, expected, results, testutil.IgnoreTime())
 }
 
 func TestInitialize(t *testing.T) {

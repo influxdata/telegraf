@@ -65,6 +65,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Worker pool for jenkins plugin only
   ## Empty this field will use default value 5
   # max_connections = 5
+
+  ## When set to true will add node labels as a comma-seperated tag. If none,
+  ## are found, then a tag with the value of 'none' is used. Finally, if a
+  ## lable contains a comma it is replaced with an underscore.
+  # node_labels_as_tag = false
 ```
 
 ## Metrics
