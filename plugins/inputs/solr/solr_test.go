@@ -1,6 +1,7 @@
 package solr
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -10,12 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -27,11 +28,6 @@ func TestCases(t *testing.T) {
 
 	// Make sure tests contains data
 	require.NotEmpty(t, folders)
-
-	// Register the plugin
-	inputs.Add("gnmi", func() telegraf.Input {
-		return &Solr{HTTPTimeout: config.Duration(5 * time.Second)}
-	})
 
 	options := []cmp.Option{
 		testutil.IgnoreTime(),
@@ -93,6 +89,79 @@ func TestCases(t *testing.T) {
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+func TestIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Get all integration test files in testcases
+	resultFiles, err := filepath.Glob(filepath.Join("testcases", "*.result"))
+	require.NoError(t, err)
+
+	// Make sure tests contains data
+	require.NotEmpty(t, resultFiles)
+
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	const servicePort = "8983"
+
+	for _, f := range resultFiles {
+		fname := strings.TrimSuffix(filepath.Base(f), ".result")
+		t.Run(fname, func(t *testing.T) {
+			expectedFilename := filepath.Join("testcases", fname+".result")
+
+			// Load the expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Determine container version for the integration test
+			// The version number is the last element in the filename separated
+			// by a dash and prefixed with a 'v'.
+			image := "solr"
+			parts := strings.Split(fname, "-")
+			if len(parts) > 1 {
+				version := parts[len(parts)-1]
+				require.True(t, strings.HasPrefix(version, "v"))
+				image += ":" + strings.TrimPrefix(version, "v")
+			}
+
+			// Start the container
+			container := testutil.Container{
+				Image:        image,
+				ExposedPorts: []string{servicePort},
+				Cmd:          []string{"solr-precreate", "main"},
+				WaitingFor: wait.ForAll(
+					wait.ForListeningPort(nat.Port(servicePort)),
+					wait.ForLog("o.a.s.c.SolrCore [main] Registered new searcher"),
+				),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			server := []string{fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort])}
+
+			// Setup the plugin
+			plugin := &Solr{
+				Servers:     server,
+				HTTPTimeout: config.Duration(5 * time.Second),
+			}
+			require.NoError(t, plugin.Init())
+
+			// Gather data and compare results
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
 		})
 	}
 }
