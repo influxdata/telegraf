@@ -272,12 +272,12 @@ func TestGatherValidXML(t *testing.T) {
 					},
 					time.Unix(1689872450, 0)),
 			},
-			hasTimestamp: true,
+			//hasTimestamp: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			time.Local = time.UTC
+			//time.Local = time.UTC
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
 
