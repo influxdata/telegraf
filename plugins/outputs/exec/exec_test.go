@@ -224,5 +224,4 @@ func runOutputConsumerProgram() {
 		}
 	}
 	fmt.Fprintf(os.Stdout, "%d\n", numMetrics)
-	os.Exit(0)
 }
