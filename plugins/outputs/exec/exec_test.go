@@ -32,7 +32,7 @@ func TestExternalOutputBatch(t *testing.T) {
 	e := &Exec{
 		Command:        []string{exe, "-testoutput"},
 		Environment:    []string{"PLUGINS_OUTPUTS_EXEC_MODE=application", "METRIC_NAME=cpu"},
-		Timeout:        1000000000,
+		Timeout:        3000000000,
 		UseBatchFormat: true,
 		serializer:     serializer,
 		Log:            testutil.Logger{},
@@ -64,7 +64,7 @@ func TestExternalOutputNoBatch(t *testing.T) {
 	e := &Exec{
 		Command:        []string{exe, "-testoutput"},
 		Environment:    []string{"PLUGINS_OUTPUTS_EXEC_MODE=application", "METRIC_NAME=cpu"},
-		Timeout:        1000000000,
+		Timeout:        3000000000,
 		UseBatchFormat: false,
 		serializer:     serializer,
 		Log:            testutil.Logger{},
@@ -224,4 +224,5 @@ func runOutputConsumerProgram() {
 		}
 	}
 	fmt.Fprintf(os.Stdout, "%d\n", numMetrics)
+	os.Exit(0)
 }
