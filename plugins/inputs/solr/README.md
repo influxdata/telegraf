@@ -29,7 +29,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   servers = ["http://localhost:8983"]
 
   ## specify a list of one or more Solr cores (default - all)
-  # cores = ["main"]
   # cores = ["*"]
   
   ## Optional HTTP Basic Auth Credentials
