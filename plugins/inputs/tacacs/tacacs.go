@@ -149,7 +149,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		fields["response_status"] = "timeout"
+		fields["response_status"] = "Timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -167,7 +167,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		fields["response_status"] = "timeout"
+		fields["response_status"] = "Timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -184,7 +184,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)
 		}
 		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
-		fields["response_status"] = "timeout"
+		fields["response_status"] = "Timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}

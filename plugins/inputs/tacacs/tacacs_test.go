@@ -193,12 +193,12 @@ func TestTacacsLocal(t *testing.T) {
 		{
 			name:           "unreachable",
 			testingTimeout: config.Duration(time.Nanosecond * 1000),
-			serverToTest:   []string{"unreachable.hostname.com:404"},
+			serverToTest:   []string{"unreachable.test:49"},
 			usedUsername:   config.NewSecret([]byte(`testusername`)),
 			usedPassword:   config.NewSecret([]byte(`testpassword`)),
 			usedSecret:     config.NewSecret([]byte(`testsecret`)),
 			requestAddr:    "127.0.0.1",
-			errContains:    "error on new tacacs authentication start request to unreachable.hostname.com:404 : dial tcp",
+			errContains:    "error on new tacacs authentication start request to unreachable.test:49 : dial tcp",
 		},
 	}
 

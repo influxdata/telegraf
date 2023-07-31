@@ -59,7 +59,7 @@ by the tacacs server, or filled by telegraf in case of a timeout.
 | AuthenStatusRestart  | 6 (0x6)      | tacacs server | real value
 | AuthenStatusError    | 7 (0x7)      | tacacs server | real value
 | AuthenStatusFollow   | 33 (0x21)    | tacacs server | real value
-| Timeout              | timeout      | telegraf      | eq. to response_timeout
+| Timeout              | Timeout      | telegraf      | eq. to response_timeout
 
 ### field `responsetime_ms`
 
