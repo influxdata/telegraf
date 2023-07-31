@@ -60,6 +60,7 @@ type CiscoTelemetryMDT struct {
 	EmbeddedTags       []string              `toml:"embedded_tags"`
 	EnforcementPolicy  GRPCEnforcementPolicy `toml:"grpc_enforcement_policy"`
 	IncludeDeleteField bool                  `toml:"include_delete_field"`
+	SourceFieldName    string                `toml:"source_field_name"`
 
 	Log telegraf.Logger
 
@@ -396,6 +397,10 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			tags = make(map[string]string, len(keys.Fields)+3)
 			for _, subfield := range keys.Fields {
 				c.parseKeyField(tags, subfield, "")
+			}
+			// If incoming MDT contains source key, copy to mdt_src
+			if _, ok := tags["source"]; ok {
+				tags[c.SourceFieldName] = tags["source"]
 			}
 		} else {
 			tags = make(map[string]string, 3)
@@ -744,8 +749,9 @@ func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
 func init() {
 	inputs.Add("cisco_telemetry_mdt", func() telegraf.Input {
 		return &CiscoTelemetryMDT{
-			Transport:      "grpc",
-			ServiceAddress: "127.0.0.1:57000",
+			Transport:       "grpc",
+			ServiceAddress:  "127.0.0.1:57000",
+			SourceFieldName: "mdt_source",
 		}
 	})
 }

@@ -983,3 +983,52 @@ func TestGRPCDialoutKeepalive(t *testing.T) {
 	c.Stop()
 	require.NoError(t, conn.Close())
 }
+
+func TestSourceFieldRewrite(t *testing.T) {
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"alias": "type:model/some/path"}}
+	c.SourceFieldName = "mdt_source"
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	telemetry := &telemetryBis.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "type:model/some/path",
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
+			{
+				Fields: []*telemetryBis.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetryBis.TelemetryField{
+							{
+								Name:        "source",
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "str"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetryBis.TelemetryField{
+							{
+								Name:        "bool",
+								ValueByType: &telemetryBis.TelemetryField_BoolValue{BoolValue: false},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+
+	tags := map[string]string{"path": "type:model/some/path", "mdt_source": "str", "source": "hostname", "subscription": "subscription"}
+	fields := map[string]interface{}{"bool": false}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+}
