@@ -1,13 +1,12 @@
-# Lustre Input Plugin
-
+# Lustre Input Plugin 
 The [Lustre][]® file system is an open-source, parallel file system that
 supports many requirements of leadership class HPC simulation environments.
 
 This plugin monitors the Lustre file system using its entries in the proc
-filesystem.
+filesystem. Compared to https://github.com/influxdata/telegraf/tree/master/plugins/inputs/lustre2,
+we use commond `lctl get_param` to get statistics instead of reading data based on absolute path of statistics file(recommand from the Lustre).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
-
 In addition to the plugin-specific configuration settings, plugins support
 additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
@@ -16,165 +15,195 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
-
 ```toml @sample.conf
 # Read metrics from local Lustre service on OST, MDS
 # This plugin ONLY supports Linux
 [[inputs.lustre2]]
-  ## An array of /proc globs to search for Lustre stats
-  ## If not specified, the default will work on Lustre 2.5.x
+  [[inputs.lustre2]]
+  ## A variable indicates the identifier of a node, because different types of nodes
+  ## have differenct metrics.
   ##
-  # ost_procfiles = [
-  #   "/proc/fs/lustre/obdfilter/*/stats",
-  #   "/proc/fs/lustre/osd-ldiskfs/*/stats",
-  #   "/proc/fs/lustre/obdfilter/*/job_stats",
-  #   "/proc/fs/lustre/obdfilter/*/exports/*/stats",
-  # ]
-  # mds_procfiles = [
-  #   "/proc/fs/lustre/mdt/*/md_stats",
-  #   "/proc/fs/lustre/mdt/*/job_stats",
-  #   "/proc/fs/lustre/mdt/*/exports/*/stats",
-  # ]
+  # ost = true | false
+  # mdt = true | false
+  # mgs = true | false
+  
 ```
 
 ## Metrics
 
-From `/proc/fs/lustre/obdfilter/*/stats` and
-`/proc/fs/lustre/osd-ldiskfs/*/stats`:
-
-- lustre2
-  - tags:
-    - name
-  - fields:
-    - write_bytes
-    - write_calls
-    - read_bytes
-    - read_calls
-    - cache_hit
-    - cache_miss
-    - cache_access
-
-From `/proc/fs/lustre/obdfilter/*/exports/*/stats`:
-
-- lustre2
-  - tags:
-    - name
-    - client
-  - fields:
-    - write_bytes
-    - write_calls
-    - read_bytes
-    - read_calls
-
-From `/proc/fs/lustre/obdfilter/*/job_stats`:
-
-- lustre2
-  - tags:
-    - name
-    - jobid
-  - fields:
-    - jobstats_ost_getattr
-    - jobstats_ost_setattr
-    - jobstats_ost_sync
-    - jobstats_punch
-    - jobstats_destroy
-    - jobstats_create
-    - jobstats_ost_statfs
-    - jobstats_get_info
-    - jobstats_set_info
-    - jobstats_quotactl
-    - jobstats_read_bytes
-    - jobstats_read_calls
-    - jobstats_read_max_size
-    - jobstats_read_min_size
-    - jobstats_write_bytes
-    - jobstats_write_calls
-    - jobstats_write_max_size
-    - jobstats_write_min_size
-
-From `/proc/fs/lustre/mdt/*/md_stats`:
-
-- lustre2
-  - tags:
-    - name
-  - fields:
-    - open
-    - close
-    - mknod
-    - link
-    - unlink
-    - mkdir
-    - rmdir
-    - rename
-    - getattr
-    - setattr
-    - getxattr
-    - setxattr
-    - statfs
-    - sync
-    - samedir_rename
-    - crossdir_rename
-
-From `/proc/fs/lustre/mdt/*/exports/*/stats`:
-
-- lustre2
-  - tags:
-    - name
-    - client
-  - fields:
-    - open
-    - close
-    - mknod
-    - link
-    - unlink
-    - mkdir
-    - rmdir
-    - rename
-    - getattr
-    - setattr
-    - getxattr
-    - setxattr
-    - statfs
-    - sync
-    - samedir_rename
-    - crossdir_rename
-
-From `/proc/fs/lustre/mdt/*/job_stats`:
-
-- lustre2
-  - tags:
-    - name
-    - jobid
-  - fields:
-    - jobstats_close
-    - jobstats_crossdir_rename
-    - jobstats_getattr
-    - jobstats_getxattr
-    - jobstats_link
-    - jobstats_mkdir
-    - jobstats_mknod
-    - jobstats_open
-    - jobstats_rename
-    - jobstats_rmdir
-    - jobstats_samedir_rename
-    - jobstats_setattr
-    - jobstats_setxattr
-    - jobstats_statfs
-    - jobstats_sync
-    - jobstats_unlink
-
-## Troubleshooting
-
-Check for the default or custom procfiles in the proc filesystem, and reference
-the [Lustre Monitoring and Statistics Guide][guide].  This plugin does not
-report all information from these files, only a limited set of items
-corresponding to the above metric fields.
+|                     name                     | type  |                               value                                |       description       |
+| :------------------------------------------: | :---: | :----------------------------------------------------------------: | :---------------------: |
+|           lustre2_ost_health_check           | Gauge |             1 represent healthy, 0 represent unhealthy             |            -            |
+|         lustre2_ost_recovery_status          | Gauge | 1 represents recovery completed, 0 represents recovery uncompleted |            -            |
+|   lustre2_ost_jobstats_read_bytes_samples    | Gauge |               the number of read operations of a job               |            -            |
+|     lustre2_ost_jobstats_read_bytes_min      | Gauge |           the maximum bytes of a read operation of a job           |            -            |
+|     lustre2_ost_jobstats_read_bytes_max      | Gauge |           the minimum bytes of a read operation of a job           |            -            |
+|     lustre2_ost_jobstats_read_bytes_sum      | Gauge |            the total bytes of read operations of a job             |            -            |
+|    lustre2_ost_jobstats_read_bytes_sumsq     | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_ost_jobstats_write_bytes_samples   | Gauge |              the number of write operations of a job               |            -            |
+|     lustre2_ost_jobstats_write_bytes_min     | Gauge |          the maximum bytes of a write operation of a job           |            -            |
+|     lustre2_ost_jobstats_write_bytes_max     | Gauge |          the minimum bytes of a write operation of a job           |            -            |
+|     lustre2_ost_jobstats_write_bytes_sum     | Gauge |            the total bytes of write operations of a job            |            -            |
+|    lustre2_ost_jobstats_write_bytes_sumsq    | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_getattr_samples     | Gauge |                                 -                                  |            -            |
+|       lustre2_ost_jobstats_getattr_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_getattr_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_getattr_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_getattr_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_setattr_samples     | Gauge |                                 -                                  |            -            |
+|       lustre2_ost_jobstats_setattr_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_setattr_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_setattr_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_setattr_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_punch_samples      | Gauge |                                 -                                  |            -            |
+|        lustre2_ost_jobstats_punch_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_ost_jobstats_punch_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_ost_jobstats_punch_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_punch_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_sync_samples       | Gauge |                                 -                                  |            -            |
+|        lustre2_ost_jobstats_sync_min         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_ost_jobstats_sync_max         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_ost_jobstats_sync_sum         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_sync_sumsq        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_destroy_samples     | Gauge |                                 -                                  |            -            |
+|       lustre2_ost_jobstats_destroy_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_destroy_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_destroy_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_destroy_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_create_samples      | Gauge |                                 -                                  |            -            |
+|       lustre2_ost_jobstats_create_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_create_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_create_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_create_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_statfs_samples      | Gauge |                                 -                                  |            -            |
+|       lustre2_ost_jobstats_statfs_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_statfs_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_ost_jobstats_statfs_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_statfs_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_ost_jobstats_get_info_samples     | Gauge |                                 -                                  |            -            |
+|      lustre2_ost_jobstats_get_info_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_get_info_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_get_info_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_get_info_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_ost_jobstats_set_info_samples     | Gauge |                                 -                                  |            -            |
+|      lustre2_ost_jobstats_set_info_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_set_info_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_set_info_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_set_info_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_ost_jobstats_quotactl_samples     | Gauge |                                 -                                  |            -            |
+|      lustre2_ost_jobstats_quotactl_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_quotactl_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_quotactl_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_quotactl_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_ost_jobstats_prealloc_samples     | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_prealloc_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_prealloc_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_ost_jobstats_prealloc_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_ost_jobstats_prealloc_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_open_samples       | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_open_min         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_open_max         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_open_sum         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_open_sumsq        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_close_samples      | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_close_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_close_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_close_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_close_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_mknod_samples      | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_mknod_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_mknod_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_mknod_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_mknod_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_link_samples       | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_link_min         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_link_max         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_link_sum         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_link_sumsq        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_unlink_samples      | Gauge |                                 -                                  |            -            |
+|       lustre2_mdt_jobstats_unlink_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_unlink_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_unlink_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_unlink_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_mkdir_samples      | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_mkdir_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_mkdir_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_mkdir_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_mkdir_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_rmdir_samples      | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_rmdir_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_rmdir_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_rmdir_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_rmdir_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_rename_samples      | Gauge |                                 -                                  |            -            |
+|       lustre2_mdt_jobstats_rename_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_rename_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_rename_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_rename_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_getattr_samples     | Gauge |                                 -                                  |            -            |
+|       lustre2_mdt_jobstats_getattr_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_getattr_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_getattr_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_getattr_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_setattr_samples     | Gauge |                                 -                                  |            -            |
+|       lustre2_mdt_jobstats_setattr_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_setattr_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_setattr_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_setattr_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_mdt_jobstats_getxattr_samples     | Gauge |                                 -                                  |            -            |
+|      lustre2_mdt_jobstats_getxattr_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_getxattr_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_getxattr_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_getxattr_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_mdt_jobstats_setxattr_samples     | Gauge |                                 -                                  |            -            |
+|      lustre2_mdt_jobstats_setxattr_min       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_setxattr_max       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_setxattr_sum       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_setxattr_sumsq      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_statfs_samples      | Gauge |                                 -                                  |            -            |
+|       lustre2_mdt_jobstats_statfs_min        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_statfs_max        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_statfs_sum        | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_statfs_sumsq       | Gauge |                                 -                                  | support >= lustre v2.15 |
+|      lustre2_mdt_jobstats_sync_samples       | Gauge |                                 -                                  |            -            |
+|        lustre2_mdt_jobstats_sync_min         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_sync_max         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|        lustre2_mdt_jobstats_sync_sum         | Gauge |                                 -                                  | support >= lustre v2.15 |
+|       lustre2_mdt_jobstats_sync_sumsq        | Gauge |                                 -                                  | support >= lustre v2.15 |
+| lustre2_mdt_jobstats_samedir_rename_samples  | Gauge |                                 -                                  |            -            |
+|   lustre2_mdt_jobstats_samedir_rename_min    | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_samedir_rename_max    | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_samedir_rename_sum    | Gauge |                                 -                                  | support >= lustre v2.15 |
+|  lustre2_mdt_jobstats_samedir_rename_sumsq   | Gauge |                                 -                                  | support >= lustre v2.15 |
+| lustre2_mdt_jobstats_crossdir_rename_samples | Gauge |                                 -                                  |            -            |
+|   lustre2_mdt_jobstats_crossdir_rename_min   | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_crossdir_rename_max   | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_crossdir_rename_sum   | Gauge |                                 -                                  | support >= lustre v2.15 |
+|  lustre2_mdt_jobstats_crossdir_rename_sumsq  | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_read_bytes_samples    | Gauge |                                 -                                  |            -            |
+|     lustre2_mdt_jobstats_read_bytes_min      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_read_bytes_max      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_read_bytes_sum      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_mdt_jobstats_read_bytes_sumsq     | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_write_bytes_samples    | Gauge |                                 -                                  |            -            |
+|     lustre2_mdt_jobstats_write_bytes_min      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_write_bytes_max      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_write_bytes_sum      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_mdt_jobstats_write_bytes_sumsq     | Gauge |                                 -                                  | support >= lustre v2.15 |
+|   lustre2_mdt_jobstats_punch_bytes_samples    | Gauge |                                 -                                  |            -            |
+|     lustre2_mdt_jobstats_punch_bytes_min      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_punch_bytes_max      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|     lustre2_mdt_jobstats_punch_bytes_sum      | Gauge |                                 -                                  | support >= lustre v2.15 |
+|    lustre2_mdt_jobstats_punch_bytes_sumsq     | Gauge |                                 -                                  | support >= lustre v2.15 |
 
 ## Example Output
 
 ```text
-lustre2,host=oss2,jobid=42990218,name=wrk-OST0041 jobstats_ost_setattr=0i,jobstats_ost_sync=0i,jobstats_punch=0i,jobstats_read_bytes=4096i,jobstats_read_calls=1i,jobstats_read_max_size=4096i,jobstats_read_min_size=4096i,jobstats_write_bytes=310206488i,jobstats_write_calls=7423i,jobstats_write_max_size=53048i,jobstats_write_min_size=8820i 1556525847000000000
-lustre2,host=mds1,jobid=42992017,name=wrk-MDT0000 jobstats_close=31798i,jobstats_crossdir_rename=0i,jobstats_getattr=34146i,jobstats_getxattr=15i,jobstats_link=0i,jobstats_mkdir=658i,jobstats_mknod=0i,jobstats_open=31797i,jobstats_rename=0i,jobstats_rmdir=0i,jobstats_samedir_rename=0i,jobstats_setattr=1788i,jobstats_setxattr=0i,jobstats_statfs=0i,jobstats_sync=0i,jobstats_unlink=0i 1556525828000000000
+lustre2_ost_ost_jobstats_create_samples{cluster="hpc4",host="ost114",jobid="1211707",unit="reqs",volume="THL9-OST0005"} 0
+lustre2_ost_ost_jobstats_create_samples{cluster="hpc4",host="ost114",jobid="1228445",unit="reqs",volume="THL9-OST0004"} 0
+lustre2_ost_ost_jobstats_create_samples{cluster="hpc4",host="ost114",jobid="1230486",unit="reqs",volume="THL9-OST0005"} 0
+lustre2_ost_ost_jobstats_create_samples{cluster="hpc4",host="ost114",jobid="1233543",unit="reqs",volume="THL9-OST0005"} 0
+lustre2_ost_ost_jobstats_create_samples{cluster="hpc4",host="ost114",jobid="1235122",unit="reqs",volume="THL9-OST0004"} 0
 ```
 
 [lustre]: http://lustre.org/
