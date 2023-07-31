@@ -82,6 +82,12 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 					if version > 2 {
 						s.Log.Warnf("Unknown API version %q! Using latest known", version)
 					}
+					c, err := newCollectorV2(s.client, s.Username, s.Password, s.Cores)
+					if err != nil {
+						acc.AddError(fmt.Errorf("creating collector v2 for server %q failed: %w", server, err))
+					}
+					collector = c
+					s.collectors[server] = c
 				}
 			}
 
@@ -115,7 +121,7 @@ func (s *Solr) determineServerApiVersion(server string) (int, error) {
 	}
 
 	var info map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(info); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		return 0, fmt.Errorf("decoding response failed: %w", err)
 	}
 
