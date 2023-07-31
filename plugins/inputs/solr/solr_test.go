@@ -153,6 +153,7 @@ func TestIntegration(t *testing.T) {
 			plugin := &Solr{
 				Servers:     server,
 				HTTPTimeout: config.Duration(5 * time.Second),
+				Log:         &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -161,6 +162,7 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			actual := acc.GetTelegrafMetrics()
+			testutil.PrintMetrics(actual)
 			testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
 		})
 	}
