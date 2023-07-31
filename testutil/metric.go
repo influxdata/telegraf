@@ -172,7 +172,7 @@ func IgnoreFields(names ...string) cmp.Option {
 	)
 }
 
-// return disables comparison of the tags with the given names.
+// IgnoreTags disables comparison of the tags with the given names.
 // The tag-names are case-sensitive!
 func IgnoreTags(names ...string) cmp.Option {
 	return cmpopts.IgnoreSliceElements(
