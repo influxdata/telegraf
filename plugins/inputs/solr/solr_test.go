@@ -141,7 +141,7 @@ func TestIntegration(t *testing.T) {
 				Cmd:          []string{"solr-precreate", "main"},
 				WaitingFor: wait.ForAll(
 					wait.ForListeningPort(nat.Port(servicePort)),
-					wait.ForLog("o.a.s.c.SolrCore [main] Registered new searcher"),
+					wait.ForLog("Registered new searcher"),
 				),
 			}
 			require.NoError(t, container.Start(), "failed to start container")
