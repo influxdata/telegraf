@@ -83,7 +83,6 @@ func (c *metricCollectorV1) Collect(acc telegraf.Accumulator, server string) {
 }
 
 func (c *metricCollectorV1) query(endpoint string, v interface{}) error {
-	fmt.Println("gathering from:", endpoint)
 	req, reqErr := http.NewRequest(http.MethodGet, endpoint, nil)
 	if reqErr != nil {
 		return reqErr
@@ -108,13 +107,21 @@ func (c *metricCollectorV1) query(endpoint string, v interface{}) error {
 }
 
 func parseCore(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
-	if len(data.SolrMbeans) < 2 {
+	// Determine the core information element
+	var coreData json.RawMessage
+	for i := 0; i < len(data.SolrMbeans); i += 2 {
+		if string(data.SolrMbeans[i]) == `"CORE"` {
+			coreData = data.SolrMbeans[i+1]
+			break
+		}
+	}
+	if coreData == nil {
 		acc.AddError(errors.New("no core metric data to unmarshal"))
 		return
 	}
 
 	var coreMetrics map[string]Core
-	if err := json.Unmarshal(data.SolrMbeans[1], &coreMetrics); err != nil {
+	if err := json.Unmarshal(coreData, &coreMetrics); err != nil {
 		acc.AddError(fmt.Errorf("unmarshalling core metrics for %q failed: %w", core, err))
 		return
 	}
@@ -138,13 +145,21 @@ func parseCore(acc telegraf.Accumulator, core string, data *MBeansData, ts time.
 }
 
 func parseQueryHandler(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
-	if len(data.SolrMbeans) < 4 {
+	// Determine the query-handler information element
+	var queryData json.RawMessage
+	for i := 0; i < len(data.SolrMbeans); i += 2 {
+		if string(data.SolrMbeans[i]) == `"QUERYHANDLER"` {
+			queryData = data.SolrMbeans[i+1]
+			break
+		}
+	}
+	if queryData == nil {
 		acc.AddError(errors.New("no query handler metric data to unmarshal"))
 		return
 	}
 
 	var queryMetrics map[string]QueryHandler
-	if err := json.Unmarshal(data.SolrMbeans[3], &queryMetrics); err != nil {
+	if err := json.Unmarshal(queryData, &queryMetrics); err != nil {
 		acc.AddError(fmt.Errorf("unmarshalling query handler for %q failed: %w", core, err))
 		return
 	}
@@ -197,65 +212,83 @@ func parseQueryHandler(acc telegraf.Accumulator, core string, data *MBeansData, 
 }
 
 func parseUpdateHandler(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
-	if len(data.SolrMbeans) < 6 {
+	// Determine the update-handler information element
+	var updateData json.RawMessage
+	for i := 0; i < len(data.SolrMbeans); i += 2 {
+		if string(data.SolrMbeans[i]) == `"UPDATEHANDLER"` {
+			updateData = data.SolrMbeans[i+1]
+			break
+		}
+	}
+	if updateData == nil {
 		acc.AddError(errors.New("no update handler metric data to unmarshal"))
 		return
 	}
 
 	var updateMetrics map[string]UpdateHandler
-	if err := json.Unmarshal(data.SolrMbeans[5], &updateMetrics); err != nil {
+	if err := json.Unmarshal(updateData, &updateMetrics); err != nil {
 		acc.AddError(fmt.Errorf("unmarshalling update handler for %q failed: %w", core, err))
 		return
 	}
 
-	for name, metrics := range updateMetrics {
-		var autoCommitMaxTime int64
-		if len(metrics.Stats.AutocommitMaxTime) > 2 {
-			s := metrics.Stats.AutocommitMaxTime[:len(metrics.Stats.AutocommitMaxTime)-2]
-			var err error
-			autoCommitMaxTime, err = strconv.ParseInt(s, 0, 64)
-			if err != nil {
-				autoCommitMaxTime = 0
-			}
-		}
-
-		fields := map[string]interface{}{
-			"adds":                        metrics.Stats.Adds,
-			"autocommit_max_docs":         metrics.Stats.AutocommitMaxDocs,
-			"autocommit_max_time":         autoCommitMaxTime,
-			"autocommits":                 metrics.Stats.Autocommits,
-			"commits":                     metrics.Stats.Commits,
-			"cumulative_adds":             metrics.Stats.CumulativeAdds,
-			"cumulative_deletes_by_id":    metrics.Stats.CumulativeDeletesByID,
-			"cumulative_deletes_by_query": metrics.Stats.CumulativeDeletesByQuery,
-			"cumulative_errors":           metrics.Stats.CumulativeErrors,
-			"deletes_by_id":               metrics.Stats.DeletesByID,
-			"deletes_by_query":            metrics.Stats.DeletesByQuery,
-			"docs_pending":                metrics.Stats.DocsPending,
-			"errors":                      metrics.Stats.Errors,
-			"expunge_deletes":             metrics.Stats.ExpungeDeletes,
-			"optimizes":                   metrics.Stats.Optimizes,
-			"rollbacks":                   metrics.Stats.Rollbacks,
-			"soft_autocommits":            metrics.Stats.SoftAutocommits,
-		}
-
-		tags := map[string]string{
-			"core":    core,
-			"handler": name,
-		}
-
-		acc.AddFields("solr_updatehandler", fields, tags, ts)
+	metrics, found := updateMetrics["updateHandler"]
+	if !found {
+		return
 	}
+	var autoCommitMaxTime int64
+	if len(metrics.Stats.AutocommitMaxTime) > 2 {
+		s := metrics.Stats.AutocommitMaxTime[:len(metrics.Stats.AutocommitMaxTime)-2]
+		var err error
+		autoCommitMaxTime, err = strconv.ParseInt(s, 0, 64)
+		if err != nil {
+			autoCommitMaxTime = 0
+		}
+	}
+
+	fields := map[string]interface{}{
+		"adds":                        metrics.Stats.Adds,
+		"autocommit_max_docs":         metrics.Stats.AutocommitMaxDocs,
+		"autocommit_max_time":         autoCommitMaxTime,
+		"autocommits":                 metrics.Stats.Autocommits,
+		"commits":                     metrics.Stats.Commits,
+		"cumulative_adds":             metrics.Stats.CumulativeAdds,
+		"cumulative_deletes_by_id":    metrics.Stats.CumulativeDeletesByID,
+		"cumulative_deletes_by_query": metrics.Stats.CumulativeDeletesByQuery,
+		"cumulative_errors":           metrics.Stats.CumulativeErrors,
+		"deletes_by_id":               metrics.Stats.DeletesByID,
+		"deletes_by_query":            metrics.Stats.DeletesByQuery,
+		"docs_pending":                metrics.Stats.DocsPending,
+		"errors":                      metrics.Stats.Errors,
+		"expunge_deletes":             metrics.Stats.ExpungeDeletes,
+		"optimizes":                   metrics.Stats.Optimizes,
+		"rollbacks":                   metrics.Stats.Rollbacks,
+		"soft_autocommits":            metrics.Stats.SoftAutocommits,
+	}
+
+	tags := map[string]string{
+		"core":    core,
+		"handler": "updateHandler",
+	}
+
+	acc.AddFields("solr_updatehandler", fields, tags, ts)
 }
 
 func parseCache(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
-	if len(data.SolrMbeans) < 8 {
+	// Determine the cache information element
+	var cacheData json.RawMessage
+	for i := 0; i < len(data.SolrMbeans); i += 2 {
+		if string(data.SolrMbeans[i]) == `"CACHE"` {
+			cacheData = data.SolrMbeans[i+1]
+			break
+		}
+	}
+	if cacheData == nil {
 		acc.AddError(errors.New("no cache metric data to unmarshal"))
 		return
 	}
 
 	var cacheMetrics map[string]Cache
-	if err := json.Unmarshal(data.SolrMbeans[7], &cacheMetrics); err != nil {
+	if err := json.Unmarshal(cacheData, &cacheMetrics); err != nil {
 		acc.AddError(fmt.Errorf("unmarshalling update handler for %q failed: %w", core, err))
 		return
 	}

@@ -63,6 +63,8 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					acc.AddError(err)
 				}
+				s.Log.Debugf("Found API version %d for server %q...", version, server)
+
 				switch version {
 				case 0:
 					s.Log.Warn("Unable to determine API version! Using API v1...")
@@ -75,7 +77,6 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 					collector = c
 					s.collectors[server] = c
 				case 2:
-					fmt.Println("got version 2")
 					fallthrough
 				default:
 					if version > 2 {
