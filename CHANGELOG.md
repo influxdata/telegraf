@@ -1,6 +1,45 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.27.3 [2023-07-31]
+
+### Bugfixes
+
+- [#13614](https://github.com/influxdata/telegraf/pull/13614) `agent` Respect processor order in file
+- [#13675](https://github.com/influxdata/telegraf/pull/13675) `config` Handle escaping and quotation correctly
+- [#13671](https://github.com/influxdata/telegraf/pull/13671) `config` Setup logger for secret-stores
+- [#13646](https://github.com/influxdata/telegraf/pull/13646) `inputs.docker` Add restart count
+- [#13647](https://github.com/influxdata/telegraf/pull/13647) `inputs.jti_openconfig_telemetry` Reauthenticate connection on reconnect
+- [#13663](https://github.com/influxdata/telegraf/pull/13663) `inputs.mqtt_consumer` Add client trace logs via option
+- [#13629](https://github.com/influxdata/telegraf/pull/13629) `inputs.prometheus` Do not collect metrics from finished pods
+- [#13627](https://github.com/influxdata/telegraf/pull/13627) `inputs.prometheus` Fix missing metrics when multiple plugin instances specified
+- [#13597](https://github.com/influxdata/telegraf/pull/13597) `outputs.nebius_cloud_monitoring` Replace reserved label names
+- [#13292](https://github.com/influxdata/telegraf/pull/13292) `outputs.opentelemetry` Group metrics by age and timestamp
+- [#13575](https://github.com/influxdata/telegraf/pull/13575) `outputs.stackdriver` Add tag as resource label option
+- [#13662](https://github.com/influxdata/telegraf/pull/13662) `parsers.xpath` Ensure precedence of explicitly defined tags and fields
+- [#13665](https://github.com/influxdata/telegraf/pull/13665) `parsers.xpath` Fix field-names for arrays of simple types
+- [#13660](https://github.com/influxdata/telegraf/pull/13660) `parsers.xpath` Improve handling of complex-type nodes
+- [#13604](https://github.com/influxdata/telegraf/pull/13604) `tools.custom_builder` Ignore non-plugin sections during configuration
+
+### Dependency Updates
+
+- [#13668](https://github.com/influxdata/telegraf/pull/13668) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go 1.62.389 to 1.62.470
+- [#13640](https://github.com/influxdata/telegraf/pull/13640) `deps` Bump github.com/antchfx/jsonquery from 1.3.1 to 1.3.2
+- [#13639](https://github.com/influxdata/telegraf/pull/13639) `deps` Bump github.com/antchfx/xmlquery from 1.3.15 to 1.3.17
+- [#13679](https://github.com/influxdata/telegraf/pull/13679) `deps` Bump github.com/antchfx/xpath from v1.2.4 to latest master
+- [#13589](https://github.com/influxdata/telegraf/pull/13589) `deps` Bump github.com/aws/aws-sdk-go-v2/service/dynamodb from 1.17.3 to 1.20.0
+- [#13669](https://github.com/influxdata/telegraf/pull/13669) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.19.2 to 1.19.3
+- [#13670](https://github.com/influxdata/telegraf/pull/13670) `deps` Bump github.com/eclipse/paho.golang from 0.10.0 to 0.11.0
+- [#13588](https://github.com/influxdata/telegraf/pull/13588) `deps` Bump github.com/go-ldap/ldap/v3 from 3.4.4 to 3.4.5
+- [#13603](https://github.com/influxdata/telegraf/pull/13603) `deps` Bump github.com/jaegertracing/jaeger from 1.38.0 to 1.47.0
+- [#13586](https://github.com/influxdata/telegraf/pull/13586) `deps` Bump github.com/opensearch-project/opensearch-go/v2 from 2.2.0 to 2.3.0
+- [#13585](https://github.com/influxdata/telegraf/pull/13585) `deps` Bump github.com/prometheus-community/pro-bing from 0.2.0 to 0.3.0
+- [#13666](https://github.com/influxdata/telegraf/pull/13666) `deps` Bump github.com/shirou/gopsutil/v3 from 3.23.5 to 3.23.6
+- [#13638](https://github.com/influxdata/telegraf/pull/13638) `deps` Bump github.com/thomasklein94/packer-plugin-libvirt from 0.3.4 to 0.5.0
+- [#13667](https://github.com/influxdata/telegraf/pull/13667) `deps` Bump k8s.io/api from 0.27.2 to 0.27.4
+- [#13587](https://github.com/influxdata/telegraf/pull/13587) `deps` Bump k8s.io/apimachinery from 0.27.2 to 0.27.3
+- [#13641](https://github.com/influxdata/telegraf/pull/13641) `deps` Bump modernc.org/sqlite from 1.23.1 to 1.24.0
+
 ## v1.27.2 [2023-07-10]
 
 ### Bugfixes
