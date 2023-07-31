@@ -162,7 +162,6 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			actual := acc.GetTelegrafMetrics()
-			// testutil.PrintMetrics(actual)
 			testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
 		})
 	}
