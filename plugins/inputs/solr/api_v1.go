@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-const apiv1MbeansEndpoint = "/admin/mbeans?stats=true&wt=json&cat=CORE&cat=QUERYHANDLER&cat=UPDATEHANDLER&cat=CACHE"
+const apiV1MbeansEndpoint = "/admin/mbeans?stats=true&wt=json&cat=CORE&cat=QUERYHANDLER&cat=UPDATEHANDLER&cat=CACHE"
 
 type metricCollectorV1 struct {
 	client   *http.Client
@@ -66,7 +65,7 @@ func (c *metricCollectorV1) Collect(acc telegraf.Accumulator, server string) {
 		go func(server string, core string) {
 			defer wg.Done()
 
-			endpoint := server + "/solr/" + core + apiv1MbeansEndpoint
+			endpoint := server + "/solr/" + core + apiV1MbeansEndpoint
 			var data MBeansData
 			if err := c.query(endpoint, &data); err != nil {
 				acc.AddError(err)
@@ -74,8 +73,8 @@ func (c *metricCollectorV1) Collect(acc telegraf.Accumulator, server string) {
 			}
 
 			parseCore(acc, core, &data, now)
-			parseQueryHandler(acc, core, &data, now)
-			parseUpdateHandler(acc, core, &data, now)
+			parseQueryHandlerV1(acc, core, &data, now)
+			parseUpdateHandlerV1(acc, core, &data, now)
 			parseCache(acc, core, &data, now)
 		}(server, core)
 	}
@@ -106,45 +105,7 @@ func (c *metricCollectorV1) query(endpoint string, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-func parseCore(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
-	// Determine the core information element
-	var coreData json.RawMessage
-	for i := 0; i < len(data.SolrMbeans); i += 2 {
-		if string(data.SolrMbeans[i]) == `"CORE"` {
-			coreData = data.SolrMbeans[i+1]
-			break
-		}
-	}
-	if coreData == nil {
-		acc.AddError(errors.New("no core metric data to unmarshal"))
-		return
-	}
-
-	var coreMetrics map[string]Core
-	if err := json.Unmarshal(coreData, &coreMetrics); err != nil {
-		acc.AddError(fmt.Errorf("unmarshalling core metrics for %q failed: %w", core, err))
-		return
-	}
-
-	for name, m := range coreMetrics {
-		if strings.Contains(name, "@") {
-			continue
-		}
-		fields := map[string]interface{}{
-			"deleted_docs": m.Stats.DeletedDocs,
-			"max_docs":     m.Stats.MaxDoc,
-			"num_docs":     m.Stats.NumDocs,
-		}
-		tags := map[string]string{
-			"core":    core,
-			"handler": name,
-		}
-
-		acc.AddFields("solr_core", fields, tags, ts)
-	}
-}
-
-func parseQueryHandler(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
+func parseQueryHandlerV1(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
 	// Determine the query-handler information element
 	var queryData json.RawMessage
 	for i := 0; i < len(data.SolrMbeans); i += 2 {
@@ -211,7 +172,7 @@ func parseQueryHandler(acc telegraf.Accumulator, core string, data *MBeansData, 
 	}
 }
 
-func parseUpdateHandler(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
+func parseUpdateHandlerV1(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
 	// Determine the update-handler information element
 	var updateData json.RawMessage
 	for i := 0; i < len(data.SolrMbeans); i += 2 {
@@ -271,51 +232,4 @@ func parseUpdateHandler(acc telegraf.Accumulator, core string, data *MBeansData,
 	}
 
 	acc.AddFields("solr_updatehandler", fields, tags, ts)
-}
-
-func parseCache(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
-	// Determine the cache information element
-	var cacheData json.RawMessage
-	for i := 0; i < len(data.SolrMbeans); i += 2 {
-		if string(data.SolrMbeans[i]) == `"CACHE"` {
-			cacheData = data.SolrMbeans[i+1]
-			break
-		}
-	}
-	if cacheData == nil {
-		acc.AddError(errors.New("no cache metric data to unmarshal"))
-		return
-	}
-
-	var cacheMetrics map[string]Cache
-	if err := json.Unmarshal(cacheData, &cacheMetrics); err != nil {
-		acc.AddError(fmt.Errorf("unmarshalling update handler for %q failed: %w", core, err))
-		return
-	}
-
-	for name, metrics := range cacheMetrics {
-		fields := make(map[string]interface{}, len(metrics.Stats))
-		for key, value := range metrics.Stats {
-			splitKey := strings.Split(key, ".")
-			newKey := splitKey[len(splitKey)-1]
-			switch newKey {
-			case "cumulative_evictions", "cumulative_hits", "cumulative_inserts", "cumulative_lookups",
-				"eviction", "evictions", "hits", "inserts", "lookups", "size":
-				fields[newKey] = getInt(value)
-			case "hitratio", "cumulative_hitratio":
-				fields[newKey] = getFloat(value)
-			case "warmupTime":
-				fields["warmup_time"] = getInt(value)
-			default:
-				continue
-			}
-		}
-
-		tags := map[string]string{
-			"core":    core,
-			"handler": name,
-		}
-
-		acc.AddFields("solr_cache", fields, tags, ts)
-	}
 }
