@@ -143,6 +143,21 @@ func IgnoreFields(names ...string) cmp.Option {
 	)
 }
 
+// return disables comparison of the tags with the given names.
+// The tag-names are case-sensitive!
+func IgnoreTags(names ...string) cmp.Option {
+	return cmpopts.IgnoreSliceElements(
+		func(f *telegraf.Tag) bool {
+			for _, n := range names {
+				if f.Key == n {
+					return true
+				}
+			}
+			return false
+		},
+	)
+}
+
 // MetricEqual returns true if the metrics are equal.
 func MetricEqual(expected, actual telegraf.Metric, opts ...cmp.Option) bool {
 	var lhs, rhs *metricDiff
