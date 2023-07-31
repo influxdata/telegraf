@@ -59,7 +59,7 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 			// Check the server version from cache or query one
 			collector, found := s.collectors[server]
 			if !found {
-				version, err := s.determineServerApiVersion(server)
+				version, err := s.determineServerAPIVersion(server)
 				if err != nil {
 					acc.AddError(err)
 				}
@@ -99,7 +99,7 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Solr) determineServerApiVersion(server string) (int, error) {
+func (s *Solr) determineServerAPIVersion(server string) (int, error) {
 	url := server + "/solr/admin/info/system?wt=json"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -113,7 +113,7 @@ func (s *Solr) determineServerApiVersion(server string) (int, error) {
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

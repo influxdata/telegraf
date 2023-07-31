@@ -29,8 +29,10 @@ func newCollectorV1(client *http.Client, user, passwd string, coreFilters []stri
 		return nil, err
 	}
 	collector := &metricCollectorV1{
-		client: client,
-		filter: f,
+		client:   client,
+		username: user,
+		password: passwd,
+		filter:   f,
 	}
 	return collector, nil
 }
