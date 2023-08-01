@@ -83,8 +83,10 @@ linters-settings:
       - builtinShadowDecl
       - caseOrder
       - codegenComment
+      - commentedOutCode
       - deferInLoop
       - dupArg
+      - deprecatedComment
       - dupBranchBody
       - dupCase
       - dupSubExpr
