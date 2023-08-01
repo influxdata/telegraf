@@ -127,12 +127,15 @@ func (j *JenkinsBuilds) initialize(client *http.Client) error {
 }
 
 func (j *JenkinsBuilds) gatherJobs(acc telegraf.Accumulator) {
+	j.Log.Infof("Getting all jobs")
 	start := time.Now().Unix()
 	jobs, err := j.client.getAllJobs()
+
 	if err != nil {
 		acc.AddError(errors.New("unable to get all jobs : " + err.Error()))
 		return
 	}
+	j.Log.Infof("Got %d jobs", len(jobs))
 	var wg sync.WaitGroup
 
 	for _, job := range jobs {
