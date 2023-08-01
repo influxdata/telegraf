@@ -99,6 +99,7 @@ linters-settings:
       - offBy1
       - regexpPattern
       - sloppyTestFuncName
+      - sloppyReassign
       - sloppyTypeAssert
       - sortSlice
       - sprintfQuotedString

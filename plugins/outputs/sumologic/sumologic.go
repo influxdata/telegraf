@@ -158,7 +158,7 @@ func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 		return err
 	}
 
-	if err = gz.Close(); err != nil {
+	if err := gz.Close(); err != nil {
 		return err
 	}
 

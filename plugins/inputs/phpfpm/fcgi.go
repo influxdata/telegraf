@@ -120,7 +120,7 @@ type record struct {
 }
 
 func (rec *record) read(r io.Reader) (err error) {
-	if err = binary.Read(r, binary.BigEndian, &rec.h); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &rec.h); err != nil {
 		return err
 	}
 	if rec.h.Version != 1 {

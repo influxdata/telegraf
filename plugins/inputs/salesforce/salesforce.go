@@ -117,7 +117,7 @@ func (s *Salesforce) fetchLimits() (limits, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		if err = s.login(); err != nil {
+		if err := s.login(); err != nil {
 			return l, err
 		}
 		resp, err = s.queryLimits()

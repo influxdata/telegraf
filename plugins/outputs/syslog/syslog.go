@@ -105,7 +105,7 @@ func (s *Syslog) Close() error {
 func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 	if s.Conn == nil {
 		// previous write failed with permanent error and socket was closed.
-		if err = s.Connect(); err != nil {
+		if err := s.Connect(); err != nil {
 			return err
 		}
 	}

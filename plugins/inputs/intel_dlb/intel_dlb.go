@@ -85,7 +85,7 @@ func (d *IntelDLB) Init() error {
 		d.Log.Debugf("Using default eventdev commands '%v'", eventdevDefaultCommands)
 	}
 
-	if err = validateEventdevCommands(d.EventdevCommands); err != nil {
+	if err := validateEventdevCommands(d.EventdevCommands); err != nil {
 		return err
 	}
 

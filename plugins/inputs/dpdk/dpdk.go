@@ -75,14 +75,14 @@ func (dpdk *dpdk) Init() error {
 	}
 
 	var err error
-	if err = isSocket(dpdk.SocketPath); err != nil {
+	if err := isSocket(dpdk.SocketPath); err != nil {
 		return err
 	}
 
 	dpdk.rawdevCommands = []string{"/rawdev/xstats"}
 	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/link_status"}
 
-	if err = dpdk.validateCommands(); err != nil {
+	if err := dpdk.validateCommands(); err != nil {
 		return err
 	}
 
