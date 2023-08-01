@@ -222,44 +222,42 @@ func (cfg *apiConfig) parseUpdateHandler(acc telegraf.Accumulator, core string, 
 		return
 	}
 
-	metrics, found := updateMetrics["updateHandler"]
-	if !found {
-		return
-	}
-	var autoCommitMaxTime int64
-	if len(metrics.Stats.AutocommitMaxTime) > 2 {
-		s := metrics.Stats.AutocommitMaxTime[:len(metrics.Stats.AutocommitMaxTime)-2]
-		var err error
-		autoCommitMaxTime, err = strconv.ParseInt(s, 0, 64)
-		if err != nil {
-			autoCommitMaxTime = 0
+	for name, metrics := range updateMetrics {
+		var autoCommitMaxTime int64
+		if len(metrics.Stats.AutocommitMaxTime) > 2 {
+			s := metrics.Stats.AutocommitMaxTime[:len(metrics.Stats.AutocommitMaxTime)-2]
+			var err error
+			autoCommitMaxTime, err = strconv.ParseInt(s, 0, 64)
+			if err != nil {
+				autoCommitMaxTime = 0
+			}
 		}
-	}
 
-	fields := map[string]interface{}{
-		"adds":                        metrics.Stats.Adds,
-		"autocommit_max_docs":         metrics.Stats.AutocommitMaxDocs,
-		"autocommit_max_time":         autoCommitMaxTime,
-		"autocommits":                 metrics.Stats.Autocommits,
-		"commits":                     metrics.Stats.Commits,
-		"cumulative_adds":             metrics.Stats.CumulativeAdds,
-		"cumulative_deletes_by_id":    metrics.Stats.CumulativeDeletesByID,
-		"cumulative_deletes_by_query": metrics.Stats.CumulativeDeletesByQuery,
-		"cumulative_errors":           metrics.Stats.CumulativeErrors,
-		"deletes_by_id":               metrics.Stats.DeletesByID,
-		"deletes_by_query":            metrics.Stats.DeletesByQuery,
-		"docs_pending":                metrics.Stats.DocsPending,
-		"errors":                      metrics.Stats.Errors,
-		"expunge_deletes":             metrics.Stats.ExpungeDeletes,
-		"optimizes":                   metrics.Stats.Optimizes,
-		"rollbacks":                   metrics.Stats.Rollbacks,
-		"soft_autocommits":            metrics.Stats.SoftAutocommits,
-	}
+		fields := map[string]interface{}{
+			"adds":                        metrics.Stats.Adds,
+			"autocommit_max_docs":         metrics.Stats.AutocommitMaxDocs,
+			"autocommit_max_time":         autoCommitMaxTime,
+			"autocommits":                 metrics.Stats.Autocommits,
+			"commits":                     metrics.Stats.Commits,
+			"cumulative_adds":             metrics.Stats.CumulativeAdds,
+			"cumulative_deletes_by_id":    metrics.Stats.CumulativeDeletesByID,
+			"cumulative_deletes_by_query": metrics.Stats.CumulativeDeletesByQuery,
+			"cumulative_errors":           metrics.Stats.CumulativeErrors,
+			"deletes_by_id":               metrics.Stats.DeletesByID,
+			"deletes_by_query":            metrics.Stats.DeletesByQuery,
+			"docs_pending":                metrics.Stats.DocsPending,
+			"errors":                      metrics.Stats.Errors,
+			"expunge_deletes":             metrics.Stats.ExpungeDeletes,
+			"optimizes":                   metrics.Stats.Optimizes,
+			"rollbacks":                   metrics.Stats.Rollbacks,
+			"soft_autocommits":            metrics.Stats.SoftAutocommits,
+		}
 
-	tags := map[string]string{
-		"core":    core,
-		"handler": "updateHandler",
-	}
+		tags := map[string]string{
+			"core":    core,
+			"handler": name,
+		}
 
-	acc.AddFields("solr_updatehandler", fields, tags, ts)
+		acc.AddFields("solr_updatehandler", fields, tags, ts)
+	}
 }
