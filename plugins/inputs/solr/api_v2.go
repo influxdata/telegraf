@@ -4,35 +4,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 )
 
 const apiV2MbeansEndpoint = "/admin/mbeans?stats=true&wt=json&cat=CORE&cat=QUERY&cat=UPDATE&cat=CACHE"
 
 type metricCollectorV2 struct {
-	client   *http.Client
-	username string
-	password string
-	filter   filter.Filter
+	s      *Solr
+	filter filter.Filter
 }
 
-func newCollectorV2(client *http.Client, user, passwd string, coreFilters []string) (MetricCollector, error) {
+func newCollectorV2(s *Solr, coreFilters []string) (MetricCollector, error) {
 	f, err := filter.Compile(coreFilters)
 	if err != nil {
 		return nil, err
 	}
 	collector := &metricCollectorV2{
-		client:   client,
-		username: user,
-		password: passwd,
-		filter:   f,
+		s:      s,
+		filter: f,
 	}
 	return collector, nil
 }
@@ -43,7 +37,7 @@ func (c *metricCollectorV2) Collect(acc telegraf.Accumulator, server string) {
 
 	var coreStatus AdminCoresStatus
 	endpoint := server + "/solr/admin/cores?action=STATUS&wt=json"
-	if err := c.query(endpoint, &coreStatus); err != nil {
+	if err := c.s.query(endpoint, &coreStatus); err != nil {
 		acc.AddError(err)
 		return
 	}
@@ -69,7 +63,7 @@ func (c *metricCollectorV2) Collect(acc telegraf.Accumulator, server string) {
 
 			endpoint := server + "/solr/" + core + apiV2MbeansEndpoint
 			var data MBeansData
-			if err := c.query(endpoint, &data); err != nil {
+			if err := c.s.query(endpoint, &data); err != nil {
 				acc.AddError(err)
 				return
 			}
@@ -81,30 +75,6 @@ func (c *metricCollectorV2) Collect(acc telegraf.Accumulator, server string) {
 		}(server, core)
 	}
 	wg.Wait()
-}
-
-func (c *metricCollectorV2) query(endpoint string, v interface{}) error {
-	req, reqErr := http.NewRequest(http.MethodGet, endpoint, nil)
-	if reqErr != nil {
-		return reqErr
-	}
-
-	if c.username != "" {
-		req.SetBasicAuth(c.username, c.password)
-	}
-
-	req.Header.Set("User-Agent", internal.ProductToken())
-
-	r, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer r.Body.Close()
-	if r.StatusCode != http.StatusOK {
-		return fmt.Errorf("solr: API endpoint %q responded with %q", endpoint, r.Status)
-	}
-
-	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func parseQueryHandlerV2(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {

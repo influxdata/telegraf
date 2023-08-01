@@ -4,11 +4,37 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
+
+func (s *Solr) query(endpoint string, v interface{}) error {
+	req, reqErr := http.NewRequest(http.MethodGet, endpoint, nil)
+	if reqErr != nil {
+		return reqErr
+	}
+
+	if s.Username != "" {
+		req.SetBasicAuth(s.Username, s.Password)
+	}
+
+	req.Header.Set("User-Agent", internal.ProductToken())
+
+	r, err := s.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return fmt.Errorf("solr: API endpoint %q responded with %q", endpoint, r.Status)
+	}
+
+	return json.NewDecoder(r.Body).Decode(v)
+}
 
 func parseCore(acc telegraf.Accumulator, core string, data *MBeansData, ts time.Time) {
 	// Determine the core information element

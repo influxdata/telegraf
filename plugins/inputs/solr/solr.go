@@ -3,8 +3,6 @@ package solr
 
 import (
 	_ "embed"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -13,7 +11,6 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -42,7 +39,13 @@ func (*Solr) SampleConfig() string {
 }
 
 func (s *Solr) Init() error {
-	s.client = s.createHTTPClient()
+	s.client = &http.Client{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: time.Duration(s.HTTPTimeout),
+		},
+		Timeout: time.Duration(s.HTTPTimeout),
+	}
+
 	s.collectors = make(map[string]MetricCollector, len(s.Servers))
 	return nil
 }
@@ -78,29 +81,10 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Solr) determineServerAPIVersion(server string) (int, error) {
-	url := server + "/solr/admin/info/system?wt=json"
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return 0, err
-	}
-
-	if s.Username != "" {
-		req.SetBasicAuth(s.Username, s.Password)
-	}
-	req.Header.Set("User-Agent", internal.ProductToken())
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, errors.New(resp.Status)
-	}
-
+	endpoint := server + "/solr/admin/info/system?wt=json"
 	var info map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		return 0, fmt.Errorf("decoding response failed: %w", err)
+	if err := s.query(endpoint, &info); err != nil {
+		return 0, err
 	}
 
 	lraw, found := info["lucene"]
@@ -146,7 +130,7 @@ func (s *Solr) updateCollector(server string) error {
 		s.Log.Warn("Unable to determine API version! Using API v1...")
 		fallthrough
 	case 1:
-		c, err := newCollectorV1(s.client, s.Username, s.Password, s.Cores)
+		c, err := newCollectorV1(s, s.Cores)
 		if err != nil {
 			return fmt.Errorf("creating collector v1 for server %q failed: %w", server, err)
 		}
@@ -157,7 +141,7 @@ func (s *Solr) updateCollector(server string) error {
 		if version > 2 {
 			s.Log.Warnf("Unknown API version %q! Using latest known", version)
 		}
-		c, err := newCollectorV2(s.client, s.Username, s.Password, s.Cores)
+		c, err := newCollectorV2(s, s.Cores)
 		if err != nil {
 			return fmt.Errorf("creating collector v2 for server %q failed: %w", server, err)
 		}
@@ -165,18 +149,6 @@ func (s *Solr) updateCollector(server string) error {
 	}
 
 	return nil
-}
-
-func (s *Solr) createHTTPClient() *http.Client {
-	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(s.HTTPTimeout),
-	}
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(s.HTTPTimeout),
-	}
-
-	return client
 }
 
 func init() {
