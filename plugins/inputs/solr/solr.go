@@ -20,10 +20,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type MetricCollector interface {
-	Collect(acc telegraf.Accumulator, server string)
-}
-
 // Solr is a plugin to read stats from one or many Solr servers
 type Solr struct {
 	Servers     []string        `toml:"servers"`
@@ -64,9 +60,10 @@ func (s *Solr) Init() error {
 	return nil
 }
 
-func (s *Solr) Start(acc telegraf.Accumulator) error {
+func (s *Solr) Start(_ telegraf.Accumulator) error {
 	for _, server := range s.Servers {
-		acc.AddError(s.updateConfig(server))
+		// Simply fill the cache for all available servers
+		_ = s.getAPIConfig(server)
 	}
 	return nil
 }
@@ -81,11 +78,7 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 
 			// Check the server version from cache or query one
-			if err := s.updateConfig(server); err != nil {
-				acc.AddError(err)
-				return
-			}
-			cfg := s.configs[server]
+			cfg := s.getAPIConfig(server)
 			s.collect(acc, cfg, server)
 		}(srv)
 	}
@@ -94,13 +87,17 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Solr) updateConfig(server string) error {
-	if _, found := s.configs[server]; found {
-		return nil
+func (s *Solr) getAPIConfig(server string) *apiConfig {
+	if cfg, found := s.configs[server]; found {
+		return cfg
 	}
+
 	version, err := s.determineServerAPIVersion(server)
 	if err != nil {
 		s.Log.Errorf("Getting version for %q failed: %v", server, err)
+		// Exit early and do not fill the cache as the server might not be
+		// reachable yet.
+		return newAPIv1Config()
 	}
 	s.Log.Debugf("Found API version %d for server %q...", version, server)
 
@@ -119,7 +116,7 @@ func (s *Solr) updateConfig(server string) error {
 		s.configs[server] = newAPIv2Config()
 	}
 
-	return nil
+	return s.configs[server]
 }
 
 func (s *Solr) collect(acc telegraf.Accumulator, cfg *apiConfig, server string) {
