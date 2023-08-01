@@ -94,10 +94,13 @@ linters-settings:
       - externalErrorReassign
       - nilValReturn
       - regexpPattern
+      - sloppyTestFuncName
       - sloppyTypeAssert
       - sortSlice
       - sprintfQuotedString
       - sqlQuery
+      - syncMapLoadAndDelete
+      - truncateCmp
       - uncheckedInlineErr
       - unnecessaryDefer
       - weakCond
