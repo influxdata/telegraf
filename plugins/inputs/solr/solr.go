@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -78,41 +77,6 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	return nil
-}
-
-func (s *Solr) determineServerAPIVersion(server string) (int, error) {
-	endpoint := server + "/solr/admin/info/system?wt=json"
-	var info map[string]interface{}
-	if err := s.query(endpoint, &info); err != nil {
-		return 0, err
-	}
-
-	lraw, found := info["lucene"]
-	if !found {
-		return 0, nil
-	}
-	lucene, ok := lraw.(map[string]interface{})
-	if !ok {
-		return 0, nil
-	}
-	vraw, ok := lucene["solr-spec-version"]
-	if !ok {
-		return 0, nil
-	}
-	v, ok := vraw.(string)
-	if !ok {
-		return 0, nil
-	}
-
-	// API version 1 is required until v7.x
-	version := semver.New(v)
-	if version.LessThan(semver.Version{Major: 7}) {
-		return 1, nil
-	}
-
-	// Starting from 7.0 API version 2 has to be used to get the UPDATE and
-	// QUERY metrics.
-	return 2, nil
 }
 
 func (s *Solr) updateCollector(server string) error {
