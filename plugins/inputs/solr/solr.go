@@ -3,13 +3,17 @@ package solr
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -29,8 +33,9 @@ type Solr struct {
 	Cores       []string        `toml:"cores"`
 	Log         telegraf.Logger `toml:"-"`
 
-	client     *http.Client
-	collectors map[string]MetricCollector
+	client  *http.Client
+	configs map[string]*apiConfig
+	filter  filter.Filter
 }
 
 func (*Solr) SampleConfig() string {
@@ -38,6 +43,7 @@ func (*Solr) SampleConfig() string {
 }
 
 func (s *Solr) Init() error {
+	// Setup client to do the queries
 	s.client = &http.Client{
 		Transport: &http.Transport{
 			ResponseHeaderTimeout: time.Duration(s.HTTPTimeout),
@@ -45,13 +51,22 @@ func (s *Solr) Init() error {
 		Timeout: time.Duration(s.HTTPTimeout),
 	}
 
-	s.collectors = make(map[string]MetricCollector, len(s.Servers))
+	// Prepare filter for the cores to query
+	f, err := filter.Compile(s.Cores)
+	if err != nil {
+		return err
+	}
+	s.filter = f
+
+	// Allocate config cache
+	s.configs = make(map[string]*apiConfig, len(s.Servers))
+
 	return nil
 }
 
 func (s *Solr) Start(acc telegraf.Accumulator) error {
 	for _, server := range s.Servers {
-		acc.AddError(s.updateCollector(server))
+		acc.AddError(s.updateConfig(server))
 	}
 	return nil
 }
@@ -66,12 +81,12 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 
 			// Check the server version from cache or query one
-			if err := s.updateCollector(server); err != nil {
+			if err := s.updateConfig(server); err != nil {
 				acc.AddError(err)
 				return
 			}
-			collector := s.collectors[server]
-			collector.Collect(acc, server)
+			cfg := s.configs[server]
+			s.collect(acc, cfg, server)
 		}(srv)
 	}
 	wg.Wait()
@@ -79,8 +94,8 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Solr) updateCollector(server string) error {
-	if _, found := s.collectors[server]; found {
+func (s *Solr) updateConfig(server string) error {
+	if _, found := s.configs[server]; found {
 		return nil
 	}
 	version, err := s.determineServerAPIVersion(server)
@@ -94,25 +109,119 @@ func (s *Solr) updateCollector(server string) error {
 		s.Log.Warn("Unable to determine API version! Using API v1...")
 		fallthrough
 	case 1:
-		c, err := newCollectorV1(s, s.Cores)
-		if err != nil {
-			return fmt.Errorf("creating collector v1 for server %q failed: %w", server, err)
-		}
-		s.collectors[server] = c
+		s.configs[server] = newAPIv1Config()
 	case 2:
 		fallthrough
 	default:
 		if version > 2 {
 			s.Log.Warnf("Unknown API version %q! Using latest known", version)
 		}
-		c, err := newCollectorV2(s, s.Cores)
-		if err != nil {
-			return fmt.Errorf("creating collector v2 for server %q failed: %w", server, err)
-		}
-		s.collectors[server] = c
+		s.configs[server] = newAPIv2Config()
 	}
 
 	return nil
+}
+
+func (s *Solr) collect(acc telegraf.Accumulator, cfg *apiConfig, server string) {
+	now := time.Now()
+
+	var coreStatus AdminCoresStatus
+	if err := s.query(cfg.adminEndpoint(server), &coreStatus); err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	var wg sync.WaitGroup
+	for core, metrics := range coreStatus.Status {
+		fields := map[string]interface{}{
+			"deleted_docs":  metrics.Index.DeletedDocs,
+			"max_docs":      metrics.Index.MaxDoc,
+			"num_docs":      metrics.Index.NumDocs,
+			"size_in_bytes": metrics.Index.SizeInBytes,
+		}
+		tags := map[string]string{"core": core}
+		acc.AddFields("solr_admin", fields, tags, now)
+
+		if s.filter != nil && !s.filter.Match(core) {
+			continue
+		}
+
+		wg.Add(1)
+		go func(server string, core string) {
+			defer wg.Done()
+
+			var data MBeansData
+			if err := s.query(cfg.mbeansEndpoint(server, core), &data); err != nil {
+				acc.AddError(err)
+				return
+			}
+
+			cfg.parseCore(acc, core, &data, now)
+			cfg.parseQueryHandler(acc, core, &data, now)
+			cfg.parseUpdateHandler(acc, core, &data, now)
+			cfg.parseCache(acc, core, &data, now)
+		}(server, core)
+	}
+	wg.Wait()
+}
+
+func (s *Solr) query(endpoint string, v interface{}) error {
+	req, reqErr := http.NewRequest(http.MethodGet, endpoint, nil)
+	if reqErr != nil {
+		return reqErr
+	}
+
+	if s.Username != "" {
+		req.SetBasicAuth(s.Username, s.Password)
+	}
+
+	req.Header.Set("User-Agent", internal.ProductToken())
+
+	r, err := s.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return fmt.Errorf("solr: API endpoint %q responded with %q", endpoint, r.Status)
+	}
+
+	return json.NewDecoder(r.Body).Decode(v)
+}
+
+func (s *Solr) determineServerAPIVersion(server string) (int, error) {
+	endpoint := server + "/solr/admin/info/system?wt=json"
+	var info map[string]interface{}
+	if err := s.query(endpoint, &info); err != nil {
+		return 0, err
+	}
+
+	lraw, found := info["lucene"]
+	if !found {
+		return 0, nil
+	}
+	lucene, ok := lraw.(map[string]interface{})
+	if !ok {
+		return 0, nil
+	}
+	vraw, ok := lucene["solr-spec-version"]
+	if !ok {
+		return 0, nil
+	}
+	v, ok := vraw.(string)
+	if !ok {
+		return 0, nil
+	}
+
+	// API version 1 is required until v7.x
+	version := semver.New(v)
+	if version.LessThan(semver.Version{Major: 7}) {
+		return 1, nil
+	}
+
+	// Starting from 7.0 API version 2 has to be used to get the UPDATE and
+	// QUERY metrics.
+	return 2, nil
 }
 
 func init() {
