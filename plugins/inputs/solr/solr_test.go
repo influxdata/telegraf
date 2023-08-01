@@ -85,7 +85,9 @@ func TestCases(t *testing.T) {
 
 			// Gather data and compare results
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
 			require.NoError(t, plugin.Gather(&acc))
+			plugin.Stop()
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
@@ -159,7 +161,9 @@ func TestIntegration(t *testing.T) {
 
 			// Gather data and compare results
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
 			require.NoError(t, plugin.Gather(&acc))
+			plugin.Stop()
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
