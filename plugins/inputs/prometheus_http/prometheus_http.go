@@ -43,6 +43,7 @@ type PrometheusHttpMetric struct {
 	UniqueBy    []string          `toml:"unique_by"`
 	templates   map[string]*toolsRender.TextTemplate
 	dependecies map[string][]string
+	only        map[string]string
 	uniques     map[uint64]bool
 }
 
@@ -229,7 +230,7 @@ func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) inte
 	return string(b)
 }
 
-func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, values, metricTags, metricVars map[string]string) string {
+func (p *PrometheusHttp) getAllTags(values, metricTags, metricVars map[string]string) map[string]interface{} {
 
 	tgs := make(map[string]interface{})
 	for k, v := range values {
@@ -241,15 +242,51 @@ func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, values, 
 	m["tags"] = metricTags
 	m["vars"] = metricVars
 	m["files"] = p.files
+	return m
+}
 
+func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, values, metricTags, metricVars map[string]string) (string, error) {
+
+	m := p.getAllTags(values, metricTags, metricVars)
 	b, err := t.RenderObject(&m)
 	if err != nil {
 		p.Log.Errorf("%s failed to execute template: %v", p.Name, err)
-		return err.Error()
+		return "", err
 	}
 	r := strings.TrimSpace(string(b))
 	// simplify <no value> => empty string
-	return strings.ReplaceAll(r, "<no value>", "")
+	return strings.ReplaceAll(r, "<no value>", ""), nil
+}
+
+func (p *PrometheusHttp) getOnly(only string, values, metricTags, metricVars map[string]string) string {
+
+	e := "error"
+	m := p.getAllTags(values, metricTags, metricVars)
+
+	arr := strings.FieldsFunc(only, func(c rune) bool {
+		return c == '.'
+	})
+
+	l := len(arr)
+	switch l {
+	case 0:
+		p.Log.Errorf("%s no dots for: %s", p.Name, only)
+		return e
+	case 1:
+		v, ok := m["values"].(map[string]string)
+		if ok {
+			return v[arr[0]]
+		}
+	case 2:
+		v, ok := m[arr[0]].(map[string]string)
+		if ok {
+			return v[arr[1]]
+		}
+	default:
+		p.Log.Errorf("%s dots are more than two: %s", p.Name, only)
+		return e
+	}
+	return e
 }
 
 func (p *PrometheusHttp) getKeys(arr map[string][]string) []string {
@@ -318,12 +355,22 @@ func (p *PrometheusHttp) getExtraMetricTags(values map[string]string, m *Prometh
 
 		tpl := m.templates[k]
 		if tpl != nil {
-			vars[k] = p.setExtraMetricTag(tpl, values, m.Tags, vars)
+			vk, err := p.setExtraMetricTag(tpl, values, m.Tags, vars)
+			if err != nil {
+				vars[k] = "error"
+				continue
+			}
+			vars[k] = vk
 			if !p.SkipEmptyTags && vars[k] == "" {
 				vars[k] = m.Tags[k]
 			}
 		} else {
-			vars[k] = m.Tags[k]
+			only := m.only[k]
+			if only != "" {
+				vars[k] = p.getOnly(only, values, m.Tags, vars)
+			} else {
+				vars[k] = m.Tags[k]
+			}
 		}
 	}
 	return vars
@@ -497,19 +544,31 @@ func (p *PrometheusHttp) getDefaultTemplate(name, value string) *toolsRender.Tex
 	return tpl
 }
 
-func (p *PrometheusHttp) ifTemplate(s string) bool {
+func (p *PrometheusHttp) ifTemplate(s string) (bool, string) {
 
+	only := ""
 	if strings.TrimSpace(s) == "" {
-		return false
+		return false, only
 	}
 	// find {{ }} to pass templates
 	l := len("{{")
-	idx := strings.Index(s, "{{")
-	if idx == -1 {
-		return false
+	idx1 := strings.Index(s, "{{")
+	if idx1 == -1 {
+		return false, only
 	}
-	s1 := s[idx+l+1:]
-	return strings.Contains(s1, "}}")
+	s1 := s[idx1+l:]
+	idx2 := strings.LastIndex(s1, "}}")
+	if idx2 == -1 {
+		return false, only
+	}
+	s2 := strings.TrimSpace(s1[0:idx2])
+	arr := strings.Split(s2, " ")
+	if len(arr) == 1 {
+		if idx1 == 0 && strings.HasPrefix(arr[0], ".") {
+			only = arr[0]
+		}
+	}
+	return true, only
 }
 
 func (p *PrometheusHttp) findTagsOnVars(ident, name, value string, tags map[string]string, stack []string) []string {
@@ -550,8 +609,12 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 		m.templates = make(map[string]*toolsRender.TextTemplate)
 	}
 	m.dependecies = make(map[string][]string)
+	m.only = make(map[string]string)
 	for k, v := range m.Tags {
-		if p.ifTemplate(v) {
+
+		b, only := p.ifTemplate(v)
+		if b {
+
 			n := fmt.Sprintf("%s_%s", m.Name, k)
 			d := p.findTagsOnVars(m.Name, k, v, m.Tags, []string{k})
 			if utils.Contains(d, k) {
@@ -562,7 +625,11 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 				p.Log.Debugf("%s: %s dependencies are %s", m.Name, k, d)
 			}
 			m.dependecies[k] = d
-			m.templates[k] = p.getDefaultTemplate(n, v)
+			if only == "" {
+				m.templates[k] = p.getDefaultTemplate(n, v)
+			} else {
+				m.only[k] = only
+			}
 		}
 	}
 	if m.uniques == nil {
