@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/bndr/gojenkins"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
@@ -37,6 +36,7 @@ type JenkinsBuilds struct {
 
 	MaxIdleConnections int      `toml:"max_idle_connections"`
 	MaxWorkers         int      `toml:"max_workers"`
+	MaxDepth           int      `toml:"max_depth"`
 	MaxBuildAge        int      `toml:"max_build_age"`
 	MaxNumBuilds       int      `toml:"max_num_builds"`
 	JobExclude         []string `toml:"job_exclude"`
@@ -89,7 +89,6 @@ func (j *JenkinsBuilds) newHTTPClient() (*http.Client, error) {
 func (j *JenkinsBuilds) initialize(client *http.Client) error {
 	var err error
 
-	// init jenkins tags
 	u, err := url.Parse(j.URL)
 	if err != nil {
 		return err
@@ -110,7 +109,11 @@ func (j *JenkinsBuilds) initialize(client *http.Client) error {
 	}
 
 	if j.MaxWorkers <= 0 {
-		j.MaxIdleConnections = 5
+		j.MaxWorkers = 5
+	}
+
+	if j.MaxDepth <= 0 {
+		j.MaxDepth = 10
 	}
 
 	// init filters
@@ -122,17 +125,16 @@ func (j *JenkinsBuilds) initialize(client *http.Client) error {
 	j.semaphore = make(chan int, j.MaxWorkers)
 	ctx := context.Background()
 	j.client = newJenkinsClient(client, j.URL, j.Username, j.Password, ctx)
-
 	return j.client.init()
 }
 
 func (j *JenkinsBuilds) gatherJobs(acc telegraf.Accumulator) {
 	j.Log.Infof("Getting all jobs")
 	start := time.Now().Unix()
-	jobs, err := j.client.getAllJobs()
+	jobs, err := j.client.getAllJobs(j.MaxDepth)
 
 	if err != nil {
-		acc.AddError(errors.New("unable to get all jobs : " + err.Error()))
+		acc.AddError(errors.New("Unable to get all jobs : " + err.Error()))
 		return
 	}
 	j.Log.Infof("Got %d jobs", len(jobs))
@@ -152,21 +154,16 @@ func (j *JenkinsBuilds) gatherJobs(acc telegraf.Accumulator) {
 
 	}
 	wg.Wait()
+
 	end := time.Now().Unix()
-	j.Log.Infof("Finished Gathering jobs in %d", end-start)
+	j.Log.Infof("Finished Gathering builds data in %d", end-start)
 }
 
 func (j *JenkinsBuilds) processJobs(job JobInfo, acc telegraf.Accumulator) {
-	thisJob, err := j.client.getJob(job.Name, job.Parents)
-	if err != nil {
-		acc.AddError(errors.New("unable to get job : " + err.Error()))
-		return
-	}
-
-	builds, err := j.client.getAllBuilds(thisJob)
+	builds, err := j.client.getAllBuildIds(job.Base)
 
 	if err != nil {
-		acc.AddError(errors.New("unable to get all build ids : " + err.Error()))
+		acc.AddError(errors.New("Unable to get all build ids : " + err.Error()))
 		return
 	}
 
@@ -180,12 +177,12 @@ func (j *JenkinsBuilds) processJobs(job JobInfo, acc telegraf.Accumulator) {
 
 	cutoff := time.Now().Add(-time.Hour * time.Duration(j.MaxBuildAge))
 	for _, build := range builds {
-		buildInfo, err := j.client.getBuildInfo(thisJob, build.Number)
+		buildInfo, err := j.client.getBuildInfo(job.Base, build.Number)
 		if err != nil {
 			continue
 		}
 
-		if buildInfo == nil || buildInfo.GetTimestamp().Before(cutoff) || buildInfo.Raw.Building {
+		if buildInfo == nil || buildInfo.GetTimestamp().Before(cutoff) || buildInfo.Building {
 			continue
 		}
 
@@ -193,20 +190,20 @@ func (j *JenkinsBuilds) processJobs(job JobInfo, acc telegraf.Accumulator) {
 	}
 }
 
-func (j *JenkinsBuilds) gatherJobBuild(job JobInfo, buildInfo *gojenkins.Build, acc telegraf.Accumulator) {
+func (j *JenkinsBuilds) gatherJobBuild(job JobInfo, buildInfo *BuildInfo, acc telegraf.Accumulator) {
 	jobParent := strings.Join(job.Parents, "/")
-	tags := map[string]string{"name": job.Name, "parents": jobParent, "result": buildInfo.GetResult(), "server": j.client.getServer()}
+	tags := map[string]string{"name": job.Name, "parents": jobParent, "result": buildInfo.Result, "server": j.client.getServer()}
 	fields := make(map[string]interface{})
-	fields["duration"] = buildInfo.GetDuration()
-	fields["result_code"] = mapResultCode(buildInfo.GetResult())
-	fields["number"] = buildInfo.GetBuildNumber()
-	fields["estimated_duration"] = buildInfo.Raw.EstimatedDuration
+	fields["duration"] = buildInfo.Duration
+	fields["result_code"] = mapResultCode(buildInfo.Result)
+	fields["number"] = buildInfo.Number
+	fields["estimated_duration"] = buildInfo.EstimatedDuration
 
 	acc.AddFields(measurementJob, fields, tags, buildInfo.GetTimestamp())
 }
 
 func (j *JenkinsBuilds) gatherExecutorInfo(acc telegraf.Accumulator) {
-	total, busy, err := j.client.getExecutors()
+	total, busy, err := j.client.getExecutorsInfo()
 	if err != nil {
 		acc.AddError(errors.New("unable to get executor info : " + err.Error()))
 		return
@@ -242,6 +239,7 @@ func init() {
 			MaxIdleConnections: 10,
 			MaxNumBuilds:       30,
 			MaxWorkers:         5,
+			MaxDepth:           10,
 		}
 	})
 }

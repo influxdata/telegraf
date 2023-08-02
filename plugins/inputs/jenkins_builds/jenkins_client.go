@@ -2,19 +2,87 @@ package jenkins
 
 import (
 	"context"
-	"github.com/bndr/gojenkins"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
+type BuildInfo struct {
+	Building          bool    `json:"building"`
+	Duration          float64 `json:"duration"`
+	EstimatedDuration float64 `json:"estimatedDuration"`
+	Number            int64   `json:"number"`
+	Result            string  `json:"result"`
+	Timestamp         int64   `json:"timestamp"`
+	URL               string  `json:"url"`
+}
+
+func (b *BuildInfo) GetTimestamp() time.Time {
+	msInt := int64(b.Timestamp)
+	return time.Unix(0, msInt*int64(time.Millisecond))
+}
+
+type Jenkins struct {
+	Server string `json:"url"`
+}
+
+type ExecutorsInfo struct {
+	BusyExecutors  int `json:"busyExecutors"`
+	TotalExecutors int `json:"totalExecutors"`
+}
+
+type JobBuild struct {
+	Number int64
+}
+
 type JenkinsClient struct {
-	goJenkinsClient *gojenkins.Jenkins
-	httpClient      *http.Client
-	ctx             context.Context
-	url             string
-	username        string
-	password        string
+	httpClient    *http.Client
+	ctx           context.Context
+	url           string
+	username      string
+	password      string
+	sessionCookie *http.Cookie
+	jenkins       *Jenkins
+}
+
+type APIError struct {
+	URL         string
+	StatusCode  int
+	Title       string
+	Description string
+}
+
+func (e APIError) Error() string {
+	if e.Description != "" {
+		return fmt.Sprintf("[%s] %s: %s", e.URL, e.Title, e.Description)
+	}
+	return fmt.Sprintf("[%s] %s", e.URL, e.Title)
+}
+
+type Job struct {
+	Class string `json:"_class"`
+	Url   string `json:"url"`
+	Color string `json:"color"`
+	Jobs  []Job  `json:"jobs"`
+}
+
+type JobsResponse struct {
+	Class string `json:"_class"`
+	Jobs  []Job  `json:"jobs"`
+}
+
+type JobInfo struct {
+	Base    string
+	Class   string
+	Name    string
+	Url     string
+	Color   string
+	Folder  string
+	Parents []string
 }
 
 func newJenkinsClient(client *http.Client, url string, username string, password string,
@@ -29,46 +97,120 @@ func newJenkinsClient(client *http.Client, url string, username string, password
 }
 
 func (jc *JenkinsClient) init() error {
-	jenkinsClient, err := gojenkins.CreateJenkins(jc.httpClient, jc.url, jc.username, jc.password).Init(jc.ctx)
+	req, err := http.NewRequest("GET", jc.url, nil)
 	if err != nil {
 		return err
 	}
-	jc.goJenkinsClient = jenkinsClient
+	if jc.username != "" || jc.password != "" {
+		req.SetBasicAuth(jc.username, jc.password)
+	}
+	resp, err := jc.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	for _, cc := range resp.Cookies() {
+		if strings.Contains(cc.Name, "JSESSIONID") {
+			jc.sessionCookie = cc
+			break
+		}
+	}
+
+	jenkins := new(Jenkins)
+	err = jc.doGet("/api/json", jenkins)
+
+	if err != nil {
+		return err
+	}
+
+	jc.jenkins = jenkins
 	return nil
 }
 
-func (jc *JenkinsClient) getJobs() []*gojenkins.Job {
-	jobs, err := jc.goJenkinsClient.GetAllJobs(jc.ctx)
-	if err != nil {
-		panic(err)
-	}
-	return jobs
-}
-
-func (jc *JenkinsClient) isFolder(job gojenkins.InnerJob) bool {
-	if strings.Contains(job.Class, "com.cloudbees.hudson.plugins.folder.Folder") {
+func (jc *JenkinsClient) isFolder(class string) bool {
+	if strings.Contains(class, "com.cloudbees.hudson.plugins.folder.Folder") {
 		return true
 	}
 	return false
 }
 
-func (jc *JenkinsClient) isMultiBranch(job gojenkins.InnerJob) bool {
-	if strings.Contains(job.Class, "org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject") {
+func (jc *JenkinsClient) isMultiBranch(class string) bool {
+	if strings.Contains(class, "org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject") {
 		return true
 	}
 	return false
 }
 
-func (jc *JenkinsClient) getAllJobs() ([]JobInfo, error) {
-	var allJobs []JobInfo
-	jobs, err := jc.goJenkinsClient.GetAllJobNames(jc.ctx)
+func createJobQueryString(depth int) string {
+	queryString := "tree="
+	queryString += strings.Repeat("jobs[url,color,buildable,", depth-1)
+	queryString += "jobs[url]"
+	end := strings.Repeat("]", depth-1)
+	queryString += end
+
+	return queryString
+}
+
+func (jc *JenkinsClient) getBuildInfo(base string, id int64) (*BuildInfo, error) {
+	build := new(BuildInfo)
+	url := base + "/" + fmt.Sprintf("%d", id) + "/api/json"
+	err := jc.doGet(url, build)
 	if err != nil {
 		return nil, err
 	}
-	for _, w := range jobs {
-		allJobs = jc._findJobs(allJobs, w)
+	return build, nil
+}
+
+func (jc *JenkinsClient) getAllBuildIds(base string) ([]JobBuild, error) {
+	var buildsResp struct {
+		Builds []JobBuild `json:"allBuilds"`
 	}
+	url := base + "/api/json?tree=allBuilds[number]"
+	err := jc.doGet(url, &buildsResp)
+	if err != nil {
+		return nil, err
+	}
+	return buildsResp.Builds, nil
+}
+
+func (jc *JenkinsClient) getAllJobs(depth int) ([]JobInfo, error) {
+
+	qr := createJobQueryString(depth)
+	url := "/api/json?" + qr
+	allJobsResponse := new(JobsResponse)
+	err := jc.doGet(url, allJobsResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	var allJobs []JobInfo
+
+	allJobs = append(jc.collectJobs(allJobsResponse.Jobs, allJobs))
 	return allJobs, nil
+}
+
+func (jc *JenkinsClient) collectJobs(jobs []Job, allJobs []JobInfo) []JobInfo {
+	for _, job := range jobs {
+		if nil != job.Jobs {
+			allJobs = jc.collectJobs(job.Jobs, allJobs)
+		}
+
+		if jc.isFolder(job.Class) || jc.isMultiBranch(job.Class) {
+			continue
+		}
+
+		folder, parents, base := getFolderPath(job.Url)
+		allJobs = append(allJobs, JobInfo{
+			Base:    base,
+			Class:   job.Class,
+			Name:    folder,
+			Url:     job.Url,
+			Color:   job.Color,
+			Folder:  folder,
+			Parents: parents,
+		})
+	}
+	return allJobs
 }
 
 func getFolderPath(jobUrl string) (string, []string, string) {
@@ -81,71 +223,10 @@ func getFolderPath(jobUrl string) (string, []string, string) {
 	return folders[len(folders)-1], folders[0 : len(folders)-1], jobPath
 }
 
-func (jc *JenkinsClient) _findJobs(allJobs []JobInfo, job gojenkins.InnerJob) []JobInfo {
-	if jc.isFolder(job) || jc.isMultiBranch(job) {
-		folder, parents, _ := getFolderPath(job.Url)
-		jobs, err := jc.goJenkinsClient.GetFolder(jc.ctx, folder, parents...)
-		if err != nil {
-			return allJobs
-		}
-		for _, w := range jobs.Raw.Jobs {
-			allJobs = jc._findJobs(allJobs, w)
-		}
-	} else {
-		folder, parents, base := getFolderPath(job.Url)
-		allJobs = append(allJobs, JobInfo{
-			Base:    base,
-			Class:   job.Class,
-			Name:    job.Name,
-			Url:     job.Url,
-			Color:   job.Color,
-			Folder:  folder,
-			Parents: parents,
-		})
-	}
-	return allJobs
-}
+func (jc *JenkinsClient) getExecutorsInfo() (total int, busy int, err error) {
+	computers := new(ExecutorsInfo)
 
-type JobInfo struct {
-	Base    string
-	Class   string
-	Name    string
-	Url     string
-	Color   string
-	Folder  string
-	Parents []string
-}
-
-func (jc *JenkinsClient) getBuildInfo(job *gojenkins.Job, buildNumber int64) (*gojenkins.Build, error) {
-	build, err := job.GetBuild(jc.ctx, buildNumber)
-	if err != nil {
-		return nil, err
-	}
-	return build, nil
-}
-
-func (jc *JenkinsClient) getAllBuilds(job *gojenkins.Job) ([]gojenkins.JobBuild, error) {
-	build, err := job.GetAllBuildIds(jc.ctx)
-	if err != nil {
-		return nil, err
-	}
-	return build, nil
-}
-
-func (jc *JenkinsClient) getJob(name string, parents []string) (*gojenkins.Job, error) {
-	job, err := jc.goJenkinsClient.GetJob(jc.ctx, name, parents...)
-	if err != nil {
-		return nil, err
-	}
-	return job, nil
-}
-
-func (jc *JenkinsClient) getExecutors() (total int, busy int, err error) {
-	computers := new(gojenkins.Computers)
-	qr := map[string]string{
-		"depth": "1",
-	}
-	_, err = jc.goJenkinsClient.Requester.GetJSON(jc.ctx, "/computer", computers, qr)
+	err = jc.doGet("/computer/api/json?depth=1", computers)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -154,6 +235,63 @@ func (jc *JenkinsClient) getExecutors() (total int, busy int, err error) {
 }
 
 func (jc *JenkinsClient) getServer() string {
-	server, _ := url.Parse(jc.goJenkinsClient.Server)
+	server, _ := url.Parse(jc.jenkins.Server)
 	return server.Hostname()
+}
+
+func (jc *JenkinsClient) doGet(url string, responseType interface{}) error {
+	req, err := createGetRequest(jc.url+url, jc.username, jc.password, jc.sessionCookie)
+	if err != nil {
+		return err
+	}
+	resp, err := jc.httpClient.Do(req.WithContext(jc.ctx))
+	if err != nil {
+		return err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(resp.Body)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		jc.sessionCookie = nil
+		return APIError{
+			URL:        url,
+			StatusCode: resp.StatusCode,
+			Title:      resp.Status,
+		}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return APIError{
+			URL:        url,
+			StatusCode: resp.StatusCode,
+			Title:      resp.Status,
+		}
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return APIError{
+			URL:        url,
+			StatusCode: resp.StatusCode,
+			Title:      resp.Status,
+		}
+	}
+
+	return json.NewDecoder(resp.Body).Decode(responseType)
+}
+
+func createGetRequest(url string, username, password string, sessionCookie *http.Cookie) (*http.Request, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if username != "" || password != "" {
+		req.SetBasicAuth(username, password)
+	}
+	if sessionCookie != nil {
+		req.AddCookie(sessionCookie)
+	}
+	req.Header.Add("Accept", "application/json")
+	return req, nil
 }

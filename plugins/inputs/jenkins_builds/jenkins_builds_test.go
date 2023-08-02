@@ -101,7 +101,7 @@ func TestInitialize(t *testing.T) {
 			},
 			output: &JenkinsBuilds{
 				Log:                testutil.Logger{},
-				MaxIdleConnections: 5,
+				MaxIdleConnections: 10,
 			},
 		},
 	}
