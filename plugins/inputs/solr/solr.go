@@ -104,15 +104,13 @@ func (s *Solr) getAPIConfig(server string) *apiConfig {
 	switch version {
 	case 0:
 		s.Log.Warn("Unable to determine API version! Using API v1...")
-		fallthrough
+		s.configs[server] = newAPIv1Config()
 	case 1:
 		s.configs[server] = newAPIv1Config()
 	case 2:
-		fallthrough
+		s.configs[server] = newAPIv2Config()
 	default:
-		if version > 2 {
-			s.Log.Warnf("Unknown API version %q! Using latest known", version)
-		}
+		s.Log.Warnf("Unknown API version %q! Using latest known", version)
 		s.configs[server] = newAPIv2Config()
 	}
 
