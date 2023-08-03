@@ -143,16 +143,12 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
-	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
-	//var pk []string
 
 	if p.TimestampColumn != "" {
-		//pk = append(pk, quoteIdent(p.TimestampColumn))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
 	for _, tag := range metric.TagList() {
-		//pk = append(pk, quoteIdent(tag.Key))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
 	}
 
@@ -166,7 +162,6 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
-	//query = strings.ReplaceAll(query, "{KEY_COLUMNS}", strings.Join(pk, ","))
 
 	return query
 }

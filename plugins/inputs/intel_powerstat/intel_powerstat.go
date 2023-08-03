@@ -463,8 +463,8 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 	}
 
 	if (model != strconv.FormatInt(0x37, 10)) && // INTEL_FAM6_ATOM_SILVERMONT
-		(model != strconv.FormatInt(0x4A, 10)) && // INTEL_FAM6_ATOM_SILVERMONT_MID:
-		(model != strconv.FormatInt(0x5A, 10)) && // INTEL_FAM6_ATOM_AIRMONT_MID:
+		(model != strconv.FormatInt(0x4A, 10)) && // INTEL_FAM6_ATOM_SILVERMONT_MID
+		(model != strconv.FormatInt(0x5A, 10)) && // INTEL_FAM6_ATOM_AIRMONT_MID
 		(model != strconv.FormatInt(0x2E, 10)) && // INTEL_FAM6_NEHALEM_EX
 		(model != strconv.FormatInt(0x2F, 10)) && // INTEL_FAM6_WESTMERE_EX
 		(model != strconv.FormatInt(0x57, 10)) && // INTEL_FAM6_XEON_PHI_KNL
@@ -492,7 +492,7 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 	}
 	// dump_atom_turbo_ratio_limits
 	if model == strconv.FormatInt(0x37, 10) || // INTEL_FAM6_ATOM_SILVERMONT
-		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID:
+		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID
 		model == strconv.FormatInt(0x5A, 10) { // INTEL_FAM6_ATOM_AIRMONT_MID
 		coreCounts := uint64(0x04030201) // counting the number of active cores 1 to 4
 		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrAtomCoreTurboRatiosString)

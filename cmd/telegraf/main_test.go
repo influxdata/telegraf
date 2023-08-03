@@ -463,7 +463,7 @@ func TestCommandVersion(t *testing.T) {
 	}
 }
 
-// Deprecated in favor of command version
+// Users should use the version subcommand
 func TestFlagVersion(t *testing.T) {
 	tests := []struct {
 		Version        string

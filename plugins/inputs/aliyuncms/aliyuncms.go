@@ -329,7 +329,6 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 						fields[formatField(metricName, key)] = value
 					}
 				}
-				//Log.logW("Datapoint time: %s, now: %s", time.Unix(datapointTime, 0).Format(time.RFC3339), time.Now().Format(time.RFC3339))
 				acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
 			}
 
