@@ -134,17 +134,8 @@ func newDiscoveryTool(
 		case "acs_ocs":
 			return nil, noDiscoverySupportErr
 		case "acs_oss":
-			//oss is really complicated
-			//it is on it's own format
+			// oss is really complicated and its' own format
 			return nil, noDiscoverySupportErr
-
-			//As a possible solution we can
-			//mimic to request format supported by oss
-
-			//req := DescribeLOSSRequest{
-			//	RpcRequest: &requests.RpcRequest{},
-			//}
-			//req.InitWithApiInfo("oss", "2014-08-15", "DescribeDBInstances", "oss", "openAPI")
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
 			responseRootKey = "EipAddresses"

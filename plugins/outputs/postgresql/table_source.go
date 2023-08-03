@@ -278,11 +278,11 @@ func (tsrc *TableSource) getValues() ([]interface{}, error) {
 			}
 			values = append(values, tagValues...)
 		} else {
-			// tags_as_foreign_key=false, tags_as_json=true
+			// tags_as_foreign_key is false and tags_as_json is true
 			values = append(values, utils.TagListToJSON(metric.TagList()))
 		}
 	} else {
-		// tags_as_foreignkey=true
+		// tags_as_foreignkey is true
 		tagID := utils.GetTagID(metric)
 		if tsrc.postgresql.ForeignTagConstraint {
 			if _, ok := tsrc.tagSets[tagID]; !ok {
@@ -294,7 +294,7 @@ func (tsrc *TableSource) getValues() ([]interface{}, error) {
 	}
 
 	if !tsrc.postgresql.FieldsAsJsonb {
-		// fields_as_json=false
+		// fields_as_json is false
 		fieldValues := make([]interface{}, len(tsrc.fieldColumns.columns))
 		fieldsEmpty := true
 		for _, field := range metric.FieldList() {
@@ -310,7 +310,7 @@ func (tsrc *TableSource) getValues() ([]interface{}, error) {
 		}
 		values = append(values, fieldValues...)
 	} else {
-		// fields_as_json=true
+		// fields_as_json is true
 		value, err := utils.FieldListToJSON(metric.FieldList())
 		if err != nil {
 			return nil, err

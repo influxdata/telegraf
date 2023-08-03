@@ -394,7 +394,7 @@ func (d *PacketDecoder) decodeIPv6Header(r io.Reader) (h IPV6Header, err error) 
 	h.DSCP = uint8((fourByteBlock & 0xFC00000) >> 22)
 	h.ECN = uint8((fourByteBlock & 0x300000) >> 20)
 
-	// flowLabel := fourByteBlock & 0xFFFFF // not currently being used.
+	// The flowLabel is available via fourByteBlock & 0xFFFFF
 	if err := read(r, &h.PayloadLength, "PayloadLength"); err != nil {
 		return h, err
 	}

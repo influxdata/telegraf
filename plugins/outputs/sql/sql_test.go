@@ -200,7 +200,6 @@ func TestMysqlIntegration(t *testing.T) {
 	p.Log = testutil.Logger{}
 	p.Driver = "mysql"
 	p.DataSourceName = address
-	//p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
 	p.InitSQL = "SET sql_mode='ANSI_QUOTES';"
 
 	require.NoError(t, p.Connect())
@@ -332,7 +331,6 @@ func TestClickHouseIntegration(t *testing.T) {
 	}
 
 	initdb, err := filepath.Abs("testdata/clickhouse/initdb")
-	// confd, err := filepath.Abs("testdata/clickhouse/config.d")
 	require.NoError(t, err)
 
 	// initdb/init.sql creates this database
