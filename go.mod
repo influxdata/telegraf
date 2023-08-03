@@ -166,7 +166,7 @@ require (
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.22
 	github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316
-	github.com/srebhan/protobufquery v0.0.0-20230803120840-f00050d5c2bd
+	github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55
 	github.com/stretchr/testify v1.8.4
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.21.0
