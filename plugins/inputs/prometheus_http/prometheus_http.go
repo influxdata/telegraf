@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -245,12 +244,12 @@ func (p *PrometheusHttp) getAllTags(values, metricTags, metricVars map[string]st
 	return m
 }
 
-func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, values, metricTags, metricVars map[string]string) (string, error) {
+func (p *PrometheusHttp) setExtraMetricTag(gid uint64, t *toolsRender.TextTemplate, values, metricTags, metricVars map[string]string) (string, error) {
 
 	m := p.getAllTags(values, metricTags, metricVars)
 	b, err := t.RenderObject(&m)
 	if err != nil {
-		p.Log.Errorf("%s failed to execute template: %v", p.Name, err)
+		p.Log.Errorf("[%d] %s failed to execute template: %v", gid, p.Name, err)
 		return "", err
 	}
 	r := strings.TrimSpace(string(b))
@@ -258,7 +257,7 @@ func (p *PrometheusHttp) setExtraMetricTag(t *toolsRender.TextTemplate, values, 
 	return strings.ReplaceAll(r, "<no value>", ""), nil
 }
 
-func (p *PrometheusHttp) getOnly(only string, values, metricTags, metricVars map[string]string) string {
+func (p *PrometheusHttp) getOnly(gid uint64, only string, values, metricTags, metricVars map[string]string) string {
 
 	e := "error"
 	m := p.getAllTags(values, metricTags, metricVars)
@@ -270,7 +269,7 @@ func (p *PrometheusHttp) getOnly(only string, values, metricTags, metricVars map
 	l := len(arr)
 	switch l {
 	case 0:
-		p.Log.Errorf("%s no dots for: %s", p.Name, only)
+		p.Log.Errorf("[%d] %s no dots for: %s", gid, p.Name, only)
 		return e
 	case 1:
 		v, ok := m["values"].(map[string]string)
@@ -283,7 +282,7 @@ func (p *PrometheusHttp) getOnly(only string, values, metricTags, metricVars map
 			return v[arr[1]]
 		}
 	default:
-		p.Log.Errorf("%s dots are more than two: %s", p.Name, only)
+		p.Log.Errorf("[%d] %s dots are more than two: %s", gid, p.Name, only)
 		return e
 	}
 	return e
@@ -343,7 +342,7 @@ func (p *PrometheusHttp) sortMetricTags(m *PrometheusHttpMetric) []string {
 	return tags
 }
 
-func (p *PrometheusHttp) getExtraMetricTags(values map[string]string, m *PrometheusHttpMetric) map[string]string {
+func (p *PrometheusHttp) getExtraMetricTags(gid uint64, values map[string]string, m *PrometheusHttpMetric) map[string]string {
 
 	if m.templates == nil {
 		return values
@@ -355,7 +354,7 @@ func (p *PrometheusHttp) getExtraMetricTags(values map[string]string, m *Prometh
 
 		tpl := m.templates[k]
 		if tpl != nil {
-			vk, err := p.setExtraMetricTag(tpl, values, m.Tags, vars)
+			vk, err := p.setExtraMetricTag(gid, tpl, values, m.Tags, vars)
 			if err != nil {
 				vars[k] = "error"
 				continue
@@ -367,7 +366,7 @@ func (p *PrometheusHttp) getExtraMetricTags(values map[string]string, m *Prometh
 		} else {
 			only := m.only[k]
 			if only != "" {
-				vars[k] = p.getOnly(only, values, m.Tags, vars)
+				vars[k] = p.getOnly(gid, only, values, m.Tags, vars)
 			} else {
 				vars[k] = m.Tags[k]
 			}
@@ -429,6 +428,9 @@ func (p *PrometheusHttp) uniqueHash(pm *PrometheusHttpMetric, tgs map[string]str
 
 func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric, ds PrometheusHttpDatasource) {
 
+	gid := utils.GetRoutineID()
+	p.Log.Debugf("[%d] %s start gathering %s...", gid, p.Name, pm.Name)
+
 	timeout := pm.Timeout
 	if timeout == 0 {
 		timeout = p.Timeout
@@ -477,11 +479,11 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 			tags[k] = t
 		}
 
-		tags = p.getExtraMetricTags(tags, pm)
+		tags = p.getExtraMetricTags(gid, tags, pm)
 
 		if math.IsNaN(value) || math.IsInf(value, 0) {
 			bs, _ := json.Marshal(tags)
-			p.Log.Debugf("%s skipped NaN/Inf value for: %v[%v]", p.Name, pm.Name, string(bs))
+			p.Log.Debugf("[%d] %s skipped NaN/Inf value for: %v[%v]", gid, p.Name, pm.Name, string(bs))
 			return
 		}
 		p.acc.AddFields(p.Prefix, fields, tags, stamp)
@@ -503,14 +505,14 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 	}
 }
 
-func (p *PrometheusHttp) gatherMetrics(ds PrometheusHttpDatasource) error {
+func (p *PrometheusHttp) gatherMetrics(gid uint64, ds PrometheusHttpDatasource) error {
 
 	var wg sync.WaitGroup
 
 	for _, m := range p.Metrics {
 
 		if m.Name == "" {
-			err := fmt.Errorf("%s no metric name found", p.Name)
+			err := fmt.Errorf("[%d] %s no metric name found", gid, p.Name)
 			p.Log.Error(err)
 			return err
 		}
@@ -597,7 +599,7 @@ func (p *PrometheusHttp) findTagsOnVars(ident, name, value string, tags map[stri
 	return r
 }
 
-func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
+func (p *PrometheusHttp) setDefaultMetric(gid uint64, m *PrometheusHttpMetric) {
 
 	if m.Name == "" {
 		return
@@ -618,11 +620,11 @@ func (p *PrometheusHttp) setDefaultMetric(m *PrometheusHttpMetric) {
 			n := fmt.Sprintf("%s_%s", m.Name, k)
 			d := p.findTagsOnVars(m.Name, k, v, m.Tags, []string{k})
 			if utils.Contains(d, k) {
-				p.Log.Errorf("%s: %s dependency error: contains in %s", m.Name, k, d)
+				p.Log.Errorf("[%d] %s metric %s: %s dependency contains in %s", gid, p.Name, m.Name, k, d)
 				continue
 			}
 			if len(d) > 0 {
-				p.Log.Debugf("%s: %s dependencies are %s", m.Name, k, d)
+				p.Log.Debugf("[%d] %s metric %s %s dependencies are %s", gid, p.Name, m.Name, k, d)
 			}
 			m.dependecies[k] = d
 			if only == "" {
@@ -662,16 +664,16 @@ func (p *PrometheusHttp) readYaml(bytes []byte) (interface{}, error) {
 	return v, nil
 }
 
-func (p *PrometheusHttp) readFiles() map[string]interface{} {
+func (p *PrometheusHttp) readFiles(gid uint64) map[string]interface{} {
 
 	r := make(map[string]interface{})
 	for _, v := range p.Files {
 
 		if _, err := os.Stat(v.Path); err == nil {
 
-			p.Log.Debugf("read file: %s", v.Path)
+			p.Log.Debugf("[%d] %s read file: %s", gid, p.Name, v.Path)
 
-			bytes, err := ioutil.ReadFile(v.Path)
+			bytes, err := os.ReadFile(v.Path)
 			if err != nil {
 				p.Log.Error(err)
 				continue
@@ -709,8 +711,9 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 	p.acc = acc
 
 	var ds PrometheusHttpDatasource = nil
+	gid := utils.GetRoutineID()
 	// Gather data
-	err := p.gatherMetrics(ds)
+	err := p.gatherMetrics(gid, ds)
 	if err != nil {
 		return err
 	}
@@ -719,6 +722,8 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 }
 
 func (p *PrometheusHttp) Init() error {
+
+	gid := utils.GetRoutineID()
 
 	if p.Name == "" {
 		p.Name = "unknown"
@@ -737,19 +742,19 @@ func (p *PrometheusHttp) Init() error {
 	}
 
 	if len(p.Metrics) == 0 {
-		err := fmt.Errorf("%s no metrics found", p.Name)
+		err := fmt.Errorf("[%d] %s no metrics found", gid, p.Name)
 		p.Log.Error(err)
 		return err
 	}
 
-	p.Log.Debugf("%s metrics: %d", p.Name, len(p.Metrics))
+	p.Log.Debugf("[%d] %s metrics amount: %d", gid, p.Name, len(p.Metrics))
 
 	for _, m := range p.Metrics {
-		p.setDefaultMetric(m)
+		p.setDefaultMetric(gid, m)
 	}
 
 	if len(p.Files) > 0 {
-		p.files = p.readFiles()
+		p.files = p.readFiles(gid)
 	}
 
 	return nil

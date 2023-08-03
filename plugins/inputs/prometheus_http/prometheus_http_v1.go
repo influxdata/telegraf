@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	utils "github.com/devopsext/utils"
 	"github.com/influxdata/telegraf"
 )
 
@@ -64,7 +64,7 @@ func (p *PrometheusHttpV1) httpDoRequest(method, query string, params url.Values
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	return data, resp.StatusCode, err
 }
 
@@ -148,6 +148,9 @@ func (p *PrometheusHttpV1) processVector(res *PrometheusHttpV1Response, when tim
 
 func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, push PrometheusHttpPushFunc) error {
 
+	gid := utils.GetRoutineID()
+	p.log.Debugf("[%v] %s prometheus query => %s", gid, p.name, query)
+
 	params := make(url.Values)
 	params.Add("query", query)
 
@@ -170,23 +173,23 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 
 	raw, code, err := p.httpDoRequest("GET", path, params, nil)
 	if err != nil {
-		return fmt.Errorf("%s prometheus HTTP error %s [%s]", p.name, err, time.Since(when))
+		return fmt.Errorf("[%d] %s prometheus HTTP error %s [%s]", gid, p.name, err, time.Since(when))
 	}
 
 	if code != 200 {
-		return fmt.Errorf("%s prometheus HTTP error %d: returns %s [%s]", p.name, code, raw, time.Since(when))
+		return fmt.Errorf("[%d] %s prometheus HTTP error %d: returns %s [%s]", gid, p.name, code, raw, time.Since(when))
 	}
 
 	var res PrometheusHttpV1Response
 	err = json.Unmarshal(raw, &res)
 	if err != nil {
-		return fmt.Errorf("%s prometheus unmarshall error %s [%s]", p.name, err, time.Since(when))
+		return fmt.Errorf("[%d] %s prometheus unmarshall error %s [%s]", gid, p.name, err, time.Since(when))
 	}
 	if res.Status != "success" {
-		return fmt.Errorf("%s prometheus status %s [%s]", p.name, res.Status, time.Since(when))
+		return fmt.Errorf("[%d] %s prometheus status %s [%s]", gid, p.name, res.Status, time.Since(when))
 	}
 	if res.Data == nil {
-		p.log.Debugf("%s prometheus has no data [%s]", p.name, time.Since(when))
+		p.log.Debugf("[%v] %s prometheus has no data [%s]", gid, p.name, time.Since(when))
 		return nil
 	}
 
@@ -196,9 +199,9 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 	case "vector":
 		p.processVector(&res, when, push)
 	default:
-		return fmt.Errorf("%s prometheus result type %s is not supported [%s]", p.name, res.Data.ResultType, time.Since(when))
+		return fmt.Errorf("[%d] %s prometheus result type %s is not supported [%s]", gid, p.name, res.Data.ResultType, time.Since(when))
 	}
-	p.log.Debugf("%s processed successfully [%s]", p.name, time.Since(when))
+	p.log.Debugf("[%d] %s processed successfully [%s]", gid, p.name, time.Since(when))
 	return nil
 }
 
