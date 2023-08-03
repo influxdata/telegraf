@@ -84,6 +84,7 @@ linters-settings:
       - caseOrder
       - codegenComment
       - deferInLoop
+      - dupArg
       - dupBranchBody
       - dupCase
       - dupSubExpr
@@ -92,7 +93,10 @@ linters-settings:
       - evalOrder
       - exitAfterDefer
       - externalErrorReassign
+      - flagName
+      - mapKey
       - nilValReturn
+      - offBy1
       - regexpPattern
       - sloppyTypeAssert
       - sortSlice
