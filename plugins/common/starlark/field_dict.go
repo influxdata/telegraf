@@ -243,7 +243,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 			if err != nil {
 				return starlark.None, err
 			}
-			if err = dict.SetKey(sKey, sValue); err != nil {
+			if err := dict.SetKey(sKey, sValue); err != nil {
 				return starlark.None, err
 			}
 		}

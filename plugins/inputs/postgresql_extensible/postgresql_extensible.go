@@ -187,7 +187,7 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 	}
 
 	// deconstruct array of variables and send to Scan
-	if err = row.Scan(columnVars...); err != nil {
+	if err := row.Scan(columnVars...); err != nil {
 		return err
 	}
 

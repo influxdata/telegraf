@@ -238,7 +238,7 @@ func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err err
 		return request.Host, fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
 	}
 
-	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
+	if err := json.NewDecoder(response.Body).Decode(v); err != nil {
 		return request.Host, err
 	}
 

@@ -33,7 +33,7 @@ type CookieAuthConfig struct {
 }
 
 func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger, clock clockutil.Clock) (err error) {
-	if err = c.initializeClient(client); err != nil {
+	if err := c.initializeClient(client); err != nil {
 		return err
 	}
 

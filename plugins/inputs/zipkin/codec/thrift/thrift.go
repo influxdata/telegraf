@@ -29,13 +29,13 @@ func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 	spans := make([]*zipkincore.Span, 0, size)
 	for i := 0; i < size; i++ {
 		zs := &zipkincore.Span{}
-		if err = zs.Read(context.Background(), transport); err != nil {
+		if err := zs.Read(context.Background(), transport); err != nil {
 			return nil, err
 		}
 		spans = append(spans, zs)
 	}
 
-	if err = transport.ReadListEnd(context.Background()); err != nil {
+	if err := transport.ReadListEnd(context.Background()); err != nil {
 		return nil, err
 	}
 	return spans, nil

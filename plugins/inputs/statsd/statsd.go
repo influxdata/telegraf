@@ -434,12 +434,12 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 			}
 
 			if s.TCPKeepAlive {
-				if err = conn.SetKeepAlive(true); err != nil {
+				if err := conn.SetKeepAlive(true); err != nil {
 					return err
 				}
 
 				if s.TCPKeepAlivePeriod != nil {
-					if err = conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
+					if err := conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
 						return err
 					}
 				}
