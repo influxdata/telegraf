@@ -72,7 +72,7 @@ func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		if err = j.initialize(client); err != nil {
+		if err := j.initialize(client); err != nil {
 			return err
 		}
 	}

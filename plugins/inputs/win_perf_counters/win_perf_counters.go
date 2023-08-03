@@ -208,7 +208,7 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 		hostCounter = &hostCountersInfo{computer: computer, tag: sourceTag}
 		m.hostCounters[computer] = hostCounter
 		hostCounter.query = m.queryCreator.NewPerformanceQuery(computer)
-		if err = hostCounter.query.Open(); err != nil {
+		if err := hostCounter.query.Open(); err != nil {
 			return err
 		}
 		hostCounter.counters = make([]*counter, 0)
@@ -413,11 +413,11 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval > 0 && m.lastRefreshed.Add(time.Duration(m.CountersRefreshInterval)).Before(time.Now())) {
-		if err = m.cleanQueries(); err != nil {
+		if err := m.cleanQueries(); err != nil {
 			return err
 		}
 
-		if err = m.ParseConfig(); err != nil {
+		if err := m.ParseConfig(); err != nil {
 			return err
 		}
 		for _, hostCounterSet := range m.hostCounters {
@@ -439,7 +439,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			}
 		} else {
 			hostCounterSet.timestamp = time.Now()
-			if err = hostCounterSet.query.CollectData(); err != nil {
+			if err := hostCounterSet.query.CollectData(); err != nil {
 				return err
 			}
 		}
