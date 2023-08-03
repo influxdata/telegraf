@@ -12,8 +12,8 @@ import (
 
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
 	"github.com/srebhan/cborquery"
+	"github.com/srebhan/protobufquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
