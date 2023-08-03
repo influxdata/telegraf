@@ -274,6 +274,8 @@ func (t *Timestream) Write(metrics []telegraf.Metric) error {
 func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteRecordsInput, resourceNotFoundRetry bool) error {
 	_, err := t.svc.WriteRecords(context.Background(), writeRecordsInput)
 	if err != nil {
+		t.Log.Debugf("Received error %v (%T)", err, err)
+
 		// Telegraf will retry ingesting the metrics if an error is returned from the plugin.
 		// Therefore, return error only for retryable exceptions: ThrottlingException and 5xx exceptions.
 		var notFound *types.ResourceNotFoundException
