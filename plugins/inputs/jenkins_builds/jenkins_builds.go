@@ -191,6 +191,10 @@ func (j *JenkinsBuilds) processJobs(job JobInfo, acc telegraf.Accumulator) {
 }
 
 func (j *JenkinsBuilds) gatherJobBuild(job JobInfo, buildInfo *BuildInfo, acc telegraf.Accumulator) {
+	if len(job.Parents) == 0 {
+		job.Parents = []string{"root"}
+	}
+
 	jobParent := strings.Join(job.Parents, "/")
 	tags := map[string]string{"name": job.Name, "parents": jobParent, "result": buildInfo.Result, "server": j.client.getServer()}
 	fields := make(map[string]interface{})
