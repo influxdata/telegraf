@@ -164,6 +164,10 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
     - lag(int, number)
     - offset(int, number)
 
+- redis_errorstat_total
+  - tags:
+    - err(int, number)
+
 ### Tags
 
 - All measurements have the following tags:
@@ -216,4 +220,10 @@ redis_command:
 
 ```text
 redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=68113i,usec=325146i,usec_per_call=4.77 1559227136000000000
+```
+
+redis_error:
+
+```text
+redis_errorstat,err=MOVED,host=host,port=6379,replication_role=master,server=localhost total=4284 1691119309000000000
 ```
