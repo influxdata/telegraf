@@ -192,7 +192,7 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 		p.log.Debugf("[%v] %s prometheus has no data [%s]", gid, p.name, time.Since(when))
 		return nil
 	}
-
+	p.log.Debugf("[%d] %s started processing %s %d [%s]", gid, p.name, res.Data.ResultType, len(res.Data.Result), time.Since(when))
 	switch res.Data.ResultType {
 	case "matrix":
 		p.processMatrix(&res, when, push)
