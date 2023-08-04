@@ -232,13 +232,6 @@ func TestSerializeJSONv2FormatBatch(t *testing.T) {
 	metrics := []telegraf.Metric{m, m}
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
-	fmt.Println(string(buf))
-	fmt.Println(string([]byte(
-		`{"records":[` +
-			`{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"},` +
-			`{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}` +
-			`]}`,
-	)))
 	require.Equal(
 		t,
 		[]byte(
