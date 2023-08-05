@@ -12,13 +12,28 @@ import (
 )
 
 type BuildInfo struct {
-	Building          bool    `json:"building"`
-	Duration          float64 `json:"duration"`
-	EstimatedDuration float64 `json:"estimatedDuration"`
-	Number            int64   `json:"number"`
-	Result            string  `json:"result"`
-	Timestamp         int64   `json:"timestamp"`
-	URL               string  `json:"url"`
+	Building          bool     `json:"building"`
+	Duration          float64  `json:"duration"`
+	EstimatedDuration float64  `json:"estimatedDuration"`
+	Number            int64    `json:"number"`
+	Result            string   `json:"result"`
+	Timestamp         int64    `json:"timestamp"`
+	URL               string   `json:"url"`
+	Actions           []Action `json:"actions"`
+}
+
+type Action struct {
+	Class                   string  `json:"_class"`
+	BlockedDurationMillis   float64 `json:"blockedDurationMillis"`
+	BlockedTimeMillis       float64 `json:"blockedTimeMillis"`
+	BuildableDurationMillis float64 `json:"buildableDurationMillis"`
+	BuildableTimeMillis     float64 `json:"buildableTimeMillis"`
+	BuildingDurationMillis  float64 `json:"buildingDurationMillis"`
+	ExecutingTimeMillis     float64 `json:"executingTimeMillis"`
+	ExecutorUtilization     float64 `json:"executorUtilization"`
+	SubTaskCount            float64 `json:"subTaskCount"`
+	WaitingDurationMillis   float64 `json:"waitingDurationMillis"`
+	WaitingTimeMillis       float64 `json:"waitingTimeMillis"`
 }
 
 func (b *BuildInfo) GetTimestamp() time.Time {

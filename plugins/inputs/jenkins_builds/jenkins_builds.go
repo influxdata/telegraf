@@ -196,12 +196,32 @@ func (j *JenkinsBuilds) gatherJobBuild(job JobInfo, buildInfo *BuildInfo, acc te
 	}
 
 	jobParent := strings.Join(job.Parents, "/")
-	tags := map[string]string{"name": job.Name, "parents": jobParent, "result": buildInfo.Result, "server": j.client.getServer()}
+	tags := map[string]string{
+		"name":    job.Name,
+		"parents": jobParent,
+		"result":  buildInfo.Result,
+		"server":  j.client.getServer()}
 	fields := make(map[string]interface{})
 	fields["duration"] = buildInfo.Duration
 	fields["result_code"] = mapResultCode(buildInfo.Result)
 	fields["number"] = buildInfo.Number
 	fields["estimated_duration"] = buildInfo.EstimatedDuration
+
+	for _, action := range buildInfo.Actions {
+		if "jenkins.metrics.impl.TimeInQueueAction" == action.Class {
+			fields["blocked_duration_millis"] = action.BlockedDurationMillis
+			fields["blocked_time_millis"] = action.BlockedTimeMillis
+			fields["buildable_duration_millis"] = action.BuildableDurationMillis
+			fields["buildable_time_millis"] = action.BuildableTimeMillis
+			fields["building_duration_millis"] = action.BuildingDurationMillis
+			fields["executing_time_millis"] = action.ExecutingTimeMillis
+			fields["executor_utilization"] = action.ExecutorUtilization
+			fields["sub_task_count"] = action.SubTaskCount
+			fields["waiting_duration_millis"] = action.WaitingDurationMillis
+			fields["waiting_time_millis"] = action.WaitingTimeMillis
+			break
+		}
+	}
 
 	acc.AddFields(measurementJob, fields, tags, buildInfo.GetTimestamp())
 }
