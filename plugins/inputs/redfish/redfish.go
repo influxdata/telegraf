@@ -43,11 +43,19 @@ type System struct {
 }
 
 type Chassis struct {
-	Location *Location
-	Power    struct {
+	ChassisType  string
+	Location     *Location
+	Manufacturer string
+	Model        string
+	PartNumber   string
+	Power        struct {
 		Ref string `json:"@odata.id"`
 	}
-	Thermal struct {
+	PowerState   string
+	SKU          string
+	SerialNumber string
+	Status       Status
+	Thermal      struct {
 		Ref string `json:"@odata.id"`
 	}
 }
@@ -245,6 +253,24 @@ func (r *Redfish) getThermal(ref string) (*Thermal, error) {
 	return thermal, nil
 }
 
+func setChassisTags(chassis *Chassis, tags map[string]string) {
+	tags["chassis_chassistype"] = chassis.ChassisType
+	if chassis.Location != nil {
+		tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		tags["room"] = chassis.Location.PostalAddress.Room
+		tags["rack"] = chassis.Location.Placement.Rack
+		tags["row"] = chassis.Location.Placement.Row
+	}
+	tags["chassis_manufacturer"] = chassis.Manufacturer
+	tags["chassis_model"] = chassis.Model
+	tags["chassis_partnumber"] = chassis.PartNumber
+	tags["chassis_powerstate"] = chassis.PowerState
+	tags["chassis_sku"] = chassis.SKU
+	tags["chassis_serialnumber"] = chassis.SerialNumber
+	tags["chassis_state"] = chassis.Status.State
+	tags["chassis_health"] = chassis.Status.Health
+}
+
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	address, _, err := net.SplitHostPort(r.baseURL.Host)
 	if err != nil {
@@ -269,18 +295,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range thermal.Temperatures {
 			tags := map[string]string{}
+			setChassisTags(chassis, tags)
 			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
-				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
-				tags["room"] = chassis.Location.PostalAddress.Room
-				tags["rack"] = chassis.Location.Placement.Rack
-				tags["row"] = chassis.Location.Placement.Row
-			}
 
 			fields := make(map[string]interface{})
 			fields["reading_celsius"] = j.ReadingCelsius
@@ -294,18 +315,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		for _, j := range thermal.Fans {
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
+			setChassisTags(chassis, tags)
 			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
-				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
-				tags["room"] = chassis.Location.PostalAddress.Room
-				tags["rack"] = chassis.Location.Placement.Rack
-				tags["row"] = chassis.Location.Placement.Row
-			}
 
 			if j.ReadingUnits != nil && *j.ReadingUnits == "RPM" {
 				fields["upper_threshold_critical"] = j.UpperThresholdCritical
@@ -331,12 +347,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 				"name":      j.Name,
 				"source":    system.Hostname,
 			}
-			if chassis.Location != nil {
-				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
-				tags["room"] = chassis.Location.PostalAddress.Room
-				tags["rack"] = chassis.Location.Placement.Rack
-				tags["row"] = chassis.Location.Placement.Row
-			}
+			setChassisTags(chassis, tags)
 
 			fields := map[string]interface{}{
 				"power_allocated_watts":  j.PowerAllocatedWatts,
@@ -355,18 +366,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.PowerSupplies {
 			tags := map[string]string{}
+			setChassisTags(chassis, tags)
 			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
-				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
-				tags["room"] = chassis.Location.PostalAddress.Room
-				tags["rack"] = chassis.Location.Placement.Rack
-				tags["row"] = chassis.Location.Placement.Row
-			}
 
 			fields := make(map[string]interface{})
 			fields["power_input_watts"] = j.PowerInputWatts
@@ -379,18 +385,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.Voltages {
 			tags := map[string]string{}
+			setChassisTags(chassis, tags)
 			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
-				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
-				tags["room"] = chassis.Location.PostalAddress.Room
-				tags["rack"] = chassis.Location.Placement.Rack
-				tags["row"] = chassis.Location.Placement.Row
-			}
 
 			fields := make(map[string]interface{})
 			fields["reading_volts"] = j.ReadingVolts
