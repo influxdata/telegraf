@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
@@ -40,6 +41,7 @@ type OpenConfigTelemetry struct {
 	StrAsTags       bool            `toml:"str_as_tags"`
 	RetryDelay      config.Duration `toml:"retry_delay"`
 	EnableTLS       bool            `toml:"enable_tls"`
+	KeepAlivePeriod config.Duration `toml:"keep_alive_period"`
 	internaltls.ClientConfig
 
 	Log telegraf.Logger
@@ -380,7 +382,21 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	opt := grpc.WithTransportCredentials(creds)
+
+	// Setup the basic connection options
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+		grpc.WithBlock(),
+	}
+
+	// Add keep-alive settings
+	if m.KeepAlivePeriod > 0 {
+		params := keepalive.ClientParameters{
+			Time:    time.Duration(m.KeepAlivePeriod),
+			Timeout: 2 * time.Duration(m.KeepAlivePeriod),
+		}
+		options = append(options, grpc.WithKeepaliveParams(params))
+	}
 
 	// Connect to given list of servers and start collecting data
 	var grpcClientConn *grpc.ClientConn
@@ -406,7 +422,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		grpcClientConn, err = grpc.DialContext(ctx, server, opt)
+		grpcClientConn, err = grpc.DialContext(ctx, server, options...)
 		if err != nil {
 			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {
@@ -438,6 +454,7 @@ func init() {
 	inputs.Add("jti_openconfig_telemetry", func() telegraf.Input {
 		return &OpenConfigTelemetry{
 			RetryDelay:      config.Duration(time.Second),
+			KeepAlivePeriod: config.Duration(10 * time.Second),
 			StrAsTags:       false,
 			TimestampSource: "collection",
 		}
