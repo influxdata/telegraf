@@ -213,8 +213,6 @@ require (
 	modernc.org/sqlite v1.24.0
 )
 
-require github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
-
 require (
 	cloud.google.com/go v0.110.4 // indirect
 	cloud.google.com/go/compute v1.20.1 // indirect
@@ -493,3 +491,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/robinson/gos7 => github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb

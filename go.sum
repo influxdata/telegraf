@@ -1327,8 +1327,6 @@ github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff h1:+6NUiITWwE5q1
 github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff/go.mod h1:xvqspoSXJTIpemEonrMDFq6XzwHYYgToXWj5eRX1OtY=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
 github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
-github.com/robinson/gos7 v0.0.0-20230421131203-d20ac6ca08cd h1:UhVHgo6tdrKiuVqxTd63ja0B9YihC7D3z8hfEye6Vqo=
-github.com/robinson/gos7 v0.0.0-20230421131203-d20ac6ca08cd/go.mod h1:/gqBMUg6JbR1JKVqIK4ZKCtWDUq/cfrh+hVH8Ak/35A=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
 github.com/rogpeppe/fastuuid v1.1.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/fastuuid v1.2.0 h1:Ppwyp6VYCF1nvBTXL3trRso7mXMlRrw9ooo375wvi2s=
@@ -1418,6 +1416,8 @@ github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316 h1:HVv8JjpX24FuI
 github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316/go.mod h1:9vX3Dhehey14KFYwWo4K/4JOJRve6jvQf6R9Y8PymLI=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55 h1:ksmbrLbJAm+8yxB7fJ245usD0b1v9JHBJrWF+WqGyjs=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55/go.mod h1:SIB3zq5pZq2Ff7aJtCdRpGiHc/meKyMLPEj8F5Tf1j8=
+github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb h1:WUK18HBPrJVKkJp9VpvNZFE2bLmC+Mf0zMoMDcD1vFw=
+github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb/go.mod h1:+96COZeFGpQFstWJ0eKQF+F6/z8gWVpBNGx/K3gD+QU=
 github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
 github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
@@ -1443,8 +1443,6 @@ github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcU
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
-github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 h1:UyzmZLoiDWMRywV4DUYb9Fbt8uiOSooupjTq10vpvnU=
-github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62 h1:Oj2e7Sae4XrOsk3ij21QjjEgAcVSeo9nkp0dI//cD2o=
 github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62/go.mod h1:qUzPVlSj2UgxJkVbH0ZwuuiR46U8RBMDT5KLY78Ifpw=
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
