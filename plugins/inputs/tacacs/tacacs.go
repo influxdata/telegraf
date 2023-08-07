@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -145,10 +146,10 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	startTime := time.Now()
 	reply, session, err := client.SendAuthenStart(ctx, &t.authStart)
 	if err != nil {
-		if !errors.Is(err, context.DeadlineExceeded) {
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on new tacacs authentication start request to %s : %w", client.Addr, err)
 		}
-		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
 		fields["response_status"] = "Timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
@@ -163,10 +164,10 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 
 	reply, err = session.Continue(ctx, string(username))
 	if err != nil {
-		if !errors.Is(err, context.DeadlineExceeded) {
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
 		}
-		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
 		fields["response_status"] = "Timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
@@ -180,10 +181,10 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 
 	reply, err = session.Continue(ctx, string(password))
 	if err != nil {
-		if !errors.Is(err, context.DeadlineExceeded) {
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)
 		}
-		fields["responsetime_ms"] = time.Duration(t.ResponseTimeout).Milliseconds()
+		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
 		fields["response_status"] = "Timeout"
 		acc.AddFields("tacacs", fields, tags)
 		return nil
