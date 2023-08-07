@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/srebhan/protobufquery"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -138,7 +138,6 @@ func (d *protobufDocument) GetNodePath(node, relativeTo dataNode, sep string) st
 		if n.Parent != nil && n.Parent.Value() != nil {
 			kind = reflect.TypeOf(n.Parent.Value()).Kind()
 		}
-		fmt.Printf("node %q: %v (value=%v)   parent: %v\n", n.Data, kind, n.Value(), n.Parent.Value())
 		switch kind {
 		case reflect.Slice, reflect.Array:
 			// Determine the index for array elements

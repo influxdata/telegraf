@@ -11,7 +11,7 @@ import (
 
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
+	"github.com/srebhan/protobufquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -466,7 +466,6 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 
 		// Handle complex types which would be dropped otherwise for
 		// native type handling
-		fmt.Printf("explicit field %q: %v (%T)\n", name, v, v)
 		if v != nil {
 			switch reflect.TypeOf(v).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:

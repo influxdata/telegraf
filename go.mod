@@ -65,7 +65,6 @@ require (
 	github.com/djherbis/times v1.5.0
 	github.com/docker/docker v23.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/doclambda/protobufquery v0.0.0-20220727165953-0da287796ee9
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
 	github.com/eclipse/paho.golang v0.11.0
 	github.com/eclipse/paho.mqtt.golang v1.4.2
@@ -164,6 +163,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.22
+	github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55
 	github.com/stretchr/testify v1.8.4
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.21.0
