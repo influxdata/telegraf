@@ -108,6 +108,7 @@ following works:
 - github.com/cpuguy83/dockercfg [MIT License](https://github.com/cpuguy83/dockercfg/blob/main/LICENSE)
 - github.com/cpuguy83/go-md2man [MIT License](https://github.com/cpuguy83/go-md2man/blob/master/LICENSE.md)
 - github.com/danieljoos/wincred [MIT License](https://github.com/danieljoos/wincred/blob/master/LICENSE)
+- github.com/datadope-io/go-zabbix [MIT License](https://github.com/datadope-io/go-zabbix/blob/master/LICENSE)
 - github.com/davecgh/go-spew [ISC License](https://github.com/davecgh/go-spew/blob/master/LICENSE)
 - github.com/devigned/tab [MIT License](https://github.com/devigned/tab/blob/master/LICENSE)
 - github.com/dgryski/go-rendezvous [MIT License](https://github.com/dgryski/go-rendezvous/blob/master/LICENSE)

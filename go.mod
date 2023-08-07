@@ -65,6 +65,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/couchbase/go-couchbase v0.1.1
+	github.com/datadope-io/go-zabbix/v2 v2.0.1
 	github.com/digitalocean/go-libvirt v0.0.0-20221205150000-2939327a8519
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.6.0
