@@ -1,10 +1,8 @@
-
 syntax = "proto3";
 
 package dunedaq.ersschema;
 
 message Context {
-
   string cwd = 1;
   string file_name = 2;
   string function_name = 3;
@@ -20,24 +18,21 @@ message Context {
 }
 
 message SimpleIssue {
-
   Context context = 1;
 
   string name = 2;
-  repeated string inheritance = 3;  
+  repeated string inheritance = 3;
   string message = 4;
   string severity = 5;
   uint64 time = 6;
-  map<string, string> parameters = 7;	
+  map<string, string> parameters = 7;
 }
 
 message IssueChain {
-
   SimpleIssue final = 1;
   repeated SimpleIssue causes = 2;
 
   string session = 10;
   string application = 11;
   string module = 12;
-
 }
