@@ -277,6 +277,11 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "redis_replication", replicationFields, replicationTags)
+
+	errorStatsTags := map[string]string{"host": "redis.net", "replication_role": "master", "err": "MOVED"}
+	errorStatsFields := map[string]interface{}{"total": int64(3628)}
+
+	acc.AssertContainsTaggedFields(t, "redis_errorstat", errorStatsFields, errorStatsTags)
 }
 
 func TestRedis_ParseFloatOnInts(t *testing.T) {
@@ -513,6 +518,17 @@ cluster_enabled:0
 # Commandstats
 cmdstat_set:calls=261265,usec=1634157,usec_per_call=6.25
 cmdstat_command:calls=1,usec=990,usec_per_call=990.00
+
+# Errorstats
+errorstat_CLUSTERDOWN:count=8
+errorstat_CROSSSLOT:count=3
+errorstat_ERR:count=172
+errorstat_LOADING:count=4284
+errorstat_MASTERDOWN:count=102
+errorstat_MOVED:count=3628
+errorstat_NOSCRIPT:count=4
+errorstat_WRONGPASS:count=2
+errorstat_WRONGTYPE:count=30
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0
