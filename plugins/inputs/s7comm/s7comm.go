@@ -229,7 +229,6 @@ func (s *S7comm) createRequests() error {
 				return fmt.Errorf("duplicate field definition field %q in metric %q", f.Name, cfg.Name)
 			}
 			seenFields[id] = true
-
 		}
 
 		// Update the configuration if changed
