@@ -106,7 +106,7 @@ func (s *Server) gatherTopStatData() (*TopStats, error) {
 
 	totals, ok := dest["totals"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Collection totals not found or not a map")
+		return nil, fmt.Errorf("collection totals not found or not a map")
 	}
 	delete(totals, "note")
 
