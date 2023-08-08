@@ -21,7 +21,16 @@ func determineConversion(dtype string, extra int) converterFunc {
 		}
 	case "S":
 		return func(buf []byte) interface{} {
-			return helper.GetStringAt(buf, 0)
+			if len(buf) <= 2 {
+				return ""
+			}
+			// Get the length of the encoded string
+			length := int(buf[0])
+			// Clip the string if we do not fill the whole buffer
+			if length < len(buf)-2 {
+				return string(buf[2 : 2+length])
+			}
+			return string(buf[2:])
 		}
 	case "W":
 		return func(buf []byte) interface{} {

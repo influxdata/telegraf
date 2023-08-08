@@ -331,7 +331,7 @@ func TestFieldMappings(t *testing.T) {
 							DBNumber: 5,
 							Start:    3,
 							Amount:   10,
-							Data:     make([]byte, 11),
+							Data:     make([]byte, 12),
 						},
 					},
 					mappings: []fieldMapping{
