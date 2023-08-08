@@ -613,21 +613,17 @@ func gatherErrorstatsLine(
 	acc telegraf.Accumulator,
 	globalTags map[string]string,
 ) {
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(globalTags)+1)
 	for k, v := range globalTags {
 		tags[k] = v
 	}
-
 	tags["err"] = strings.TrimPrefix(name, "errorstat_")
-
 	kv := strings.Split(line, "=")
 	ival, err := strconv.ParseInt(kv[1], 10, 64)
 	if err == nil {
-		fields["total"] = ival
+		fields := map[string]interface{}{"total": ival}
+		acc.AddFields("redis_errorstat", fields, tags)
 	}
-
-	acc.AddFields("redis_errorstat", fields, tags)
 }
 
 func init() {
