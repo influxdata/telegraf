@@ -37,9 +37,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## name    - field name
     ## address - indirect address "<area>.<type><address>[.length]"
     ##           area    - e.g. be "DB1" for data-block one
-    ##           type    - supported types are
+    ##           type    - supported types are (uppercase)
     ##                     X  -- bit with <address>.<bit>
     ##                     B  -- byte (8 bit)
+    ##                     C  -- character (8 bit)
     ##                     W  -- word (16 bit)
     ##                     DW -- double word (32 bit)
     ##                     I  -- integer (16 bit)
