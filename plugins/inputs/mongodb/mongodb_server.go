@@ -112,7 +112,7 @@ func (s *Server) gatherTopStatData() (*TopStats, error) {
 
 	recorded, err := bson.Marshal(totals)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to marshal totals")
+		return nil, fmt.Errorf("unable to marshal totals")
 	}
 
 	topInfo := make(map[string]TopStatCollection)
