@@ -93,28 +93,31 @@ func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 }
 
 func (s *Server) gatherTopStatData() (*TopStats, error) {
-	var dest bson.M
+	var dest map[string]interface{}
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "top",
 			Value: 1,
 		},
-	}, dest)
+	}, &dest)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed running admin cmd: %w", err)
 	}
 
-	totals, ok := dest["totals"]
+	totals, ok := dest["totals"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Unable to find totals")
+		return nil, fmt.Errorf("Collection totals not found or not a map")
 	}
+	delete(totals, "note")
+
 	recorded, err := bson.Marshal(totals)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to marshal totals")
 	}
+
 	topInfo := make(map[string]TopStatCollection)
 	if err := bson.Unmarshal(recorded, &topInfo); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed unmarshalling records: %w", err)
 	}
 
 	return &TopStats{Totals: topInfo}, nil
