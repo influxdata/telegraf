@@ -164,10 +164,12 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
     - lag(int, number)
     - offset(int, number)
 
-- redis_errorstat_total
+- redis_errorstat
   - tags:
-    - err(int, number)
-
+    - err
+  - fields:
+    - total (int, number)
+  
 ### Tags
 
 - All measurements have the following tags:
