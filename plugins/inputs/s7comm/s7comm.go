@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"hash/maphash"
 	"log" //nolint:depguard // Required for tracing connection issues
 	"os"
 	"regexp"
@@ -177,6 +178,8 @@ func (s *S7comm) Gather(acc telegraf.Accumulator) error {
 
 // Internal functions
 func (s *S7comm) createRequests() error {
+	seed := maphash.MakeSeed()
+	seenFields := make(map[uint64]bool)
 	s.batches = make([]batch, 0)
 
 	current := batch{}
@@ -215,6 +218,17 @@ func (s *S7comm) createRequests() error {
 				s.batches = append(s.batches, current)
 				current = batch{}
 			}
+
+			// Check for duplicate field definitions
+			id, err := fieldID(seed, cfg, f)
+			if err != nil {
+				return fmt.Errorf("cannot determine field id for %q: %w", f.Name, err)
+			}
+			if seenFields[id] {
+				return fmt.Errorf("duplicate field definition field %q in metric %q", f.Name, cfg.Name)
+			}
+			seenFields[id] = true
+
 		}
 
 		// Update the configuration if changed
@@ -333,6 +347,45 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	// Determine the type converter function
 	f := determineConversion(dtype, extra)
 	return item, f, nil
+}
+
+func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) (uint64, error) {
+	var mh maphash.Hash
+	mh.SetSeed(seed)
+
+	if _, err := mh.WriteString(def.Name); err != nil {
+		return 0, err
+	}
+	if err := mh.WriteByte(0); err != nil {
+		return 0, err
+	}
+	if _, err := mh.WriteString(field.Name); err != nil {
+		return 0, err
+	}
+	if err := mh.WriteByte(0); err != nil {
+		return 0, err
+	}
+
+	// Tags
+	for k, v := range def.Tags {
+		if _, err := mh.WriteString(k); err != nil {
+			return 0, err
+		}
+		if err := mh.WriteByte('='); err != nil {
+			return 0, err
+		}
+		if _, err := mh.WriteString(v); err != nil {
+			return 0, err
+		}
+		if err := mh.WriteByte(':'); err != nil {
+			return 0, err
+		}
+	}
+	if err := mh.WriteByte(0); err != nil {
+		return 0, err
+	}
+
+	return mh.Sum64(), nil
 }
 
 // Add this plugin to telegraf

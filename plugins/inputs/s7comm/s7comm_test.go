@@ -524,7 +524,8 @@ func TestFieldMappings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &S7comm{
 				Server:  "127.0.0.1:102",
-				Slot:    0,
+				Rack:    0,
+				Slot:    2,
 				Configs: tt.configs,
 				Log:     &testutil.Logger{},
 			}
@@ -545,6 +546,119 @@ func TestFieldMappings(t *testing.T) {
 					buf := ab.items[j].Data
 					require.Equal(t, em.convert(buf), am.convert(buf))
 				}
+			}
+		})
+	}
+}
+
+func TestMetricCollisions(t *testing.T) {
+	tests := []struct {
+		name          string
+		configs       []metricDefinition
+		expectedError string
+	}{
+		{
+			name: "duplicate fields same config",
+			configs: []metricDefinition{
+				{
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.W1",
+						},
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+				},
+			},
+			expectedError: "duplicate field definition",
+		},
+		{
+			name: "duplicate fields different config",
+			configs: []metricDefinition{
+				{
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+				},
+				{
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+				},
+			},
+			expectedError: "duplicate field definition",
+		},
+		{
+			name: "same fields different name",
+			configs: []metricDefinition{
+				{
+					Name: "foo",
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+				},
+				{
+					Name: "bar",
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "same fields different tags",
+			configs: []metricDefinition{
+				{
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+					Tags: map[string]string{"device": "foo"},
+				},
+				{
+					Name: "bar",
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB1.B1",
+						},
+					},
+					Tags: map[string]string{"device": "bar"},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &S7comm{
+				Server:  "127.0.0.1:102",
+				Rack:    0,
+				Slot:    2,
+				Configs: tt.configs,
+				Log:     &testutil.Logger{},
+			}
+			err := plugin.Init()
+			if tt.expectedError != "" {
+				require.ErrorContains(t, err, tt.expectedError)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
