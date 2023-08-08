@@ -34,7 +34,7 @@ func (s *Serializer) Init() error {
 		s.Format = "oi"
 	case "oi", "jsonv2":
 	default:
-		return fmt.Errorf("Invalid root option %q, use either array or object", s.Format)
+		return fmt.Errorf("invalid format %q", s.Format)
 	}
 
 	return nil
