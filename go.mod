@@ -90,7 +90,7 @@ require (
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.3.0
 	github.com/gopcua/opcua v0.4.0
-	github.com/gophercloud/gophercloud v1.2.0
+	github.com/gophercloud/gophercloud v1.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/gosnmp/gosnmp v1.35.1-0.20230602062452-f30602b8dad6
