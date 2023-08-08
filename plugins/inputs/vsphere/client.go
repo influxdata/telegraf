@@ -167,6 +167,15 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		}
 	}
 
+	// Set the proxy dependent on the settings
+	proxy, err := vs.HTTPProxy.Proxy()
+	if err != nil {
+		return nil, fmt.Errorf("creating proxy failed: %w", err)
+	}
+	transport := soapClient.DefaultTransport()
+	transport.Proxy = proxy
+	soapClient.Client.Transport = transport
+
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(vs.Timeout))
 	defer cancel1()
 	vimClient, err := vim25.NewClient(ctx1, soapClient)

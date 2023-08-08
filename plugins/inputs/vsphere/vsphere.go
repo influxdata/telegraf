@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -22,66 +23,65 @@ var sampleConfig string
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
 type VSphere struct {
-	Vcenters                    []string
-	Username                    config.Secret `toml:"username"`
-	Password                    config.Secret `toml:"password"`
-	DatacenterInstances         bool
-	DatacenterMetricInclude     []string
-	DatacenterMetricExclude     []string
-	DatacenterInclude           []string
-	DatacenterExclude           []string
-	ClusterInstances            bool
-	ClusterMetricInclude        []string
-	ClusterMetricExclude        []string
-	ClusterInclude              []string
-	ClusterExclude              []string
-	ResourcePoolInstances       bool
-	ResourcePoolMetricInclude   []string
-	ResourcePoolMetricExclude   []string
-	ResourcePoolInclude         []string
-	ResourcePoolExclude         []string
-	HostInstances               bool
-	HostMetricInclude           []string
-	HostMetricExclude           []string
-	HostInclude                 []string
-	HostExclude                 []string
-	VMInstances                 bool     `toml:"vm_instances"`
-	VMMetricInclude             []string `toml:"vm_metric_include"`
-	VMMetricExclude             []string `toml:"vm_metric_exclude"`
-	VMInclude                   []string `toml:"vm_include"`
-	VMExclude                   []string `toml:"vm_exclude"`
-	DatastoreInstances          bool
-	DatastoreMetricInclude      []string
-	DatastoreMetricExclude      []string
-	DatastoreInclude            []string
-	DatastoreExclude            []string
-	VSANMetricInclude           []string `toml:"vsan_metric_include"`
-	VSANMetricExclude           []string `toml:"vsan_metric_exclude"`
-	VSANMetricSkipVerify        bool     `toml:"vsan_metric_skip_verify"`
-	VSANClusterInclude          []string `toml:"vsan_cluster_include"`
-	Separator                   string
-	CustomAttributeInclude      []string
-	CustomAttributeExclude      []string
-	UseIntSamples               bool
-	IPAddresses                 []string
-	MetricLookback              int
-	DisconnectedServersBehavior string
-	MaxQueryObjects             int
-	MaxQueryMetrics             int
-	CollectConcurrency          int
-	DiscoverConcurrency         int
-	ForceDiscoverOnInit         bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
-	ObjectDiscoveryInterval     config.Duration
-	Timeout                     config.Duration
-	HistoricalInterval          config.Duration
+	Vcenters                    []string        `toml:"vcenters"`
+	Username                    config.Secret   `toml:"username"`
+	Password                    config.Secret   `toml:"password"`
+	DatacenterInstances         bool            `toml:"datacenter_instances"`
+	DatacenterMetricInclude     []string        `toml:"datacenter_metric_include"`
+	DatacenterMetricExclude     []string        `toml:"datacenter_metric_exclude"`
+	DatacenterInclude           []string        `toml:"datacenter_include"`
+	DatacenterExclude           []string        `toml:"datacenter_exclude"`
+	ClusterInstances            bool            `toml:"cluster_instances"`
+	ClusterMetricInclude        []string        `toml:"cluster_metric_include"`
+	ClusterMetricExclude        []string        `toml:"cluster_metric_exclude"`
+	ClusterInclude              []string        `toml:"cluster_include"`
+	ClusterExclude              []string        `toml:"cluster_exclude"`
+	ResourcePoolInstances       bool            `toml:"resource_pool_instances"`
+	ResourcePoolMetricInclude   []string        `toml:"resource_pool_metric_include"`
+	ResourcePoolMetricExclude   []string        `toml:"resource_pool_metric_exclude"`
+	ResourcePoolInclude         []string        `toml:"resource_pool_include"`
+	ResourcePoolExclude         []string        `toml:"resource_pool_exclude"`
+	HostInstances               bool            `toml:"host_instances"`
+	HostMetricInclude           []string        `toml:"host_metric_include"`
+	HostMetricExclude           []string        `toml:"host_metric_exclude"`
+	HostInclude                 []string        `toml:"host_include"`
+	HostExclude                 []string        `toml:"host_exclude"`
+	VMInstances                 bool            `toml:"vm_instances"`
+	VMMetricInclude             []string        `toml:"vm_metric_include"`
+	VMMetricExclude             []string        `toml:"vm_metric_exclude"`
+	VMInclude                   []string        `toml:"vm_include"`
+	VMExclude                   []string        `toml:"vm_exclude"`
+	DatastoreInstances          bool            `toml:"datastore_instances"`
+	DatastoreMetricInclude      []string        `toml:"datastore_metric_include"`
+	DatastoreMetricExclude      []string        `toml:"datastore_metric_exclude"`
+	DatastoreInclude            []string        `toml:"datastore_include"`
+	DatastoreExclude            []string        `toml:"datastore_exclude"`
+	VSANMetricInclude           []string        `toml:"vsan_metric_include"`
+	VSANMetricExclude           []string        `toml:"vsan_metric_exclude"`
+	VSANMetricSkipVerify        bool            `toml:"vsan_metric_skip_verify"`
+	VSANClusterInclude          []string        `toml:"vsan_cluster_include"`
+	Separator                   string          `toml:"separator"`
+	CustomAttributeInclude      []string        `toml:"custom_attribute_include"`
+	CustomAttributeExclude      []string        `toml:"custom_attribute_exclude"`
+	UseIntSamples               bool            `toml:"use_int_samples"`
+	IPAddresses                 []string        `toml:"ip_addresses"`
+	MetricLookback              int             `toml:"metric_lookback"`
+	DisconnectedServersBehavior string          `toml:"disconnected_servers_behavior"`
+	MaxQueryObjects             int             `toml:"max_query_objects"`
+	MaxQueryMetrics             int             `toml:"max_query_metrics"`
+	CollectConcurrency          int             `toml:"collect_concurrency"`
+	DiscoverConcurrency         int             `toml:"discover_concurrency"`
+	ForceDiscoverOnInit         bool            `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
+	ObjectDiscoveryInterval     config.Duration `toml:"object_discovery_interval"`
+	Timeout                     config.Duration `toml:"timeout"`
+	HistoricalInterval          config.Duration `toml:"historical_interval"`
+	Log                         telegraf.Logger `toml:"-"`
+
+	tls.ClientConfig // Mix in the TLS/SSL goodness from core
+	proxy.HTTPProxy
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
-
-	// Mix in the TLS/SSL goodness from core
-	tls.ClientConfig
-
-	Log telegraf.Logger
 }
 
 func (*VSphere) SampleConfig() string {
@@ -158,40 +158,19 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters:                    []string{},
-			DatacenterInstances:         false,
-			DatacenterMetricInclude:     nil,
-			DatacenterMetricExclude:     nil,
 			DatacenterInclude:           []string{"/*"},
-			ClusterInstances:            false,
-			ClusterMetricInclude:        nil,
-			ClusterMetricExclude:        nil,
 			ClusterInclude:              []string{"/*/host/**"},
 			HostInstances:               true,
-			HostMetricInclude:           nil,
-			HostMetricExclude:           nil,
 			HostInclude:                 []string{"/*/host/**"},
-			ResourcePoolInstances:       false,
-			ResourcePoolMetricInclude:   nil,
-			ResourcePoolMetricExclude:   nil,
 			ResourcePoolInclude:         []string{"/*/host/**"},
 			VMInstances:                 true,
-			VMMetricInclude:             nil,
-			VMMetricExclude:             nil,
 			VMInclude:                   []string{"/*/vm/**"},
-			DatastoreInstances:          false,
-			DatastoreMetricInclude:      nil,
-			DatastoreMetricExclude:      nil,
 			DatastoreInclude:            []string{"/*/datastore/**"},
-			VSANMetricInclude:           nil,
 			VSANMetricExclude:           []string{"*"},
-			VSANMetricSkipVerify:        false,
 			VSANClusterInclude:          []string{"/*/host/**"},
 			Separator:                   "_",
-			CustomAttributeInclude:      []string{},
 			CustomAttributeExclude:      []string{"*"},
 			UseIntSamples:               true,
-			IPAddresses:                 []string{},
 			MaxQueryObjects:             256,
 			MaxQueryMetrics:             256,
 			CollectConcurrency:          1,
@@ -202,6 +181,7 @@ func init() {
 			Timeout:                     config.Duration(time.Second * 60),
 			HistoricalInterval:          config.Duration(time.Second * 300),
 			DisconnectedServersBehavior: "error",
+			HTTPProxy:                   proxy.HTTPProxy{UseSystemProxy: true},
 		}
 	})
 }

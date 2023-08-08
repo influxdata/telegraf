@@ -247,6 +247,10 @@ to use them.
   ##   - error: telegraf will return an error on startup if one the servers is unreachable
   ##   - ignore: telegraf will ignore unreachable servers on both startup and gather
   # disconnected_servers_behavior = "error"
+
+  ## HTTP Proxy support
+  # use_system_proxy = true
+  # http_proxy_url = ""
 ```
 
 NOTE: To disable collection of a specific resource type, simply exclude all
