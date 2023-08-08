@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 
 	"github.com/influxdata/telegraf"
 )
@@ -94,7 +93,7 @@ func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 }
 
 func (s *Server) gatherTopStatData() (*TopStats, error) {
-	dest := &bsonx.Doc{}
+	var dest bson.M
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "top",
@@ -105,19 +104,16 @@ func (s *Server) gatherTopStatData() (*TopStats, error) {
 		return nil, err
 	}
 
-	// From: https://github.com/mongodb/mongo-tools/blob/master/mongotop/mongotop.go#L49-L70
-	// Remove 'note' field that prevents easy decoding, then round-trip
-	// again to simplify unpacking into the nested data structure
-	totals, err := dest.LookupErr("totals")
-	if err != nil {
-		return nil, err
+	totals, ok := dest["totals"]
+	if !ok {
+		return nil, fmt.Errorf("Unable to find totals")
 	}
-	recoded, err := totals.Document().Delete("note").MarshalBSON()
+	recorded, err := bson.Marshal(totals)
 	if err != nil {
 		return nil, err
 	}
 	topInfo := make(map[string]TopStatCollection)
-	if err := bson.Unmarshal(recoded, &topInfo); err != nil {
+	if err := bson.Unmarshal(recorded, &topInfo); err != nil {
 		return nil, err
 	}
 
