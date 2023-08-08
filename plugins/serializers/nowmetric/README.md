@@ -87,7 +87,7 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
   ## Now Metric Operational Intelligence format or with the option set to 'oi'.
   ## Optionally, if set to 'jsonv2' the output format will involve the newer
   ## JSON object based format.
-  nowmetric_format = "oi"
+  # nowmetric_format = "oi"
 
   ## Additional HTTP headers
   [outputs.http.headers]
