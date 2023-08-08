@@ -19,6 +19,10 @@ func determineConversion(dtype string, extra int) converterFunc {
 		return func(buf []byte) interface{} {
 			return buf[0]
 		}
+	case "C":
+		return func(buf []byte) interface{} {
+			return string(buf[0])
+		}
 	case "S":
 		return func(buf []byte) interface{} {
 			if len(buf) <= 2 {

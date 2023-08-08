@@ -310,6 +310,41 @@ func TestFieldMappings(t *testing.T) {
 			},
 		},
 		{
+			name: "single field char",
+			configs: []metricDefinition{
+				{
+					Name: "test",
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB5.C3",
+						},
+					},
+				},
+			},
+			expected: []batch{
+				{
+					items: []gos7.S7DataItem{
+						{
+							Area:     0x84,
+							WordLen:  0x03,
+							DBNumber: 5,
+							Start:    3,
+							Amount:   1,
+							Data:     make([]byte, 1),
+						},
+					},
+					mappings: []fieldMapping{
+						{
+							measurement: "test",
+							field:       "foo",
+							convert:     func(b []byte) interface{} { return string([]byte{0}) },
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "single field string",
 			configs: []metricDefinition{
 				{

@@ -41,7 +41,8 @@ var (
 	wordLenMap = map[string]int{
 		"X":  0x01, // Bit
 		"B":  0x02, // Byte (8 bit)
-		"S":  0x03, // Char (8 bit)
+		"C":  0x03, // Char (8 bit)
+		"S":  0x03, // String (8 bit)
 		"W":  0x04, // Word (16 bit)
 		"I":  0x05, // Integer (16 bit)
 		"DW": 0x06, // Double Word (32 bit)
@@ -319,9 +320,9 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	amount := 1
 	var buflen int
 	switch dtype {
-	case "X", "B": // 8-bit types
+	case "X", "B", "C": // 8-bit types
 		buflen = 1
-	case "W", "I", "C", "T": // 16-bit types
+	case "W", "I": // 16-bit types
 		buflen = 2
 	case "DW", "DI", "R": // 32-bit types
 		buflen = 4
