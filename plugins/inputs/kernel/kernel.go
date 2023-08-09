@@ -112,28 +112,19 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if k.optCollect["ksm"] {
-		stats := map[string]interface{}{
-			"full_scans":                         0,
-			"max_page_sharing":                   0,
-			"merge_across_nodes":                 0,
-			"pages_shared":                       0,
-			"pages_sharing":                      0,
-			"pages_to_scan":                      0,
-			"pages_unshared":                     0,
-			"pages_volatile":                     0,
-			"run":                                0,
-			"sleep_millisecs":                    0,
-			"stable_node_chains":                 0,
-			"stable_node_chains_prune_millisecs": 0,
-			"stable_node_dups":                   0,
-			"use_zero_pages":                     0,
+		stats := []string{
+			"full_scans", "max_page_sharing",
+			"merge_across_nodes", "pages_shared",
+			"pages_sharing", "pages_to_scan",
+			"pages_unshared", "pages_volatile",
+			"run", "sleep_millisecs",
+			"stable_node_chains", "stable_node_chains_prune_millisecs",
+			"stable_node_dups", "use_zero_pages",
 		}
 		// these exist in very recent Linux versions only, but useful to include if there.
-		extraStats := map[string]interface{}{
-			"general_profit": 0,
-		}
+		extraStats := []string{"general_profit"}
 
-		for f := range stats {
+		for _, f := range stats {
 			m, err := k.getProcValueInt(filepath.Join(k.ksmStatsDir, f))
 			if err != nil {
 				return err
@@ -142,7 +133,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 			fields["ksm_"+f] = m
 		}
 
-		for f := range extraStats {
+		for _, f := range extraStats {
 			m, err := k.getProcValueInt(filepath.Join(k.ksmStatsDir, f))
 			if err != nil {
 				// if an extraStats metric doesn't exist in our kernel version, ignore it.
