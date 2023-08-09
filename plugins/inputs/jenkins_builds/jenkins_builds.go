@@ -178,12 +178,17 @@ func (j *JenkinsBuilds) processJobs(job JobInfo, acc telegraf.Accumulator) {
 	cutoff := time.Now().Add(-time.Hour * time.Duration(j.MaxBuildAge))
 	for _, build := range builds {
 		buildInfo, err := j.client.getBuildInfo(job.Base, build.Number)
+
 		if err != nil {
 			continue
 		}
 
 		if buildInfo == nil || buildInfo.GetTimestamp().Before(cutoff) || buildInfo.Building {
 			continue
+		}
+
+		if strings.Contains(buildInfo.Class, "org.jenkinsci.plugins.workflow.job.WorkflowRun") {
+			buildInfo.BuilderAllocationDuration = j.client.getNodeAllocationDuration(job.Base, build.Number)
 		}
 
 		j.gatherJobBuild(job, buildInfo, acc)
@@ -206,6 +211,7 @@ func (j *JenkinsBuilds) gatherJobBuild(job JobInfo, buildInfo *BuildInfo, acc te
 	fields["result_code"] = mapResultCode(buildInfo.Result)
 	fields["number"] = buildInfo.Number
 	fields["estimated_duration"] = buildInfo.EstimatedDuration
+	fields["builder_allocation_duration"] = buildInfo.BuilderAllocationDuration
 
 	for _, action := range buildInfo.Actions {
 		if "jenkins.metrics.impl.TimeInQueueAction" == action.Class {

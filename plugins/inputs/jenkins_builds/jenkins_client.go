@@ -12,14 +12,20 @@ import (
 )
 
 type BuildInfo struct {
-	Building          bool     `json:"building"`
-	Duration          float64  `json:"duration"`
-	EstimatedDuration float64  `json:"estimatedDuration"`
-	Number            int64    `json:"number"`
-	Result            string   `json:"result"`
-	Timestamp         int64    `json:"timestamp"`
-	URL               string   `json:"url"`
-	Actions           []Action `json:"actions"`
+	Class                     string   `json:"_class"`
+	Building                  bool     `json:"building"`
+	Duration                  float64  `json:"duration"`
+	EstimatedDuration         float64  `json:"estimatedDuration"`
+	Number                    int64    `json:"number"`
+	Result                    string   `json:"result"`
+	Timestamp                 int64    `json:"timestamp"`
+	URL                       string   `json:"url"`
+	Actions                   []Action `json:"actions"`
+	BuilderAllocationDuration float64
+}
+
+type BuilderAllocation struct {
+	Duration float64 `json:"durationMillis"`
 }
 
 type Action struct {
@@ -247,6 +253,16 @@ func (jc *JenkinsClient) getExecutorsInfo() (total int, busy int, err error) {
 	}
 
 	return computers.TotalExecutors, computers.BusyExecutors, nil
+}
+
+func (jc *JenkinsClient) getNodeAllocationDuration(base string, id int64) float64 {
+	nodeAllocation := new(BuilderAllocation)
+	url := base + "/" + fmt.Sprintf("%d", id) + "/execution/node/3/wfapi/describe"
+	err := jc.doGet(url, nodeAllocation)
+	if err != nil {
+		return 0
+	}
+	return nodeAllocation.Duration
 }
 
 func (jc *JenkinsClient) getServer() string {
