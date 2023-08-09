@@ -170,7 +170,7 @@ func (s *S7comm) Gather(acc telegraf.Accumulator) error {
 			// Convert the data
 			buf := b.items[j].Data
 			value := m.convert(buf)
-			s.Log.Debugf("  got %v for field %q @ %d (%T)--> %v (%T)", buf, m.field, b.items[j].Start, value, value)
+			s.Log.Debugf("  got %v for field %q @ %d --> %v (%T)", buf, m.field, b.items[j].Start, value, value)
 
 			// Group the data by series
 			grouper.Add(m.measurement, m.tags, timestamp, m.field, value)
