@@ -257,6 +257,18 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			// do some heuristics to know which one to use for queries. This
 			// only occurs when using the official name format.
 			if s.MetricNameFormat == "official" && strings.HasSuffix(timeSeries.Metric.Type, "unknown") {
+				metricKind := metricpb.MetricDescriptor_CUMULATIVE
+				startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
+				timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, endTime)
+				if err != nil {
+					s.Log.Errorf("Get time interval failed: %s", err)
+					continue
+				}
+				dataPoint := &monitoringpb.Point{
+					Interval: timeInterval,
+					Value:    value,
+				}
+
 				counterTimeSeries := &monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
 						Type:   s.generateMetricName(m, f.Key) + ":counter",
@@ -358,7 +370,10 @@ func getStackdriverIntervalEndpoints(
 	f *telegraf.Field,
 	cc *counterCache,
 ) (*timestamppb.Timestamp, *timestamppb.Timestamp) {
+	fmt.Println(kind)
+	fmt.Printf("metric timestamp: %s\n", m.Time())
 	endTime := timestamppb.New(m.Time())
+	fmt.Printf("generated end time: %s\n", endTime.String())
 	var startTime *timestamppb.Timestamp
 	if kind == metricpb.MetricDescriptor_CUMULATIVE {
 		// Interval starts for stackdriver CUMULATIVE metrics must reset any time
@@ -366,6 +381,10 @@ func getStackdriverIntervalEndpoints(
 		// observed values for each counter in the batch.
 		startTime = cc.GetStartTime(GetCounterCacheKey(m, f), value, endTime)
 	}
+
+	fmt.Printf("startTime: %s\n", startTime.String())
+	fmt.Printf("endTime:   %s\n", endTime.String())
+	fmt.Println()
 	return startTime, endTime
 }
 
