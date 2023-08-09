@@ -37,10 +37,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## Field definitions
     ## name    - field name
-    ## address - indirect address "<area>.<type><address>[.length]"
+    ## address - indirect address "<area>.<type><address>[.extra]"
     ##           area    - e.g. be "DB1" for data-block one
     ##           type    - supported types are (uppercase)
-    ##                     X  -- bit with <address>.<bit>
+    ##                     X  -- bit, requires the bit-number as 'extra'
+    ##                           parameter
     ##                     B  -- byte (8 bit)
     ##                     C  -- character (8 bit)
     ##                     W  -- word (16 bit)
@@ -50,10 +51,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                     R  -- IEEE 754 real floating point number (32 bit)
     ##                     DT -- date-time, always converted to unix timestamp
     ##                           with nano-second precision
-    ##                     S  -- string, requires "length"
+    ##                     S  -- string, requires the maximum length of the
+    ##                           string as 'extra' parameter
     ##           address - start address to read if not specified otherwise
     ##                     in the type field
-    ##           length  - array length required for the string data-type
+    ##           extra   - extra parameter e.g. for the bit and string type
     fields = [
       { name="rpm",             address="DB1.R4"    },
       { name="status_ok",       address="DB1.X2.1"  },
