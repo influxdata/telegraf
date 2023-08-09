@@ -31,6 +31,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## System Id to collect data for in Redfish APIs.
   computer_system_id="System.Embedded.1"
 
+  ## Tag sets allow you to include redfish OData link parent data, default set shown below
+  ## For Example.
+  ## Thermal data is an OData link with parent Chassis which has a link of Location.
+  ## For more info see the Redfish Resource and Schema Guide at DMTFs website.
+  # include_tag_sets = ["chassis.location"]
+
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
 
@@ -50,19 +56,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - member_id
     - address
     - name
-    - chassis_chassistype
-    - chassis_manufacturer
-    - chassis_model
-    - chassis_partnumber
-    - chassis_powerstate
-    - chassis_sku
-    - chassis_serialnumber
-    - chassis_state
-    - chassis_health
-    - datacenter (available only if location data is found)
-    - rack (available only if location data is found)
-    - room (available only if location data is found)
-    - row (available only if location data is found)
     - state
     - health
   - fields:
@@ -78,19 +71,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - member_id
     - address
     - name
-    - chassis_chassistype
-    - chassis_manufacturer
-    - chassis_model
-    - chassis_partnumber
-    - chassis_powerstate
-    - chassis_sku
-    - chassis_serialnumber
-    - chassis_state
-    - chassis_health
-    - datacenter (available only if location data is found)
-    - rack (available only if location data is found)
-    - room (available only if location data is found)
-    - row (available only if location data is found)
     - state
     - health
   - fields:
@@ -103,22 +83,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - redfish_power_powersupplies
   - tags:
     - source
-    - address
     - member_id
+    - address
     - name
-    - chassis_chassistype
-    - chassis_manufacturer
-    - chassis_model
-    - chassis_partnumber
-    - chassis_powerstate
-    - chassis_sku
-    - chassis_serialnumber
-    - chassis_state
-    - chassis_health
-    - datacenter (available only if location data is found)
-    - rack (available only if location data is found)
-    - room (available only if location data is found)
-    - row (available only if location data is found)
     - state
     - health
   - fields:
@@ -131,9 +98,30 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - redfish_power_voltages (available only if voltage data is found)
   - tags:
     - source
-    - address
     - member_id
+    - address
     - name
+    - state
+    - health
+  - fields:
+    - reading_volts
+    - upper_threshold_critical
+    - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
+
+
+## Tag Sets
+
+- chassis.location
+  - tags:
+    - datacenter (available only if location data is found)
+    - rack (available only if location data is found)
+    - room (available only if location data is found)
+    - row (available only if location data is found)
+
+- chassis
+  - tags:
     - chassis_chassistype
     - chassis_manufacturer
     - chassis_model
@@ -143,18 +131,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - chassis_serialnumber
     - chassis_state
     - chassis_health
-    - datacenter (available only if location data is found)
-    - rack (available only if location data is found)
-    - room (available only if location data is found)
-    - row (available only if location data is found)
-    - state
-    - health
-  - fields:
-    - reading_volts
-    - upper_threshold_critical
-    - upper_threshold_fatal
-    - lower_threshold_critical
-    - lower_threshold_fatal
+
 
 ## Example Output
 

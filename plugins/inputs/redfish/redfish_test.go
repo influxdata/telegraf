@@ -46,25 +46,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":                 "CPU1 Temp",
-				"member_id":            "iDRAC.Embedded.1#CPU1Temp",
-				"source":               "tpa-hostname",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"name":       "CPU1 Temp",
+				"member_id":  "iDRAC.Embedded.1#CPU1Temp",
+				"source":     "tpa-hostname",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 3.0,
@@ -78,25 +69,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan1A",
-				"member_id":            "0x17||Fan.Embedded.1A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan1A",
+				"member_id":  "0x17||Fan.Embedded.1A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"reading_rpm":              17760,
@@ -108,25 +90,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan1B",
-				"member_id":            "0x17||Fan.Embedded.1B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan1B",
+				"member_id":  "0x17||Fan.Embedded.1B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -138,25 +111,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan2A",
-				"member_id":            "0x17||Fan.Embedded.2A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan2A",
+				"member_id":  "0x17||Fan.Embedded.2A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -168,25 +132,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan2B",
-				"member_id":            "0x17||Fan.Embedded.2B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan2B",
+				"member_id":  "0x17||Fan.Embedded.2B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -198,25 +153,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan3A",
-				"member_id":            "0x17||Fan.Embedded.3A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan3A",
+				"member_id":  "0x17||Fan.Embedded.3A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -228,25 +174,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan3B",
-				"member_id":            "0x17||Fan.Embedded.3B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan3B",
+				"member_id":  "0x17||Fan.Embedded.3B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -258,25 +195,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan4A",
-				"member_id":            "0x17||Fan.Embedded.4A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan4A",
+				"member_id":  "0x17||Fan.Embedded.4A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -288,25 +216,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan4B",
-				"member_id":            "0x17||Fan.Embedded.4B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan4B",
+				"member_id":  "0x17||Fan.Embedded.4B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -318,25 +237,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan5A",
-				"member_id":            "0x17||Fan.Embedded.5A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan5A",
+				"member_id":  "0x17||Fan.Embedded.5A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -348,25 +258,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan5B",
-				"member_id":            "0x17||Fan.Embedded.5B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan5B",
+				"member_id":  "0x17||Fan.Embedded.5B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -378,25 +279,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan6A",
-				"member_id":            "0x17||Fan.Embedded.6A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan6A",
+				"member_id":  "0x17||Fan.Embedded.6A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -408,25 +300,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan6B",
-				"member_id":            "0x17||Fan.Embedded.6B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan6B",
+				"member_id":  "0x17||Fan.Embedded.6B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -438,25 +321,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan7A",
-				"member_id":            "0x17||Fan.Embedded.7A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan7A",
+				"member_id":  "0x17||Fan.Embedded.7A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -468,25 +342,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan7B",
-				"member_id":            "0x17||Fan.Embedded.7B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan7B",
+				"member_id":  "0x17||Fan.Embedded.7B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -498,25 +363,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan8A",
-				"member_id":            "0x17||Fan.Embedded.8A",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan8A",
+				"member_id":  "0x17||Fan.Embedded.8A",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -528,25 +384,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board Fan8B",
-				"member_id":            "0x17||Fan.Embedded.8B",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan8B",
+				"member_id":  "0x17||Fan.Embedded.8B",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -558,23 +405,14 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_powercontrol",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Power Control",
-				"member_id":            "PowerControl",
-				"address":              address,
-				"datacenter":           "",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Power Control",
+				"member_id":  "PowerControl",
+				"address":    address,
+				"datacenter": "",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
 			},
 			map[string]interface{}{
 				"average_consumed_watts": 426.0,
@@ -592,25 +430,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "PS1 Status",
-				"member_id":            "PSU.Slot.1",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "PS1 Status",
+				"member_id":  "PSU.Slot.1",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"power_capacity_watts": 750.00,
@@ -623,25 +452,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_voltages",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board DIMM PG",
-				"member_id":            "iDRAC.Embedded.1#SystemBoardDIMMPG",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board DIMM PG",
+				"member_id":  "iDRAC.Embedded.1#SystemBoardDIMMPG",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"reading_volts": 1.0,
@@ -651,25 +471,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_voltages",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board NDC PG",
-				"member_id":            "iDRAC.Embedded.1#SystemBoardNDCPG",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board NDC PG",
+				"member_id":  "iDRAC.Embedded.1#SystemBoardNDCPG",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"reading_volts": 1.0,
@@ -680,25 +491,16 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_voltages",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "System Board PS1 PG FAIL",
-				"member_id":            "iDRAC.Embedded.1#SystemBoardPS1PGFAIL",
-				"address":              address,
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"chassis_chassistype":  "RackMount",
-				"chassis_manufacturer": "Dell Inc.",
-				"chassis_model":        "PowerEdge R640",
-				"chassis_partnumber":   "0CRT1GA05",
-				"chassis_powerstate":   "On",
-				"chassis_sku":          "CLFV7M2",
-				"chassis_serialnumber": "CNIVC007CV0803",
-				"chassis_state":        "Enabled",
-				"chassis_health":       "OK",
+				"source":     "tpa-hostname",
+				"name":       "System Board PS1 PG FAIL",
+				"member_id":  "iDRAC.Embedded.1#SystemBoardPS1PGFAIL",
+				"address":    address,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
 			},
 			map[string]interface{}{
 				"reading_volts": 1.0,
@@ -723,6 +525,395 @@ func TestDellApis(t *testing.T) {
 }
 
 func TestHPApis(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/Chassis/1/Thermal":
+			http.ServeFile(w, r, "testdata/hp_thermal.json")
+		case "/redfish/v1/Chassis/1/Power":
+			http.ServeFile(w, r, "testdata/hp_power.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp_systems.json")
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp_chassis.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
+	expectedMetricsHp := []telegraf.Metric{
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "01-Inlet Ambient",
+				"member_id": "0",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          19.0,
+				"upper_threshold_critical": 42.0,
+				"upper_threshold_fatal":    47.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "44-P/S 2 Zone",
+				"source":    "tpa-hostname",
+				"member_id": "42",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          34.0,
+				"upper_threshold_critical": 75.0,
+				"upper_threshold_fatal":    80.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "Fan 1",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "Fan 2",
+				"member_id": "1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "Fan 3",
+				"member_id": "2",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powercontrol",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "",
+				"member_id": "0",
+				"address":   address,
+			},
+			map[string]interface{}{
+				"average_consumed_watts": 221.0,
+				"interval_in_min":        int64(20),
+				"max_consumed_watts":     252.0,
+				"min_consumed_watts":     220.0,
+				"power_capacity_watts":   1600.0,
+				"power_consumed_watts":   221.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powersupplies",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "HpeServerPowerSupply",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"power_capacity_watts":    800.0,
+				"line_input_voltage":      205.0,
+				"last_power_output_watts": 0.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powersupplies",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "HpeServerPowerSupply",
+				"member_id": "1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"power_capacity_watts":    800.0,
+				"line_input_voltage":      205.0,
+				"last_power_output_watts": 90.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	hpPlugin := &Redfish{
+		Address:          ts.URL,
+		Username:         "test",
+		Password:         "test",
+		ComputerSystemID: "1",
+	}
+	require.NoError(t, hpPlugin.Init())
+	var hpAcc testutil.Accumulator
+
+	err = hpPlugin.Gather(&hpAcc)
+	require.NoError(t, err)
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
+}
+
+func checkAuth(r *http.Request, username, password string) bool {
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		return false
+	}
+	return user == username && pass == password
+}
+
+func TestInvalidUsernameorPassword(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "testing", "testing") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
+			http.ServeFile(w, r, "testdata/dell_thermal.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	r := &Redfish{
+		Address:          ts.URL,
+		Username:         "test",
+		Password:         "test",
+		ComputerSystemID: "System.Embedded.1",
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, r.Init())
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+", expected 200")
+}
+func TestNoUsernameorPasswordConfiguration(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "testing", "testing") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
+			http.ServeFile(w, r, "testdata/dell_thermal.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	r := &Redfish{
+		Address:          ts.URL,
+		ComputerSystemID: "System.Embedded.1",
+	}
+
+	err := r.Init()
+	require.Error(t, err)
+	require.EqualError(t, err, "did not provide username and password")
+}
+
+func TestInvalidDellJSON(t *testing.T) {
+	tests := []struct {
+		name             string
+		thermalfilename  string
+		powerfilename    string
+		chassisfilename  string
+		hostnamefilename string
+	}{
+		{
+			name:             "check Thermal",
+			thermalfilename:  "testdata/dell_thermalinvalid.json",
+			powerfilename:    "testdata/dell_power.json",
+			chassisfilename:  "testdata/dell_chassis.json",
+			hostnamefilename: "testdata/dell_systems.json",
+		},
+		{
+			name:             "check Power",
+			thermalfilename:  "testdata/dell_thermal.json",
+			powerfilename:    "testdata/dell_powerinvalid.json",
+			chassisfilename:  "testdata/dell_chassis.json",
+			hostnamefilename: "testdata/dell_systems.json",
+		},
+		{
+			name:             "check Location",
+			thermalfilename:  "testdata/dell_thermal.json",
+			powerfilename:    "testdata/dell_power.json",
+			chassisfilename:  "testdata/dell_chassisinvalid.json",
+			hostnamefilename: "testdata/dell_systems.json",
+		},
+		{
+			name:             "check Hostname",
+			thermalfilename:  "testdata/dell_thermal.json",
+			powerfilename:    "testdata/dell_power.json",
+			chassisfilename:  "testdata/dell_chassis.json",
+			hostnamefilename: "testdata/dell_systemsinvalid.json",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !checkAuth(r, "test", "test") {
+					http.Error(w, "Unauthorized.", 401)
+					return
+				}
+
+				switch r.URL.Path {
+				case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
+					http.ServeFile(w, r, tt.thermalfilename)
+				case "/redfish/v1/Chassis/System.Embedded.1/Power":
+					http.ServeFile(w, r, tt.powerfilename)
+				case "/redfish/v1/Chassis/System.Embedded.1":
+					http.ServeFile(w, r, tt.chassisfilename)
+				case "/redfish/v1/Systems/System.Embedded.1":
+					http.ServeFile(w, r, tt.hostnamefilename)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
+
+			plugin := &Redfish{
+				Address:          ts.URL,
+				Username:         "test",
+				Password:         "test",
+				ComputerSystemID: "System.Embedded.1",
+			}
+
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "error parsing input:")
+		})
+	}
+}
+
+func TestInvalidHPJSON(t *testing.T) {
+	tests := []struct {
+		name             string
+		thermalfilename  string
+		powerfilename    string
+		hostnamefilename string
+		chassisfilename  string
+	}{
+		{
+			name:             "check Thermal",
+			thermalfilename:  "testdata/hp_thermalinvalid.json",
+			powerfilename:    "testdata/hp_power.json",
+			hostnamefilename: "testdata/hp_systems.json",
+			chassisfilename:  "testdata/hp_chassis.json",
+		},
+		{
+			name:             "check Power",
+			thermalfilename:  "testdata/hp_thermal.json",
+			powerfilename:    "testdata/hp_powerinvalid.json",
+			hostnamefilename: "testdata/hp_systems.json",
+			chassisfilename:  "testdata/hp_chassis.json",
+		},
+		{
+			name:             "check Hostname",
+			thermalfilename:  "testdata/hp_thermal.json",
+			powerfilename:    "testdata/hp_power.json",
+			hostnamefilename: "testdata/hp_systemsinvalid.json",
+			chassisfilename:  "testdata/hp_chassis.json",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !checkAuth(r, "test", "test") {
+					http.Error(w, "Unauthorized.", 401)
+					return
+				}
+
+				switch r.URL.Path {
+				case "/redfish/v1/Chassis/1/Thermal":
+					http.ServeFile(w, r, tt.thermalfilename)
+				case "/redfish/v1/Chassis/1/Power":
+					http.ServeFile(w, r, tt.powerfilename)
+				case "/redfish/v1/Chassis/1/":
+					http.ServeFile(w, r, tt.chassisfilename)
+				case "/redfish/v1/Systems/System.Embedded.2":
+					http.ServeFile(w, r, tt.hostnamefilename)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
+
+			plugin := &Redfish{
+				Address:          ts.URL,
+				Username:         "test",
+				Password:         "test",
+				ComputerSystemID: "System.Embedded.2",
+			}
+
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "error parsing input:")
+		})
+	}
+}
+
+func TestIncludeTagSetsConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "test", "test") {
 			http.Error(w, "Unauthorized.", 401)
@@ -961,6 +1152,7 @@ func TestHPApis(t *testing.T) {
 		Username:         "test",
 		Password:         "test",
 		ComputerSystemID: "1",
+		IncludeTagSets:   []string{"chassis"},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
@@ -970,215 +1162,4 @@ func TestHPApis(t *testing.T) {
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
 	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
-}
-
-func checkAuth(r *http.Request, username, password string) bool {
-	user, pass, ok := r.BasicAuth()
-	if !ok {
-		return false
-	}
-	return user == username && pass == password
-}
-
-func TestInvalidUsernameorPassword(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", 401)
-			return
-		}
-
-		switch r.URL.Path {
-		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer ts.Close()
-
-	r := &Redfish{
-		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
-		ComputerSystemID: "System.Embedded.1",
-	}
-
-	var acc testutil.Accumulator
-	require.NoError(t, r.Init())
-	u, err := url.Parse(ts.URL)
-	require.NoError(t, err)
-	err = r.Gather(&acc)
-	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+", expected 200")
-}
-func TestNoUsernameorPasswordConfiguration(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", 401)
-			return
-		}
-
-		switch r.URL.Path {
-		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer ts.Close()
-
-	r := &Redfish{
-		Address:          ts.URL,
-		ComputerSystemID: "System.Embedded.1",
-	}
-
-	err := r.Init()
-	require.Error(t, err)
-	require.EqualError(t, err, "did not provide username and password")
-}
-
-func TestInvalidDellJSON(t *testing.T) {
-	tests := []struct {
-		name             string
-		thermalfilename  string
-		powerfilename    string
-		chassisfilename  string
-		hostnamefilename string
-	}{
-		{
-			name:             "check Thermal",
-			thermalfilename:  "testdata/dell_thermalinvalid.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systems.json",
-		},
-		{
-			name:             "check Power",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_powerinvalid.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systems.json",
-		},
-		{
-			name:             "check Location",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassisinvalid.json",
-			hostnamefilename: "testdata/dell_systems.json",
-		},
-		{
-			name:             "check Hostname",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systemsinvalid.json",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if !checkAuth(r, "test", "test") {
-					http.Error(w, "Unauthorized.", 401)
-					return
-				}
-
-				switch r.URL.Path {
-				case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-					http.ServeFile(w, r, tt.thermalfilename)
-				case "/redfish/v1/Chassis/System.Embedded.1/Power":
-					http.ServeFile(w, r, tt.powerfilename)
-				case "/redfish/v1/Chassis/System.Embedded.1":
-					http.ServeFile(w, r, tt.chassisfilename)
-				case "/redfish/v1/Systems/System.Embedded.1":
-					http.ServeFile(w, r, tt.hostnamefilename)
-				default:
-					w.WriteHeader(http.StatusNotFound)
-				}
-			}))
-			defer ts.Close()
-
-			plugin := &Redfish{
-				Address:          ts.URL,
-				Username:         "test",
-				Password:         "test",
-				ComputerSystemID: "System.Embedded.1",
-			}
-
-			require.NoError(t, plugin.Init())
-
-			var acc testutil.Accumulator
-			err := plugin.Gather(&acc)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "error parsing input:")
-		})
-	}
-}
-
-func TestInvalidHPJSON(t *testing.T) {
-	tests := []struct {
-		name             string
-		thermalfilename  string
-		powerfilename    string
-		hostnamefilename string
-		chassisfilename  string
-	}{
-		{
-			name:             "check Thermal",
-			thermalfilename:  "testdata/hp_thermalinvalid.json",
-			powerfilename:    "testdata/hp_power.json",
-			hostnamefilename: "testdata/hp_systems.json",
-			chassisfilename:  "testdata/hp_chassis.json",
-		},
-		{
-			name:             "check Power",
-			thermalfilename:  "testdata/hp_thermal.json",
-			powerfilename:    "testdata/hp_powerinvalid.json",
-			hostnamefilename: "testdata/hp_systems.json",
-			chassisfilename:  "testdata/hp_chassis.json",
-		},
-		{
-			name:             "check Hostname",
-			thermalfilename:  "testdata/hp_thermal.json",
-			powerfilename:    "testdata/hp_power.json",
-			hostnamefilename: "testdata/hp_systemsinvalid.json",
-			chassisfilename:  "testdata/hp_chassis.json",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if !checkAuth(r, "test", "test") {
-					http.Error(w, "Unauthorized.", 401)
-					return
-				}
-
-				switch r.URL.Path {
-				case "/redfish/v1/Chassis/1/Thermal":
-					http.ServeFile(w, r, tt.thermalfilename)
-				case "/redfish/v1/Chassis/1/Power":
-					http.ServeFile(w, r, tt.powerfilename)
-				case "/redfish/v1/Chassis/1/":
-					http.ServeFile(w, r, tt.chassisfilename)
-				case "/redfish/v1/Systems/System.Embedded.2":
-					http.ServeFile(w, r, tt.hostnamefilename)
-				default:
-					w.WriteHeader(http.StatusNotFound)
-				}
-			}))
-			defer ts.Close()
-
-			plugin := &Redfish{
-				Address:          ts.URL,
-				Username:         "test",
-				Password:         "test",
-				ComputerSystemID: "System.Embedded.2",
-			}
-
-			require.NoError(t, plugin.Init())
-
-			var acc testutil.Accumulator
-			err := plugin.Gather(&acc)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "error parsing input:")
-		})
-	}
 }
