@@ -89,7 +89,7 @@ func (w *WinEventLog) Stop() {
 func (w *WinEventLog) GetState() interface{} {
 	bookmarkXML, err := w.renderBookmark(w.bookmark)
 	if err != nil {
-		w.Log.Errorf("State-persistence failed, cannot render bookmark: %w", err)
+		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
 		return ""
 	}
 	return bookmarkXML
