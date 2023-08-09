@@ -63,5 +63,5 @@ func determineConversion(dtype string, extra int) converterFunc {
 		}
 	}
 
-	panic("unknown type")
+	panic("Unknown type! Please file an issue on https://github.com/influxdata/telegraf including your config.")
 }
