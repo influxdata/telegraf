@@ -45,7 +45,7 @@ func (k *Kernel) Init() error {
 	if k.optCollect["ksm"] {
 		if _, err := os.Stat(k.ksmStatsDir); os.IsNotExist(err) {
 			// ksm probably not enabled in the kernel, bail out early
-			return fmt.Errorf("kernel: %s does not exist. Is KSM enabled in this kernel?", k.ksmStatsDir)
+			return fmt.Errorf("Directory %q does not exist. Is KSM enabled in this kernel?", k.ksmStatsDir)
 		}
 	}
 	return nil
@@ -159,14 +159,14 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("kernel: Path %s does not exist", path)
+		return nil, fmt.Errorf("Path %q does not exist", path)
 	} else if err != nil {
 		return nil, err
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("kernel: Failed to read from %s", path)
+		return nil, fmt.Errorf("Failed to read from %q: %w", path, err)
 	}
 
 	return data, nil
@@ -180,7 +180,7 @@ func (k *Kernel) getProcValueInt(path string) (int64, error) {
 
 	m, err := strconv.ParseInt(string(bytes.TrimSpace(data)), 10, 64)
 	if err != nil {
-		return -1, fmt.Errorf("kernel: Failed to parse %s as an integer, invalid syntax", data)
+		return -1, fmt.Errorf("Failed to parse %q as an integer: %w", data, err)
 	}
 
 	return m, nil
