@@ -171,7 +171,7 @@ func (k *Kernel) getProcValueInt(path string) (int64, error) {
 
 	m, err := strconv.ParseInt(string(bytes.TrimSpace(data)), 10, 64)
 	if err != nil {
-		return -1, fmt.Errorf("Failed to parse %q as an integer: %w", data, err)
+		return -1, fmt.Errorf("failed to parse %q as an integer: %w", data, err)
 	}
 
 	return m, nil
