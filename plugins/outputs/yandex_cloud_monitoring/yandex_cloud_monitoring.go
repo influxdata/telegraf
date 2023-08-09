@@ -126,7 +126,7 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 		for _, field := range m.FieldList() {
 			value, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				a.Log.Errorf("skipping value: %w", err.Error())
+				a.Log.Errorf("Skipping value: %v", err)
 				continue
 			}
 
@@ -180,7 +180,7 @@ func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error)
 }
 
 func (a *YandexCloudMonitoring) getFolderIDFromMetadata() (string, error) {
-	a.Log.Infof("getting folder ID in %s", a.MetadataFolderURL)
+	a.Log.Infof("Getting folder ID in %s", a.MetadataFolderURL)
 	body, err := getResponseFromMetadata(a.client, a.MetadataFolderURL)
 	if err != nil {
 		return "", err
@@ -193,7 +193,7 @@ func (a *YandexCloudMonitoring) getFolderIDFromMetadata() (string, error) {
 }
 
 func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
-	a.Log.Debugf("getting new IAM token in %s", a.MetadataTokenURL)
+	a.Log.Debugf("Getting new IAM token in %s", a.MetadataTokenURL)
 	body, err := getResponseFromMetadata(a.client, a.MetadataTokenURL)
 	if err != nil {
 		return "", 0, err
@@ -230,7 +230,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
-	a.Log.Debugf("sending metrics to %s", req.URL.String())
+	a.Log.Debugf("Sending metrics to %s", req.URL.String())
 	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {
