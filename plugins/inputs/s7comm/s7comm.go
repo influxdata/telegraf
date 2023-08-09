@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"hash/maphash"
 	"log" //nolint:depguard // Required for tracing connection issues
+	"net"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/robinson/gos7"
@@ -111,9 +113,17 @@ func (s *S7comm) Init() error {
 	if s.Slot < 0 {
 		return errors.New("'slot' has to be specified")
 	}
-
 	if len(s.Configs) == 0 {
 		return errors.New("no metric defined")
+	}
+
+	// Set default port to 102 if none is given
+	var nerr *net.AddrError
+	if _, _, err := net.SplitHostPort(s.Server); errors.As(err, &nerr) {
+		if !strings.Contains(nerr.Err, "missing port") {
+			return errors.New("invalid 'server' address")
+		}
+		s.Server += ":102"
 	}
 
 	// Create the requests

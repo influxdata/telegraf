@@ -17,6 +17,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Plugin for retrieving data from Siemens PLCs via the S7 protocol (RFC1006)
 [[inputs.s7comm]]
   ## Parameters to contact the PLC (mandatory)
+  ## The server is in the <host>[:port] format where the port defaults to 102
+  ## if not explicitly specified.
   server = "127.0.0.1:102"
   rack = 0
   slot = 0
