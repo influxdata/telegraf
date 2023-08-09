@@ -1419,6 +1419,8 @@ github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316 h1:HVv8JjpX24FuI
 github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316/go.mod h1:9vX3Dhehey14KFYwWo4K/4JOJRve6jvQf6R9Y8PymLI=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55 h1:ksmbrLbJAm+8yxB7fJ245usD0b1v9JHBJrWF+WqGyjs=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55/go.mod h1:SIB3zq5pZq2Ff7aJtCdRpGiHc/meKyMLPEj8F5Tf1j8=
+github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb h1:WUK18HBPrJVKkJp9VpvNZFE2bLmC+Mf0zMoMDcD1vFw=
+github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb/go.mod h1:+96COZeFGpQFstWJ0eKQF+F6/z8gWVpBNGx/K3gD+QU=
 github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
 github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

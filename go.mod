@@ -156,6 +156,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.8.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
+	github.com/robinson/gos7 v0.0.0-20230421131203-d20ac6ca08cd
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
@@ -491,3 +492,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/robinson/gos7 => github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb
