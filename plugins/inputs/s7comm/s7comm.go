@@ -50,8 +50,6 @@ var (
 		"R":  0x08, // IEEE 754 real (32 bit)
 		// see https://support.industry.siemens.com/cs/document/36479/date_and_time-format-for-s7-?dti=0&lc=en-DE
 		"DT": 0x0F, // Date and time (7 byte)
-		// "C":  0x1C, // Counter (16 bit)
-		// "T":  0x1D, // Timer (16 bit)
 	}
 )
 
