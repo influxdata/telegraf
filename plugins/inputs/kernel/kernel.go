@@ -28,13 +28,12 @@ var (
 )
 
 type Kernel struct {
+	ConfigCollect []string `toml:"collect"`
+
+	optCollect      map[string]bool
 	statFile        string
 	entropyStatFile string
 	ksmStatsDir     string
-
-	optCollect map[string]bool
-
-	ConfigCollect []string `toml:"collect"`
 }
 
 func (k *Kernel) Init() error {
