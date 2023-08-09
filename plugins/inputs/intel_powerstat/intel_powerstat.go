@@ -633,7 +633,7 @@ func (p *PowerStat) addCPUC6StateResidencyMetric(cpuID string, acc telegraf.Accu
 	coresData := p.msr.getCPUCoresData()
 	// Avoid division by 0
 	if coresData[cpuID].timeStampCounterDelta == 0 {
-		p.Log.Errorf("timestamp counter on offset %s should not equal 0 on cpuID %s",
+		p.Log.Errorf("timestamp counter on offset %d should not equal 0 on cpuID %s",
 			timestampCounterLocation, cpuID)
 		return
 	}
@@ -657,7 +657,7 @@ func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accu
 	coresData := p.msr.getCPUCoresData()
 	// Avoid division by 0
 	if coresData[cpuID].timeStampCounterDelta == 0 {
-		p.Log.Errorf("timestamp counter on offset %s should not equal 0 on cpuID %s",
+		p.Log.Errorf("timestamp counter on offset %d should not equal 0 on cpuID %s",
 			timestampCounterLocation, cpuID)
 		return
 	}
@@ -734,7 +734,7 @@ func (p *PowerStat) getBusClock(cpuID string) float64 {
 		return p.getSilvermontBusClock(cpuID)
 	}
 
-	p.Log.Debugf("couldn't find the freq for the model: %d", model)
+	p.Log.Debugf("couldn't find the freq for the model: %s", model)
 	return 0.0
 }
 
@@ -748,7 +748,7 @@ func (p *PowerStat) getSilvermontBusClock(cpuID string) float64 {
 
 	i := int(msr & 0xf)
 	if i >= len(silvermontFreqTable) {
-		p.Log.Debugf("unknown msr value: %d, using default bus clock value: %d", i, silvermontFreqTable[3])
+		p.Log.Debugf("unknown msr value: %d, using default bus clock value: %f", i, silvermontFreqTable[3])
 		//same behaviour as in turbostat
 		i = 3
 	}

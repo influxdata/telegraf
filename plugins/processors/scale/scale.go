@@ -46,7 +46,8 @@ func (s *Scaling) Init() error {
 	anyMinMaxSet := s.OutMax != nil || s.OutMin != nil || s.InMax != nil || s.InMin != nil
 	factorSet := s.Factor != nil || s.Offset != nil
 	if anyMinMaxSet && factorSet {
-		return fmt.Errorf("cannot use factor/offset and minimum/maximum at the same time for fields %s", strings.Join(s.Fields, ","))
+		return fmt.Errorf("cannot use factor/offset and minimum/maximum at the same time for fields %s",
+			strings.Join(s.Fields, ","))
 	} else if anyMinMaxSet && !allMinMaxSet {
 		return fmt.Errorf("all minimum and maximum values need to be set for fields %s", strings.Join(s.Fields, ","))
 	} else if !anyMinMaxSet && !factorSet {
@@ -122,7 +123,7 @@ func (s *Scale) scaleValues(metric telegraf.Metric) {
 
 			v, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				s.Log.Errorf("error converting %q to float: %w\n", field.Key, err)
+				s.Log.Errorf("error converting %q to float: %v", field.Key, err)
 				continue
 			}
 

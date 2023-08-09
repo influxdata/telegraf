@@ -298,7 +298,7 @@ func (*NFSClient) SampleConfig() string {
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	file, err := os.Open(n.mountstatsPath)
 	if err != nil {
-		n.Log.Errorf("Failed opening the [%s] file: %s ", file, err)
+		n.Log.Errorf("Failed opening the %q file: %v ", file.Name(), err)
 		return err
 	}
 	defer file.Close()

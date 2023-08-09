@@ -126,7 +126,7 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 		for _, field := range m.FieldList() {
 			value, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				a.Log.Errorf("skipping value: %w", err.Error())
+				a.Log.Errorf("skipping value: %v", err)
 				continue
 			}
 

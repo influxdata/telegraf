@@ -137,7 +137,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				// unmarshal extention
 				err := proto.Unmarshal(currentExt, juniperHeader)
 				if err != nil {
-					h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %w", err)
+					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
 					break
 				}
 				// Add only relevant Tags from the Juniper Header extention.
@@ -187,7 +187,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			}
 			h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
 			if err := h.tagStore.insert(tagSub, fullPath, fields, tags); err != nil {
-				h.log.Errorf("inserting tag failed: %w", err)
+				h.log.Errorf("inserting tag failed: %v", err)
 			}
 			tagUpdate = true
 			break

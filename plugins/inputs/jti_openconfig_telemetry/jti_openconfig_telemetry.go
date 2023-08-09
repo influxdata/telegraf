@@ -438,7 +438,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 		if m.Username != "" && m.Password != "" && m.ClientID != "" {
 			if err := m.authenticate(ctx, server, grpcClientConn); err != nil {
-				m.Log.Errorf("error authenticating to %s: %w", grpcServer, err)
+				m.Log.Errorf("error authenticating to %s: %v", grpcServer, err)
 				continue
 			}
 		}

@@ -249,7 +249,7 @@ func (i *IntelPMU) Stop() {
 			}
 			err := event.Deactivate()
 			if err != nil {
-				i.Log.Warnf("failed to deactivate core event %q: %w", event, err)
+				i.Log.Warnf("failed to deactivate core event %q: %v", event, err)
 			}
 		}
 	}
@@ -264,7 +264,7 @@ func (i *IntelPMU) Stop() {
 				}
 				err := event.Deactivate()
 				if err != nil {
-					i.Log.Warnf("failed to deactivate uncore event %q: %w", event, err)
+					i.Log.Warnf("failed to deactivate uncore event %q: %v", event, err)
 				}
 			}
 		}

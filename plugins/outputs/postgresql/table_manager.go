@@ -89,7 +89,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 			if isTempError(err) {
 				return err
 			}
-			tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %w", tagTable.name, err)
+			tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %v", tagTable.name, err)
 		}
 
 		if len(missingCols) > 0 {
@@ -120,7 +120,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 		if isTempError(err) {
 			return err
 		}
-		tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %w", metricTable.name, err)
+		tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %v", metricTable.name, err)
 	}
 
 	if len(missingCols) > 0 {

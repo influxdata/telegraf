@@ -156,7 +156,7 @@ func (m *MongoDB) Stop() {
 	for _, server := range m.clients {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		if err := server.client.Disconnect(ctx); err != nil {
-			m.Log.Errorf("disconnecting from %q failed: %s", server, err)
+			m.Log.Errorf("disconnecting from %q failed: %v", server.hostname, err)
 		}
 		cancel()
 	}

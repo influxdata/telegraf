@@ -165,12 +165,12 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		case telegraf.Summary:
 			vType = common.InfluxMetricValueTypeSummary
 		default:
-			o.Log.Warnf("unrecognized metric type %Q", metric.Type())
+			o.Log.Warnf("unrecognized metric type %v", metric.Type())
 			continue
 		}
 		err := batch.AddPoint(metric.Name(), metric.Tags(), metric.Fields(), metric.Time(), vType)
 		if err != nil {
-			o.Log.Warnf("failed to add point: %s", err)
+			o.Log.Warnf("failed to add point: %v", err)
 			continue
 		}
 	}
