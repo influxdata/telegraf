@@ -157,7 +157,7 @@ func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read from %q: %w", path, err)
+		return nil, fmt.Errorf("failed to read from %q: %w", path, err)
 	}
 
 	return data, nil
