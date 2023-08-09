@@ -83,10 +83,11 @@ func (o *SubscribeClient) Connect() error {
 }
 
 func (o *SubscribeClient) Stop(ctx context.Context) <-chan struct{} {
-	o.Log.Debugf("Opc Subscribe Stopped")
-	err := o.sub.Cancel(ctx)
-	if err != nil {
-		o.Log.Warn("Cancelling OPC UA subscription failed with error ", err)
+	o.Log.Debugf("Stopping OPC subscription...")
+	if o.sub != nil {
+		if err := o.sub.Cancel(ctx); err != nil {
+			o.Log.Warn("Cancelling OPC UA subscription failed with error ", err)
+		}
 	}
 	closing := o.OpcUAInputClient.Stop(ctx)
 	o.processingCancel()
