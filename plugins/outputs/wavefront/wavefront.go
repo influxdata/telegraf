@@ -88,15 +88,15 @@ func (w *Wavefront) Connect() error {
 	}
 	var connectionURL string
 	if w.URL != "" {
-		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
+		w.Log.Debugf("Connecting over http/https using url: %s", w.URL)
 		connectionURLWithToken, err := w.senderURLFromURLAndToken()
 		if err != nil {
 			return err
 		}
 		connectionURL = connectionURLWithToken
 	} else {
-		w.Log.Warnf("configuration with host/port is deprecated. Please use url.")
-		w.Log.Debugf("connecting over http using Host: %q and Port: %d", w.Host, w.Port)
+		w.Log.Warn("Configuration with host/port is deprecated. Please use url.")
+		w.Log.Debugf("Connecting over http using Host: %q and Port: %d", w.Host, w.Port)
 		connectionURL = senderURLFromHostAndPort(w.Host, w.Port)
 	}
 
@@ -147,8 +147,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 						}
 					}
 				}
-				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-				w.Log.Debugf("non-retryable metric data: %+v", point)
+				w.Log.Errorf("Non-retryable error during Wavefront.Write: %v", err)
+				w.Log.Debugf("Non-retryable metric data: %+v", point)
 			}
 		}
 	}

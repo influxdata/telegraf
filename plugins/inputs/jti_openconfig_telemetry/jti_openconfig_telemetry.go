@@ -325,7 +325,7 @@ func (m *OpenConfigTelemetry) collectData(
 							if ok {
 								timestamp = time.UnixMilli(int64(ts))
 							} else {
-								m.Log.Warnf("invalid type %T for _timestamp %v", group.data["_timestamp"], group.data["_timestamp"])
+								m.Log.Warnf("Invalid type %T for _timestamp %v", group.data["_timestamp"], group.data["_timestamp"])
 							}
 						}
 
@@ -422,7 +422,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 		if m.Username != "" && m.Password != "" && m.ClientID != "" {
 			if err := m.authenticate(ctx, server, grpcClientConn); err != nil {
-				m.Log.Errorf("error authenticating to %s: %w", grpcServer, err)
+				m.Log.Errorf("Error authenticating to %s: %v", grpcServer, err)
 				continue
 			}
 		}

@@ -152,6 +152,19 @@ linters-settings:
       # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
       # Default: "0600"
       G306: "0640"
+  govet:
+    settings:
+      ## Check the logging function like it would be a printf
+      printf:
+        funcs:
+          - (github.com/influxdata/telegraf.Logger).Debugf
+          - (github.com/influxdata/telegraf.Logger).Infof
+          - (github.com/influxdata/telegraf.Logger).Warnf
+          - (github.com/influxdata/telegraf.Logger).Errorf
+          - (github.com/influxdata/telegraf.Logger).Debug
+          - (github.com/influxdata/telegraf.Logger).Info
+          - (github.com/influxdata/telegraf.Logger).Warn
+          - (github.com/influxdata/telegraf.Logger).Error
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.

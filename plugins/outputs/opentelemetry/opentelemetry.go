@@ -139,7 +139,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	// sort the timestamps we collected
 	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
 
-	o.Log.Debugf("received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
+	o.Log.Debugf("Received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
 	for _, timestamp := range timestamps {
 		if err := o.sendBatch(metricBatch[timestamp]); err != nil {
 			return err
@@ -165,12 +165,12 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		case telegraf.Summary:
 			vType = common.InfluxMetricValueTypeSummary
 		default:
-			o.Log.Warnf("unrecognized metric type %Q", metric.Type())
+			o.Log.Warnf("Unrecognized metric type %v", metric.Type())
 			continue
 		}
 		err := batch.AddPoint(metric.Name(), metric.Tags(), metric.Fields(), metric.Time(), vType)
 		if err != nil {
-			o.Log.Warnf("failed to add point: %s", err)
+			o.Log.Warnf("Failed to add point: %v", err)
 			continue
 		}
 	}

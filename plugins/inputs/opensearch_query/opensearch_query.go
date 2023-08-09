@@ -70,7 +70,7 @@ func (o *OpensearchQuery) Init() error {
 
 	err := o.newClient()
 	if err != nil {
-		o.Log.Errorf("error creating OpenSearch client: %w", err)
+		o.Log.Errorf("Error creating OpenSearch client: %v", err)
 	}
 
 	for i, agg := range o.Aggregations {

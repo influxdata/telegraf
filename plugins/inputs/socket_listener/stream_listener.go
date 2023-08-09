@@ -117,15 +117,15 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 		}
 		if *l.KeepAlivePeriod == 0 {
 			if err := tcpConn.SetKeepAlive(false); err != nil {
-				l.Log.Warnf("Cannot set keep-alive: %w", err)
+				l.Log.Warnf("Cannot set keep-alive: %v", err)
 			}
 		} else {
 			if err := tcpConn.SetKeepAlive(true); err != nil {
-				l.Log.Warnf("Cannot set keep-alive: %w", err)
+				l.Log.Warnf("Cannot set keep-alive: %v", err)
 			}
 			err := tcpConn.SetKeepAlivePeriod(time.Duration(*l.KeepAlivePeriod))
 			if err != nil {
-				l.Log.Warnf("Cannot set keep-alive period: %w", err)
+				l.Log.Warnf("Cannot set keep-alive period: %v", err)
 			}
 		}
 	}

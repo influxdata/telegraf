@@ -98,10 +98,10 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 		if h.trace {
 			buf, err := protojson.Marshal(reply)
 			if err != nil {
-				h.log.Debugf("marshal failed: %v", err)
+				h.log.Debugf("Marshal failed: %v", err)
 			} else {
 				t := reply.GetUpdate().GetTimestamp()
-				h.log.Debugf("update_%v: %s", t, string(buf))
+				h.log.Debugf("Got update_%v: %s", t, string(buf))
 			}
 		}
 		if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
@@ -137,7 +137,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				// unmarshal extention
 				err := proto.Unmarshal(currentExt, juniperHeader)
 				if err != nil {
-					h.log.Errorf("unmarshal gnmi Juniper Header extention failed: %w", err)
+					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
 					break
 				}
 				// Add only relevant Tags from the Juniper Header extention.
@@ -156,7 +156,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		var origin string
 		var err error
 		if origin, prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, h.aliases, ""); err != nil {
-			h.log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
+			h.log.Errorf("Handling path %q failed: %v", response.Update.Prefix, err)
 		}
 		prefix = origin + prefix
 	}
@@ -187,7 +187,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			}
 			h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
 			if err := h.tagStore.insert(tagSub, fullPath, fields, tags); err != nil {
-				h.log.Errorf("inserting tag failed: %w", err)
+				h.log.Errorf("Inserting tag failed: %v", err)
 			}
 			tagUpdate = true
 			break
@@ -259,7 +259,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				key = strings.TrimLeft(key, "/.")
 			}
 			if key == "" {
-				h.log.Errorf("invalid empty path: %q", k)
+				h.log.Errorf("Invalid empty path: %q", k)
 				continue
 			}
 			grouper.Add(name, tags, timestamp, key, v)
@@ -276,11 +276,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 func (h *handler) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
 	_, gpath, aliasPath, err := handlePath(update.Path, tags, h.aliases, prefix)
 	if err != nil {
-		h.log.Errorf("handling path %q failed: %v", update.Path, err)
+		h.log.Errorf("Handling path %q failed: %v", update.Path, err)
 	}
 	fields, err := gnmiToFields(strings.Replace(gpath, "-", "_", -1), update.Val)
 	if err != nil {
-		h.log.Errorf("error parsing update value %q: %v", update.Val, err)
+		h.log.Errorf("Error parsing update value %q: %v", update.Val, err)
 	}
 	return aliasPath, fields
 }
