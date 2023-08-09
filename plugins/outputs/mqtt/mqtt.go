@@ -167,7 +167,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 	for _, msg := range topicMessages {
 		if err := m.client.Publish(msg.topic, msg.payload); err != nil {
-			m.Log.Warn("Could not publish message to MQTT server, %s", err)
+			m.Log.Warnf("Could not publish message to MQTT server: %v", err)
 		}
 	}
 
