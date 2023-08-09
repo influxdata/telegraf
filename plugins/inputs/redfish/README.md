@@ -110,7 +110,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - lower_threshold_critical
     - lower_threshold_fatal
 
-
 ## Tag Sets
 
 - chassis.location
@@ -131,7 +130,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - chassis_serialnumber
     - chassis_state
     - chassis_health
-
 
 ## Example Output
 
