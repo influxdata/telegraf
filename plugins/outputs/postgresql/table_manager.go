@@ -89,7 +89,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 			if isTempError(err) {
 				return err
 			}
-			tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %v", tagTable.name, err)
+			tm.Postgresql.Logger.Errorf("Permanent error updating schema for %s: %v", tagTable.name, err)
 		}
 
 		if len(missingCols) > 0 {
@@ -100,7 +100,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 				}
 				colDefs = append(colDefs, col.Name+" "+col.Type)
 			}
-			tm.Logger.Errorf("table %q is missing tag columns (dropping metrics): %s",
+			tm.Logger.Errorf("Table %q is missing tag columns (dropping metrics): %s",
 				tagTable.name,
 				strings.Join(colDefs, ", "))
 		}
@@ -120,7 +120,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 		if isTempError(err) {
 			return err
 		}
-		tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %v", metricTable.name, err)
+		tm.Postgresql.Logger.Errorf("Permanent error updating schema for %s: %v", metricTable.name, err)
 	}
 
 	if len(missingCols) > 0 {
@@ -131,7 +131,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 			}
 			colDefs = append(colDefs, col.Name+" "+col.Type)
 		}
-		tm.Logger.Errorf("table %q is missing columns (omitting fields): %s",
+		tm.Logger.Errorf("Table %q is missing columns (omitting fields): %s",
 			metricTable.name,
 			strings.Join(colDefs, ", "))
 	}
@@ -189,7 +189,7 @@ func (tm *TableManager) EnsureStructure(
 		if col.Role == utils.TagColType {
 			return nil, fmt.Errorf("column name too long: %q", col.Name)
 		}
-		tm.Postgresql.Logger.Errorf("column name too long: %q", col.Name)
+		tm.Postgresql.Logger.Errorf("Column name too long: %q", col.Name)
 		invalidColumns = append(invalidColumns, col)
 	}
 

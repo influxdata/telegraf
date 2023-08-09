@@ -97,7 +97,7 @@ func (s *Scale) Init() error {
 		for _, field := range s.Scalings[i].Fields {
 			// only generate a warning for the first duplicate field filter
 			if warn, ok := allFields[field]; ok && warn {
-				s.Log.Warnf("filter field %q used twice in scalings", field)
+				s.Log.Warnf("Filter field %q used twice in scalings", field)
 				allFields[field] = false
 			} else {
 				allFields[field] = true
@@ -123,7 +123,7 @@ func (s *Scale) scaleValues(metric telegraf.Metric) {
 
 			v, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				s.Log.Errorf("error converting %q to float: %v", field.Key, err)
+				s.Log.Errorf("Error converting %q to float: %v", field.Key, err)
 				continue
 			}
 

@@ -256,7 +256,7 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 
 		msgs, nodeID, err := m.collectHomieDeviceMessages(topic, metric)
 		if err != nil {
-			m.Log.Warnf(err.Error())
+			m.Log.Warn(err.Error())
 			m.Log.Debugf("metric was: %v", metric)
 			continue
 		}
