@@ -37,7 +37,7 @@ type Kernel struct {
 }
 
 func (k *Kernel) Init() error {
-	k.optCollect = make(map[string]bool)
+	k.optCollect = make(map[string]bool, len(k.ConfigCollect))
 	for _, v := range k.ConfigCollect {
 		k.optCollect[v] = true
 	}
