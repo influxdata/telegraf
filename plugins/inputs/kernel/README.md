@@ -57,18 +57,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Get various kernel statistics.
-# Currently collects:
-#   /proc/stat
-#   /proc/entropy
-#   /sys/kernel/mm/ksm (optional, if enabled)
-#
+# Plugin to collect various Linux kernel statistics.
 # This plugin ONLY supports Linux
 [[inputs.kernel]]
-## Additional gather options
-## Possible options include:
-## * ksm - kernel same-page merging
-# collect = []
+  ## Additional gather options
+  ## Possible options include:
+  ## * ksm - kernel same-page merging
+  # collect = []
 ```
 
 ## Metrics
