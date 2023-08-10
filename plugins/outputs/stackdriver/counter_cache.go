@@ -62,7 +62,6 @@ func (cc *counterCache) GetStartTime(key string, value *monpb.TypedValue, endTim
 		// ...but...
 		// start times cannot be over 25 hours old; reset after 1 day to be safe
 		age := endTime.GetSeconds() - lastObserved.StartTime.GetSeconds()
-		cc.log.Debugf("age: %d", age)
 		if age > 86400 {
 			lastObserved.Reset(endTime)
 		}
