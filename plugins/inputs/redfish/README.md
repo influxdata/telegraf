@@ -31,11 +31,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## System Id to collect data for in Redfish APIs.
   computer_system_id="System.Embedded.1"
 
-  ## Tag sets allow you to include redfish OData link parent data, default set shown below
+  ## Tag sets allow you to include redfish OData link parent data
   ## For Example.
   ## Thermal data is an OData link with parent Chassis which has a link of Location.
   ## For more info see the Redfish Resource and Schema Guide at DMTFs website.
-  # include_tag_sets = ["chassis.location"]
+  # include_tag_sets = [
+  #   "chassis.location"
+  #   "chassis"
+  # ]
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"

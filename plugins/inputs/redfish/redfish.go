@@ -29,7 +29,7 @@ type Redfish struct {
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
 	Timeout          config.Duration `toml:"timeout"`
 
-	TagSet map[string]bool
+	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
 	baseURL *url.URL
@@ -163,12 +163,9 @@ func (r *Redfish) Init() error {
 		return fmt.Errorf("did not provide the computer system ID of the resource")
 	}
 
-	if r.IncludeTagSets == nil {
-		r.IncludeTagSets = []string{tagSetChassisLocation}
-	}
-	r.TagSet = make(map[string]bool)
+	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
 	for _, setLabel := range r.IncludeTagSets {
-		r.TagSet[setLabel] = true
+		r.tagSet[setLabel] = true
 	}
 
 	var err error
@@ -311,13 +308,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if _, ok := r.TagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
 			}
-			if _, ok := r.TagSet[tagSetChassis]; ok {
+			if _, ok := r.tagSet[tagSetChassis]; ok {
 				setChassisTags(chassis, tags)
 			}
 
@@ -339,13 +336,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if _, ok := r.TagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
 			}
-			if _, ok := r.TagSet[tagSetChassis]; ok {
+			if _, ok := r.tagSet[tagSetChassis]; ok {
 				setChassisTags(chassis, tags)
 			}
 
@@ -367,18 +364,19 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, j := range power.PowerControl {
-			tags := map[string]string{}
-			tags["member_id"] = j.MemberID
-			tags["address"] = address
-			tags["name"] = j.Name
-			tags["source"] = system.Hostname
-			if _, ok := r.TagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
+			tags := map[string]string{
+				"member_id": j.MemberID,
+				"address":   address,
+				"name":      j.Name,
+				"source":    system.Hostname,
+			}
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
 			}
-			if _, ok := r.TagSet[tagSetChassis]; ok {
+			if _, ok := r.tagSet[tagSetChassis]; ok {
 				setChassisTags(chassis, tags)
 			}
 
@@ -405,13 +403,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if _, ok := r.TagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
 			}
-			if _, ok := r.TagSet[tagSetChassis]; ok {
+			if _, ok := r.tagSet[tagSetChassis]; ok {
 				setChassisTags(chassis, tags)
 			}
 
@@ -432,13 +430,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if _, ok := r.TagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
 			}
-			if _, ok := r.TagSet[tagSetChassis]; ok {
+			if _, ok := r.tagSet[tagSetChassis]; ok {
 				setChassisTags(chassis, tags)
 			}
 
@@ -457,6 +455,9 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("redfish", func() telegraf.Input {
-		return &Redfish{}
+		return &Redfish{
+			// default tag set of chassis.location required for backwards compatibility
+			IncludeTagSets: []string{tagSetChassisLocation},
+		}
 	})
 }
