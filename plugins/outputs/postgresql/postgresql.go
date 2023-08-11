@@ -149,6 +149,7 @@ func (p *Postgresql) Init() error {
 	default:
 		return fmt.Errorf("invalid uint64_type")
 	}
+	p.initTimeColumn()
 
 	return nil
 }
