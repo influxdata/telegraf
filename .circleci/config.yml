@@ -42,8 +42,8 @@ commands:
       - checkout
       - check-changed-files-or-halt
       - restore_cache:
-        name: "Restore binaries from cache"
-        key: << parameters.os >>-<< parameters.arch >>-go-bin-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          name: "Restore binaries from cache"
+          key: << parameters.os >>-<< parameters.arch >>-go-bin-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
