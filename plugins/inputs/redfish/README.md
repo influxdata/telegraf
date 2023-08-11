@@ -35,10 +35,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## For Example.
   ## Thermal data is an OData link with parent Chassis which has a link of Location.
   ## For more info see the Redfish Resource and Schema Guide at DMTFs website.
-  # include_tag_sets = [
-  #   "chassis.location"
-  #   "chassis"
-  # ]
+  ## Available sets are: "chassis.location" and "chassis"
+  # include_tag_sets = ["chassis.location"]
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
