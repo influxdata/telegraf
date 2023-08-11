@@ -41,7 +41,6 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - run: go env
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -67,6 +66,7 @@ commands:
                 key: windows-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
+      - run: go env
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
       - when:
           condition:
