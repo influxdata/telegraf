@@ -9,6 +9,7 @@ package lustre2
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -508,6 +509,20 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 			tags["client"] = tgs.client
 		}
 		acc.AddFields("lustre2", fields, tags)
+	}
+
+	healthCheckPath := "/sys/fs/lustre/health_check"
+	if _, err := os.Stat(healthCheckPath); err != nil {
+		data, err := os.ReadFile(healthCheckPath)
+		if err != nil {
+			return fmt.Errorf("failed to read from %q: %w", healthCheckPath, err)
+		}
+		field := map[string]any{"health": 0}
+		if string(data) == "healthy" {
+			field["health"] = 1
+		}
+
+		acc.AddFields("lustre2", field, map[string]string{})
 	}
 
 	return nil

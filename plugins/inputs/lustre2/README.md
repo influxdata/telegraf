@@ -163,6 +163,12 @@ From `/proc/fs/lustre/mdt/*/job_stats`:
     - jobstats_sync
     - jobstats_unlink
 
+From `/sys/fs/lustre/health_check`:
+
+- lustre2
+  - fields:
+    - health
+
 ## Troubleshooting
 
 Check for the default or custom procfiles in the proc filesystem, and reference
