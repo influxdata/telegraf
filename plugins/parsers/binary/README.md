@@ -21,7 +21,7 @@ user-specified configurations.
   ## Specify the endianness of the data.
   ## Available values are "be" (big-endian), "le" (little-endian) and "host",
   ## where "host" means the same endianness as the machine running Telegraf.
-  # endianess = "host"
+  # endianness = "host"
 
   ## Interpret input as string containing hex-encoded data.
   # hex_encoding = false
@@ -282,7 +282,7 @@ you can use the following configuration
 [[inputs.file]]
   files = ["messageA.bin", "messageB.bin", "messageC.bin"]
   data_format = "binary"
-  endianess = "le"
+  endianness = "le"
 
   [[inputs.file.binary]]
     metric_name = "messageA"

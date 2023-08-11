@@ -4,4 +4,4 @@ package internal
 
 import "encoding/binary"
 
-var HostEndianess = binary.BigEndian
+var HostEndianness = binary.BigEndian
