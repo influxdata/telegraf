@@ -1,6 +1,29 @@
 {
+  "ChassisType": "RackMount",
+  "Location": {
+    "Info": ";;;;1",
+    "InfoFormat": "DataCenter;RoomName;Aisle;RackName;RackSlot",
+    "Placement": {
+      "Rack": "",
+      "Row": ""
+    },
+    "PostalAddress": {
+      "Building": "",
+      "Room": ""
+    }
+  },
+  "Manufacturer": "HP",
+  "Model": "Proliant Gen10",
+  "PartNumber": "CT6NWPYZ",
   "Power": {
     "@odata.id": "/redfish/v1/Chassis/1/Power"
+  },
+  "PowerState": "On",
+  "SKU": "CLFYTTWP",
+  "SerialNumber": "QWEVC007C99803",
+  "Status": {
+    "Health": "OK",
+    "State": "Enabled"
   },
   "Thermal": {
     "@odata.id": "/redfish/v1/Chassis/1/Thermal"
