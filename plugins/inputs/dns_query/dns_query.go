@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,6 +37,7 @@ type DNSQuery struct {
 	Port          int             `toml:"port"`
 	Timeout       config.Duration `toml:"timeout"`
 	IncludeFields []string        `toml:"include_fields"`
+	QueryOptions  []string        `toml:"query_options"`
 
 	fieldEnabled map[string]bool
 }
@@ -74,7 +76,7 @@ func (d *DNSQuery) Init() error {
 		d.Port = 53
 	}
 
-	return nil
+	return choice.CheckSlice(d.QueryOptions, []string{"DisableRecusion"})
 }
 
 func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
@@ -128,6 +130,9 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	var msg dns.Msg
 	msg.SetQuestion(dns.Fqdn(domain), recordType)
 	msg.RecursionDesired = true
+	if choice.Contains("DisableRecusion", d.QueryOptions) {
+		msg.RecursionDesired = false
+	}
 
 	addr := net.JoinHostPort(server, strconv.Itoa(d.Port))
 	r, rtt, err := c.Exchange(&msg, addr)

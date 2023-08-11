@@ -41,6 +41,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##    "first_ip" -- return IP of the first A and AAAA answer
   ##    "all_ips"  -- return IPs of all A and AAAA answers
   # include_fields = []
+
+  ## Query Options
+  ## Used to set specific options, choose from:
+  ##    "DisableRecusion" -- Disables Recusion
+  # query_options = []
 ```
 
 ## Metrics

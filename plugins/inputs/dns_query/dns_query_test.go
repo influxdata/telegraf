@@ -260,3 +260,15 @@ func TestRecordTypeParserError(t *testing.T) {
 	_, err := plugin.parseRecordType()
 	require.Error(t, err)
 }
+
+func TestQueryOptions(t *testing.T) {
+	invalidPlugin := DNSQuery{
+		QueryOptions: []string{"foobar"},
+	}
+	require.Error(t, invalidPlugin.Init())
+
+	plugin := DNSQuery{
+		QueryOptions: []string{"DisableRecusion"},
+	}
+	require.NoError(t, plugin.Init())
+}
