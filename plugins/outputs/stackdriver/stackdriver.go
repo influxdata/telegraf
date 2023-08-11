@@ -257,6 +257,18 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			// do some heuristics to know which one to use for queries. This
 			// only occurs when using the official name format.
 			if s.MetricNameFormat == "official" && strings.HasSuffix(timeSeries.Metric.Type, "unknown") {
+				metricKind := metricpb.MetricDescriptor_CUMULATIVE
+				startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
+				timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, endTime)
+				if err != nil {
+					s.Log.Errorf("Get time interval failed: %s", err)
+					continue
+				}
+				dataPoint := &monitoringpb.Point{
+					Interval: timeInterval,
+					Value:    value,
+				}
+
 				counterTimeSeries := &monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
 						Type:   s.generateMetricName(m, f.Key) + ":counter",
