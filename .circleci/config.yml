@@ -46,7 +46,7 @@ commands:
             equal: [ linux, << parameters.os >> ]
           steps:
             - restore_cache:
-                key: linux1-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: linux2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - attach_workspace:
                 at: '/go'
       - when:
@@ -54,7 +54,7 @@ commands:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - restore_cache:
-                key: darwin1-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: darwin2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_mac.sh'
       - when:
           condition:
@@ -63,7 +63,7 @@ commands:
             - run: rm -rf /c/Go
             - run: choco feature enable -n allowGlobalConfirmation
             - restore_cache:
-                key: windows1-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: windows2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
       - run: go env
@@ -128,7 +128,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving cache'
-                key: linux1-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: linux2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '/go/pkg/mod'
@@ -140,7 +140,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving cache'
-                key: darwin1-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: darwin2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '~/go/pkg/mod'
@@ -155,11 +155,11 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving cache'
-                key: windows1-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: windows2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - '~\gotestsum.exe'
+                  - '~\project\gotestsum.exe'
                   - '~\go\pkg\mod'
-                  - '~\AppData\Local\AppData\Local\golangci-lint'
+                  - '~\AppData\Local\golangci-lint'
                   - '~\AppData\Local\go-build'
                   - 'C:\Go'
   package-build:
