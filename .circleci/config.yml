@@ -65,7 +65,6 @@ commands:
                 key: windows3-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
-
       - run: go env
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
       - when:
