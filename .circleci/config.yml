@@ -60,10 +60,9 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf /c/Go
             - run: choco feature enable -n allowGlobalConfirmation
             - restore_cache:
-                key: windows2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: windows3-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
 
@@ -156,13 +155,13 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving cache'
-                key: windows2-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: windows3-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~\project\gotestsum.exe'
                   - '~\go\pkg\mod'
                   - '~\AppData\Local\golangci-lint'
                   - '~\AppData\Local\go-build'
-                  - 'C:\Go'
+                  - 'C:\Program Files\Go'
   package-build:
     parameters:
       type:
