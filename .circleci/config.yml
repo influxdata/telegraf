@@ -71,7 +71,12 @@ commands:
           condition:
             equal: [ linux, << parameters.os >> ]
           steps:
-            - run: GOGC=20 /go/bin/golangci-lint run --verbose
+            - run:
+                name: golangci-lint cache status
+                command: GOGC=20 /go/bin/golangci-lint cache status
+            - run:
+                name: golangci-lint run
+                command: GOGC=20 /go/bin/golangci-lint run --verbose
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
