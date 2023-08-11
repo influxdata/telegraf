@@ -218,6 +218,15 @@ func (r *Rename) Process(points []telegraf.Metric) []telegraf.Metric {
 		removedFields := make([]string, 0)
 		for _, field := range point.FieldList() {
 			key := originalName + "." + field.Key
+			if originalName == "varnish" {
+				// `originalName + "." + field.Key` usage is a bit legacy code.
+				// It leads to have `x.x.y.t` metrics in SC.
+				// Refer to SC-17059 for the historical context and additional information.
+				//
+				// TODO(bora.tanrikulu): remove `originalName + "." + field.Key` usage.
+				key = field.Key
+			}
+
 			replace, ok := fieldReplaces[key]
 			if !ok {
 				replace = ChangeNames(key)
