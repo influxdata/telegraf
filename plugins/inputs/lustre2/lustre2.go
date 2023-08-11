@@ -512,7 +512,7 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	healthCheckPath := "/sys/fs/lustre/health_check"
-	if _, err := os.Stat(healthCheckPath); err != nil {
+	if _, err := os.Stat(healthCheckPath); err == nil {
 		data, err := os.ReadFile(healthCheckPath)
 		if err != nil {
 			return fmt.Errorf("failed to read from %q: %w", healthCheckPath, err)
