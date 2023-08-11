@@ -133,6 +133,7 @@ commands:
                   - '/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '/go/pkg/mod'
                   - '~/.cache/golangci-lint'
+                  - '~/.cache/go-build'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
@@ -142,6 +143,9 @@ commands:
                 key: darwin-<< parameters.arch >>-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~/go/src/github.com/influxdata/telegraf/gotestsum'
+                  - '~/go/pkg/mod'
+                  - '~/Library/Caches/golangci-lint'
+                  - '~/Library/Caches/go-build'
                   - '/usr/local/Cellar/go'
                   - '/usr/local/bin/go'
                   - '/usr/local/bin/gofmt'
