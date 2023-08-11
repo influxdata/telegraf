@@ -54,6 +54,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Store all fields as a JSONB object in a single 'fields' column.
   # fields_as_jsonb = false
 
+  ## Name of the timestamp column
+  ## NOTE: Some tools (e.g. Grafana) require the default name so be careful!
+  # timestamp_column_name = "time"
+
   ## Templated statements to execute when creating a new table.
   # create_templates = [
   #   '''CREATE TABLE {{ .table }} ({{ .columns }})''',

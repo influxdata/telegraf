@@ -41,6 +41,7 @@ type Postgresql struct {
 	ForeignTagConstraint       bool                    `toml:"foreign_tag_constraint"`
 	TagsAsJsonb                bool                    `toml:"tags_as_jsonb"`
 	FieldsAsJsonb              bool                    `toml:"fields_as_jsonb"`
+	TimestampColumnName        string                  `toml:"timestamp_column_name"`
 	CreateTemplates            []*sqltemplate.Template `toml:"create_templates"`
 	AddColumnTemplates         []*sqltemplate.Template `toml:"add_column_templates"`
 	TagTableCreateTemplates    []*sqltemplate.Template `toml:"tag_table_create_templates"`
@@ -128,6 +129,7 @@ func (p *Postgresql) Init() error {
 	default:
 		return fmt.Errorf("invalid uint64_type")
 	}
+	p.initTimeColumn()
 
 	return nil
 }
