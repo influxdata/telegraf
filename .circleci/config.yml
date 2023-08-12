@@ -187,6 +187,7 @@ commands:
           root: './build'
           paths:
             - 'dist'
+
 jobs:
   test-go-linux:
     executor: telegraf-ci
