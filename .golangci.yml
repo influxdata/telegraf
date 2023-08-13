@@ -95,6 +95,7 @@ linters-settings:
       - evalOrder
       - exitAfterDefer
       - externalErrorReassign
+      - filepathJoin
       - flagName
       - mapKey
       - nilValReturn
