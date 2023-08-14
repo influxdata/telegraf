@@ -4,4 +4,4 @@ package internal
 
 import "encoding/binary"
 
-var HostEndianess = binary.LittleEndian
+var HostEndianness = binary.LittleEndian

@@ -164,7 +164,7 @@ func (p *Parser) toBytes(value interface{}) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := gobin.Write(&buf, internal.HostEndianess, value); err != nil {
+	if err := gobin.Write(&buf, internal.HostEndianness, value); err != nil {
 		return nil, err
 	}
 
