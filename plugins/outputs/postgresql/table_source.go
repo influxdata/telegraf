@@ -133,7 +133,7 @@ func (tsrc *TableSource) TagColumns() []utils.Column {
 	var cols []utils.Column
 
 	if tsrc.postgresql.TagsAsJsonb {
-		cols = append(cols, tagsJSONColumn)
+		cols = append(cols, tsrc.postgresql.tagsJSONColumn)
 	} else {
 		cols = append(cols, tsrc.tagColumns.columns...)
 	}
@@ -149,17 +149,17 @@ func (tsrc *TableSource) FieldColumns() []utils.Column {
 // MetricTableColumns returns the full column list, including time, tag id or tags, and fields.
 func (tsrc *TableSource) MetricTableColumns() []utils.Column {
 	cols := []utils.Column{
-		timeColumn,
+		tsrc.postgresql.timeColumn,
 	}
 
 	if tsrc.postgresql.TagsAsForeignKeys {
-		cols = append(cols, tagIDColumn)
+		cols = append(cols, tsrc.postgresql.tagIDColumn)
 	} else {
 		cols = append(cols, tsrc.TagColumns()...)
 	}
 
 	if tsrc.postgresql.FieldsAsJsonb {
-		cols = append(cols, fieldsJSONColumn)
+		cols = append(cols, tsrc.postgresql.fieldsJSONColumn)
 	} else {
 		cols = append(cols, tsrc.FieldColumns()...)
 	}
@@ -169,7 +169,7 @@ func (tsrc *TableSource) MetricTableColumns() []utils.Column {
 
 func (tsrc *TableSource) TagTableColumns() []utils.Column {
 	cols := []utils.Column{
-		tagIDColumn,
+		tsrc.postgresql.tagIDColumn,
 	}
 
 	cols = append(cols, tsrc.TagColumns()...)

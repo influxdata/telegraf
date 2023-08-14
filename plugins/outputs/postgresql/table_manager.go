@@ -318,13 +318,13 @@ func (tm *TableManager) getColumns(ctx context.Context, db dbh, name string) (ma
 
 		role := utils.FieldColType
 		switch colName {
-		case timeColumn.Name:
+		case tm.timeColumn.Name:
 			role = utils.TimeColType
-		case tagIDColumn.Name:
+		case tm.tagIDColumn.Name:
 			role = utils.TagsIDColType
-		case tagsJSONColumn.Name:
+		case tm.tagsJSONColumn.Name:
 			role = utils.TagColType
-		case fieldsJSONColumn.Name:
+		case tm.fieldsJSONColumn.Name:
 			role = utils.FieldColType
 		default:
 			// We don't want to monopolize the column comment (preventing user from storing other information there),

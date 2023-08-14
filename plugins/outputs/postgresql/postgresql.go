@@ -50,6 +50,7 @@ type Postgresql struct {
 	RetryMaxBackoff            config.Duration         `toml:"retry_max_backoff"`
 	TagCacheSize               int                     `toml:"tag_cache_size"`
 	LogLevel                   string                  `toml:"log_level"`
+	Logger                     telegraf.Logger         `toml:"-"`
 
 	dbContext       context.Context
 	dbContextCancel func()
@@ -63,7 +64,11 @@ type Postgresql struct {
 	writeChan      chan *TableSource
 	writeWaitGroup *utils.WaitGroup
 
-	Logger telegraf.Logger `toml:"-"`
+	// Column types
+	timeColumn       utils.Column
+	tagIDColumn      utils.Column
+	fieldsJSONColumn utils.Column
+	tagsJSONColumn   utils.Column
 }
 
 func init() {
@@ -100,6 +105,21 @@ func (p *Postgresql) Init() error {
 		return fmt.Errorf("invalid tag_cache_size")
 	}
 
+	// Set the time-column name
+	if p.TimestampColumnName == "" {
+		p.TimestampColumnName = "time"
+	}
+
+	// Initialize the column prototypes
+	p.timeColumn = utils.Column{
+		Name: p.TimestampColumnName,
+		Type: PgTimestampWithoutTimeZone,
+		Role: utils.TimeColType,
+	}
+	p.tagIDColumn = utils.Column{Name: "tag_id", Type: PgBigInt, Role: utils.TagsIDColType}
+	p.fieldsJSONColumn = utils.Column{Name: "fields", Type: PgJSONb, Role: utils.FieldColType}
+	p.tagsJSONColumn = utils.Column{Name: "tags", Type: PgJSONb, Role: utils.TagColType}
+
 	var err error
 	if p.dbConfig, err = pgxpool.ParseConfig(p.Connection); err != nil {
 		return err
@@ -128,11 +148,6 @@ func (p *Postgresql) Init() error {
 		p.dbConfig.AfterConnect = p.registerUint8
 	default:
 		return fmt.Errorf("invalid uint64_type")
-	}
-
-	// Rename the time-column if requested by the user
-	if p.TimestampColumnName != "" {
-		timeColumn.Name = p.TimestampColumnName
 	}
 
 	return nil
