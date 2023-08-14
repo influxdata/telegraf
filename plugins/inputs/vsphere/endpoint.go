@@ -1388,11 +1388,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 
 	// Fill in custom values if they exist
-	if objectRef.customValues != nil {
-		for k, v := range objectRef.customValues {
-			if v != "" {
-				t[k] = v
-			}
+	for k, v := range objectRef.customValues {
+		if v != "" {
+			t[k] = v
 		}
 	}
 }
