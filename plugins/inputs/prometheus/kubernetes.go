@@ -63,7 +63,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 			return fmt.Errorf("failed to get current user: %w", err)
 		}
 
-		kubeconfig := filepath.Join(u.HomeDir, ".kube/config")
+		kubeconfig := filepath.Join(u.HomeDir, ".kube", "config")
 
 		config, err = loadConfig(kubeconfig)
 		if err != nil {
