@@ -150,11 +150,6 @@ func (p *Postgresql) Init() error {
 		return fmt.Errorf("invalid uint64_type")
 	}
 
-	// Rename the time-column if requested by the user
-	if p.TimestampColumnName != "" {
-		timeColumn.Name = p.TimestampColumnName
-	}
-
 	return nil
 }
 
