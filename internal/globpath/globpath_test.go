@@ -42,8 +42,10 @@ func TestCompileAndMatch(t *testing.T) {
 		// test exclamation mark creates non-matching list without a range
 		{path: filepath.Join(testdataDir, "log[!2]*"), matches: 2},
 		// test exclamation mark creates non-matching list without a range
+		//nolint:gocritic // filepathJoin - '\\' used to escape in glob, not path separator
 		{path: filepath.Join(testdataDir, "log\\[!*"), matches: 1},
 		// test exclamation mark creates non-matching list without a range
+		//nolint:gocritic // filepathJoin - '\\' used to escape in glob, not path separator
 		{path: filepath.Join(testdataDir, "log\\[^*"), matches: 0},
 	}
 

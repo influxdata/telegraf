@@ -907,7 +907,7 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			c := config.NewConfig()
 			filenames := make([]string, 0, len(test.filename))
 			for _, fn := range test.filename {
-				filenames = append(filenames, filepath.Join("./testdata/processor_order", fn))
+				filenames = append(filenames, filepath.Join(".", "testdata", "processor_order", fn))
 			}
 			require.NoError(t, c.LoadAll(filenames...))
 
