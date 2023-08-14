@@ -58,6 +58,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## NOTE: Some tools (e.g. Grafana) require the default name so be careful!
   # timestamp_column_name = "time"
 
+  ## Allow timezone data in the timestamp column
+  # timestamp_column_with_timezone = false
+
   ## Templated statements to execute when creating a new table.
   # create_templates = [
   #   '''CREATE TABLE {{ .table }} ({{ .columns }})''',

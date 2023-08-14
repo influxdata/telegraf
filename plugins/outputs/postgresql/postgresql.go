@@ -113,7 +113,6 @@ func (p *Postgresql) Init() error {
 	timeColumnType := PgTimestampWithoutTimeZone
 	if p.TimestampColumnTimezone {
 		timeColumnType = PgTimestampWithTimeZone
-
 	}
 
 	// Initialize the column prototypes
