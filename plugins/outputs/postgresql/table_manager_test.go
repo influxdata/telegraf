@@ -474,7 +474,7 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 func TestTableManager_TimeWithTimezone(t *testing.T) {
 	p := newPostgresqlTest(t)
 	p.TagsAsForeignKeys = true
-	p.TimestampColumnTimezone = true
+	p.TimestampColumnType = "timestamp with time zone"
 	require.NoError(t, p.Init())
 	require.NoError(t, p.Connect())
 
