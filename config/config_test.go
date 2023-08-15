@@ -446,6 +446,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("[agent]\ndebug = true"))
 	}))
 	defer ts.Close()
 
@@ -454,8 +455,7 @@ func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	configPath, err := config.GetDefaultConfigPath()
 	require.NoError(t, err)
 	require.Equal(t, []string{ts.URL}, configPath)
-	err = c.LoadConfig("")
-	require.NoError(t, err)
+	require.NoError(t, c.LoadConfig(configPath[0]))
 }
 
 func TestConfig_URLLikeFileName(t *testing.T) {
