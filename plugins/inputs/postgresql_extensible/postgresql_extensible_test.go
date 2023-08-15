@@ -312,6 +312,15 @@ func TestAccRow(t *testing.T) {
 	}
 }
 
+func TestQueriesFile(t *testing.T) {
+	p := Postgresql{
+		Log:         testutil.Logger{},
+		QueriesFile: "testdata/queries.toml",
+	}
+	require.NoError(t, p.Init())
+	require.NotEmpty(t, p.Query)
+}
+
 type fakeRow struct {
 	fields []interface{}
 }

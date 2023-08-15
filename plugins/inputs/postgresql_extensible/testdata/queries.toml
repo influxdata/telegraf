@@ -1,0 +1,2 @@
+[[inputs.postgresql_extensible.query]]
+sqlquery = "SELECT 1"

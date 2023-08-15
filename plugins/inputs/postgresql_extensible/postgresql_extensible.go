@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
+	"github.com/influxdata/toml"
 )
 
 //go:embed sample.conf
@@ -28,6 +29,7 @@ type Postgresql struct {
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query
+	QueriesFile        string `toml:"queries_file"`
 	Debug              bool
 	PreparedStatements bool `toml:"prepared_statements"`
 
@@ -66,6 +68,25 @@ func (p *Postgresql) Init() error {
 		}
 	}
 	p.Service.IsPgBouncer = !p.PreparedStatements
+
+	if p.QueriesFile != "" {
+		queriesFile := struct {
+			Inputs struct {
+				PostgresqlExtensible struct {
+					Query query
+				}
+			}
+		}{}
+
+		data, _, err := config.LoadConfigFile(p.QueriesFile)
+		if err != nil {
+			return fmt.Errorf("error loading queries file %s: %w", p.QueriesFile, err)
+		}
+		if err := toml.Unmarshal(data, &queriesFile); err != nil {
+			return fmt.Errorf("error parsing queries file %s: %w", p.QueriesFile, err)
+		}
+		p.Query = append(p.Query, queriesFile.Inputs.PostgresqlExtensible.Query...)
+	}
 	return nil
 }
 
