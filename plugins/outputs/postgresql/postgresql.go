@@ -41,6 +41,7 @@ type Postgresql struct {
 	ForeignTagConstraint       bool                    `toml:"foreign_tag_constraint"`
 	TagsAsJsonb                bool                    `toml:"tags_as_jsonb"`
 	FieldsAsJsonb              bool                    `toml:"fields_as_jsonb"`
+	TimestampColumnName        string                  `toml:"timestamp_column_name"`
 	CreateTemplates            []*sqltemplate.Template `toml:"create_templates"`
 	AddColumnTemplates         []*sqltemplate.Template `toml:"add_column_templates"`
 	TagTableCreateTemplates    []*sqltemplate.Template `toml:"tag_table_create_templates"`
@@ -49,6 +50,7 @@ type Postgresql struct {
 	RetryMaxBackoff            config.Duration         `toml:"retry_max_backoff"`
 	TagCacheSize               int                     `toml:"tag_cache_size"`
 	LogLevel                   string                  `toml:"log_level"`
+	Logger                     telegraf.Logger         `toml:"-"`
 
 	dbContext       context.Context
 	dbContextCancel func()
@@ -62,7 +64,11 @@ type Postgresql struct {
 	writeChan      chan *TableSource
 	writeWaitGroup *utils.WaitGroup
 
-	Logger telegraf.Logger `toml:"-"`
+	// Column types
+	timeColumn       utils.Column
+	tagIDColumn      utils.Column
+	fieldsJSONColumn utils.Column
+	tagsJSONColumn   utils.Column
 }
 
 func init() {
@@ -98,6 +104,21 @@ func (p *Postgresql) Init() error {
 	if p.TagCacheSize < 0 {
 		return fmt.Errorf("invalid tag_cache_size")
 	}
+
+	// Set the time-column name
+	if p.TimestampColumnName == "" {
+		p.TimestampColumnName = "time"
+	}
+
+	// Initialize the column prototypes
+	p.timeColumn = utils.Column{
+		Name: p.TimestampColumnName,
+		Type: PgTimestampWithoutTimeZone,
+		Role: utils.TimeColType,
+	}
+	p.tagIDColumn = utils.Column{Name: "tag_id", Type: PgBigInt, Role: utils.TagsIDColType}
+	p.fieldsJSONColumn = utils.Column{Name: "fields", Type: PgJSONb, Role: utils.FieldColType}
+	p.tagsJSONColumn = utils.Column{Name: "tags", Type: PgJSONb, Role: utils.TagColType}
 
 	var err error
 	if p.dbConfig, err = pgxpool.ParseConfig(p.Connection); err != nil {
