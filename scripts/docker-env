@@ -23,8 +23,7 @@ def main():
 
 def build(args):
     env = {
-        **os.environ,
-        "NAME": "telegraf-128tech",
+        "NAME": args.name,
         "SUPPORTER": args.supporter,
         "version": args.version,
         "rpm_iteration": args.release,
@@ -33,8 +32,12 @@ def build(args):
 
     try:
         subprocess.run(
-            ["make", f"telegraf-128tech-{args.version}-{args.release}.x86_64.rpm"],
-            env=env,
+            build_docker_command(
+                args.docker_file,
+                ["make", "x86_64.rpm"],
+                interactive=False,
+                env=env,
+            ),
             check=True,
         )
     except subprocess.CalledProcessError as error:
@@ -56,7 +59,7 @@ def create_docker_env(docker_file):
         sys.exit(1)
 
 
-def build_docker_command(docker_file, internal_cmd, interactive=False):
+def build_docker_command(docker_file, internal_cmd, interactive=False, env=None):
     cmd = [
         "docker",
         "run",
@@ -64,6 +67,10 @@ def build_docker_command(docker_file, internal_cmd, interactive=False):
 
     if internal_cmd:
         cmd.append("-it")
+
+    if env:
+        for key, value in env.items():
+            cmd.extend(["--env", f"{key}={value}"])
 
     cmd.extend(
         [
