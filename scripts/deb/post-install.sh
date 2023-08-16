@@ -1,6 +1,5 @@
 #!/bin/bash
 
-LOG_DIR=/var/log/telegraf
 SCRIPT_DIR=/usr/lib/telegraf/scripts
 
 function install_init {
@@ -45,11 +44,16 @@ fi
 # If 'telegraf.conf' is not present use package's sample (fresh install)
 if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.sample ]]; then
    cp /etc/telegraf/telegraf.conf.sample /etc/telegraf/telegraf.conf
+   chmod 640 /etc/telegraf/telegraf.conf
+   chmod 750 /etc/telegraf/telegraf.d
 fi
 
-test -d $LOG_DIR || mkdir -p $LOG_DIR
-chown -R -L telegraf:telegraf $LOG_DIR
-chmod 755 $LOG_DIR
+LOG_DIR=/var/log/telegraf
+test -d $LOG_DIR || {
+    mkdir -p $LOG_DIR
+    chown -R -L telegraf:telegraf $LOG_DIR
+    chmod 755 $LOG_DIR
+}
 
 STATE_DIR=/var/lib/telegraf
 test -d "$STATE_DIR" || {
