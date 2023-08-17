@@ -27,6 +27,11 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 
 		common.SetIfUsed("str", fields, "driver_version", s.DriverVersion)
 		common.SetIfUsed("str", fields, "cuda_version", s.CUDAVersion)
+		common.SetIfUsed("str", fields, "serial", gpu.Serial)
+		common.SetIfUsed("str", fields, "vbios_version", gpu.VbiosVersion)
+		common.SetIfUsed("str", fields, "display_active", gpu.DisplayActive)
+		common.SetIfUsed("str", fields, "display_mode", gpu.DisplayMode)
+		common.SetIfUsed("str", fields, "current_ecc", gpu.EccMode.CurrentEcc)
 		common.SetIfUsed("int", fields, "fan_speed", gpu.FanSpeed)
 		common.SetIfUsed("int", fields, "memory_total", gpu.Memory.Total)
 		common.SetIfUsed("int", fields, "memory_used", gpu.Memory.Used)
