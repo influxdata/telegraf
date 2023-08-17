@@ -300,7 +300,7 @@ issues:
       linters:
         - govet
 
-    - path: cmd/telegraf/(main|printer).go
+    - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     - path: _test\.go
