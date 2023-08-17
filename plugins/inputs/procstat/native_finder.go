@@ -80,10 +80,38 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	return pids, err
 }
 
-// Just to meet the requirements of the interface
+// ChildPattern matches children pids on the command line when the process was executed
 func (pg *NativeFinder) ChildPattern(pattern string) ([]PID, error) {
+	var parentpids []PID
 	var pids []PID
-	var err error
+	regxPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		return pids, err
+	}
+	procs, err := process.Processes()
+	if err != nil {
+		return pids, err
+	}
+	for _, p := range procs {
+		cmd, err := p.Cmdline()
+		if err != nil {
+			continue
+		}
+		if regxPattern.MatchString(cmd) {
+			parentpids = append(parentpids, PID(p.Pid))
+		}
+	}
+	for _, p := range parentpids {
+		parent, err := process.NewProcess(int32(p))
+		if err != nil {
+			return pids, err
+		}
+		children, _ := parent.Children()
+
+		for _, child := range children {
+			pids = append(pids, PID(child.Pid))
+		}
+	}
 	return pids, err
 }
 

@@ -12,6 +12,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- supervisor_unit
 - win_service
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -112,6 +113,7 @@ Below are an example set of tags and fields:
     - systemd_unit (when defined)
     - cgroup (when defined)
     - cgroup_full (when cgroup or systemd_unit is used with glob)
+    - supervisor_unit (when defined)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)
@@ -182,6 +184,7 @@ Below are an example set of tags and fields:
     - user
     - systemd_unit
     - cgroup
+    - supervisor_unit
     - win_service
     - result
   - fields:
