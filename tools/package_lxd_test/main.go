@@ -10,8 +10,8 @@ import (
 )
 
 var imagesRPM = []string{
+	"fedora/38",
 	"fedora/37",
-	"fedora/36",
 	"centos/7",
 	"centos/9-Stream",
 	"amazonlinux/current",
