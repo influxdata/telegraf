@@ -2,7 +2,7 @@
 
 set -eux
 
-GO_VERSION="1.21"
+GO_VERSION="1.21.0"
 GO_ARCH="linux-amd64"
 # from https://golang.org/dl
 GO_VERSION_SHA="d0398903a16ba2232b389fb31032ddf57cac34efda306a0eebac34f0965a0742"

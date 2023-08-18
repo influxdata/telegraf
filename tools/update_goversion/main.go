@@ -149,7 +149,7 @@ func main() {
 		fmt.Printf("%s  %s\n", hash, file)
 	}
 
-	zeroPatchVersion := removeZeroPatch(version)
+	//zeroPatchVersion := removeZeroPatch(version)
 	noPatchVersion := removePatch(version)
 
 	files := []FileInfo{
@@ -181,22 +181,22 @@ func main() {
 		{
 			FileName: "scripts/ci.docker",
 			Regex:    `(FROM golang):(\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1:%s", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=%q", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1=%q", version),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=%q", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1=%q", version),
 		},
 		{
 			FileName: "scripts/installgo_windows.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=%q", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1=%q", version),
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",

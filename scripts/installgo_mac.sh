@@ -3,7 +3,7 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.21"
+GO_VERSION="1.21.0"
 GO_VERSION_SHA_arm64="3aca44de55c5e098de2f406e98aba328898b05d509a2e2a356416faacf2c4566" # from https://golang.org/dl
 GO_VERSION_SHA_amd64="b314de9f704ab122c077d2ec8e67e3670affe8865479d1f01991e7ac55d65e70" # from https://golang.org/dl
 
