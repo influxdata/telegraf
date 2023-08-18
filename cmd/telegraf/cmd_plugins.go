@@ -15,11 +15,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var deprecatedFlag = cli.BoolFlag{
-	Name:  "deprecated",
-	Usage: "print only deprecated plugins",
-}
-
 func getInputNames() []byte {
 	inputNames := make([]string, 0, len(inputs.Inputs))
 	for i := range inputs.Inputs {
