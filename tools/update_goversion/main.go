@@ -53,8 +53,6 @@ func removePatch(version string) string {
 
 // findHash will search the downloads table for the hashes matching the artifacts list
 func findHashes(body io.Reader, version string) (map[string]string, error) {
-	version = removeZeroPatch(version)
-
 	htmlTokens := html.NewTokenizer(body)
 	artifacts := []string{
 		fmt.Sprintf("go%s.linux-amd64.tar.gz", version),
@@ -147,6 +145,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	for file, hash := range hashes {
+		fmt.Printf("%s  %s\n", hash, file)
+	}
 
 	zeroPatchVersion := removeZeroPatch(version)
 	noPatchVersion := removePatch(version)
@@ -200,17 +201,17 @@ func main() {
 		{
 			FileName: "scripts/installgo_linux.sh",
 			Regex:    `(GO_VERSION_SHA)=".*"`,
-			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.linux-amd64.tar.gz", zeroPatchVersion)]),
+			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.linux-amd64.tar.gz", version)]),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION_SHA_arm64)=".*"`,
-			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-arm64.tar.gz", zeroPatchVersion)]),
+			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-arm64.tar.gz", version)]),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION_SHA_amd64)=".*"`,
-			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", zeroPatchVersion)]),
+			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", version)]),
 		},
 	}
 
