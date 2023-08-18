@@ -149,7 +149,7 @@ func main() {
 		fmt.Printf("%s  %s\n", hash, file)
 	}
 
-	//zeroPatchVersion := removeZeroPatch(version)
+	_ = removeZeroPatch(version)
 	noPatchVersion := removePatch(version)
 
 	files := []FileInfo{
