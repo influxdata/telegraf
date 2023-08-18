@@ -40,7 +40,7 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
--# Read metrics from one or many vCenters
+# Read metrics from one or many vCenters
 [[inputs.vsphere]]
   ## List of vCenter URLs to be monitored. These three lines must be uncommented
   ## and edited for the plugin to work.
