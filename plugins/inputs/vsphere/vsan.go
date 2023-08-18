@@ -59,6 +59,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) er
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	for _, obj := range res.objects {
 		te.Run(ctx, func() {
+			fmt.Printf("[metrics] start %s @ %d\n", obj.name, time.Now().Unix())
 			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
 		})
 	}
@@ -99,6 +100,8 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *object
 	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
 		acc.AddError(fmt.Errorf("error querying performance metrics for cluster %s: %w", clusterRef.name, err))
 	}
+
+	fmt.Printf("[metrics] end %s @ %d\n", clusterRef.name, time.Now().Unix())
 }
 
 // vsanEnabled returns True if vSAN is enabled, otherwise False
@@ -297,6 +300,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			}
 			// We've iterated through all the metrics and collected buckets for each measurement name. Now emit them!
 			for _, bucket := range buckets {
+				fmt.Printf("[metrics] publishing %s @ %d\n", clusterRef.name, bucket.ts.Unix())
 				acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 			}
 			count += len(buckets)
