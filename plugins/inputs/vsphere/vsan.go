@@ -39,6 +39,12 @@ var (
 
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) error {
+	fmt.Printf("collection interval for vsan started @ %d\n", time.Now().Unix())
+	fmt.Println("printing resources (we loop over this for the throttled executor)")
+	for _, resource := range e.resourceKinds["vsan"].objects {
+		fmt.Printf(" * %s\n", resource.name)
+	}
+
 	lower := versionLowerThan(e.apiVersion, 5, 5)
 	if lower {
 		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)
@@ -55,11 +61,16 @@ func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) er
 	vsanClient := vimClient.NewServiceClient(vsanPath, vsanNamespace)
 	// vSAN Metrics to collect
 	metrics := e.getVsanMetadata(ctx, vsanClient, res)
+	fmt.Println("printing metrics to collect:")
+	for key, value := range metrics {
+		fmt.Printf(" * %s: %s\n", key, value)
+	}
+
 	// Iterate over all clusters, run a goroutine for each cluster
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	for _, obj := range res.objects {
 		te.Run(ctx, func() {
-			fmt.Printf("[metrics] start %s @ %d\n", obj.name, time.Now().Unix())
+			fmt.Printf("[metrics] start %s @ %d %s\n", obj.name, time.Now().Unix(), metrics)
 			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
 		})
 	}
