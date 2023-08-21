@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
@@ -38,6 +39,10 @@ type Secret struct {
 
 	// Denotes if the secret is completely empty
 	notempty bool
+
+	// If secret has no references to secret stores, then keep it as plaintext string.
+	// Valid only if notempty.
+	plainValue []byte
 }
 
 // NewSecret creates a new secret from the given bytes
@@ -72,9 +77,14 @@ func (s *Secret) init(secret []byte) {
 	// Find all parts that need to be resolved and return them
 	s.unlinked = secretPattern.FindAllString(string(secret), -1)
 
-	// Setup the enclave
-	s.enclave = memguard.NewEnclave(secret)
-	s.resolvers = nil
+	if s.notempty && len(s.unlinked) == 0 {
+		s.plainValue = bytes.Clone(secret)
+		s.enclave = nil
+	} else {
+		// Setup the enclave
+		s.enclave = memguard.NewEnclave(secret)
+		s.resolvers = nil
+	}
 }
 
 // Destroy the secret content
@@ -82,17 +92,16 @@ func (s *Secret) Destroy() {
 	s.resolvers = nil
 	s.unlinked = nil
 	s.notempty = false
+	s.plainValue = nil
 
-	if s.enclave == nil {
-		return
+	if s.enclave != nil {
+		// Wipe the secret from memory
+		lockbuf, err := s.enclave.Open()
+		if err == nil {
+			lockbuf.Destroy()
+		}
+		s.enclave = nil
 	}
-
-	// Wipe the secret from memory
-	lockbuf, err := s.enclave.Open()
-	if err == nil {
-		lockbuf.Destroy()
-	}
-	s.enclave = nil
 
 	// Keep track of the number of secrets...
 	secretCount.Add(-1)
@@ -105,6 +114,10 @@ func (s *Secret) Empty() bool {
 
 // EqualTo performs a constant-time comparison of the secret to the given reference
 func (s *Secret) EqualTo(ref []byte) (bool, error) {
+	if s.notempty && len(s.plainValue) > 0 {
+		return bytes.Equal(ref, s.plainValue), nil
+	}
+
 	if s.enclave == nil {
 		return false, nil
 	}
@@ -125,6 +138,10 @@ func (s *Secret) EqualTo(ref []byte) (bool, error) {
 
 // Get return the string representation of the secret
 func (s *Secret) Get() ([]byte, error) {
+	if s.notempty && len(s.plainValue) > 0 {
+		return bytes.Clone(s.plainValue), nil
+	}
+
 	if s.enclave == nil {
 		return nil, nil
 	}
@@ -140,13 +157,6 @@ func (s *Secret) Get() ([]byte, error) {
 	}
 	defer lockbuf.Destroy()
 	secret := lockbuf.Bytes()
-
-	if len(s.resolvers) == 0 {
-		// Make a copy as we cannot access lockbuf after Destroy, i.e.
-		// after this function finishes.
-		newsecret := append([]byte{}, secret...)
-		return newsecret, protect(newsecret)
-	}
 
 	replaceErrs := make([]string, 0)
 	newsecret := secretPattern.ReplaceAllFunc(secret, func(match []byte) []byte {
@@ -185,6 +195,7 @@ func (s *Secret) Set(value []byte) error {
 	s.enclave = memguard.NewEnclave(secret)
 	s.resolvers = res
 	s.notempty = len(value) > 0
+	s.plainValue = nil
 
 	return nil
 }
