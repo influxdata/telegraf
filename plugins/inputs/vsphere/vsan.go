@@ -68,10 +68,10 @@ func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) er
 
 	// Iterate over all clusters, run a goroutine for each cluster
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
-	for _, obj := range res.objects {
+	for index := range res.objects {
 		te.Run(ctx, func() {
-			fmt.Printf("[metrics] start %s @ %d %s\n", obj.name, time.Now().Unix(), metrics)
-			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
+			fmt.Printf("[metrics] start %s @ %d %s\n", res.objects[index].name, time.Now().Unix(), metrics)
+			e.collectVsanPerCluster(ctx, res.objects[index], vimClient, vsanClient, metrics, acc)
 		})
 	}
 	te.Wait()
