@@ -27,6 +27,8 @@ type CredentialConfig struct {
 }
 
 func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
+	fmt.Printf("env AWS_REGION is %q\n", os.Getenv("AWS_REGION"))
+	fmt.Printf("setting region to: %s\n", c.Region)
 	if c.RoleARN != "" {
 		fmt.Println("loading with assume credentials")
 		fmt.Printf("role arn: %s\n", c.RoleARN)
@@ -37,8 +39,6 @@ func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
 }
 
 func (c *CredentialConfig) configWithRootCredentials() (awsV2.Config, error) {
-	fmt.Printf("env AWS_REGION is %q\n", os.Getenv("AWS_REGION"))
-	fmt.Printf("setting region to: %s\n", c.Region)
 	options := []func(*configV2.LoadOptions) error{
 		configV2.WithRegion(c.Region),
 	}
