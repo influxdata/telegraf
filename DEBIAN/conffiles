@@ -1,0 +1,2 @@
+/etc/logrotate.d/telegraf
+/etc/telegraf/telegraf.conf.sample

@@ -1,0 +1,115 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: Debian
+Label: Debian
+Suite: Debian
+Codename: DaoXiangHu-stable
+Version: 10.4
+Date: Wed, 16 Aug 2023 01:18:26 UTC
+Architectures: loongarch64
+Components: main contrib non-free
+MD5Sum:
+ 8b66857197ca0deabf2bea919ec7b56f 56397294 main/binary-loongarch64/Packages
+ 82a6860549371fe9c90279e35f4fc13d 15965353 main/binary-loongarch64/Packages.gz
+ 3ba9f95dccdd8a91e3e0b1740b71a6a2 101 main/binary-loongarch64/Release
+ 3c10bc0fd3b088f10df4a3352435faad 366064 main/debian-installer/binary-loongarch64/Packages
+ 7cbaa22190c176072b3daa8d1242162d 90980 main/debian-installer/binary-loongarch64/Packages.gz
+ 8efc0d90e60fa79512173c2a597f1f86 46364341 main/source/Sources
+ 7b913aaee673be26e8a1b8a738ee33ef 12355079 main/source/Sources.gz
+ 157a35160bec7de8e053134e5a689222 96 main/source/Release
+ d41d8cd98f00b204e9800998ecf8427e 0 contrib/binary-loongarch64/Packages
+ 7029066c27ac6f5ef18d660d5741979a 20 contrib/binary-loongarch64/Packages.gz
+ 59e3837f1e65fbeaf66203b5b867e78c 104 contrib/binary-loongarch64/Release
+ d41d8cd98f00b204e9800998ecf8427e 0 contrib/source/Sources
+ 7029066c27ac6f5ef18d660d5741979a 20 contrib/source/Sources.gz
+ bf7249fa03d6d844ae9f48c7659c4f13 99 contrib/source/Release
+ 224dc5914959a5891012cce6264641b6 422362 non-free/binary-loongarch64/Packages
+ 7ae7800019476b120bd9ed4c82f4f565 108746 non-free/binary-loongarch64/Packages.gz
+ cb1c0de70defdf1248458be545750c34 105 non-free/binary-loongarch64/Release
+ ac46c791d3319583c7460aa7334201eb 423028 non-free/source/Sources
+ 90455f9e0b4a91386122c79be83e2b95 117101 non-free/source/Sources.gz
+ b65cbf32728e65bea0f73bb54a6384bf 100 non-free/source/Release
+ 0cf135aaf7a4b478e789194e68adbf8f 395444796 main/Contents-loongarch64
+ 5060998d775b127b170bab7e35176782 27542593 main/Contents-loongarch64.gz
+ 0291d347788c31a74a8084144b4f3f84 20739232 main/Contents-loongarch64.xz
+ d41d8cd98f00b204e9800998ecf8427e 0 contrib/Contents-loongarch64
+ 7029066c27ac6f5ef18d660d5741979a 20 contrib/Contents-loongarch64.gz
+ 8dc5aea5b03dff8595f096f9e368e888 32 contrib/Contents-loongarch64.xz
+ 4b5a4c6b8f8efdb7e575577b92ed9f31 7393811 non-free/Contents-loongarch64
+ 6a350f7c0ce579a5a6f888cbe086b71b 402860 non-free/Contents-loongarch64.gz
+ 12b7e7aba6f6babedf6f5abb910cbe21 304428 non-free/Contents-loongarch64.xz
+SHA1:
+ 2105a0dbfbe42c5abcb4ce6522452b33ca2e2a9a 56397294 main/binary-loongarch64/Packages
+ d8c0d193ff8103a22b17d83937c342b10b38757a 15965353 main/binary-loongarch64/Packages.gz
+ efb790ee9ce902520e097f22a48c023716f08d88 101 main/binary-loongarch64/Release
+ f10b8f5a9d01e8b8fbbbb9c7b71215b1eb704760 366064 main/debian-installer/binary-loongarch64/Packages
+ a7cf0b03ad471d8147a8b908ae937e35c7013458 90980 main/debian-installer/binary-loongarch64/Packages.gz
+ d8de07d8fda22b343c08c6f3b5f24b68b4109f42 46364341 main/source/Sources
+ bd17e530d864f4acd59ff6fde5c4e85af86bb5aa 12355079 main/source/Sources.gz
+ e3d6ee8e06f172e31ad317cd5b59c1a813e1d7fd 96 main/source/Release
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 contrib/binary-loongarch64/Packages
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 contrib/binary-loongarch64/Packages.gz
+ 3b97488b793aa3ab1415a778353023bcda88f67a 104 contrib/binary-loongarch64/Release
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 contrib/source/Sources
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 contrib/source/Sources.gz
+ fb29300836ad4f3409e517fd56b1d1d1d6cf0900 99 contrib/source/Release
+ 1e811d30dc250b492a67ca8993ac0bb2f2d6436c 422362 non-free/binary-loongarch64/Packages
+ 4299f5f947534e1d7cbaa78061a873c87affc746 108746 non-free/binary-loongarch64/Packages.gz
+ 3c76ad8dc399ee3ba5d25b38c67b9d62d69faaa7 105 non-free/binary-loongarch64/Release
+ 030d2951eb1b9fd3c163b35f7bac56ff6103d833 423028 non-free/source/Sources
+ 33bd6f993db8d71383512b4a3f45104f63128098 117101 non-free/source/Sources.gz
+ ef5ec23c71dc26289d6788c76269a243252d639f 100 non-free/source/Release
+ 8cdb5581d8b1f659e4d520b1990e11ff576db408 395444796 main/Contents-loongarch64
+ 4966cacc4d7430b37cdbdf5dbcfa1f1b16c43835 27542593 main/Contents-loongarch64.gz
+ 49f099fab2c01dd94f4a6d1960e03be957948416 20739232 main/Contents-loongarch64.xz
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 contrib/Contents-loongarch64
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 contrib/Contents-loongarch64.gz
+ 9746882f4236fa1c3a8f86be2f1d9c46680c0b10 32 contrib/Contents-loongarch64.xz
+ e5b48feafd24c039edfe59bd3629531e928728c2 7393811 non-free/Contents-loongarch64
+ fae116b2257495ee0e611d07560fec3dbbd86d0a 402860 non-free/Contents-loongarch64.gz
+ 0e16cf2fee45af6dc2f1aed8440edd1d5ffc73ab 304428 non-free/Contents-loongarch64.xz
+SHA256:
+ 838b883354eb170abb69f3fa2c2be0344a22167f9c00bf3c09e4e376845f4942 56397294 main/binary-loongarch64/Packages
+ 4e44c2c5bd8920272e6bd320d8316df7a65937f62a497fb3b42c10466e681ac3 15965353 main/binary-loongarch64/Packages.gz
+ d1e4fb19204715ca8f45e15366419eddae77ea91039843142cda8ae031b893d9 101 main/binary-loongarch64/Release
+ 7b135a12a1e6023f20d7e1cd241e7779aa359ba905b1e663e75914fc00f25f3a 366064 main/debian-installer/binary-loongarch64/Packages
+ a118e0b281b291a02eac6463d6a45484e9dd51666452729872226735b1e16db5 90980 main/debian-installer/binary-loongarch64/Packages.gz
+ 98d356094fec2553d30d7cdb2fecc3284a1e1a612bb79c91233cb3e10d8734de 46364341 main/source/Sources
+ 2f121743b4aed648033d8acde27721dedcf73f9700a8c7f02ca1f02cc3e13dae 12355079 main/source/Sources.gz
+ 3d47062b4c641dad7bbe520e3c0df65954b6a9fd7867cde781a22d28c2592749 96 main/source/Release
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 contrib/binary-loongarch64/Packages
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 contrib/binary-loongarch64/Packages.gz
+ eecee2ddd378a87f47e05c10fe9561966342cb6d686f3c6ed00974457452b8ba 104 contrib/binary-loongarch64/Release
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 contrib/source/Sources
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 contrib/source/Sources.gz
+ 637ac92b7c5b2718ecb4a62e86ad1d60048411b9f924c0c04b5be0bcad74fa28 99 contrib/source/Release
+ 797725242a6fe54be35917806739f82f7f999b5b5877e3b3f3b2b0cdcb31c71e 422362 non-free/binary-loongarch64/Packages
+ 7b6ecb02e05c3122dd9a69b1aacf2e85c6fcd90c2a2b7cf6dbd6fa2a5f2e82f1 108746 non-free/binary-loongarch64/Packages.gz
+ 59bd3b39906919ab75867307640b6d68059a4a92ea6249690765d83e3d26d2f2 105 non-free/binary-loongarch64/Release
+ d4c9fd7c859155fb91f6e43f70593a20c76f744e2b7ea51a03cac83681b49285 423028 non-free/source/Sources
+ 16844732c6de32ec680520d3a2a8abc26244d296385a4ae41b1266fc3473c6e0 117101 non-free/source/Sources.gz
+ 8ab629f142e3f8661804361a319141b3964f84878a3d7528e614f964713d9ffc 100 non-free/source/Release
+ 9e713f8cea21ef88f934e10ad8eb42606fe09c4e7be45f6ac871a7ec376f7dcb 395444796 main/Contents-loongarch64
+ cc1e2eafc790fa9f5f1c83b0568f1aae30776640f04acdecc18760d7408806d6 27542593 main/Contents-loongarch64.gz
+ 45663f5991661bb73cadf7a683c6608273cc3fbf450a444f7b9ac3a725acd266 20739232 main/Contents-loongarch64.xz
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 contrib/Contents-loongarch64
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 contrib/Contents-loongarch64.gz
+ 0040f94d11d0039505328a90b2ff48968db873e9e7967307631bf40ef5679275 32 contrib/Contents-loongarch64.xz
+ 5f0dfee245797841b41cf159b8630b5290280f2700af95967e97bc6299cac5b2 7393811 non-free/Contents-loongarch64
+ 2e67ed98ab25bbe1a7fb98776287ffa8ea2ded925f7a093c3ba3476a6a67713c 402860 non-free/Contents-loongarch64.gz
+ 975957e6e299b697b69e008980ccbd1c715642ab0976184c5266de8eee9ad61a 304428 non-free/Contents-loongarch64.xz
+-----BEGIN PGP SIGNATURE-----
+
+iQGzBAEBCgAdFiEE0bj00yQfAVys9zPTqMfCDO3xuBcFAmTcI+QACgkQqMfCDO3x
+uBeA4gv/XatCjfrxu5dbOJSARKD1RaMnam0J62cHPwJcHgR55o/P/znT4KkK+5Oq
+nDVxSBX+34Lxc8vA4YVrmKZw0r+6ndG4C9ZW2rkt0TgkQhff0FF9jbGe9dDYHYfg
+Y9RlRJ1jl6OLSDvGYkB25GSu5r958eLbryUYJe6erWZL74Z3KYDSP0YE2Bi7b7V5
+4ZoapKGznIG7ofV6Cqn3dGXIXJnZuVrhS5LANj7+Exl65gawrsG1UH/JFrhmJzXH
+Fg4mtoHtaTrryetPi6tAUW9AQzHWMhGvq0kH3C1fMFe93uFYYjIh0TSCniDmVfns
+5OJG7daukHvSug5SHTYb64AyPVfw1TVWR4ajB/IqsqgpdQIkaks0mYr79QUs3S18
+4iQpnTh2lzTTzLeCOk4MO2LUaiuvZatp03aPonQcap04j+53jZ1I/AvtbN+ggssy
+v985ewmAtT5f1dx21KPiyVAljrq+s2BopNBe2Y1yk918j+LCRaN3/liZym1X1x7e
+g5F613TK
+=3nIL
+-----END PGP SIGNATURE-----

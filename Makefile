@@ -122,14 +122,14 @@ embed_readme_%:
 .PHONY: config
 config:
 	@echo "generating default config"
-	go run ./cmd/telegraf config > etc/telegraf.conf
+	go run -v ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
 docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -v -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -137,7 +137,7 @@ telegraf: build
 # Used by dockerfile builds
 .PHONY: go-install
 go-install:
-	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+	go install -mod=vendor -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
 test:
@@ -242,15 +242,15 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	docker build -f scripts/buster.docker -t "telegraf:$(commit)" .
+	docker build -f scripts/buster.docker -t "cr.loongnix.cn/library/telegraf:1.27.3" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.20.5 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.20.5
+	docker build -t cr.loongnix.cn/influxdb/telegraf-ci:1.20.2 - < scripts/ci.docker
+	#docker push cr.loongnix.cn/influxdb/telegraf-ci:1.20.2
 
 .PHONY: install
 install: $(buildbin)
@@ -274,7 +274,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -v -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -287,6 +287,12 @@ mipsel += mipsel.deb linux_mipsel.tar.gz
 mipsel:
 	@ echo $(mipsel)
 arm64 += linux_arm64.tar.gz arm64.deb aarch64.rpm
+
+loongarch64 += linux_loongarch64.tar.gz loongarch64.deb loongarch64.rpm
+.PHONY: loongarch64
+loongarch64:
+	@ echo $(loongarch64)
+
 .PHONY: arm64
 arm64:
 	@ echo $(arm64)
@@ -332,7 +338,7 @@ darwin-arm64 += darwin_arm64.tar.gz
 darwin-arm64:
 	@ echo $(darwin-arm64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
+include_packages := $(mips) $(mipsel) $(loongarch64) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: docs config $(include_packages)
@@ -424,6 +430,9 @@ mips.deb linux_mips.tar.gz: export GOARCH := mips
 
 mipsel.deb linux_mipsel.tar.gz: export GOOS := linux
 mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
+
+loongarch64.deb linux_loongarch64.tar.gz: export GOOS := linux
+loongarch64.deb linux_loongarch64.tar.gz: export GOARCH := loong64
 
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64

@@ -1,0 +1,11 @@
+Package: telegraf
+Version: 1.27.3-1
+License: MIT
+Vendor: InfluxData
+Architecture: loongarch64
+Maintainer: support@influxdb.com
+Installed-Size: 179032
+Section: default
+Priority: optional
+Homepage: https://github.com/influxdata/telegraf
+Description: Plugin-driven server agent for reporting metrics into InfluxDB.

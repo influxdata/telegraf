@@ -1,9 +1,11 @@
-FROM golang:1.20.5
+FROM cr.loongnix.cn/library/golang:1.20-buster
+MAINTAINER yangzewei@loongson.cn
 
 RUN chmod -R 755 "$GOPATH"
-
-RUN DEBIAN_FRONTEND=noninteractive \
-	apt update && apt install -y --no-install-recommends \
+#COPY InRelease InRelease
+#RUN DEBIAN_FRONTEND=noninteractive \
+#RUN	apt update && apt install -y --no-install-recommends \
+RUN     apt update && apt install -y \
 	autoconf \
 	git \
 	libtool \
@@ -15,9 +17,11 @@ RUN DEBIAN_FRONTEND=noninteractive \
 	ruby-dev \
 	zip && \
 	rm -rf /var/lib/apt/lists/*
-
+RUN gem sources --add http://mirrors.aliyun.com/rubygems/ \ #更换为阿里源\
+    gem sources --remove https://rubygems.org/ \
+    gem install fpm
 RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN locale-gen C.UTF-8 || true
 ENV LANG=C.UTF-8
 
-RUN gem install fpm
+#RUN gem install fpm

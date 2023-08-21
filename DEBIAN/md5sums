@@ -1,0 +1,6 @@
+e8b654479dc3f727652531061f818f7a  etc/logrotate.d/telegraf
+9af80392a0c859a993e17d0ccff68b69  etc/telegraf/telegraf.conf.sample
+d595b3a128b25aba493dafda70e36a55  usr/bin/telegraf
+28e966be61619129cc202b4a67f6fa86  usr/lib/telegraf/scripts/init.sh
+079516eb2c92438b387eee2ff60eeebf  usr/lib/telegraf/scripts/telegraf.service
+c2c8cbcc6242096ed5f579868d9864a6  usr/share/doc/telegraf/changelog.gz
