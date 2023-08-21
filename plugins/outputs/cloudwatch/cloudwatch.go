@@ -4,6 +4,7 @@ package cloudwatch
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -170,6 +171,7 @@ func (c *CloudWatch) Connect() error {
 		return err
 	}
 
+	fmt.Printf("connecting using region: %s\n", cfg.Region)
 	c.svc = cloudwatch.NewFromConfig(cfg, func(options *cloudwatch.Options) {
 		options.HTTPClient = client
 	})

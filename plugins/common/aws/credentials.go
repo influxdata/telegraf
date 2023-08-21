@@ -2,6 +2,8 @@ package aws
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	configV2 "github.com/aws/aws-sdk-go-v2/config"
@@ -26,12 +28,17 @@ type CredentialConfig struct {
 
 func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
 	if c.RoleARN != "" {
+		fmt.Println("loading with assume credentials")
+		fmt.Printf("role arn: %s\n", c.RoleARN)
 		return c.configWithAssumeCredentials()
 	}
+	fmt.Println("loading with root credentials")
 	return c.configWithRootCredentials()
 }
 
 func (c *CredentialConfig) configWithRootCredentials() (awsV2.Config, error) {
+	fmt.Printf("env AWS_REGION is %q\n", os.Getenv("AWS_REGION"))
+	fmt.Printf("setting region to: %s\n", c.Region)
 	options := []func(*configV2.LoadOptions) error{
 		configV2.WithRegion(c.Region),
 	}
@@ -48,7 +55,10 @@ func (c *CredentialConfig) configWithRootCredentials() (awsV2.Config, error) {
 		options = append(options, configV2.WithCredentialsProvider(provider))
 	}
 
-	return configV2.LoadDefaultConfig(context.Background(), options...)
+	config, err := configV2.LoadDefaultConfig(context.Background(), options...)
+
+	fmt.Printf("loaded config is using region: %s\n", config.Region)
+	return config, err
 }
 
 func (c *CredentialConfig) configWithAssumeCredentials() (awsV2.Config, error) {
@@ -80,5 +90,7 @@ func (c *CredentialConfig) configWithAssumeCredentials() (awsV2.Config, error) {
 	}
 
 	defaultConfig.Credentials = awsV2.NewCredentialsCache(provider)
+	fmt.Printf("loaded config is using region: %s\n", defaultConfig.Region)
+
 	return defaultConfig, nil
 }
