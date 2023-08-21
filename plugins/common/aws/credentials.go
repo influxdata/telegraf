@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	configV2 "github.com/aws/aws-sdk-go-v2/config"
@@ -27,6 +28,8 @@ type CredentialConfig struct {
 }
 
 func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
+	fmt.Println(runtime.GOOS)
+	fmt.Println(runtime.GOARCH)
 	fmt.Printf("env AWS_REGION is %q\n", os.Getenv("AWS_REGION"))
 	fmt.Printf("setting region to: %s\n", c.Region)
 	if c.RoleARN != "" {
