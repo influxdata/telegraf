@@ -102,7 +102,9 @@ Builds for other platforms or package formats are provided by members of theTele
 These packages are not built, tested, or supported by the Telegraf project or InfluxData. Please
 get in touch with the package author if support is needed:
 
-- [Ansible Role](https://github.com/rossmcdonald/telegraf)
+
+- [Loongarch]()
+- [Ansible Role](https://github.com/rossmcdonald/telegraf) by yzewei
 - [Chocolatey](https://chocolatey.org/packages/telegraf) by [ripclawffb](https://chocolatey.org/profiles/ripclawffb)
 - [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/telegraf.json)
 - [Snap](https://snapcraft.io/telegraf) by Laurent Sesquès (sajoupa)
