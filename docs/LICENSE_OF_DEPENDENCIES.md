@@ -5,7 +5,7 @@ following works:
 
 - cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
-- collectd.org [MIT License](https://git.octo.it/?p=collectd.git;a=blob;f=COPYING;hb=HEAD)
+- collectd.org [ISC License](https://github.com/collectd/go-collectd/blob/master/LICENSE)
 - dario.cat/mergo [BSD 3-Clause "New" or "Revised" License](https://github.com/imdario/mergo/blob/master/LICENSE)
 - github.com/99designs/keyring [MIT License](https://github.com/99designs/keyring/blob/master/LICENSE)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
