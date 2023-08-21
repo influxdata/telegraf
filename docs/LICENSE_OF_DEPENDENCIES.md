@@ -32,6 +32,7 @@ following works:
 - github.com/Masterminds/sprig [MIT License](https://github.com/Masterminds/sprig/blob/master/LICENSE.txt)
 - github.com/Mellanox/rdmamap [Apache License 2.0](https://github.com/Mellanox/rdmamap/blob/master/LICENSE)
 - github.com/Microsoft/go-winio [MIT License](https://github.com/Microsoft/go-winio/blob/master/LICENSE)
+- github.com/PaesslerAG/gval [BSD 3-Clause "New" or "Revised" License](https://github.com/PaesslerAG/gval/blob/master/LICENSE)
 - github.com/Shopify/sarama [MIT License](https://github.com/IBM/sarama/blob/master/LICENSE.md)
 - github.com/aerospike/aerospike-client-go [Apache License 2.0](https://github.com/aerospike/aerospike-client-go/blob/master/LICENSE)
 - github.com/alecthomas/participle [MIT License](https://github.com/alecthomas/participle/blob/master/COPYING)
