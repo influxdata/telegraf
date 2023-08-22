@@ -26,6 +26,8 @@ import (
 type Parser struct {
 	MetricName      string            `toml:"metric_name"`
 	SchemaRegistry  string            `toml:"avro_schema_registry"`
+	Authorization   string            `toml:"avro_schema_registry_authorization_base64"`
+	CaCertPath      string            `toml:"avro_schema_registry_cacert_path"`
 	Schema          string            `toml:"avro_schema"`
 	Format          string            `toml:"avro_format"`
 	Measurement     string            `toml:"avro_measurement"`
@@ -62,7 +64,12 @@ func (p *Parser) Init() error {
 		}
 	}
 	if p.SchemaRegistry != "" {
-		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
+		registryObj, err := newSchemaRegistry(p.SchemaRegistry, p.Authorization, p.CaCertPath)
+		if err != nil {
+			return fmt.Errorf("error connecting to the schema registry '%v'. '%v'", p.SchemaRegistry, err)
+		}
+
+		p.registryObj = registryObj
 	}
 
 	return nil
