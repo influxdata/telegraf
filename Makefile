@@ -472,6 +472,7 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 %.deb: export localstatedir := /var
 %.rpm: export pkg := rpm
 %.rpm: export prefix := /usr
+%.rpm: export conf_suffix := .sample
 %.rpm: export sysconfdir := /etc
 %.rpm: export localstatedir := /var
 %.tar.gz: export pkg := tar
