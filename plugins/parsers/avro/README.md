@@ -58,6 +58,17 @@ The message is supposed to be encoded as follows:
   #      }
   #'''
 
+  ## login and password in format "Login:Password" encoded to base64 string
+  ## that will be added as a basic auth header to the schema registry requests
+  ## Should be filled only when schema registry uses basic authentication 
+  ## For example "Aladdin:open sesame" equals to "QWxhZGRpbjpvcGVuIHNlc2FtZQ==" in base64
+  # avro_schema_registry_authorization_base64 = "QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
+
+  ## Path to the schema registry certificate. Should be specified when it is required 
+  ## for connection to the schema registry only. 
+  ## For example "Aladdin:open sesame" equals to "QWxhZGRpbjpvcGVuIHNlc2FtZQ==" in base64
+  # avro_schema_registry_cacert_path = "/etc/telegraf/ca_cert.crt"
+
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
   # avro_measurement = "ratings"
