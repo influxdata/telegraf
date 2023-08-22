@@ -445,6 +445,7 @@ func (e *Endpoint) getAncestorName(
 }
 
 func (e *Endpoint) discover(ctx context.Context) error {
+	fmt.Println("discover called")
 	e.busy.Lock()
 	defer e.busy.Unlock()
 	if ctx.Err() != nil {
@@ -541,7 +542,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
+	fmt.Println("updating resource kinds")
 	for k, v := range newObjects {
+		fmt.Printf(" * %s: %v\n", k, v)
 		e.resourceKinds[k].objects = v
 	}
 	e.lun2ds = l2d
@@ -552,6 +555,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 	sw.Stop()
 	SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": "instance-total"}, numRes)
+	fmt.Println("discover done")
 	return nil
 }
 
@@ -959,6 +963,7 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 				defer wg.Done()
 				var err error
 				if k == "vsan" {
+					fmt.Println("collecting vsan")
 					err = e.collectVsan(ctx, acc)
 				} else {
 					err = e.collectResource(ctx, k, acc)

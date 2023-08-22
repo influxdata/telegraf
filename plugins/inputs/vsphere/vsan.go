@@ -66,16 +66,12 @@ func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) er
 		fmt.Printf(" * %s: %s\n", key, value)
 	}
 
-	// Iterate over all clusters, run a goroutine for each cluster
-	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	for index := range res.objects {
-		fmt.Printf("starting: %s\n", res.objects[index].name)
-		te.Run(ctx, func() {
-			fmt.Printf("[metrics] start %s @ %d %s\n", res.objects[index].name, time.Now().Unix(), metrics)
-			e.collectVsanPerCluster(ctx, res.objects[index], vimClient, vsanClient, metrics, acc)
-		})
+		fmt.Printf("[metrics] start %s @ %d %s\n", res.objects[index].name, time.Now().Unix(), metrics)
+		e.collectVsanPerCluster(ctx, res.objects[index], vimClient, vsanClient, metrics, acc)
+		fmt.Printf("[metrics] end %s @ %d %s\n", res.objects[index].name, time.Now().Unix(), metrics)
 	}
-	te.Wait()
+
 	return nil
 }
 
@@ -112,8 +108,6 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *object
 	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
 		acc.AddError(fmt.Errorf("error querying performance metrics for cluster %s: %w", clusterRef.name, err))
 	}
-
-	fmt.Printf("[metrics] end %s @ %d\n", clusterRef.name, time.Now().Unix())
 }
 
 // vsanEnabled returns True if vSAN is enabled, otherwise False
