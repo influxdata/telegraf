@@ -285,7 +285,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 		return err
 	}
 
-	log.Printf("I! Starting Telegraf %s%s", internal.Version, internal.Customized)
+	log.Printf("I! Starting Telegraf %s%s brought to you by InfluxData the makers of InfluxDB", internal.Version, internal.Customized)
 	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret-stores",
 		len(inputs.Inputs),
 		len(aggregators.Aggregators),
