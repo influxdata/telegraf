@@ -23,11 +23,10 @@ fi
 if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.sample ]]; then
    cp /etc/telegraf/telegraf.conf.sample /etc/telegraf/telegraf.conf
    chmod 640 /etc/telegraf/telegraf.conf
-   chown root:telegraf /etc/telegraf/telegraf.conf
    chmod 750 /etc/telegraf/telegraf.d
-   chown root:telegraf /etc/telegraf/telegraf.d
 fi
 
+# Set up log directories
 LOG_DIR=/var/log/telegraf
 test -d $LOG_DIR || {
     mkdir -p $LOG_DIR
