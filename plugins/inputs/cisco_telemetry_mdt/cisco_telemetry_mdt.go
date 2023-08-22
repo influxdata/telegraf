@@ -18,12 +18,12 @@ import (
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -559,6 +559,49 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 	}
 }
 
+func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+	encodingPath string, tags map[string]string, timestamp time.Time) {
+	var nxMicro *telemetry.TelemetryField
+	var nxMicro1 *telemetry.TelemetryField
+	// Microburst
+	measurement := encodingPath
+	if len(field.Fields) > 3 {
+		nxMicro = field.Fields[2]
+		if len(nxMicro.Fields) > 0 {
+			nxMicro1 = nxMicro.Fields[0]
+			if len(nxMicro1.Fields) >= 3 {
+				nxMicro = nxMicro1.Fields[3]
+			}
+		}
+	}
+	for _, subfield := range nxMicro.Fields {
+		//For Every table fill the keys which is name, i.e. physical interface name.
+		switch subfield.Name {
+		case "interfaceName":
+			tags[subfield.Name] = decodeTag(subfield)
+		}
+		for _, subf := range subfield.Fields {
+			switch subf.Name {
+			case "sourceName":
+				newstr := strings.Split(decodeTag(subf), "-[")
+				if len(newstr) <= 2 {
+					tags[subf.Name] = decodeTag(subf)
+				} else {
+					intf_name := strings.Split(newstr[1], "]")
+					queue := strings.Split(newstr[2], "]")
+					tags["interface_name"] = intf_name[0]
+					tags["queue_number"] = queue[0]
+				}
+			case "startTs":
+				tags[subf.Name] = decodeTag(subf)
+			}
+			if value := decodeValue(subf); value != nil {
+				grouper.Add(measurement, tags, timestamp, subf.Name, value)
+			}
+		}
+	}
+}
+
 func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
@@ -567,6 +610,11 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 	if encodingPath == "rib" {
 		//handle native data path rib
 		c.parseRib(grouper, field, encodingPath, tags, timestamp)
+		return
+	}
+	if encodingPath == "microburst" {
+		//dump microburst
+		c.parseMicroburst(grouper, field, encodingPath, tags, timestamp)
 		return
 	}
 	if field == nil || !isDme || len(field.Fields) == 0 || len(field.Fields[0].Fields) == 0 || len(field.Fields[0].Fields[0].Fields) == 0 {

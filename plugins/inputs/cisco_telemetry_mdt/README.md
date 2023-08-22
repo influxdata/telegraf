@@ -158,4 +158,5 @@ multicast pim    NXAPI         show ip pim route vrf all
 multicast pim    NXAPI         show ip pim rp vrf all
 multicast pim    NXAPI         show ip pim statistics vrf all
 multicast pim    NXAPI         show ip pim vrf all
+microburst       NATIVE        path microburst
 ```
