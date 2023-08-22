@@ -4,7 +4,9 @@ package procstat
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,43 +29,54 @@ var (
 	defaultProcess   = NewProc
 	// defaultCollection is the default group of metrics to gather
 	defaultCollection = []string{
-		MetricsThreads,
-		MetricsFDs,
-		MetricsContextSwitches,
-		MetricsPageFaults,
-		MetricsIO,
-		MetricsCreateTime,
-		MetricsCPU,
-		MetricsCPUPercent,
-		MetricsMemory,
-		MetricsMemoryPercent,
-		MetricsLimits,
+		metricsThreads,
+		metricsFDs,
+		metricsContextSwitches,
+		metricsPageFaults,
+		metricsIO,
+		metricsCreateTime,
+		metricsCPU,
+		metricsCPUPercent,
+		metricsMemory,
+		metricsMemoryPercent,
+		metricsLimits,
 	}
 )
 
 const (
-	// MetricsThreads to enable collection of number of threads
-	MetricsThreads = "threads"
-	// MetricsFDs to enable collection of number of file descriptors
-	MetricsFDs = "fds"
-	// MetricsContextSwitches to enable collection of context switches
-	MetricsContextSwitches = "ctx_switches"
-	// MetricsPageFaults to enable collection of page faults
-	MetricsPageFaults = "page_faults"
-	// MetricsIO to enable collection of IO
-	MetricsIO = "io"
-	// MetricsCreateTime to enable collection of proc creation time
-	MetricsCreateTime = "create_time"
-	// MetricsCPU to enable collection of CPU time used
-	MetricsCPU = "cpu"
-	// MetricsCPUPercent to enable collection of percentage of CPU used
-	MetricsCPUPercent = "cpu_percent"
-	// MetricsMemory to enable collection of memory used
-	MetricsMemory = "mem"
-	// MetricsMemoryPercent to enable collection of memory percentage used
-	MetricsMemoryPercent = "mem_percent"
-	// MetricsLimits to enable collection of procs' limits
-	MetricsLimits = "limits"
+	// metricsThreads to enable collection of number of threads
+	metricsThreads = "threads"
+	// metricsFDs to enable collection of number of file descriptors
+	metricsFDs = "fds"
+	// metricsContextSwitches to enable collection of context switches
+	metricsContextSwitches = "ctx_switches"
+	// metricsPageFaults to enable collection of page faults
+	metricsPageFaults = "page_faults"
+	// metricsIO to enable collection of IO
+	metricsIO = "io"
+	// metricsCreateTime to enable collection of proc creation time
+	metricsCreateTime = "create_time"
+	// metricsCPU to enable collection of CPU time used
+	metricsCPU = "cpu"
+	// metricsCPUPercent to enable collection of percentage of CPU used
+	metricsCPUPercent = "cpu_percent"
+	// metricsMemory to enable collection of memory used
+	metricsMemory = "mem"
+	// metricsMemoryPercent to enable collection of memory percentage used
+	metricsMemoryPercent = "mem_percent"
+	// metricsLimits to enable collection of procs' limits
+	metricsLimits = "limits"
+	// metricsTCPStats to enable collection of procs' TCP stats
+	metricsTCPStats = "tcp_stats"
+	// metricsConnectionsEndpoints to enable collection of metric procstat_tcp
+	metricsConnectionsEndpoints = "connections_endpoints"
+
+	// metricNameTCPConnections is the measurement name for TCP connections metrics
+	metricNameTCPConnections = "procstat_tcp"
+	// tcpConnectionKey is the metric value to put all the listen endpoints
+	tcpConnectionKey = "conn"
+	// tcpListenKey is the metric value to put all the connection endpoints
+	tcpListenKey = "listen"
 )
 
 type PID int32
@@ -83,7 +96,8 @@ type Procstat struct {
 	PidTag                 bool
 	WinService             string `toml:"win_service"`
 	Mode                   string
-	MetricsInclude         []string `toml:"metrics_include"`
+	MetricsInclude         []string        `toml:"metrics_include"`
+	Log                    telegraf.Logger `toml:"-"`
 
 	solarisMode bool
 
@@ -148,8 +162,20 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	p.procs = newProcs
+
+	// Initialize the conn object. Gather info about all TCP connections organized per PID
+	// Avoid repeating this task for each proc
+	netInfo := networkInfo{}
+	// Only collect this info if we are going to use it (avoid reading all /proc/N/fd dirs)
+	if (p.metricEnabled(metricsTCPStats) || p.metricEnabled(metricsConnectionsEndpoints)) && len(p.procs) > 0 {
+		err := netInfo.Fetch()
+		if err != nil {
+			acc.AddError(fmt.Errorf("getting TCP network info: %w", err))
+		}
+	}
+
 	for _, proc := range p.procs {
-		p.addMetric(proc, acc, now)
+		p.addMetric(proc, acc, now, netInfo)
 	}
 
 	fields := map[string]interface{}{
@@ -166,7 +192,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time) {
+func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time, netInfo networkInfo) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -205,21 +231,21 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsThreads) {
+	if p.metricEnabled(metricsThreads) {
 		numThreads, err := proc.NumThreads()
 		if err == nil {
 			fields[prefix+"num_threads"] = numThreads
 		}
 	}
 
-	if p.metricEnabled(MetricsFDs) {
+	if p.metricEnabled(metricsFDs) {
 		fds, err := proc.NumFDs()
 		if err == nil {
 			fields[prefix+"num_fds"] = fds
 		}
 	}
 
-	if p.metricEnabled(MetricsContextSwitches) {
+	if p.metricEnabled(metricsContextSwitches) {
 		ctx, err := proc.NumCtxSwitches()
 		if err == nil {
 			fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
@@ -227,7 +253,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsPageFaults) {
+	if p.metricEnabled(metricsPageFaults) {
 		faults, err := proc.PageFaults()
 		if err == nil {
 			fields[prefix+"minor_faults"] = faults.MinorFaults
@@ -237,7 +263,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsIO) {
+	if p.metricEnabled(metricsIO) {
 		io, err := proc.IOCounters()
 		if err == nil {
 			fields[prefix+"read_count"] = io.ReadCount
@@ -247,14 +273,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsCreateTime) {
+	if p.metricEnabled(metricsCreateTime) {
 		createdAt, err := proc.CreateTime() // Returns epoch in ms
 		if err == nil {
 			fields[prefix+"created_at"] = createdAt * 1000000 // Convert ms to ns
 		}
 	}
 
-	if p.metricEnabled(MetricsCPU) {
+	if p.metricEnabled(metricsCPU) {
 		cpuTime, err := proc.Times()
 		if err == nil {
 			fields[prefix+"cpu_time_user"] = cpuTime.User
@@ -270,7 +296,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsCPUPercent) {
+	if p.metricEnabled(metricsCPUPercent) {
 		cpuPerc, err := proc.Percent(time.Duration(0))
 		if err == nil {
 			if p.solarisMode {
@@ -281,7 +307,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsMemory) {
+	if p.metricEnabled(metricsMemory) {
 		mem, err := proc.MemoryInfo()
 		if err == nil {
 			fields[prefix+"memory_rss"] = mem.RSS
@@ -293,14 +319,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	if p.metricEnabled(MetricsMemoryPercent) {
+	if p.metricEnabled(metricsMemoryPercent) {
 		memPerc, err := proc.MemoryPercent()
 		if err == nil {
 			fields[prefix+"memory_usage"] = memPerc
 		}
 	}
 
-	if p.metricEnabled(MetricsLimits) {
+	if p.metricEnabled(metricsLimits) {
 		rlims, err := proc.RlimitUsage(true)
 		if err == nil {
 			for _, rlim := range rlims {
@@ -351,7 +377,40 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		fields[prefix+"status"] = status[0]
 	}
 
+	if p.metricEnabled(metricsTCPStats) {
+		// Add values with the number of connections in each TCP state
+		pidConnections, err := netInfo.GetConnectionsByPid(uint32(proc.PID()))
+		if err == nil {
+			addConnectionStats(pidConnections, fields, prefix)
+		} else {
+			// Ignore errors because pid was not found. It is normal to have procs without connections
+			if !errors.Is(err, errPIDNotFound) {
+				p.Log.Debugf("not able to get connections for pid=%v: %v", proc.PID(), err)
+			}
+		}
+	}
+
 	acc.AddFields("procstat", fields, proc.Tags(), t)
+
+	if p.metricEnabled(metricsConnectionsEndpoints) {
+		// add measurement procstat_tcp with tcp listeners and connections for each proccess
+		err := addConnectionEndpoints(acc, proc, netInfo)
+		if err != nil {
+			p.Log.Debugf("not able to generate network metrics for pid=%v: %v", proc.PID(), err)
+		}
+	}
+}
+
+// extractIPs extract and return IPs from addresses
+func extractIPs(addreses []net.Addr) (ret []net.IP, err error) {
+	for _, a := range addreses {
+		ip, _, err := net.ParseCIDR(a.String())
+		if err != nil {
+			return nil, fmt.Errorf("parsing interface address: %w", err)
+		}
+		ret = append(ret, ip)
+	}
+	return ret, nil
 }
 
 // Update monitored Processes
@@ -579,6 +638,31 @@ func (p *Procstat) Init() error {
 	}
 
 	return nil
+}
+
+func containsIP(a []net.IP, x net.IP) bool {
+	for _, n := range a {
+		if x.Equal(n) {
+			return true
+		}
+	}
+	return false
+}
+
+func isIPV4(ip net.IP) bool {
+	return ip.To4() != nil
+}
+
+func isIPV6(ip net.IP) bool {
+	return ip.To4() == nil
+}
+
+// endpointString return the correct representation of ip and port for IPv4 and IPv6
+func endpointString(ip net.IP, port uint32) string {
+	if isIPV6(ip) {
+		return fmt.Sprintf("[%s]:%d", ip, port)
+	}
+	return fmt.Sprintf("%s:%d", ip, port)
 }
 
 // metricEnabled check is some group of metrics are enabled in the config file

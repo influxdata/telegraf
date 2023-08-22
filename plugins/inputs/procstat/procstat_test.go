@@ -97,6 +97,7 @@ func (pg *testPgrep) FullPattern(_ string) ([]PID, error) {
 
 type testProc struct {
 	pid  PID
+	ppid int32
 	tags map[string]string
 }
 
@@ -168,7 +169,7 @@ func (p *testProc) RlimitUsage(_ bool) ([]process.RlimitStat, error) {
 }
 
 func (p *testProc) Ppid() (int32, error) {
-	return 0, nil
+	return p.ppid, nil
 }
 
 func (p *testProc) Status() ([]string, error) {
@@ -253,7 +254,7 @@ func TestGather_PidTag(t *testing.T) {
 		Exe:             exe,
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
-		MetricsInclude:  []string{MetricsThreads},
+		MetricsInclude:  []string{metricsThreads},
 		createProcess:   newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -268,7 +269,7 @@ func TestGather_Prefix(t *testing.T) {
 		Exe:             exe,
 		Prefix:          "custom_prefix",
 		createPIDFinder: pidFinder([]PID{pid}),
-		MetricsInclude:  []string{MetricsFDs},
+		MetricsInclude:  []string{metricsFDs},
 		createProcess:   newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -348,7 +349,7 @@ func TestGather_PercentFirstPass(t *testing.T) {
 		Pattern:         "foo",
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
-		MetricsInclude:  []string{MetricsCPU, MetricsCPUPercent},
+		MetricsInclude:  []string{metricsCPU, metricsCPUPercent},
 		createProcess:   NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -365,7 +366,7 @@ func TestGather_PercentSecondPass(t *testing.T) {
 		Pattern:         "foo",
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
-		MetricsInclude:  []string{MetricsCPU, MetricsCPUPercent},
+		MetricsInclude:  []string{metricsCPU, metricsCPUPercent},
 		createProcess:   NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -445,13 +446,13 @@ func TestGather_SameTimestamps(t *testing.T) {
 
 func TestMetricEnabled(t *testing.T) {
 	p := Procstat{
-		MetricsInclude: []string{MetricsCPU, MetricsMemory, MetricsIO},
+		MetricsInclude: []string{metricsCPU, metricsMemory, metricsIO},
 	}
 
-	require.True(t, p.metricEnabled(MetricsCPU))
-	require.True(t, p.metricEnabled(MetricsMemory))
-	require.True(t, p.metricEnabled(MetricsIO))
-	require.False(t, p.metricEnabled(MetricsContextSwitches))
+	require.True(t, p.metricEnabled(metricsCPU))
+	require.True(t, p.metricEnabled(metricsMemory))
+	require.True(t, p.metricEnabled(metricsIO))
+	require.False(t, p.metricEnabled(metricsContextSwitches))
 }
 
 // TestGatherFilter tests that the metricEnabled filter works.
@@ -463,7 +464,7 @@ func TestGatherFilter(t *testing.T) {
 		Pattern:         "foo",
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
-		MetricsInclude:  []string{MetricsCPU, MetricsMemory},
+		MetricsInclude:  []string{metricsCPU, metricsMemory},
 		createProcess:   NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -472,4 +473,36 @@ func TestGatherFilter(t *testing.T) {
 	require.True(t, acc.HasUIntField("procstat", "memory_rss"))
 	require.False(t, acc.HasUIntField("procstat", "memory_usage"))
 	require.False(t, acc.HasUIntField("procstat", "rlimit_num_fds_hard"))
+}
+
+func BenchmarkDefaultCollectionPlusEndpoints(b *testing.B) {
+	var acc testutil.Accumulator
+	pattern := "."
+
+	p := Procstat{
+		Pattern:        pattern,
+		CmdLineTag:     true,
+		MetricsInclude: append(defaultCollection, metricsConnectionsEndpoints),
+	}
+
+	for i := 0; i < b.N; i++ {
+		err := acc.GatherError(p.Gather)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkConnEndpointsOnly(b *testing.B) {
+	var acc testutil.Accumulator
+	pattern := "."
+
+	p := Procstat{
+		Pattern:        pattern,
+		CmdLineTag:     true,
+		MetricsInclude: []string{metricsConnectionsEndpoints},
+	}
+
+	for i := 0; i < b.N; i++ {
+		err := acc.GatherError(p.Gather)
+		require.NoError(b, err)
+	}
 }

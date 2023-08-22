@@ -213,6 +213,8 @@ require (
 	modernc.org/sqlite v1.24.0
 )
 
+require github.com/elastic/gosigar v0.14.2
+
 require (
 	cloud.google.com/go v0.110.4 // indirect
 	cloud.google.com/go/compute v1.20.1 // indirect
