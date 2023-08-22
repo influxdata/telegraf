@@ -20,12 +20,14 @@ import (
 func init() {
 	execCommand = mockExecCommand
 }
+
 func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 	args = append([]string{"-test.run=TestMockExecCommand", "--", arg0}, args...)
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stderr = os.Stderr
 	return cmd
 }
+
 func TestMockExecCommand(_ *testing.T) {
 	var cmd []string //nolint:prealloc // Pre-allocated this slice would break the algorithm
 	for _, arg := range os.Args {
@@ -173,8 +175,10 @@ func (p *testProc) Status() ([]string, error) {
 	return []string{"running"}, nil
 }
 
-var pid = PID(42)
-var exe = "foo"
+var (
+	pid = PID(42)
+	exe = "foo"
+)
 
 func TestGather_CreateProcessErrorOk(t *testing.T) {
 	var acc testutil.Accumulator
@@ -249,6 +253,7 @@ func TestGather_PidTag(t *testing.T) {
 		Exe:             exe,
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
+		MetricsInclude:  []string{MetricsThreads},
 		createProcess:   newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -263,6 +268,7 @@ func TestGather_Prefix(t *testing.T) {
 		Exe:             exe,
 		Prefix:          "custom_prefix",
 		createPIDFinder: pidFinder([]PID{pid}),
+		MetricsInclude:  []string{MetricsFDs},
 		createProcess:   newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -342,6 +348,7 @@ func TestGather_PercentFirstPass(t *testing.T) {
 		Pattern:         "foo",
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
+		MetricsInclude:  []string{MetricsCPU, MetricsCPUPercent},
 		createProcess:   NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -358,6 +365,7 @@ func TestGather_PercentSecondPass(t *testing.T) {
 		Pattern:         "foo",
 		PidTag:          true,
 		createPIDFinder: pidFinder([]PID{pid}),
+		MetricsInclude:  []string{MetricsCPU, MetricsCPUPercent},
 		createProcess:   NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -384,12 +392,12 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 }
 
 func TestGather_cgroupPIDs(t *testing.T) {
-	//no cgroups in windows
+	// no cgroups in windows
 	if runtime.GOOS == "windows" {
 		t.Skip("no cgroups in windows")
 	}
 	td := t.TempDir()
-	err := os.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0640)
+	err := os.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0o640)
 	require.NoError(t, err)
 
 	p := Procstat{
@@ -433,4 +441,35 @@ func TestGather_SameTimestamps(t *testing.T) {
 	procstatLookup, _ := acc.Get("procstat_lookup")
 
 	require.Equal(t, procstat.Time, procstatLookup.Time)
+}
+
+func TestMetricEnabled(t *testing.T) {
+	p := Procstat{
+		MetricsInclude: []string{MetricsCPU, MetricsMemory, MetricsIO},
+	}
+
+	require.True(t, p.metricEnabled(MetricsCPU))
+	require.True(t, p.metricEnabled(MetricsMemory))
+	require.True(t, p.metricEnabled(MetricsIO))
+	require.False(t, p.metricEnabled(MetricsContextSwitches))
+}
+
+// TestGatherFilter tests that the metricEnabled filter works.
+func TestGatherFilter(t *testing.T) {
+	var acc testutil.Accumulator
+	pid := PID(os.Getpid())
+
+	p := Procstat{
+		Pattern:         "foo",
+		PidTag:          true,
+		createPIDFinder: pidFinder([]PID{pid}),
+		MetricsInclude:  []string{MetricsCPU, MetricsMemory},
+		createProcess:   NewProc,
+	}
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	require.True(t, acc.HasFloatField("procstat", "cpu_time_user"))
+	require.True(t, acc.HasUIntField("procstat", "memory_rss"))
+	require.False(t, acc.HasUIntField("procstat", "memory_usage"))
+	require.False(t, acc.HasUIntField("procstat", "rlimit_num_fds_hard"))
 }
