@@ -29,6 +29,7 @@ const (
 	ValidExpectedRequestWithMixedResponse = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\nrouter{\npeers(names:\"peer-1\"){\nnodes{\npaths{\nstatus\nuptime}}}}}}}}}"}`
 	InvalidRouterExpectedRequest          = `{"query":"query {\nallRouters(name:\"not-a-router\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ntest-field\ntest-tag}}}}}}}"}`
 	InvalidFieldExpectedRequest           = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\narp{\nnodes{\ninvalid-field\ntest-tag}}}}}}}"}`
+	ValidDeviceStateRequest               = `{"query":"query {\nallRouters(name:\"ComboEast\"){\nnodes{\nnodes(name:\"east-combo\"){\nnodes{\ndeviceInterfaces{\nnodes{\nenabled\nname\nstate{\nadminStatus\nmacAddress\noperationalStatus\nredundancyStatus}}}}}}}}"}`
 )
 
 var (
@@ -38,6 +39,7 @@ var (
 	ValidQueryWithMixedResponse = ValidExpectedRequestWithMixedResponse[10 : len(ValidExpectedRequestWithMixedResponse)-2]
 	InvalidRouterQuery          = InvalidRouterExpectedRequest[10 : len(InvalidRouterExpectedRequest)-2]
 	InvalidFieldQuery           = InvalidFieldExpectedRequest[10 : len(InvalidFieldExpectedRequest)-2]
+	ValidDeviceStateQuery       = ValidDeviceStateRequest[10 : len(ValidDeviceStateRequest)-2]
 )
 
 var CollectorTestCases = []struct {
@@ -380,6 +382,137 @@ var CollectorTestCases = []struct {
 		ExpectedErrors: []string{
 			"found errors in response for collector test-collector: Int cannot represent non 32-bit signed integer value: 3066521082",
 		},
+		ExpectedRequests: []int{1},
+	},
+	{
+		Name:       "non forwarding with null state values",
+		EntryPoint: "allRouters(name:'ComboEast')/nodes/nodes(name:'east-combo')/nodes/deviceInterfaces/nodes",
+		Fields: map[string]string{
+			"enabled":           "enabled",
+			"adminStatus":       "state/adminStatus",
+			"operationalStatus": "state/operationalStatus",
+			"redundancyStatus":  "state/redundancyStatus",
+		},
+		Tags: map[string]string{
+			"device-interface": "name",
+			"mac-address":      "state/macAddress",
+		},
+		Endpoint: Endpoint{"/api/v1/graphql/", 200, ValidDeviceStateRequest, `{
+			"data": {
+			  "allRouters": {
+				"nodes": [
+				  {
+					"nodes": {
+					  "nodes": [
+						{
+						  "deviceInterfaces": {
+							"nodes": [
+							  {
+								"name": "host-if",
+								"enabled": true,
+								"state": {
+								  "adminStatus": "ADMIN_UP",
+								  "operationalStatus": "OPER_UP",
+								  "provisionalStatus": "PROV_UP",
+								  "redundancyStatus": "NON_REDUNDANT",
+								  "macAddress": "d6:84:3e:60:00:cc"
+								}
+							  },
+							  {
+								"name": "eth1_pppoe",
+								"enabled": true,
+								"state": {
+								  "adminStatus": "ADMIN_UP",
+								  "operationalStatus": "OPER_UP",
+								  "provisionalStatus": "PROV_UP",
+								  "redundancyStatus": "NON_REDUNDANT",
+								  "macAddress": "1a:09:4f:e4:3c:03"
+								}
+							  },
+							  {
+								"name": "eth2",
+								"enabled": true,
+								"state": {
+								  "adminStatus": "ADMIN_UP",
+								  "operationalStatus": "OPER_UP",
+								  "provisionalStatus": "PROV_UP",
+								  "redundancyStatus": "NON_REDUNDANT",
+								  "macAddress": "00:03:2d:51:7e:ff"
+								}
+							  },
+							  {
+								"name": "test",
+								"enabled": true,
+								"state": {
+								  "adminStatus": null,
+								  "operationalStatus": null,
+								  "provisionalStatus": null,
+								  "redundancyStatus": null,
+								  "macAddress": null
+								}
+							  }
+							]
+						  }
+						}
+					  ]
+					}
+				  }
+				]
+			  }
+			}
+		}`},
+		Query: ValidDeviceStateQuery,
+		ExpectedMetrics: []*testutil.Metric{
+			&testutil.Metric{
+				Measurement: "test-collector",
+				Tags: map[string]string{
+					"device-interface": "host-if",
+					"mac-address":      "d6:84:3e:60:00:cc",
+				},
+				Fields: map[string]interface{}{
+					"adminStatus":       "ADMIN_UP",
+					"enabled":           true,
+					"operationalStatus": "OPER_UP",
+					"redundancyStatus":  "NON_REDUNDANT",
+				},
+			},
+			&testutil.Metric{
+				Measurement: "test-collector",
+				Tags: map[string]string{
+					"device-interface": "eth1_pppoe",
+					"mac-address":      "1a:09:4f:e4:3c:03",
+				},
+				Fields: map[string]interface{}{
+					"adminStatus":       "ADMIN_UP",
+					"enabled":           true,
+					"operationalStatus": "OPER_UP",
+					"redundancyStatus":  "NON_REDUNDANT",
+				},
+			},
+			&testutil.Metric{
+				Measurement: "test-collector",
+				Tags: map[string]string{
+					"device-interface": "eth2",
+					"mac-address":      "00:03:2d:51:7e:ff",
+				},
+				Fields: map[string]interface{}{
+					"adminStatus":       "ADMIN_UP",
+					"enabled":           true,
+					"operationalStatus": "OPER_UP",
+					"redundancyStatus":  "NON_REDUNDANT",
+				},
+			},
+			&testutil.Metric{
+				Measurement: "test-collector",
+				Tags: map[string]string{
+					"device-interface": "test",
+				},
+				Fields: map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+		ExpectedErrors:   []string{},
 		ExpectedRequests: []int{1},
 	},
 }
