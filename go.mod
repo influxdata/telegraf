@@ -178,7 +178,7 @@ require (
 	github.com/vapourismo/knx-go v0.0.0-20220829185957-fb5458a5389d
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.28.1-0.20220921224932-b4b508abf208
-	github.com/wavefronthq/wavefront-sdk-go v0.13.0
+	github.com/wavefronthq/wavefront-sdk-go v0.14.0
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
@@ -272,6 +272,7 @@ require (
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/bufbuild/protocompile v0.4.0 // indirect
+	github.com/caio/go-tdigest/v4 v4.0.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
