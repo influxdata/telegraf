@@ -130,7 +130,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 			return fmt.Errorf("unable to collect autofailover settings: %w", err)
 		}
 
-		acc.AddFields("couchbase_node_autofailover", fields, tags)
+		acc.AddFields("couchbase_autofailover", fields, tags)
 	}
 
 	return nil

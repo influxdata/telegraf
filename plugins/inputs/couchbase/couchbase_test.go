@@ -202,7 +202,7 @@ func TestGatherFailover(t *testing.T) {
 
 	var metric *testutil.Metric
 	for _, m := range acc.Metrics {
-		if m.Measurement == "couchbase_node_autofailover" {
+		if m.Measurement == "couchbase_autofailover" {
 			metric = m
 			break
 		}
