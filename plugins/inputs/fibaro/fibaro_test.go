@@ -174,7 +174,7 @@ const devicesHC3JSON = `
             "type": "com.fibaro.temperatureSensor",
             "enabled": true,
             "properties": {
-                "batteryLevel": "100",
+                "batteryLevel": 100,
                 "dead": false,
                 "value": "22.80"
             },
@@ -187,8 +187,8 @@ const devicesHC3JSON = `
             "type": "com.fibaro.FGRM222",
             "enabled": true,
             "properties": {
-                "energy": "4.33",
-                "power": "0.7",
+                "energy": 4.33,
+                "power": 0.7,
                 "dead": false,
                 "value": "50",
                 "value2": "75"

@@ -50,21 +50,15 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 		fields := make(map[string]interface{})
 
 		if device.Properties.BatteryLevel != nil {
-			if fValue, err := strconv.ParseFloat(*device.Properties.BatteryLevel, 64); err == nil {
-				fields["batteryLevel"] = fValue
-			}
+			fields["batteryLevel"] = *device.Properties.BatteryLevel
 		}
 
 		if device.Properties.Energy != nil {
-			if fValue, err := strconv.ParseFloat(*device.Properties.Energy, 64); err == nil {
-				fields["energy"] = fValue
-			}
+			fields["energy"] = *device.Properties.Energy
 		}
 
 		if device.Properties.Power != nil {
-			if fValue, err := strconv.ParseFloat(*device.Properties.Power, 64); err == nil {
-				fields["power"] = fValue
-			}
+			fields["power"] = *device.Properties.Power
 		}
 
 		if device.Properties.Value != nil {
