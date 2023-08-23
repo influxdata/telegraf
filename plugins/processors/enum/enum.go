@@ -23,7 +23,9 @@ type EnumMapper struct {
 
 type Mapping struct {
 	Tag           string
+	Tags          []string
 	Field         string
+	Fields        []string
 	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
@@ -37,17 +39,38 @@ func (mapper *EnumMapper) Init() error {
 	mapper.FieldFilters = make(map[string]filter.Filter)
 	mapper.TagFilters = make(map[string]filter.Filter)
 	for _, mapping := range mapper.Mappings {
+		if mapping.Field != "" && len(mapping.Fields) != 0 {
+			return fmt.Errorf("use field or fields, but not both")
+		}
 		if mapping.Field != "" {
 			fieldFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Field}, nil)
 			if err != nil {
-				return fmt.Errorf("failed to create new field filter: %w", err)
+				return fmt.Errorf("failed to create new field filter from field: %w", err)
 			}
 			mapper.FieldFilters[mapping.Field] = fieldFilter
+		}
+		if len(mapping.Fields) != 0 {
+			fieldFilter, err := filter.NewIncludeExcludeFilter(mapping.Fields, nil)
+			if err != nil {
+				return fmt.Errorf("failed to create new field filter from fields: %w", err)
+			}
+			mapper.FieldFilters[mapping.Field] = fieldFilter
+		}
+
+		if mapping.Tag != "" && len(mapping.Tags) != 0 {
+			return fmt.Errorf("use tag or tags, but not both")
 		}
 		if mapping.Tag != "" {
 			tagFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Tag}, nil)
 			if err != nil {
-				return fmt.Errorf("failed to create new tag filter: %w", err)
+				return fmt.Errorf("failed to create new tag filter from tag: %w", err)
+			}
+			mapper.TagFilters[mapping.Tag] = tagFilter
+		}
+		if len(mapping.Tags) != 0 {
+			tagFilter, err := filter.NewIncludeExcludeFilter(mapping.Tags, nil)
+			if err != nil {
+				return fmt.Errorf("failed to create new tag filter from tags: %w", err)
 			}
 			mapper.TagFilters[mapping.Tag] = tagFilter
 		}
@@ -68,10 +91,10 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	newTags := make(map[string]string)
 
 	for _, mapping := range mapper.Mappings {
-		if mapping.Field != "" {
+		if mapping.Field != "" || len(mapping.Fields) != 0 {
 			mapper.fieldMapping(metric, mapping, newFields)
 		}
-		if mapping.Tag != "" {
+		if mapping.Tag != "" || len(mapping.Tags) != 0 {
 			mapper.tagMapping(metric, mapping, newTags)
 		}
 	}

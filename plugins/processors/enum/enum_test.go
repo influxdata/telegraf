@@ -196,3 +196,35 @@ func TestTagGlobMatching(t *testing.T) {
 
 	assertTagValue(t, "glob", "tag", tags)
 }
+
+func TestFieldsAndTags(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{
+		{
+			Tags:   []string{"tag", "duplicate_tag"},
+			Fields: []string{"string_value", "duplicate_string_value"},
+			ValueMappings: map[string]interface{}{
+				"test":      "0",
+				"tag_value": "1",
+			},
+		},
+	}}
+	require.NoError(t, mapper.Init())
+
+	tags := calculateProcessedTags(mapper, createTestMetric())
+	assertTagValue(t, "1", "tag", tags)
+	assertTagValue(t, "1", "duplicate_tag", tags)
+
+	fields := calculateProcessedValues(mapper, createTestMetric())
+	assertFieldValue(t, "0", "string_value", fields)
+	assertFieldValue(t, "0", "duplicate_string_value", fields)
+}
+
+func TestTagAndTagsError(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{{Tag: "*", Tags: []string{"Foo"}, ValueMappings: map[string]interface{}{"tag_value": "glob"}}}}
+	require.Error(t, mapper.Init())
+}
+
+func TestFieldAndFieldsError(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{{Field: "*", Fields: []string{"Bar"}, ValueMappings: map[string]interface{}{"tag_value": "glob"}}}}
+	require.Error(t, mapper.Init())
+}
