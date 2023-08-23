@@ -66,7 +66,7 @@ func (p *Parser) Init() error {
 	if p.SchemaRegistry != "" {
 		registryObj, err := newSchemaRegistry(p.SchemaRegistry, p.Authorization, p.CaCertPath)
 		if err != nil {
-			return fmt.Errorf("error connecting to the schema registry '%v'. '%v'", p.SchemaRegistry, err)
+			return fmt.Errorf("error connecting to the schema registry '%v'. '%w'", p.SchemaRegistry, err)
 		}
 
 		p.registryObj = registryObj
