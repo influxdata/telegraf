@@ -5,8 +5,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/linkedin/goavro/v2"
@@ -18,23 +18,23 @@ type schemaAndCodec struct {
 }
 
 type schemaRegistry struct {
-	url         string
-	auth_base64 string
-	cache       map[int]*schemaAndCodec
-	client      http.Client
+	url        string
+	authBase64 string
+	cache      map[int]*schemaAndCodec
+	client     http.Client
 }
 
 const schemaByID = "%s/schemas/ids/%d"
 
-func newSchemaRegistry(url string, auth_base64 string, ca_cert_path string) (*schemaRegistry, error) {
+func newSchemaRegistry(url string, authBase64 string, caCertPath string) (*schemaRegistry, error) {
 	var client *http.Client
 
-	caCert, err := ioutil.ReadFile(ca_cert_path)
+	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if ca_cert_path != "" {
+	if caCertPath != "" {
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 		client = &http.Client{
@@ -55,7 +55,7 @@ func newSchemaRegistry(url string, auth_base64 string, ca_cert_path string) (*sc
 		}
 	}
 
-	return &schemaRegistry{url: url, auth_base64: auth_base64, cache: make(map[int]*schemaAndCodec), client: *client}, nil
+	return &schemaRegistry{url: url, authBase64: authBase64, cache: make(map[int]*schemaAndCodec), client: *client}, nil
 }
 
 func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
@@ -68,8 +68,8 @@ func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 		return nil, err
 	}
 
-	if sr.auth_base64 != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Basic %s", sr.auth_base64))
+	if sr.authBase64 != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Basic %s", sr.authBase64))
 	}
 
 	resp, err := sr.client.Do(req)
