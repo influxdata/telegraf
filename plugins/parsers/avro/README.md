@@ -64,9 +64,8 @@ The message is supposed to be encoded as follows:
   ## For example "Aladdin:open sesame" equals to "QWxhZGRpbjpvcGVuIHNlc2FtZQ==" in base64
   # avro_schema_registry_authorization_base64 = "QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
 
-  ## Path to the schema registry certificate. Should be specified when it is required 
-  ## for connection to the schema registry only. 
-  ## For example "Aladdin:open sesame" equals to "QWxhZGRpbjpvcGVuIHNlc2FtZQ==" in base64
+  ## Path to the schema registry certificate. Should be specified only when it is 
+  ## required for connection to the schema registry. 
   # avro_schema_registry_cacert_path = "/etc/telegraf/ca_cert.crt"
 
   ## Measurement string; if not set, determine measurement name from
