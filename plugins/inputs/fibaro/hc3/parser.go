@@ -2,6 +2,7 @@ package hc3
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -61,23 +62,26 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 			fields["power"] = *device.Properties.Power
 		}
 
+		// Value can be a JSON bool, string, or numeric value
 		if device.Properties.Value != nil {
-			value := device.Properties.Value
-			switch value {
-			case "true":
-				value = "1"
-			case "false":
-				value = "0"
-			}
-
-			if fValue, err := strconv.ParseFloat(value.(string), 64); err == nil {
-				fields["value"] = fValue
-			}
-		}
-
-		if device.Properties.Value2 != nil {
-			if fValue, err := strconv.ParseFloat(*device.Properties.Value2, 64); err == nil {
-				fields["value2"] = fValue
+			switch v := device.Properties.Value.(type) {
+			case string:
+				if fValue, err := strconv.ParseFloat(v, 64); err == nil {
+					fields["value"] = fValue
+				}
+			case bool:
+				switch v {
+				case true:
+					fields["value"] = 1.0
+				case false:
+					fields["value"] = 0.0
+				}
+			case float64:
+				fields["value"] = v
+			case int:
+				fields["value"] = float64(v)
+			default:
+				acc.AddError(fmt.Errorf("unknown value type %T: %s", v, v))
 			}
 		}
 

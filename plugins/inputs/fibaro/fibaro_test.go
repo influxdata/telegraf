@@ -139,7 +139,7 @@ const devicesHC3JSON = `
             "enabled": true,
             "properties": {
                 "dead": false,
-                "value": "false"
+                "value": false
             },
             "sortOrder": 1
         },
@@ -151,7 +151,7 @@ const devicesHC3JSON = `
             "enabled": true,
             "properties": {
                 "dead": false,
-                "value": "true"
+                "value": true
             },
             "sortOrder": 2
         },
@@ -176,7 +176,7 @@ const devicesHC3JSON = `
             "properties": {
                 "batteryLevel": 100,
                 "dead": false,
-                "value": "22.80"
+                "value": 22.80
             },
             "sortOrder": 4
         },
@@ -190,8 +190,7 @@ const devicesHC3JSON = `
                 "energy": 4.33,
                 "power": 0.7,
                 "dead": false,
-                "value": "50",
-                "value2": "75"
+                "value": 34
             },
             "sortOrder": 5
         }
@@ -331,7 +330,7 @@ func TestHC3JSON(t *testing.T) {
 
 	// Ensure fields / values are correct - Device 5
 	tags = map[string]string{"deviceId": "5", "section": "Section 3", "room": "Room 4", "name": "Device 5", "type": "com.fibaro.FGRM222"}
-	fields = map[string]interface{}{"energy": float64(4.33), "power": float64(0.7), "value": float64(50), "value2": float64(75)}
+	fields = map[string]interface{}{"energy": float64(4.33), "power": float64(0.7), "value": float64(34)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 }
 
