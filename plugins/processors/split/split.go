@@ -90,6 +90,11 @@ func (s *Split) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				}
 			}
 
+			// metric with no fields should be skipped
+			if len(fields) == 0 {
+				continue
+			}
+
 			m := metric.New(template.Name, tags, fields, point.Time())
 			newMetrics = append(newMetrics, m)
 		}

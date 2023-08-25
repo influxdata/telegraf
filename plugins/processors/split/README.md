@@ -1,7 +1,8 @@
 # Split Processor Plugin
 
 This plugin splits a metric up into one or more metrics based on a template
-the user provides.
+the user provides. Note if no matches are found based on the template then the
+metric is lost unless the keep original field is true.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
