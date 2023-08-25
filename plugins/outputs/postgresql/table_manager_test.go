@@ -470,3 +470,28 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 
 	assert.Equal(t, 1, stmtCount)
 }
+
+func TestTableManager_TimeWithTimezone(t *testing.T) {
+	p := newPostgresqlTest(t)
+	p.TagsAsForeignKeys = true
+	p.TimestampColumnType = "timestamp with time zone"
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "", MSS{"pop": "tart"}, MSI{"a": 1, "b": 2}),
+	}
+	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
+	p.Logger.Info("ok")
+
+	expected := `CREATE TABLE "public"."TestTableManager_TimeWithTimezone" ("time" timestamp with time zone, "tag_id" bigint, "a" bigint, "b" bigint)`
+	stmtCount := 0
+	for _, log := range p.Logger.Logs() {
+		if strings.Contains(log.String(), expected) {
+			stmtCount++
+		}
+	}
+
+	require.Equal(t, 1, stmtCount)
+}
