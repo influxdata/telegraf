@@ -26,6 +26,7 @@ require (
 	github.com/aerospike/aerospike-client-go/v5 v5.10.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.77
+	github.com/allegro/bigcache v1.2.1
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.1
 	github.com/antchfx/xmlquery v1.3.15
@@ -57,7 +58,8 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/devopsext/tools v0.9.8
+	github.com/devopsext/tools v0.9.13
+	github.com/devopsext/utils v0.2.1
 	github.com/digitalocean/go-libvirt v0.0.0-20220811165305-15feff002086
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.5.0
@@ -198,7 +200,6 @@ require (
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
-	github.com/devopsext/utils v0.2.1 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.6.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gosimple/slug v1.1.1 // indirect
