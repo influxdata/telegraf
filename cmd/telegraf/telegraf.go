@@ -232,10 +232,13 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 		configFiles = append(configFiles, files...)
 	}
 
-	// providing no "config" or "config-directory" flag(s) should load default
-	// configuration files
+	// load default config paths if none are found
 	if len(configFiles) == 0 {
-		configFiles = append(configFiles, "")
+		defaultFiles, err := config.GetDefaultConfigPath()
+		if err != nil {
+			return nil, fmt.Errorf("unable to load default config paths: %w", err)
+		}
+		configFiles = append(configFiles, defaultFiles...)
 	}
 
 	t.configFiles = configFiles

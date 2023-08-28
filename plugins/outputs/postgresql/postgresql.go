@@ -42,6 +42,7 @@ type Postgresql struct {
 	TagsAsJsonb                bool                    `toml:"tags_as_jsonb"`
 	FieldsAsJsonb              bool                    `toml:"fields_as_jsonb"`
 	TimestampColumnName        string                  `toml:"timestamp_column_name"`
+	TimestampColumnType        string                  `toml:"timestamp_column_type"`
 	CreateTemplates            []*sqltemplate.Template `toml:"create_templates"`
 	AddColumnTemplates         []*sqltemplate.Template `toml:"add_column_templates"`
 	TagTableCreateTemplates    []*sqltemplate.Template `toml:"tag_table_create_templates"`
@@ -110,10 +111,19 @@ func (p *Postgresql) Init() error {
 		p.TimestampColumnName = "time"
 	}
 
+	switch p.TimestampColumnType {
+	case "":
+		p.TimestampColumnType = PgTimestampWithoutTimeZone
+	case PgTimestampWithoutTimeZone, PgTimestampWithTimeZone:
+	// do nothing for the valid choices
+	default:
+		return fmt.Errorf("unknown timestamp column type %q", p.TimestampColumnType)
+	}
+
 	// Initialize the column prototypes
 	p.timeColumn = utils.Column{
 		Name: p.TimestampColumnName,
-		Type: PgTimestampWithoutTimeZone,
+		Type: p.TimestampColumnType,
 		Role: utils.TimeColType,
 	}
 	p.tagIDColumn = utils.Column{Name: "tag_id", Type: PgBigInt, Role: utils.TagsIDColType}

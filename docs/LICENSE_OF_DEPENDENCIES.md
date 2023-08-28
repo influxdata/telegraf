@@ -5,7 +5,7 @@ following works:
 
 - cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
-- collectd.org [MIT License](https://git.octo.it/?p=collectd.git;a=blob;f=COPYING;hb=HEAD)
+- collectd.org [ISC License](https://github.com/collectd/go-collectd/blob/master/LICENSE)
 - dario.cat/mergo [BSD 3-Clause "New" or "Revised" License](https://github.com/imdario/mergo/blob/master/LICENSE)
 - github.com/99designs/keyring [MIT License](https://github.com/99designs/keyring/blob/master/LICENSE)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
@@ -152,7 +152,7 @@ following works:
 - github.com/golang/snappy [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/snappy/blob/master/LICENSE)
 - github.com/google/cel-go [Apache License 2.0](https://github.com/google/cel-go/blob/master/LICENSE)
 - github.com/google/flatbuffers [Apache License 2.0](https://github.com/google/flatbuffers/blob/master/LICENSE)
-- github.com/google/gnostic [Apache License 2.0](https://github.com/google/gnostic/blob/master/LICENSE)
+- github.com/google/gnostic-models [Apache License 2.0](https://github.com/google/gnostic-models/blob/master/LICENSE)
 - github.com/google/gnxi [Apache License 2.0](https://github.com/google/gnxi/blob/master/LICENSE)
 - github.com/google/go-cmp [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-cmp/blob/master/LICENSE)
 - github.com/google/go-github [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-github/blob/master/LICENSE)

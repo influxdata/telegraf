@@ -10,6 +10,34 @@ Removed the Python compatibility support for "not", "and", and "or" keywords.
 This support was incorrectly removing these keywords from actual data. Users
 should instead use the standard "!", "&&", and "||" operators.
 
+## v1.27.4 [2023-08-21]
+
+### Bugfixes
+
+- [#13693](https://github.com/influxdata/telegraf/pull/13693) `inputs.cisco_telemetry_mdt` Fix MDT source field overwrite
+- [#13682](https://github.com/influxdata/telegraf/pull/13682) `inputs.opcua` Register node IDs again on reconnect
+- [#13742](https://github.com/influxdata/telegraf/pull/13742) `inputs.opcua_listener` Avoid segfault when subscription was not successful
+- [#13745](https://github.com/influxdata/telegraf/pull/13745) `outputs.stackdriver` Regenerate time interval for unknown metrics
+- [#13719](https://github.com/influxdata/telegraf/pull/13719) `parsers.xpath` Handle protobuf maps correctly
+- [#13722](https://github.com/influxdata/telegraf/pull/13722) `serializers.nowmetric` Add option for JSONv2 format
+
+### Dependency Updates
+
+- [#13766](https://github.com/influxdata/telegraf/pull/13766) `deps` Bump cloud.google.com/go/pubsub from 1.32.0 to 1.33.0
+- [#13767](https://github.com/influxdata/telegraf/pull/13767) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.13.26 to 1.13.32
+- [#13703](https://github.com/influxdata/telegraf/pull/13703) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.13.4 to 1.13.7
+- [#13702](https://github.com/influxdata/telegraf/pull/13702) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.17.14 to 1.18.0
+- [#13769](https://github.com/influxdata/telegraf/pull/13769) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.18.0 to 1.18.2
+- [#13734](https://github.com/influxdata/telegraf/pull/13734) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.19.3 to 1.21.2
+- [#13735](https://github.com/influxdata/telegraf/pull/13735) `deps` Bump github.com/gophercloud/gophercloud from 1.2.0 to 1.5.0
+- [#13737](https://github.com/influxdata/telegraf/pull/13737) `deps` Bump github.com/microsoft/go-mssqldb from 1.3.1-0.20230630170514-78ad89164253 to 1.5.0
+- [#13768](https://github.com/influxdata/telegraf/pull/13768) `deps` Bump github.com/miekg/dns from 1.1.51 to 1.1.55
+- [#13706](https://github.com/influxdata/telegraf/pull/13706) `deps` Bump github.com/openconfig/gnmi from 0.9.1 to 0.10.0
+- [#13705](https://github.com/influxdata/telegraf/pull/13705) `deps` Bump github.com/santhosh-tekuri/jsonschema/v5 from 5.3.0 to 5.3.1
+- [#13736](https://github.com/influxdata/telegraf/pull/13736) `deps` Bump go.mongodb.org/mongo-driver from 1.11.6 to 1.12.1
+- [#13738](https://github.com/influxdata/telegraf/pull/13738) `deps` Bump golang.org/x/oauth2 from 0.10.0 to 0.11.0
+- [#13704](https://github.com/influxdata/telegraf/pull/13704) `deps` Bump google.golang.org/api from 0.129.0 to 0.134.0
+
 ## v1.27.3 [2023-07-31]
 
 ### Bugfixes
