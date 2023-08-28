@@ -9,21 +9,32 @@ type smi struct {
 
 // GPU defines the structure of the GPU portion of the smi output.
 type GPU struct {
-	FanSpeed     string             `xml:"fan_speed"` // int
-	Memory       MemoryStats        `xml:"fb_memory_usage"`
-	RetiredPages MemoryRetiredPages `xml:"retired_pages"`
-	RemappedRows MemoryRemappedRows `xml:"remapped_rows"`
-	PState       string             `xml:"performance_state"`
-	Temp         TempStats          `xml:"temperature"`
-	ProdName     string             `xml:"product_name"`
-	UUID         string             `xml:"uuid"`
-	ComputeMode  string             `xml:"compute_mode"`
-	Utilization  UtilizationStats   `xml:"utilization"`
-	Power        PowerReadings      `xml:"power_readings"`
-	PCI          PCI                `xml:"pci"`
-	Encoder      EncoderStats       `xml:"encoder_stats"`
-	FBC          FBCStats           `xml:"fbc_stats"`
-	Clocks       ClockStats         `xml:"clocks"`
+	Clocks        ClockStats         `xml:"clocks"`
+	ComputeMode   string             `xml:"compute_mode"`
+	DisplayActive string             `xml:"display_active"`
+	DisplayMode   string             `xml:"display_mode"`
+	EccMode       ECCMode            `xml:"ecc_mode"`
+	Encoder       EncoderStats       `xml:"encoder_stats"`
+	FanSpeed      string             `xml:"fan_speed"` // int
+	FBC           FBCStats           `xml:"fbc_stats"`
+	Memory        MemoryStats        `xml:"fb_memory_usage"`
+	PCI           PCI                `xml:"pci"`
+	Power         PowerReadings      `xml:"power_readings"`
+	ProdName      string             `xml:"product_name"`
+	PState        string             `xml:"performance_state"`
+	RemappedRows  MemoryRemappedRows `xml:"remapped_rows"`
+	RetiredPages  MemoryRetiredPages `xml:"retired_pages"`
+	Serial        string             `xml:"serial"`
+	Temp          TempStats          `xml:"temperature"`
+	Utilization   UtilizationStats   `xml:"utilization"`
+	UUID          string             `xml:"uuid"`
+	VbiosVersion  string             `xml:"vbios_version"`
+}
+
+// ECCMode defines the structure of the ecc portions in the smi output.
+type ECCMode struct {
+	CurrentEcc string `xml:"current_ecc"` // Enabled, Disabled, N/A
+	PendingEcc string `xml:"pending_ecc"` // Enabled, Disabled, N/A
 }
 
 // MemoryStats defines the structure of the memory portions in the smi output.
