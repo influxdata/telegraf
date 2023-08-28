@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, deviecsBytes []byte) error {
@@ -13,7 +14,7 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 	if err := json.Unmarshal(sectionBytes, &tmpSections); err != nil {
 		return err
 	}
-	sections := map[uint16]string{}
+	sections := make(map[uint16]string, len(tmpSections))
 	for _, v := range tmpSections {
 		sections[v.ID] = v.Name
 	}
@@ -22,9 +23,9 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 	if err := json.Unmarshal(roomBytes, &tmpRooms); err != nil {
 		return err
 	}
-	rooms := map[uint16]LinkRoomsSections{}
+	rooms := make(map[uint16]linkRoomsSections, len(tmpRooms))
 	for _, v := range tmpRooms {
-		rooms[v.ID] = LinkRoomsSections{Name: v.Name, SectionID: v.SectionID}
+		rooms[v.ID] = linkRoomsSections{Name: v.Name, SectionID: v.SectionID}
 	}
 
 	var devices []Devices
@@ -64,25 +65,11 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 
 		// Value can be a JSON bool, string, or numeric value
 		if device.Properties.Value != nil {
-			switch v := device.Properties.Value.(type) {
-			case string:
-				if fValue, err := strconv.ParseFloat(v, 64); err == nil {
-					fields["value"] = fValue
-				}
-			case bool:
-				switch v {
-				case true:
-					fields["value"] = 1.0
-				case false:
-					fields["value"] = 0.0
-				}
-			case float64:
-				fields["value"] = v
-			case int:
-				fields["value"] = float64(v)
-			default:
-				acc.AddError(fmt.Errorf("unknown value type %T: %s", v, v))
+			v, err := internal.ToFloat64(device.Properties.Value)
+			if err != nil {
+				acc.AddError(fmt.Errorf("unable to convert value: %w", err))
 			}
+			fields["value"] = v
 		}
 
 		acc.AddFields("fibaro", fields, tags)

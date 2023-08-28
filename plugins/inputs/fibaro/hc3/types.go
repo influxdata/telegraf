@@ -1,7 +1,7 @@
 package hc3
 
 // LinkRoomsSections links rooms to sections
-type LinkRoomsSections struct {
+type linkRoomsSections struct {
 	Name      string
 	SectionID uint16
 }
