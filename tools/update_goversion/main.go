@@ -37,14 +37,6 @@ func (f FileInfo) Update() error {
 	return nil
 }
 
-// removeZeroPatch cleans version in case the user provides the minor version as "1.19.0" but require "1.19"
-func removeZeroPatch(version string) string {
-	if strings.HasSuffix(version, ".0") {
-		return strings.Trim(version, ".0")
-	}
-	return version
-}
-
 // removePatch cleans version from "1.20.1" to "1.20" (think go.mod entry)
 func removePatch(version string) string {
 	verInfo := semver.New(version)
@@ -149,7 +141,6 @@ func main() {
 		fmt.Printf("%s  %s\n", hash, file)
 	}
 
-	_ = removeZeroPatch(version)
 	noPatchVersion := removePatch(version)
 
 	files := []FileInfo{
