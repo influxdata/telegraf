@@ -179,15 +179,15 @@ to use them.
   #   separator = "_"
 
   ## Suffix equals to "__" + measurement's "foo" tag value.
-  ##   If there's no such a tag, suffix equals to an empty string
+  ## If there's no such a tag, suffix equals to an empty string
   # [outputs.kafka.topic_suffix]
   #   method = "tags"
   #   keys = ["foo"]
   #   separator = "__"
 
   ## Suffix equals to "_" + measurement's "foo" and "bar"
-  ##   tag values, separated by "_". If there is no such tags,
-  ##   their values treated as empty strings.
+  ## tag values, separated by "_". If there is no such tags,
+  ## their values treated as empty strings.
   # [outputs.kafka.topic_suffix]
   #   method = "tags"
   #   keys = ["foo", "bar"]
