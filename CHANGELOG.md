@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Next
+
+### BREAKING CHANGES
+
+- [#13791](https://github.com/influxdata/telegraf/pull/11493) `metricpass`
+Removed the Python compatibility support for "not", "and", and "or" keywords.
+This support was incorrectly removing these keywords from actual data. Users
+should instead use the standard "!", "&&", and "||" operators.
+
 ## v1.27.3 [2023-07-31]
 
 ### Bugfixes
