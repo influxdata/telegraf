@@ -226,7 +226,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 			a.Log.Debugf("Connected to %q", broker)
 			break
 		}
-		a.Log.Debugf("Error connecting to %q", broker)
+		a.Log.Errorf("Error connecting to %q: %s", broker, err)
 	}
 
 	if a.conn == nil {
