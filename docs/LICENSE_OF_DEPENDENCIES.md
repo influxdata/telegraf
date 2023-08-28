@@ -166,7 +166,7 @@ following works:
 - github.com/gopcua/opcua [MIT License](https://github.com/gopcua/opcua/blob/master/LICENSE)
 - github.com/gophercloud/gophercloud [Apache License 2.0](https://github.com/gophercloud/gophercloud/blob/master/LICENSE)
 - github.com/gorilla/mux [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/mux/blob/master/LICENSE)
-- github.com/gorilla/websocket [BSD 2-Clause "Simplified" License](https://github.com/gorilla/websocket/blob/master/LICENSE)
+- github.com/gorilla/websocket [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/websocket/blob/master/LICENSE)
 - github.com/gosnmp/gosnmp [BSD 2-Clause "Simplified" License](https://github.com/gosnmp/gosnmp/blob/master/LICENSE)
 - github.com/grid-x/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/grid-x/modbus/blob/master/LICENSE)
 - github.com/grid-x/serial [MIT License](https://github.com/grid-x/serial/blob/master/LICENSE)
