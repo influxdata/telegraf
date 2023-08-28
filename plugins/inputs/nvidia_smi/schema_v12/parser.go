@@ -69,6 +69,30 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
+
+		for _, device := range gpu.MigDevices.MigDevice {
+			tags := map[string]string{}
+			common.SetTagIfUsed(tags, "index", device.Index)
+			common.SetTagIfUsed(tags, "gpu_index", device.GpuInstanceID)
+			common.SetTagIfUsed(tags, "compute_index", device.ComputeInstanceID)
+			common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
+			common.SetTagIfUsed(tags, "name", gpu.ProductName)
+			common.SetTagIfUsed(tags, "arch", gpu.ProductArchitecture)
+			common.SetTagIfUsed(tags, "uuid", gpu.UUID)
+			common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
+
+			fields := map[string]interface{}{}
+			common.SetIfUsed("int", fields, "sram_uncorrectable", device.EccErrorCount.VolatileCount.SramUncorrectable)
+			common.SetIfUsed("int", fields, "memory_fb_total", device.FbMemoryUsage.Total)
+			common.SetIfUsed("int", fields, "memory_fb_reserved", device.FbMemoryUsage.Reserved)
+			common.SetIfUsed("int", fields, "memory_fb_used", device.FbMemoryUsage.Used)
+			common.SetIfUsed("int", fields, "memory_fb_free", device.FbMemoryUsage.Free)
+			common.SetIfUsed("int", fields, "memory_bar1_total", device.Bar1MemoryUsage.Total)
+			common.SetIfUsed("int", fields, "memory_bar1_used", device.Bar1MemoryUsage.Used)
+			common.SetIfUsed("int", fields, "memory_bar1_free", device.Bar1MemoryUsage.Free)
+
+			acc.AddFields("nvidia_smi_mig", fields, tags, timestamp)
+		}
 	}
 
 	return nil
