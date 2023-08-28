@@ -69,6 +69,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Custom resource type
   # resource_type = "generic_node"
 
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## Additional resource labels
   # [outputs.stackdriver.resource_labels]
   #   node_id = "$HOSTNAME"
