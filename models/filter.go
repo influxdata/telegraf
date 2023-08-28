@@ -3,7 +3,6 @@ package models
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/google/cel-go/cel"
@@ -256,11 +255,6 @@ func (f *Filter) compileMetricFilter() error {
 
 	// Initialize the expression
 	expression := f.MetricPass
-
-	// Replace python-like logic-operators
-	expression = regexp.MustCompile(`\bnot\b`).ReplaceAllString(expression, "!")
-	expression = regexp.MustCompile(`\band\b`).ReplaceAllString(expression, "&&")
-	expression = regexp.MustCompile(`\bor\b`).ReplaceAllString(expression, "||")
 
 	// Check if we need to call into CEL at all and quit early
 	if expression == "" {
