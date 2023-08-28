@@ -441,30 +441,17 @@ func isURL(str string) bool {
 
 // LoadConfig loads the given config files and applies it to c
 func (c *Config) LoadConfig(path string) error {
-	var err error
-	paths := []string{}
-
-	if path == "" {
-		if paths, err = GetDefaultConfigPath(); err != nil {
-			return err
-		}
-	} else {
-		paths = append(paths, path)
+	if !c.Agent.Quiet {
+		log.Printf("I! Loading config: %s", path)
 	}
 
-	for _, path := range paths {
-		if !c.Agent.Quiet {
-			log.Printf("I! Loading config: %s", path)
-		}
+	data, _, err := LoadConfigFile(path)
+	if err != nil {
+		return fmt.Errorf("error loading config file %s: %w", path, err)
+	}
 
-		data, _, err := LoadConfigFile(path)
-		if err != nil {
-			return fmt.Errorf("error loading config file %s: %w", path, err)
-		}
-
-		if err = c.LoadConfigData(data); err != nil {
-			return fmt.Errorf("error loading config file %s: %w", path, err)
-		}
+	if err = c.LoadConfigData(data); err != nil {
+		return fmt.Errorf("error loading config file %s: %w", path, err)
 	}
 
 	return nil
