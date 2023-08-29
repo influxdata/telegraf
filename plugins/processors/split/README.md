@@ -11,8 +11,9 @@ templates before putting into production *and* use metric filtering to
 avoid data loss.
 
 Some outputs are sensitive to the number of metric series that are produced.
-Multiple series of the same metric name can result in a decrease in performance
-in these outputs.
+Multiple metrics of the same series (i.e. identical name, tag key-values and
+field name) with the same timestamp might result in squashing those points
+to the latest metric produced.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
