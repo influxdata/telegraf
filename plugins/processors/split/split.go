@@ -3,6 +3,7 @@ package split
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -16,7 +17,7 @@ var sampleConfig string
 
 type Split struct {
 	Templates    []template `toml:"template"`
-	KeepOriginal bool       `toml:"keep_original"`
+	DropOriginal bool       `toml:"drop_original"`
 }
 
 type template struct {
@@ -34,25 +35,25 @@ func (*Split) SampleConfig() string {
 
 func (s *Split) Init() error {
 	if len(s.Templates) == 0 {
-		return fmt.Errorf("at least one template required")
+		return errors.New("at least one template required")
 	}
 
 	for index, template := range s.Templates {
 		if template.Name == "" {
-			return fmt.Errorf("metric name cannot be empty")
+			return errors.New("metric name cannot be empty")
 		}
 
 		if len(template.Fields) == 0 {
-			return fmt.Errorf("at least one field is required for a valid metric")
+			return errors.New("at least one field is required for a valid metric")
 		}
-		f, err := filter.NewIncludeExcludeFilter(template.Fields, nil)
+		f, err := filter.Compile(template.Fields)
 		if err != nil {
 			return fmt.Errorf("failed to create new field filter: %w", err)
 		}
 		s.Templates[index].fieldFilters = f
 
 		if len(template.Tags) != 0 {
-			f, err := filter.NewIncludeExcludeFilter(template.Tags, nil)
+			f, err := filter.Compile(template.Tags)
 			if err != nil {
 				return fmt.Errorf("failed to create new tag filter: %w", err)
 			}
@@ -67,10 +68,10 @@ func (s *Split) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	newMetrics := []telegraf.Metric{}
 
 	for _, point := range in {
-		if s.KeepOriginal {
-			newMetrics = append(newMetrics, point)
-		} else {
+		if s.DropOriginal {
 			point.Accept()
+		} else {
+			newMetrics = append(newMetrics, point)
 		}
 
 		for _, template := range s.Templates {

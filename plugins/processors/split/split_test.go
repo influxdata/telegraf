@@ -14,7 +14,7 @@ import (
 )
 
 func TestCases(t *testing.T) {
-	folders, err := os.ReadDir("testdata")
+	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
 	require.NotEmpty(t, folders)
 
@@ -29,7 +29,7 @@ func TestCases(t *testing.T) {
 		}
 
 		fname := f.Name()
-		testdataPath := filepath.Join("testdata", fname)
+		testdataPath := filepath.Join("testcases", fname)
 		configFilename := filepath.Join(testdataPath, "config.toml")
 		inputFilename := filepath.Join(testdataPath, "input.influx")
 		expectedFilename := filepath.Join(testdataPath, "expected.out")
