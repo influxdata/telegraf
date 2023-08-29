@@ -79,24 +79,24 @@ func collectGoStat(acc telegraf.Accumulator) {
 
 	fields := map[string]any{}
 	for _, sample := range samples {
-		name, value := sample.Name, sample.Value
+		name := sanitizeName(sample.Name)
 
-		switch value.Kind() {
+		switch sample.Value.Kind() {
 		case metrics.KindUint64:
-			fields[name] = value.Uint64()
+			fields[name] = sample.Value.Uint64()
 		case metrics.KindFloat64:
-			fields[name] = value.Float64()
+			fields[name] = sample.Value.Float64()
 		case metrics.KindFloat64Histogram:
 			// The histogram may be quite large, so let's just pull out
 			// a crude estimate for the median for the sake of this example.
-			fields[name] = medianBucket(value.Float64Histogram())
+			fields[name] = medianBucket(sample.Value.Float64Histogram())
 		default:
 			// This may happen as new metrics get added.
 			//
 			// The safest thing to do here is to simply log it somewhere
 			// as something to look into, but ignore it for now.
 			// In the worst case, you might temporarily miss out on a new metric.
-			fmt.Printf("%s: unexpected metric Kind: %v\n", name, value.Kind())
+			fmt.Printf("%s: unexpected metric Kind: %v\n", name, sample.Value.Kind())
 		}
 	}
 
@@ -104,6 +104,15 @@ func collectGoStat(acc telegraf.Accumulator) {
 		"go_version": strings.TrimPrefix(runtime.Version(), "go"),
 	}
 	acc.AddFields("internal_gostats", fields, tags)
+}
+
+// Converts /cpu/classes/gc/mark/assist:cpu-seconds to cpu_classes_gc_mark_assist_cpu_seconds
+func sanitizeName(name string) string {
+	name = strings.TrimPrefix(name, "/")
+	name = strings.ReplaceAll(name, "/", "_")
+	name = strings.ReplaceAll(name, ":", "_")
+	name = strings.ReplaceAll(name, "-", "_")
+	return name
 }
 
 func medianBucket(h *metrics.Float64Histogram) float64 {
