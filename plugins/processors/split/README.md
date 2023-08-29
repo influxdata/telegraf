@@ -5,9 +5,10 @@ the user provides. The timestamp of the new metric is based on the source
 metric. Templates can overlap, where a field or tag, is used across templates
 and as a result end up in multiple metrics.
 
-If drop original is changed to true, then the plugin can result in dropping
-all metrics when no match is found! Please ensure to test templates before
-putting into production to avoid data loss.
+**NOTE**: If drop original is changed to true, then the plugin can result in
+dropping all metrics when no match is found! Please ensure to test
+templates before putting into production *and* use metric filtering to
+avoid data loss.
 
 Some outputs are sensitive to the number of metric series that are produced.
 Multiple series of the same metric name can result in a decrease in performance
