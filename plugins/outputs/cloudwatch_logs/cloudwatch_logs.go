@@ -375,7 +375,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 			} else {
-				putLogEvents.SequenceToken = &elem.sequenceToken
+				putLogEvents.SequenceToken = &c.ls[logStream].sequenceToken
 			}
 
 			//Upload log events

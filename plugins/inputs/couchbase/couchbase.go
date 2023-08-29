@@ -94,7 +94,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 			fields := cb.basicBucketStats(bucket.BasicStats)
 			tags := map[string]string{"cluster": cluster, "bucket": name}
 
-			err := cb.gatherDetailedBucketStats(addr, name, nil, fields)
+			err := cb.gatherDetailedBucketStats(addr, name, "", fields)
 			if err != nil {
 				return err
 			}
@@ -107,7 +107,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 				fields := cb.basicBucketStats(bucket.BasicStats)
 				tags := map[string]string{"cluster": cluster, "bucket": name, "hostname": node.Hostname}
 
-				err := cb.gatherDetailedBucketStats(addr, name, &node.Hostname, fields)
+				err := cb.gatherDetailedBucketStats(addr, name, node.Hostname, fields)
 				if err != nil {
 					return err
 				}
@@ -133,7 +133,7 @@ func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[str
 	return fields
 }
 
-func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, nodeHostname *string, fields map[string]interface{}) error {
+func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, nodeHostname string, fields map[string]interface{}) error {
 	extendedBucketStats := &BucketStats{}
 	err := cb.queryDetailedBucketStats(server, bucket, nodeHostname, extendedBucketStats)
 	if err != nil {
@@ -374,10 +374,10 @@ func (cb *Couchbase) addBucketFieldChecked(fields map[string]interface{}, fieldK
 	cb.addBucketField(fields, fieldKey, values[len(values)-1])
 }
 
-func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, nodeHostname *string, bucketStats *BucketStats) error {
+func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, nodeHostname string, bucketStats *BucketStats) error {
 	url := server + "/pools/default/buckets/" + bucket
-	if nodeHostname != nil {
-		url += "/nodes/" + *nodeHostname
+	if nodeHostname != "" {
+		url += "/nodes/" + nodeHostname
 	}
 	url += "/stats?"
 

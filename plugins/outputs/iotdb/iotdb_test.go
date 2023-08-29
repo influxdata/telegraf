@@ -265,7 +265,8 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			require.NoError(t, err)
 			// Ignore the tags-list for comparison
 			actual.TagsList = nil
-			require.EqualValues(t, &tt.expected, actual)
+			expected := tt.expected
+			require.EqualValues(t, &expected, actual)
 		})
 	}
 }
@@ -343,9 +344,10 @@ func TestTagsHandling(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			input := tt.input
 			tt.plugin.Log = &testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
-			require.NoError(t, tt.plugin.modifyRecordsWithTags(&tt.input))
+			require.NoError(t, tt.plugin.modifyRecordsWithTags(&input))
 			// Ignore the tags-list for comparison
 			tt.input.TagsList = nil
 			require.EqualValues(t, tt.expected, tt.input)
@@ -478,10 +480,11 @@ func TestEntireMetricConversion(t *testing.T) {
 			require.NoError(t, tt.plugin.modifyRecordsWithTags(actual))
 			// Ignore the tags-list for comparison
 			actual.TagsList = nil
+			expected := tt.expected
 			if tt.requireEqual {
-				require.EqualValues(t, &tt.expected, actual)
+				require.EqualValues(t, &expected, actual)
 			} else {
-				require.NotEqualValues(t, &tt.expected, actual)
+				require.NotEqualValues(t, &expected, actual)
 			}
 		})
 	}

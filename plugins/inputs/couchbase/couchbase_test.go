@@ -90,7 +90,7 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		node     *string
+		node     string
 		response []byte
 	}{
 		{
@@ -104,7 +104,7 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 		{
 			name:     "node-level with all fields",
 			response: nodeBucketStatsResponse,
-			node:     &node,
+			node:     node,
 		},
 	}
 
