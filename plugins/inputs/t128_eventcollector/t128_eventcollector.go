@@ -4,15 +4,18 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// T128EventCollector is an input for metrics of a 128T router instance
 type T128EventCollector struct {
-	CollectorName string `toml:"collector_name"`
-	LogName       string `toml:"log_name"`
-	Topic         string `toml:"topic"`
-	IndexFile     string `toml:"index_file"`
-	EventType     string `toml:"event_type"`
+	CollectorName string          `toml:"collector_name"`
+	LogName       string          `toml:"log_name"`
+	Topic         string          `toml:"topic"`
+	IndexFile     string          `toml:"index_file"`
+	EventType     string          `toml:"event_type"`
+	Timeout       config.Duration `toml:"timeout"`
 }
 
 var sampleConfig = `
@@ -41,7 +44,7 @@ func (*T128EventCollector) SampleConfig() string {
 	return sampleConfig
 }
 
-// Description returns a one-sentence description on the Input
+// Description returns a one-sentence description of the Input
 func (*T128EventCollector) Description() string {
 	return "Read 128T Event Collector"
 }
