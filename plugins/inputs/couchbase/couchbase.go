@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -26,7 +27,7 @@ type Couchbase struct {
 	BucketStatsIncluded []string `toml:"bucket_stats_included"`
 	ClusterBucketStats  bool     `toml:"cluster_bucket_stats"`
 	NodeBucketStats     bool     `toml:"node_bucket_stats"`
-	AutoFailoverStats   bool     `toml:"autofailover_stats"`
+	AdditionalStats     []string `toml:"additional_stats"`
 
 	bucketInclude filter.Filter
 	client        *http.Client
@@ -123,7 +124,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 		}
 	}
 
-	if cb.AutoFailoverStats {
+	if choice.Contains("autofailover", cb.AdditionalStats) {
 		tags := map[string]string{"cluster": cluster}
 		fields, err := cb.gatherAutoFailoverStats(addr)
 		if err != nil {

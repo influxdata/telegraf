@@ -48,8 +48,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Whether to collect bucket stats for each individual node
   # node_bucket_stats = false
 
-  ## Whether to collect auto-failover settings
-  # autofailover_stats = false
+  ## List of additional stats to collect, choose from:
+  ##  * autofailover
+  # additional_stats = []
 ```
 
 ## Metrics

@@ -191,7 +191,7 @@ func TestGatherFailover(t *testing.T) {
 		Servers:            []string{faker.URL},
 		ClusterBucketStats: false,
 		NodeBucketStats:    false,
-		AutoFailoverStats:  true,
+		AdditionalStats:    []string{"autofailover"},
 	}
 	require.NoError(t, cb.Init())
 
