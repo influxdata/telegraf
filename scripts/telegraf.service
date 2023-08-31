@@ -12,7 +12,8 @@ ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-director
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartForceExitStatus=SIGPIPE
-KillMode=control-group
+KillMode=mixed
+TimeoutStopSec=5
 LimitMEMLOCK=8M:8M
 
 [Install]
