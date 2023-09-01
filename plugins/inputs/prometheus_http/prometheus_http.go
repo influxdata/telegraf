@@ -22,15 +22,15 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	bigcache "github.com/allegro/bigcache"
 	toolsRender "github.com/devopsext/tools/render"
 	utils "github.com/devopsext/utils"
 )
 
 type PrometheusHttpTextTemplate struct {
 	template *toolsRender.TextTemplate
-	metric   *PrometheusHttpMetric
 	input    *PrometheusHttp
+	name     string
+	hash     uint64
 }
 
 // PrometheusHttpMetric struct
@@ -81,14 +81,10 @@ type PrometheusHttp struct {
 	SkipEmptyTags bool                    `toml:"skip_empty_tags"`
 	Files         []*PrometheusHttpFile   `toml:"file"`
 
-	CacheLifeSeconds  int `toml:"cache_life_seconds"`
-	CacheCleanSeconds int `toml:"cache_clean_seconds"`
-	CacheMaxSize      int `toml:"cache_max_size"`
-
 	Log   telegraf.Logger `toml:"-"`
 	acc   telegraf.Accumulator
 	files map[string]interface{}
-	cache *bigcache.BigCache
+	cache map[uint64]map[string]interface{}
 }
 
 type PrometheusHttpPushFunc = func(when time.Time, tags map[string]string, stamp time.Time, value float64)
@@ -541,19 +537,23 @@ func (ptt *PrometheusHttpTextTemplate) FCacheRegexMatchObjectNameByField(obj map
 	if obj == nil || utils.IsEmpty(field) || utils.IsEmpty(value) {
 		return ""
 	}
+	name := fmt.Sprintf("%s.%s", ptt.name, field)
 	if ptt.input.cache != nil {
-		entry, err := ptt.input.cache.Get(field)
-		if err == nil {
-			return string(entry)
+		v := ptt.input.cache[ptt.hash][name]
+		if v != nil {
+			return fmt.Sprintf("%v", v)
 		}
 	}
 	r := ""
-	entry := ptt.template.RegexMatchObjectNameByField(obj, field, value)
-	if entry != nil {
-		r = fmt.Sprintf("%v", entry)
-	}
-	if entry != nil && ptt.input.cache != nil {
-		ptt.input.cache.Set(field, []byte(r))
+	v := ptt.template.RegexMatchObjectNameByField(obj, field, value)
+	if v != nil && ptt.input.cache != nil {
+		m := ptt.input.cache[ptt.hash]
+		if m == nil {
+			m = make(map[string]interface{})
+		}
+		m[name] = v
+		ptt.input.cache[ptt.hash] = m
+		r = fmt.Sprintf("%v", v)
 	}
 	return r
 }
@@ -581,8 +581,9 @@ func (p *PrometheusHttp) getDefaultTemplate(m *PrometheusHttpMetric, name, value
 		return nil
 	}
 	ptt.template = tpl
-	ptt.metric = m
 	ptt.input = p
+	ptt.name = name
+	ptt.hash = byteHash64(byteSha512([]byte(m.Query)))
 	return tpl
 }
 
@@ -761,6 +762,10 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (p *PrometheusHttp) Printf(format string, v ...interface{}) {
+	p.Log.Debugf(format, v)
+}
+
 func (p *PrometheusHttp) Init() error {
 
 	gid := utils.GetRoutineID()
@@ -781,27 +786,6 @@ func (p *PrometheusHttp) Init() error {
 		p.Prefix = "prometheus_http"
 	}
 
-	if p.CacheLifeSeconds <= 0 {
-		p.CacheLifeSeconds = 60
-	}
-
-	if p.CacheCleanSeconds <= 0 {
-		p.CacheCleanSeconds = p.CacheLifeSeconds * 2
-	}
-
-	if p.CacheLifeSeconds > 0 {
-		config := bigcache.DefaultConfig(time.Duration(p.CacheLifeSeconds) * time.Second)
-		config.CleanWindow = time.Duration(p.CacheCleanSeconds) * time.Second
-		config.HardMaxCacheSize = p.CacheMaxSize
-
-		cache, err := bigcache.NewBigCache(config)
-		if err != nil {
-			p.Log.Error(err)
-			return err
-		}
-		p.cache = cache
-	}
-
 	if len(p.Metrics) == 0 {
 		err := fmt.Errorf("[%d] %s no metrics found", gid, p.Name)
 		p.Log.Error(err)
@@ -810,6 +794,7 @@ func (p *PrometheusHttp) Init() error {
 
 	p.Log.Debugf("[%d] %s metrics amount: %d", gid, p.Name, len(p.Metrics))
 
+	p.cache = make(map[uint64]map[string]interface{})
 	for _, m := range p.Metrics {
 		p.setDefaultMetric(gid, m)
 	}
