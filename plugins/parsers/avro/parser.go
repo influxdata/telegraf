@@ -234,13 +234,20 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// Exactly how we flatten is decided by p.UnionMode
 		if p.UnionMode == "flatten" {
 			flat, err = flatten.Flatten(candidate, "", sep)
+			if err != nil {
+				return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+			}
 		} else {
-			// "nullable" or "all"
+			// "nullable" or "any"
 			typedVal, ok := candidate[fld].(map[string]interface{})
 			if !ok {
 				// the "key" is not a string, so ...
-				// maybe an array?  Do the default thing.
+				// most likely an array?  Do the default thing
+				// and flatten the candidate.
 				flat, err = flatten.Flatten(candidate, "", sep)
+				if err != nil {
+					return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+				}
 			} else {
 				flat = p.flattenField(fld, typedVal)
 			}
