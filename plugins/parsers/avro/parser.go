@@ -229,7 +229,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	for _, fld := range fieldList {
 		candidate := make(map[string]interface{})
 		candidate[fld] = data[fld] // 1-item map
-		flat := make(map[string]interface{})
+		var flat map[string]interface{}
 		var err error
 		// Exactly how we flatten is decided by p.UnionMode
 		if p.UnionMode == "flatten" {
@@ -244,7 +244,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			} else {
 				flat = p.flattenField(fld, typedVal)
 			}
-
 		}
 		if err != nil {
 			return nil, fmt.Errorf("flatten field %q failed: %w", fld, err)
@@ -319,7 +318,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		timestamp = time.Now()
 	}
 	m := metric.New(name, tags, fields, timestamp)
-	fmt.Printf("*** Metric: %v\n", m)
 	return m, nil
 }
 
