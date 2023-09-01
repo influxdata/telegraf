@@ -57,7 +57,11 @@ func (p *Parser) Init() error {
 		if p.Timestamp != "" {
 			return errors.New("if 'timestamp' field is specified, 'timestamp_format' must be as well")
 		}
-		if p.TimestampFormat != "unix" && p.TimestampFormat != "unix_us" && p.TimestampFormat != "unix_ms" && p.TimestampFormat != "unix_ns" {
+	} else {
+		switch p.TimestampFormat {
+		case "unix", "unix_ns", "unix_us", "unix_ms":
+			// Valid values
+		default:
 			return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 		}
 	}
