@@ -172,7 +172,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// If you have specified your fields in the config, you
 		// get what you asked for.
 		fieldList = p.Fields
-
 	} else {
 		for k := range data {
 			// Otherwise, that which is not a tag is a field
