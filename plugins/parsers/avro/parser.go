@@ -162,9 +162,9 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map[string]interface{} {
+	// Helper function for the "nullable" and "any" p.UnionModes
 	// fldVal is a one-item map of string-to-something
 	ret := make(map[string]interface{})
-	// Helper function for the "nullable" and "any" p.UnionModes
 	if p.UnionMode == "nullable" {
 		_, ok := fldVal["null"]
 		if ok {
@@ -172,13 +172,7 @@ func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map
 		}
 	}
 	// Otherwise, we just return the value in the fieldname.
-	//
-	// WARNING: if you once write a measurement to InfluxDB, and you
-	// later give it a measurement which has a field with the same
-	// name but a different type, InfluxDB will reject the entire second
-	// measurement.  Be sure you know what you're doing if you turn
-	// on "any", or you use "nullable" but there's more than one non-null
-	// type that your measurement can be.
+	// See README.md for an important warning about "any" and "nullable".
 	for _, v := range fldVal {
 		ret[fldName] = v
 		break // Not really needed, since it's a one-item map
@@ -259,7 +253,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			fields[k] = v
 		}
 	}
-
 	var schemaObj map[string]interface{}
 	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
 		return nil, fmt.Errorf("unmarshaling schema failed: %w", err)
@@ -324,8 +317,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	} else {
 		timestamp = time.Now()
 	}
-	m := metric.New(name, tags, fields, timestamp)
-	return m, nil
+	return metric.New(name, tags, fields, timestamp), nil
 }
 
 func init() {

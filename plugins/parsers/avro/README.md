@@ -127,7 +127,8 @@ the error will be rised and the message will not be parsed.
   ## associate that field with the first type it sees for a given
   ## its value.  If it receives another measurement with a different
   ## type in that field, it will discard that entire measurement.  Be
-  ## sure you know what you're doing if you use the "any" type.
+  ## sure you know what you're doing if you use the "any" type, or
+  ## "nullable" with more than one non-null type.
   # avro_union_mode = "flatten"
 
   ## Default values for given tags: optional
