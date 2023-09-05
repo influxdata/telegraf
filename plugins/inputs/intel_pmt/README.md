@@ -58,7 +58,6 @@ local copies of XML files from the cloned [Intel-PMT Repository].
   ## If empty, all metrics are enabled.
   ## When used, the alternative option datatypes_enabled should NOT be used.
   # samples_enabled = []
-  
 ```
 
 ## Example Configuration: C-State residency and temperature with a datatype metric filter
