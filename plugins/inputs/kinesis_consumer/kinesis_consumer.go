@@ -230,7 +230,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 
 				k.lastSeqNum = strToBint(sequenceNum)
 				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
-					k.Log.Info("Setting checkpoint failed: %v", err)
+					k.Log.Infof("Setting checkpoint failed: %v", err)
 				}
 			} else {
 				k.Log.Info("Metric group failed to process")
