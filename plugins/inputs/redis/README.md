@@ -17,10 +17,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from one or many redis servers
 [[inputs.redis]]
   ## specify servers via a url matching:
-  ##  [protocol://][:password]@address[:port]
+  ##  [protocol://][username:password]@address[:port]
   ##  e.g.
   ##    tcp://localhost:6379
-  ##    tcp://:password@192.168.99.100
+  ##    tcp://username:password@192.168.99.100
   ##    unix:///var/run/redis.sock
   ##
   ## If no servers are specified, then localhost is used as the host.
@@ -37,11 +37,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   # Can be "string", "integer", or "float"
   #   type = "string"
 
-  ## specify server password
-  # password = "s#cr@t%"
-
-  ## specify username for ACL auth (Redis 6.0+)
-  # username = "default"
+  ## Specify username and password for ACL auth (Redis 6.0+). You can add this
+  ## to the server URI above or specify it here. The values here take
+  ## precidence.
+  # username = ""
+  # password = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
