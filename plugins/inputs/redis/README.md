@@ -148,8 +148,10 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
   - avg_ttl(int, number)
 
 - redis_cmdstat
-    Every Redis used command will have 3 new fields:
+    Every Redis used command could have the following fields:
   - calls(int, number)
+  - failed_calls(int, number)
+  - rejected_calls(int, number)
   - usec(int, mircoseconds)
   - usec_per_call(float, microseconds)
 
@@ -169,7 +171,7 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
     - err
   - fields:
     - total (int, number)
-  
+
 ### Tags
 
 - All measurements have the following tags:
