@@ -175,9 +175,7 @@ docs](https://github.com/jackc/pgx) for more details.
 
 ### modernc.org/sqlite
 
-This driver is not available on all operating systems and architectures. It is
-only included in Linux builds on amd64, 386, arm64, arm, and Darwin on amd64. It
-is not available for Windows, FreeBSD, and other Linux and Darwin platforms.
+It is not supported on mips and mips64 platforms.
 
 The DSN is a filename or url with scheme "file:". See the [driver
 docs](https://modernc.org/sqlite) for details.
