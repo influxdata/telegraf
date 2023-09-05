@@ -4,11 +4,11 @@ package intel_pmt
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
+	"path/filepath"
 )
 
 type pmt struct {
@@ -52,6 +52,8 @@ type sample struct {
 	SampleID      string   `xml:"sampleID,attr"`
 	Lsb           uint64   `xml:"lsb"`
 	Msb           uint64   `xml:"msb"`
+
+	mask uint64
 }
 
 type aggregatorInterface struct {
@@ -110,26 +112,149 @@ func (fileReader) getReadCloser(source string) (io.ReadCloser, error) {
 	return os.Open(source)
 }
 
-type httpReader struct{}
+// parseXMLs reads and parses PMT XMLs.
+//
+// This method retrieves all metadata about known GUIDs from PmtSpec.
+// Then, it explores PMT sysfs to find all readable "telem" files and their GUIDs.
+// It then matches found (readable) system GUIDs with GUIDs from metadata and
+// reads corresponding sets of XMLs.
+//
+// Returns:
+//
+//	error - if PMT spec is empty, if exploring PMT sysfs fails, or if reading XMLs fails.
+func (p *IntelPMT) parseXMLs() error {
+	err := parseXML(p.PmtSpec, p.reader, &p.pmtMetadata)
+	if err != nil {
+		return err
+	}
+	if len(p.pmtMetadata.Mappings.Mapping) == 0 {
+		return errors.New("pmt XML provided contains no mappings")
+	}
 
-func (httpReader) getReadCloser(source string) (io.ReadCloser, error) {
-	u, err := url.Parse(source)
+	err = p.readXMLs()
 	if err != nil {
-		return nil, fmt.Errorf("error during url parsing: %w", err)
+		return err
 	}
-	resp, err := http.Get(u.String())
+
+	p.pmtTransformations = make(map[string]map[string]transformation)
+	for guid := range p.pmtTelemetryFiles {
+		p.pmtTransformations[guid] = make(map[string]transformation)
+		for _, transform := range p.pmtAggregatorInterface[guid].Transformations.Transformation {
+			p.pmtTransformations[guid][transform.TransformID] = transform
+		}
+	}
+	return nil
+}
+
+// readXMLs function reads all XMLs for found GUIDs.
+//
+// This method reads two required XMLs for each found GUID,
+// checks if any of the provided filtering metrics were not found,
+// and checks if there is at least one non-empty XML set.
+//
+// Returns:
+//
+//	error - error if reading operation failed or if all XMLs are empty.
+func (p *IntelPMT) readXMLs() error {
+	p.pmtAggregator = make(map[string]aggregator)
+	p.pmtAggregatorInterface = make(map[string]aggregatorInterface)
+	dtMetricsFound := make(map[string]bool)
+	sampleFilterFound := make(map[string]bool)
+	for guid := range p.pmtTelemetryFiles {
+		err := p.getAllXMLData(guid, dtMetricsFound, sampleFilterFound)
+		if err != nil {
+			return fmt.Errorf("failed reading XMLs: %w", err)
+		}
+	}
+	for _, dt := range p.DatatypeFilter {
+		if _, ok := dtMetricsFound[dt]; !ok {
+			p.Log.Warnf("Configured datatype metric %q has not been found", dt)
+		}
+	}
+	for _, sm := range p.SampleFilter {
+		if _, ok := sampleFilterFound[sm]; !ok {
+			p.Log.Warnf("Configured sample metric %q has not been found", sm)
+		}
+	}
+	err := p.verifyNoEmpty()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("XMLs empty: %w", err)
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("reading %q, expected status code 200, got %d", source, resp.StatusCode)
+	return nil
+}
+
+// getAllXMLData retrieves two XMLs for given GUID.
+//
+// This method reads where to find the Aggregator and Aggregator interface XMLs
+// from pmt metadata and reads found XMLs.
+// This method also filters read XMLs before saving them
+// and extracts additional tags from the data.
+//
+// Parameters:
+//
+//	guid - GUID saying which XMLs should be read.
+//	dtMetricsFound - a map of found datatype metrics for all GUIDs.
+//	smFound - a map of found sample names for all GUIDs.
+//
+// Returns:
+//
+//	error - if reading XML has failed.
+func (p *IntelPMT) getAllXMLData(guid string, dtMetricsFound map[string]bool, smFound map[string]bool) error {
+	for _, mapping := range p.pmtMetadata.Mappings.Mapping {
+		if mapping.GUID == guid {
+			basedir := mapping.XMLSet.Basedir
+			guid := mapping.GUID
+			var aggSource, aggInterfaceSource string
+
+			aggSource = filepath.Join(p.pmtBasePath, basedir, mapping.XMLSet.Aggregator)
+			aggInterfaceSource = filepath.Join(p.pmtBasePath, basedir, mapping.XMLSet.AggregatorInterface)
+
+			tAgg := aggregator{}
+			tAggInterface := aggregatorInterface{}
+
+			err := parseXML(aggSource, p.reader, &tAgg)
+			if err != nil {
+				return fmt.Errorf("failed reading aggregator XML: %w", err)
+			}
+			err = parseXML(aggInterfaceSource, p.reader, &tAggInterface)
+			if err != nil {
+				return fmt.Errorf("failed reading aggregator interface XML: %w", err)
+			}
+			if len(p.DatatypeFilter) > 0 {
+				tAgg.filterAggregatorByDatatype(p.DatatypeFilter)
+				tAggInterface.filterAggInterfaceByDatatype(p.DatatypeFilter, dtMetricsFound)
+			}
+			if len(p.SampleFilter) > 0 {
+				tAgg.filterAggregatorBySampleName(p.SampleFilter)
+				tAggInterface.filterAggInterfaceBySampleName(p.SampleFilter, smFound)
+			}
+			tAgg.calculateMasks()
+			p.pmtAggregator[guid] = tAgg
+			tAggInterface.extractTagsFromSample()
+			p.pmtAggregatorInterface[guid] = tAggInterface
+		}
 	}
-	return resp.Body, nil
+	return nil
+}
+
+func (a *aggregator) calculateMasks() {
+	for i := range a.SampleGroup {
+		for j, sample := range a.SampleGroup[i].Sample {
+			mask := computeMask(sample.Msb, sample.Lsb)
+			a.SampleGroup[i].Sample[j].mask = mask
+		}
+	}
+}
+
+func computeMask(msb uint64, lsb uint64) uint64 {
+	msbMask := uint64(0xffffffffffffffff) & ((1 << (msb + 1)) - 1)
+	lsbMask := uint64(0xffffffffffffffff) & (1<<lsb - 1)
+	return msbMask & (^lsbMask)
 }
 
 func parseXML(source string, sr sourceReader, v interface{}) error {
 	if sr == nil {
-		return fmt.Errorf("XML reader failed to initialize")
+		return errors.New("XML reader failed to initialize")
 	}
 	reader, err := sr.getReadCloser(source)
 	if err != nil {

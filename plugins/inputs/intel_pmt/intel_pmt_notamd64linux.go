@@ -23,8 +23,6 @@ func (p *IntelPMT) Init() error {
 }
 func (*IntelPMT) SampleConfig() string                { return sampleConfig }
 func (*IntelPMT) Gather(_ telegraf.Accumulator) error { return nil }
-func (*IntelPMT) Start(_ telegraf.Accumulator) error  { return nil }
-func (*IntelPMT) Stop()                               {}
 
 func init() {
 	inputs.Add("intel_pmt", func() telegraf.Input {

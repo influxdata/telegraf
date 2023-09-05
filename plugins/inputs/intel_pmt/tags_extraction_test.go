@@ -40,7 +40,7 @@ func TestExtractTagsFromSample(t *testing.T) {
 				AggregatorSamples: aggregatorSamples{
 					AggregatorSample: []aggregatorSample{
 						{
-							SampleName:    "C_test",
+							SampleName:    "test",
 							SampleGroup:   "test-group",
 							DatatypeIDRef: "test-datatype",
 							TransformREF:  "test-transform-ref",
@@ -84,7 +84,7 @@ func TestExtractTagsFromSample(t *testing.T) {
 				AggregatorSamples: aggregatorSamples{
 					AggregatorSample: []aggregatorSample{
 						{
-							SampleName:    "CHA_test",
+							SampleName:    "test",
 							SampleGroup:   "test-group",
 							DatatypeIDRef: "test-datatype",
 							TransformREF:  "test-transform-ref",

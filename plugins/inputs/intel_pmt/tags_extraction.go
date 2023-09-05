@@ -19,14 +19,14 @@ func (a *aggregatorInterface) extractTagsFromSample() {
 			// matches[0] is the exact match in the code
 			// matches[1] is the captured number (in parentheses)
 			sample.core = matches[1]
-			sample.SampleName = coreRegex.ReplaceAllString(sample.SampleName, "C_")
+			sample.SampleName = coreRegex.ReplaceAllString(sample.SampleName, "")
 			newAggSample.AggregatorSample = append(newAggSample.AggregatorSample, sample)
 			continue
 		}
 		matches = chaRegex.FindStringSubmatch(sample.SampleName)
 		if len(matches) == 2 {
 			sample.cha = matches[1]
-			sample.SampleName = chaRegex.ReplaceAllString(sample.SampleName, "CHA_")
+			sample.SampleName = chaRegex.ReplaceAllString(sample.SampleName, "")
 		}
 		newAggSample.AggregatorSample = append(newAggSample.AggregatorSample, sample)
 	}

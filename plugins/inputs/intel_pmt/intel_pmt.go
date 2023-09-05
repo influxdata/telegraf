@@ -9,13 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/PaesslerAG/gval"
 
@@ -41,13 +41,12 @@ type fileInfo struct {
 }
 
 type IntelPMT struct {
-	PmtSource       string          `toml:"pmt_source"`
-	DatatypeMetrics []string        `toml:"datatype_metrics"`
-	SampleMetrics   []string        `toml:"sample_metrics"`
-	Log             telegraf.Logger `toml:"-"`
+	PmtSpec        string          `toml:"spec"`
+	DatatypeFilter []string        `toml:"datatypes_enabled"`
+	SampleFilter   []string        `toml:"samples_enabled"`
+	Log            telegraf.Logger `toml:"-"`
 
 	pmtBasePath            string
-	isFilePath             bool
 	reader                 sourceReader
 	pmtTelemetryFiles      map[string]pmtFileInfo
 	pmtMetadata            *pmt
@@ -63,9 +62,14 @@ func (p *IntelPMT) SampleConfig() string {
 
 // Init performs one time setup of the plugin
 func (p *IntelPMT) Init() error {
-	err := p.definePmtSourceType()
+	err := p.checkPmtSpec()
 	if err != nil {
 		return err
+	}
+
+	err = p.explorePmtInSysfs()
+	if err != nil {
+		return fmt.Errorf("error while exploring pmt sysfs: %w", err)
 	}
 
 	return p.parseXMLs()
@@ -74,7 +78,7 @@ func (p *IntelPMT) Init() error {
 // Gather collects the plugin's metrics.
 func (p *IntelPMT) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	errorChan := make(chan error, len(p.pmtTelemetryFiles))
+	var hasError atomic.Bool
 	for guid := range p.pmtTelemetryFiles {
 		wg.Add(1)
 		go func(guid string, fileInfo []fileInfo) {
@@ -82,108 +86,52 @@ func (p *IntelPMT) Gather(acc telegraf.Accumulator) error {
 			for _, info := range fileInfo {
 				data, err := os.ReadFile(info.path)
 				if err != nil {
-					errorChan <- err
+					hasError.Store(true)
+					p.Log.Errorf("Error occurred while gathering metrics: %v", err)
 					return
 				}
 
 				err = p.aggregateSamples(guid, data, info.numaNode, acc)
 				if err != nil {
-					errorChan <- err
+					hasError.Store(true)
+					p.Log.Errorf("Error occurred while gathering metrics: %v", err)
 					return
 				}
 			}
 		}(guid, p.pmtTelemetryFiles[guid])
 	}
 	wg.Wait()
-	close(errorChan)
 
-	var hasError bool
-	for err := range errorChan {
-		if err != nil {
-			p.Log.Errorf("Error occurred while gathering metrics: %v", err)
-			hasError = true
-		}
-	}
-	if hasError {
+	if hasError.Load() {
 		return errors.New("error(s) occurred while gathering metrics")
 	}
 	return nil
 }
 
-// definePmtSourceType defines if provided pmtSource is URL or filepath
+// checkPmtSpec checks if provided PmtSpec is correct and readable.
 //
-// pmtSource is expected to be an absolute URL or absolute filepath.
-// This function determines which one it is and creates a correct reader.
+// PmtSpec is expected to be an absolute filepath.
 //
 // Returns:
 //
-//	error - error if pmtSource is invalid or not absolute.
-func (p *IntelPMT) definePmtSourceType() error {
-	if p.PmtSource == "" {
-		return fmt.Errorf("no source of XMLs provided")
+//	error - error if PmtSpec is invalid, not readable, or not absolute.
+func (p *IntelPMT) checkPmtSpec() error {
+	if p.PmtSpec == "" {
+		return errors.New("pmt spec is empty")
 	}
 
-	parsedURL, err := url.Parse(p.PmtSource)
-	// URL parse doesn't return an error if scheme is empty/invalid.
-	// If scheme is empty or no Host in URL then check if provided source is a readable filePath.
-	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
-		if !isFileReadable(p.PmtSource) {
-			return fmt.Errorf("provided pmt source is invalid %q", p.PmtSource)
-		}
-		p.isFilePath = true
+	if !isFileReadable(p.PmtSpec) {
+		return fmt.Errorf("provided pmt spec is not readable %q", p.PmtSpec)
 	}
 
-	lastSlash := strings.LastIndex(p.PmtSource, "/")
-	// if pmtSource contains no "/"
+	lastSlash := strings.LastIndex(p.PmtSpec, "/")
+	// if PmtSpec contains no "/"
 	if lastSlash == -1 {
-		return fmt.Errorf("provided pmt source is not an absolute path")
+		return errors.New("provided pmt spec is not an absolute path")
 	}
-	if p.isFilePath {
-		p.pmtBasePath = p.PmtSource[:lastSlash]
-		p.reader = fileReader{}
-	} else {
-		p.pmtBasePath = parsedURL.String()[:lastSlash]
-		p.reader = httpReader{}
-	}
-	return nil
-}
+	p.pmtBasePath = p.PmtSpec[:lastSlash]
+	p.reader = fileReader{}
 
-// parseXMLs reads and parses PMT XMLs.
-//
-// This method retrieves all metadata about known GUIDs from pmtSource.
-// Then, it explores PMT sysfs to find all readable "telem" files and their GUIDs.
-// It then matches found (readable) system GUIDs with GUIDs from metadata and
-// reads corresponding sets of XMLs.
-//
-// Returns:
-//
-//	error - if PMT source is empty, if exploring PMT sysfs fails, or if reading XMLs fails.
-func (p *IntelPMT) parseXMLs() error {
-	err := parseXML(p.PmtSource, p.reader, &p.pmtMetadata)
-	if err != nil {
-		return err
-	}
-	if len(p.pmtMetadata.Mappings.Mapping) == 0 {
-		return fmt.Errorf("pmt XML provided contains no mappings")
-	}
-
-	err = p.explorePmtInSysfs()
-	if err != nil {
-		return fmt.Errorf("error while exploring pmt sysfs: %w", err)
-	}
-
-	err = p.readXMLs()
-	if err != nil {
-		return err
-	}
-
-	p.pmtTransformations = make(map[string]map[string]transformation)
-	for guid := range p.pmtTelemetryFiles {
-		p.pmtTransformations[guid] = make(map[string]transformation)
-		for _, transform := range p.pmtAggregatorInterface[guid].Transformations.Transformation {
-			p.pmtTransformations[guid][transform.TransformID] = transform
-		}
-	}
 	return nil
 }
 
@@ -206,13 +154,16 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 		if !strings.HasPrefix(dir.Name(), "telem") {
 			continue
 		}
-
-		pmtGUIDPath := filepath.Join(defaultPmtBasePath, dir.Name(), "guid")
-		if !isFileReadable(pmtGUIDPath) {
-			p.Log.Warnf("GUID file is not readable %q", pmtGUIDPath)
+		telemDirPath := filepath.Join(defaultPmtBasePath, dir.Name())
+		symlinkInfo, err := os.Stat(telemDirPath)
+		if err != nil {
+			return fmt.Errorf("error resolving symlink for directory %q: %w", telemDirPath, err)
+		}
+		if !symlinkInfo.IsDir() {
 			continue
 		}
 
+		pmtGUIDPath := filepath.Join(telemDirPath, "guid")
 		rawGUID, err := os.ReadFile(pmtGUIDPath)
 		if err != nil {
 			return fmt.Errorf("cannot read GUID: %w", err)
@@ -220,13 +171,13 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 		// cut the newline char
 		tID := strings.TrimRight(string(rawGUID), "\n")
 
-		telemPath := filepath.Join(defaultPmtBasePath, dir.Name(), "telem")
+		telemPath := filepath.Join(telemDirPath, "telem")
 		if !isFileReadable(telemPath) {
 			p.Log.Warnf("telem file is not readable %q", telemPath)
 			continue
 		}
 
-		numaNodePath := filepath.Join(defaultPmtBasePath, dir.Name(), "device", "numa_node")
+		numaNodePath := filepath.Join(telemDirPath, "device", "numa_node")
 		numaNodeSymlink, err := filepath.EvalSymlinks(numaNodePath)
 		if err != nil {
 			return fmt.Errorf("error while evaluating symlink %q: %w", numaNodePath, err)
@@ -265,105 +216,6 @@ func isFileReadable(path string) bool {
 	file.Close()
 
 	return true
-}
-
-// readXMLs function reads all XMLs for found GUIDs.
-//
-// This method reads two required XMLs for each found GUID,
-// checks if any of the provided filtering metrics were not found,
-// and checks if there is at least one non-empty XML set.
-//
-// Returns:
-//
-//	error - error if reading operation failed or if all XMLs are empty.
-func (p *IntelPMT) readXMLs() error {
-	p.pmtAggregator = make(map[string]aggregator)
-	p.pmtAggregatorInterface = make(map[string]aggregatorInterface)
-	dtMetricsFound := make(map[string]bool)
-	sampleMetricsFound := make(map[string]bool)
-	for guid := range p.pmtTelemetryFiles {
-		err := p.getAllXMLData(guid, dtMetricsFound, sampleMetricsFound)
-		if err != nil {
-			return fmt.Errorf("failed reading XMLs: %w", err)
-		}
-	}
-	for _, dt := range p.DatatypeMetrics {
-		if _, ok := dtMetricsFound[dt]; !ok {
-			p.Log.Warnf("Configured datatype metric %q has not been found", dt)
-		}
-	}
-	for _, sm := range p.SampleMetrics {
-		if _, ok := sampleMetricsFound[sm]; !ok {
-			p.Log.Warnf("Configured sample metric %q has not been found", sm)
-		}
-	}
-	err := p.verifyNoEmpty()
-	if err != nil {
-		return fmt.Errorf("XMLs empty: %w", err)
-	}
-	return nil
-}
-
-// getAllXMLData retrieves two XMLs for given GUID.
-//
-// This method reads where to find the Aggregator and Aggregator interface XMLs
-// from pmt metadata and reads found XMLs.
-// This method also filters read XMLs before saving them
-// and extracts additional tags from the data.
-//
-// Parameters:
-//
-//	guid - GUID saying which XMLs should be read.
-//	dtMetricsFound - a map of found datatype metrics for all GUIDs.
-//	smFound - a map of found sample names for all GUIDs.
-//
-// Returns:
-//
-//	error - if reading XML has failed.
-func (p *IntelPMT) getAllXMLData(guid string, dtMetricsFound map[string]bool, smFound map[string]bool) error {
-	for _, mapping := range p.pmtMetadata.Mappings.Mapping {
-		if mapping.GUID == guid {
-			basedir := mapping.XMLSet.Basedir
-			guid := mapping.GUID
-			var aggSource, aggInterfaceSource string
-
-			if !p.isFilePath {
-				pmtBaseURL, err := url.Parse(p.pmtBasePath)
-				if err != nil {
-					return err
-				}
-				aggSource = pmtBaseURL.JoinPath(basedir, mapping.XMLSet.Aggregator).String()
-				aggInterfaceSource = pmtBaseURL.JoinPath(basedir, mapping.XMLSet.AggregatorInterface).String()
-			} else {
-				aggSource = filepath.Join(p.pmtBasePath, basedir, mapping.XMLSet.Aggregator)
-				aggInterfaceSource = filepath.Join(p.pmtBasePath, basedir, mapping.XMLSet.AggregatorInterface)
-			}
-
-			tAgg := aggregator{}
-			tAggInterface := aggregatorInterface{}
-
-			err := parseXML(aggSource, p.reader, &tAgg)
-			if err != nil {
-				return fmt.Errorf("failed reading aggregator XML: %w", err)
-			}
-			err = parseXML(aggInterfaceSource, p.reader, &tAggInterface)
-			if err != nil {
-				return fmt.Errorf("failed reading aggregator interface XML: %w", err)
-			}
-			if len(p.DatatypeMetrics) > 0 {
-				tAgg.filterAggregatorByDatatype(p.DatatypeMetrics)
-				tAggInterface.filterAggInterfaceByDatatype(p.DatatypeMetrics, dtMetricsFound)
-			}
-			if len(p.SampleMetrics) > 0 {
-				tAgg.filterAggregatorBySampleName(p.SampleMetrics)
-				tAggInterface.filterAggInterfaceBySampleName(p.SampleMetrics, smFound)
-			}
-			p.pmtAggregator[guid] = tAgg
-			tAggInterface.extractTagsFromSample()
-			p.pmtAggregatorInterface[guid] = tAggInterface
-		}
-	}
-	return nil
 }
 
 // getSampleValues reads all sample values for all sample groups.
@@ -418,12 +270,9 @@ func getTelemSample(s sample, buf []byte, offset uint64) (uint64, error) {
 		return 0, fmt.Errorf("error reading telemetry sample: insufficient bytes from offset %d in buffer of size %d", offset, len(buf))
 	}
 	data := binary.LittleEndian.Uint64(buf[offset : offset+8])
-	msbMask := uint64(0xffffffffffffffff) & ((1 << (s.Msb + 1)) - 1)
-	lsbMask := uint64(0xffffffffffffffff) & (1<<s.Lsb - 1)
-	mask := msbMask & (^lsbMask)
 
 	// Apply mask and shift right
-	value := (data & mask) >> s.Lsb
+	value := (data & s.mask) >> s.Lsb
 	return value, nil
 }
 
@@ -522,7 +371,7 @@ func transformEquation(eq string) string {
 //	error - error if the equation is empty, if hex to dec conversion failed or if the equation is invalid.
 func eval(eq string, params map[string]interface{}) (interface{}, error) {
 	if eq == "" {
-		return nil, fmt.Errorf("no transformation equation found")
+		return nil, errors.New("no transformation equation found")
 	}
 	// gval doesn't support hexadecimals
 	eq = hexToDecRegex.ReplaceAllStringFunc(eq, hexToDec)
@@ -546,6 +395,6 @@ func hexToDec(hexStr string) string {
 
 func init() {
 	inputs.Add(pluginName, func() telegraf.Input {
-		return new(IntelPMT)
+		return &IntelPMT{}
 	})
 }

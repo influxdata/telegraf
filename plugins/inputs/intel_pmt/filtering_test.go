@@ -33,7 +33,7 @@ func TestFilterAggregatorByDatatype(t *testing.T) {
 			},
 		}
 		p := IntelPMT{
-			DatatypeMetrics: []string{"test-datatype"},
+			DatatypeFilter: []string{"test-datatype"},
 		}
 		expected := aggregator{
 			SampleGroup: []sampleGroup{
@@ -50,7 +50,7 @@ func TestFilterAggregatorByDatatype(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorByDatatype(p.DatatypeMetrics)
+		agg.filterAggregatorByDatatype(p.DatatypeFilter)
 		require.Equal(t, expected, agg)
 	})
 
@@ -82,7 +82,7 @@ func TestFilterAggregatorByDatatype(t *testing.T) {
 			},
 		}
 		p := IntelPMT{
-			DatatypeMetrics: []string{"test-datatype"},
+			DatatypeFilter: []string{"test-datatype"},
 		}
 		expected := aggregator{
 			SampleGroup: []sampleGroup{
@@ -99,7 +99,7 @@ func TestFilterAggregatorByDatatype(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorByDatatype(p.DatatypeMetrics)
+		agg.filterAggregatorByDatatype(p.DatatypeFilter)
 		require.Equal(t, expected, agg)
 	})
 }
@@ -162,10 +162,10 @@ func TestFilterAggregatorInterfaceByDatatype(t *testing.T) {
 		}
 
 		p := IntelPMT{
-			DatatypeMetrics: []string{"test-datatype"},
-			Log:             testutil.Logger{},
+			DatatypeFilter: []string{"test-datatype"},
+			Log:            testutil.Logger{},
 		}
-		aggInterface.filterAggInterfaceByDatatype(p.DatatypeMetrics, make(map[string]bool))
+		aggInterface.filterAggInterfaceByDatatype(p.DatatypeFilter, make(map[string]bool))
 		require.Equal(t, expected, aggInterface)
 	})
 }
@@ -196,7 +196,7 @@ func TestFilterAggregatorBySampleName(t *testing.T) {
 			},
 		}
 		p := IntelPMT{
-			SampleMetrics: []string{"exists"},
+			SampleFilter: []string{"exists"},
 		}
 		expected := aggregator{
 			SampleGroup: []sampleGroup{
@@ -214,7 +214,7 @@ func TestFilterAggregatorBySampleName(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorBySampleName(p.SampleMetrics)
+		agg.filterAggregatorBySampleName(p.SampleFilter)
 		require.Equal(t, expected, agg)
 	})
 
@@ -232,7 +232,7 @@ func TestFilterAggregatorBySampleName(t *testing.T) {
 							SampleID:      "test-sample-ref",
 						},
 						{
-							SampleName:    "missing",
+							SampleName:    "C61_TEMP_test",
 							DatatypeIDRef: "test-datatype",
 							Msb:           0,
 							Lsb:           0,
@@ -243,7 +243,7 @@ func TestFilterAggregatorBySampleName(t *testing.T) {
 			},
 		}
 		p := IntelPMT{
-			SampleMetrics: []string{"Cx_TEMP"},
+			SampleFilter: []string{"TEMP"},
 		}
 		expected := aggregator{
 			SampleGroup: []sampleGroup{
@@ -261,7 +261,7 @@ func TestFilterAggregatorBySampleName(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorBySampleName(p.SampleMetrics)
+		agg.filterAggregatorBySampleName(p.SampleFilter)
 		require.Equal(t, expected, agg)
 	})
 }
@@ -324,10 +324,10 @@ func TestFilterAggregatorInterfaceBySampleName(t *testing.T) {
 		}
 
 		p := IntelPMT{
-			SampleMetrics: []string{"Cx_PVP_LEVEL_RES_128_L1"},
-			Log:           testutil.Logger{},
+			SampleFilter: []string{"PVP_LEVEL_RES_128_L1"},
+			Log:          testutil.Logger{},
 		}
-		aggInterface.filterAggInterfaceBySampleName(p.SampleMetrics, make(map[string]bool))
+		aggInterface.filterAggInterfaceBySampleName(p.SampleFilter, make(map[string]bool))
 		require.Equal(t, expected, aggInterface)
 	})
 
@@ -388,10 +388,10 @@ func TestFilterAggregatorInterfaceBySampleName(t *testing.T) {
 		}
 
 		p := IntelPMT{
-			SampleMetrics: []string{"test-sample"},
-			Log:           testutil.Logger{},
+			SampleFilter: []string{"test-sample"},
+			Log:          testutil.Logger{},
 		}
-		aggInterface.filterAggInterfaceBySampleName(p.SampleMetrics, make(map[string]bool))
+		aggInterface.filterAggInterfaceBySampleName(p.SampleFilter, make(map[string]bool))
 		require.Equal(t, expected, aggInterface)
 	})
 }
@@ -426,7 +426,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 			pmtAggregatorInterface: map[string]aggregatorInterface{
 				"test-guid": {},
 			},
-			DatatypeMetrics:   []string{"doesn't-exist"},
+			DatatypeFilter:    []string{"doesn't-exist"},
 			Log:               testutil.Logger{},
 			pmtTelemetryFiles: map[string]pmtFileInfo{"test-guid": []fileInfo{{}}},
 		}
@@ -450,7 +450,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 				},
 			},
 		}
-		aggInterface.filterAggInterfaceByDatatype(p.DatatypeMetrics, make(map[string]bool))
+		aggInterface.filterAggInterfaceByDatatype(p.DatatypeFilter, make(map[string]bool))
 		p.pmtAggregatorInterface["test-guid"] = aggInterface
 		require.ErrorContains(t, p.verifyNoEmpty(), "all aggregator interface XMLs are empty")
 	})
@@ -460,7 +460,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 			pmtAggregatorInterface: map[string]aggregatorInterface{
 				"test-guid": {},
 			},
-			SampleMetrics:     []string{"doesn't-exist"},
+			SampleFilter:      []string{"doesn't-exist"},
 			Log:               testutil.Logger{},
 			pmtTelemetryFiles: map[string]pmtFileInfo{"test-guid": []fileInfo{{}}},
 		}
@@ -485,7 +485,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 				},
 			},
 		}
-		aggInterface.filterAggInterfaceBySampleName(p.SampleMetrics, make(map[string]bool))
+		aggInterface.filterAggInterfaceBySampleName(p.SampleFilter, make(map[string]bool))
 		p.pmtAggregatorInterface["test-guid"] = aggInterface
 		require.ErrorContains(t, p.verifyNoEmpty(), "XMLs are empty")
 	})
@@ -497,7 +497,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 			pmtAggregatorInterface: map[string]aggregatorInterface{
 				"test-guid": {},
 			},
-			SampleMetrics:     []string{"test-sample"},
+			SampleFilter:      []string{"test-sample"},
 			pmtTelemetryFiles: map[string]pmtFileInfo{"test-guid": []fileInfo{{}}},
 		}
 		agg := aggregator{
@@ -536,8 +536,8 @@ func TestVerifyNoEmpty(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorBySampleName(p.SampleMetrics)
-		aggInterface.filterAggInterfaceBySampleName(p.SampleMetrics, make(map[string]bool))
+		agg.filterAggregatorBySampleName(p.SampleFilter)
+		aggInterface.filterAggInterfaceBySampleName(p.SampleFilter, make(map[string]bool))
 		p.pmtAggregator["test-guid"] = agg
 		p.pmtAggregatorInterface["test-guid"] = aggInterface
 		require.NoError(t, p.verifyNoEmpty())
@@ -551,7 +551,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 			pmtAggregatorInterface: map[string]aggregatorInterface{
 				"test-guid": {},
 			},
-			DatatypeMetrics:   []string{"test-datatype"},
+			DatatypeFilter:    []string{"test-datatype"},
 			pmtTelemetryFiles: map[string]pmtFileInfo{"test-guid": []fileInfo{{}}},
 		}
 		agg := aggregator{
@@ -590,8 +590,8 @@ func TestVerifyNoEmpty(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorByDatatype(p.DatatypeMetrics)
-		aggInterface.filterAggInterfaceByDatatype(p.DatatypeMetrics, make(map[string]bool))
+		agg.filterAggregatorByDatatype(p.DatatypeFilter)
+		aggInterface.filterAggInterfaceByDatatype(p.DatatypeFilter, make(map[string]bool))
 		p.pmtAggregator["test-guid"] = agg
 		p.pmtAggregatorInterface["test-guid"] = aggInterface
 		require.NoError(t, p.verifyNoEmpty())
@@ -605,7 +605,7 @@ func TestVerifyNoEmpty(t *testing.T) {
 			pmtAggregatorInterface: map[string]aggregatorInterface{
 				"test-guid": {},
 			},
-			DatatypeMetrics:   []string{"test-datatype"},
+			DatatypeFilter:    []string{"test-datatype"},
 			pmtTelemetryFiles: map[string]pmtFileInfo{"test-guid": []fileInfo{{}}},
 		}
 		agg := aggregator{
@@ -645,8 +645,8 @@ func TestVerifyNoEmpty(t *testing.T) {
 				},
 			},
 		}
-		agg.filterAggregatorByDatatype(p.DatatypeMetrics)
-		aggInterface.filterAggInterfaceByDatatype(p.DatatypeMetrics, make(map[string]bool))
+		agg.filterAggregatorByDatatype(p.DatatypeFilter)
+		aggInterface.filterAggInterfaceByDatatype(p.DatatypeFilter, make(map[string]bool))
 		p.pmtAggregator["test-guid"] = agg
 		p.pmtAggregatorInterface["test-guid"] = aggInterface
 		require.ErrorContains(t, p.verifyNoEmpty(), "all aggregator XMLs are empty")
