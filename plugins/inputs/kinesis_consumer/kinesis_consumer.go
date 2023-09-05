@@ -176,6 +176,7 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
 	k.Log.Info("got a message")
+
 	data, err := k.processContentEncodingFunc(r.Data)
 	if err != nil {
 		k.Log.Info("onMessage: error processing encoding")
