@@ -74,7 +74,8 @@ The message is supposed to be encoded as follows:
   ## be used for the measurement timestamp.
   # avro_timestamp = ""
   ## If avro_timestamp is specified, avro_timestamp_format must be set
-  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'
+  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'.  It will
+  ## default to 'unix'.
   # avro_timestamp_format = "unix"
 
   ## Used to separate parts of array structures.  As above, the default
