@@ -37,7 +37,7 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
       goversion:
         type: string
         default: 1.21.0
@@ -202,7 +202,7 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: linux-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
@@ -212,7 +212,7 @@ jobs:
       - test-go
       - save_cache:
           name: "Save Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-v1-{{ checksum "go.sum" }}
+          key: linux-amd64-go<< parameters.goversion >>-v2-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
             - '~/.cache/golangci-lint'
@@ -231,7 +231,7 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: linux-386-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: linux-386-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'GOARCH=386 make deps'
       - run: 'GOARCH=386 make tidy'
@@ -240,7 +240,7 @@ jobs:
           arch: "386"
       - save_cache:
           name: "Save Go caches"
-          key: linux-386-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: linux-386-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
             - '~/.cache/golangci-lint'
@@ -265,12 +265,12 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: darwin-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: darwin-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
       - save_cache:
           name: "Save Go caches"
-          key: darwin-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: darwin-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '~/Library/Caches/golangci-lint'
@@ -288,13 +288,13 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: windows-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: windows-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
       - save_cache:
           name: "Save Go caches"
-          key: windows-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: windows-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
           paths:
             - '~\go\pkg\mod'
             - '~\AppData\Local\golangci-lint'
@@ -310,13 +310,13 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: linux-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
       - save_cache:
           name: "Save Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-cache-v1-{{ checksum "go.sum" }}
+          key: linux-amd64-go<< parameters.goversion >>-cache-v2-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
             - '~/.cache/golangci-lint'
