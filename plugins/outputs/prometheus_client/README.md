@@ -65,7 +65,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
-  # [outputs.file.prometheus_metric_types]
+  # [outputs.prometheus_client.prometheus_metric_types]
   #   counter = []
   #   gauge = []
 ```
