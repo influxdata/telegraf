@@ -53,17 +53,13 @@ func (p *Parser) Init() error {
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
-	if p.TimestampFormat == "" {
-		if p.Timestamp != "" {
-			return errors.New("if 'timestamp' field is specified, 'timestamp_format' must be as well")
-		}
-	} else {
-		switch p.TimestampFormat {
-		case "unix", "unix_ns", "unix_us", "unix_ms":
-			// Valid values
-		default:
-			return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
-		}
+	switch p.TimestampFormat {
+	case "":
+		p.TimestampFormat = "unix"
+	case "unix", "unix_ns", "unix_us", "unix_ms":
+		// Valid values
+	default:
+		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
 	if p.SchemaRegistry != "" {
 		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
