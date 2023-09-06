@@ -24,31 +24,31 @@ import (
 var sampleConfig string
 
 type ConvertStruct struct {
-	Integer         string
-	Real            string
-	Text            string
-	Timestamp       string
-	Defaultvalue    string
-	Unsigned        string
-	Bool            string
-	ConversionStyle string
+	Integer         string `toml:"integer"`
+	Real            string `toml:"real"`
+	Text            string `toml:"text"`
+	Timestamp       string `toml:"timestamp"`
+	Defaultvalue    string `toml:"defaultvalue"`
+	Unsigned        string `toml:"unsigned"`
+	Bool            string `toml:"bool"`
+	ConversionStyle string `toml:"conversion_style"`
 }
 
 type SQL struct {
-	Driver                string
-	DataSourceName        string
-	TimestampColumn       string
-	TableTemplate         string
-	TableExistsTemplate   string
-	InitSQL               string `toml:"init_sql"`
-	Convert               ConvertStruct
-	ConnectionMaxIdleTime config.Duration
-	ConnectionMaxLifetime config.Duration
-	ConnectionMaxIdle     int
-	ConnectionMaxOpen     int
+	Driver                string          `toml:"driver"`
+	DataSourceName        string          `toml:"data_source_name"`
+	TimestampColumn       string          `toml:"timestamp_column"`
+	TableTemplate         string          `toml:"table_template"`
+	TableExistsTemplate   string          `toml:"table_exists_template"`
+	InitSQL               string          `toml:"init_sql"`
+	Convert               ConvertStruct   `toml:"convert"`
+	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
+	ConnectionMaxLifetime config.Duration `toml:"connection_max_lifetime"`
+	ConnectionMaxIdle     int             `toml:"connection_max_idle"`
+	ConnectionMaxOpen     int             `toml:"connection_max_open"`
+	Log                   telegraf.Logger `toml:"-"`
 
 	db     *gosql.DB
-	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
 }
 

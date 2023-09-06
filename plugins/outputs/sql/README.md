@@ -106,13 +106,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Initialization SQL
   # init_sql = ""
 
-  ## This setting controls the behavior of the unsigned value. By default the
-  ## setting will take the integer value and append the unsigned value to it. The other
-  ## option is "literal", which will use the actual value the user provides to
-  ## the unsigned option. This is useful for a database like ClickHouse where
-  ## the unsigned value should use a value like "uint64".
-  # conversion_style = "unsigned_suffix"
-
   ## Maximum amount of time a connection may be idle. "0s" means connections are
   ## never closed due to idle time.
   # connection_max_idle_time = "0s"
@@ -147,6 +140,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  defaultvalue         = "TEXT"
   #  unsigned             = "UNSIGNED"
   #  bool                 = "BOOL"
+  #  ## This setting controls the behavior of the unsigned value. By default the
+  #  ## setting will take the integer value and append the unsigned value to it. The other
+  #  ## option is "literal", which will use the actual value the user provides to
+  #  ## the unsigned option. This is useful for a database like ClickHouse where
+  #  ## the unsigned value should use a value like "uint64".
+  #  # conversion_style = "unsigned_suffix"
 ```
 
 ## Driver-specific information
