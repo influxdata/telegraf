@@ -55,6 +55,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
+  ## Node name to filter to.
+  # node = "minikube"
+
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
   ## Ignored if url is empty and in-cluster config is used.
@@ -112,7 +115,6 @@ list "persistentvolumes" and "nodes". You will then need to make an [aggregated
 ClusterRole][agg] that will eventually be bound to a user or group.
 
 [rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
-
 [agg]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
 
 ```yaml
@@ -184,6 +186,7 @@ tls_key = "/run/telegraf-kubernetes-key"
 ## Metrics
 
 - kubernetes_daemonset
+
   - tags:
     - daemonset_name
     - namespace
@@ -199,6 +202,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - updated_number_scheduled
 
 - kubernetes_deployment
+
   - tags:
     - deployment_name
     - namespace
@@ -209,6 +213,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - created
 
 - kubernetes_endpoints
+
   - tags:
     - endpoint_name
     - namespace
@@ -224,6 +229,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - port
 
 - kubernetes_ingress
+
   - tags:
     - ingress_name
     - namespace
@@ -239,6 +245,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - tls
 
 - kubernetes_node
+
   - tags:
     - node_name
     - status
@@ -258,6 +265,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - node_count
 
 - kubernetes_persistentvolume
+
   - tags:
     - pv_name
     - phase
@@ -266,6 +274,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - phase_type (int, [see below](#pv-phase_type))
 
 - kubernetes_persistentvolumeclaim
+
   - tags:
     - pvc_name
     - namespace
@@ -276,6 +285,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - phase_type (int, [see below](#pvc-phase_type))
 
 - kubernetes_pod_container
+
   - tags:
     - container_name
     - namespace
@@ -299,6 +309,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - status_condition
 
 - kubernetes_service
+
   - tags:
     - service_name
     - namespace
@@ -314,6 +325,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - target_port
 
 - kubernetes_statefulset
+
   - tags:
     - statefulset_name
     - namespace
@@ -329,6 +341,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - observed_generation
 
 - kubernetes_resourcequota
+
   - tags:
     - resource
     - namespace
@@ -365,11 +378,11 @@ tls_key = "/run/telegraf-kubernetes-key"
 
 The node status ready can mean 3 different values.
 
-| Tag value | Corresponding field value |  Meaning |
-| --------- | ------------------------- |  -------
-| ready     | 0                         |  NotReady|
-| ready     | 1                         |  Ready   |
-| ready     | 2                         |  Unknown |
+| Tag value | Corresponding field value | Meaning  |
+| --------- | ------------------------- | -------- |
+| ready     | 0                         | NotReady |
+| ready     | 1                         | Ready    |
+| ready     | 2                         | Unknown  |
 
 ### pv `phase_type`
 
