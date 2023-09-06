@@ -2,6 +2,7 @@ package input
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -73,6 +74,15 @@ func (o *InputClientConfig) Validate() error {
 
 	if o.TimestampFormat == "" {
 		o.TimestampFormat = time.RFC3339Nano
+	}
+
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 {
+		return errors.New("no groups or root nodes provided to gather from")
+	}
+	for _, group := range o.Groups {
+		if len(group.Nodes) == 0 {
+			return errors.New("group has no nodes to collect from")
+		}
 	}
 
 	return nil

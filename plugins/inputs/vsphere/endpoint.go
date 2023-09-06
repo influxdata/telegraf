@@ -651,7 +651,7 @@ func getDatacenters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFi
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
 			dcname:       r.Name,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
@@ -697,7 +697,7 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 				name:         r.Name,
 				ref:          r.ExtensibleManagedObject.Reference(),
 				parentRef:    p,
-				customValues: e.loadCustomAttributes(&r.ManagedEntity),
+				customValues: e.loadCustomAttributes(r.ManagedEntity),
 			}
 			return nil
 		}()
@@ -721,7 +721,7 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
@@ -750,7 +750,7 @@ func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) 
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
@@ -856,7 +856,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			guest:        guest,
 			altID:        uuid,
 			rpname:       rpname,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 			lookup:       lookup,
 		}
 	}
@@ -885,13 +885,13 @@ func getDatastores(ctx context.Context, e *Endpoint, resourceFilter *ResourceFil
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
 			altID:        lunID,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
 }
 
-func (e *Endpoint) loadCustomAttributes(entity *mo.ManagedEntity) map[string]string {
+func (e *Endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]string {
 	if !e.customAttrEnabled {
 		return map[string]string{}
 	}

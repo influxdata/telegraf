@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/influxdata/telegraf/selfstat"
@@ -10,7 +11,9 @@ import (
 )
 
 func TestSelfPlugin(t *testing.T) {
-	s := NewSelf()
+	s := Self{
+		CollectMemstats: true,
+	}
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, s.Gather(acc))
@@ -63,4 +66,49 @@ func TestSelfPlugin(t *testing.T) {
 			"version": "unknown",
 		},
 	)
+}
+
+func TestNoMemStat(t *testing.T) {
+	s := Self{
+		CollectMemstats: false,
+		CollectGostats:  false,
+	}
+	acc := &testutil.Accumulator{}
+
+	require.NoError(t, s.Gather(acc))
+	require.False(t, acc.HasMeasurement("internal_memstats"))
+	require.False(t, acc.HasMeasurement("internal_gostats"))
+}
+
+func TestGostats(t *testing.T) {
+	s := Self{
+		CollectMemstats: false,
+		CollectGostats:  true,
+	}
+	acc := &testutil.Accumulator{}
+
+	require.NoError(t, s.Gather(acc))
+	require.False(t, acc.HasMeasurement("internal_memstats"))
+	require.True(t, acc.HasMeasurement("internal_gostats"))
+
+	var metric *testutil.Metric
+	for _, m := range acc.Metrics {
+		if m.Measurement == "internal_gostats" {
+			metric = m
+			break
+		}
+	}
+
+	require.NotNil(t, metric)
+	require.Equal(t, metric.Measurement, "internal_gostats")
+	require.Equal(t, len(metric.Tags), 1)
+	require.Contains(t, metric.Tags, "go_version")
+
+	for name, value := range metric.Fields {
+		switch value.(type) {
+		case int64, uint64, float64:
+		default:
+			require.True(t, false, fmt.Sprintf("field %s is of non-numeric type %T\n", name, value))
+		}
+	}
 }

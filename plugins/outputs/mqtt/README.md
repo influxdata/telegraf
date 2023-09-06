@@ -125,6 +125,10 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## Optional MQTT 5 publish properties
   ## These setting only apply if the "protocol" property is set to 5. This must
   ## be defined at the end of the plugin settings, otherwise TOML will assume

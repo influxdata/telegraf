@@ -150,21 +150,23 @@ func (s *AliyunCMS) Init() error {
 	}
 
 	//check metrics dimensions consistency
-	for _, metric := range s.Metrics {
-		if metric.Dimensions != "" {
-			metric.dimensionsUdObj = map[string]string{}
-			metric.dimensionsUdArr = []map[string]string{}
+	for i := range s.Metrics {
+		metric := s.Metrics[i]
+		if metric.Dimensions == "" {
+			continue
+		}
+		metric.dimensionsUdObj = map[string]string{}
+		metric.dimensionsUdArr = []map[string]string{}
 
-			// first try to unmarshal as an object
-			err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdObj)
-			if err != nil {
-				// then try to unmarshal as an array
-				err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr)
+		// first try to unmarshal as an object
+		if err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdObj); err == nil {
+			// We were successful, so stop here
+			continue
+		}
 
-				if err != nil {
-					return fmt.Errorf("cannot parse dimensions (neither obj, nor array) %q: %w", metric.Dimensions, err)
-				}
-			}
+		// then try to unmarshal as an array
+		if err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr); err != nil {
+			return fmt.Errorf("cannot parse dimensions (neither obj, nor array) %q: %w", metric.Dimensions, err)
 		}
 	}
 

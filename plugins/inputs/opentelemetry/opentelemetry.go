@@ -25,9 +25,10 @@ import (
 var sampleConfig string
 
 type OpenTelemetry struct {
-	ServiceAddress string   `toml:"service_address"`
-	SpanDimensions []string `toml:"span_dimensions"`
-	MetricsSchema  string   `toml:"metrics_schema"`
+	ServiceAddress      string   `toml:"service_address"`
+	SpanDimensions      []string `toml:"span_dimensions"`
+	LogRecordDimensions []string `toml:"log_record_dimensions"`
+	MetricsSchema       string   `toml:"metrics_schema"`
 
 	tls.ServerConfig
 	Timeout config.Duration `toml:"timeout"`
@@ -73,7 +74,7 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 		return err
 	}
 	pmetricotlp.RegisterGRPCServer(o.grpcServer, metricsSvc)
-	logsSvc, err := newLogsService(logger, influxWriter)
+	logsSvc, err := newLogsService(logger, influxWriter, o.LogRecordDimensions)
 	if err != nil {
 		return err
 	}
@@ -108,10 +109,11 @@ func (o *OpenTelemetry) Stop() {
 func init() {
 	inputs.Add("opentelemetry", func() telegraf.Input {
 		return &OpenTelemetry{
-			ServiceAddress: "0.0.0.0:4317",
-			SpanDimensions: otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
-			MetricsSchema:  "prometheus-v1",
-			Timeout:        config.Duration(5 * time.Second),
+			ServiceAddress:      "0.0.0.0:4317",
+			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
+			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
+			MetricsSchema:       "prometheus-v1",
+			Timeout:             config.Duration(5 * time.Second),
 		}
 	})
 }

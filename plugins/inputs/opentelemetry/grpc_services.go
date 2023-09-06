@@ -80,10 +80,11 @@ type logsService struct {
 
 var _ plogotlp.GRPCServer = (*logsService)(nil)
 
-func newLogsService(logger common.Logger, writer *writeToAccumulator) (*logsService, error) {
+func newLogsService(logger common.Logger, writer *writeToAccumulator, logRecordDimensions []string) (*logsService, error) {
 	expConfig := otel2influx.DefaultOtelLogsToLineProtocolConfig()
 	expConfig.Logger = logger
 	expConfig.Writer = writer
+	expConfig.LogRecordDimensions = logRecordDimensions
 	exp, err := otel2influx.NewOtelLogsToLineProtocol(expConfig)
 	if err != nil {
 		return nil, err

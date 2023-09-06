@@ -1,0 +1,8 @@
+[[processors.split]]
+  drop_original = true
+  [[processors.split.template]]
+    name = "sensor1"
+    fields = ["sensor1_channel1", "sensor1_channel2"]
+  [[processors.split.template]]
+    name = "sensor2"
+    fields = ["sensor2_channel1", "sensor2_channel2"]

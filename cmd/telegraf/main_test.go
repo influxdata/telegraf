@@ -200,7 +200,8 @@ func TestInputListFlag(t *testing.T) {
 	}
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
 	require.NoError(t, err)
-	expectedOutput := `Available Input Plugins:
+	expectedOutput := `DEPRECATED: use telegraf plugins inputs
+Available Input Plugins:
   test
 `
 	require.Equal(t, expectedOutput, buf.String())
@@ -217,7 +218,8 @@ func TestOutputListFlag(t *testing.T) {
 	}
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
 	require.NoError(t, err)
-	expectedOutput := `Available Output Plugins:
+	expectedOutput := `DEPRECATED: use telegraf plugins outputs
+Available Output Plugins:
   test
 `
 	require.Equal(t, expectedOutput, buf.String())
