@@ -194,6 +194,10 @@ commands:
 jobs:
   test-go-linux:
     executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.0
     steps:
       - checkout
       - restore_cache:
@@ -219,6 +223,10 @@ jobs:
             - '*'
   test-go-linux-386:
     executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.0
     steps:
       - checkout
       - restore_cache:
@@ -249,6 +257,10 @@ jobs:
       - run: 'make test-integration'
   test-go-mac:
     executor: mac
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.0
     steps:
       - checkout
       - restore_cache:
@@ -264,6 +276,10 @@ jobs:
             - '~/Library/Caches/golangci-lint'
             - '~/Library/Caches/go-build'
   test-go-windows:
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.0
     executor:
         name: win/default
         shell: bash.exe
@@ -286,6 +302,10 @@ jobs:
 
   test-licenses:
     executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.0
     steps:
       - checkout
       - restore_cache:
