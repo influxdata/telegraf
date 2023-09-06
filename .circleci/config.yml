@@ -38,14 +38,11 @@ commands:
       cache_version:
         type: string
         default: "v1"
-      goversion:
-        type: string
-        default: 1.21.0
     steps:
       - check-changed-files-or-halt
       - restore_cache:
           name: "Restore binaries from cache"
-          key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: << parameters.os >>-<< parameters.arch >>-go-bin-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -126,7 +123,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving binaries to cache'
-                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: << parameters.os >>-<< parameters.arch >>-go-bin-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '/go/src/github.com/influxdata/telegraf/gotestsum'
       - when:
@@ -135,7 +132,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving binaries to cache'
-                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: << parameters.os >>-<< parameters.arch >>-go-bin-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '/usr/local/Cellar/go'
@@ -147,7 +144,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving binaries to cache'
-                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: << parameters.os >>-<< parameters.arch >>-go-bin-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~\project\gotestsum.exe'
                   - 'C:\Program Files\Go'
