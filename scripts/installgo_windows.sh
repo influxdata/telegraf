@@ -5,6 +5,7 @@ set -eux
 GO_VERSION="1.21.0"
 
 setup_go () {
+    rm -rf '/c/Program Files/Go'
     choco upgrade golang --allow-downgrade --version=${GO_VERSION}
     choco install make
     git config --system core.longpaths true
