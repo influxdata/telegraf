@@ -8,7 +8,6 @@ Wants=network-online.target
 Type=notify
 EnvironmentFile=-/etc/default/telegraf
 User=telegraf
-#LoadCredentialEncrypted=telegraf:/etc/telegraf/credentials
 ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
@@ -16,6 +15,8 @@ RestartForceExitStatus=SIGPIPE
 KillMode=mixed
 TimeoutStopSec=5
 LimitMEMLOCK=8M:8M
+PrivateMounts=true
+#LoadCredentialEncrypted=telegraf:/etc/telegraf/credentials
 
 [Install]
 WantedBy=multi-user.target
