@@ -83,7 +83,6 @@ type PrometheusHttp struct {
 
 	Log   telegraf.Logger `toml:"-"`
 	acc   telegraf.Accumulator
-	files map[string]interface{}
 	cache map[uint64]map[string]interface{}
 }
 
@@ -94,6 +93,7 @@ type PrometheusHttpDatasource interface {
 }
 
 var description = "Collect data from Prometheus http api"
+var globalFiles = sync.Map{}
 
 // Description will return a short string to explain what the plugin does.
 func (*PrometheusHttp) Description() string {
@@ -248,7 +248,12 @@ func (p *PrometheusHttp) getAllTags(values, metricTags, metricVars map[string]st
 	m["values"] = values
 	m["tags"] = metricTags
 	m["vars"] = metricVars
-	m["files"] = p.files
+	files := make(map[string]interface{})
+	globalFiles.Range(func(key, value interface{}) bool {
+		files[fmt.Sprint(key)] = value
+		return true
+	})
+	m["files"] = files
 	return m
 }
 
@@ -705,10 +710,15 @@ func (p *PrometheusHttp) readYaml(bytes []byte) (interface{}, error) {
 	return v, nil
 }
 
-func (p *PrometheusHttp) readFiles(gid uint64) map[string]interface{} {
+func (p *PrometheusHttp) readFiles(gid uint64, files *sync.Map) {
 
-	r := make(map[string]interface{})
 	for _, v := range p.Files {
+
+		_, ok := files.Load(v.Name)
+		if ok {
+			p.Log.Debugf("[%d] %s cache file: %s", gid, p.Name, v.Path)
+			continue
+		}
 
 		if _, err := os.Stat(v.Path); err == nil {
 
@@ -740,10 +750,9 @@ func (p *PrometheusHttp) readFiles(gid uint64) map[string]interface{} {
 				p.Log.Error(err)
 				continue
 			}
-			r[v.Name] = obj
+			files.Store(v.Name, obj)
 		}
 	}
-	return r
 }
 
 // Gather is called by telegraf when the plugin is executed on its interval.
@@ -800,7 +809,7 @@ func (p *PrometheusHttp) Init() error {
 	}
 
 	if len(p.Files) > 0 {
-		p.files = p.readFiles(gid)
+		p.readFiles(gid, &globalFiles)
 	}
 
 	return nil
