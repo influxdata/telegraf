@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -22,7 +23,13 @@ import (
 )
 
 func TestHandleTelemetryTwoSimple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"alias": "type:model/some/path"}}
+	c := &CiscoTelemetryMDT{
+		Log:       testutil.Logger{},
+		Transport: "dummy",
+		Aliases: map[string]string{
+			"alias": "type:model/some/path",
+		},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -90,11 +97,22 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags := map[string]string{"path": "type:model/some/path", "name": "str", "uint64": "1234", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{
+		"path":         "type:model/some/path",
+		"name":         "str",
+		"uint64":       "1234",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields := map[string]interface{}{"bool": true}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"path": "type:model/some/path", "name": "str2", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{
+		"path":         "type:model/some/path",
+		"name":         "str2",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields = map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }
@@ -268,7 +286,13 @@ func TestIncludeDeleteField(t *testing.T) {
 }
 
 func TestHandleTelemetrySingleNested(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"nested": "type:model/nested/path"}}
+	c := &CiscoTelemetryMDT{
+		Log:       testutil.Logger{},
+		Transport: "dummy",
+		Aliases: map[string]string{
+			"nested": "type:model/nested/path",
+		},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -330,13 +354,22 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags := map[string]string{"path": "type:model/nested/path", "level": "3", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{
+		"path":         "type:model/nested/path",
+		"level":        "3",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields := map[string]interface{}{"nested/value/foo": "bar"}
 	acc.AssertContainsTaggedFields(t, "nested", fields, tags)
 }
 
 func TestHandleEmbeddedTags(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"extra": "type:model/extra"}, EmbeddedTags: []string{"type:model/extra/list/name"}}
+	c := &CiscoTelemetryMDT{
+		Transport:    "dummy",
+		Aliases:      map[string]string{"extra": "type:model/extra"},
+		EmbeddedTags: []string{"type:model/extra/list/name"},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -400,16 +433,31 @@ func TestHandleEmbeddedTags(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "type:model/extra", "foo": "bar", "source": "hostname", "subscription": "subscription", "list/name": "entry1"}
+	tags1 := map[string]string{
+		"path":         "type:model/extra",
+		"foo":          "bar",
+		"source":       "hostname",
+		"subscription": "subscription",
+		"list/name":    "entry1",
+	}
 	fields1 := map[string]interface{}{"list/test": "foo"}
-	tags2 := map[string]string{"path": "type:model/extra", "foo": "bar", "source": "hostname", "subscription": "subscription", "list/name": "entry2"}
+	tags2 := map[string]string{
+		"path":         "type:model/extra",
+		"foo":          "bar",
+		"source":       "hostname",
+		"subscription": "subscription",
+		"list/name":    "entry2",
+	}
 	fields2 := map[string]interface{}{"list/test": "bar"}
 	acc.AssertContainsTaggedFields(t, "extra", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "extra", fields2, tags2)
 }
 
 func TestHandleNXAPI(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"nxapi": "show nxapi"}}
+	c := &CiscoTelemetryMDT{
+		Transport: "dummy",
+		Aliases:   map[string]string{"nxapi": "show nxapi"},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -489,16 +537,34 @@ func TestHandleNXAPI(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{
+		"path":         "show nxapi",
+		"foo":          "bar",
+		"TABLE_nxapi":  "i1",
+		"row_number":   "0",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields1 := map[string]interface{}{"value": "foo"}
-	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "row_number": "0", "source": "hostname", "subscription": "subscription"}
+	tags2 := map[string]string{
+		"path":         "show nxapi",
+		"foo":          "bar",
+		"TABLE_nxapi":  "i2",
+		"row_number":   "0",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields2 := map[string]interface{}{"value": "bar"}
 	acc.AssertContainsTaggedFields(t, "nxapi", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "nxapi", fields2, tags2)
 }
 
 func TestHandleNXAPIXformNXAPI(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"nxapi": "show nxapi"}}
+	c := &CiscoTelemetryMDT{
+		Log:       testutil.Logger{},
+		Transport: "dummy",
+		Aliases:   map[string]string{"nxapi": "show nxapi"},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -579,7 +645,10 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 }
 
 func TestHandleNXXformMulti(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"dme": "sys/lldp"}}
+	c := &CiscoTelemetryMDT{
+		Transport: "dummy",
+		Aliases:   map[string]string{"dme": "sys/lldp"},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -659,12 +728,20 @@ func TestHandleNXXformMulti(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 	//validate various transformation scenaarios newly added in the code.
-	fields := map[string]interface{}{"portIdV": "12", "portDesc": "100", "test": int64(281474976710655), "subscriptionId": "2814749767106551"}
+	fields := map[string]interface{}{
+		"portIdV":        "12",
+		"portDesc":       "100",
+		"test":           int64(281474976710655),
+		"subscriptionId": "2814749767106551",
+	}
 	acc.AssertContainsFields(t, "dme", fields)
 }
 
 func TestHandleNXDME(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"dme": "sys/dme"}}
+	c := &CiscoTelemetryMDT{
+		Transport: "dummy",
+		Aliases:   map[string]string{"dme": "sys/dme"},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
@@ -732,13 +809,23 @@ func TestHandleNXDME(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "sys/dme", "foo": "bar", "fooEntity": "some-rn", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{
+		"path":         "sys/dme",
+		"foo":          "bar",
+		"fooEntity":    "some-rn",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields1 := map[string]interface{}{"value": "foo"}
 	acc.AssertContainsTaggedFields(t, "dme", fields1, tags1)
 }
 
 func TestTCPDialoutOverflow(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:0"}
+	c := &CiscoTelemetryMDT{
+		Log:            testutil.Logger{},
+		Transport:      "tcp",
+		ServiceAddress: "127.0.0.1:0",
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	require.NoError(t, err)
@@ -765,10 +852,13 @@ func TestTCPDialoutOverflow(t *testing.T) {
 }
 
 func mockTelemetryMicroburstMessage() *telemetryBis.Telemetry {
-	data := []byte{10,11,110,57,107,45,101,111,114,45,116,109,52,26,1,49,50,10,109,105,99,114,111,98,117,114,115,116,64,207,150,1,80,201,242,160,232,155,49,90,130,45,122,32,18,4,107,101,121,115,122,24,18,10,109,105,99,114,111,98,117,114,115,116,42,10,109,105,99,114,111,98,117,114,115,116,122,221,44,18,7,99,111,110,116,101,110,116,122,209,44,122,206,44,18,8,99,104,105,108,100,114,101,110,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,51,48,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,48,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,51,48,56,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,48,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,51,56,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,49,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,51,56,53,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,49,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,48,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,50,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,49,48,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,50,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,50,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,51,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,50,55,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,51,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,52,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,52,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,52,52,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,52,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,53,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,53,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,54,48,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,53,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,56,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,54,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,56,52,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,54,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,52,57,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,55,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,53,48,48,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,55,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,53,49,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,56,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,53,49,53,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,56,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4,122,183,4,122,23,18,8,110,111,100,101,78,97,109,101,42,11,110,57,107,45,101,111,114,45,116,109,52,122,38,18,9,116,105,109,101,115,116,97,109,112,42,25,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,53,51,122,191,3,18,11,115,116,97,116,79,98,106,101,99,116,115,122,175,3,122,10,18,6,115,111,117,114,99,101,42,0,122,22,18,8,115,116,97,116,78,97,109,101,42,10,109,105,99,114,111,98,117,114,115,116,122,10,18,8,99,111,117,110,116,101,114,115,122,252,2,18,10,109,105,99,114,111,98,117,114,115,116,122,237,2,122,25,18,13,105,110,116,101,114,102,97,99,101,78,97,109,101,42,8,69,116,104,57,47,48,47,48,122,18,18,5,113,117,101,117,101,42,9,113,117,101,117,101,45,50,53,53,122,20,18,9,113,117,101,117,101,84,121,112,101,42,7,117,110,105,99,97,115,116,122,13,18,9,116,104,114,101,115,104,111,108,100,80,0,122,9,18,4,112,101,97,107,80,232,7,122,12,18,8,101,110,100,68,101,112,116,104,80,0,122,13,18,8,100,117,114,97,116,105,111,110,64,176,9,122,33,18,2,116,115,42,27,50,48,50,51,45,48,56,45,48,51,84,50,48,58,49,50,58,53,57,46,54,53,53,53,51,49,90,122,31,18,7,115,116,97,114,116,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,29,18,5,101,110,100,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,30,18,6,112,101,97,107,84,115,42,20,48,51,45,48,56,45,50,48,50,51,32,50,48,58,49,50,58,53,57,90,122,80,18,10,115,111,117,114,99,101,78,97,109,101,42,66,110,111,100,101,45,110,57,107,45,101,111,114,45,116,109,52,47,109,105,99,114,111,98,117,114,115,116,47,105,110,116,101,114,102,97,99,101,45,91,69,116,104,57,47,48,47,48,93,47,113,117,101,117,101,45,91,113,117,101,117,101,45,50,53,53,93,122,26,18,10,99,108,97,115,115,76,101,118,101,108,42,12,99,108,97,115,115,45,108,101,118,101,108,53,122,14,18,10,102,97,98,114,105,99,78,97,109,101,42,0,122,21,18,6,118,101,110,100,111,114,42,11,67,73,83,67,79,95,78,88,45,79,83,122,11,18,7,118,101,114,115,105,111,110,80,4}
+	data, err := os.ReadFile("./testdata/microburst")
+	if err != nil {
+		panic(err)
+	}
 
 	newMessage := &telemetryBis.Telemetry{}
-	err := proto.Unmarshal(data, newMessage)
+	err = proto.Unmarshal(data, newMessage)
 	if err != nil {
 		panic(err)
 	}
@@ -809,26 +899,56 @@ func mockTelemetryMessage() *telemetryBis.Telemetry {
 }
 
 func TestGRPCDialoutMicroburst(t *testing.T) {
-        c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", Aliases: map[string]string{
-                "some": "microburst", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
-        acc := &testutil.Accumulator{}
-        err := c.Start(acc)
-        require.NoError(t, err)
+	c := &CiscoTelemetryMDT{
+		Log:            testutil.Logger{},
+		Transport:      "grpc",
+		ServiceAddress: "127.0.0.1:0",
+		Aliases: map[string]string{
+			"some":     "microburst",
+			"parallel": "type:model/parallel/path",
+			"other":    "type:model/other/path",
+		},
+	}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	require.NoError(t, err)
 
-        telemetry := mockTelemetryMicroburstMessage()
-        data, err := proto.Marshal(telemetry)
-        require.NoError(t, err)
+	telemetry := mockTelemetryMicroburstMessage()
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
-        c.handleTelemetry(data)
+	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
-	tags := map[string]string{"microburst": "microburst", "path": "microburst", "source": "n9k-eor-tm4", "subscription": "1"}
-	fields := map[string]interface{}{"duration":uint64(1200), "endDepth":int64(0), "interfaceName":"Eth0/0/0", "peak":int64(500), "queue":"queue-255","queueType":"unicast", "threshold":int64(0), "ts":"2023-08-03T20:12:59.655308Z"}
+	tags := map[string]string{
+		"microburst":   "microburst",
+		"path":         "microburst",
+		"source":       "n9k-eor-tm4",
+		"subscription": "1",
+	}
+	fields := map[string]interface{}{
+		"duration":      uint64(1200),
+		"endDepth":      int64(0),
+		"interfaceName": "Eth0/0/0",
+		"peak":          int64(500),
+		"queue":         "queue-255",
+		"queueType":     "unicast",
+		"threshold":     int64(0),
+		"ts":            "2023-08-03T20:12:59.655308Z",
+	}
 	acc.AssertContainsTaggedFields(t, "microburst", fields, tags)
 }
 
 func TestTCPDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:0", Aliases: map[string]string{
-		"some": "type:model/some/path", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
+	c := &CiscoTelemetryMDT{
+		Log:            testutil.Logger{},
+		Transport:      "tcp",
+		ServiceAddress: "127.0.0.1:0",
+		Aliases: map[string]string{
+			"some":     "type:model/some/path",
+			"parallel": "type:model/parallel/path",
+			"other":    "type:model/other/path",
+		},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	require.NoError(t, err)
@@ -887,21 +1007,40 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	// We use the invalid dialout flags to let the server close the connection
 	require.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
 
-	tags := map[string]string{"path": "type:model/some/path", "name": "str", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{
+		"path":         "type:model/some/path",
+		"name":         "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields := map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "some", fields, tags)
 
-	tags = map[string]string{"path": "type:model/parallel/path", "name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{
+		"path":         "type:model/parallel/path",
+		"name":         "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "parallel", fields, tags)
 
-	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{
+		"path":         "type:model/other/path",
+		"name":         "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
 }
 
 func TestGRPCDialoutError(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0"}
+	c := &CiscoTelemetryMDT{
+		Log:            testutil.Logger{},
+		Transport:      "grpc",
+		ServiceAddress: "127.0.0.1:0",
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	require.NoError(t, err)
@@ -925,8 +1064,16 @@ func TestGRPCDialoutError(t *testing.T) {
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", Aliases: map[string]string{
-		"some": "type:model/some/path", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
+	c := &CiscoTelemetryMDT{
+		Log:            testutil.Logger{},
+		Transport:      "grpc",
+		ServiceAddress: "127.0.0.1:0",
+		Aliases: map[string]string{
+			"some":     "type:model/some/path",
+			"parallel": "type:model/parallel/path",
+			"other":    "type:model/other/path",
+		},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	require.NoError(t, err)
@@ -974,24 +1121,44 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
-	tags := map[string]string{"path": "type:model/some/path", "name": "str", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{
+		"path":         "type:model/some/path",
+		"name":         "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields := map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "some", fields, tags)
 
-	tags = map[string]string{"path": "type:model/parallel/path", "name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{
+		"path":         "type:model/parallel/path",
+		"name":         "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "parallel", fields, tags)
 
-	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{
+		"path":         "type:model/other/path",
+		"name":         "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
 }
 
 func TestGRPCDialoutKeepalive(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", EnforcementPolicy: GRPCEnforcementPolicy{
-		PermitKeepaliveWithoutCalls: true,
-		KeepaliveMinTime:            0,
-	}}
+	c := &CiscoTelemetryMDT{
+		Log:            testutil.Logger{},
+		Transport:      "grpc",
+		ServiceAddress: "127.0.0.1:0",
+		EnforcementPolicy: GRPCEnforcementPolicy{
+			PermitKeepaliveWithoutCalls: true,
+			KeepaliveMinTime:            0,
+		},
+	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
 	require.NoError(t, err)
@@ -1014,7 +1181,11 @@ func TestGRPCDialoutKeepalive(t *testing.T) {
 }
 
 func TestSourceFieldRewrite(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"alias": "type:model/some/path"}}
+	c := &CiscoTelemetryMDT{
+		Log:       testutil.Logger{},
+		Transport: "dummy",
+		Aliases:   map[string]string{"alias": "type:model/some/path"},
+	}
 	c.SourceFieldName = "mdt_source"
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1057,7 +1228,12 @@ func TestSourceFieldRewrite(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags := map[string]string{"path": "type:model/some/path", "mdt_source": "str", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{
+		"path":         "type:model/some/path",
+		"mdt_source":   "str",
+		"source":       "hostname",
+		"subscription": "subscription",
+	}
 	fields := map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }

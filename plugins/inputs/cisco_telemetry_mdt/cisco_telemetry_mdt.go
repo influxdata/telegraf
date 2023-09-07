@@ -18,12 +18,12 @@ import (
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -575,11 +575,10 @@ func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field
 		}
 	}
 	for _, subfield := range nxMicro.Fields {
-		//For Every table fill the keys which is name, i.e. physical interface name.
-		switch subfield.Name {
-		case "interfaceName":
+		if subfield.Name == "interfaceName" {
 			tags[subfield.Name] = decodeTag(subfield)
 		}
+
 		for _, subf := range subfield.Fields {
 			switch subf.Name {
 			case "sourceName":
@@ -587,9 +586,9 @@ func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field
 				if len(newstr) <= 2 {
 					tags[subf.Name] = decodeTag(subf)
 				} else {
-					intf_name := strings.Split(newstr[1], "]")
+					intfName := strings.Split(newstr[1], "]")
 					queue := strings.Split(newstr[2], "]")
-					tags["interface_name"] = intf_name[0]
+					tags["interface_name"] = intfName[0]
 					tags["queue_number"] = queue[0]
 				}
 			case "startTs":
