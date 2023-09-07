@@ -662,7 +662,7 @@ are provided in the [language definition][CEL lang] as well as in the
 [extension documentation][CEL ext].
 
 **Caution** - Errorhandling: Sometimes an expression can be compiled
-but failed at runtime. One example for this is to try to read a non
+but failes at runtime. One example for this is to try to read a non
 existing field. If this happens, the evaluation is aborted, an error
 is logged and the expression is reported to be `true`, so the metric
 passes.
