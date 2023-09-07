@@ -6,9 +6,8 @@ GO_VERSION="1.21.0"
 
 setup_go () {
     rm -rf '/c/Program Files/Go'
-    choco feature enable -n allowGlobalConfirmation
     choco upgrade golang --allow-downgrade --version=${GO_VERSION}
-    choco install make mingw
+    choco install make
     git config --system core.longpaths true
 }
 
@@ -16,6 +15,7 @@ if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
     v=$(go version | { read -r _ _ v _; echo "${v#go}"; })
     which go
+    go env
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
