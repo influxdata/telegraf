@@ -78,7 +78,7 @@ func (s *Systemd) Get(key string) ([]byte, error) {
 		return nil, err
 	}
 	if filepath.Dir(secretFile) != s.Path {
-		return nil, fmt.Errorf("directory traversal detected for key %q", key)
+		return nil, fmt.Errorf("invalid directory detected for key %q", key)
 	}
 	value, err := os.ReadFile(secretFile)
 	if err != nil {
