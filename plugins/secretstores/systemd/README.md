@@ -77,7 +77,8 @@ Furthermore, we assume the secret-store ID to be set to `systemd` in the
 examples.
 
 Setting up systemd-credentials might vary on your distribution or version so
-please also check the documentation there.
+please also check the documentation there. You might also need to install
+supporting packages such as `tpm2-tools`.
 
 ### Setup
 
