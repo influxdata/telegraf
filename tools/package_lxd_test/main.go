@@ -36,6 +36,7 @@ func main() {
 				Name:        "package",
 				Usage:       ".deb or .rpm file for upgrade testing",
 				Destination: &packageFile,
+				Required:    true,
 			},
 			&cli.StringFlag{
 				Name:        "image",
@@ -44,6 +45,10 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			if _, err := os.Stat(packageFile); err != nil {
+				return fmt.Errorf("unknown package file: %w", err)
+			}
+
 			if image != "" && packageFile != "" {
 				fmt.Printf("test package %q on image %q\n", packageFile, image)
 				return launchTests(packageFile, []string{image})
@@ -61,7 +66,7 @@ func main() {
 				}
 			}
 
-			return fmt.Errorf("please provide at least a package to test")
+			return nil
 		},
 	}
 
