@@ -559,6 +559,48 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 	}
 }
 
+func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+	encodingPath string, tags map[string]string, timestamp time.Time) {
+	var nxMicro *telemetry.TelemetryField
+	var nxMicro1 *telemetry.TelemetryField
+	// Microburst
+	measurement := encodingPath
+	if len(field.Fields) > 3 {
+		nxMicro = field.Fields[2]
+		if len(nxMicro.Fields) > 0 {
+			nxMicro1 = nxMicro.Fields[0]
+			if len(nxMicro1.Fields) >= 3 {
+				nxMicro = nxMicro1.Fields[3]
+			}
+		}
+	}
+	for _, subfield := range nxMicro.Fields {
+		if subfield.Name == "interfaceName" {
+			tags[subfield.Name] = decodeTag(subfield)
+		}
+
+		for _, subf := range subfield.Fields {
+			switch subf.Name {
+			case "sourceName":
+				newstr := strings.Split(decodeTag(subf), "-[")
+				if len(newstr) <= 2 {
+					tags[subf.Name] = decodeTag(subf)
+				} else {
+					intfName := strings.Split(newstr[1], "]")
+					queue := strings.Split(newstr[2], "]")
+					tags["interface_name"] = intfName[0]
+					tags["queue_number"] = queue[0]
+				}
+			case "startTs":
+				tags[subf.Name] = decodeTag(subf)
+			}
+			if value := decodeValue(subf); value != nil {
+				grouper.Add(measurement, tags, timestamp, subf.Name, value)
+			}
+		}
+	}
+}
+
 func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
@@ -567,6 +609,11 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 	if encodingPath == "rib" {
 		//handle native data path rib
 		c.parseRib(grouper, field, encodingPath, tags, timestamp)
+		return
+	}
+	if encodingPath == "microburst" {
+		//dump microburst
+		c.parseMicroburst(grouper, field, encodingPath, tags, timestamp)
 		return
 	}
 	if field == nil || !isDme || len(field.Fields) == 0 || len(field.Fields[0].Fields) == 0 || len(field.Fields[0].Fields[0].Fields) == 0 {
