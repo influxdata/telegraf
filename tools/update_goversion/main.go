@@ -151,7 +151,7 @@ func main() {
 		},
 		{
 			FileName: ".circleci/config.yml",
-			Regex:    `(default): "(\d.\d*.\d)"`,
+			Regex:    `(default): (\d.\d*.\d)`,
 			Replace:  fmt.Sprintf("$1: %s", version),
 		},
 		{
