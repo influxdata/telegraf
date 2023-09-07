@@ -661,6 +661,12 @@ for time-based filtering. An introduction to the CEL language can be found
 are provided in the [language definition][CEL lang] as well as in the
 [extension documentation][CEL ext].
 
+**Caution** - Errorhandling: Sometimes an expression can be compiled
+but failed at runtime. One example for this is to try to read a non
+existing field. If this happens, the evaluation is aborted, an error
+is logged and the expression is reported to be `true`, so the metric
+passes.
+
 > NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
 > slower compared to `namepass`/`namedrop` and friends. So consider to use the
 > more restricted filter options where possible in case of high-throughput
