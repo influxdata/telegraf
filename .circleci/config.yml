@@ -62,7 +62,7 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: rm -rf /c/Go
-            - run: rm -rf /c/Program\ Files/Go'
+            - run: rm -rf '/c/Program Files/Go'
             - run: choco feature enable -n allowGlobalConfirmation
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
