@@ -14,8 +14,6 @@ setup_go () {
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
     v=$(go version | { read -r _ _ v _; echo "${v#go}"; })
-    which go
-    go env
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
