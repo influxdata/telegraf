@@ -61,11 +61,7 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf /c/Go
-            - run: rm -rf '/c/Program Files/Go'
-            - run: choco feature enable -n allowGlobalConfirmation
             - run: 'sh ./scripts/installgo_windows.sh'
-            - run: choco install mingw
       - run: go env
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
       - when:
