@@ -37,7 +37,7 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
       goversion:
         type: string
         default: 1.21.0
@@ -61,6 +61,7 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
+            - run: rm -rf '/c/Program Files/Go'
             - run: choco feature enable -n allowGlobalConfirmation
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
@@ -200,7 +201,7 @@ jobs:
         default: 1.21.0
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
@@ -232,7 +233,7 @@ jobs:
         default: 1.21.0
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
@@ -269,7 +270,7 @@ jobs:
         default: 1.21.0
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
@@ -291,7 +292,7 @@ jobs:
         default: 1.21.0
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
     executor:
         name: win/default
         shell: bash.exe
@@ -320,7 +321,7 @@ jobs:
         default: 1.21.0
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
