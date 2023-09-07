@@ -1,10 +1,11 @@
 # Systemd Secret-Store Plugin
 
-The `systemd` plugin allows to utilize credentials and secrets provided by
+The `systemd` plugin allows utilizing credentials and secrets provided by
 [systemd][] to the Telegraf service. Systemd ensures that only the intended
-service can access the credentials for the live-time of this service. The
-credentials appear as plaintext files but are stored encrypted with TPM2
-protection if available (see [this article][systemd-descr] for details).
+service can access the credentials for the lifetime of this service. The
+credentials appear as plaintext files to the consuming service but are stored
+encrypted on the host system. This encryption can also use TPM2 protection if
+available (see [this article][systemd-descr] for details).
 
 This plugin does not support setting the credentials. See the
 [credentials management section](#credential-management) below for how to
@@ -49,7 +50,7 @@ store usage.
   ## Unique identifier for the secretstore.
   ## This id can later be used in plugins to reference the secrets
   ## in this secret-store via @{<id>:<secret_key>} (mandatory)
-  id = "my_secretstore"
+  id = "systemd"
 
   ## Path to systemd credentials directory
   ## This should not be required as systemd indicates this directory
@@ -69,10 +70,14 @@ and are using this command. Please also check that man-page as the options
 or verbs used here might be outdated for the systemd version you are using.
 
 **Please note**: We are using `/etc/telegraf/credentials` as our storage
-location for encrypted credentials throughout the examples below. This is
-because the Telegraf service file expects credentials to be located there
-by default. Furthermore, we assume the secret-store ID to be set to `syscreds`
-in the examples.
+location for encrypted credentials throughout the examples below assuming a
+Telegraf install via package manager. If you are using some other means to
+install Telegraf you might need to create that directory.
+Furthermore, we assume the secret-store ID to be set to `systemd` in the
+examples.
+
+Setting up systemd-credentials might vary on your distribution or version so
+please also check the documentation there.
 
 ### Setup
 
@@ -82,7 +87,7 @@ for protecting the credentials, you should first make sure that it is
 available using
 
 ```shell
-# sudo systemd-creds has-tpm2
+$ sudo systemd-creds has-tpm2
 partial
 -firmware
 +driver
@@ -90,12 +95,14 @@ partial
 +subsystem
 ```
 
-The output should look similar to the above.
+The output should look similar to the above. If TPM2 is available on your system
+credentials can also be tied to the device by utilizing TPM2 sealing.
+See the  [systemd-creds man-page][systemd-creds] for details.
 
 Now setup the credentials by creating the root key.
 
 ```shell
-# sudo systemd-creds setup
+$ sudo systemd-creds setup
 Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
 4096 byte credentials host key set up.
 ```
@@ -108,7 +115,8 @@ disk which is not recommended. With this, we are all set to create credentials.
 After setting up the encryption key we can create a new credential using
 
 ```shell
-# echo -n "john-doe-jr" | systemd-creds encrypt - /etc/telegraf/credentials/http_user
+$ echo -n "john-doe-jr" | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_user
+Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
 ```
 
 You should now have a file named `http_user` that contains the encrypted
@@ -124,7 +132,8 @@ We can now add more secrets. To avoid potentially leaking the plain-text
 credentials through command-history or showing it on the screen we use
 
 ```shell
-systemd-ask-password -n | | systemd-creds encrypt - /etc/telegraf/credentials/http_password
+$ systemd-ask-password -n | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_password
+Password: (press TAB for no echo)
 ```
 
 to interactively enter the password.
@@ -135,17 +144,20 @@ To actually provide credentials to the Telegraf service, you need to list them
 in the service file. You can use
 
 ```shell
-# systemctl edit telegraf
+$ sudo systemctl edit telegraf
+...
 ```
 
-to overwrite parts of the service file. The resulting override should be placed
-in `/etc/systemd/system/telegraf.service.d/override.conf`. The following is an
+to overwrite parts of the service file. On some systems you need to create the
+overriding directory `/etc/systemd/system/telegraf.service.d` first. The
+resulting override can be found in
+`/etc/systemd/system/telegraf.service.d/override.conf`. The following is an
 example for the content of the file
 
 ```text
 [Service]
 LoadCredentialEncrypted=http_user:/etc/telegraf/credentials/http_user
-LoadCredentialEncrypted=http_passwd:/etc/telegraf/credentials/http_passwd
+LoadCredentialEncrypted=http_passwd:/etc/telegraf/credentials/http_password
 ```
 
 This will load two credentials, named `http_user` and `http_passwd` which are
@@ -220,11 +232,11 @@ In case you are having trouble to reference credentials in Telegraf, you should
 check what is available via
 
 ```shell
-# CREDENTIALS_DIRECTORY=/etc/telegraf/credentials systemd-creds list
-NAME        SECURE   SIZE PATH
----------------------------------------------------------------
-http_passwd insecure 146B /etc/telegraf/credentials/http_passwd
-http_user   insecure 142B /etc/telegraf/credentials/http_user
+$ CREDENTIALS_DIRECTORY=/etc/telegraf/credentials sudo systemd-creds list
+NAME          SECURE   SIZE PATH
+-------------------------------------------------------------------
+http_password insecure 146B /etc/telegraf/credentials/http_password
+http_user     insecure 142B /etc/telegraf/credentials/http_user
 ```
 
 Please note that Telegraf's secret management functionality is not helpful here
@@ -237,7 +249,8 @@ is the key you need to reference the secret.
 To get the actual value of a credential use
 
 ```shell
-# systemd-creds decrypt /etc/telegraf/credentials/http_passwd -
+$ sudo systemd-creds decrypt /etc/telegraf/credentials/http_password -
+whooohabooo
 ```
 
 Please use the above command(s) with care as they do reveal the secret value
