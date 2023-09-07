@@ -90,6 +90,7 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
+            - run: rm -rf /c/Go
             - run:
                 name: golangci-lint cache status
                 command: $HOME/go/bin/golangci-lint.exe cache status
