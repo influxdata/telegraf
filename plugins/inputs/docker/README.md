@@ -53,6 +53,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # container_state_include = []
   # container_state_exclude = []
 
+  ## Objects to include for disk usage query
+  ## Allowed values are "container", "image", "volume" 
+  ## When empty disk usage is excluded
+  storage_objects = []
+
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
@@ -378,6 +383,18 @@ status if configured.
   - fields:
     - tasks_desired
     - tasks_running
+
+- docker_disk_usage
+  - tags:
+    - container_name
+    - image_id
+    - image_repo_tag
+    - volume_name
+  - fields:
+    - size_rw
+    - size_root_fs
+    - size
+    - shared_size
 
 ## Example Output
 
