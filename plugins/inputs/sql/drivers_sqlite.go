@@ -1,4 +1,4 @@
-//go:build !mips && !mipsle && !mips64 && !mips64le
+//go:build !mips && !mipsle && !mips64 && !mips64le && !(windows && 386)
 
 package sql
 

@@ -175,7 +175,7 @@ docs](https://github.com/jackc/pgx) for more details.
 
 ### modernc.org/sqlite
 
-It is not supported on mips and mips64 platforms.
+It is not supported on windows/386, mips, and mips64 platforms.
 
 The DSN is a filename or url with scheme "file:". See the [driver
 docs](https://modernc.org/sqlite) for details.
