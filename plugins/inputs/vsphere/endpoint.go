@@ -245,7 +245,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			parentTag:        "dcname",
 			enabled:          anythingEnabled(parent.VSANMetricExclude),
 			realTime:         false,
-			sampling:         300,
+			sampling:         int32(time.Duration(parent.VSANInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VSANMetricInclude, parent.VSANMetricExclude),
 			paths:            parent.VSANClusterInclude,
