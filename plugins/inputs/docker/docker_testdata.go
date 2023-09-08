@@ -542,3 +542,5 @@ func containerInspect() types.ContainerJSON {
 		},
 	}
 }
+
+var DiskUsage = types.DiskUsage{}

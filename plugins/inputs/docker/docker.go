@@ -53,6 +53,8 @@ type Docker struct {
 	ContainerStateInclude []string `toml:"container_state_include"`
 	ContainerStateExclude []string `toml:"container_state_exclude"`
 
+	StorageObjects []string `toml:"storage_objects"`
+
 	IncludeSourceTag bool `toml:"source_tag"`
 
 	Log telegraf.Logger
@@ -208,6 +210,27 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}(container)
 	}
 	wg.Wait()
+
+	// Get disk usage data
+	if len(d.StorageObjects) > 0 {
+		object_types := []types.DiskUsageObject{}
+
+		for _, object := range d.StorageObjects {
+			if object == "container" {
+				object_types = append(object_types, types.VolumeObject)
+			} else if object == "image" {
+				object_types = append(object_types, types.ImageObject)
+			} else if object == "volume" {
+				object_types = append(object_types, types.VolumeObject)
+				// } else if object == "build-cache" {
+				// 	du_opts.Types = append(du_opts.Types, types.BuildCacheObject)
+			} else {
+				d.Log.Warnf("Unrecognized storage object type: %s", object)
+			}
+		}
+
+		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: object_types})
+	}
 
 	return nil
 }
@@ -847,6 +870,71 @@ func (d *Docker) gatherBlockIOMetrics(
 		iotags["device"] = "total"
 		acc.AddFields("docker_container_blkio", totalStatMap, iotags, tm)
 	}
+}
+
+func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageOptions) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	defer cancel()
+
+	du, err := d.client.DiskUsage(ctx, opts)
+
+	if err != nil {
+		acc.AddError(err)
+	}
+
+	now := time.Now()
+	du_name := "docker_disk_usage"
+
+	// Containers
+	for _, container := range du.Containers {
+
+		fields := map[string]interface{}{
+			"size_rw":      container.SizeRootFs,
+			"size_root_fs": container.SizeRw,
+		}
+
+		// TODO: container name parsing and add other tags from gatherContainer?
+		// TODO: check for integration with gatherContainer?
+		tags := map[string]string{
+			"container_name": strings.TrimPrefix(container.Names[0], "/"),
+		}
+
+		acc.AddFields(du_name, fields, tags, now)
+	}
+
+	// Images
+	for _, image := range du.Images {
+		fields := map[string]interface{}{
+			"size": image.Size,
+			// "virtual_size": image.VirtualSize, // deprecated
+			"shared_size": image.SharedSize,
+		}
+
+		tags := map[string]string{
+			"image_id": image.ID,
+		}
+		if len(image.RepoTags) > 0 {
+			tags["image_repo_tag"] = image.RepoTags[0]
+		}
+
+		acc.AddFields(du_name, fields, tags, now)
+	}
+
+	// Volumes
+	for _, volume := range du.Volumes {
+		fields := map[string]interface{}{
+			"size": volume.UsageData.Size,
+		}
+
+		tags := map[string]string{
+			"volume_name": volume.Name,
+		}
+
+		acc.AddFields(du_name, fields, tags, now)
+	}
+
+	// Build Cache is not implemented
 }
 
 func copyTags(in map[string]string) map[string]string {

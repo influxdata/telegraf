@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	version        = "1.24" // https://docs.docker.com/engine/api/
+	version        = "1.43" // https://docs.docker.com/engine/api/
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 
@@ -23,6 +23,7 @@ type Client interface {
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	DiskUsage(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
 	Close() error
 }
 
@@ -76,6 +77,9 @@ func (c *SocketClient) TaskList(ctx context.Context, options types.TaskListOptio
 }
 func (c *SocketClient) NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error) {
 	return c.client.NodeList(ctx, options)
+}
+func (c *SocketClient) DiskUsage(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error) {
+	return c.client.DiskUsage(ctx, options)
 }
 func (c *SocketClient) Close() error {
 	return c.client.Close()
