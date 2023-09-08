@@ -25,7 +25,7 @@ to use them.
 ```toml @sample.conf
 [[outputs.wavefront]]
   ## Url for Wavefront API or Wavefront proxy instance.
-  ## Direct Ingestion via Wavefront API requires authentication.
+  ## Direct Ingestion via Wavefront API requires authentication. See below.
   url = "https://metrics.wavefront.com"
 
   ## Maximum number of metrics to send per HTTP request. This value should be higher than the `metric_batch_size`. Default is 10,000. Values higher than 40,000 are not recommended.
