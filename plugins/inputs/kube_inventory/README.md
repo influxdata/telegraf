@@ -56,7 +56,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # namespace = "default"
 
   ## Node name to filter to. No filtering by default.
-  # node = ""
+  # node_name = ""
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
