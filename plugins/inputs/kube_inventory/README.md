@@ -55,8 +55,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
-  ## Node name to filter to.
-  # node = "minikube"
+  ## Node name to filter to. No filtering by default.
+  # node = ""
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
@@ -186,7 +186,6 @@ tls_key = "/run/telegraf-kubernetes-key"
 ## Metrics
 
 - kubernetes_daemonset
-
   - tags:
     - daemonset_name
     - namespace
@@ -202,7 +201,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - updated_number_scheduled
 
 - kubernetes_deployment
-
   - tags:
     - deployment_name
     - namespace
@@ -213,7 +211,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - created
 
 - kubernetes_endpoints
-
   - tags:
     - endpoint_name
     - namespace
@@ -229,7 +226,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - port
 
 - kubernetes_ingress
-
   - tags:
     - ingress_name
     - namespace
@@ -245,7 +241,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - tls
 
 - kubernetes_node
-
   - tags:
     - node_name
     - status
@@ -265,7 +260,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - node_count
 
 - kubernetes_persistentvolume
-
   - tags:
     - pv_name
     - phase
@@ -274,7 +268,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - phase_type (int, [see below](#pv-phase_type))
 
 - kubernetes_persistentvolumeclaim
-
   - tags:
     - pvc_name
     - namespace
@@ -285,7 +278,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - phase_type (int, [see below](#pvc-phase_type))
 
 - kubernetes_pod_container
-
   - tags:
     - container_name
     - namespace
@@ -309,7 +301,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - status_condition
 
 - kubernetes_service
-
   - tags:
     - service_name
     - namespace
@@ -325,7 +316,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - target_port
 
 - kubernetes_statefulset
-
   - tags:
     - statefulset_name
     - namespace
@@ -341,7 +331,6 @@ tls_key = "/run/telegraf-kubernetes-key"
     - observed_generation
 
 - kubernetes_resourcequota
-
   - tags:
     - resource
     - namespace
