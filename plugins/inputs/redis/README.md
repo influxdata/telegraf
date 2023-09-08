@@ -148,8 +148,10 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
   - avg_ttl(int, number)
 
 - redis_cmdstat
-    Every Redis used command will have 3 new fields:
+    Every Redis used command could have the following fields:
   - calls(int, number)
+  - failed_calls(int, number)
+  - rejected_calls(int, number)
   - usec(int, mircoseconds)
   - usec_per_call(float, microseconds)
 
@@ -169,7 +171,7 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
     - err
   - fields:
     - total (int, number)
-  
+
 ### Tags
 
 - All measurements have the following tags:
@@ -221,7 +223,7 @@ redis_keyspace,database=db1,host=host,server=localhost,port=6379,replication_rol
 redis_command:
 
 ```text
-redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=68113i,usec=325146i,usec_per_call=4.77 1559227136000000000
+redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=569514i,failed_calls=0i,rejected_calls=0i,usec=9916334i,usec_per_call=17.41 1559227136000000000
 ```
 
 redis_error:

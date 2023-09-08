@@ -541,7 +541,7 @@ func gatherCommandstateLine(
 		switch kv[0] {
 		case "calls":
 			fallthrough
-		case "usec":
+		case "usec", "rejected_calls", "failed_calls":
 			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
 				fields[kv[0]] = ival
