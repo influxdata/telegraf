@@ -15,17 +15,17 @@ setup systemd credentials and how to add credentials
 
 ## Requirements and caveats
 
-This plugin requires **systemd version 250+** with a correctly set-up
-credentials via [systemd-creds][] (see [setup section](#credential-management)).
+This plugin requires **systemd version 250+** with correctly set-up credentials
+via [systemd-creds][] (see [setup section](#credential-management)).
 Furthermore, provisioning of the created credentials must by enabled
 via `LoadCredentialEncrypted` in the service file. This is the case for the
 Telegraf service provided in this repository. It expects encrypted credentials
 to be stored in `/etc/telegraf/credentials`.
 
-It is important to note that credentials can only be created and used on
-the **same machine** as decrypting the secrets requires the encryption
-key *and* a key stored in TPM2. Therefore, creating credentials and then
-copying it to another machine will fail!
+It is important to note that when TPM2 sealing is available on the host,
+credentials can only be created and used on the **same machine** as decrypting
+the secrets requires the encryption key *and* a key stored in TPM2. Therefore,
+creating credentials and then copying it to another machine will fail!
 
 Please be aware that, due to its nature, this plugin is **ONLY** available
 when started as a service. It does **NOT** find any credentials when started
@@ -59,9 +59,11 @@ store usage.
 ```
 
 Each Secret provided by systemd will be available as file under
-`${CREDENTIALS_DIRECTORY}/<secret-name>` for the service. You will **not**
-be able to see them as a regular user, not are those files accessible to other
-services.
+`${CREDENTIALS_DIRECTORY}/<secret-name>` for the service. You will **not** be
+able to see them as a regular, non-telegraf user. Credential visibility from
+other systemd services is mediated by the `User=` and `PrivateMounts=`
+service-unit directives for those services. See the
+[systemd.exec man-page][systemd-exec] for details.
 
 ## Credential management
 
@@ -70,8 +72,8 @@ and are using this command. Please also check that man-page as the options
 or verbs used here might be outdated for the systemd version you are using.
 
 **Please note**: We are using `/etc/telegraf/credentials` as our storage
-location for encrypted credentials throughout the examples below assuming a
-Telegraf install via package manager. If you are using some other means to
+location for encrypted credentials throughout the examples below and assuming
+a Telegraf install via package manager. If you are using some other means to
 install Telegraf you might need to create that directory.
 Furthermore, we assume the secret-store ID to be set to `systemd` in the
 examples.
@@ -96,9 +98,9 @@ partial
 +subsystem
 ```
 
-The output should look similar to the above. If TPM2 is available on your system
-credentials can also be tied to the device by utilizing TPM2 sealing.
-See the  [systemd-creds man-page][systemd-creds] for details.
+The output should look similar to the above. If TPM2 is available on your
+system, credentials can also be tied to the device by utilizing TPM2 sealing.
+See the [systemd-creds man-page][systemd-creds] for details.
 
 Now setup the credentials by creating the root key.
 
@@ -120,10 +122,10 @@ $ echo -n "john-doe-jr" | sudo systemd-creds encrypt - /etc/telegraf/credentials
 Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
 ```
 
-You should now have a file named `http_user` that contains the encrypted
-username. Please note that systemd credentials are named, so the name
-`http_user` is also stored in the file. The secret-store later provides
-the secret using this name as the secret's key.
+You should now have a file named `http_user` containing the encrypted username.
+Please note that systemd credentials are named such that the name `http_user`
+is also stored in the file. The secret-store later provides the secret using
+this name as the secret's key.
 
 You can explicitly name credentials using the `--name` parameter, however,
 in the interest of simplicity, you should follow the filename equals the
@@ -159,15 +161,17 @@ example for the content of the file
 ```text
 [Service]
 LoadCredentialEncrypted=http_user:/etc/telegraf/credentials/http_user
-LoadCredentialEncrypted=http_passwd:/etc/telegraf/credentials/http_password
+LoadCredentialEncrypted=http_password:/etc/telegraf/credentials/http_password
 ```
 
-This will load two credentials, named `http_user` and `http_passwd` which are
+This will load two credentials, named `http_user` and `http_password` which are
 then accessible by Telegraf with those names. Please note that the names have
 to match the names used during encryption of the credentials.
 
 You can add an arbitrary list of credentials to the service as long as the name
-is unique.
+is unique. For Telegraf installs that weren't done via the package manager, it
+is recommended to set `PrivateMounts=true` in the service alongside the
+`LoadCredentialEncrypted` directives.
 
 ### Using credentials as secrets
 
@@ -180,13 +184,13 @@ secret-store by adding
 ```
 
 to your Telegraf configuration. Assuming the two example credentials
-`http_user` and `http_passwd` you can now use those as secrets via
+`http_user` and `http_password` you can now use those as secrets via
 
 ```toml
 [[inputs.http]]
   urls = ["http://localhost/metrics"]
   username = "@{systemd:http_user}"
-  password = "@{systemd:http_passwd}"
+  password = "@{systemd:http_password}"
 
 ```
 
@@ -230,7 +234,7 @@ is a mismatch between the name stored in the credential (given during
 `systemd-creds encrypt`) does not match the one used in the
 `LoadCredentialEncrypted` statement.
 
-In case you are having trouble to reference credentials in Telegraf, you should
+In case you are having trouble referencing credentials in Telegraf, you should
 check what is available via
 
 ```shell
@@ -261,3 +265,4 @@ of the credential!
 [systemd]: https://www.freedesktop.org/wiki/Software/systemd/
 [systemd-descr]: https://systemd.io/CREDENTIALS
 [systemd-creds]: https://www.freedesktop.org/software/systemd/man/systemd-creds.html
+[systemd-exec]: https://www.freedesktop.org/software/systemd/man/systemd.exec.html
