@@ -213,15 +213,15 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 
 	// Get disk usage data
 	if len(d.StorageObjects) > 0 {
-		object_types := []types.DiskUsageObject{}
+		objectTypes := []types.DiskUsageObject{}
 
 		for _, object := range d.StorageObjects {
 			if object == "container" {
-				object_types = append(object_types, types.VolumeObject)
+				objectTypes = append(objectTypes, types.VolumeObject)
 			} else if object == "image" {
-				object_types = append(object_types, types.ImageObject)
+				objectTypes = append(objectTypes, types.ImageObject)
 			} else if object == "volume" {
-				object_types = append(object_types, types.VolumeObject)
+				objectTypes = append(objectTypes, types.VolumeObject)
 				// } else if object == "build-cache" {
 				// 	du_opts.Types = append(du_opts.Types, types.BuildCacheObject)
 			} else {
@@ -229,7 +229,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: object_types})
+		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: objectTypes})
 	}
 
 	return nil
@@ -873,7 +873,6 @@ func (d *Docker) gatherBlockIOMetrics(
 }
 
 func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageOptions) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
@@ -884,11 +883,10 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 	}
 
 	now := time.Now()
-	du_name := "docker_disk_usage"
+	duName := "docker_disk_usage"
 
 	// Containers
 	for _, container := range du.Containers {
-
 		fields := map[string]interface{}{
 			"size_rw":      container.SizeRootFs,
 			"size_root_fs": container.SizeRw,
@@ -900,7 +898,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"container_name": strings.TrimPrefix(container.Names[0], "/"),
 		}
 
-		acc.AddFields(du_name, fields, tags, now)
+		acc.AddFields(duName, fields, tags, now)
 	}
 
 	// Images
@@ -918,7 +916,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			tags["image_repo_tag"] = image.RepoTags[0]
 		}
 
-		acc.AddFields(du_name, fields, tags, now)
+		acc.AddFields(duName, fields, tags, now)
 	}
 
 	// Volumes
@@ -931,7 +929,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"volume_name": volume.Name,
 		}
 
-		acc.AddFields(du_name, fields, tags, now)
+		acc.AddFields(duName, fields, tags, now)
 	}
 
 	// Build Cache is not implemented
