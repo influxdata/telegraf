@@ -96,7 +96,7 @@ require (
 	github.com/gosnmp/gosnmp v1.35.1-0.20230602062452-f30602b8dad6
 	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
 	github.com/gwos/tcg/sdk v0.0.0-20220621192633-df0eac0a1a4c
-	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
+	github.com/harlow/kinesis-consumer v0.3.6-0.20230616182007-af2db0d43f14
 	github.com/hashicorp/consul/api v1.24.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/influxdata/go-syslog/v3 v3.0.0

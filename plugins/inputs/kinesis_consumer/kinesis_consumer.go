@@ -109,6 +109,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			return err
 		}
 	}
+	k.Log.Info("checkpoint created")
 
 	cons, err := consumer.New(
 		k.StreamName,
@@ -120,6 +121,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		k.Log.Info("error creating new consumer")
 		return err
 	}
+	k.Log.Info("consumer created")
 
 	k.cons = cons
 	k.acc = ac.WithTracking(k.MaxUndeliveredMessages)
