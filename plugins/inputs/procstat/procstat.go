@@ -225,15 +225,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
+	// This only returns values for RSS and VMS
 	mem, err := proc.MemoryInfo()
 	if err == nil {
 		fields[prefix+"memory_rss"] = mem.RSS
 		fields[prefix+"memory_vms"] = mem.VMS
-		fields[prefix+"memory_swap"] = mem.Swap
-		fields[prefix+"memory_data"] = mem.Data
-		fields[prefix+"memory_stack"] = mem.Stack
-		fields[prefix+"memory_locked"] = mem.Locked
 	}
+
+	collectMemmap(proc, prefix, fields)
 
 	memPerc, err := proc.MemoryPercent()
 	if err == nil {
