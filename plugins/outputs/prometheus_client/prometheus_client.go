@@ -125,7 +125,7 @@ func (p *PrometheusClient) Init() error {
 
 	password, err := p.BasicPassword.Get()
 	if err != nil {
-		return nil
+		return err
 	}
 	defer config.ReleaseSecret(password)
 
