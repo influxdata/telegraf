@@ -27,23 +27,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   urls = ["http://node1.os.example.com:9200"]
 
   ## Index Name
-  ## The target index for metrics (OpenSearch will create if it not exists).
-  ## You can use the date specifiers below to create indexes per time frame.
-  ## The metric timestamp will be used to decide the destination index name
-  ##   %Y - year (2016)
-  ##   %y - last two digits of year (00..99)
-  ##   %m - month (01..12)
-  ##   %d - day of month (e.g., 01)
-  ##   %H - hour (00..23)
-  ##   %V - week of the year (ISO week) (01..53)
-  ## For example: telegraf-%Y.%m.%d would set it to telegraf-2006-01-02
-  index_name = ""
-
-  ## Default Index Tag Value
-  ## Additionally, you can specify a tag name using the notation {{tag_name}}
-  ## which will be used as part of the index name: "telegraf-{{host}}-%Y.%m.%d"
+  ## Target index name for metrics (OpenSearch will create if it not exists).
+  ## This is a Golang template (see https://pkg.go.dev/text/template)
+  ## You can also specify
+  ## metric name (`{{Name}}`), tag value (`{{Tag "tag_name"}}`), field value (`{{Field "feild_name"}}`) 
   ## If the tag does not exist, the default tag value will be used.
   # default_tag_value = ""
+  ## the timestamp (`{{.Time.Format "xxxxxxxxx"}}`).
+  ## For example: "telegraf-{{.Time.Format "2006-01-02"}}-{{Tag "host"}}" would set it to telegraf-2023-07-27-HostName
+  index_name = ""
 
   ## Timeout
   ## OpenSearch client timeout
@@ -115,8 +107,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_pipeline = "my_pipeline"
 
   ## Pipeline Name
-  ## Additionally, you can specify a tag name using the notation {{tag_name}}
-  ## which will be used as part of the pipeline name (e.g. "{{es_pipeline}}").
+  ## Additionally, you can specify a tag name using the notation (`{{Tag "tag_name"}}`)
+  ## If the tag does not exist, the default tag value will be used.
+  # default_tag_value = ""
   ## If the tag does not exist, the default pipeline will be used as the
   ## pipeline. If no default pipeline is set, no pipeline is used for the
   ## metric.
@@ -127,22 +120,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 * `urls`: A list containing the full HTTP URL of one or more nodes from your
   OpenSearch instance.
-* `index_name`: The target index for metrics. You can use the date specifiers
-  below to create indexes per time frame.
+* `index_name`: The target index for metrics. You can use the date format
 
-```text
-  %Y - year (2017)
-  %y - last two digits of year (00..99)
-  %m - month (01..12)
-  %d - day of month (e.g., 01)
-  %H - hour (00..23)
-  %V - week of the year (ISO week) (01..53)
-```
-
-Additionally, you can specify dynamic index names by using tags with the
-notation ```{{tag_name}}```. This will store the metrics with different tag
-values in different indices. If the tag does not exist in a particular metric,
-the `default_tag_value` will be used instead.
+For example: "telegraf-{{.Time.Format "2006-01-02"}}" would set it to telegraf-2023-07-27
+You can also specify
+metric name (`{{Name}}`), tag value (`{{Tag "tag_name"}}`), field value (`{{Field "feild_name"}}`) 
+If the tag does not exist, the default tag value will be used. default_tag_value = ""
 
 ## Permissions
 

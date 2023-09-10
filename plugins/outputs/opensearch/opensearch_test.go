@@ -3,7 +3,6 @@ package opensearch
 import (
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
@@ -37,59 +36,6 @@ func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container 
 	return &container
 }
 
-func TestGetReplacementKeys(t *testing.T) {
-	e := &Opensearch{
-		DefaultTagValue: "none",
-		Log:             testutil.Logger{},
-	}
-
-	tests := []struct {
-		IndexName         string
-		ExpectedIndexName string
-		ExpectedTagKeys   []string
-	}{
-		{
-			"indexname",
-			"indexname",
-			[]string{},
-		}, {
-			`indexname-{{.Time.Format "2006-01"}}`,
-			`indexname-{{.Time.Format "2006-01"}}`,
-			[]string{},
-		}, {
-			`indexname-{{.Time.Format "2006-01-02"}}`,
-			`indexname-{{.Time.Format "2006-01-02"}}`,
-			[]string{},
-		}, {
-			`indexname-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
-			`indexname-%s-{{.Time.Format "2006-01-02"}}`,
-			[]string{"tag1"},
-		}, {
-			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}`,
-			`indexname-%s-%s-{{.Time.Format "2006-01-02"}}`,
-			[]string{"tag1", "tag2"},
-		}, {
-			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Tag "tag3"}}-{{.Time.Format "2006-01-02"}}`,
-			`indexname-%s-%s-%s-{{.Time.Format "2006-01-02"}}`,
-			[]string{"tag1", "tag2", "tag3"},
-		},
-		{
-			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}-{{.Tag "tag3"}}`,
-			`indexname-%s-%s-{{.Time.Format "2006-01-02"}}-%s`,
-			[]string{"tag1", "tag2", "tag3"},
-		},
-	}
-	for _, test := range tests {
-		indexName, tagKeys := e.GetReplacementKeys(test.IndexName, ".Tag", "%s")
-		if indexName != test.ExpectedIndexName {
-			t.Errorf("Expected indexname %s, got %s\n", test.ExpectedIndexName, indexName)
-		}
-		if !reflect.DeepEqual(tagKeys, test.ExpectedTagKeys) {
-			t.Errorf("Expected tagKeys %s, got %s\n", test.ExpectedTagKeys, tagKeys)
-		}
-	}
-}
-
 func TestGetIndexName(t *testing.T) {
 	e := &Opensearch{
 		DefaultTagValue: "none",
@@ -99,62 +45,49 @@ func TestGetIndexName(t *testing.T) {
 	tests := []struct {
 		EventTime time.Time
 		Tags      map[string]string
-		TagKeys   []string
 		IndexName string
 		Expected  string
 	}{
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
 			"indexname",
 			"indexname",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			`indexname-{{.Time.Format "2006"}}`,
-			"indexname-2014",
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			`indexname-{{.Time.Format "2006-01"}}`,
-			"indexname-2014-12",
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
+			map[string]string{},
 			`indexname-{{.Time.Format "2006-01-02"}}`,
 			"indexname-2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{"tag1"},
-			`indexname-%s-{{.Time.Format "2006-01"}}`,
-			"indexname-value1-2014-12",
+			map[string]string{},
+			`indexname-{{Tag "tag2"}}-{{.Time.Format "2006-01-02"}}`,
+			"indexname-none-2014-12-01",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1"},
+			`indexname-{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+			"indexname-value1-2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{"tag1", "tag2"},
-			`indexname-%s-%s-{{.Time.Format "2006-01"}}`,
-			"indexname-value1-value2-2014-12",
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{"tag1", "tag2", "tag3"},
-			`indexname-%s-%s-%s-{{.Time.Format "2006-01"}}`,
-			"indexname-value1-value2-none-2014-12",
+			`indexname-{{Tag "tag1"}}-{{Tag "tag2"}}-{{Tag "tag3"}}-{{.Time.Format "2006-01-02"}}`,
+			"indexname-value1-value2-none-2014-12-01",
 		},
 	}
 	for _, test := range tests {
-		indexName := e.GetIndexName(test.IndexName, test.EventTime, test.TagKeys, test.Tags)
+		mockMetric := testutil.MockMetrics()[0]
+		mockMetric.SetTime(test.EventTime)
+		for key, val := range test.Tags {
+			mockMetric.AddTag(key, val)
+		}
+		
+		indexName, err := e.GetIndexName(test.IndexName, mockMetric)
+		require.NoError(t, err)
 		if indexName != test.Expected {
 			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
 		}
@@ -163,143 +96,50 @@ func TestGetIndexName(t *testing.T) {
 
 func TestGetPipelineName(t *testing.T) {
 	e := &Opensearch{
-		UsePipeline:     "{{es-pipeline}}",
 		DefaultPipeline: "myDefaultPipeline",
 		Log:             testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetReplacementKeys(e.UsePipeline, "", "%s")
 
 	tests := []struct {
-		EventTime       time.Time
 		Tags            map[string]string
 		PipelineTagKeys []string
+		UsePipeline 	string
 		Expected        string
 	}{
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			`{{Tag "es-pipeline"}}`,
 			"myDefaultPipeline",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
-			"myDefaultPipeline",
+			``,
+			"",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
 			[]string{},
+			`{{Tag "es-pipeline"}}`,
 			"myOtherPipeline",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			map[string]string{"tag1": "pipeline2", "es-pipeline": "myOtherPipeline"},
 			[]string{},
+			`{{Tag "tag1"}}`,
 			"pipeline2",
 		},
 	}
 	for _, test := range tests {
-		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
-		require.Equal(t, test.Expected, pipelineName)
-	}
+		e.UsePipeline = test.UsePipeline
+		mockMetric := testutil.MockMetrics()[0]
+		for key, val := range test.Tags {
+			mockMetric.AddTag(key, val)
+		}
 
-	// Setup testing for testing no pipeline set. All the tests in this case should return "".
-	e = &Opensearch{
-		Log: testutil.Logger{},
-	}
-	e.pipelineName, e.pipelineTagKeys = e.GetReplacementKeys(e.UsePipeline, "", "%s")
-
-	for _, test := range tests {
-		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
-		require.Equal(t, "", pipelineName)
-	}
-}
-
-func TestPipelineConfigs(t *testing.T) {
-	tests := []struct {
-		EventTime       time.Time
-		Tags            map[string]string
-		PipelineTagKeys []string
-		Expected        string
-		Elastic         *Opensearch
-	}{
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"",
-			&Opensearch{
-				Log: testutil.Logger{},
-			},
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"",
-			&Opensearch{
-				DefaultPipeline: "myDefaultPipeline",
-				Log:             testutil.Logger{},
-			},
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
-			[]string{},
-			"myDefaultPipeline",
-			&Opensearch{
-				UsePipeline: "myDefaultPipeline",
-				Log:         testutil.Logger{},
-			},
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"",
-			&Opensearch{
-				DefaultPipeline: "myDefaultPipeline",
-				Log:             testutil.Logger{},
-			},
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"pipeline2",
-			&Opensearch{
-				UsePipeline: "{{es-pipeline}}",
-				Log:         testutil.Logger{},
-			},
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"value1-pipeline2",
-			&Opensearch{
-				UsePipeline: "{{tag1}}-{{es-pipeline}}",
-				Log:         testutil.Logger{},
-			},
-		},
-		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1"},
-			[]string{},
-			"",
-			&Opensearch{
-				UsePipeline: "{{es-pipeline}}",
-				Log:         testutil.Logger{},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		e := test.Elastic
-		e.pipelineName, e.pipelineTagKeys = e.GetReplacementKeys(e.UsePipeline, "", "%s")
-		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
+		pipelineName, err := e.getPipelineName(mockMetric)
+		require.NoError(t, err)
 		require.Equal(t, test.Expected, pipelineName)
 	}
 }
@@ -325,15 +165,18 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:      `test-{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     true,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
 
-	e.IndexName, e.tagKeys = e.GetReplacementKeys(e.IndexName, ".Tag", "%s")
-	err := e.Connect()
+	var indexName, err = e.GetIndexName(e.IndexName, testutil.MockMetrics()[0])
+	require.NoError(t, err)
+	e.IndexName = indexName
+
+	err = e.Connect()
 	require.NoError(t, err)
 
 	err = e.Write(testutil.MockMetrics())
@@ -360,14 +203,13 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:      `test-{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     false,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
 
-	e.IndexName, e.tagKeys = e.GetReplacementKeys(e.IndexName, ".Tag", "%s")
 	err := e.Connect()
 	require.NoError(t, err)
 
@@ -395,7 +237,7 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:            urls,
-		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:       `{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
 		EnableGzip:      false,
 		ManageTemplate:  false,
@@ -403,7 +245,6 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
 
-	e.IndexName, e.tagKeys = e.GetReplacementKeys(e.IndexName, ".Tag", "%s")
 	err := e.Connect()
 	require.NoError(t, err)
 

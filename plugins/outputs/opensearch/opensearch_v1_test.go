@@ -314,7 +314,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:              urls,
-		IndexName:         `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:         `{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        false,
 		ManageTemplate:    true,

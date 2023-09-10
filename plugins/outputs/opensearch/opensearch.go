@@ -46,8 +46,6 @@ type Opensearch struct {
 	pipelineName        string
 	DefaultPipeline     string `toml:"default_pipeline"`
 	UsePipeline         string `toml:"use_pipeline"`
-	pipelineTagKeys     []string
-	tagKeys             []string
 	DefaultTagValue     string          `toml:"default_tag_value"`
 	Timeout             config.Duration `toml:"timeout"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
@@ -85,9 +83,6 @@ func (o *Opensearch) Init() error {
 	if o.FloatHandling == "" {
 		o.FloatHandling = "none"
 	}
-
-	o.IndexName, o.tagKeys = o.GetReplacementKeys(o.IndexName, ".Tag", "%s")
-	o.pipelineName, o.pipelineTagKeys = o.GetReplacementKeys(o.UsePipeline, "", "%s")
 
 	o.onSucc = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
 		o.Log.Debugf("Indexed to OpenSearch with status- [%d] Result- %s DocumentID- %s ", res.Status, res.Result, res.DocumentID)
@@ -212,7 +207,10 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := o.GetIndexName(o.IndexName, metric.Time(), o.tagKeys, metric.Tags())
+		indexName, err := o.GetIndexName(o.IndexName, metric)
+		if err != nil {
+			return fmt.Errorf("generating indexname failed: %w", err)
+		}
 
 		// Handle NaN and inf field-values
 		fields := make(map[string]interface{})
@@ -257,7 +255,12 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if o.UsePipeline != "" {
-			if pipelineName := o.getPipelineName(o.pipelineName, o.pipelineTagKeys, metric.Tags()); pipelineName != "" {
+			pipelineName, err := o.getPipelineName(metric);
+			if err != nil {
+				return fmt.Errorf("failed to evaluate pipeline name: %w", err)
+			}
+			
+			if pipelineName != "" {
 				if indexers[pipelineName] != nil {
 					if err := indexers[pipelineName].Add(ctx, bulkIndxrItem); err != nil {
 						o.Log.Errorf("error adding metric entry to OpenSearch bulkIndexer: %w for pipeline %s", err, pipelineName)
@@ -294,7 +297,12 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 
 	if osInst.UsePipeline != "" {
 		for _, metric := range metrics {
-			if pipelineName := osInst.getPipelineName(osInst.pipelineName, osInst.pipelineTagKeys, metric.Tags()); pipelineName != "" {
+			pipelineName, err := osInst.getPipelineName(metric);
+			if err != nil {
+				osInst.Log.Errorf("error while evaluating pipeline name: %s for pipeline %s", err, pipelineName)
+			}
+			
+			if pipelineName != "" {
 				// BulkIndexer supports pipeline at config level not metric level
 				if _, ok := indexers[osInst.pipelineName]; ok {
 					continue
@@ -331,6 +339,82 @@ func createBulkIndexer(osInst *Opensearch, pipelineName string) (opensearchutil.
 	return opensearchutil.NewBulkIndexer(bulkIndexerConfig)
 }
 
+func (o *Opensearch) GetIndexName(rawIndexName string, metric telegraf.Metric) (string, error) {
+	var tagVal = func(key string) interface{} {
+		if val, ok := metric.Tags()[key]; ok {
+			return val
+		}
+		return o.DefaultTagValue
+	}
+	var fieldVal = func(key string) interface{} {
+		if val, ok := metric.Fields()[key]; ok {
+			return val
+		}
+		return ""
+	}
+	var nameVal = func() string{
+		return metric.Name()
+	}
+
+	var funcs = template.FuncMap{
+		"Name": nameVal,
+		"Tag": tagVal,
+		"Field": fieldVal,
+	}
+	
+	var indexTmpl, err = template.New("index").Funcs(funcs).Parse(rawIndexName)
+	if err != nil {
+		return "", fmt.Errorf("parsing index name failed: %w", err)
+	}
+
+	var buf bytes.Buffer
+	err = indexTmpl.Execute(&buf, struct{Time time.Time}{metric.Time().UTC()})
+	if err != nil {
+		return "", fmt.Errorf("creating index name failed: %w", err)
+	}
+	var indexName = buf.String()
+	if strings.Contains(indexName, "{{") {
+		return "", fmt.Errorf("failed to evaluate valid indexname: %s", indexName)
+	}
+	o.Log.Debugf("indexName- %s", indexName)
+	
+
+	return indexName, nil
+}
+
+func (o *Opensearch) getPipelineName(metric telegraf.Metric) (string, error) {
+	if o.UsePipeline == "" || !strings.Contains(o.UsePipeline, "{{") {
+		return o.UsePipeline, nil
+	}
+	var tagVal = func(key string) interface{} {
+		if val, ok := metric.Tags()[key]; ok {
+			return val
+		}
+		return o.DefaultTagValue
+	}
+	
+	var pipelineTmpl, err = template.New("pipeline").Funcs(template.FuncMap{"Tag": tagVal}).Parse(o.UsePipeline)
+	if err != nil {
+		return "", fmt.Errorf("parsing pipeline name failed: %w", err)
+	}
+
+	var buf bytes.Buffer
+	err = pipelineTmpl.Execute(&buf, "")
+	if err != nil {
+		return "", fmt.Errorf("creating pipeline name failed: %w", err)
+	}
+	var pipelineName = buf.String()
+	if strings.Contains(pipelineName, "{{") {
+		return "", fmt.Errorf("failed to evaluate valid pipelineName: %s", pipelineName)
+	}
+	o.Log.Debugf("PipelineTemplate- %s", pipelineName)
+	
+	if pipelineName == "" {
+        pipelineName = o.DefaultPipeline
+    }
+	return pipelineName, nil
+}
+
 func (o *Opensearch) manageTemplate(ctx context.Context) error {
 	tempReq := opensearchapi.CatTemplatesRequest{
 		Name: o.TemplateName,
@@ -343,10 +427,6 @@ func (o *Opensearch) manageTemplate(ctx context.Context) error {
 
 	templateExists := resp.Body != http.NoBody
 	templatePattern := o.IndexName
-
-	if strings.Contains(templatePattern, "%") {
-		templatePattern = templatePattern[0:strings.Index(templatePattern, "%")]
-	}
 
 	if strings.Contains(templatePattern, "{{") {
 		templatePattern = templatePattern[0:strings.Index(templatePattern, "{{")]
@@ -383,69 +463,6 @@ func (o *Opensearch) manageTemplate(ctx context.Context) error {
 		o.Log.Debug("Found existing OpenSearch template. Skipping template management")
 	}
 	return nil
-}
-
-func (o *Opensearch) GetReplacementKeys(indexName string, key string, replacement string) (string, []string) {
-	tagKeys := []string{}
-	startKey := "{{" + key
-	startTag := strings.Index(indexName, startKey)
-
-	for startTag >= 0 {
-		endTag := startTag + strings.Index(indexName[startTag:], "}}")
-
-		if endTag < 0 {
-			break
-		}
-		tagName := indexName[startTag+len(startKey) : endTag]
-		var tagReplacer = strings.NewReplacer(startKey+tagName+"}}", replacement)
-
-		indexName = tagReplacer.Replace(indexName)
-		tagKeys = append(tagKeys, strings.Trim(strings.TrimSpace(tagName), `"`))
-
-		startTag = strings.Index(indexName, startKey)
-	}
-
-	return indexName, tagKeys
-}
-
-func (o *Opensearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
-	tagValues := []interface{}{}
-
-	for _, key := range tagKeys {
-		if value, ok := metricTags[key]; ok {
-			tagValues = append(tagValues, value)
-		} else {
-			o.Log.Debugf("Tag %q not found, using %q on index name instead", key, o.DefaultTagValue)
-			tagValues = append(tagValues, o.DefaultTagValue)
-		}
-	}
-
-	indexName = fmt.Sprintf(indexName, tagValues...)
-
-	if strings.Contains(indexName, "{{.Time.Format") {
-		updatedIndexName, dateStrArr := o.GetReplacementKeys(indexName, ".Time.Format", "%DATE%")
-		indexName = strings.Replace(updatedIndexName, "%DATE%", eventTime.UTC().Format(dateStrArr[0]), 1)
-	}
-
-	return indexName
-}
-
-func (o *Opensearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
-	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
-		return pipelineInput
-	}
-
-	tagValues := make([]interface{}, 0, len(tagKeys))
-
-	for _, key := range tagKeys {
-		if value, ok := metricTags[key]; ok {
-			tagValues = append(tagValues, value)
-			continue
-		}
-		o.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
-		return o.DefaultPipeline
-	}
-	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
 func (o *Opensearch) Close() error {
