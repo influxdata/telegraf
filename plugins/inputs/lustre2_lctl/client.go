@@ -15,7 +15,6 @@ var (
 )
 
 func gatherClient(client bool, namespace string, acc telegraf.Accumulator) {
-
 	if !client {
 		return
 	}
@@ -26,7 +25,6 @@ func gatherClient(client bool, namespace string, acc telegraf.Accumulator) {
 	if result, err := executeCommand("lctl", "get_param", "mdc.*.active"); err != nil { // to get volume.
 		acc.AddError(err)
 	} else {
-
 		vs := clientMDCActivePattern.FindAllStringSubmatch(result, -1)
 		for _, v := range vs {
 			if value, err := strconv.ParseInt(v[2], 10, 64); err != nil {

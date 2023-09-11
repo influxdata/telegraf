@@ -16,7 +16,6 @@ import (
 )
 
 func TestGatherClient(t *testing.T) {
-
 	expected := []telegraf.Metric{
 		metric.New(
 			"lustre2_client",
@@ -102,7 +101,6 @@ func TestHelperOSCActive(t *testing.T) {
 }
 
 func fakeClientExecCommand(command string, args ...string) *exec.Cmd {
-
 	tmp := make([]string, 0)
 	tmp = append(tmp, command)
 	tmp = append(tmp, args...)
