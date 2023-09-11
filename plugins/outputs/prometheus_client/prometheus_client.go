@@ -49,7 +49,7 @@ type PrometheusClient struct {
 	WriteTimeout       config.Duration        `toml:"write_timeout"`
 	MetricVersion      int                    `toml:"metric_version"`
 	BasicUsername      string                 `toml:"basic_username"`
-	BasicPassword      string                 `toml:"basic_password"`
+	BasicPassword      config.Secret          `toml:"basic_password"`
 	IPRange            []string               `toml:"ip_range"`
 	ExpirationInterval config.Duration        `toml:"expiration_interval"`
 	Path               string                 `toml:"path"`
@@ -57,9 +57,9 @@ type PrometheusClient struct {
 	StringAsLabel      bool                   `toml:"string_as_label"`
 	ExportTimestamp    bool                   `toml:"export_timestamp"`
 	TypeMappings       serializer.MetricTypes `toml:"metric_types"`
-	tlsint.ServerConfig
+	Log                telegraf.Logger        `toml:"-"`
 
-	Log telegraf.Logger `toml:"-"`
+	tlsint.ServerConfig
 
 	server    *http.Server
 	url       *url.URL
@@ -140,7 +140,14 @@ func (p *PrometheusClient) Init() error {
 		ipRange = append(ipRange, ipNet)
 	}
 
-	authHandler := internal.BasicAuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
+	password, err := p.BasicPassword.Get()
+	if err != nil {
+		return err
+	}
+	passwordStr := string(password)
+	defer config.ReleaseSecret(password)
+
+	authHandler := internal.BasicAuthHandler(p.BasicUsername, passwordStr, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
