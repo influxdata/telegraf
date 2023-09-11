@@ -34,25 +34,20 @@ func newSchemaRegistry(url string, authBase64 string, caCertPath string) (*schem
 		return nil, err
 	}
 
+	var tlsCfg *tls.Config
 	if caCertPath != "" {
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: caCertPool,
-				},
-				MaxIdleConns:    10,
-				IdleConnTimeout: 90 * time.Second,
-			},
+		tlsCfg = &tls.Config{
+			RootCAs: caCertPool,
 		}
-	} else {
-		client = &http.Client{
-			Transport: &http.Transport{
-				MaxIdleConns:    10,
-				IdleConnTimeout: 90 * time.Second,
-			},
-		}
+	}
+	client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			MaxIdleConns:    10,
+			IdleConnTimeout: 90 * time.Second,
+		},
 	}
 
 	return &schemaRegistry{url: url, authBase64: authBase64, cache: make(map[int]*schemaAndCodec), client: *client}, nil
