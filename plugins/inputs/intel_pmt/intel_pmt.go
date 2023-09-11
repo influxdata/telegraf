@@ -87,14 +87,14 @@ func (p *IntelPMT) Gather(acc telegraf.Accumulator) error {
 				data, err := os.ReadFile(info.path)
 				if err != nil {
 					hasError.Store(true)
-					p.Log.Errorf("Error occurred while gathering metrics: %v", err)
+					acc.AddError(fmt.Errorf("gathering metrics failed: %w", err))
 					return
 				}
 
-				err = p.aggregateSamples(guid, data, info.numaNode, acc)
+				err = p.aggregateSamples(acc, guid, data, info.numaNode)
 				if err != nil {
 					hasError.Store(true)
-					p.Log.Errorf("Error occurred while gathering metrics: %v", err)
+					acc.AddError(fmt.Errorf("gathering metrics failed: %w", err))
 					return
 				}
 			}
@@ -169,7 +169,7 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 			return fmt.Errorf("cannot read GUID: %w", err)
 		}
 		// cut the newline char
-		tID := strings.TrimRight(string(rawGUID), "\n")
+		tID := strings.TrimSpace(string(rawGUID))
 
 		telemPath := filepath.Join(telemDirPath, "telem")
 		if !isFileReadable(telemPath) {
@@ -187,7 +187,7 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 		if err != nil {
 			return fmt.Errorf("error while reading symlink %q: %w", numaNodeSymlink, err)
 		}
-		numaNodeString := strings.TrimRight(string(numaNode), "\n")
+		numaNodeString := strings.TrimSpace(string(numaNode))
 		if numaNodeString == "" {
 			return fmt.Errorf("numa_node file %q is empty", numaNodeSymlink)
 		}
@@ -292,7 +292,7 @@ func getTelemSample(s sample, buf []byte, offset uint64) (uint64, error) {
 // Returns:
 //
 //	error - error if getting values has failed, if sample IDref is missing or if equation evaluation has failed.
-func (p *IntelPMT) aggregateSamples(guid string, data []byte, numaNode string, acc telegraf.Accumulator) error {
+func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data []byte, numaNode string) error {
 	results, err := p.getSampleValues(guid, data)
 	if err != nil {
 		return err
