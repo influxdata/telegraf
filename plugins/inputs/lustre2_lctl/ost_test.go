@@ -323,6 +323,8 @@ func TestHelperRecoveryStatus(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -333,6 +335,8 @@ func TestHelperHealthCheck(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, `healthy`)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -353,6 +357,8 @@ func TestTestHelperJobstats(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -366,6 +372,8 @@ func TestHelperStats(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -377,6 +385,8 @@ func TestHelperKbytestotal(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -388,6 +398,8 @@ func TestHelperKbytesavail(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -399,6 +411,8 @@ func TestHelperKbytesfree(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 

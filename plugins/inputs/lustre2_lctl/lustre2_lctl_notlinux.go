@@ -25,7 +25,7 @@ func (*Lustre2Lctl) SampleConfig() string                { return sampleConfig }
 func (*Lustre2Lctl) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
-	inputs.Add("lustre2", func() telegraf.Input {
+	inputs.Add("lustre2_lctl", func() telegraf.Input {
 		return &Lustre2Lctl{}
 	})
 }

@@ -62,7 +62,7 @@ func (l *Lustre2Lctl) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add(namespace, func() telegraf.Input {
+	inputs.Add("lustre2_lctl", func() telegraf.Input {
 		return &Lustre2Lctl{}
 	})
 }

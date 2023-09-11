@@ -4,7 +4,8 @@ supports many requirements of leadership class HPC simulation environments.
 
 This plugin monitors the Lustre file system using its utility `lctl get_param`.
 
-Note that this plugins has been only tested on Lustre@v2.12.7 and Luster@v2.15.0.
+Note that this plugins has been only tested on Lustre@v2.12.7 
+and Luster@v2.15.0.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

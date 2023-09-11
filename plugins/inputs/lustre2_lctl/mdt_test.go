@@ -870,6 +870,8 @@ func TestHelperMDTStatsV215(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -885,6 +887,8 @@ func TestHelperMDTStatsV217(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -906,6 +910,8 @@ func TestHelperMDTJobStatsV215(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -926,6 +932,8 @@ func TestHelperMDTJobStatsV217(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -945,6 +953,8 @@ func TestHelperMDTRecoveryStatusV215(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -964,6 +974,8 @@ func TestHelperMDTRecoveryStatusV217(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -977,6 +989,8 @@ func TestHelperMDTVolumes(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 

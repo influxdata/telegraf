@@ -82,6 +82,8 @@ func TestHelperMDCActive(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
@@ -94,6 +96,8 @@ func TestHelperOSCActive(t *testing.T) {
 	}
 
 	fmt.Fprint(os.Stdout, data)
+
+	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }
 
