@@ -57,10 +57,9 @@ type PrometheusClient struct {
 	StringAsLabel      bool                   `toml:"string_as_label"`
 	ExportTimestamp    bool                   `toml:"export_timestamp"`
 	TypeMappings       serializer.MetricTypes `toml:"metric_types"`
-  
-	tlsint.ServerConfig
+	Log                telegraf.Logger        `toml:"-"`
 
-	Log telegraf.Logger `toml:"-"`
+	tlsint.ServerConfig
 
 	server    *http.Server
 	url       *url.URL
