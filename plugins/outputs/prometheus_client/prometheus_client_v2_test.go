@@ -331,7 +331,7 @@ cpu_time_idle{host="example.org"} 42
 `),
 		},
 		{
-			name: "untyped forced to counter",
+			name: "untyped forced to gauge",
 			output: &PrometheusClient{
 				Listen:            ":0",
 				MetricVersion:     2,
