@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -18,22 +19,22 @@ type schemaAndCodec struct {
 }
 
 type schemaRegistry struct {
-	url        string
-	authBase64 string
-	cache      map[int]*schemaAndCodec
-	client     http.Client
+	url      string
+	username string
+	password string
+	cache    map[int]*schemaAndCodec
+	client   *http.Client
 }
 
 const schemaByID = "%s/schemas/ids/%d"
 
-func newSchemaRegistry(url string, authBase64 string, caCertPath string) (*schemaRegistry, error) {
-	var client *http.Client
-
+func newSchemaRegistry(addr string, caCertPath string) (*schemaRegistry, error) {
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		return nil, err
 	}
 
+	var client *http.Client
 	var tlsCfg *tls.Config
 	if caCertPath != "" {
 		caCertPool := x509.NewCertPool()
@@ -50,7 +51,26 @@ func newSchemaRegistry(url string, authBase64 string, caCertPath string) (*schem
 		},
 	}
 
-	return &schemaRegistry{url: url, authBase64: authBase64, cache: make(map[int]*schemaAndCodec), client: *client}, nil
+	u, err := url.Parse(addr)
+	if err != nil {
+		return nil, fmt.Errorf("parsing registry URL failed: %w", err)
+	}
+
+	var username, password string
+	if u.User != nil {
+		username = u.User.Username()
+		password, _ = u.User.Password()
+	}
+
+	registry := &schemaRegistry{
+		url:      u.String(),
+		username: username,
+		password: password,
+		cache:    make(map[int]*schemaAndCodec),
+		client:   client,
+	}
+
+	return registry, nil
 }
 
 func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
@@ -63,8 +83,8 @@ func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 		return nil, err
 	}
 
-	if sr.authBase64 != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Basic %s", sr.authBase64))
+	if sr.username != "" {
+		req.SetBasicAuth(sr.username, sr.password)
 	}
 
 	resp, err := sr.client.Do(req)

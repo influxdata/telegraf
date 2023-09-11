@@ -31,9 +31,14 @@ The message is supposed to be encoded as follows:
   ## Supported values are "binary" (default) and "json"
   # avro_format = "binary"
 
-  ## Url of the schema registry; exactly one of schema registry and
-  ## schema must be set
+  ## URL of the schema registry which may contain username and password in the
+  ## form http[s]://[username[:password]@]<host>[:port]
+  ## NOTE: Exactly one of schema registry and schema must be set
   avro_schema_registry = "http://localhost:8081"
+
+  ## Path to the schema registry certificate. Should be specified only if
+  ## required for connection to the schema registry.
+  # avro_schema_registry_cert = "/etc/telegraf/ca_cert.crt"
 
   ## Schema string; exactly one of schema registry and schema must be set
   #avro_schema = '''
@@ -57,16 +62,6 @@ The message is supposed to be encoded as follows:
   #          ]
   #      }
   #'''
-
-  ## login and password in format "Login:Password" encoded to base64 string
-  ## that will be added as a basic auth header to the schema registry requests
-  ## Should be filled only when schema registry uses basic authentication 
-  ## For example "Aladdin:open sesame" equals to "QWxhZGRpbjpvcGVuIHNlc2FtZQ==" in base64
-  # avro_schema_registry_authorization_base64 = "QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
-
-  ## Path to the schema registry certificate. Should be specified only when it is 
-  ## required for connection to the schema registry. 
-  # avro_schema_registry_cacert_path = "/etc/telegraf/ca_cert.crt"
 
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
