@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	//nolint: unparam
 	execCommand           = exec.Command
 	volumesPattern        = regexp.MustCompile(`(\w*).(.+)`)
 	recoveryStatusPattern = regexp.MustCompile(`status:(.+)`)
