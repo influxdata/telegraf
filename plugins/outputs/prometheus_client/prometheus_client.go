@@ -127,9 +127,10 @@ func (p *PrometheusClient) Init() error {
 	if err != nil {
 		return err
 	}
+	password_str := string(password)
 	defer config.ReleaseSecret(password)
 
-	authHandler := internal.BasicAuthHandler(p.BasicUsername, string(password), "prometheus", onAuthError)
+	authHandler := internal.BasicAuthHandler(p.BasicUsername, password_str, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
