@@ -934,7 +934,6 @@ func TestHelperMDTJobStatsV217(_ *testing.T) {
 }
 
 func TestHelperMDTRecoveryStatusV215(_ *testing.T) {
-
 	data := `status: COMPLETE
 	recovery_start: 61
 	recovery_duration: 44
@@ -955,7 +954,6 @@ func TestHelperMDTRecoveryStatusV215(_ *testing.T) {
 }
 
 func TestHelperMDTRecoveryStatusV217(_ *testing.T) {
-
 	data := `status: COMPLETE
 	recovery_start: 1692176311
 	recovery_duration: 86
