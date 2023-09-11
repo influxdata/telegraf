@@ -72,7 +72,7 @@ func TestGatherClient(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestHelperMDCActive(t *testing.T) {
+func TestHelperMDCActive(_ *testing.T) {
 	data := `mdc.THL9-MDT0000-mdc-ffff98795f16f000.active=1
 	mdc.thfs1-MDT0000-mdc-ffff0781dc988800.active=1`
 
@@ -86,7 +86,7 @@ func TestHelperMDCActive(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperOSCActive(t *testing.T) {
+func TestHelperOSCActive(_ *testing.T) {
 	data := `osc.THL9-OST003d-osc-ffff98795f16f000.active=1
 	osc.thfs3-OST0076-osc-ffff0181ddbfa000.active=1`
 

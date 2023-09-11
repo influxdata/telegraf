@@ -79,9 +79,7 @@ func gatherMDTJobstats(flag Stats, measurement string, volumes []string, acc tel
 		jobstats := parseJobStats(result)
 
 		for jobid, entries := range jobstats {
-
 			for _, entry := range entries {
-
 				if flag.RW && (strings.Contains(entry.Operation, "read") || strings.Contains(entry.Operation, "write")) {
 					acc.AddGauge(measurement, map[string]interface{}{
 						fmt.Sprintf("jobstats_%s_samples", entry.Operation): entry.Samples,
@@ -187,7 +185,7 @@ func gatherMDT(mdt MDT, namespace string, acc telegraf.Accumulator) {
 	// Get volumes' name.
 	result, _ := executeCommand("lctl", "get_param", "-N", "mdt.*")
 
-	volumes, _ := parserVolumesName(result)
+	volumes := parserVolumesName(result)
 
 	gatherMDTRecoveryStatus(mdt.RecoveryStatus, measurement, volumes, acc)
 	gatherMDTJobstats(mdt.Jobstats, measurement, volumes, acc)

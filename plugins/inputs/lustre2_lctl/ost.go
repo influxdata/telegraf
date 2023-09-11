@@ -4,14 +4,9 @@ package lustre2_lctl
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/influxdata/telegraf"
-)
-
-var (
-	ostObdfilterStatsOps = regexp.MustCompile(`(\w+)\s*(\d*)\s*(\w+)\s*\[(\w+)\]\s*(\d*)\s*(\d*)\s*(\d*)\s*(\d*)`)
 )
 
 // gatherOST
@@ -19,7 +14,7 @@ var (
 //	@param ost
 //	@param namespace
 //	@param acc
-func gatherOST(ost OST, namespace string, acc telegraf.Accumulator, log telegraf.Logger) {
+func gatherOST(ost OST, namespace string, acc telegraf.Accumulator) {
 	measurement := namespace + "_ost"
 
 	gatherObdfilter(ost.Obdfilter, measurement, acc)
@@ -33,7 +28,7 @@ func gatherObdfilter(obdfilter Obdfilter, measurement string, acc telegraf.Accum
 	// Get volumes' name.
 	result, _ := executeCommand("lctl", "get_param", "-N", "obdfilter.*")
 
-	volumes, _ := parserVolumesName(result)
+	volumes := parserVolumesName(result)
 
 	// gatherOSTObdfilterRecoveryStatus
 	gatherOSTObdfilterRecoveryStatus(obdfilter.RecoveryStatus, volumes, measurement, acc)
@@ -60,7 +55,6 @@ func gatherOSTObdfilterRecoveryStatus(flag bool, volumes []string, measurement s
 	}
 
 	for _, v := range volumes {
-
 		content, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("obdfilter.%s.recovery_status", v))
 		if err != nil {
 			acc.AddError(err)
@@ -68,7 +62,7 @@ func gatherOSTObdfilterRecoveryStatus(flag bool, volumes []string, measurement s
 		}
 
 		acc.AddGauge(measurement, map[string]interface{}{
-			"recovery_status": parseRecoveryStatus(string(content)),
+			"recovery_status": parseRecoveryStatus(content),
 		}, map[string]string{
 			"volume": v,
 		})
@@ -87,7 +81,6 @@ func gatherOSTObdfilterJobstats(flag Stats, volumes []string, measurement string
 	}
 
 	for _, volume := range volumes {
-
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("obdfilter.%s.job_stats", volume))
 		if err != nil {
 			acc.AddError(err)
@@ -97,9 +90,7 @@ func gatherOSTObdfilterJobstats(flag Stats, volumes []string, measurement string
 		jobstats := parseJobStats(result)
 
 		for jobid, entries := range jobstats {
-
 			for _, entry := range entries {
-
 				if flag.RW && (strings.Contains(entry.Operation, "read") || strings.Contains(entry.Operation, "write")) {
 					acc.AddGauge(measurement, map[string]interface{}{
 						fmt.Sprintf("jobstats_%s_samples", entry.Operation): entry.Samples,
@@ -154,7 +145,6 @@ func gatherOSTObdfilterStats(flag Stats, volumes []string, measurement string, a
 	}
 
 	for _, volume := range volumes {
-
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("obdfilter.%s.stats", volume))
 		if err != nil {
 			acc.AddError(err)
@@ -164,7 +154,6 @@ func gatherOSTObdfilterStats(flag Stats, volumes []string, measurement string, a
 		stats := parseStats(result)
 
 		for _, stat := range stats {
-
 			if flag.RW && (strings.Contains(stat.Operation, "read") || strings.Contains(stat.Operation, "write")) {
 				acc.AddGauge(measurement, map[string]interface{}{
 					fmt.Sprintf("stats_%s_samples", stat.Operation): stat.Samples,
@@ -215,11 +204,9 @@ func gatherOSTCapacity(flag bool, volumes []string, measurement string, acc tele
 
 	var capacity int64
 	for _, v := range volumes {
-
 		if result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("obdfilter.%s.kbytestotal", v)); err != nil {
 			acc.AddError(err)
 		} else {
-
 			if _, err := fmt.Sscanf(result, "%d", &capacity); err != nil {
 				acc.AddError(err)
 			} else {
@@ -234,7 +221,6 @@ func gatherOSTCapacity(flag bool, volumes []string, measurement string, acc tele
 		if result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("obdfilter.%s.kbytesavail", v)); err != nil {
 			acc.AddError(err)
 		} else {
-
 			if _, err := fmt.Sscanf(result, "%d", &capacity); err != nil {
 				acc.AddError(err)
 			} else {
@@ -249,7 +235,6 @@ func gatherOSTCapacity(flag bool, volumes []string, measurement string, acc tele
 		if result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("obdfilter.%s.kbytesfree", v)); err != nil {
 			acc.AddError(err)
 		} else {
-
 			if _, err := fmt.Sscanf(result, "%d", &capacity); err != nil {
 				acc.AddError(err)
 			} else {

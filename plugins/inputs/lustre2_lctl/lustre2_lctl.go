@@ -55,7 +55,7 @@ func (*Lustre2Lctl) SampleConfig() string {
 // Gather reads stats from all lustre targets
 func (l *Lustre2Lctl) Gather(acc telegraf.Accumulator) error {
 	gatherHealth(namespace, acc)
-	gatherOST(l.OST, namespace, acc, l.Log)
+	gatherOST(l.OST, namespace, acc)
 	gatherMDT(l.MDT, namespace, acc)
 	gatherClient(l.Client, namespace, acc)
 	return nil

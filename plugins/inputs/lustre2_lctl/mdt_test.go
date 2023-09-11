@@ -856,7 +856,7 @@ func TestGatherMDTStats(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestHelperMDTStatsV215(t *testing.T) {
+func TestHelperMDTStatsV215(_ *testing.T) {
 	data := `snapshot_time             1694140455.278503266 secs.nsecs
 	open                      137391283844 samples [reqs]
 	close                     97376107699 samples [reqs] 1 1 97376107699`
@@ -871,7 +871,7 @@ func TestHelperMDTStatsV215(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperMDTStatsV217(t *testing.T) {
+func TestHelperMDTStatsV217(_ *testing.T) {
 	data := `snapshot_time             1964295.787757337 secs.nsecs
 	start_time                0.000000000 secs.nsecs
 	elapsed_time              1964295.787757337 secs.nsecs
@@ -888,7 +888,7 @@ func TestHelperMDTStatsV217(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperMDTJobStatsV215(t *testing.T) {
+func TestHelperMDTJobStatsV215(_ *testing.T) {
 	data := `job_stats:
 	- job_id:          thmc.0
 	  snapshot_time:   1694072655
@@ -911,7 +911,7 @@ func TestHelperMDTJobStatsV215(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperMDTJobStatsV217(t *testing.T) {
+func TestHelperMDTJobStatsV217(_ *testing.T) {
 	data := `job_stats:
 	- job_id:          rsync_env.sh.30026
 	snapshot_time   : 1896247.780050045 secs.nsecs
@@ -933,7 +933,7 @@ func TestHelperMDTJobStatsV217(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperMDTRecoveryStatusV215(t *testing.T) {
+func TestHelperMDTRecoveryStatusV215(_ *testing.T) {
 
 	data := `status: COMPLETE
 	recovery_start: 61
@@ -954,7 +954,7 @@ func TestHelperMDTRecoveryStatusV215(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperMDTRecoveryStatusV217(t *testing.T) {
+func TestHelperMDTRecoveryStatusV217(_ *testing.T) {
 
 	data := `status: COMPLETE
 	recovery_start: 1692176311
@@ -975,7 +975,7 @@ func TestHelperMDTRecoveryStatusV217(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperMDTVolumes(t *testing.T) {
+func TestHelperMDTVolumes(_ *testing.T) {
 	data := `mdt.THL9-MDT0000
 	mdt.THL9-MDT0001
 	mdt.THL9-MDT0002`

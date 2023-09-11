@@ -304,7 +304,7 @@ func TestGatherOSTCapacity(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestHelperRecoveryStatus(t *testing.T) {
+func TestHelperRecoveryStatus(_ *testing.T) {
 	data := `status: COMPLETE
 	recovery_start: 55
 	recovery_duration: 0
@@ -324,7 +324,7 @@ func TestHelperRecoveryStatus(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperHealthCheck(t *testing.T) {
+func TestHelperHealthCheck(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -335,7 +335,7 @@ func TestHelperHealthCheck(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestTestHelperJobstats(t *testing.T) {
+func TestTestHelperJobstats(_ *testing.T) {
 	data := `job_stats:
 	- job_id:          1306853
 	  snapshot_time:   1693988320
@@ -357,7 +357,7 @@ func TestTestHelperJobstats(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperStats(t *testing.T) {
+func TestHelperStats(_ *testing.T) {
 	data := `snapshot_time             1693990463.128002841 secs.nsecs
 	read_bytes                1487077410 samples [bytes] 4096 4194304 606617630789632
 	setattr                   21402423 samples [reqs]`
@@ -372,7 +372,7 @@ func TestHelperStats(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperKbytestotal(t *testing.T) {
+func TestHelperKbytestotal(_ *testing.T) {
 	data := `46488188776`
 
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
@@ -385,7 +385,7 @@ func TestHelperKbytestotal(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperKbytesavail(t *testing.T) {
+func TestHelperKbytesavail(_ *testing.T) {
 	data := `24598218684`
 
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
@@ -398,7 +398,7 @@ func TestHelperKbytesavail(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestHelperKbytesfree(t *testing.T) {
+func TestHelperKbytesfree(_ *testing.T) {
 	data := `26942292504`
 
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {

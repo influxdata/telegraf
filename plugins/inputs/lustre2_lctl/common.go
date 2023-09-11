@@ -43,12 +43,12 @@ func executeCommand(name string, arg ...string) (string, error) {
 //	@param content the result of recovery_status
 //	@return int64 1 represents complete.
 func parseRecoveryStatus(content string) int64 {
-	status := recoveryStatusPattern.FindStringSubmatch(string(content))
+	status := recoveryStatusPattern.FindStringSubmatch(content)
 	if strings.ToLower(strings.TrimSpace(status[1])) == "complete" {
 		return 1
-	} else {
-		return 0
 	}
+
+	return 0
 }
 
 type Jobstat struct {
@@ -149,32 +149,31 @@ func parseStats(content string) []*Stat {
 
 		if len(match) == 0 {
 			continue
-		} else {
-
-			result := [4]uint64{}
-			samples, _ := strconv.ParseUint(match[2], 10, 64)
-			valuesStr := match[4]
-
-			if valuesStr != "" {
-				values := strings.Fields(valuesStr)
-
-				for k, valStr := range values {
-					result[k], _ = strconv.ParseUint(valStr, 10, 64)
-				}
-			}
-
-			stat := &Stat{
-				Operation: match[1],
-				Unit:      match[3],
-				Samples:   samples,
-				Min:       result[0],
-				Max:       result[1],
-				Sum:       result[2],
-				Sumsq:     result[3],
-			}
-			stats = append(stats, stat)
 		}
+		result := [4]uint64{}
+		samples, _ := strconv.ParseUint(match[2], 10, 64)
+		valuesStr := match[4]
+
+		if valuesStr != "" {
+			values := strings.Fields(valuesStr)
+
+			for k, valStr := range values {
+				result[k], _ = strconv.ParseUint(valStr, 10, 64)
+			}
+		}
+
+		stat := &Stat{
+			Operation: match[1],
+			Unit:      match[3],
+			Samples:   samples,
+			Min:       result[0],
+			Max:       result[1],
+			Sum:       result[2],
+			Sumsq:     result[3],
+		}
+		stats = append(stats, stat)
 	}
+
 	return stats
 }
 
@@ -189,7 +188,7 @@ func gatherHealth(measurement string, acc telegraf.Accumulator) {
 		return
 	}
 
-	if strings.HasPrefix(strings.ToLower(string(content)), "health") {
+	if strings.HasPrefix(strings.ToLower(content), "health") {
 		acc.AddGauge(measurement, map[string]interface{}{
 			"health_check": 1,
 		}, nil)
@@ -205,11 +204,11 @@ func gatherHealth(measurement string, acc telegraf.Accumulator) {
 //	@param content the result returned by command.
 //	@return []string volumes' name.
 //	@return error
-func parserVolumesName(content string) ([]string, error) {
+func parserVolumesName(content string) []string {
 	volumes := make([]string, 0)
 	vsName := volumesPattern.FindAllStringSubmatch(content, -1)
 	for _, value := range vsName {
 		volumes = append(volumes, value[len(value)-1])
 	}
-	return volumes, nil
+	return volumes
 }
