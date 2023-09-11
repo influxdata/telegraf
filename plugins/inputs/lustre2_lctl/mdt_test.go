@@ -18,7 +18,6 @@ import (
 )
 
 func TestGetMDTVolumes(t *testing.T) {
-
 	expected := []string{"THL9-MDT0000", "THL9-MDT0001", "THL9-MDT0002"}
 
 	execCommand = fakeMDTExecuteCommand
@@ -38,7 +37,6 @@ func TestGetMDTVolumes(t *testing.T) {
 }
 
 func TestGatherMDTRecoveryStatus(t *testing.T) {
-
 	expected := []telegraf.Metric{
 		metric.New(
 			"lustre2_mdt",
@@ -74,7 +72,6 @@ func TestGatherMDTRecoveryStatus(t *testing.T) {
 }
 
 func TestGatherMDTJobStats(t *testing.T) {
-
 	// gather all.
 	expected := []telegraf.Metric{
 		// v2.15 job1
@@ -736,7 +733,6 @@ func TestGatherMDTJobStats(t *testing.T) {
 }
 
 func TestGatherMDTStats(t *testing.T) {
-
 	expected := []telegraf.Metric{
 		// lustre@v2.15
 		metric.New(
@@ -995,7 +991,6 @@ func TestHelperMDTVolumes(t *testing.T) {
 }
 
 func fakeMDTExecuteCommand(command string, args ...string) *exec.Cmd {
-
 	tmp := make([]string, 0)
 	tmp = append(tmp, command)
 	tmp = append(tmp, args...)

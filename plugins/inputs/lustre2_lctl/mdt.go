@@ -39,7 +39,6 @@ func getMDTVolumes() ([]string, error) {
 //	@param volumes the volumes' name.
 //	@param acc
 func gatherMDTRecoveryStatus(flag bool, measurement string, volumes []string, acc telegraf.Accumulator) {
-
 	if !flag {
 		return
 	}
@@ -66,13 +65,11 @@ func gatherMDTRecoveryStatus(flag bool, measurement string, volumes []string, ac
 //	@param volumes the volumes' name.
 //	@param acc
 func gatherMDTJobstats(flag Stats, measurement string, volumes []string, acc telegraf.Accumulator) {
-
 	if !flag.RW && !flag.OP {
 		return
 	}
 
 	for _, volume := range volumes {
-
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("mdt.%s.job_stats", volume))
 		if err != nil {
 			acc.AddError(err)
@@ -139,7 +136,6 @@ func gatherMDTStats(flag Stats, measurement string, volumes []string, acc telegr
 	}
 
 	for _, volume := range volumes {
-
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("mdt.%s.md_stats", volume))
 		if err != nil {
 			acc.AddError(err)
@@ -149,7 +145,6 @@ func gatherMDTStats(flag Stats, measurement string, volumes []string, acc telegr
 		stats := parseStats(result)
 
 		for _, stat := range stats {
-
 			if flag.RW && (strings.Contains(stat.Operation, "read") || strings.Contains(stat.Operation, "write")) {
 				acc.AddGauge(measurement, map[string]interface{}{
 					fmt.Sprintf("stats_%s_samples", stat.Operation): stat.Samples,
@@ -188,7 +183,6 @@ func gatherMDTStats(flag Stats, measurement string, volumes []string, acc telegr
 }
 
 func gatherMDT(mdt MDT, namespace string, acc telegraf.Accumulator) {
-
 	measurement := namespace + "_mdt"
 	// Get volumes' name.
 	result, _ := executeCommand("lctl", "get_param", "-N", "mdt.*")

@@ -40,7 +40,6 @@ func TestGatherOSTRecoveryStatus(t *testing.T) {
 }
 
 func TestGatherOSTObdfilterJobstats(t *testing.T) {
-
 	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
 
@@ -170,7 +169,6 @@ func TestGatherOSTObdfilterJobstats(t *testing.T) {
 }
 
 func TestGatherOSTObdfilterStats(t *testing.T) {
-
 	/* 1. */
 	stats := Stats{RW: false, OP: false}
 	expected := []telegraf.Metric{}
@@ -262,7 +260,6 @@ func TestGatherOSTObdfilterStats(t *testing.T) {
 }
 
 func TestGatherOSTCapacity(t *testing.T) {
-
 	expected := []telegraf.Metric{
 		metric.New(
 			"lustre2_ost",
@@ -308,7 +305,6 @@ func TestGatherOSTCapacity(t *testing.T) {
 }
 
 func TestHelperRecoveryStatus(t *testing.T) {
-
 	data := `status: COMPLETE
 	recovery_start: 55
 	recovery_duration: 0
@@ -329,7 +325,6 @@ func TestHelperRecoveryStatus(t *testing.T) {
 }
 
 func TestHelperHealthCheck(t *testing.T) {
-
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -417,7 +412,6 @@ func TestHelperKbytesfree(t *testing.T) {
 }
 
 func fakeExecCommand(command string, args ...string) *exec.Cmd {
-
 	tmp := make([]string, 0)
 	tmp = append(tmp, command)
 	tmp = append(tmp, args...)

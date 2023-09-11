@@ -20,7 +20,6 @@ var (
 //	@param namespace
 //	@param acc
 func gatherOST(ost OST, namespace string, acc telegraf.Accumulator, log telegraf.Logger) {
-
 	measurement := namespace + "_ost"
 
 	gatherObdfilter(ost.Obdfilter, measurement, acc)
@@ -31,9 +30,7 @@ func gatherOST(ost OST, namespace string, acc telegraf.Accumulator, log telegraf
 //	@param obdfilter
 //	@param acc
 func gatherObdfilter(obdfilter Obdfilter, measurement string, acc telegraf.Accumulator) {
-
 	// Get volumes' name.
-
 	result, _ := executeCommand("lctl", "get_param", "-N", "obdfilter.*")
 
 	volumes, _ := parserVolumesName(result)
@@ -85,7 +82,6 @@ func gatherOSTObdfilterRecoveryStatus(flag bool, volumes []string, measurement s
 //	@param measurement
 //	@param acc
 func gatherOSTObdfilterJobstats(flag Stats, volumes []string, measurement string, acc telegraf.Accumulator) {
-
 	if !flag.RW && !flag.OP {
 		return
 	}

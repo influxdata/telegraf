@@ -253,7 +253,6 @@ func TestParseJobstats(t *testing.T) {
 }
 
 func TestParseStats(t *testing.T) {
-
 	dataMDTv215 := `snapshot_time             1694140455.278503266 secs.nsecs
 	open                      137391283844 samples [reqs]
 	close                     97376107699 samples [reqs] 1 1 97376107699`
