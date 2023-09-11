@@ -26,16 +26,17 @@ import (
 var sampleConfig string
 
 type RedisCommand struct {
-	Command []interface{}
-	Field   string
-	Type    string
+	Command []interface{} `toml:"command"`
+	Field   string        `toml:"field"`
+	Type    string        `toml:"type"`
 }
 
 type Redis struct {
-	Commands []*RedisCommand
-	Servers  []string
-	Username string
-	Password string
+	Commands []*RedisCommand `toml:"commands"`
+	Servers  []string        `toml:"servers"`
+	Username string          `toml:"username"`
+	Password string          `toml:"passowrd"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`

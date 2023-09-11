@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -270,22 +271,74 @@ rpc_duration_seconds_sum 1.7560473e+07
 rpc_duration_seconds_count 2693
 `),
 		},
+		{
+			name: "prometheus untyped forced to counter",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				TypeMappings:      prometheus.MetricTypes{Counter: []string{"cpu_time_idle"}},
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle counter
+cpu_time_idle{host="example.org"} 42
+`),
+		},
+		{
+			name: "prometheus untyped forced to gauge",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				TypeMappings:      prometheus.MetricTypes{Gauge: []string{"cpu_time_idle"}},
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle gauge
+cpu_time_idle{host="example.org"} 42
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.output.Init()
-			require.NoError(t, err)
+			require.NoError(t, tt.output.Init())
 
-			err = tt.output.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.output.Connect())
 
 			defer func() {
-				err := tt.output.Close()
-				require.NoError(t, err)
+				require.NoError(t, tt.output.Close())
 			}()
 
-			err = tt.output.Write(tt.metrics)
-			require.NoError(t, err)
+			require.NoError(t, tt.output.Write(tt.metrics))
 
 			resp, err := http.Get(tt.output.URL())
 			require.NoError(t, err)

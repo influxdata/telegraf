@@ -70,6 +70,12 @@ to use them.
 
   ## Export metric collection time.
   # export_timestamp = false
+
+  ## Specify the metric type explicitly.
+  ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
+  # [outputs.prometheus_client.prometheus_metric_types]
+  #   counter = []
+  #   gauge = []
 ```
 
 ## Metrics

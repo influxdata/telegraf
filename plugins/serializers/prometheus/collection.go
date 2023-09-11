@@ -188,10 +188,11 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 		if !ok {
 			continue
 		}
+		metricType := c.config.TypeMappings.DetermineType(metricName, metric)
 
 		family := MetricFamily{
 			Name: metricName,
-			Type: metric.Type(),
+			Type: metricType,
 		}
 
 		entry, ok := c.Entries[family]

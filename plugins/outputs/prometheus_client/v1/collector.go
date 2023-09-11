@@ -54,6 +54,7 @@ type Collector struct {
 	ExpirationInterval time.Duration
 	StringAsLabel      bool
 	ExportTimestamp    bool
+	TypeMapping        serializer.MetricTypes
 	Log                telegraf.Logger
 
 	sync.Mutex
@@ -61,11 +62,18 @@ type Collector struct {
 	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool, logger telegraf.Logger) *Collector {
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel bool,
+	exportTimestamp bool,
+	typeMapping serializer.MetricTypes,
+	logger telegraf.Logger,
+) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
 		ExportTimestamp:    exportTimestamp,
+		TypeMapping:        typeMapping,
 		Log:                logger,
 		fam:                make(map[string]*MetricFamily),
 	}
@@ -176,9 +184,10 @@ func (c *Collector) addMetricFamily(point telegraf.Metric, sample *Sample, mname
 	var fam *MetricFamily
 	var ok bool
 	if fam, ok = c.fam[mname]; !ok {
+		pointType := c.TypeMapping.DetermineType(mname, point)
 		fam = &MetricFamily{
 			Samples:           make(map[SampleID]*Sample),
-			TelegrafValueType: point.Type(),
+			TelegrafValueType: pointType,
 			LabelSet:          make(map[string]int),
 		}
 		c.fam[mname] = fam
