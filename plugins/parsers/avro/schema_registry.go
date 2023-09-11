@@ -1,9 +1,14 @@
 package avro
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"time"
 
 	"github.com/linkedin/goavro/v2"
 )
@@ -14,21 +19,75 @@ type schemaAndCodec struct {
 }
 
 type schemaRegistry struct {
-	url   string
-	cache map[int]*schemaAndCodec
+	url      string
+	username string
+	password string
+	cache    map[int]*schemaAndCodec
+	client   *http.Client
 }
 
 const schemaByID = "%s/schemas/ids/%d"
 
-func newSchemaRegistry(url string) *schemaRegistry {
-	return &schemaRegistry{url: url, cache: make(map[int]*schemaAndCodec)}
+func newSchemaRegistry(addr string, caCertPath string) (*schemaRegistry, error) {
+	caCert, err := os.ReadFile(caCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var client *http.Client
+	var tlsCfg *tls.Config
+	if caCertPath != "" {
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsCfg = &tls.Config{
+			RootCAs: caCertPool,
+		}
+	}
+	client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			MaxIdleConns:    10,
+			IdleConnTimeout: 90 * time.Second,
+		},
+	}
+
+	u, err := url.Parse(addr)
+	if err != nil {
+		return nil, fmt.Errorf("parsing registry URL failed: %w", err)
+	}
+
+	var username, password string
+	if u.User != nil {
+		username = u.User.Username()
+		password, _ = u.User.Password()
+	}
+
+	registry := &schemaRegistry{
+		url:      u.String(),
+		username: username,
+		password: password,
+		cache:    make(map[int]*schemaAndCodec),
+		client:   client,
+	}
+
+	return registry, nil
 }
 
 func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 	if v, ok := sr.cache[id]; ok {
 		return v, nil
 	}
-	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(schemaByID, sr.url, id), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if sr.username != "" {
+		req.SetBasicAuth(sr.username, sr.password)
+	}
+
+	resp, err := sr.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

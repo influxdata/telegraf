@@ -31,9 +31,14 @@ The message is supposed to be encoded as follows:
   ## Supported values are "binary" (default) and "json"
   # avro_format = "binary"
 
-  ## Url of the schema registry; exactly one of schema registry and
-  ## schema must be set
+  ## URL of the schema registry which may contain username and password in the
+  ## form http[s]://[username[:password]@]<host>[:port]
+  ## NOTE: Exactly one of schema registry and schema must be set
   avro_schema_registry = "http://localhost:8081"
+
+  ## Path to the schema registry certificate. Should be specified only if
+  ## required for connection to the schema registry.
+  # avro_schema_registry_cert = "/etc/telegraf/ca_cert.crt"
 
   ## Schema string; exactly one of schema registry and schema must be set
   #avro_schema = '''

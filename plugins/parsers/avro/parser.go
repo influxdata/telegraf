@@ -26,6 +26,7 @@ import (
 type Parser struct {
 	MetricName      string            `toml:"metric_name"`
 	SchemaRegistry  string            `toml:"avro_schema_registry"`
+	CaCertPath      string            `toml:"avro_schema_registry_cert"`
 	Schema          string            `toml:"avro_schema"`
 	Format          string            `toml:"avro_format"`
 	Measurement     string            `toml:"avro_measurement"`
@@ -62,7 +63,11 @@ func (p *Parser) Init() error {
 		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
 	if p.SchemaRegistry != "" {
-		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
+		registry, err := newSchemaRegistry(p.SchemaRegistry, p.CaCertPath)
+		if err != nil {
+			return fmt.Errorf("error connecting to the schema registry %q: %w", p.SchemaRegistry, err)
+		}
+		p.registryObj = registry
 	}
 
 	return nil
