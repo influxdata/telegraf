@@ -7,6 +7,7 @@ This plugin monitors the Lustre file system using its utility `lctl get_param`.
 Note that this plugins has been only tested on Lustre@v2.12.7 and Luster@v2.15.0.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
 In addition to the plugin-specific configuration settings, plugins support
 additional global and plugin configuration settings. These settings are used to
 modify metrics, tags, and field or create aliases and configure ordering, etc.
@@ -43,15 +44,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## MDT/MDS
   [inputs.lustre2_lctl.mdt]
     recovery_status = true
-    stats = true
+
   
   [inputs.lustre2_lctl.mdt.stats]
     rw = true
     operation = true
-  
+
+  [inputs.lustre2_lctl.mdt.job_stats]
+    rw = true
+    operation = true
+    
   ## Client
   client = true
-
 ```
 
 ## Metrics
