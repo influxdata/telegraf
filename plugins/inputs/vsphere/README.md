@@ -430,7 +430,7 @@ instance. For example:
   datastore_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
   datacenter_metric_exclude = ["*"]
-  resourcepool_metric_exclude = ["*"]
+  resource_pool_metric_exclude = ["*"]
   vsan_metric_exclude = ["*"]
 
   collect_concurrency = 5
