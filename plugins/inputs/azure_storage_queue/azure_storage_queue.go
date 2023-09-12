@@ -79,13 +79,11 @@ func (a *AzureStorageQueue) GatherQueueMetrics(
 	acc.AddFields("azure_storage_queues", fields, tags)
 }
 
-func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
+func (a *AzureStorageQueue) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	serviceURL, err := a.GetServiceURL()
 	if err != nil {
 		return err
 	}
-
-	ctx := context.TODO()
 
 	for marker := (azqueue.Marker{}); marker.NotDone(); {
 		a.Log.Debugf("Listing queues of storage account %q", a.StorageAccountName)

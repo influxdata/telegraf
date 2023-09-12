@@ -1,6 +1,7 @@
 package x509_cert
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -118,7 +119,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 			testErr := false
 
 			acc := testutil.Accumulator{}
-			err = sc.Gather(&acc)
+			err = sc.Gather(context.Background(), &acc)
 			if len(acc.Errors) > 0 {
 				testErr = true
 			}
@@ -178,7 +179,7 @@ func TestGatherLocal(t *testing.T) {
 			require.NoError(t, sc.Init())
 
 			acc := testutil.Accumulator{}
-			err = sc.Gather(&acc)
+			err = sc.Gather(context.Background(), &acc)
 
 			if (len(acc.Errors) > 0) != test.error {
 				t.Errorf("%s", err)
@@ -207,7 +208,7 @@ func TestTags(t *testing.T) {
 	require.NoError(t, sc.Init())
 
 	acc := testutil.Accumulator{}
-	require.NoError(t, sc.Gather(&acc))
+	require.NoError(t, sc.Gather(context.Background(), &acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
 
@@ -257,7 +258,7 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	require.NoError(t, sc.Init())
 
 	acc := testutil.Accumulator{}
-	require.NoError(t, sc.Gather(&acc))
+	require.NoError(t, sc.Gather(context.Background(), &acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
 	require.Equal(t, acc.NMetrics(), uint64(1))
@@ -293,7 +294,7 @@ func TestGatherChain(t *testing.T) {
 			require.NoError(t, sc.Init())
 
 			acc := testutil.Accumulator{}
-			err = sc.Gather(&acc)
+			err = sc.Gather(context.Background(), &acc)
 			if (err != nil) != test.error {
 				t.Errorf("%s", err)
 			}
@@ -328,7 +329,7 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	require.NoError(t, m.Init())
 
 	var acc testutil.Accumulator
-	require.NoError(t, m.Gather(&acc))
+	require.NoError(t, m.Gather(context.Background(), &acc))
 
 	require.Len(t, acc.Errors, 0)
 	require.True(t, acc.HasMeasurement("x509_cert"))
@@ -348,7 +349,7 @@ func TestGatherTCPCert(t *testing.T) {
 	require.NoError(t, m.Init())
 
 	var acc testutil.Accumulator
-	require.NoError(t, m.Gather(&acc))
+	require.NoError(t, m.Gather(context.Background(), &acc))
 
 	require.Len(t, acc.Errors, 0)
 	require.True(t, acc.HasMeasurement("x509_cert"))
@@ -366,7 +367,7 @@ func TestGatherCertIntegration(t *testing.T) {
 	require.NoError(t, m.Init())
 
 	var acc testutil.Accumulator
-	require.NoError(t, m.Gather(&acc))
+	require.NoError(t, m.Gather(context.Background(), &acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
 	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
@@ -385,7 +386,7 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	require.NoError(t, m.Init())
 
 	var acc testutil.Accumulator
-	require.NoError(t, m.Gather(&acc))
+	require.NoError(t, m.Gather(context.Background(), &acc))
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
 	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
@@ -577,7 +578,7 @@ func TestClassification(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(context.Background(), &acc))
 	require.Empty(t, acc.Errors)
 
 	expected := []telegraf.Metric{

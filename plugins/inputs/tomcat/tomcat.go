@@ -2,6 +2,7 @@
 package tomcat
 
 import (
+	"context"
 	_ "embed"
 	"encoding/xml"
 	"fmt"
@@ -79,7 +80,7 @@ func (*Tomcat) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
+func (s *Tomcat) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	if s.client == nil {
 		client, err := s.createHTTPClient()
 		if err != nil {
@@ -93,7 +94,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		request, err := http.NewRequest("GET", s.URL, nil)
+		request, err := http.NewRequestWithContext(ctx, "GET", s.URL, nil)
 		if err != nil {
 			return err
 		}

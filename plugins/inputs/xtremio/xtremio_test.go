@@ -1,6 +1,7 @@
 package xtremio
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -142,7 +143,7 @@ func TestFixedValue(t *testing.T) {
 			var acc testutil.Accumulator
 			tt.plugin.Log = testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
-			require.NoError(t, tt.plugin.Gather(&acc))
+			require.NoError(t, tt.plugin.Gather(context.Background(), &acc))
 			require.Len(t, acc.Errors, 0, "found errors accumulated by acc.AddError()")
 			acc.Wait(len(tt.expected))
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
@@ -184,7 +185,7 @@ func TestAuthenticationFailed(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
 
-			err := tt.plugin.Gather(&acc)
+			err := tt.plugin.Gather(context.Background(), &acc)
 			require.Error(t, err)
 			require.EqualError(t, err, tt.expected)
 		})

@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -267,8 +268,8 @@ type MockupTypesPlugin struct {
 	Sizes     []config.Size     `toml:"sizes"`
 }
 
-func (*MockupTypesPlugin) SampleConfig() string                { return "Mockup test types plugin" }
-func (*MockupTypesPlugin) Gather(_ telegraf.Accumulator) error { return nil }
+func (*MockupTypesPlugin) SampleConfig() string                                   { return "Mockup test types plugin" }
+func (*MockupTypesPlugin) Gather(_ context.Context, _ telegraf.Accumulator) error { return nil }
 
 // Register the mockup plugin on loading
 func init() {

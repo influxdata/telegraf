@@ -2,6 +2,7 @@ package shim
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"strings"
 	"testing"
@@ -92,7 +93,7 @@ func (i *testInput) Description() string {
 	return "test"
 }
 
-func (i *testInput) Gather(acc telegraf.Accumulator) error {
+func (i *testInput) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	acc.AddFields("measurement",
 		map[string]interface{}{
 			"field": 1,
@@ -125,7 +126,7 @@ func (i *serviceInput) Description() string {
 	return ""
 }
 
-func (i *serviceInput) Gather(acc telegraf.Accumulator) error {
+func (i *serviceInput) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	acc.AddFields("measurement",
 		map[string]interface{}{
 			"field": 1,

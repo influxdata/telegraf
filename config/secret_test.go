@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -701,8 +702,8 @@ type MockupSecretPlugin struct {
 	Expected string `toml:"expected"`
 }
 
-func (*MockupSecretPlugin) SampleConfig() string                { return "Mockup test secret plugin" }
-func (*MockupSecretPlugin) Gather(_ telegraf.Accumulator) error { return nil }
+func (*MockupSecretPlugin) SampleConfig() string                                   { return "Mockup test secret plugin" }
+func (*MockupSecretPlugin) Gather(_ context.Context, _ telegraf.Accumulator) error { return nil }
 
 type MockupSecretStore struct {
 	Secrets map[string][]byte

@@ -1,6 +1,7 @@
 package chrony
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,7 +19,7 @@ func TestGather(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := c.Gather(&acc)
+	err := c.Gather(context.Background(), &acc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func TestGather(t *testing.T) {
 
 	// test with dns lookup
 	c.DNSLookup = true
-	err = c.Gather(&acc)
+	err = c.Gather(context.Background(), &acc)
 	if err != nil {
 		t.Fatal(err)
 	}

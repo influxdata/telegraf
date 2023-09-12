@@ -3,6 +3,7 @@ package cloudwatch_metric_streams
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	_ "embed"
 	"encoding/base64"
@@ -111,7 +112,7 @@ func (cms *CloudWatchMetricStreams) Description() string {
 	return "HTTP listener & parser for AWS Metric Streams"
 }
 
-func (cms *CloudWatchMetricStreams) Gather(_ telegraf.Accumulator) error {
+func (cms *CloudWatchMetricStreams) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

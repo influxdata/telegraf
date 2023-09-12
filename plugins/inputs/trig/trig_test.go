@@ -1,6 +1,7 @@
 package trig
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -19,7 +20,7 @@ func TestTrig(t *testing.T) {
 		sine := math.Sin((i*math.Pi)/5.0) * s.Amplitude
 		cosine := math.Cos((i*math.Pi)/5.0) * s.Amplitude
 
-		require.NoError(t, s.Gather(&acc))
+		require.NoError(t, s.Gather(context.Background(), &acc))
 
 		fields := make(map[string]interface{})
 		fields["sine"] = sine

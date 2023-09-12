@@ -4,6 +4,7 @@ package system
 import (
 	"bufio"
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -29,7 +30,7 @@ func (*SystemStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
+func (s *SystemStats) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err

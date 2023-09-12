@@ -32,9 +32,7 @@ func (*ApcUpsd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
-	ctx := context.Background()
-
+func (h *ApcUpsd) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	for _, server := range h.Servers {
 		err := func(address string) error {
 			addrBits, err := url.Parse(address)

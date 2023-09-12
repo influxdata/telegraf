@@ -2,6 +2,7 @@
 package teamspeak
 
 import (
+	"context"
 	_ "embed"
 	"strconv"
 
@@ -58,7 +59,7 @@ func (*Teamspeak) SampleConfig() string {
 	return sampleConfig
 }
 
-func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
+func (ts *Teamspeak) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var err error
 
 	if !ts.connected {

@@ -2,6 +2,7 @@
 package aliyuncms
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -217,7 +218,7 @@ func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 }
 
 // Gather implements telegraf.Inputs interface
-func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
+func (s *AliyunCMS) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	s.updateWindow(time.Now())
 
 	// limit concurrency or we can easily exhaust user connection limit

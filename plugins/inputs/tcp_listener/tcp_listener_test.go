@@ -1,6 +1,7 @@
 package tcp_listener
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -258,7 +259,7 @@ func TestRunParser(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	require.NoError(t, listener.Gather(&acc))
+	require.NoError(t, listener.Gather(context.Background(), &acc))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -303,7 +304,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	require.NoError(t, listener.Gather(&acc))
+	require.NoError(t, listener.Gather(context.Background(), &acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
@@ -326,7 +327,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	require.NoError(t, listener.Gather(&acc))
+	require.NoError(t, listener.Gather(context.Background(), &acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",

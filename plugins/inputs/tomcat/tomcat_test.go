@@ -1,6 +1,7 @@
 package tomcat
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -53,7 +54,7 @@ func TestHTTPTomcat8(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, tc.Gather(&acc))
+	require.NoError(t, tc.Gather(context.Background(), &acc))
 
 	// tomcat_jvm_memory
 	jvmMemoryFields := map[string]interface{}{
@@ -138,7 +139,7 @@ func TestHTTPTomcat6(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, tc.Gather(&acc))
+	require.NoError(t, tc.Gather(context.Background(), &acc))
 
 	// tomcat_jvm_memory
 	jvmMemoryFields := map[string]interface{}{

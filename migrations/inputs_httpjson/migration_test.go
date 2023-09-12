@@ -1,6 +1,7 @@
 package inputs_httpjson_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -124,7 +125,7 @@ func TestParsing(t *testing.T) {
 			plugin.URLs = []string{addr}
 			require.NoError(t, plugin.Init())
 			var acc testutil.Accumulator
-			require.NoError(t, plugin.Gather(&acc))
+			require.NoError(t, plugin.Gather(context.Background(), &acc))
 
 			// Prepare metrics for comparison
 			for i := range expected {

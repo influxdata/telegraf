@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1202,7 +1203,7 @@ type MockupInputPluginParserNew struct {
 func (m *MockupInputPluginParserNew) SampleConfig() string {
 	return "Mockup old parser test plugin"
 }
-func (m *MockupInputPluginParserNew) Gather(_ telegraf.Accumulator) error {
+func (m *MockupInputPluginParserNew) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser) {
@@ -1234,7 +1235,7 @@ type MockupInputPlugin struct {
 func (m *MockupInputPlugin) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPlugin) Gather(_ telegraf.Accumulator) error {
+func (m *MockupInputPlugin) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPlugin) SetParser(parser telegraf.Parser) {
@@ -1249,7 +1250,7 @@ type MockupInputPluginParserFunc struct {
 func (m *MockupInputPluginParserFunc) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPluginParserFunc) Gather(_ telegraf.Accumulator) error {
+func (m *MockupInputPluginParserFunc) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) {
@@ -1264,7 +1265,7 @@ type MockupInputPluginParserOnly struct {
 func (m *MockupInputPluginParserOnly) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPluginParserOnly) Gather(_ telegraf.Accumulator) error {
+func (m *MockupInputPluginParserOnly) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPluginParserOnly) SetParser(p telegraf.Parser) {
@@ -1497,7 +1498,7 @@ func (m *MockupStatePlugin) SampleConfig() string {
 	return "Mockup test plugin"
 }
 
-func (m *MockupStatePlugin) Gather(_ telegraf.Accumulator) error {
+func (m *MockupStatePlugin) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

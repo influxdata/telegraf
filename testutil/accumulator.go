@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -297,8 +298,8 @@ func (a *Accumulator) TagValue(measurement string, key string) string {
 }
 
 // GatherError calls the given Gather function and returns the first error found.
-func (a *Accumulator) GatherError(gf func(telegraf.Accumulator) error) error {
-	if err := gf(a); err != nil {
+func (a *Accumulator) GatherError(gf func(context.Context, telegraf.Accumulator) error) error {
+	if err := gf(context.Background(), a); err != nil {
 		return err
 	}
 	if len(a.Errors) > 0 {

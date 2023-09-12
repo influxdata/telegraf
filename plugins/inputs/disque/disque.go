@@ -3,6 +3,7 @@ package disque
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -56,7 +57,7 @@ func (*Disque) SampleConfig() string {
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (d *Disque) Gather(acc telegraf.Accumulator) error {
+func (d *Disque) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if len(d.Servers) == 0 {
 		address := &url.URL{
 			Host: ":7711",

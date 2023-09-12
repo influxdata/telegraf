@@ -96,7 +96,7 @@ func TestUpsdGather(t *testing.T) {
 			nut.Port = (lAddr.(*net.TCPAddr)).Port
 			nut.ForceFloat = tt.forceFloat
 
-			err = nut.Gather(&acc)
+			err = nut.Gather(context.Background(), &acc)
 			if tt.err {
 				require.Error(t, err)
 			} else {
@@ -140,7 +140,7 @@ func TestUpsdGatherFail(t *testing.T) {
 			nut.Server = (lAddr.(*net.TCPAddr)).IP.String()
 			nut.Port = (lAddr.(*net.TCPAddr)).Port
 
-			err = nut.Gather(&acc)
+			err = nut.Gather(context.Background(), &acc)
 			if tt.err {
 				require.Error(t, err)
 			} else {

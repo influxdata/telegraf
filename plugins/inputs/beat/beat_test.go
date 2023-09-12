@@ -1,6 +1,7 @@
 package beat
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -44,7 +45,7 @@ func Test_BeatStats(t *testing.T) {
 	fakeServer.Start()
 	defer fakeServer.Close()
 
-	require.NoError(t, err, beatTest.Gather(&beat6StatsAccumulator))
+	require.NoError(t, err, beatTest.Gather(context.Background(), &beat6StatsAccumulator))
 
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
@@ -199,5 +200,5 @@ func Test_BeatRequest(t *testing.T) {
 	beatTest.Username = "admin"
 	beatTest.Password = "PWD"
 
-	require.NoError(t, beatTest.Gather(&beat6StatsAccumulator))
+	require.NoError(t, beatTest.Gather(context.Background(), &beat6StatsAccumulator))
 }

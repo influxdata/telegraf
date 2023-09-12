@@ -2,6 +2,7 @@
 package consul_agent
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -81,8 +82,8 @@ func (n *ConsulAgent) Init() error {
 }
 
 // Gather, collects metrics from Consul endpoint
-func (n *ConsulAgent) Gather(acc telegraf.Accumulator) error {
-	summaryMetrics, err := n.loadJSON(n.URL + "/v1/agent/metrics")
+func (n *ConsulAgent) Gather(ctx context.Context, acc telegraf.Accumulator) error {
+	summaryMetrics, err := n.loadJSON(ctx, n.URL+"/v1/agent/metrics")
 	if err != nil {
 		return err
 	}
@@ -90,8 +91,8 @@ func (n *ConsulAgent) Gather(acc telegraf.Accumulator) error {
 	return buildConsulAgent(acc, summaryMetrics)
 }
 
-func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (n *ConsulAgent) loadJSON(ctx context.Context, url string) (*AgentInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package twemproxy
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"testing"
@@ -92,7 +93,7 @@ func TestGather(t *testing.T) {
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err = twemproxy.Gather(&acc)
+	err = twemproxy.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	var sourceData map[string]interface{}

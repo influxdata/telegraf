@@ -2,6 +2,7 @@
 package cassandra
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -170,9 +171,9 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func (c *Cassandra) getAttr(requestURL *url.URL) (map[string]interface{}, error) {
+func (c *Cassandra) getAttr(ctx context.Context, requestURL *url.URL) (map[string]interface{}, error) {
 	// Create + send request
-	req, err := http.NewRequest("GET", requestURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", requestURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +248,7 @@ func (c *Cassandra) Start(_ telegraf.Accumulator) error {
 func (c *Cassandra) Stop() {
 }
 
-func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
+func (c *Cassandra) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	context := c.Context
 	servers := c.Servers
 	metrics := c.Metrics
@@ -280,7 +281,7 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 					serverTokens["passwd"])
 			}
 
-			out, err := c.getAttr(requestURL)
+			out, err := c.getAttr(ctx, requestURL)
 			if err != nil {
 				acc.AddError(err)
 				continue

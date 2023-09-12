@@ -3,6 +3,7 @@
 package dmcache
 
 import (
+	"context"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ type cacheStatus struct {
 	dirty             int64
 }
 
-func (c *DMCache) Gather(acc telegraf.Accumulator) error {
+func (c *DMCache) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	outputLines, err := c.getCurrentStatus()
 	if err != nil {
 		return err

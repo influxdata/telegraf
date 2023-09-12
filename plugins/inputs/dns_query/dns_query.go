@@ -2,6 +2,7 @@
 package dns_query
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -77,7 +78,7 @@ func (d *DNSQuery) Init() error {
 	return nil
 }
 
-func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
+func (d *DNSQuery) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, domain := range d.Domains {
@@ -86,7 +87,7 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 			go func(domain, server string) {
 				defer wg.Done()
 
-				fields, tags, err := d.query(domain, server)
+				fields, tags, err := d.query(context.TODO(), domain, server)
 				if err != nil {
 					var opErr *net.OpError
 					if !errors.As(err, &opErr) || !opErr.Timeout() {
@@ -102,7 +103,7 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, map[string]string, error) {
+func (d *DNSQuery) query(_ context.Context, domain string, server string) (map[string]interface{}, map[string]string, error) {
 	tags := map[string]string{
 		"server":      server,
 		"domain":      domain,
@@ -130,7 +131,7 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	msg.RecursionDesired = true
 
 	addr := net.JoinHostPort(server, strconv.Itoa(d.Port))
-	r, rtt, err := c.Exchange(&msg, addr)
+	r, rtt, err := c.Exchange(&msg, addr) // TODO: ExchangeWithConnContext
 	if err != nil {
 		var opErr *net.OpError
 		if errors.As(err, &opErr) && opErr.Timeout() {

@@ -2,6 +2,7 @@
 package burrow
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -101,7 +102,7 @@ func (*burrow) SampleConfig() string {
 	return sampleConfig
 }
 
-func (b *burrow) Gather(acc telegraf.Accumulator) error {
+func (b *burrow) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if len(b.Servers) == 0 {
@@ -133,7 +134,7 @@ func (b *burrow) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(u *url.URL) {
 			defer wg.Done()
-			acc.AddError(b.gatherServer(u, acc))
+			acc.AddError(b.gatherServer(ctx, u, acc))
 		}(u)
 	}
 
@@ -199,8 +200,8 @@ func (b *burrow) createClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (b *burrow) getResponse(u *url.URL) (*apiResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+func (b *burrow) getResponse(ctx context.Context, u *url.URL) (*apiResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -224,10 +225,10 @@ func (b *burrow) getResponse(u *url.URL) (*apiResponse, error) {
 	return ares, dec.Decode(ares)
 }
 
-func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
+func (b *burrow) gatherServer(ctx context.Context, src *url.URL, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	r, err := b.getResponse(src)
+	r, err := b.getResponse(ctx, src)
 	if err != nil {
 		return err
 	}
@@ -245,7 +246,7 @@ func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
 			// fetch topic list
 			// endpoint: <api_prefix>/(cluster)/topic
 			ut := appendPathToURL(src, cluster, "topic")
-			b.gatherTopics(guard, ut, cluster, acc)
+			b.gatherTopics(ctx, guard, ut, cluster, acc)
 		}(cluster)
 
 		wg.Add(1)
@@ -255,7 +256,7 @@ func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
 			// fetch consumer group list
 			// endpoint: <api_prefix>/(cluster)/consumer
 			uc := appendPathToURL(src, cluster, "consumer")
-			b.gatherGroups(guard, uc, cluster, acc)
+			b.gatherGroups(ctx, guard, uc, cluster, acc)
 		}(cluster)
 	}
 
@@ -263,10 +264,10 @@ func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *burrow) gatherTopics(guard chan struct{}, src *url.URL, cluster string, acc telegraf.Accumulator) {
+func (b *burrow) gatherTopics(ctx context.Context, guard chan struct{}, src *url.URL, cluster string, acc telegraf.Accumulator) {
 	var wg sync.WaitGroup
 
-	r, err := b.getResponse(src)
+	r, err := b.getResponse(ctx, src)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -289,7 +290,7 @@ func (b *burrow) gatherTopics(guard chan struct{}, src *url.URL, cluster string,
 			// fetch topic offsets
 			// endpoint: <api_prefix>/<cluster>/topic/<topic>
 			tu := appendPathToURL(src, topic)
-			tr, err := b.getResponse(tu)
+			tr, err := b.getResponse(ctx, tu)
 			if err != nil {
 				acc.AddError(err)
 				return
@@ -320,10 +321,10 @@ func (b *burrow) genTopicMetrics(r *apiResponse, cluster, topic string, acc tele
 	}
 }
 
-func (b *burrow) gatherGroups(guard chan struct{}, src *url.URL, cluster string, acc telegraf.Accumulator) {
+func (b *burrow) gatherGroups(ctx context.Context, guard chan struct{}, src *url.URL, cluster string, acc telegraf.Accumulator) {
 	var wg sync.WaitGroup
 
-	r, err := b.getResponse(src)
+	r, err := b.getResponse(ctx, src)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -346,7 +347,7 @@ func (b *burrow) gatherGroups(guard chan struct{}, src *url.URL, cluster string,
 			// fetch consumer group status
 			// endpoint: <api_prefix>/<cluster>/consumer/<group>/lag
 			gl := appendPathToURL(src, group, "lag")
-			gr, err := b.getResponse(gl)
+			gr, err := b.getResponse(ctx, gl)
 			if err != nil {
 				acc.AddError(err)
 				return

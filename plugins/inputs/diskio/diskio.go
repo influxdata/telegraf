@@ -2,6 +2,7 @@
 package diskio
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"regexp"
@@ -42,7 +43,7 @@ func (d *DiskIO) Init() error {
 	return nil
 }
 
-func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
+func (d *DiskIO) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var devices []string
 	if d.deviceFilter == nil {
 		for _, dev := range d.Devices {

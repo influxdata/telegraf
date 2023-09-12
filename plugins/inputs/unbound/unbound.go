@@ -23,7 +23,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type runner func(unbound Unbound) (*bytes.Buffer, error)
+type runner func(ctx context.Context, unbound Unbound) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
@@ -41,7 +41,7 @@ var defaultBinary = "/usr/sbin/unbound-control"
 var defaultTimeout = config.Duration(time.Second)
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
+func unboundRunner(ctx context.Context, unbound Unbound) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if unbound.Server != "" {
@@ -53,7 +53,7 @@ func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 
 		// Unbound control requires an IP address, and we want to be nice to the user
 		resolver := net.Resolver{}
-		ctx, lookUpCancel := context.WithTimeout(context.Background(), time.Duration(unbound.Timeout))
+		ctx, lookUpCancel := context.WithTimeout(ctx, time.Duration(unbound.Timeout))
 		defer lookUpCancel()
 		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
@@ -97,7 +97,7 @@ func (*Unbound) SampleConfig() string {
 }
 
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
-func (s *Unbound) Gather(acc telegraf.Accumulator) error {
+func (s *Unbound) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	// Always exclude histogram statistics
 	statExcluded := []string{"histogram.*"}
 	filterExcluded, err := filter.Compile(statExcluded)
@@ -105,7 +105,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	out, err := s.run(*s)
+	out, err := s.run(ctx, *s)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %w", err)
 	}

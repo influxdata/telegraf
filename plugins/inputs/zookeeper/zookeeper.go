@@ -57,9 +57,7 @@ func (*Zookeeper) SampleConfig() string {
 }
 
 // Gather reads stats from all configured servers accumulates stats
-func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
-	ctx := context.Background()
-
+func (z *Zookeeper) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	if !z.initialized {
 		tlsConfig, err := z.ClientConfig.TLSConfig()
 		if err != nil {

@@ -127,7 +127,7 @@ func (d *Docker) Init() error {
 }
 
 // Gather metrics from the docker server.
-func (d *Docker) Gather(acc telegraf.Accumulator) error {
+func (d *Docker) Gather(gctx context.Context, acc telegraf.Accumulator) error {
 	if d.client == nil {
 		c, err := d.getNewClient()
 		if err != nil {
@@ -157,13 +157,19 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Get daemon info
-	err := d.gatherInfo(acc)
+	err := d.gatherInfo(gctx, acc)
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = errServiceTimeout
+	}
 	if err != nil {
 		acc.AddError(err)
 	}
 
 	if d.GatherServices {
-		err := d.gatherSwarmInfo(acc)
+		err := d.gatherSwarmInfo(gctx, acc)
+		if errors.Is(err, context.DeadlineExceeded) {
+			err = errServiceTimeout
+		}
 		if err != nil {
 			acc.AddError(err)
 		}
@@ -185,7 +191,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	opts := types.ContainerListOptions{
 		Filters: filterArgs,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	ctx, cancel := context.WithTimeout(gctx, time.Duration(d.Timeout))
 	defer cancel()
 
 	containers, err := d.client.ContainerList(ctx, opts)
@@ -195,6 +201,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	cancel()
 
 	// Get container data
 	var wg sync.WaitGroup
@@ -202,7 +209,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	for _, container := range containers {
 		go func(c types.Container) {
 			defer wg.Done()
-			if err := d.gatherContainer(c, acc); err != nil {
+			if err := d.gatherContainer(gctx, c, acc); err != nil {
 				acc.AddError(err)
 			}
 		}(container)
@@ -212,14 +219,11 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+func (d *Docker) gatherSwarmInfo(gctx context.Context, acc telegraf.Accumulator) error {
+	ctx, cancel := context.WithTimeout(gctx, time.Duration(d.Timeout))
 	defer cancel()
 
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
-	if errors.Is(err, context.DeadlineExceeded) {
-		return errServiceTimeout
-	}
 	if err != nil {
 		return err
 	}
@@ -283,20 +287,17 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
+func (d *Docker) gatherInfo(gctx context.Context, acc telegraf.Accumulator) error {
 	// Init vars
 	dataFields := make(map[string]interface{})
 	metadataFields := make(map[string]interface{})
 	now := time.Now()
 
 	// Get info from docker daemon
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	ctx, cancel := context.WithTimeout(gctx, time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.Info(ctx)
-	if errors.Is(err, context.DeadlineExceeded) {
-		return errInfoTimeout
-	}
 	if err != nil {
 		return err
 	}
@@ -413,6 +414,7 @@ func hostnameFromID(id string) string {
 }
 
 func (d *Docker) gatherContainer(
+	gctx context.Context,
 	container types.Container,
 	acc telegraf.Accumulator,
 ) error {
@@ -450,7 +452,7 @@ func (d *Docker) gatherContainer(
 		tags["source"] = hostnameFromID(container.ID)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	ctx, cancel := context.WithTimeout(gctx, time.Duration(d.Timeout))
 	defer cancel()
 
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
@@ -478,17 +480,18 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
-	return d.gatherContainerInspect(container, acc, tags, daemonOSType, v)
+	return d.gatherContainerInspect(gctx, container, acc, tags, daemonOSType, v)
 }
 
 func (d *Docker) gatherContainerInspect(
+	gctx context.Context,
 	container types.Container,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	daemonOSType string,
 	v *types.StatsJSON,
 ) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	ctx, cancel := context.WithTimeout(gctx, time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.ContainerInspect(ctx, container.ID)

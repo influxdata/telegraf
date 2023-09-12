@@ -2,6 +2,7 @@
 package twemproxy
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -26,11 +27,16 @@ func (*Twemproxy) SampleConfig() string {
 }
 
 // Gather data from all Twemproxy instances
-func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
-	conn, err := net.DialTimeout("tcp", t.Addr, 1*time.Second)
+func (t *Twemproxy) Gather(ctx context.Context, acc telegraf.Accumulator) error {
+	ctx, cancelFunc := context.WithTimeout(ctx, 1*time.Second)
+	defer cancelFunc()
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "tcp", t.Addr)
 	if err != nil {
 		return err
 	}
+	cancelFunc()
+
 	body, err := io.ReadAll(conn)
 	if err != nil {
 		return err

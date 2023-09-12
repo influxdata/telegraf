@@ -2,6 +2,7 @@
 package couchdb
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -97,13 +98,13 @@ func (*CouchDB) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
+func (c *CouchDB) Gather(ctx context.Context, accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, u := range c.Hosts {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			if err := c.fetchAndInsertData(accumulator, host); err != nil {
+			if err := c.fetchAndInsertData(ctx, accumulator, host); err != nil {
 				accumulator.AddError(fmt.Errorf("[host=%s]: %w", host, err))
 			}
 		}(u)
@@ -114,7 +115,7 @@ func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
+func (c *CouchDB) fetchAndInsertData(ctx context.Context, accumulator telegraf.Accumulator, host string) error {
 	if c.client == nil {
 		c.client = &http.Client{
 			Transport: &http.Transport{
@@ -124,7 +125,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		}
 	}
 
-	req, err := http.NewRequest("GET", host, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", host, nil)
 	if err != nil {
 		return err
 	}

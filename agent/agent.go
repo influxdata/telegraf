@@ -494,7 +494,7 @@ func (a *Agent) testRunInputs(
 			case "cpu", "mongodb", "procstat":
 				nulAcc := NewAccumulator(input, nul)
 				nulAcc.SetPrecision(getPrecision(precision, interval))
-				if err := input.Input.Gather(nulAcc); err != nil {
+				if err := input.Input.Gather(ctx, nulAcc); err != nil {
 					nulAcc.AddError(err)
 				}
 
@@ -504,7 +504,7 @@ func (a *Agent) testRunInputs(
 			acc := NewAccumulator(input, unit.dst)
 			acc.SetPrecision(getPrecision(precision, interval))
 
-			if err := input.Input.Gather(acc); err != nil {
+			if err := input.Input.Gather(ctx, acc); err != nil {
 				acc.AddError(err)
 			}
 		}(input)
@@ -552,8 +552,8 @@ func (a *Agent) gatherLoop(
 	for {
 		select {
 		case <-ticker.Elapsed():
-			err := a.gatherOnce(acc, input, ticker, interval)
-			if err != nil {
+			err := a.gatherOnce(ctx, acc, input, ticker, interval)
+			if err != nil && !errors.Is(err, context.Canceled) {
 				acc.AddError(err)
 			}
 		case <-ctx.Done():
@@ -565,6 +565,7 @@ func (a *Agent) gatherLoop(
 // gatherOnce runs the input's Gather function once, logging a warning each
 // interval it fails to complete before.
 func (a *Agent) gatherOnce(
+	ctx context.Context,
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	ticker Ticker,
@@ -572,7 +573,7 @@ func (a *Agent) gatherOnce(
 ) error {
 	done := make(chan error)
 	go func() {
-		done <- input.Gather(acc)
+		done <- input.Gather(ctx, acc)
 	}()
 
 	// Only warn after interval seconds, even if the interval is started late.

@@ -75,7 +75,7 @@ func (*DirectoryMonitor) SampleConfig() string {
 	return sampleConfig
 }
 
-func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
+func (monitor *DirectoryMonitor) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	processFile := func(path string) error {
 		// We've been cancelled via Stop().
 		if monitor.context.Err() != nil {

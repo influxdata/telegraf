@@ -2,6 +2,7 @@
 package udp_listener
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -78,7 +79,7 @@ func (*UDPListener) SampleConfig() string {
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
-func (u *UDPListener) Gather(_ telegraf.Accumulator) error {
+func (u *UDPListener) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

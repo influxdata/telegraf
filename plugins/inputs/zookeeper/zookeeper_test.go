@@ -1,6 +1,7 @@
 package zookeeper
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -57,7 +59,10 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			require.NoError(t, acc.GatherError(tt.zookeeper.Gather))
+			require.NoError(t, acc.GatherError(
+				func(acc telegraf.Accumulator) error {
+					return tt.zookeeper.Gather(context.Background(), acc)
+				}))
 
 			intMetrics := []string{
 				"max_latency",

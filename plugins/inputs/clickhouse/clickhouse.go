@@ -3,6 +3,7 @@ package clickhouse
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -85,7 +86,7 @@ func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 }
 
 // Gather collect data from ClickHouse server
-func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
+func (ch *ClickHouse) Gather(ctx context.Context, acc telegraf.Accumulator) (err error) {
 	var (
 		connects []connect
 		exists   = func(host string) bool {
@@ -106,7 +107,7 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 		switch {
 		case ch.AutoDiscovery:
 			var conns []connect
-			if err := ch.execQuery(u, "SELECT cluster, shard_num, host_name FROM system.clusters "+ch.clusterIncludeExcludeFilter(), &conns); err != nil {
+			if err := ch.execQuery(ctx, u, "SELECT cluster, shard_num, host_name FROM system.clusters "+ch.clusterIncludeExcludeFilter(), &conns); err != nil {
 				acc.AddError(err)
 				continue
 			}
@@ -128,7 +129,7 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	for i := range connects {
-		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
+		metricsFuncs := []func(ctx context.Context, acc telegraf.Accumulator, conn *connect) error{
 			ch.tables,
 			ch.zookeeper,
 			ch.replicationQueue,
@@ -141,13 +142,13 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 		}
 
 		for _, metricFunc := range metricsFuncs {
-			if err := metricFunc(acc, &connects[i]); err != nil {
+			if err := metricFunc(ctx, acc, &connects[i]); err != nil {
 				acc.AddError(err)
 			}
 		}
 
 		for metric := range commonMetrics {
-			if err := ch.commonMetrics(acc, &connects[i], metric); err != nil {
+			if err := ch.commonMetrics(ctx, acc, &connects[i], metric); err != nil {
 				acc.AddError(err)
 			}
 		}
@@ -192,7 +193,7 @@ func (ch *ClickHouse) clusterIncludeExcludeFilter() string {
 	return "WHERE " + includeFilter
 }
 
-func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, metric string) error {
+func (ch *ClickHouse) commonMetrics(ctx context.Context, acc telegraf.Accumulator, conn *connect, metric string) error {
 	var intResult []struct {
 		Metric string   `json:"metric"`
 		Value  chUInt64 `json:"value"`
@@ -207,14 +208,14 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 	fields := make(map[string]interface{})
 
 	if commonMetricsIsFloat[metric] {
-		if err := ch.execQuery(conn.url, commonMetrics[metric], &floatResult); err != nil {
+		if err := ch.execQuery(ctx, conn.url, commonMetrics[metric], &floatResult); err != nil {
 			return err
 		}
 		for _, r := range floatResult {
 			fields[internal.SnakeCase(r.Metric)] = r.Value
 		}
 	} else {
-		if err := ch.execQuery(conn.url, commonMetrics[metric], &intResult); err != nil {
+		if err := ch.execQuery(ctx, conn.url, commonMetrics[metric], &intResult); err != nil {
 			return err
 		}
 		for _, r := range intResult {
@@ -226,12 +227,12 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 	return nil
 }
 
-func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) zookeeper(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var zkExists []struct {
 		ZkExists chUInt64 `json:"zk_exists"`
 	}
 
-	if err := ch.execQuery(conn.url, systemZookeeperExistsSQL, &zkExists); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemZookeeperExistsSQL, &zkExists); err != nil {
 		return err
 	}
 	tags := ch.makeDefaultTags(conn)
@@ -240,7 +241,7 @@ func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
 		var zkRootNodes []struct {
 			ZkRootNodes chUInt64 `json:"zk_root_nodes"`
 		}
-		if err := ch.execQuery(conn.url, systemZookeeperRootNodesSQL, &zkRootNodes); err != nil {
+		if err := ch.execQuery(ctx, conn.url, systemZookeeperRootNodesSQL, &zkRootNodes); err != nil {
 			return err
 		}
 
@@ -254,12 +255,12 @@ func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
-func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) replicationQueue(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var replicationQueueExists []struct {
 		ReplicationQueueExists chUInt64 `json:"replication_queue_exists"`
 	}
 
-	if err := ch.execQuery(conn.url, systemReplicationExistsSQL, &replicationQueueExists); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemReplicationExistsSQL, &replicationQueueExists); err != nil {
 		return err
 	}
 
@@ -270,7 +271,7 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 			NumTriesReplicas     chUInt64 `json:"replication_num_tries_replicas"`
 			TooManyTriesReplicas chUInt64 `json:"replication_too_many_tries_replicas"`
 		}
-		if err := ch.execQuery(conn.url, systemReplicationNumTriesSQL, &replicationTooManyTries); err != nil {
+		if err := ch.execQuery(ctx, conn.url, systemReplicationNumTriesSQL, &replicationTooManyTries); err != nil {
 			return err
 		}
 
@@ -285,11 +286,11 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 	return nil
 }
 
-func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) detachedParts(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var detachedParts []struct {
 		DetachedParts chUInt64 `json:"detached_parts"`
 	}
-	if err := ch.execQuery(conn.url, systemDetachedPartsSQL, &detachedParts); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemDetachedPartsSQL, &detachedParts); err != nil {
 		return err
 	}
 
@@ -305,13 +306,13 @@ func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) err
 	return nil
 }
 
-func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) dictionaries(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var brokenDictionaries []struct {
 		Origin         string   `json:"origin"`
 		BytesAllocated chUInt64 `json:"bytes_allocated"`
 		Status         string   `json:"status"`
 	}
-	if err := ch.execQuery(conn.url, systemDictionariesSQL, &brokenDictionaries); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemDictionariesSQL, &brokenDictionaries); err != nil {
 		return err
 	}
 
@@ -338,13 +339,13 @@ func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) erro
 	return nil
 }
 
-func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) mutations(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var mutationsStatus []struct {
 		Failed    chUInt64 `json:"failed"`
 		Running   chUInt64 `json:"running"`
 		Completed chUInt64 `json:"completed"`
 	}
-	if err := ch.execQuery(conn.url, systemMutationSQL, &mutationsStatus); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemMutationSQL, &mutationsStatus); err != nil {
 		return err
 	}
 
@@ -364,7 +365,7 @@ func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
-func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) disks(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var disksStatus []struct {
 		Name            string   `json:"name"`
 		Path            string   `json:"path"`
@@ -372,7 +373,7 @@ func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
 		KeepFreePercent chUInt64 `json:"keep_free_space_percent"`
 	}
 
-	if err := ch.execQuery(conn.url, systemDisksSQL, &disksStatus); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemDisksSQL, &disksStatus); err != nil {
 		return err
 	}
 
@@ -393,7 +394,7 @@ func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
-func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) processes(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var processesStats []struct {
 		QueryType      string  `json:"query_type"`
 		Percentile50   float64 `json:"p50"`
@@ -401,7 +402,7 @@ func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
 		LongestRunning float64 `json:"longest_running"`
 	}
 
-	if err := ch.execQuery(conn.url, systemProcessesSQL, &processesStats); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemProcessesSQL, &processesStats); err != nil {
 		return err
 	}
 
@@ -422,12 +423,12 @@ func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
-func (ch *ClickHouse) textLog(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) textLog(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var textLogExists []struct {
 		TextLogExists chUInt64 `json:"text_log_exists"`
 	}
 
-	if err := ch.execQuery(conn.url, systemTextLogExistsSQL, &textLogExists); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemTextLogExistsSQL, &textLogExists); err != nil {
 		return err
 	}
 
@@ -436,7 +437,7 @@ func (ch *ClickHouse) textLog(acc telegraf.Accumulator, conn *connect) error {
 			Level             string   `json:"level"`
 			MessagesLast10Min chUInt64 `json:"messages_last_10_min"`
 		}
-		if err := ch.execQuery(conn.url, systemTextLogSQL, &textLogLast10MinMessages); err != nil {
+		if err := ch.execQuery(ctx, conn.url, systemTextLogSQL, &textLogLast10MinMessages); err != nil {
 			return err
 		}
 
@@ -454,7 +455,7 @@ func (ch *ClickHouse) textLog(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
-func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
+func (ch *ClickHouse) tables(ctx context.Context, acc telegraf.Accumulator, conn *connect) error {
 	var parts []struct {
 		Database string   `json:"database"`
 		Table    string   `json:"table"`
@@ -463,7 +464,7 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		Rows     chUInt64 `json:"rows"`
 	}
 
-	if err := ch.execQuery(conn.url, systemPartsSQL, &parts); err != nil {
+	if err := ch.execQuery(ctx, conn.url, systemPartsSQL, &parts); err != nil {
 		return err
 	}
 	tags := ch.makeDefaultTags(conn)
@@ -505,11 +506,11 @@ func (e *clickhouseError) Error() string {
 	return fmt.Sprintf("received error code %d: %s", e.StatusCode, e.body)
 }
 
-func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) error {
+func (ch *ClickHouse) execQuery(ctx context.Context, address *url.URL, query string, i interface{}) error {
 	q := address.Query()
 	q.Set("query", query+" FORMAT JSON")
 	address.RawQuery = q.Encode()
-	req, _ := http.NewRequest("GET", address.String(), nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", address.String(), nil)
 	if ch.Username != "" {
 		req.Header.Add("X-ClickHouse-User", ch.Username)
 	}

@@ -69,7 +69,7 @@ func (*PubSubPush) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
+func (p *PubSubPush) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

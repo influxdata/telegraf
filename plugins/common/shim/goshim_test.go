@@ -2,6 +2,7 @@ package shim
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -64,7 +65,7 @@ func (i *erroringInput) SampleConfig() string {
 	return ""
 }
 
-func (i *erroringInput) Gather(acc telegraf.Accumulator) error {
+func (i *erroringInput) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	acc.AddError(errors.New("intentional"))
 	return nil
 }

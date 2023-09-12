@@ -1,6 +1,7 @@
 package ctrlx_datalayer
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/boschrexroth/ctrlx-datalayer-golang/pkg/token"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -202,7 +204,9 @@ func TestCtrlXMetricsField(t *testing.T) {
 	defer cleanup(server)
 
 	var acc testutil.Accumulator
-	require.NoError(t, acc.GatherError(s.Start))
+	require.NoError(t, acc.GatherError(func(_ context.Context, acc telegraf.Accumulator) error {
+		return s.Start(acc)
+	}))
 	require.Eventually(t, func() bool {
 		if v, found := acc.FloatField(measurement, fieldName); found {
 			require.Equal(t, 43.0, v)
@@ -222,7 +226,9 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	require.NoError(t, acc.GatherError(s.Start))
+	require.NoError(t, acc.GatherError(func(_ context.Context, acc telegraf.Accumulator) error {
+		return s.Start(acc)
+	}))
 	require.Eventually(t, func() bool {
 		if v, found := acc.FloatField(measurement, fieldName); found {
 			require.Equal(t, 44.0, v)

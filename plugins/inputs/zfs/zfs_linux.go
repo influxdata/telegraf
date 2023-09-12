@@ -3,6 +3,7 @@
 package zfs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -179,7 +180,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (z *Zfs) Gather(acc telegraf.Accumulator) error {
+func (z *Zfs) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	kstatMetrics := z.KstatMetrics
 	if len(kstatMetrics) == 0 {
 		// vdev_cache_stats is deprecated

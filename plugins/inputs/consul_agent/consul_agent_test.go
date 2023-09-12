@@ -1,6 +1,7 @@
 package consul_agent
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -88,7 +89,7 @@ func TestConsulStats(t *testing.T) {
 			require.NoError(t, err)
 
 			acc := testutil.Accumulator{}
-			err = plugin.Gather(&acc)
+			err = plugin.Gather(context.Background(), &acc)
 			require.NoError(t, err)
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())

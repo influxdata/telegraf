@@ -3,10 +3,12 @@
 package dmcache
 
 import (
+	"context"
+
 	"github.com/influxdata/telegraf"
 )
 
-func (*DMCache) Gather(_ telegraf.Accumulator) error {
+func (*DMCache) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

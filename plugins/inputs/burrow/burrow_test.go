@@ -1,6 +1,7 @@
 package burrow
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +73,7 @@ func TestBurrowTopic(t *testing.T) {
 
 	plugin := &burrow{Servers: []string{s.URL}}
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	fields := []map[string]interface{}{
 		// topicA
@@ -103,7 +104,7 @@ func TestBurrowPartition(t *testing.T) {
 		Servers: []string{s.URL},
 	}
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	fields := []map[string]interface{}{
 		{
@@ -151,7 +152,7 @@ func TestBurrowGroup(t *testing.T) {
 		Servers: []string{s.URL},
 	}
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	fields := []map[string]interface{}{
 		{
@@ -189,7 +190,7 @@ func TestMultipleServers(t *testing.T) {
 		Servers: []string{s1.URL, s2.URL},
 	}
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	require.Exactly(t, 14, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
@@ -205,7 +206,7 @@ func TestMultipleRuns(t *testing.T) {
 	}
 	for i := 0; i < 4; i++ {
 		acc := &testutil.Accumulator{}
-		require.NoError(t, plugin.Gather(acc))
+		require.NoError(t, plugin.Gather(context.Background(), acc))
 
 		require.Exactly(t, 7, len(acc.Metrics))
 		require.Empty(t, acc.Errors)
@@ -224,7 +225,7 @@ func TestBasicAuthConfig(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	require.Exactly(t, 7, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
@@ -241,7 +242,7 @@ func TestFilterClusters(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	// no match by cluster
 	require.Exactly(t, 0, len(acc.Metrics))
@@ -260,7 +261,7 @@ func TestFilterGroups(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	require.Exactly(t, 1, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
@@ -278,7 +279,7 @@ func TestFilterTopics(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(acc))
+	require.NoError(t, plugin.Gather(context.Background(), acc))
 
 	require.Exactly(t, 3, len(acc.Metrics))
 	require.Empty(t, acc.Errors)

@@ -2,6 +2,7 @@
 package aerospike
 
 import (
+	"context"
 	"crypto/tls"
 	_ "embed"
 	"fmt"
@@ -59,7 +60,7 @@ func (*Aerospike) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
+func (a *Aerospike) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if !a.initialized {
 		tlsConfig, err := a.ClientConfig.TLSConfig()
 		if err != nil {

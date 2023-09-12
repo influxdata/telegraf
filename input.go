@@ -1,11 +1,13 @@
 package telegraf
 
+import "context"
+
 type Input interface {
 	PluginDescriber
 
 	// Gather takes in an accumulator and adds the metrics that the Input
 	// gathers. This is called every agent.interval
-	Gather(Accumulator) error
+	Gather(context.Context, Accumulator) error
 }
 
 type ServiceInput interface {

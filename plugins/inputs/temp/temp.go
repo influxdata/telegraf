@@ -2,6 +2,7 @@
 package temp
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"strings"
@@ -22,7 +23,7 @@ func (*Temperature) SampleConfig() string {
 	return sampleConfig
 }
 
-func (t *Temperature) Gather(acc telegraf.Accumulator) error {
+func (t *Temperature) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	temps, err := t.ps.Temperature()
 	if err != nil {
 		if strings.Contains(err.Error(), "not implemented yet") {

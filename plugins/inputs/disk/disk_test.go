@@ -1,6 +1,7 @@
 package disk
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,7 +90,7 @@ func TestDiskUsage(t *testing.T) {
 	mps.On("PSDiskUsage", "/home").Return(&duAll[1], nil)
 	mps.On("PSDiskUsage", "/var/rootbind").Return(&duAll[2], nil)
 
-	err = (&DiskStats{ps: mps}).Gather(&acc)
+	err = (&DiskStats{ps: mps}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	numDiskMetrics := acc.NFields()
@@ -148,18 +149,18 @@ func TestDiskUsage(t *testing.T) {
 
 	// We expect 7 more DiskMetrics to show up with an explicit match on "/"
 	// and /home not matching the /dev in MountPoints
-	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	require.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// /, /home, and /var/rootbind
-	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home", "/var/rootbind"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home", "/var/rootbind"}}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	require.Equal(t, expectedAllDiskMetrics+7*4, acc.NFields())
 
 	// We should see all the mounts as MountPoints except the bind mound
-	err = (&DiskStats{ps: &mps, IgnoreMountOpts: []string{"bind"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, IgnoreMountOpts: []string{"bind"}}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	require.Equal(t, expectedAllDiskMetrics+7*6, acc.NFields())
 }
@@ -290,7 +291,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 
 			mps.On("OSGetenv", "HOST_MOUNT_PREFIX").Return(tt.hostMountPrefix)
 
-			err = (&DiskStats{ps: mps}).Gather(&acc)
+			err = (&DiskStats{ps: mps}).Gather(context.Background(), &acc)
 			require.NoError(t, err)
 
 			acc.AssertContainsTaggedFields(t, "disk", tt.expectedFields, tt.expectedTags)
@@ -420,7 +421,7 @@ func TestDiskStats(t *testing.T) {
 	mps.On("DiskUsage", []string{"/", "/home", "/var/rootbind"}, []string(nil), []string(nil)).Return(duAll, psAll, nil)
 	mps.On("DiskUsage", []string(nil), []string{"bind"}, []string(nil)).Return(duOptFiltered, psOptFiltered, nil)
 
-	err = (&DiskStats{ps: &mps}).Gather(&acc)
+	err = (&DiskStats{ps: &mps}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	numDiskMetrics := acc.NFields()
@@ -463,18 +464,18 @@ func TestDiskStats(t *testing.T) {
 
 	// We expect 7 more DiskMetrics to show up with an explicit match on "/"
 	// and /home and /var/rootbind not matching the /dev in MountPoints
-	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	require.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// /, /home, and /var/rootbind
-	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home", "/var/rootbind"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home", "/var/rootbind"}}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	require.Equal(t, expectedAllDiskMetrics+7*4, acc.NFields())
 
 	// We should see all the mounts as MountPoints except the bind mound
-	err = (&DiskStats{ps: &mps, IgnoreMountOpts: []string{"bind"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, IgnoreMountOpts: []string{"bind"}}).Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	require.Equal(t, expectedAllDiskMetrics+7*6, acc.NFields())
 }
@@ -635,7 +636,7 @@ func TestDiskUsageIssues(t *testing.T) {
 			// Setup the plugin and run the test
 			var acc testutil.Accumulator
 			plugin := &DiskStats{ps: &mps}
-			require.NoError(t, plugin.Gather(&acc))
+			require.NoError(t, plugin.Gather(context.Background(), &acc))
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())

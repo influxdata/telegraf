@@ -3,6 +3,7 @@ package tcp_listener
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"fmt"
 	"net"
@@ -68,7 +69,7 @@ func (*TCPListener) SampleConfig() string {
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
-func (t *TCPListener) Gather(_ telegraf.Accumulator) error {
+func (t *TCPListener) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

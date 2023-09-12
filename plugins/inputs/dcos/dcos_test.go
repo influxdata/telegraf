@@ -431,7 +431,7 @@ func TestGatherFilterNode(t *testing.T) {
 				NodeExclude: tt.nodeExclude,
 				client:      tt.client,
 			}
-			err := dcos.Gather(&acc)
+			err := dcos.Gather(context.Background(), &acc)
 			require.NoError(t, err)
 			for i, ok := range tt.check(&acc) {
 				require.True(t, ok, fmt.Sprintf("Index was not true: %d", i))

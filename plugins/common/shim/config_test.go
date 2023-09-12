@@ -1,6 +1,7 @@
 package shim
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -73,7 +74,7 @@ func (i *testDurationInput) SampleConfig() string {
 func (i *testDurationInput) Description() string {
 	return ""
 }
-func (i *testDurationInput) Gather(_ telegraf.Accumulator) error {
+func (i *testDurationInput) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

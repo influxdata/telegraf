@@ -96,14 +96,14 @@ func (t *Tacacs) AuthenReplyToString(code uint8) string {
 	return "AuthenStatusUnknown(" + strconv.FormatUint(uint64(code), 10) + ")"
 }
 
-func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
+func (t *Tacacs) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for idx := range t.clients {
 		wg.Add(1)
 		go func(client *tacplus.Client) {
 			defer wg.Done()
-			acc.AddError(t.pollServer(acc, client))
+			acc.AddError(t.pollServer(ctx, acc, client))
 		}(&t.clients[idx])
 	}
 
@@ -111,7 +111,7 @@ func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) error {
+func (t *Tacacs) pollServer(ctx context.Context, acc telegraf.Accumulator, client *tacplus.Client) error {
 	// Create the fields for this metric
 	tags := map[string]string{"source": client.Addr}
 	fields := make(map[string]interface{})
@@ -136,7 +136,6 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	defer config.ReleaseSecret(password)
 
-	ctx := context.Background()
 	if t.ResponseTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(t.ResponseTimeout))

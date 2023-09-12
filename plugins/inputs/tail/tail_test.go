@@ -2,6 +2,7 @@ package tail
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -363,7 +364,7 @@ cpu,42
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
 	defer plugin.Stop()
-	err = plugin.Gather(&acc)
+	err = plugin.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(2)
 	plugin.Stop()
@@ -426,7 +427,7 @@ skip2,mem,100
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
 	defer plugin.Stop()
-	err = plugin.Gather(&acc)
+	err = plugin.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(2)
 	plugin.Stop()
@@ -482,7 +483,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
 	defer plugin.Stop()
-	err = plugin.Gather(&acc)
+	err = plugin.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(2)
 	plugin.Stop()
@@ -751,13 +752,13 @@ func TestCSVBehavior(t *testing.T) {
 	_, err = input.WriteString("1,2\n")
 	require.NoError(t, err)
 	require.NoError(t, input.Sync())
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(context.Background(), &acc))
 
 	// Write another line of data
 	_, err = input.WriteString("3,4\n")
 	require.NoError(t, err)
 	require.NoError(t, input.Sync())
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(context.Background(), &acc))
 	require.Eventuallyf(t, func() bool {
 		acc.Lock()
 		defer acc.Unlock()

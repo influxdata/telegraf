@@ -100,7 +100,7 @@ func (*Bcache) SampleConfig() string {
 	return sampleConfig
 }
 
-func (b *Bcache) Gather(acc telegraf.Accumulator) error {
+func (b *Bcache) Gather(_ context.Context(), acc telegraf.Accumulator) error {
 	bcacheDevsChecked := make(map[string]bool)
 	var restrictDevs bool
 	if len(b.BcacheDevs) != 0 {

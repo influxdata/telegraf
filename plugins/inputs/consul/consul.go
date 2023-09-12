@@ -2,6 +2,7 @@
 package consul
 
 import (
+	"context"
 	_ "embed"
 	"net/http"
 	"strings"
@@ -128,7 +129,7 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 	}
 }
 
-func (c *Consul) Gather(acc telegraf.Accumulator) error {
+func (c *Consul) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	if c.client == nil {
 		newClient, err := c.createAPIClient()
 
@@ -139,7 +140,7 @@ func (c *Consul) Gather(acc telegraf.Accumulator) error {
 		c.client = newClient
 	}
 
-	checks, _, err := c.client.Health().State("any", nil)
+	checks, _, err := c.client.Health().State("any", (&api.QueryOptions{}).WithContext(ctx))
 
 	if err != nil {
 		return err

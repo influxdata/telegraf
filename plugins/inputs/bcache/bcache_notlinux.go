@@ -4,6 +4,7 @@
 package bcache
 
 import (
+	"context"
 	_ "embed"
 
 	"github.com/influxdata/telegraf"
@@ -21,8 +22,8 @@ func (b *Bcache) Init() error {
 	b.Log.Warn("current platform is not supported")
 	return nil
 }
-func (*Bcache) SampleConfig() string                { return sampleConfig }
-func (*Bcache) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Bcache) SampleConfig() string                                   { return sampleConfig }
+func (*Bcache) Gather(_ context.Context, _ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("bcache", func() telegraf.Input {

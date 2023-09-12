@@ -2,6 +2,7 @@
 package csgo
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -40,7 +41,7 @@ func (*CSGO) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *CSGO) Gather(acc telegraf.Accumulator) error {
+func (s *CSGO) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	// Loop through each server and collect metrics

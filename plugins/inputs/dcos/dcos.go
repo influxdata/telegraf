@@ -79,13 +79,11 @@ func (*DCOS) SampleConfig() string {
 	return sampleConfig
 }
 
-func (d *DCOS) Gather(acc telegraf.Accumulator) error {
+func (d *DCOS) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	err := d.init()
 	if err != nil {
 		return err
 	}
-
-	ctx := context.Background()
 
 	token, err := d.creds.Token(ctx, d.client)
 	if err != nil {

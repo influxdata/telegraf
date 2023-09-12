@@ -81,13 +81,13 @@ func (h *HTTP) Init() error {
 
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval"
-func (h *HTTP) Gather(acc telegraf.Accumulator) error {
+func (h *HTTP) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, u := range h.URLs {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
-			if err := h.gatherURL(acc, url); err != nil {
+			if err := h.gatherURL(ctx, acc, url); err != nil {
 				acc.AddError(fmt.Errorf("[url=%s]: %w", url, err))
 			}
 		}(u)
@@ -113,11 +113,12 @@ func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
 //
 //	error: Any error that may have occurred
 func (h *HTTP) gatherURL(
+	ctx context.Context,
 	acc telegraf.Accumulator,
 	url string,
 ) error {
 	body := makeRequestBodyReader(h.ContentEncoding, h.Body)
-	request, err := http.NewRequest(h.Method, url, body)
+	request, err := http.NewRequestWithContext(ctx, h.Method, url, body)
 	if err != nil {
 		return err
 	}

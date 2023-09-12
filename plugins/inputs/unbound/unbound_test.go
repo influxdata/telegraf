@@ -2,6 +2,7 @@ package unbound
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,8 +10,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func UnboundControl(output string) func(unbound Unbound) (*bytes.Buffer, error) {
-	return func(unbound Unbound) (*bytes.Buffer, error) {
+func UnboundControl(output string) func(_ context.Context, unbound Unbound) (*bytes.Buffer, error) {
+	return func(_ context.Context, unbound Unbound) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -20,7 +21,7 @@ func TestParseFullOutput(t *testing.T) {
 	v := &Unbound{
 		run: UnboundControl(fullOutput),
 	}
-	err := v.Gather(acc)
+	err := v.Gather(context.Background(), acc)
 
 	require.NoError(t, err)
 
@@ -38,7 +39,7 @@ func TestParseFullOutputThreadAsTag(t *testing.T) {
 		run:         UnboundControl(fullOutput),
 		ThreadAsTag: true,
 	}
-	err := v.Gather(acc)
+	err := v.Gather(context.Background(), acc)
 
 	require.NoError(t, err)
 

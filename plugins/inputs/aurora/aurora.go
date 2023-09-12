@@ -63,7 +63,7 @@ func (*Aurora) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *Aurora) Gather(acc telegraf.Accumulator) error {
+func (a *Aurora) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	if a.client == nil {
 		err := a.initialize()
 		if err != nil {
@@ -71,7 +71,7 @@ func (a *Aurora) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(a.Timeout))
 	defer cancel()
 
 	var wg sync.WaitGroup

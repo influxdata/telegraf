@@ -4,6 +4,7 @@
 package conntrack
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -68,7 +69,7 @@ func (c *Conntrack) Init() error {
 	return nil
 }
 
-func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
+func (c *Conntrack) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var metricKey string
 	fields := make(map[string]interface{})
 

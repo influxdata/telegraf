@@ -2,6 +2,7 @@
 package bind
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -38,7 +39,7 @@ func (b *Bind) Init() error {
 	return nil
 }
 
-func (b *Bind) Gather(acc telegraf.Accumulator) error {
+func (b *Bind) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if len(b.Urls) == 0 {
@@ -55,7 +56,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(b.gatherURL(addr, acc))
+			acc.AddError(b.gatherURL(context.TODO(), addr, acc))
 		}(addr)
 	}
 
@@ -63,7 +64,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *Bind) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
+func (b *Bind) gatherURL(_ context.Context, addr *url.URL, acc telegraf.Accumulator) error {
 	switch addr.Path {
 	case "":
 		// BIND 9.6 - 9.8

@@ -3,6 +3,7 @@ package bond
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -43,7 +44,7 @@ func (*Bond) SampleConfig() string {
 	return sampleConfig
 }
 
-func (bond *Bond) Gather(acc telegraf.Accumulator) error {
+func (bond *Bond) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	// load proc path, get default value if config value and env variable are empty
 	bond.loadPaths()
 	// list bond interfaces from bonding directory or gather all interfaces.

@@ -355,7 +355,7 @@ func TestSelectMetrics(t *testing.T) {
 	}
 	require.NoError(t, c.Init())
 	c.client = &mockSelectMetricsCloudWatchClient{}
-	filtered, err := getFilteredMetrics(c)
+	filtered, err := getFilteredMetrics(context.Background(), c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
 	require.Equal(t, 12, len(filtered[0].metrics))

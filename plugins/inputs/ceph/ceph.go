@@ -3,6 +3,7 @@ package ceph
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -51,7 +52,7 @@ func (*Ceph) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *Ceph) Gather(acc telegraf.Accumulator) error {
+func (c *Ceph) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if c.GatherAdminSocketStats {
 		if err := c.gatherAdminSocketStats(acc); err != nil {
 			return err

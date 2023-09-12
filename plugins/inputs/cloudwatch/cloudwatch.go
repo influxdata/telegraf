@@ -114,8 +114,8 @@ func (c *CloudWatch) Init() error {
 
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval".
-func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
-	filteredMetrics, err := getFilteredMetrics(c)
+func (c *CloudWatch) Gather(ctx context.Context, acc telegraf.Accumulator) error {
+	filteredMetrics, err := getFilteredMetrics(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 			<-lmtr.C
 			go func(n string, inm []types.MetricDataQuery) {
 				defer wg.Done()
-				result, err := c.gatherMetrics(c.getDataInputs(inm))
+				result, err := c.gatherMetrics(ctx, c.getDataInputs(inm))
 				if err != nil {
 					acc.AddError(err)
 					return
@@ -229,7 +229,7 @@ type filteredMetric struct {
 }
 
 // getFilteredMetrics returns metrics specified in the config file or metrics listed from Cloudwatch.
-func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
+func getFilteredMetrics(ctx context.Context, c *CloudWatch) ([]filteredMetric, error) {
 	if c.metricCache != nil && c.metricCache.isValid() {
 		return c.metricCache.metrics, nil
 	}
@@ -259,7 +259,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 					}
 				}
 			} else {
-				allMetrics, allAccounts := c.fetchNamespaceMetrics()
+				allMetrics, allAccounts := c.fetchNamespaceMetrics(ctx)
 
 				for _, name := range m.MetricNames {
 					for i, metric := range allMetrics {
@@ -296,7 +296,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 			})
 		}
 	} else {
-		metrics, accounts := c.fetchNamespaceMetrics()
+		metrics, accounts := c.fetchNamespaceMetrics(ctx)
 		fMetrics = []filteredMetric{
 			{
 				metrics:    metrics,
@@ -314,7 +314,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 }
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
-func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, []string) {
+func (c *CloudWatch) fetchNamespaceMetrics(ctx context.Context) ([]types.Metric, []string) {
 	metrics := []types.Metric{}
 	var accounts []string
 	for _, namespace := range c.Namespaces {
@@ -328,7 +328,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, []string) {
 		}
 
 		for {
-			resp, err := c.client.ListMetrics(context.Background(), params)
+			resp, err := c.client.ListMetrics(ctx, params)
 			if err != nil {
 				c.Log.Errorf("failed to list metrics with namespace %s: %v", namespace, err)
 				// skip problem namespace on error and continue to next namespace
@@ -427,12 +427,13 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 
 // gatherMetrics gets metric data from Cloudwatch.
 func (c *CloudWatch) gatherMetrics(
+	ctx context.Context,
 	params *cwClient.GetMetricDataInput,
 ) ([]types.MetricDataResult, error) {
 	results := []types.MetricDataResult{}
 
 	for {
-		resp, err := c.client.GetMetricData(context.Background(), params)
+		resp, err := c.client.GetMetricData(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get metric data: %w", err)
 		}

@@ -217,7 +217,7 @@ func TestTacacsLocal(t *testing.T) {
 			var acc testutil.Accumulator
 
 			require.NoError(t, plugin.Init())
-			require.NoError(t, plugin.Gather(&acc))
+			require.NoError(t, plugin.Gather(context.Background(), &acc))
 
 			if tt.errContains == "" {
 				require.Len(t, acc.Errors, 0)
@@ -299,7 +299,7 @@ func TestTacacsIntegration(t *testing.T) {
 
 			// Startup the plugin & Gather
 			require.NoError(t, plugin.Init())
-			require.NoError(t, plugin.Gather(&acc))
+			require.NoError(t, plugin.Gather(context.Background(), &acc))
 
 			require.NoError(t, acc.FirstError())
 

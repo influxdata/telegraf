@@ -355,7 +355,7 @@ func (c *CtrlXDataLayer) Stop() {
 }
 
 // Gather is called by telegraf to collect the metrics.
-func (c *CtrlXDataLayer) Gather(_ telegraf.Accumulator) error {
+func (c *CtrlXDataLayer) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	// Metrics are sent to the accumulator asynchronously in worker thread. So nothing to do here.
 	return nil
 }

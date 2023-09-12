@@ -96,7 +96,7 @@ func TestConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			apc.Servers = tt.servers
 
-			err := apc.Gather(&acc)
+			err := apc.Gather(context.Background(), &acc)
 			if tt.err {
 				require.Error(t, err)
 			} else {
@@ -169,7 +169,7 @@ func TestApcupsdGather(t *testing.T) {
 
 			apc.Servers = []string{"tcp://" + lAddr}
 
-			err = apc.Gather(&acc)
+			err = apc.Gather(context.Background(), &acc)
 			if tt.err {
 				require.Error(t, err)
 			} else {

@@ -5,6 +5,7 @@
 package uwsgi
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -38,7 +39,7 @@ func (*Uwsgi) SampleConfig() string {
 }
 
 // Gather collect data from uWSGI Server
-func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
+func (u *Uwsgi) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if u.client == nil {
 		u.client = &http.Client{
 			Timeout: time.Duration(u.Timeout),
@@ -56,7 +57,7 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			if err := u.gatherServer(acc, n); err != nil {
+			if err := u.gatherServer(context.TODO(), acc, n); err != nil {
 				acc.AddError(err)
 				return
 			}
@@ -68,7 +69,7 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, address *url.URL) error {
+func (u *Uwsgi) gatherServer(_ context.Context, acc telegraf.Accumulator, address *url.URL) error {
 	var err error
 	var r io.ReadCloser
 	var s StatsServer

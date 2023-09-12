@@ -2,6 +2,7 @@
 package xtremio
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -72,7 +73,7 @@ func (xio *XtremIO) Init() error {
 	return nil
 }
 
-func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
+func (xio *XtremIO) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if err := xio.authenticate(); err != nil {
 		return err
 	}

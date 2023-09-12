@@ -2,6 +2,7 @@
 package activemq
 
 import (
+	"context"
 	_ "embed"
 	"encoding/xml"
 	"fmt"
@@ -221,7 +222,7 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 	}
 }
 
-func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
+func (a *ActiveMQ) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	dataQueues, err := a.GetMetrics(a.QueuesURL())
 	if err != nil {
 		return err

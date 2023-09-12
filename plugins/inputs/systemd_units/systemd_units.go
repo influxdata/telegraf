@@ -4,6 +4,7 @@ package systemd_units
 import (
 	"bufio"
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"os/exec"
@@ -129,7 +130,7 @@ func (*SystemdUnits) SampleConfig() string {
 }
 
 // Gather parses systemctl outputs and adds counters to the Accumulator
-func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
+func (s *SystemdUnits) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	out, err := s.systemctl(s.Timeout, s.UnitType, s.Pattern)
 	if err != nil {
 		return err

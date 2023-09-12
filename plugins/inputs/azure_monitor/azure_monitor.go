@@ -2,6 +2,7 @@
 package azure_monitor
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"sync"
@@ -96,7 +97,7 @@ func (am *AzureMonitor) Init() error {
 	return nil
 }
 
-func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
+func (am *AzureMonitor) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var waitGroup sync.WaitGroup
 
 	for _, target := range am.receiver.Targets.ResourceTargets {

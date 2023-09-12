@@ -1,6 +1,7 @@
 package aurora
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -209,7 +210,7 @@ func TestAurora(t *testing.T) {
 			plugin := &Aurora{}
 			plugin.Schedulers = []string{u.String()}
 			plugin.Roles = tt.roles
-			err := plugin.Gather(&acc)
+			err := plugin.Gather(context.Background(), &acc)
 			tt.check(t, err, &acc)
 		})
 	}
@@ -260,7 +261,7 @@ func TestBasicAuth(t *testing.T) {
 			plugin.Schedulers = []string{u.String()}
 			plugin.Username = tt.username
 			plugin.Password = tt.password
-			err := plugin.Gather(&acc)
+			err := plugin.Gather(context.Background(), &acc)
 			require.NoError(t, err)
 		})
 	}

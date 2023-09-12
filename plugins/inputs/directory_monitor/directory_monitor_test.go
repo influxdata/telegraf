@@ -3,6 +3,7 @@ package directory_monitor
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -83,7 +84,7 @@ func TestCSVGZImport(t *testing.T) {
 	// Start plugin before adding file.
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(6)
 	r.Stop()
@@ -154,7 +155,7 @@ func TestCSVGZImportWithHeader(t *testing.T) {
 	// Start plugin before adding file.
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(6)
 	r.Stop()
@@ -211,7 +212,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	err = r.Start(&acc)
 	r.Log = testutil.Logger{}
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(5)
 	r.Stop()
@@ -258,7 +259,7 @@ func TestFileTag(t *testing.T) {
 	err = r.Start(&acc)
 	r.Log = testutil.Logger{}
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(1)
 	r.Stop()
@@ -322,7 +323,7 @@ hello,80,test_name2`
 	// Start plugin before adding file.
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(1)
 	r.Stop()
@@ -393,7 +394,7 @@ hello,80,test_name2`
 	// Start plugin before adding file.
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(1)
 	r.Stop()
@@ -462,7 +463,7 @@ hello,80,test_name2`
 	// Start plugin before adding file.
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(1)
 	r.Stop()
@@ -523,7 +524,7 @@ func TestParseCompleteFile(t *testing.T) {
 
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(1)
 	r.Stop()
@@ -589,7 +590,7 @@ func TestParseSubdirectories(t *testing.T) {
 
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(2)
 	r.Stop()
@@ -667,7 +668,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 
 	err = r.Start(&acc)
 	require.NoError(t, err)
-	err = r.Gather(&acc)
+	err = r.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 	acc.Wait(1)
 	r.Stop()

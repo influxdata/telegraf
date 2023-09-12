@@ -3,6 +3,7 @@ package apache
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"fmt"
 	"net"
@@ -36,7 +37,7 @@ func (*Apache) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *Apache) Gather(acc telegraf.Accumulator) error {
+func (n *Apache) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if len(n.Urls) == 0 {
@@ -64,7 +65,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherURL(addr, acc))
+			acc.AddError(n.gatherURL(ctx, addr, acc))
 		}(addr)
 	}
 
@@ -88,8 +89,8 @@ func (n *Apache) createHTTPClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
-	req, err := http.NewRequest("GET", addr.String(), nil)
+func (n *Apache) gatherURL(ctx context.Context, addr *url.URL, acc telegraf.Accumulator) error {
+	req, err := http.NewRequestWithContext(ctx, "GET", addr.String(), nil)
 	if err != nil {
 		return fmt.Errorf("error on new request to %q: %w", addr.String(), err)
 	}

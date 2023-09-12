@@ -72,7 +72,7 @@ func (*PubSub) SampleConfig() string {
 }
 
 // Gather does nothing for this service input.
-func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
+func (ps *PubSub) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

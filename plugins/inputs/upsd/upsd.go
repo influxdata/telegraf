@@ -2,6 +2,7 @@
 package upsd
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"strings"
@@ -36,7 +37,7 @@ func (*Upsd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (u *Upsd) Gather(acc telegraf.Accumulator) error {
+func (u *Upsd) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	upsList, err := u.fetchVariables(u.Server, u.Port)
 	if err != nil {
 		return err

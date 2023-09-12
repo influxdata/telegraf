@@ -2,6 +2,7 @@
 package couchbase
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -50,7 +51,7 @@ func (*Couchbase) SampleConfig() string {
 
 // Reads stats from all configured clusters. Accumulates stats.
 // Returns one of the errors encountered while gathering stats (if any).
-func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
+func (cb *Couchbase) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if len(cb.Servers) == 0 {
 		return cb.gatherServer(acc, "http://localhost:8091/")
 	}

@@ -3,6 +3,7 @@ package cisco_telemetry_mdt
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/binary"
 	"encoding/json"
@@ -789,7 +790,7 @@ func (c *CiscoTelemetryMDT) Stop() {
 }
 
 // Gather plugin measurements (unused)
-func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
+func (c *CiscoTelemetryMDT) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

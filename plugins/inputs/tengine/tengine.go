@@ -3,6 +3,7 @@ package tengine
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -36,7 +37,7 @@ func (*Tengine) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *Tengine) Gather(acc telegraf.Accumulator) error {
+func (n *Tengine) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	// Create an HTTP client that is re-used for each
@@ -59,7 +60,7 @@ func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherURL(addr, acc))
+			acc.AddError(n.gatherURL(context.TODO(), addr, acc))
 		}(addr)
 	}
 
@@ -120,7 +121,7 @@ type TengineStatus struct {
 	httpUps5xx            uint64
 }
 
-func (n *Tengine) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Tengine) gatherURL(_ context.Context, addr *url.URL, acc telegraf.Accumulator) error {
 	var tengineStatus TengineStatus
 	resp, err := n.client.Get(addr.String())
 	if err != nil {

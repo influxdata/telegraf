@@ -2,6 +2,7 @@
 package amd_rocm_smi
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -32,7 +33,7 @@ func (*ROCmSMI) SampleConfig() string {
 }
 
 // Gather implements the telegraf interface
-func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
+func (rsmi *ROCmSMI) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
 		return fmt.Errorf("rocm-smi binary not found in path %s, cannot query GPUs statistics", rsmi.BinPath)
 	}

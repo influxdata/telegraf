@@ -122,7 +122,7 @@ func (t *Tail) SetState(state interface{}) error {
 	return nil
 }
 
-func (t *Tail) Gather(_ telegraf.Accumulator) error {
+func (t *Tail) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 

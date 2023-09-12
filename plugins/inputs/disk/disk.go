@@ -2,6 +2,7 @@
 package disk
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"strings"
@@ -44,7 +45,7 @@ func (ds *DiskStats) Init() error {
 	return nil
 }
 
-func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
+func (ds *DiskStats) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreMountOpts, ds.IgnoreFS)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %w", err)

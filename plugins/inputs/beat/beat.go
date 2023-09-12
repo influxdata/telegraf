@@ -2,6 +2,7 @@
 package beat
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -104,8 +105,8 @@ func (beat *Beat) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (beat *Beat) gatherJSONData(address string, value interface{}) error {
-	request, err := http.NewRequest(beat.Method, address, nil)
+func (beat *Beat) gatherJSONData(ctx context.Context, address string, value interface{}) error {
+	request, err := http.NewRequestWithContext(ctx, beat.Method, address, nil)
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (beat *Beat) gatherJSONData(address string, value interface{}) error {
 	return json.NewDecoder(response.Body).Decode(value)
 }
 
-func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
+func (beat *Beat) Gather(ctx context.Context, accumulator telegraf.Accumulator) error {
 	beatStats := &Stats{}
 	beatInfo := &Info{}
 
@@ -143,7 +144,7 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 		return err
 	}
 
-	err = beat.gatherJSONData(infoURL.String(), beatInfo)
+	err = beat.gatherJSONData(ctx, infoURL.String(), beatInfo)
 	if err != nil {
 		return err
 	}
@@ -155,7 +156,7 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 		"beat_version": beatInfo.Version,
 	}
 
-	err = beat.gatherJSONData(statsURL.String(), beatStats)
+	err = beat.gatherJSONData(ctx, statsURL.String(), beatStats)
 	if err != nil {
 		return err
 	}

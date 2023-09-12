@@ -3,6 +3,7 @@
 package cgroup
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -16,7 +17,7 @@ import (
 
 const metricName = "cgroup"
 
-func (g *CGroup) Gather(acc telegraf.Accumulator) error {
+func (g *CGroup) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	list := make(chan pathInfo)
 	go g.generateDirs(list)
 

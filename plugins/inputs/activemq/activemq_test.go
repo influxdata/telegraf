@@ -1,6 +1,7 @@
 package activemq
 
 import (
+	"context"
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
@@ -173,7 +174,7 @@ func TestURLs(t *testing.T) {
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator
-	err = plugin.Gather(&acc)
+	err = plugin.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	require.Len(t, acc.GetTelegrafMetrics(), 0)

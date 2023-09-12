@@ -2,6 +2,7 @@
 package trig
 
 import (
+	"context"
 	_ "embed"
 	"math"
 
@@ -21,7 +22,7 @@ func (*Trig) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Trig) Gather(acc telegraf.Accumulator) error {
+func (s *Trig) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	sinner := math.Sin((s.x*math.Pi)/5.0) * s.Amplitude
 	cosinner := math.Cos((s.x*math.Pi)/5.0) * s.Amplitude
 

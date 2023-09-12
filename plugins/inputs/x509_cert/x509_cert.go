@@ -5,6 +5,7 @@ package x509_cert
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
@@ -92,7 +93,7 @@ func (c *X509Cert) Init() error {
 }
 
 // Gather adds metrics into the accumulator.
-func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
+func (c *X509Cert) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	collectedUrls := append(c.locations, c.collectCertURLs()...)

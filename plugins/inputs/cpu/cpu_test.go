@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -48,7 +49,7 @@ func TestCPUStats(t *testing.T) {
 
 	cs := NewCPUStats(&mps)
 
-	err := cs.Gather(&acc)
+	err := cs.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	// Computed values are checked with delta > 0 because of floating point arithmetic
@@ -70,7 +71,7 @@ func TestCPUStats(t *testing.T) {
 	cs.ps = &mps2
 
 	// Should have added cpu percentages too
-	err = cs.Gather(&acc)
+	err = cs.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	assertContainsTaggedFloat(t, &acc, "time_user", 24.9, 0)
@@ -161,7 +162,7 @@ func TestCPUCountIncrease(t *testing.T) {
 			},
 		}, nil)
 
-	err = cs.Gather(&acc)
+	err = cs.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	mps2.On("CPUTimes").Return(
@@ -175,7 +176,7 @@ func TestCPUCountIncrease(t *testing.T) {
 		}, nil)
 	cs.ps = &mps2
 
-	err = cs.Gather(&acc)
+	err = cs.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 }
 
@@ -211,7 +212,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 
 	cs := NewCPUStats(&mps)
 
-	err := cs.Gather(&acc)
+	err := cs.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	// Computed values are checked with delta > 0 because of floating point arithmetic
@@ -225,14 +226,14 @@ func TestCPUTimesDecrease(t *testing.T) {
 	cs.ps = &mps2
 
 	// CPU times decreased. An error should be raised
-	err = cs.Gather(&acc)
+	err = cs.Gather(context.Background(), &acc)
 	require.Error(t, err)
 
 	mps3 := system.MockPS{}
 	mps3.On("CPUTimes").Return([]cpuUtil.TimesStat{cts3}, nil)
 	cs.ps = &mps3
 
-	err = cs.Gather(&acc)
+	err = cs.Gather(context.Background(), &acc)
 	require.NoError(t, err)
 
 	assertContainsTaggedFloat(t, &acc, "time_user", 56, 0)

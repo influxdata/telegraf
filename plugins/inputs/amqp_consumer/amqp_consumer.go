@@ -123,7 +123,7 @@ func (a *AMQPConsumer) SetParser(parser telegraf.Parser) {
 }
 
 // All gathering is done in the Start function
-func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
+func (a *AMQPConsumer) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

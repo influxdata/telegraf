@@ -2,6 +2,7 @@
 package cpu
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"time"
@@ -44,7 +45,7 @@ func (*CPUStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
+func (c *CPUStats) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %w", err)

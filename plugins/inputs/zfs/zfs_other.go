@@ -3,11 +3,13 @@
 package zfs
 
 import (
+	"context"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func (*Zfs) Gather(_ telegraf.Accumulator) error {
+func (*Zfs) Gather(_ context.Context, _ telegraf.Accumulator) error {
 	return nil
 }
 

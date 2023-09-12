@@ -2,6 +2,7 @@
 package chrony
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -40,7 +41,7 @@ func (c *Chrony) Init() error {
 	return nil
 }
 
-func (c *Chrony) Gather(acc telegraf.Accumulator) error {
+func (c *Chrony) Gather(_ context.Context, acc telegraf.Accumulator) error {
 	flags := []string{}
 	if !c.DNSLookup {
 		flags = append(flags, "-n")

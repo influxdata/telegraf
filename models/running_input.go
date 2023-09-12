@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -144,9 +145,9 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 
-func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
+func (r *RunningInput) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	start := time.Now()
-	err := r.Input.Gather(acc)
+	err := r.Input.Gather(ctx, acc)
 	elapsed := time.Since(start)
 	r.GatherTime.Incr(elapsed.Nanoseconds())
 	return err

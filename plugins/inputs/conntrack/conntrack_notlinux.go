@@ -4,6 +4,7 @@
 package conntrack
 
 import (
+	"context"
 	_ "embed"
 
 	"github.com/influxdata/telegraf"
@@ -21,8 +22,8 @@ func (c *Conntrack) Init() error {
 	c.Log.Warn("current platform is not supported")
 	return nil
 }
-func (*Conntrack) SampleConfig() string                { return sampleConfig }
-func (*Conntrack) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Conntrack) SampleConfig() string                                   { return sampleConfig }
+func (*Conntrack) Gather(_ context.Context, _ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("conntrack", func() telegraf.Input {
