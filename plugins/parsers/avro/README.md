@@ -63,6 +63,10 @@ The message is supposed to be encoded as follows:
   #      }
   #'''
 
+  ## Measurement field name; The meauserment name will be taken from this field
+  ## If not set, determine measurement name from the following options
+  # avro_measurement_field = "field_name"
+
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
   # avro_measurement = "ratings"
