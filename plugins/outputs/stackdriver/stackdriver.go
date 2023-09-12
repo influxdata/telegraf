@@ -234,6 +234,11 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 				}
 			}
 
+			fmt.Println("Creating timeseries:")
+			fmt.Println(m)
+			fmt.Printf("metric labels: %s\n", s.getStackdriverLabels(m.TagList()))
+			fmt.Printf("resource labels: %s\n\n", resourceLabels)
+
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
@@ -268,6 +273,11 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 					Interval: timeInterval,
 					Value:    value,
 				}
+
+				fmt.Println("Creating untyped timeseries:")
+				fmt.Println(m)
+				fmt.Printf("metric labels: %s\n", s.getStackdriverLabels(m.TagList()))
+				fmt.Printf("resource labels: %s\n\n", resourceLabels)
 
 				counterTimeSeries := &monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
