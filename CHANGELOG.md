@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.28.1 [2023-09-12]
+
+### Bugfixes
+
+- [#13909](https://github.com/influxdata/telegraf/pull/13909) `packaging` Revert permission change on package configs
+- [#13910](https://github.com/influxdata/telegraf/pull/13910) `inputs.redis` Fix password typo
+- [#13907](https://github.com/influxdata/telegraf/pull/13907) `inputs.vsphere` Fix config name typo in example
+
 ## v1.28.0 [2023-09-11]
 
 ### Important Changes
