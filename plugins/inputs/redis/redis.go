@@ -35,7 +35,7 @@ type Redis struct {
 	Commands []*RedisCommand `toml:"commands"`
 	Servers  []string        `toml:"servers"`
 	Username string          `toml:"username"`
-	Password string          `toml:"passowrd"`
+	Password string          `toml:"password"`
 
 	tls.ClientConfig
 
