@@ -356,7 +356,7 @@ $(include_packages):
 			--url https://github.com/influxdata/telegraf \
 			--license MIT \
 			--maintainer support@influxdb.com \
-			--config-files /etc/telegraf/telegraf.conf.sample \
+			--config-files /etc/telegraf/telegraf.conf \
 			--config-files /etc/telegraf/telegraf.d/.ignore \
 			--config-files /etc/logrotate.d/telegraf \
 			--after-install scripts/rpm/post-install.sh \
@@ -472,7 +472,6 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 %.deb: export localstatedir := /var
 %.rpm: export pkg := rpm
 %.rpm: export prefix := /usr
-%.rpm: export conf_suffix := .sample
 %.rpm: export sysconfdir := /etc
 %.rpm: export localstatedir := /var
 %.tar.gz: export pkg := tar
