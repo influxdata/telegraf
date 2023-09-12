@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	//nolint: unparam
 	execCommand           = exec.Command
 	volumesPattern        = regexp.MustCompile(`(\w*).(.+)`)
 	recoveryStatusPattern = regexp.MustCompile(`status:(.+)`)
@@ -30,6 +29,8 @@ var (
 //	@param arg the command's arguments.
 //	@return string the result of command execution.
 //	@return error
+//
+//nolint:unparam // currently the command is always `lctl`
 func executeCommand(name string, arg ...string) (string, error) {
 	cmd := execCommand(name, arg...)
 	result, err := cmd.CombinedOutput()

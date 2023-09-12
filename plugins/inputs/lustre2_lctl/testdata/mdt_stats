@@ -1,0 +1,5 @@
+snapshot_time             1694140455.278503266 secs.nsecs
+open                      137391283844 samples [reqs]
+close                     97376107699 samples [reqs] 1 1 97376107699
+link                      293759658 samples [usecs] 5 65525205 38223033629 34619065558020419
+unlink                    675832392 samples [usecs] 3 905437 15359059495 111766227630681

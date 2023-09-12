@@ -18,34 +18,10 @@ var sampleConfig string
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2Lctl struct {
-	OST    OST             `toml:"ost"`
-	MDT    MDT             `toml:"mdt"`
-	Client bool            `toml:"client"`
-	Log    telegraf.Logger `toml:"-"`
-}
-
-type OST struct {
-	Obdfilter Obdfilter `toml:"obdfilter"`
-	// Zfs       bool      `toml:"osd-zfs"`
-	// Ldiskfs   bool      `toml:"osd-ldiskfs"`
-}
-
-type MDT struct {
-	RecoveryStatus bool  `toml:"recovery_status"`
-	Jobstats       Stats `toml:"job_stats"`
-	Stats          Stats `toml:"stats"`
-}
-
-type Obdfilter struct {
-	RecoveryStatus bool  `toml:"recovery_status"`
-	Jobstats       Stats `toml:"job_stats"`
-	Stats          Stats `toml:"stats"`
-	Capacity       bool  `toml:"capacity"`
-}
-
-type Stats struct {
-	RW bool `toml:"rw"`
-	OP bool `toml:"operation"`
+	OstCollect    []string        `toml:"ost_collect"`
+	MdtCollect    []string        `toml:"mdt_collect"`
+	ClientCollect []string        `toml:"client_collect"`
+	Log           telegraf.Logger `toml:"-"`
 }
 
 func (*Lustre2Lctl) SampleConfig() string {
@@ -55,9 +31,9 @@ func (*Lustre2Lctl) SampleConfig() string {
 // Gather reads stats from all lustre targets
 func (l *Lustre2Lctl) Gather(acc telegraf.Accumulator) error {
 	gatherHealth(namespace, acc)
-	gatherOST(l.OST, namespace, acc)
-	gatherMDT(l.MDT, namespace, acc)
-	gatherClient(l.Client, namespace, acc)
+	gatherOST(l.OstCollect, namespace, acc)
+	gatherMDT(l.MdtCollect, namespace, acc)
+	gatherClient(l.ClientCollect, namespace, acc)
 	return nil
 }
 

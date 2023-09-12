@@ -1,11 +1,12 @@
-# Lustre Input Plugin 
+# Lustre Input Plugin
+
 The [Lustre][]® file system is an open-source, parallel file system that
 supports many requirements of leadership class HPC simulation environments.
 
-This plugin monitors the Lustre file system using its utility `lctl get_param`.
+This plugin monitors the Lustre file system using its utility `lctl get_param`,
+which is the standard and recommanded way to monitor and statistics[Lustre Monitoring and Statistics Guide][guide].
 
-Note that this plugins has been only tested on Lustre@v2.12.7 
-and Luster@v2.15.0.
+Note that this plugins has been only tested on Lustre@v2.12.7 and Luster@v2.15.0.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -17,51 +18,39 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
+
 ```toml @sample.conf
 # Read metrics about Lustre components, including ost/oss, mdt/mds, client.
 # This plugin ONLY supports Linux.
 [[inputs.lustre2_lctl]]
   ## According to different components, you could choose to gather pointed data about the component.
 
-  ## OST/OSS 
-  #  Switch to gather recovery status of ost and capacity of ost.
-  [inputs.lustre2_lctl.ost.obdfilter]
-    recovery_status = true
-    capacity = true
-  # Switch to gather job stats of ost.
-  # rw is information about read or write.
-  # operation is io operation except read and write, such as create, destory etc.
-  [inputs.lustre2_lctl.ost.obdfilter.job_stats]
-    rw = true
-    operation = true
+  ost_collect  = [
+    "obdfilter.*.stats",
+    "obdfilter.*.job_stats",
+    "obdfilter.*.recovery_status",
+    "obdfilter.*.kbytesfree", # osd-ldiskfs.*.kbytesfree, osd-zfs.*.kbytesfree
+    "obdfilter.*.kbytesavail", # osd-ldiskfs.*.kbytesavail, osd-zfs.*.kbytesavail
+    "obdfilter.*.kbytestotal", # osd-ldiskfs.*.kbytestotal, osd-zfs.*.kbytestotal
+  ]
 
-  # Switch to gather stats of ost.
-  # rw is information about read or write.
-  # operation is io operation except read and write, such as create, destory etc.
-  [inputs.lustre2_lctl.ost.obdfilter.stats]
-    rw = true
-    operation = true
-  
-  ## MDT/MDS
-  [inputs.lustre2_lctl.mdt]
-    recovery_status = true
+  mdt_collect = [
+    "mdt.*.recovery_status",
+    "mdt.*.stats",
+    "mdt.*.job_stats",
+  ]
 
-  
-  [inputs.lustre2_lctl.mdt.stats]
-    rw = true
-    operation = true
+  client_collect = [
+    "osc.*.active",
+    "mdc.*.active",
+  ]
 
-  [inputs.lustre2_lctl.mdt.job_stats]
-    rw = true
-    operation = true
-    
-  ## Client
-  client = true
 ```
 
 ## Metrics
 
 ### OST
+
 * tags
   * volume (the name of volume)
   * jobid
@@ -79,6 +68,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   * ost_capacity_kbytesfree (uint)
 
 ### MDT
+
 * tags
   * volume (the name of volume)
   * jobid
@@ -93,12 +83,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   * mdt_jobstats_*_sumsq   (uint)
 
 ### Client
+
 * tags
   * volume
 * fields
   * osc_volume_active (uint)
   * mdc_volume_active (uint)
 
+## Troubleshooting
+
+Check for the default or custom procfiles in the proc filesystem, and reference
+the [Lustre Monitoring and Statistics Guide][guide].  This plugin does not
+report all information from these files, only a limited set of items
+corresponding to the above metric fields.
 
 ## Example Output
 

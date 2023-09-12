@@ -3,10 +3,7 @@
 package lustre2_lctl
 
 import (
-	"fmt"
-	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
@@ -20,7 +17,7 @@ func TestGatherClient(t *testing.T) {
 		metric.New(
 			"lustre2_client",
 			map[string]string{
-				"volume": "THL9-MDT0000",
+				"volume": "MDT0000",
 			},
 			map[string]interface{}{
 				"mdc_volume_active": 1,
@@ -31,7 +28,7 @@ func TestGatherClient(t *testing.T) {
 		metric.New(
 			"lustre2_client",
 			map[string]string{
-				"volume": "thfs1-MDT0000",
+				"volume": "MDT0001",
 			},
 			map[string]interface{}{
 				"mdc_volume_active": 1,
@@ -42,7 +39,7 @@ func TestGatherClient(t *testing.T) {
 		metric.New(
 			"lustre2_client",
 			map[string]string{
-				"volume": "THL9-OST003d",
+				"volume": "OST003d",
 			},
 			map[string]interface{}{
 				"osc_volume_active": 1,
@@ -53,7 +50,7 @@ func TestGatherClient(t *testing.T) {
 		metric.New(
 			"lustre2_client",
 			map[string]string{
-				"volume": "thfs3-OST0076",
+				"volume": "OST0076",
 			},
 			map[string]interface{}{
 				"osc_volume_active": 1,
@@ -63,68 +60,11 @@ func TestGatherClient(t *testing.T) {
 		),
 	}
 
-	execCommand = fakeClientExecCommand
+	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
 
 	var acc testutil.Accumulator
-	gatherClient(true, "lustre2", &acc)
+	gatherClient([]string{"mdc.*.active", "osc.*.active"}, "lustre2", &acc)
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestHelperMDCActive(_ *testing.T) {
-	data := `mdc.THL9-MDT0000-mdc-ffff98795f16f000.active=1
-	mdc.thfs1-MDT0000-mdc-ffff0781dc988800.active=1`
-
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return
-	}
-
-	fmt.Fprint(os.Stdout, data)
-
-	//nolint:revive // os.Exit called intentionally
-	os.Exit(0)
-}
-
-func TestHelperOSCActive(_ *testing.T) {
-	data := `osc.THL9-OST003d-osc-ffff98795f16f000.active=1
-	osc.thfs3-OST0076-osc-ffff0181ddbfa000.active=1`
-
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return
-	}
-
-	fmt.Fprint(os.Stdout, data)
-
-	//nolint:revive // os.Exit called intentionally
-	os.Exit(0)
-}
-
-func fakeClientExecCommand(command string, args ...string) *exec.Cmd {
-	tmp := make([]string, 0)
-	tmp = append(tmp, command)
-	tmp = append(tmp, args...)
-	tmpc := strings.Join(tmp, " ")
-	switch tmpc {
-	case "lctl get_param mdc.*.active":
-		cs := []string{"-test.run=TestHelperMDCActive", "--", command}
-		cs = append(cs, args...)
-		cmd := exec.Command(os.Args[0], cs...)
-		cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		return cmd
-	case "lctl get_param osc.*.active":
-		cs := []string{"-test.run=TestHelperOSCActive", "--", command}
-		cs = append(cs, args...)
-		cmd := exec.Command(os.Args[0], cs...)
-		cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		return cmd
-	case "lctl get_param -n health_check":
-		cs := []string{"-test.run=TestHelperHealthCheck", "--", command}
-		cs = append(cs, args...)
-		cmd := exec.Command(os.Args[0], cs...)
-		cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		return cmd
-	}
-
-	return nil
 }

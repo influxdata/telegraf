@@ -1,0 +1,9 @@
+job_stats:
+	- job_id:          1306853
+	  snapshot_time:   1693988320
+	  read_bytes:      { samples:      169256, unit: bytes, min:    4096, max: 4194304, sum:     62372188160 }
+	  destroy:         { samples:           0, unit:  reqs }
+	- job_id:          kworker/13:2.0
+	  snapshot_time:   1693988353
+	  read_bytes:      { samples:           0, unit: bytes, min:       0, max:       0, sum:               0 }
+	  create:          { samples:           0, unit:  reqs }

@@ -14,14 +14,7 @@ var (
 	clientMDCActivePattern = regexp.MustCompile(`mdc.(.*)-mdc-\w*.active=(\d*)`)
 )
 
-func gatherClient(client bool, namespace string, acc telegraf.Accumulator) {
-	if !client {
-		return
-	}
-
-	measurement := namespace + "_client"
-
-	// mdc
+func gatherClientMDCAcitve(measurement string, acc telegraf.Accumulator) {
 	if result, err := executeCommand("lctl", "get_param", "mdc.*.active"); err != nil { // to get volume.
 		acc.AddError(err)
 	} else {
@@ -39,8 +32,9 @@ func gatherClient(client bool, namespace string, acc telegraf.Accumulator) {
 			}
 		}
 	}
+}
 
-	// osc.
+func gatherClientOSCAcitve(measurement string, acc telegraf.Accumulator) {
 	if result, err := executeCommand("lctl", "get_param", "osc.*.active"); err != nil { // to get volume.
 		acc.AddError(err)
 	} else {
@@ -56,6 +50,19 @@ func gatherClient(client bool, namespace string, acc telegraf.Accumulator) {
 					"volume": volume,
 				})
 			}
+		}
+	}
+}
+
+func gatherClient(collect []string, namespace string, acc telegraf.Accumulator) {
+	measurement := namespace + "_client"
+
+	for _, c := range collect {
+		switch c {
+		case "mdc.*.active":
+			gatherClientMDCAcitve(measurement, acc)
+		case "osc.*.active":
+			gatherClientOSCAcitve(measurement, acc)
 		}
 	}
 }

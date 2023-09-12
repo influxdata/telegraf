@@ -4,45 +4,11 @@ package lustre2_lctl
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 )
 
-var (
-	mdtVolPattern = regexp.MustCompile(`mdt.(.+)`)
-)
-
-// getMDTVolumes gets the name of volumes of MDT.
-//
-//	@return []string the name of volumes.
-//	@return error
-func getMDTVolumes() ([]string, error) {
-	volumes := make([]string, 0)
-	result, err := executeCommand("lctl", "get_param", "-N", "mdt.*")
-	if err != nil {
-		return nil, err
-	}
-	tmp := mdtVolPattern.FindAllStringSubmatch(result, -1)
-	for _, value := range tmp {
-		volumes = append(volumes, value[len(value)-1])
-	}
-
-	return volumes, nil
-}
-
-// gatherMDTRecoveryStatus gathers recovery status of MDT.
-//
-//	@param flag gather flag.
-//	@param measurement
-//	@param volumes the volumes' name.
-//	@param acc
-func gatherMDTRecoveryStatus(flag bool, measurement string, volumes []string, acc telegraf.Accumulator) {
-	if !flag {
-		return
-	}
-
+func gatherMDTRecoveryStatus(volumes []string, measurement string, acc telegraf.Accumulator) {
 	for _, volume := range volumes {
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("mdt.%s.recovery_status", volume))
 		if err != nil {
@@ -58,17 +24,7 @@ func gatherMDTRecoveryStatus(flag bool, measurement string, volumes []string, ac
 	}
 }
 
-// gatherMDTJobstats gathers job status of MDT.
-//
-//	@param flag gather flag.
-//	@param measurement
-//	@param volumes the volumes' name.
-//	@param acc
-func gatherMDTJobstats(flag Stats, measurement string, volumes []string, acc telegraf.Accumulator) {
-	if !flag.RW && !flag.OP {
-		return
-	}
-
+func gatherMDTJobstats(volumes []string, measurement string, acc telegraf.Accumulator) {
 	for _, volume := range volumes {
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("mdt.%s.job_stats", volume))
 		if err != nil {
@@ -80,59 +36,28 @@ func gatherMDTJobstats(flag Stats, measurement string, volumes []string, acc tel
 
 		for jobid, entries := range jobstats {
 			for _, entry := range entries {
-				if flag.RW && (strings.Contains(entry.Operation, "read") || strings.Contains(entry.Operation, "write")) {
-					acc.AddGauge(measurement, map[string]interface{}{
-						fmt.Sprintf("jobstats_%s_samples", entry.Operation): entry.Samples,
-					}, map[string]string{
-						"volume": volume,
-						"jobid":  jobid,
-					})
-					acc.AddGauge(measurement, map[string]interface{}{
-						fmt.Sprintf("jobstats_%s_max", entry.Operation):   entry.Max,
-						fmt.Sprintf("jobstats_%s_min", entry.Operation):   entry.Min,
-						fmt.Sprintf("jobstats_%s_sum", entry.Operation):   entry.Sum,
-						fmt.Sprintf("jobstats_%s_sumsq", entry.Operation): entry.Sumsq,
-					}, map[string]string{
-						"volume": volume,
-						"unit":   entry.Unit,
-						"jobid":  jobid,
-					})
-				}
-
-				if flag.OP && !(strings.Contains(entry.Operation, "read") || strings.Contains(entry.Operation, "write")) {
-					acc.AddGauge(measurement, map[string]interface{}{
-						fmt.Sprintf("jobstats_%s_samples", entry.Operation): entry.Samples,
-					}, map[string]string{
-						"volume": volume,
-						"jobid":  jobid,
-					})
-					acc.AddGauge(measurement, map[string]interface{}{
-						fmt.Sprintf("jobstats_%s_max", entry.Operation):   entry.Max,
-						fmt.Sprintf("jobstats_%s_min", entry.Operation):   entry.Min,
-						fmt.Sprintf("jobstats_%s_sum", entry.Operation):   entry.Sum,
-						fmt.Sprintf("jobstats_%s_sumsq", entry.Operation): entry.Sumsq,
-					}, map[string]string{
-						"volume": volume,
-						"unit":   entry.Unit,
-						"jobid":  jobid,
-					})
-				}
+				acc.AddGauge(measurement, map[string]interface{}{
+					fmt.Sprintf("jobstats_%s_samples", entry.Operation): entry.Samples,
+				}, map[string]string{
+					"volume": volume,
+					"jobid":  jobid,
+				})
+				acc.AddGauge(measurement, map[string]interface{}{
+					fmt.Sprintf("jobstats_%s_max", entry.Operation):   entry.Max,
+					fmt.Sprintf("jobstats_%s_min", entry.Operation):   entry.Min,
+					fmt.Sprintf("jobstats_%s_sum", entry.Operation):   entry.Sum,
+					fmt.Sprintf("jobstats_%s_sumsq", entry.Operation): entry.Sumsq,
+				}, map[string]string{
+					"volume": volume,
+					"unit":   entry.Unit,
+					"jobid":  jobid,
+				})
 			}
 		}
 	}
 }
 
-// gatherMDTStats gathers stats of mdt.
-//
-//	@param flag gather flag.
-//	@param measurement
-//	@param volumes the volumes' name.
-//	@param acc
-func gatherMDTStats(flag Stats, measurement string, volumes []string, acc telegraf.Accumulator) {
-	if !flag.RW && !flag.OP {
-		return
-	}
-
+func gatherMDTStats(volumes []string, measurement string, acc telegraf.Accumulator) {
 	for _, volume := range volumes {
 		result, err := executeCommand("lctl", "get_param", "-n", fmt.Sprintf("mdt.%s.md_stats", volume))
 		if err != nil {
@@ -143,51 +68,38 @@ func gatherMDTStats(flag Stats, measurement string, volumes []string, acc telegr
 		stats := parseStats(result)
 
 		for _, stat := range stats {
-			if flag.RW && (strings.Contains(stat.Operation, "read") || strings.Contains(stat.Operation, "write")) {
-				acc.AddGauge(measurement, map[string]interface{}{
-					fmt.Sprintf("stats_%s_samples", stat.Operation): stat.Samples,
-				}, map[string]string{
-					"volume": volume,
-				})
-				acc.AddGauge(measurement, map[string]interface{}{
-					fmt.Sprintf("stats_%s_max", stat.Operation):   stat.Max,
-					fmt.Sprintf("stats_%s_min", stat.Operation):   stat.Min,
-					fmt.Sprintf("stats_%s_sum", stat.Operation):   stat.Sum,
-					fmt.Sprintf("stats_%s_sumsq", stat.Operation): stat.Sumsq,
-				}, map[string]string{
-					"volume": volume,
-					"unit":   stat.Unit,
-				})
-			}
-
-			if flag.OP && !(strings.Contains(stat.Operation, "read") || strings.Contains(stat.Operation, "write")) {
-				acc.AddGauge(measurement, map[string]interface{}{
-					fmt.Sprintf("stats_%s_samples", stat.Operation): stat.Samples,
-				}, map[string]string{
-					"volume": volume,
-				})
-				acc.AddGauge(measurement, map[string]interface{}{
-					fmt.Sprintf("stats_%s_max", stat.Operation):   stat.Max,
-					fmt.Sprintf("stats_%s_min", stat.Operation):   stat.Min,
-					fmt.Sprintf("stats_%s_sum", stat.Operation):   stat.Sum,
-					fmt.Sprintf("stats_%s_sumsq", stat.Operation): stat.Sumsq,
-				}, map[string]string{
-					"volume": volume,
-					"unit":   stat.Unit,
-				})
-			}
+			acc.AddGauge(measurement, map[string]interface{}{
+				fmt.Sprintf("stats_%s_samples", stat.Operation): stat.Samples,
+			}, map[string]string{
+				"volume": volume,
+			})
+			acc.AddGauge(measurement, map[string]interface{}{
+				fmt.Sprintf("stats_%s_max", stat.Operation):   stat.Max,
+				fmt.Sprintf("stats_%s_min", stat.Operation):   stat.Min,
+				fmt.Sprintf("stats_%s_sum", stat.Operation):   stat.Sum,
+				fmt.Sprintf("stats_%s_sumsq", stat.Operation): stat.Sumsq,
+			}, map[string]string{
+				"volume": volume,
+				"unit":   stat.Unit,
+			})
 		}
 	}
 }
 
-func gatherMDT(mdt MDT, namespace string, acc telegraf.Accumulator) {
+func gatherMDT(collect []string, namespace string, acc telegraf.Accumulator) {
 	measurement := namespace + "_mdt"
-	// Get volumes' name.
+
+	// get volumes's name.
 	result, _ := executeCommand("lctl", "get_param", "-N", "mdt.*")
-
 	volumes := parserVolumesName(result)
-
-	gatherMDTRecoveryStatus(mdt.RecoveryStatus, measurement, volumes, acc)
-	gatherMDTJobstats(mdt.Jobstats, measurement, volumes, acc)
-	gatherMDTStats(mdt.Stats, measurement, volumes, acc)
+	for _, c := range collect {
+		switch c {
+		case "mdt.*.md_stats":
+			gatherMDTStats(volumes, measurement, acc)
+		case "mdt.*.job_stats":
+			gatherMDTJobstats(volumes, measurement, acc)
+		case "mdt.*.recovery_status":
+			gatherMDTRecoveryStatus(volumes, measurement, acc)
+		}
+	}
 }

@@ -1,0 +1,15 @@
+job_stats:
+	- job_id:          rsync_env.sh.30026
+	snapshot_time   : 1896247.780050045 secs.nsecs
+	start_time      : 379440.150439687 secs.nsecs
+	elapsed_time    : 1516807.629610358 secs.nsecs
+	  close:           { samples:        5051, unit: usecs, min:        8, max:     1541, sum:           236426, sumsq:           19935112 }
+	  read:            { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+	  write:           { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+	  read_bytes:      { samples:           0, unit: bytes, min:        0, max:        0, sum:                0, sumsq:                  0 }
+	  write_bytes:     { samples:           0, unit: bytes, min:        0, max:        0, sum:                0, sumsq:                  0 }
+	- job_id:          cadvisor.0
+	  snapshot_time:   1694072652
+	  statfs:          { samples:    11261065, unit:  reqs }
+	  read_bytes:      { samples:    11261065, unit:  reqs, min:       0, max:       0, sum:               0 }
+	  write_bytes:     { samples:           0, unit:  reqs, min:       0, max:       0, sum:               0 }
