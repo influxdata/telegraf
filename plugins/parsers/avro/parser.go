@@ -30,7 +30,7 @@ type Parser struct {
 	Schema           string            `toml:"avro_schema"`
 	Format           string            `toml:"avro_format"`
 	Measurement      string            `toml:"avro_measurement"`
-	MeasurementField string   		   `toml:"avro_measurement_field"`
+	MeasurementField string            `toml:"avro_measurement_field"`
 	Tags             []string          `toml:"avro_tags"`
 	Fields           []string          `toml:"avro_fields"`
 	Timestamp        string            `toml:"avro_timestamp"`
@@ -218,11 +218,13 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	// take value from that field and do not include it into fields or tags
 	name := ""
 	if p.MeasurementField != "" {
-		sMetric, err := internal.ToString(data[p.MeasurementField])
+		sField := p.MeasurementField
+		sMetric, err := internal.ToString(data[sField])
 		if err != nil {
-			p.Log.Warnf("Could not convert %v to string for measurement name %q: %w", data[p.MeasurementField], p.MeasurementField, err)
+			p.Log.Warnf("Could not convert %v to string for metric name %q: %w", data[sField], sField, err)
+		} else {
+			name = sMetric
 		}
-		name = sMetric
 	}
 	// Now some fancy stuff to extract the measurement.
 	// If it's set in the configuration, use that.
