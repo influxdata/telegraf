@@ -4,10 +4,10 @@ The [Lustre][]® file system is an open-source, parallel file system that
 supports many requirements of leadership class HPC simulation environments.
 
 This plugin monitors the Lustre file system using its utility `lctl get_param`,
-which is the standard and recommanded way to monitor and 
+which is the standard and recommanded way to monitor and
 statistics[Lustre Monitoring and Statistics Guide][guide].
 
-Note that this plugins has been only tested on Lustre@v2.12.7 
+Note that this plugins has been only tested on Lustre@v2.12.7
 and Luster@v2.15.0.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
