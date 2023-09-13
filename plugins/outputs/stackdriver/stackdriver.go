@@ -333,8 +333,14 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		for _, series := range timeSeriesRequest.TimeSeries {
 			fmt.Printf("metric: %s\n", series.Metric)
 			fmt.Printf("points: %s\n", series.Points)
-			fmt.Printf("system labels: %s\n", series.Metadata.SystemLabels)
-			fmt.Printf("user labels: %s\n\n", series.Metadata.UserLabels)
+			if series.Metadata != nil {
+				if series.Metadata.SystemLabels != nil {
+					fmt.Printf("system labels: %s\n", series.Metadata.SystemLabels)
+				}
+				if series.Metadata.UserLabels != nil {
+					fmt.Printf("user labels: %s\n\n", series.Metadata.UserLabels)
+				}
+			}
 		}
 
 		// Create the time series in Stackdriver.
