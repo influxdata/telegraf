@@ -144,4 +144,3 @@ func getTestdataDir() string {
 
 	return filepath.Join(dir, "testdata")
 }
-
