@@ -78,7 +78,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
+### Permissions
+
+Some files or directories may require elevated permissions. As such a user may
+need to provide telegraf with higher levels of permissions to access and produce
+metrics.
+
 ## Metrics
+
+For descriptions of these tags and fields, consider reading one of the
+following:
+
+- [Linux Kernel /proc Filesystem][kernel /proc]
+- [proc manpage][manpage]
+
+[kernel /proc]: https://www.kernel.org/doc/html/latest/filesystems/proc.html
+[manpage]: https://man7.org/linux/man-pages/man5/proc.5.html
+
+Below are an example set of tags and fields:
 
 - procstat
   - tags:
