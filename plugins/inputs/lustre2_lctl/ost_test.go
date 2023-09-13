@@ -209,7 +209,7 @@ func TestGatherOST(t *testing.T) {
 				"volume": "OST0000",
 			},
 			map[string]interface{}{
-				"capacity_kbytestotal": 46488188776,
+				"capacity_kbytestotal": int64(46488188776),
 			},
 			time.Unix(0, 1),
 			telegraf.Gauge,
@@ -220,7 +220,7 @@ func TestGatherOST(t *testing.T) {
 				"volume": "OST0000",
 			},
 			map[string]interface{}{
-				"capacity_kbytesavail": 24598218684,
+				"capacity_kbytesavail": int64(24598218684),
 			},
 			time.Unix(0, 1),
 			telegraf.Gauge,
@@ -231,7 +231,7 @@ func TestGatherOST(t *testing.T) {
 				"volume": "OST0000",
 			},
 			map[string]interface{}{
-				"capacity_kbytesfree": 26942292504,
+				"capacity_kbytesfree": int64(26942292504),
 			},
 			time.Unix(0, 1),
 			telegraf.Gauge,
