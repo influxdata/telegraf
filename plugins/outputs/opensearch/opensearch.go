@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/metric"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -82,6 +83,21 @@ func (o *Opensearch) Init() error {
 
 	if o.FloatHandling == "" {
 		o.FloatHandling = "none"
+	}
+
+	dummyMetric := metric.New(
+		"test",
+		map[string]string{},
+		map[string]interface{}{},
+		time.Date(2023, time.September, 10, 23, 0, 0, 0, time.UTC),
+	)
+	_, err := o.GetIndexName(dummyMetric)
+	if err != nil {
+		return fmt.Errorf("invalid index template specified %w", err)
+	}
+	_, err = o.getPipelineName(dummyMetric)
+	if err != nil {
+		return fmt.Errorf("invalid pipeline value specified for UsePipeline %w", err)
 	}
 
 	o.onSucc = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
@@ -207,7 +223,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName, err := o.GetIndexName(o.IndexName, metric)
+		indexName, err := o.GetIndexName(metric)
 		if err != nil {
 			return fmt.Errorf("generating indexname failed: %w", err)
 		}
@@ -339,8 +355,8 @@ func createBulkIndexer(osInst *Opensearch, pipelineName string) (opensearchutil.
 	return opensearchutil.NewBulkIndexer(bulkIndexerConfig)
 }
 
-func (o *Opensearch) GetIndexName(rawIndexName string, metric telegraf.Metric) (string, error) {
-	var tagVal = func(key string) interface{} {
+func (o *Opensearch) GetIndexName(metric telegraf.Metric) (string, error) {
+	var tagVal = func(key string) string {
 		if val, ok := metric.Tags()[key]; ok {
 			return val
 		}
@@ -362,7 +378,7 @@ func (o *Opensearch) GetIndexName(rawIndexName string, metric telegraf.Metric) (
 		"Field": fieldVal,
 	}
 	
-	var indexTmpl, err = template.New("index").Funcs(funcs).Parse(rawIndexName)
+	var indexTmpl, err = template.New("index").Funcs(funcs).Parse(o.IndexName)
 	if err != nil {
 		return "", fmt.Errorf("parsing index name failed: %w", err)
 	}
@@ -386,7 +402,7 @@ func (o *Opensearch) getPipelineName(metric telegraf.Metric) (string, error) {
 	if o.UsePipeline == "" || !strings.Contains(o.UsePipeline, "{{") {
 		return o.UsePipeline, nil
 	}
-	var tagVal = func(key string) interface{} {
+	var tagVal = func(key string) string {
 		if val, ok := metric.Tags()[key]; ok {
 			return val
 		}

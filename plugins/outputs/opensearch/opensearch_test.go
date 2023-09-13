@@ -85,8 +85,8 @@ func TestGetIndexName(t *testing.T) {
 		for key, val := range test.Tags {
 			mockMetric.AddTag(key, val)
 		}
-		
-		indexName, err := e.GetIndexName(test.IndexName, mockMetric)
+		e.IndexName = test.IndexName
+		indexName, err := e.GetIndexName(mockMetric)
 		require.NoError(t, err)
 		if indexName != test.Expected {
 			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
@@ -172,7 +172,7 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 		Log:            testutil.Logger{},
 	}
 
-	var indexName, err = e.GetIndexName(e.IndexName, testutil.MockMetrics()[0])
+	var indexName, err = e.GetIndexName(testutil.MockMetrics()[0])
 	require.NoError(t, err)
 	e.IndexName = indexName
 
