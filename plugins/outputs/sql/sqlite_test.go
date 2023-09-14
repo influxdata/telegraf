@@ -15,10 +15,8 @@ import (
 )
 
 func TestSqlite(t *testing.T) {
-	outDir := os.TempDir()
-	defer os.Remove(outDir)
-
-	dbfile := filepath.Join(outDir, "db")
+	dbfile := filepath.Join(os.TempDir(), "db")
+	defer os.Remove(dbfile)
 
 	// Use the plugin to write to the database address :=
 	// fmt.Sprintf("file:%v", dbfile)
