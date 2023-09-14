@@ -73,7 +73,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/go-ldap/ldap/v3 v3.4.5
 	github.com/go-logfmt/logfmt v0.6.0
-	github.com/go-ole/go-ole v1.2.6
+	github.com/go-ole/go-ole v1.3.0
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1

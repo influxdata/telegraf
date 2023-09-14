@@ -24,6 +24,7 @@ var testQuery = Query{
 	//nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 	Filter:               fmt.Sprintf(`NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`, regexp.QuoteMeta(sysDrive)),
 	TagPropertiesInclude: []string{"Name"},
+	Log:                  new(testutil.Logger),
 	tagFilter:            nil, // this is filled in by CompileInputs()
 }
 
