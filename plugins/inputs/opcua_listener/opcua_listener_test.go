@@ -182,6 +182,16 @@ identifier_type = "i"
 tags = [["tag1", "val1"], ["tag2", "val2"]]
 nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 
+[inputs.opcua_listener.group.nodes.monitoring_params]
+sampling_interval = "50ms"
+queue_size = "10"
+discard_oldest = "true"
+
+[inputs.opcua_listener.group.nodes.monitoring_params.data_change_filter]
+trigger = "StatusValue"
+deadband_type = "Absolute"
+deadband_value = "100"
+
 [inputs.opcua_listener.workarounds]
 additional_valid_status_codes = ["0xC0"]
 `
@@ -242,6 +252,16 @@ additional_valid_status_codes = ["0xC0"]
 				FieldName:  "name4",
 				Identifier: "4000",
 				TagsSlice:  [][]string{{"tag1", "override"}},
+				MonitoringParams: input.MonitoringParameters{
+					SamplingInterval: 50000000,
+					QueueSize:        "10",
+					DiscardOldest:    "true",
+					DataChangeFilter: input.DataChangeFilter{
+						Trigger:       "StatusValue",
+						DeadbandType:  "Absolute",
+						DeadbandValue: "100",
+					},
+				},
 			}},
 		},
 	}, o.SubscribeClientConfig.Groups)
