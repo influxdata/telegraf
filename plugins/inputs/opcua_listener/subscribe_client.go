@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -32,6 +33,54 @@ type SubscribeClient struct {
 	processingCancel context.CancelFunc
 }
 
+func AssignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *input.MonitoringParameters, log telegraf.Logger) {
+	req.RequestedParameters.SamplingInterval = float64(time.Duration(monParams.SamplingInterval) / time.Millisecond)
+
+	if monParams.QueueSize != "" {
+		queueSize, err := strconv.ParseUint(monParams.QueueSize, 10, 32)
+		if err == nil {
+			req.RequestedParameters.QueueSize = uint32(queueSize)
+		} else {
+			log.Debugf(
+				"Could not parse queue_size %s into uint32. Standard value %d used instead.",
+				monParams.QueueSize,
+				req.RequestedParameters.QueueSize)
+		}
+	}
+
+	if monParams.DiscardOldest != "" {
+		discardOldest, err := strconv.ParseBool(monParams.DiscardOldest)
+		if err == nil {
+			req.RequestedParameters.DiscardOldest = discardOldest
+		} else {
+			log.Debugf(
+				"Could not parse discard_oldest %s into bool. Standard value %t used instead.",
+				monParams.DiscardOldest,
+				req.RequestedParameters.DiscardOldest)
+		}
+	}
+
+	if monParams.DataChangeFilter.Trigger != "" {
+		trigger := ua.DataChangeTriggerFromString(monParams.DataChangeFilter.Trigger)
+		deadbandType := uint32(ua.DeadbandTypeFromString(monParams.DataChangeFilter.DeadbandType))
+		deadbandValue, err := strconv.ParseFloat(monParams.DataChangeFilter.DeadbandValue, 64)
+
+		if err == nil && deadbandValue != 0 {
+			req.RequestedParameters.Filter = ua.NewExtensionObject(
+				&ua.DataChangeFilter{
+					Trigger:       trigger,
+					DeadbandType:  deadbandType,
+					DeadbandValue: deadbandValue,
+				},
+			)
+		} else {
+			log.Debugf(
+				"Could not parse deadband_value %s into float64. No filter was set.",
+				monParams.DataChangeFilter.DeadbandValue)
+		}
+	}
+}
+
 func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*SubscribeClient, error) {
 	client, err := sc.InputClientConfig.CreateInputClient(log)
 	if err != nil {
@@ -57,6 +106,7 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 	for i, nodeID := range client.NodeIDs {
 		// The node id index (i) is used as the handle for the monitored item
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
+		AssignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams, log)
 		subClient.monitoredItemsReqs[i] = req
 	}
 
