@@ -257,8 +257,8 @@ opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 ## Group Configuration
 
 Groups can set default values for the namespace, identifier type, tags
-settings and sampling interval.  The default values apply to all the 
-nodes in the group.  If a default is set, a node may omit the setting 
+settings and sampling interval.  The default values apply to all the
+nodes in the group.  If a default is set, a node may omit the setting
 altogether. This simplifies node configuration, especially when many
 nodes share the same namespace or identifier type.
 
