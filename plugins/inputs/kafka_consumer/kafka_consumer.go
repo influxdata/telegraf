@@ -488,9 +488,10 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	header_key := ""
 	if len(h.MsgHeadersToTags) > 0 {
 		for _, header := range msg.Headers {
+			//convert to a string as the header and value are byte arrays.
 			header_key = string(header.Key)
 			if _, exists := h.MsgHeadersToTags[header_key]; exists {
-				// If message header should be pass as tags, add it to metrics
+				// If message header should be pass as tag then add it to the metrics
 				for _, metric := range metrics {
 					metric.AddTag(header_key, string(header.Value))
 				}
