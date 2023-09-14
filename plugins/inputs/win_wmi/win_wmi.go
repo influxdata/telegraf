@@ -32,6 +32,8 @@ type Query struct {
 	Filter               string   `toml:"filter"`
 	TagPropertiesInclude []string `toml:"tag_properties"`
 	tagFilter            filter.Filter
+
+	Log telegraf.Logger
 }
 
 // Wmi struct
@@ -139,6 +141,7 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	defer serviceRaw.Clear()
 
 	// result is a SWBemObjectSet
+	q.Log.Infof("running query: %s\n", q.query)
 	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", q.query)
 	if err != nil {
 		return fmt.Errorf("failed calling method ExecQuery for query %s: %w", q.query, err)
@@ -150,6 +153,11 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed getting Count: %w", err)
 	}
+
+	q.Log.Info("getting count property:")
+	v, ok := result.GetProperty("Count")
+	q.Log.Info(ok)
+	q.Log.Info(v)
 
 	for i := int64(0); i < count; i++ {
 		// item is a SWbemObject
