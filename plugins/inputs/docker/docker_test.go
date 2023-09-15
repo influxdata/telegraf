@@ -111,6 +111,9 @@ var baseClient = MockClient{
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
 	},
+	DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+		return DiskUsage, nil
+	},
 	CloseF: func() error {
 		return nil
 	},
@@ -1547,4 +1550,76 @@ func TestDocker_Init(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDockerGatherDiskUsage(t *testing.T) {
+	var acc testutil.Accumulator
+	d := Docker{
+		Log:       testutil.Logger{},
+		newClient: func(string, *tls.Config) (Client, error) { return &baseClient, nil },
+	}
+
+	err := acc.GatherError(d.Gather)
+	require.NoError(t, err)
+
+	duOpts := types.DiskUsageOptions{Types: []types.DiskUsageObject{}}
+	d.gatherDiskUsage(&acc, duOpts)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+
+		map[string]interface{}{
+			"layers_size": int64(1e10),
+		},
+
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+
+		map[string]interface{}{
+			"size_root_fs": int64(123456789),
+			"size_rw":      int64(0)},
+
+		map[string]string{
+			"container_image":   "some_image",
+			"container_version": "1.0.0-alpine",
+			"engine_host":       "absol",
+			"server_version":    "17.09.0-ce",
+			"container_name":    "some_container",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+
+		map[string]interface{}{
+			"size":        int64(123456789),
+			"shared_size": int64(0)},
+
+		map[string]string{
+			"image_id":       "some_image_id",
+			"image_repo_tag": "some_image_tag:1.0.0-alpine",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+
+		map[string]interface{}{
+			"size": int64(123456789),
+		},
+
+		map[string]string{
+			"volume_name":    "some_volume",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
 }

@@ -386,7 +386,11 @@ status if configured.
 
 - docker_disk_usage
   - tags:
+    - engine_host
+    - server_version
     - container_name
+    - container_image
+    - container_version
     - image_id
     - image_repo_tag
     - volume_name

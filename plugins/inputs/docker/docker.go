@@ -217,7 +217,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 
 		for _, object := range d.StorageObjects {
 			if object == "container" {
-				objectTypes = append(objectTypes, types.VolumeObject)
+				objectTypes = append(objectTypes, types.ContainerObject)
 			} else if object == "image" {
 				objectTypes = append(objectTypes, types.ImageObject)
 			} else if object == "volume" {
@@ -435,21 +435,27 @@ func hostnameFromID(id string) string {
 	return id
 }
 
+// Parse container name
+func parseContainerName(containerNames []string) string {
+	var cname string
+
+	for _, name := range containerNames {
+		trimmedName := strings.TrimPrefix(name, "/")
+		if !strings.Contains(trimmedName, "/") {
+			cname = trimmedName
+			return cname
+		}
+	}
+	return cname
+}
+
 func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
 ) error {
 	var v *types.StatsJSON
 
-	// Parse container name
-	var cname string
-	for _, name := range container.Names {
-		trimmedName := strings.TrimPrefix(name, "/")
-		if !strings.Contains(trimmedName, "/") {
-			cname = trimmedName
-			break
-		}
-	}
+	cname := parseContainerName(container.Names)
 
 	if cname == "" {
 		return nil
@@ -885,17 +891,33 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 	now := time.Now()
 	duName := "docker_disk_usage"
 
+	// Layers size
+	fields := map[string]interface{}{
+		"layers_size": du.LayersSize,
+	}
+
+	tags := map[string]string{
+		"engine_host":    d.engineHost,
+		"server_version": d.serverVersion,
+	}
+
+	acc.AddFields(duName, fields, tags, now)
+
 	// Containers
 	for _, container := range du.Containers {
 		fields := map[string]interface{}{
-			"size_rw":      container.SizeRootFs,
-			"size_root_fs": container.SizeRw,
+			"size_rw":      container.SizeRw,
+			"size_root_fs": container.SizeRootFs,
 		}
 
-		// TODO: container name parsing and add other tags from gatherContainer?
-		// TODO: check for integration with gatherContainer?
+		imageName, imageVersion := dockerint.ParseImage(container.Image)
+
 		tags := map[string]string{
-			"container_name": strings.TrimPrefix(container.Names[0], "/"),
+			"engine_host":       d.engineHost,
+			"server_version":    d.serverVersion,
+			"container_name":    parseContainerName(container.Names),
+			"container_image":   imageName,
+			"container_version": imageVersion,
 		}
 
 		acc.AddFields(duName, fields, tags, now)
@@ -909,8 +931,11 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"shared_size": image.SharedSize,
 		}
 
+		// TODO: should we use dockerint.ParseImage?
 		tags := map[string]string{
-			"image_id": image.ID,
+			"engine_host":    d.engineHost,
+			"server_version": d.serverVersion,
+			"image_id":       image.ID,
 		}
 		if len(image.RepoTags) > 0 {
 			tags["image_repo_tag"] = image.RepoTags[0]
@@ -926,7 +951,9 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 		}
 
 		tags := map[string]string{
-			"volume_name": volume.Name,
+			"engine_host":    d.engineHost,
+			"server_version": d.serverVersion,
+			"volume_name":    volume.Name,
 		}
 
 		acc.AddFields(duName, fields, tags, now)

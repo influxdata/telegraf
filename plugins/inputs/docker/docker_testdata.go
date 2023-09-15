@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/volume"
 )
 
 var info = types.Info{
@@ -543,4 +544,11 @@ func containerInspect() types.ContainerJSON {
 	}
 }
 
-var DiskUsage = types.DiskUsage{}
+var DiskUsage = types.DiskUsage{
+	LayersSize: 1e10,
+	Containers: []*types.Container{
+		{Names: []string{"some_container"}, Image: "some_image:1.0.0-alpine", SizeRw: 0, SizeRootFs: 123456789},
+	},
+	Images:  []*types.ImageSummary{{ID: "some_image_id", RepoTags: []string{"some_image_tag:1.0.0-alpine"}, Size: 123456789, SharedSize: 0}},
+	Volumes: []*volume.Volume{{Name: "some_volume", UsageData: &volume.UsageData{Size: 123456789}}},
+}
