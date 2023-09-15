@@ -278,6 +278,7 @@ jobs:
           key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
+          arch: arm64
       - save_cache:
           name: "Save Go caches"
           key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
