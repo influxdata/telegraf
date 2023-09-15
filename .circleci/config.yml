@@ -275,12 +275,12 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: darwin-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
       - save_cache:
           name: "Save Go caches"
-          key: darwin-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '~/Library/Caches/golangci-lint'
