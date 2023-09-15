@@ -46,7 +46,7 @@ if test -f "${EXE}"; then
     echo "$v is installed, required version is ${VERSION}"
     if [ "$v" != "gotestsum version ${VERSION}" ]; then
         setup_gotestsum
-        ${EXE} --version
+        ./${EXE} --version
     fi
 else
     setup_gotestsum
