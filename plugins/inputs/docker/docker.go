@@ -920,6 +920,10 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"container_version": imageVersion,
 		}
 
+		if d.IncludeSourceTag {
+			tags["source"] = hostnameFromID(container.ID)
+		}
+
 		acc.AddFields(duName, fields, tags, now)
 	}
 
@@ -931,14 +935,17 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"shared_size": image.SharedSize,
 		}
 
-		// TODO: should we use dockerint.ParseImage?
 		tags := map[string]string{
 			"engine_host":    d.engineHost,
 			"server_version": d.serverVersion,
-			"image_id":       image.ID,
+			"image_id":       image.ID[7:19], // remove "sha256:" and keep the first 12 characters
 		}
+
+		// TODO: how to handle multiple repo tags?
 		if len(image.RepoTags) > 0 {
-			tags["image_repo_tag"] = image.RepoTags[0]
+			imageName, imageVersion := dockerint.ParseImage(image.RepoTags[0])
+			tags["image_name"] = imageName
+			tags["image_version"] = imageVersion
 		}
 
 		acc.AddFields(duName, fields, tags, now)
@@ -953,7 +960,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 		tags := map[string]string{
 			"engine_host":    d.engineHost,
 			"server_version": d.serverVersion,
-			"volume_name":    volume.Name,
+			"volume_name":    volume.Name, // TODO: limit to first 12 characters if hash?
 		}
 
 		acc.AddFields(duName, fields, tags, now)

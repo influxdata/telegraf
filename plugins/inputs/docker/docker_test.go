@@ -1602,8 +1602,25 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 			"shared_size": int64(0)},
 
 		map[string]string{
-			"image_id":       "some_image_id",
-			"image_repo_tag": "some_image_tag:1.0.0-alpine",
+			"image_id":       "some_imageid",
+			"image_name":     "some_image_tag",
+			"image_version":  "1.0.0-alpine",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+
+		map[string]interface{}{
+			"size":        int64(425484494),
+			"shared_size": int64(0)},
+
+		map[string]string{
+			"image_id":       "7f4a1cc74046",
+			"image_name":     "telegraf",
+			"image_version":  "latest",
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
 		},
