@@ -392,7 +392,8 @@ status if configured.
     - container_image
     - container_version
     - image_id
-    - image_repo_tag
+    - image_name
+    - image_version
     - volume_name
   - fields:
     - size_rw
