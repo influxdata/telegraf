@@ -319,7 +319,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			//if message headers list specified, put it as map to handler
-			MsgHeadersMap := make(map[string]bool)
+			MsgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
 			if len(k.MsgHeadersAsTags) > 0 {
 				for _, header := range k.MsgHeadersAsTags {
 					MsgHeadersMap[header] = true
