@@ -161,7 +161,7 @@ func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 		a.log.Debugf("response Body: %q", string(body))
 	}
 
-	if err = chimpErrorCheck(body); err != nil {
+	if err := chimpErrorCheck(body); err != nil {
 		return nil, err
 	}
 	return body, nil

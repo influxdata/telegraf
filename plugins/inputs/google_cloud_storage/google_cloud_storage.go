@@ -88,7 +88,7 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if err != nil {
-			gcs.Log.Errorf("Error during iteration of keys", err)
+			gcs.Log.Errorf("Error during iteration of keys: %v", err)
 			return err
 		}
 
@@ -279,6 +279,6 @@ func init() {
 
 func (gcs *GCS) closeReader(r *storage.Reader) {
 	if err := r.Close(); err != nil {
-		gcs.Log.Errorf("Could not close reader", err)
+		gcs.Log.Errorf("Could not close reader: %v", err)
 	}
 }

@@ -81,7 +81,7 @@ func (w *FileWriter) Write(p []byte) (n int, err error) {
 	}
 	w.bytesWritten += int64(n)
 
-	if err = w.rotateIfNeeded(); err != nil {
+	if err := w.rotateIfNeeded(); err != nil {
 		return 0, err
 	}
 
@@ -144,14 +144,14 @@ func (w *FileWriter) rotateIfNeeded() error {
 }
 
 func (w *FileWriter) rotate() (err error) {
-	if err = w.current.Close(); err != nil {
+	if err := w.current.Close(); err != nil {
 		return err
 	}
 
 	// Use year-month-date for readability, unix time to make the file name unique with second precision
 	now := time.Now()
 	rotatedFilename := fmt.Sprintf(w.filenameRotationTemplate, now.Format(DateFormat), strconv.FormatInt(now.Unix(), 10))
-	if err = os.Rename(w.filename, rotatedFilename); err != nil {
+	if err := os.Rename(w.filename, rotatedFilename); err != nil {
 		return err
 	}
 
@@ -174,7 +174,7 @@ func (w *FileWriter) purgeArchivesIfNeeded() (err error) {
 		//sort files alphanumerically to delete older files first
 		sort.Strings(matches)
 		for _, filename := range matches[:len(matches)-w.maxArchives] {
-			if err = os.Remove(filename); err != nil {
+			if err := os.Remove(filename); err != nil {
 				return err
 			}
 		}

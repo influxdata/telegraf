@@ -65,6 +65,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Optional. If true, published PubSub message data will be base64-encoded.
   # base64_data = false
 
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## Optional. PubSub attributes to add to metrics.
   # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"

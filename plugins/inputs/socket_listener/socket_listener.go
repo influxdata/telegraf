@@ -88,7 +88,7 @@ func (sl *SocketListener) Init() error {
 		case "le":
 			order = binary.LittleEndian
 		default:
-			return fmt.Errorf("invalid 'endianess' %q", sl.SplittingLengthField.Endianness)
+			return fmt.Errorf("invalid 'endianness' %q", sl.SplittingLengthField.Endianness)
 		}
 
 		switch sl.SplittingLengthField.Bytes {

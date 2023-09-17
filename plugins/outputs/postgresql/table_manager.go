@@ -89,7 +89,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 			if isTempError(err) {
 				return err
 			}
-			tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %w", tagTable.name, err)
+			tm.Postgresql.Logger.Errorf("Permanent error updating schema for %s: %v", tagTable.name, err)
 		}
 
 		if len(missingCols) > 0 {
@@ -100,7 +100,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 				}
 				colDefs = append(colDefs, col.Name+" "+col.Type)
 			}
-			tm.Logger.Errorf("table %q is missing tag columns (dropping metrics): %s",
+			tm.Logger.Errorf("Table %q is missing tag columns (dropping metrics): %s",
 				tagTable.name,
 				strings.Join(colDefs, ", "))
 		}
@@ -120,7 +120,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 		if isTempError(err) {
 			return err
 		}
-		tm.Postgresql.Logger.Errorf("permanent error updating schema for %s: %w", metricTable.name, err)
+		tm.Postgresql.Logger.Errorf("Permanent error updating schema for %s: %v", metricTable.name, err)
 	}
 
 	if len(missingCols) > 0 {
@@ -131,7 +131,7 @@ func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *Tabl
 			}
 			colDefs = append(colDefs, col.Name+" "+col.Type)
 		}
-		tm.Logger.Errorf("table %q is missing columns (omitting fields): %s",
+		tm.Logger.Errorf("Table %q is missing columns (omitting fields): %s",
 			metricTable.name,
 			strings.Join(colDefs, ", "))
 	}
@@ -189,7 +189,7 @@ func (tm *TableManager) EnsureStructure(
 		if col.Role == utils.TagColType {
 			return nil, fmt.Errorf("column name too long: %q", col.Name)
 		}
-		tm.Postgresql.Logger.Errorf("column name too long: %q", col.Name)
+		tm.Postgresql.Logger.Errorf("Column name too long: %q", col.Name)
 		invalidColumns = append(invalidColumns, col)
 	}
 
@@ -318,16 +318,17 @@ func (tm *TableManager) getColumns(ctx context.Context, db dbh, name string) (ma
 
 		role := utils.FieldColType
 		switch colName {
-		case timeColumnName:
+		case tm.timeColumn.Name:
 			role = utils.TimeColType
-		case tagIDColumnName:
+		case tm.tagIDColumn.Name:
 			role = utils.TagsIDColType
-		case tagsJSONColumnName:
+		case tm.tagsJSONColumn.Name:
 			role = utils.TagColType
-		case fieldsJSONColumnName:
+		case tm.fieldsJSONColumn.Name:
 			role = utils.FieldColType
 		default:
-			// We don't want to monopolize the column comment (preventing user from storing other information there), so just look at the first word
+			// We don't want to monopolize the column comment (preventing user from storing other information there),
+			// so just look at the first word
 			if desc != nil {
 				descWords := strings.Split(*desc, " ")
 				if descWords[0] == "tag" {

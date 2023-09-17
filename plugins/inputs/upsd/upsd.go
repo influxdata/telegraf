@@ -67,12 +67,12 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 
 	timeLeftS, err := internal.ToFloat64(metrics["battery.runtime"])
 	if err != nil {
-		u.Log.Warnf("'battery.runtime' type is not supported: %w", err)
+		u.Log.Warnf("Type for 'battery.runtime' is not supported: %v", err)
 	}
 
 	timeLeftNS, err := internal.ToInt64(timeLeftS * 1_000_000_000)
 	if err != nil {
-		u.Log.Warnf("converting 'battery.runtime' to 'time_left_ns' failed: %w", err)
+		u.Log.Warnf("Converting 'battery.runtime' to 'time_left_ns' failed: %v", err)
 	}
 
 	fields := map[string]interface{}{

@@ -1,17 +1,19 @@
 package xpath
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
 	"github.com/srebhan/cborquery"
+	"github.com/srebhan/protobufquery"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -28,6 +30,7 @@ type dataDocument interface {
 	QueryAll(node dataNode, expr string) ([]dataNode, error)
 	CreateXPathNavigator(node dataNode) path.NodeNavigator
 	GetNodePath(node, relativeTo dataNode, sep string) string
+	GetNodeName(node dataNode, sep string, withParent bool) string
 	OutputXML(node dataNode) string
 }
 
@@ -64,6 +67,7 @@ type Config struct {
 	Fields       map[string]string `toml:"fields"`
 	FieldsInt    map[string]string `toml:"fields_int"`
 	FieldsHex    []string          `toml:"fields_bytes_as_hex"`
+	FieldsBase64 []string          `toml:"fields_bytes_as_base64"`
 
 	FieldSelection  string `toml:"field_selection"`
 	FieldNameQuery  string `toml:"field_name"`
@@ -75,8 +79,9 @@ type Config struct {
 	TagValueQuery string `toml:"tag_value"`
 	TagNameExpand bool   `toml:"tag_name_expansion"`
 
-	FieldsHexFilter filter.Filter
-	Location        *time.Location
+	FieldsHexFilter    filter.Filter
+	FieldsBase64Filter filter.Filter
+	Location           *time.Location
 }
 
 func (p *Parser) Init() error {
@@ -172,6 +177,12 @@ func (p *Parser) Init() error {
 			return fmt.Errorf("creating hex-fields filter failed: %w", err)
 		}
 		config.FieldsHexFilter = f
+
+		bf, err := filter.Compile(config.FieldsBase64)
+		if err != nil {
+			return fmt.Errorf("creating base64-fields filter failed: %w", err)
+		}
+		config.FieldsBase64Filter = bf
 
 		p.Configs[i] = config
 	}
@@ -277,25 +288,6 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 
 	// Query tags and add default ones
 	tags := make(map[string]string)
-	for name, query := range config.Tags {
-		// Execute the query and cast the returned values into strings
-		v, err := p.executeQuery(doc, selected, query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query tag %q: %w", name, err)
-		}
-		switch v := v.(type) {
-		case string:
-			tags[name] = v
-		case bool:
-			tags[name] = strconv.FormatBool(v)
-		case float64:
-			tags[name] = strconv.FormatFloat(v, 'G', -1, 64)
-		case nil:
-			continue
-		default:
-			return nil, fmt.Errorf("unknown format '%T' for tag %q", v, name)
-		}
-	}
 
 	// Handle the tag batch definitions if any.
 	if len(config.TagSelection) > 0 {
@@ -324,16 +316,11 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if !ok {
 					return nil, fmt.Errorf("failed to query tag name with query %q: result is not a string (%v)", tagnamequery, n)
 				}
+				name = p.constructFieldName(selected, selectedtag, name, config.TagNameExpand)
+
 				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
 				if err != nil {
 					return nil, fmt.Errorf("failed to query tag value for %q: %w", name, err)
-				}
-
-				if config.TagNameExpand {
-					p := p.document.GetNodePath(selectedtag, selected, "_")
-					if len(p) > 0 {
-						name = p + "_" + name
-					}
 				}
 
 				// Check if field name already exists and if so, append an index number.
@@ -359,12 +346,106 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		}
 	}
 
+	// Handle explicitly defined tags
+	for name, query := range config.Tags {
+		// Execute the query and cast the returned values into strings
+		v, err := p.executeQuery(doc, selected, query)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query tag %q: %w", name, err)
+		}
+		switch v := v.(type) {
+		case string:
+			tags[name] = v
+		case bool:
+			tags[name] = strconv.FormatBool(v)
+		case float64:
+			tags[name] = strconv.FormatFloat(v, 'G', -1, 64)
+		case nil:
+			continue
+		default:
+			return nil, fmt.Errorf("unknown format '%T' for tag %q", v, name)
+		}
+	}
+
+	// Add default tags
 	for name, v := range p.DefaultTags {
 		tags[name] = v
 	}
 
 	// Query fields
 	fields := make(map[string]interface{})
+
+	// Handle the field batch definitions if any.
+	if len(config.FieldSelection) > 0 {
+		fieldnamequery := "name()"
+		fieldvaluequery := "."
+		if len(config.FieldNameQuery) > 0 {
+			fieldnamequery = config.FieldNameQuery
+		}
+		if len(config.FieldValueQuery) > 0 {
+			fieldvaluequery = config.FieldValueQuery
+		}
+
+		// Query all fields
+		selectedFieldNodes, err := p.document.QueryAll(selected, config.FieldSelection)
+		if err != nil {
+			return nil, err
+		}
+		p.Log.Debugf("Number of selected field nodes: %d", len(selectedFieldNodes))
+		if len(selectedFieldNodes) > 0 && selectedFieldNodes[0] != nil {
+			for _, selectedfield := range selectedFieldNodes {
+				n, err := p.executeQuery(doc, selectedfield, fieldnamequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query field name with query %q: %w", fieldnamequery, err)
+				}
+				name, ok := n.(string)
+				if !ok {
+					return nil, fmt.Errorf("failed to query field name with query %q: result is not a string (%v)", fieldnamequery, n)
+				}
+				name = p.constructFieldName(selected, selectedfield, name, config.FieldNameExpand)
+
+				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query field value for %q: %w", name, err)
+				}
+
+				// Check if field name already exists and if so, append an index number.
+				if _, ok := fields[name]; ok {
+					for i := 1; ; i++ {
+						p := name + "_" + strconv.Itoa(i)
+						if _, ok := fields[p]; !ok {
+							name = p
+							break
+						}
+					}
+				}
+
+				// Handle complex types which would be dropped otherwise for
+				// native type handling
+				if v != nil {
+					switch reflect.TypeOf(v).Kind() {
+					case reflect.Array, reflect.Slice, reflect.Map:
+						if b, ok := v.([]byte); ok {
+							if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+								v = hex.EncodeToString(b)
+							}
+							if config.FieldsBase64Filter != nil && config.FieldsBase64Filter.Match(name) {
+								v = base64.StdEncoding.EncodeToString(b)
+							}
+						} else {
+							v = fmt.Sprintf("%v", v)
+						}
+					}
+				}
+
+				fields[name] = v
+			}
+		} else {
+			p.debugEmptyQuery("field selection", selected, config.FieldSelection)
+		}
+	}
+
+	// Handle explicitly defined fields
 	for name, query := range config.FieldsInt {
 		// Execute the query and cast the returned values into integers
 		v, err := p.executeQuery(doc, selected, query)
@@ -398,75 +479,25 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			return nil, fmt.Errorf("failed to query field %q: %w", name, err)
 		}
 
-		if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
-			if b, ok := v.([]byte); ok {
-				v = hex.EncodeToString(b)
+		// Handle complex types which would be dropped otherwise for
+		// native type handling
+		if v != nil {
+			switch reflect.TypeOf(v).Kind() {
+			case reflect.Array, reflect.Slice, reflect.Map:
+				if b, ok := v.([]byte); ok {
+					if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+						v = hex.EncodeToString(b)
+					}
+					if config.FieldsBase64Filter != nil && config.FieldsBase64Filter.Match(name) {
+						v = base64.StdEncoding.EncodeToString(b)
+					}
+				} else {
+					v = fmt.Sprintf("%v", v)
+				}
 			}
 		}
 
 		fields[name] = v
-	}
-
-	// Handle the field batch definitions if any.
-	if len(config.FieldSelection) > 0 {
-		fieldnamequery := "name()"
-		fieldvaluequery := "."
-		if len(config.FieldNameQuery) > 0 {
-			fieldnamequery = config.FieldNameQuery
-		}
-		if len(config.FieldValueQuery) > 0 {
-			fieldvaluequery = config.FieldValueQuery
-		}
-
-		// Query all fields
-		selectedFieldNodes, err := p.document.QueryAll(selected, config.FieldSelection)
-		if err != nil {
-			return nil, err
-		}
-		p.Log.Debugf("Number of selected field nodes: %d", len(selectedFieldNodes))
-		if len(selectedFieldNodes) > 0 && selectedFieldNodes[0] != nil {
-			for _, selectedfield := range selectedFieldNodes {
-				n, err := p.executeQuery(doc, selectedfield, fieldnamequery)
-				if err != nil {
-					return nil, fmt.Errorf("failed to query field name with query %q: %w", fieldnamequery, err)
-				}
-				name, ok := n.(string)
-				if !ok {
-					return nil, fmt.Errorf("failed to query field name with query %q: result is not a string (%v)", fieldnamequery, n)
-				}
-				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
-				if err != nil {
-					return nil, fmt.Errorf("failed to query field value for %q: %w", name, err)
-				}
-
-				if config.FieldNameExpand {
-					p := p.document.GetNodePath(selectedfield, selected, "_")
-					if len(p) > 0 {
-						name = p + "_" + name
-					}
-				}
-
-				// Check if field name already exists and if so, append an index number.
-				if _, ok := fields[name]; ok {
-					for i := 1; ; i++ {
-						p := name + "_" + strconv.Itoa(i)
-						if _, ok := fields[p]; !ok {
-							name = p
-							break
-						}
-					}
-				}
-
-				if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
-					if b, ok := v.([]byte); ok {
-						v = hex.EncodeToString(b)
-					}
-				}
-				fields[name] = v
-			}
-		} else {
-			p.debugEmptyQuery("field selection", selected, config.FieldSelection)
-		}
 	}
 
 	return metric.New(metricname, tags, fields, timestamp), nil
@@ -509,7 +540,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 				return nn.GetValue(), nil
 			}
 		}
-		// Fallback to get the string value representation
+
 		return iter.Current().Value(), nil
 	}
 
@@ -565,6 +596,30 @@ func splitLastPathElement(query string) []string {
 	}
 
 	return elements
+}
+
+func (p *Parser) constructFieldName(root, node dataNode, name string, expand bool) string {
+	var expansion string
+
+	// In case the name is empty we should determine the current node's name.
+	// This involves array index expansion in case the parent of the node is
+	// and array. If we expanded here, we should skip our parent as this is
+	// already encoded in the name
+	if name == "" {
+		name = p.document.GetNodeName(node, "_", !expand)
+	}
+
+	// If name expansion is requested, construct a path between the current
+	// node and the root node of the selection. Concatenate the elements with
+	// an underscore.
+	if expand {
+		expansion = p.document.GetNodePath(node, root, "_")
+	}
+
+	if len(expansion) > 0 {
+		name = expansion + "_" + name
+	}
+	return name
 }
 
 func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {

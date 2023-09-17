@@ -123,7 +123,7 @@ func (r *IntelRDT) Initialize() error {
 	if r.SamplingInterval == 0 {
 		r.SamplingInterval = defaultSamplingInterval
 	}
-	if err = validateInterval(r.SamplingInterval); err != nil {
+	if err := validateInterval(r.SamplingInterval); err != nil {
 		return err
 	}
 	r.parsedCores, err = parseCoresConfig(r.Cores)

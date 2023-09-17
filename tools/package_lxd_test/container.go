@@ -107,6 +107,17 @@ func (c *Container) CheckStatus(serviceName string) error {
 		return err
 	}
 
+	err = c.client.Exec(
+		c.Name,
+		"bash",
+		"-c",
+		"--",
+		"ls -la /etc/telegraf/",
+	)
+	if err != nil {
+		return err
+	}
+
 	err = c.client.Exec(c.Name, "systemctl", "start", serviceName)
 	if err != nil {
 		_ = c.client.Exec(c.Name, "systemctl", "status", serviceName)

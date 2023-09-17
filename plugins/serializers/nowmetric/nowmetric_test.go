@@ -199,3 +199,52 @@ func TestSerializeBatch(t *testing.T) {
 		buf,
 	)
 }
+
+func TestSerializeJSONv2Format(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	s := &Serializer{Format: "jsonv2"}
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		[]byte(`{"records":[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}]}`),
+		buf,
+	)
+}
+
+func TestSerializeJSONv2FormatBatch(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	s := &Serializer{Format: "jsonv2"}
+	metrics := []telegraf.Metric{m, m}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		[]byte(
+			`{"records":[`+
+				`{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"},`+
+				`{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}`+
+				`]}`,
+		),
+		buf,
+	)
+}
+
+func TestSerializeInvalidFormat(t *testing.T) {
+	s := &Serializer{Format: "foo"}
+	require.Error(t, s.Init())
+}

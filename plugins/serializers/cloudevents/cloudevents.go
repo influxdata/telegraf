@@ -139,7 +139,7 @@ func (s *Serializer) batchEvents(metrics []telegraf.Metric) ([]byte, error) {
 	for _, m := range metrics {
 		e, err := s.createEvent(m)
 		if err != nil {
-			s.Log.Errorf("creating event for %v failed: %w", m, err)
+			s.Log.Errorf("Creating event for %v failed: %v", m, err)
 			continue
 		}
 		events = append(events, e)

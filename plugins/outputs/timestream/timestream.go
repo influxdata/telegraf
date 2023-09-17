@@ -200,7 +200,7 @@ func (t *Timestream) Connect() error {
 			t.Log.Errorf("Couldn't describe database %q. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
 			return err
 		}
-		t.Log.Infof("Describe database %q returned %q.", t.DatabaseName, describeDatabaseOutput)
+		t.Log.Infof("Describe database %q returned %v", t.DatabaseName, describeDatabaseOutput)
 	}
 
 	t.svc = svc

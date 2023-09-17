@@ -145,14 +145,14 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			err := k.onMessage(k.acc, r)
 			if err != nil {
 				<-k.sem
-				k.Log.Errorf("Scan parser error: %s", err.Error())
+				k.Log.Errorf("Scan parser error: %v", err)
 			}
 
 			return nil
 		})
 		if err != nil {
 			k.cancel()
-			k.Log.Errorf("Scan encountered an error: %s", err.Error())
+			k.Log.Errorf("Scan encountered an error: %v", err)
 			k.cons = nil
 		}
 	}()
@@ -220,7 +220,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 
 				k.lastSeqNum = strToBint(sequenceNum)
 				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
-					k.Log.Debug("Setting checkpoint failed: %v", err)
+					k.Log.Debugf("Setting checkpoint failed: %v", err)
 				}
 			} else {
 				k.Log.Debug("Metric group failed to process")

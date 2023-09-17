@@ -39,7 +39,6 @@ var (
 
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) error {
-	//resourceType := "vsan"
 	lower := versionLowerThan(e.apiVersion, 5, 5)
 	if lower {
 		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)

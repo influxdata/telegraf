@@ -208,7 +208,7 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 		hostCounter = &hostCountersInfo{computer: computer, tag: sourceTag}
 		m.hostCounters[computer] = hostCounter
 		hostCounter.query = m.queryCreator.NewPerformanceQuery(computer)
-		if err = hostCounter.query.Open(); err != nil {
+		if err := hostCounter.query.Open(); err != nil {
 			return err
 		}
 		hostCounter.counters = make([]*counter, 0)
@@ -380,7 +380,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 						PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							m.Log.Errorf("invalid counterPath %q: %s", counterPath, err.Error())
+							m.Log.Errorf("Invalid counterPath %q: %s", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err
@@ -413,11 +413,11 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval > 0 && m.lastRefreshed.Add(time.Duration(m.CountersRefreshInterval)).Before(time.Now())) {
-		if err = m.cleanQueries(); err != nil {
+		if err := m.cleanQueries(); err != nil {
 			return err
 		}
 
-		if err = m.ParseConfig(); err != nil {
+		if err := m.ParseConfig(); err != nil {
 			return err
 		}
 		for _, hostCounterSet := range m.hostCounters {
@@ -439,7 +439,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			}
 		} else {
 			hostCounterSet.timestamp = time.Now()
-			if err = hostCounterSet.query.CollectData(); err != nil {
+			if err := hostCounterSet.query.CollectData(); err != nil {
 				return err
 			}
 		}
@@ -449,10 +449,10 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 	for _, hostCounterInfo := range m.hostCounters {
 		wg.Add(1)
 		go func(hostInfo *hostCountersInfo) {
-			m.Log.Debugf("gathering from %s", hostInfo.computer)
+			m.Log.Debugf("Gathering from %s", hostInfo.computer)
 			start := time.Now()
 			err := m.gatherComputerCounters(hostInfo, acc)
-			m.Log.Debugf("gathering from %s finished in %.3fs", hostInfo.computer, time.Since(start))
+			m.Log.Debugf("Gathering from %s finished in %v", hostInfo.computer, time.Since(start))
 			if err != nil {
 				acc.AddError(fmt.Errorf("error during collecting data on host %q: %w", hostInfo.computer, err))
 			}
@@ -482,7 +482,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
-				m.Log.Warnf("error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
+				m.Log.Warnf("Error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
 				continue
 			}
 			addCounterMeasurement(metric, metric.instance, value, collectedFields)
@@ -498,7 +498,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
-				m.Log.Warnf("error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
+				m.Log.Warnf("Error while getting value for counter %q, instance: %s, will skip metric: %v", metric.counterPath, metric.instance, err)
 				continue
 			}
 			for _, cValue := range counterValues {
@@ -589,14 +589,14 @@ func (m *WinPerfCounters) Init() error {
 			for _, wildcard := range wildcards {
 				if strings.Contains(object.ObjectName, wildcard) {
 					found = true
-					m.Log.Errorf("object: %s, contains wildcard %s", object.ObjectName, wildcard)
+					m.Log.Errorf("Object: %s, contains wildcard %s", object.ObjectName, wildcard)
 				}
 			}
 			for _, counter := range object.Counters {
 				for _, wildcard := range wildcards {
 					if strings.Contains(counter, wildcard) {
 						found = true
-						m.Log.Errorf("object: %s, counter: %s contains wildcard %s", object.ObjectName, counter, wildcard)
+						m.Log.Errorf("Object: %s, counter: %s contains wildcard %s", object.ObjectName, counter, wildcard)
 					}
 				}
 			}

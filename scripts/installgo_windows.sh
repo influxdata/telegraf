@@ -2,14 +2,13 @@
 
 set -eux
 
-GO_VERSION="1.20.5"
+GO_VERSION="1.21.1"
 
 setup_go () {
+    rm -rf '/c/Program Files/Go'
     choco upgrade golang --allow-downgrade --version=${GO_VERSION}
     choco install make
     git config --system core.longpaths true
-    rm -rf /c/Go
-    cp -r /c/Program\ Files/Go /c/
 }
 
 if command -v go >/dev/null 2>&1; then

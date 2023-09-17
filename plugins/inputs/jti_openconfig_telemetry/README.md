@@ -84,6 +84,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Failed streams/calls will not be retried if 0 is provided
   retry_delay = "1000ms"
 
+  ## Period for sending keep-alive packets on idle connections
+  ## This is helpful to identify broken connections to the server
+  # keep_alive_period = "10s"
+
   ## To treat all string values as tags, set this to true
   str_as_tags = false
 ```

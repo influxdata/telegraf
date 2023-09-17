@@ -1,0 +1,3 @@
+solr_admin,core=core1 deleted_docs=102815i,max_docs=7620303i,num_docs=7517488i,size_in_bytes=1784635686i 
+solr_admin,core=main deleted_docs=619275i,max_docs=169562700i,num_docs=168943425i,size_in_bytes=247497521642i 
+solr_cache,core=main,handler=documentCache evictions=141485i,cumulative_evictions=141486i,cumulative_hitratio=0.42,cumulative_hits=115364i,cumulative_inserts=149768i,cumulative_lookups=265132i,hitratio=0.44,hits=1111i,inserts=987i,lookups=1234i,size=8192i,warmup_time=1i

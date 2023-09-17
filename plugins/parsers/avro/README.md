@@ -31,9 +31,14 @@ The message is supposed to be encoded as follows:
   ## Supported values are "binary" (default) and "json"
   # avro_format = "binary"
 
-  ## Url of the schema registry; exactly one of schema registry and
-  ## schema must be set
+  ## URL of the schema registry which may contain username and password in the
+  ## form http[s]://[username[:password]@]<host>[:port]
+  ## NOTE: Exactly one of schema registry and schema must be set
   avro_schema_registry = "http://localhost:8081"
+
+  ## Path to the schema registry certificate. Should be specified only if
+  ## required for connection to the schema registry.
+  # avro_schema_registry_cert = "/etc/telegraf/ca_cert.crt"
 
   ## Schema string; exactly one of schema registry and schema must be set
   #avro_schema = '''
@@ -74,7 +79,8 @@ The message is supposed to be encoded as follows:
   ## be used for the measurement timestamp.
   # avro_timestamp = ""
   ## If avro_timestamp is specified, avro_timestamp_format must be set
-  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'
+  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'.  It will
+  ## default to 'unix'.
   # avro_timestamp_format = "unix"
 
   ## Used to separate parts of array structures.  As above, the default

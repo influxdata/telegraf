@@ -133,7 +133,7 @@ func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 			p.logOnce["msr"] = nil
 			p.addPerCoreMetrics(acc)
 		} else {
-			err := errors.New("error while trying to read MSR (probably msr module was not loaded)")
+			err := errors.New("Error while trying to read MSR (probably msr module was not loaded)")
 			if val := p.logOnce["msr"]; val == nil || val.Error() != err.Error() {
 				p.Log.Errorf("%v", err)
 				// Remember that specific error occurs to omit logging next time
@@ -171,7 +171,7 @@ func (p *PowerStat) addGlobalMetrics(acc telegraf.Accumulator) {
 		if err != nil {
 			// In case of an error skip calculating metrics for this socket
 			if val := p.logOnce[socketID+"rapl"]; val == nil || val.Error() != err.Error() {
-				p.Log.Errorf("error fetching rapl data for socket %s, err: %v", socketID, err)
+				p.Log.Errorf("Error fetching rapl data for socket %s, err: %v", socketID, err)
 				// Remember that specific error occurs for socketID to omit logging next time
 				p.logOnce[socketID+"rapl"] = err
 			}
@@ -208,7 +208,7 @@ func maxDiePerSocket(_ string) int {
 func (p *PowerStat) addUncoreFreq(socketID string, die string, acc telegraf.Accumulator) {
 	err := checkFile("/sys/devices/system/cpu/intel_uncore_frequency")
 	if err != nil {
-		err := fmt.Errorf("error while checking existing intel_uncore_frequency (probably intel-uncore-frequency module was not loaded)")
+		err := fmt.Errorf("Error while checking existing intel_uncore_frequency (probably intel-uncore-frequency module was not loaded)")
 		if val := p.logOnce["intel_uncore_frequency"]; val == nil || val.Error() != err.Error() {
 			p.Log.Errorf("%v", err)
 			// Remember that specific error occurs to omit logging next time
@@ -228,18 +228,18 @@ func (p *PowerStat) readUncoreFreq(typeFreq string, socketID string, die string,
 			p.logOnce[socketID+"msr"] = nil
 			cpuID, err := p.GetCPUIDFromSocketID(socketID)
 			if err != nil {
-				p.Log.Debugf("error while reading socket ID: %v", err)
+				p.Log.Debugf("Error while reading socket ID: %v", err)
 				return
 			}
 			actualUncoreFreq, err := p.msr.readSingleMsr(cpuID, msrUncorePerfStatusString)
 			if err != nil {
-				p.Log.Debugf("error while reading %s: %v", msrUncorePerfStatusString, err)
+				p.Log.Debugf("Error while reading %s: %v", msrUncorePerfStatusString, err)
 				return
 			}
 			actualUncoreFreq = (actualUncoreFreq & 0x3F) * 100
 			fields["uncore_frequency_mhz_cur"] = actualUncoreFreq
 		} else {
-			err := errors.New("error while trying to read MSR (probably msr module was not loaded), uncore_frequency_mhz_cur metric will not be collected")
+			err := errors.New("Error while trying to read MSR (probably msr module was not loaded), uncore_frequency_mhz_cur metric will not be collected")
 			if val := p.logOnce[socketID+"msr"]; val == nil || val.Error() != err.Error() {
 				p.Log.Errorf("%v", err)
 				// Remember that specific error occurs for socketID to omit logging next time
@@ -249,12 +249,12 @@ func (p *PowerStat) readUncoreFreq(typeFreq string, socketID string, die string,
 	}
 	initMinFreq, err := p.msr.retrieveUncoreFrequency(socketID, typeFreq, "min", die)
 	if err != nil {
-		p.Log.Errorf("error while retrieving minimum uncore frequency of the socket %s, err: %v", socketID, err)
+		p.Log.Errorf("Error while retrieving minimum uncore frequency of the socket %s, err: %v", socketID, err)
 		return
 	}
 	initMaxFreq, err := p.msr.retrieveUncoreFrequency(socketID, typeFreq, "max", die)
 	if err != nil {
-		p.Log.Errorf("error while retrieving maximum uncore frequency of the socket %s, err: %v", socketID, err)
+		p.Log.Errorf("Error while retrieving maximum uncore frequency of the socket %s, err: %v", socketID, err)
 		return
 	}
 
@@ -272,7 +272,7 @@ func (p *PowerStat) readUncoreFreq(typeFreq string, socketID string, die string,
 func (p *PowerStat) addThermalDesignPowerMetric(socketID string, acc telegraf.Accumulator) {
 	maxPower, err := p.rapl.getConstraintMaxPowerWatts(socketID)
 	if err != nil {
-		p.Log.Errorf("error while retrieving TDP of the socket %s, err: %v", socketID, err)
+		p.Log.Errorf("Error while retrieving TDP of the socket %s, err: %v", socketID, err)
 		return
 	}
 
@@ -334,7 +334,7 @@ func (p *PowerStat) addMetricsForSingleCore(cpuID string, acc telegraf.Accumulat
 		err := p.msr.openAndReadMsr(cpuID)
 		if err != nil {
 			// In case of an error exit the function. All metrics past this point are dependent on MSR
-			p.Log.Debugf("error while reading msr: %v", err)
+			p.Log.Debugf("Error while reading msr: %v", err)
 			return
 		}
 	}
@@ -368,7 +368,7 @@ func (p *PowerStat) addCPUFrequencyMetric(cpuID string, acc telegraf.Accumulator
 
 	// In case of an error leave func
 	if err != nil {
-		p.Log.Debugf("error while reading file: %v", err)
+		p.Log.Debugf("Error while reading file: %v", err)
 		return
 	}
 
@@ -435,7 +435,7 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 		}
 	}
 	if cpuID == "" || model == "" {
-		p.Log.Debug("error while reading socket ID")
+		p.Log.Debug("Error while reading socket ID")
 		return
 	}
 	// dump_hsw_turbo_ratio_limit
@@ -443,7 +443,7 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 		coreCounts := uint64(0x1211) // counting the number of active cores 17 and 18
 		msrTurboRatioLimit2, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimit2String)
 		if err != nil {
-			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimit2String, err)
+			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimit2String, err)
 			return
 		}
 
@@ -456,15 +456,15 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 		coreCounts := uint64(0x100F0E0D0C0B0A09) // counting the number of active cores 9 to 16
 		msrTurboRatioLimit1, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimit1String)
 		if err != nil {
-			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimit1String, err)
+			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimit1String, err)
 			return
 		}
 		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit1, turboRatioLimitGroups)
 	}
 
 	if (model != strconv.FormatInt(0x37, 10)) && // INTEL_FAM6_ATOM_SILVERMONT
-		(model != strconv.FormatInt(0x4A, 10)) && // INTEL_FAM6_ATOM_SILVERMONT_MID:
-		(model != strconv.FormatInt(0x5A, 10)) && // INTEL_FAM6_ATOM_AIRMONT_MID:
+		(model != strconv.FormatInt(0x4A, 10)) && // INTEL_FAM6_ATOM_SILVERMONT_MID
+		(model != strconv.FormatInt(0x5A, 10)) && // INTEL_FAM6_ATOM_AIRMONT_MID
 		(model != strconv.FormatInt(0x2E, 10)) && // INTEL_FAM6_NEHALEM_EX
 		(model != strconv.FormatInt(0x2F, 10)) && // INTEL_FAM6_WESTMERE_EX
 		(model != strconv.FormatInt(0x57, 10)) && // INTEL_FAM6_XEON_PHI_KNL
@@ -478,27 +478,27 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 			coreCounts, err = p.msr.readSingleMsr(cpuID, msrTurboRatioLimit1String)
 
 			if err != nil {
-				p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimit1String, err)
+				p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimit1String, err)
 				return
 			}
 		}
 
 		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimitString)
 		if err != nil {
-			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimitString, err)
+			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimitString, err)
 			return
 		}
 		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit, turboRatioLimitGroups)
 	}
 	// dump_atom_turbo_ratio_limits
 	if model == strconv.FormatInt(0x37, 10) || // INTEL_FAM6_ATOM_SILVERMONT
-		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID:
+		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID
 		model == strconv.FormatInt(0x5A, 10) { // INTEL_FAM6_ATOM_AIRMONT_MID
 		coreCounts := uint64(0x04030201) // counting the number of active cores 1 to 4
 		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrAtomCoreTurboRatiosString)
 
 		if err != nil {
-			p.Log.Debugf("error while reading %s: %v", msrAtomCoreTurboRatiosString, err)
+			p.Log.Debugf("Error while reading %s: %v", msrAtomCoreTurboRatiosString, err)
 			return
 		}
 		value := uint64(0)
@@ -515,7 +515,7 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 	if model == strconv.FormatInt(0x57, 10) { // INTEL_FAM6_XEON_PHI_KNL
 		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimitString)
 		if err != nil {
-			p.Log.Debugf("error while reading %s: %v", msrTurboRatioLimitString, err)
+			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimitString, err)
 			return
 		}
 
@@ -556,7 +556,7 @@ func (p *PowerStat) addCPUBusyFrequencyMetric(cpuID string, acc telegraf.Accumul
 	mperfDelta := coresData[cpuID].mperfDelta
 	// Avoid division by 0
 	if mperfDelta == 0 {
-		p.Log.Errorf("mperf delta should not equal 0 on core %s", cpuID)
+		p.Log.Errorf("Value of mperf delta should not equal 0 on core %s", cpuID)
 		return
 	}
 	aperfMperf := float64(coresData[cpuID].aperfDelta) / float64(mperfDelta)
@@ -570,7 +570,7 @@ func (p *PowerStat) addCPUBusyFrequencyMetric(cpuID string, acc telegraf.Accumul
 	}
 
 	if interval == 0 {
-		p.Log.Errorf("interval between last two Telegraf cycles is 0")
+		p.Log.Errorf("Interval between last two Telegraf cycles is 0")
 		return
 	}
 
@@ -594,7 +594,7 @@ func (p *PowerStat) addCPUC1StateResidencyMetric(cpuID string, acc telegraf.Accu
 	timestampDeltaBig := new(big.Int).SetUint64(coresData[cpuID].timeStampCounterDelta)
 	// Avoid division by 0
 	if timestampDeltaBig.Sign() < 1 {
-		p.Log.Errorf("timestamp delta value %v should not be lower than 1", timestampDeltaBig)
+		p.Log.Errorf("Timestamp delta value %v should not be lower than 1", timestampDeltaBig)
 		return
 	}
 
@@ -633,7 +633,7 @@ func (p *PowerStat) addCPUC6StateResidencyMetric(cpuID string, acc telegraf.Accu
 	coresData := p.msr.getCPUCoresData()
 	// Avoid division by 0
 	if coresData[cpuID].timeStampCounterDelta == 0 {
-		p.Log.Errorf("timestamp counter on offset %s should not equal 0 on cpuID %s",
+		p.Log.Errorf("Timestamp counter on offset %d should not equal 0 on cpuID %s",
 			timestampCounterLocation, cpuID)
 		return
 	}
@@ -657,7 +657,7 @@ func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accu
 	coresData := p.msr.getCPUCoresData()
 	// Avoid division by 0
 	if coresData[cpuID].timeStampCounterDelta == 0 {
-		p.Log.Errorf("timestamp counter on offset %s should not equal 0 on cpuID %s",
+		p.Log.Errorf("Timestamp counter on offset %d should not equal 0 on cpuID %s",
 			timestampCounterLocation, cpuID)
 		return
 	}
@@ -686,13 +686,13 @@ func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accu
 func (p *PowerStat) addCPUBaseFreq(socketID string, acc telegraf.Accumulator) {
 	cpuID, err := p.GetCPUIDFromSocketID(socketID)
 	if err != nil {
-		p.Log.Debugf("error while getting CPU ID from Socket ID: %v", err)
+		p.Log.Debugf("Error while getting CPU ID from Socket ID: %v", err)
 		return
 	}
 
 	msrPlatformInfoMsr, err := p.msr.readSingleMsr(cpuID, msrPlatformInfoString)
 	if err != nil {
-		p.Log.Debugf("error while reading %s: %v", msrPlatformInfoString, err)
+		p.Log.Debugf("Error while reading %s: %v", msrPlatformInfoString, err)
 		return
 	}
 
@@ -700,7 +700,7 @@ func (p *PowerStat) addCPUBaseFreq(socketID string, acc telegraf.Accumulator) {
 	// to get the freq -> ratio * busClock
 	cpuBaseFreq := float64((msrPlatformInfoMsr>>8)&0xFF) * p.cpuBusClockValue
 	if cpuBaseFreq == 0 {
-		p.Log.Debugf("error while adding CPU base frequency, cpuBaseFreq is zero for the socket: %s", socketID)
+		p.Log.Debugf("Error while adding CPU base frequency, cpuBaseFreq is zero for the socket: %s", socketID)
 		return
 	}
 
@@ -716,7 +716,7 @@ func (p *PowerStat) addCPUBaseFreq(socketID string, acc telegraf.Accumulator) {
 func (p *PowerStat) getBusClock(cpuID string) float64 {
 	cpuInfo, ok := p.cpuInfo[cpuID]
 	if !ok {
-		p.Log.Debugf("cannot find cpuInfo for cpu: %s", cpuID)
+		p.Log.Debugf("Cannot find cpuInfo for cpu: %s", cpuID)
 		return 0
 	}
 
@@ -734,7 +734,7 @@ func (p *PowerStat) getBusClock(cpuID string) float64 {
 		return p.getSilvermontBusClock(cpuID)
 	}
 
-	p.Log.Debugf("couldn't find the freq for the model: %d", model)
+	p.Log.Debugf("Couldn't find the freq for the model: %s", model)
 	return 0.0
 }
 
@@ -742,13 +742,13 @@ func (p *PowerStat) getSilvermontBusClock(cpuID string) float64 {
 	silvermontFreqTable := []float64{83.3, 100.0, 133.3, 116.7, 80.0}
 	msr, err := p.msr.readSingleMsr(cpuID, msrFSBFreqString)
 	if err != nil {
-		p.Log.Debugf("error while reading %s: %v", msrFSBFreqString, err)
+		p.Log.Debugf("Error while reading %s: %v", msrFSBFreqString, err)
 		return 0.0
 	}
 
 	i := int(msr & 0xf)
 	if i >= len(silvermontFreqTable) {
-		p.Log.Debugf("unknown msr value: %d, using default bus clock value: %d", i, silvermontFreqTable[3])
+		p.Log.Debugf("Unknown msr value: %d, using default bus clock value: %f", i, silvermontFreqTable[3])
 		//same behaviour as in turbostat
 		i = 3
 	}

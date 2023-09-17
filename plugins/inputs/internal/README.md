@@ -21,6 +21,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.internal]]
   ## If true, collect telegraf memory stats.
   # collect_memstats = true
+
+  ## If true, collect metrics from Go's runtime.metrics. For a full list see:
+  ##   https://pkg.go.dev/runtime/metrics
+  # collect_gostats = false
 ```
 
 ## Metrics

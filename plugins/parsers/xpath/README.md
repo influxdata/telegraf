@@ -162,6 +162,11 @@ XPath expressions.
     ## By default, all byte-array-fields are converted to string.
     # fields_bytes_as_hex = []
 
+    ## Optional: List of fields to convert to base64-strings if they
+    ## contain byte-arrays. Resulting string will generally be shorter
+    ## than using hex encoding. Base64 encoding is RFC4648 compliant.
+    # fields_bytes_as_base64 = []
+
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
@@ -280,7 +285,8 @@ in the metric.
 __Please note__: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of
-specifying fields.
+specifying fields. In this case _explicitly_ defined tags and fields take
+_precedence_ over the batch instances if both use the same tag/field name.
 
 ### metric_selection (optional)
 

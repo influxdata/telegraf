@@ -63,10 +63,10 @@ type KafkaConsumer struct {
 	ticker          *time.Ticker
 	fingerprint     string
 
-	parser    telegraf.Parser
-	topicLock sync.Mutex
-	wg        sync.WaitGroup
-	cancel    context.CancelFunc
+	parserFunc telegraf.ParserFunc
+	topicLock  sync.Mutex
+	wg         sync.WaitGroup
+	cancel     context.CancelFunc
 }
 
 type ConsumerGroup interface {
@@ -89,8 +89,8 @@ func (*KafkaConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
-	k.parser = parser
+func (k *KafkaConsumer) SetParserFunc(fn telegraf.ParserFunc) {
+	k.parserFunc = fn
 }
 
 func (k *KafkaConsumer) Init() error {
@@ -308,7 +308,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		k.startErrorAdder(acc)
 
 		for ctx.Err() == nil {
-			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
+			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parserFunc, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			// We need to copy allWantedTopics; the Consume() is
@@ -358,12 +358,12 @@ type Message struct {
 	session sarama.ConsumerGroupSession
 }
 
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *ConsumerGroupHandler {
+func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, fn telegraf.ParserFunc, log telegraf.Logger) *ConsumerGroupHandler {
 	handler := &ConsumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
 		undelivered: make(map[telegraf.TrackingID]Message, maxUndelivered),
-		parser:      parser,
+		parserFunc:  fn,
 		log:         log,
 	}
 	return handler
@@ -374,11 +374,11 @@ type ConsumerGroupHandler struct {
 	MaxMessageLen int
 	TopicTag      string
 
-	acc    telegraf.TrackingAccumulator
-	sem    semaphore
-	parser telegraf.Parser
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
+	acc        telegraf.TrackingAccumulator
+	sem        semaphore
+	parserFunc telegraf.ParserFunc
+	wg         sync.WaitGroup
+	cancel     context.CancelFunc
 
 	mu          sync.Mutex
 	undelivered map[telegraf.TrackingID]Message
@@ -456,7 +456,12 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 			len(msg.Value), h.MaxMessageLen)
 	}
 
-	metrics, err := h.parser.Parse(msg.Value)
+	parser, err := h.parserFunc()
+	if err != nil {
+		return fmt.Errorf("creating parser: %w", err)
+	}
+
+	metrics, err := parser.Parse(msg.Value)
 	if err != nil {
 		h.release()
 		return err

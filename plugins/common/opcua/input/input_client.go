@@ -2,6 +2,7 @@ package input
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -75,12 +76,20 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 {
+		return errors.New("no groups or root nodes provided to gather from")
+	}
+	for _, group := range o.Groups {
+		if len(group.Nodes) == 0 {
+			return errors.New("group has no nodes to collect from")
+		}
+	}
+
 	return nil
 }
 
 func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputClient, error) {
-	err := o.Validate()
-	if err != nil {
+	if err := o.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -97,15 +106,13 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	log.Debug("Initialising node to metric mapping")
-	err = c.InitNodeMetricMapping()
-	if err != nil {
+	if err := c.InitNodeMetricMapping(); err != nil {
 		return nil, err
 	}
 
 	c.initLastReceivedValues()
 
-	err = c.initNodeIDs()
-	return c, err
+	return c, nil
 }
 
 // NodeMetricMapping mapping from a single node to a metric
@@ -327,7 +334,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	return nil
 }
 
-func (o *OpcUAInputClient) initNodeIDs() error {
+func (o *OpcUAInputClient) InitNodeIDs() error {
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
 	for _, node := range o.NodeMetricMapping {
 		nid, err := ua.ParseNodeID(node.Tag.NodeID())

@@ -63,7 +63,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 
 	acc := queryRunner(t, query{{
 		Sqlquery:   "select * from pg_stat_database",
-		Version:    901,
+		MinVersion: 901,
 		Withdbname: false,
 		Tagvalue:   "",
 	}})
@@ -163,7 +163,7 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 	for q, assertions := range examples {
 		acc := queryRunner(t, query{{
 			Sqlquery:   q,
-			Version:    901,
+			MinVersion: 901,
 			Withdbname: false,
 			Tagvalue:   "",
 			Timestamp:  "ts",
@@ -180,7 +180,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 
 	acc := queryRunner(t, query{{
 		Sqlquery:   "select * from pg_stat_database",
-		Version:    901,
+		MinVersion: 901,
 		Withdbname: false,
 		Tagvalue:   "",
 	}})
@@ -238,7 +238,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 func TestPostgresqlSqlScript(t *testing.T) {
 	q := query{{
 		Script:     "testdata/test.sql",
-		Version:    901,
+		MinVersion: 901,
 		Withdbname: false,
 		Tagvalue:   "",
 	}}

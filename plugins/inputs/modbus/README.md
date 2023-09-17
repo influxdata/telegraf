@@ -104,7 +104,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## data_type   - INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
   ##               INT16, UINT16, INT32, UINT32, INT64, UINT64,
   ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
-  ##               FLOAT32, FIXED, UFIXED (fixed-point representation on input)
+  ##               FIXED, UFIXED (fixed-point representation on input)
+  ##               FLOAT32 is a deprecated alias for UFIXED for historic reasons, should be avoided
   ## scale       - the final numeric variable representation
   ## address     - variable address
 
@@ -383,6 +384,9 @@ Directly jump to the styles:
 This is the original style used by this plugin. It allows a per-register
 configuration for a single slave-device.
 
+> [!NOTE]
+> _For legacy reasons this configuration style is not completely consistent with the other styles. Especially `FLOAT32` which suggests a floating point representation is actually a_ ___Fixed Point___ _data type and should be considered_ ___deprecated___
+
 #### Usage of `data_type`
 
 The field `data_type` defines the representation of the data value on input from
@@ -414,7 +418,7 @@ modbus data source. For _coil_ and _discrete_ registers only `UINT16` is valid.
 Use these types if your modbus registers contain a value that is encoded in this
 format. These types always include the sign, therefore no variant exists.
 
-##### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
+##### Fixed Point: `FIXED`, `UFIXED`, (`FLOAT32` - _deprecated_)
 
 These types are handled as an integer type on input, but are converted to
 floating point representation for further processing (e.g. scaling). Use one of
@@ -430,7 +434,7 @@ Select the type `FIXED` when the input type is declared to hold signed integer
 values. Your documentation of the modbus device should indicate this with a term
 like 'int32 containing fixed-point representation with N decimal places'.
 
-(FLOAT32 is deprecated and should not be used. UFIXED provides the same
+(`FLOAT32` is deprecated and should not be used. `UFIXED` provides the same
 conversion from unsigned values).
 
 ---

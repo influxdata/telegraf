@@ -41,7 +41,7 @@ func (marc *mockAzureResourcesClient) List(_ context.Context, _ *armresources.Cl
 	}
 
 	var genericResourcesExpanded []*armresources.GenericResourceExpanded
-	if err = json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 	}
 
 	var genericResourcesExpanded []*armresources.GenericResourceExpanded
-	if err = json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +111,7 @@ func (mamdc *mockAzureMetricDefinitionsClient) List(
 	}
 
 	var metricDefinitions [][]*armmonitor.MetricDefinition
-	if err = json.Unmarshal(file, &metricDefinitions); err != nil {
+	if err := json.Unmarshal(file, &metricDefinitions); err != nil {
 		return armmonitor.MetricDefinitionsClientListResponse{}, err
 	}
 
@@ -152,7 +152,7 @@ func (mamc *mockAzureMetricsClient) List(
 	}
 
 	var metricResponses []armmonitor.Response
-	if err = json.Unmarshal(file, &metricResponses); err != nil {
+	if err := json.Unmarshal(file, &metricResponses); err != nil {
 		return armmonitor.MetricsClientListResponse{}, err
 	}
 

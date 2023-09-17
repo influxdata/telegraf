@@ -63,7 +63,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 			return fmt.Errorf("failed to get current user: %w", err)
 		}
 
-		kubeconfig := filepath.Join(u.HomeDir, ".kube/config")
+		kubeconfig := filepath.Join(u.HomeDir, ".kube", "config")
 
 		config, err = loadConfig(kubeconfig)
 		if err != nil {
@@ -125,8 +125,8 @@ func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
 	return isCandidate && shouldScrape
 }
 
-// Share informer across all instances of this plugin
-var informerfactory informers.SharedInformerFactory
+// Share informer per namespace across all instances of this plugin
+var informerfactory map[string]informers.SharedInformerFactory
 
 // An edge case exists if a pod goes offline at the same time a new pod is created
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
@@ -142,16 +142,23 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 	}
 
 	if informerfactory == nil {
+		informerfactory = make(map[string]informers.SharedInformerFactory)
+	}
+
+	var f informers.SharedInformerFactory
+	var ok bool
+	if f, ok = informerfactory[p.PodNamespace]; !ok {
 		var informerOptions []informers.SharedInformerOption
 		if p.PodNamespace != "" {
 			informerOptions = append(informerOptions, informers.WithNamespace(p.PodNamespace))
 		}
-		informerfactory = informers.NewSharedInformerFactoryWithOptions(clientset, resyncinterval, informerOptions...)
+		f = informers.NewSharedInformerFactoryWithOptions(clientset, resyncinterval, informerOptions...)
+		informerfactory[p.PodNamespace] = f
 	}
 
-	p.nsStore = informerfactory.Core().V1().Namespaces().Informer().GetStore()
+	p.nsStore = f.Core().V1().Namespaces().Informer().GetStore()
 
-	podinformer := informerfactory.Core().V1().Pods()
+	podinformer := f.Core().V1().Pods()
 	_, err := podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
 			newPod, ok := newObj.(*corev1.Pod)
@@ -195,8 +202,8 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		},
 	})
 
-	informerfactory.Start(ctx.Done())
-	informerfactory.WaitForCacheSync(wait.NeverStop)
+	f.Start(ctx.Done())
+	f.WaitForCacheSync(wait.NeverStop)
 	return err
 }
 
@@ -361,7 +368,7 @@ func podHasMatchingNamespace(pod *corev1.Pod, p *Prometheus) bool {
 func podReady(pod *corev1.Pod) bool {
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady {
-			return true
+			return pod.Status.Phase == corev1.PodRunning
 		}
 	}
 	return false

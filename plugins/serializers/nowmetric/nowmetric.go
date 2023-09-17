@@ -1,7 +1,6 @@
 package nowmetric
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,20 +9,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-type Serializer struct{}
-
-/*
-Example for the JSON generated and pushed to the MID
-{
-	"metric_type":"cpu_usage_system",
-	"resource":"",
-	"node":"ASGARD",
-	"value": 0.89,
-	"timestamp":1487365430,
-	"ci2metric_id":{"node":"ASGARD"},
-	"source":"Telegraf"
+type Serializer struct {
+	Format string `toml:"nowmetric_format"`
 }
-*/
 
 type OIMetric struct {
 	Metric    string            `json:"metric_type"`
@@ -36,30 +24,47 @@ type OIMetric struct {
 }
 
 type OIMetrics []OIMetric
+type OIMetricsObj struct {
+	Records []OIMetric `json:"records"`
+}
+
+func (s *Serializer) Init() error {
+	switch s.Format {
+	case "":
+		s.Format = "oi"
+	case "oi", "jsonv2":
+	default:
+		return fmt.Errorf("invalid format %q", s.Format)
+	}
+
+	return nil
+}
 
 func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
-	serialized, err := s.createObject(metric)
-	if err != nil {
-		return []byte{}, err
+	m := s.createObject(metric)
+
+	if s.Format == "jsonv2" {
+		obj := OIMetricsObj{Records: m}
+		return json.Marshal(obj)
 	}
-	return serialized, nil
+	return json.Marshal(m)
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
-	objects := make([]byte, 0)
+	objects := make([]OIMetric, 0)
 	for _, metric := range metrics {
-		m, err := s.createObject(metric)
-		if err != nil {
-			return nil, fmt.Errorf("dropping invalid metric: %s", metric.Name())
-		} else if m != nil {
-			objects = append(objects, m...)
-		}
+		objects = append(objects, s.createObject(metric)...)
 	}
-	replaced := bytes.Replace(objects, []byte("]["), []byte(","), -1)
-	return replaced, nil
+
+	if s.Format == "jsonv2" {
+		obj := OIMetricsObj{Records: objects}
+		return json.Marshal(obj)
+	}
+
+	return json.Marshal(objects)
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
+func (s *Serializer) createObject(metric telegraf.Metric) OIMetrics {
 	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
 	** Following elements accepted in the request body:
 		 ** metric_type: 	The name of the metric
@@ -117,9 +122,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 		allmetrics = append(allmetrics, oimetric)
 	}
 
-	metricsJSON, err := json.Marshal(allmetrics)
-
-	return metricsJSON, err
+	return allmetrics
 }
 
 func verifyValue(v interface{}) bool {

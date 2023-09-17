@@ -24,31 +24,31 @@ import (
 var sampleConfig string
 
 type ConvertStruct struct {
-	Integer         string
-	Real            string
-	Text            string
-	Timestamp       string
-	Defaultvalue    string
-	Unsigned        string
-	Bool            string
-	ConversionStyle string
+	Integer         string `toml:"integer"`
+	Real            string `toml:"real"`
+	Text            string `toml:"text"`
+	Timestamp       string `toml:"timestamp"`
+	Defaultvalue    string `toml:"defaultvalue"`
+	Unsigned        string `toml:"unsigned"`
+	Bool            string `toml:"bool"`
+	ConversionStyle string `toml:"conversion_style"`
 }
 
 type SQL struct {
-	Driver                string
-	DataSourceName        string
-	TimestampColumn       string
-	TableTemplate         string
-	TableExistsTemplate   string
-	InitSQL               string `toml:"init_sql"`
-	Convert               ConvertStruct
-	ConnectionMaxIdleTime config.Duration
-	ConnectionMaxLifetime config.Duration
-	ConnectionMaxIdle     int
-	ConnectionMaxOpen     int
+	Driver                string          `toml:"driver"`
+	DataSourceName        string          `toml:"data_source_name"`
+	TimestampColumn       string          `toml:"timestamp_column"`
+	TableTemplate         string          `toml:"table_template"`
+	TableExistsTemplate   string          `toml:"table_exists_template"`
+	InitSQL               string          `toml:"init_sql"`
+	Convert               ConvertStruct   `toml:"convert"`
+	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
+	ConnectionMaxLifetime config.Duration `toml:"connection_max_lifetime"`
+	ConnectionMaxIdle     int             `toml:"connection_max_idle"`
+	ConnectionMaxOpen     int             `toml:"connection_max_open"`
+	Log                   telegraf.Logger `toml:"-"`
 
 	db     *gosql.DB
-	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
 }
 
@@ -143,16 +143,12 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
-	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
-	//var pk []string
 
 	if p.TimestampColumn != "" {
-		//pk = append(pk, quoteIdent(p.TimestampColumn))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
 	for _, tag := range metric.TagList() {
-		//pk = append(pk, quoteIdent(tag.Key))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
 	}
 
@@ -166,7 +162,6 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
-	//query = strings.ReplaceAll(query, "{KEY_COLUMNS}", strings.Join(pk, ","))
 
 	return query
 }
