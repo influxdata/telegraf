@@ -23,7 +23,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/metric"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -47,12 +46,13 @@ type Opensearch struct {
 	pipelineName        string
 	DefaultPipeline     string `toml:"default_pipeline"`
 	UsePipeline         string `toml:"use_pipeline"`
-	DefaultTagValue     string          `toml:"default_tag_value"`
 	Timeout             config.Duration `toml:"timeout"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	URLs                []string        `toml:"urls"`
 	Log                 telegraf.Logger `toml:"-"`
+	indexTmpl			*template.Template
+	pipelineTmpl		*template.Template
 	onSucc              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
 	onFail              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
 	configOptions       httpconfig.HTTPClientConfig
@@ -85,20 +85,17 @@ func (o *Opensearch) Init() error {
 		o.FloatHandling = "none"
 	}
 
-	dummyMetric := metric.New(
-		"test",
-		map[string]string{},
-		map[string]interface{}{},
-		time.Date(2023, time.September, 10, 23, 0, 0, 0, time.UTC),
-	)
-	_, err := o.GetIndexName(dummyMetric)
+	indexTmpl, err := template.New("index").Parse(o.IndexName)
 	if err != nil {
-		return fmt.Errorf("invalid index template specified %w", err)
+		return fmt.Errorf("error parsing indextemplate %w", err)
 	}
-	_, err = o.getPipelineName(dummyMetric)
+	o.indexTmpl = indexTmpl
+
+	pipelineTmpl, err := template.New("index").Parse(o.UsePipeline)
 	if err != nil {
-		return fmt.Errorf("invalid pipeline value specified for UsePipeline %w", err)
+		return fmt.Errorf("error parsing pipelineTemplate for UsePipeline %w", err)
 	}
+	o.pipelineTmpl = pipelineTmpl
 
 	o.onSucc = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
 		o.Log.Debugf("Indexed to OpenSearch with status- [%d] Result- %s DocumentID- %s ", res.Status, res.Result, res.DocumentID)
@@ -356,35 +353,9 @@ func createBulkIndexer(osInst *Opensearch, pipelineName string) (opensearchutil.
 }
 
 func (o *Opensearch) GetIndexName(metric telegraf.Metric) (string, error) {
-	var tagVal = func(key string) string {
-		if val, ok := metric.Tags()[key]; ok {
-			return val
-		}
-		return o.DefaultTagValue
-	}
-	var fieldVal = func(key string) interface{} {
-		if val, ok := metric.Fields()[key]; ok {
-			return val
-		}
-		return ""
-	}
-	var nameVal = func() string{
-		return metric.Name()
-	}
-
-	var funcs = template.FuncMap{
-		"Name": nameVal,
-		"Tag": tagVal,
-		"Field": fieldVal,
-	}
-	
-	var indexTmpl, err = template.New("index").Funcs(funcs).Parse(o.IndexName)
-	if err != nil {
-		return "", fmt.Errorf("parsing index name failed: %w", err)
-	}
-
 	var buf bytes.Buffer
-	err = indexTmpl.Execute(&buf, struct{Time time.Time}{metric.Time().UTC()})
+	err := o.indexTmpl.Execute(&buf, metric)
+
 	if err != nil {
 		return "", fmt.Errorf("creating index name failed: %w", err)
 	}
@@ -393,8 +364,6 @@ func (o *Opensearch) GetIndexName(metric telegraf.Metric) (string, error) {
 		return "", fmt.Errorf("failed to evaluate valid indexname: %s", indexName)
 	}
 	o.Log.Debugf("indexName- %s", indexName)
-	
-
 	return indexName, nil
 }
 
@@ -402,20 +371,9 @@ func (o *Opensearch) getPipelineName(metric telegraf.Metric) (string, error) {
 	if o.UsePipeline == "" || !strings.Contains(o.UsePipeline, "{{") {
 		return o.UsePipeline, nil
 	}
-	var tagVal = func(key string) string {
-		if val, ok := metric.Tags()[key]; ok {
-			return val
-		}
-		return o.DefaultTagValue
-	}
-	
-	var pipelineTmpl, err = template.New("pipeline").Funcs(template.FuncMap{"Tag": tagVal}).Parse(o.UsePipeline)
-	if err != nil {
-		return "", fmt.Errorf("parsing pipeline name failed: %w", err)
-	}
 
 	var buf bytes.Buffer
-	err = pipelineTmpl.Execute(&buf, "")
+	err := o.pipelineTmpl.Execute(&buf, metric)
 	if err != nil {
 		return "", fmt.Errorf("creating pipeline name failed: %w", err)
 	}

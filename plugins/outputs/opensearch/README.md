@@ -30,11 +30,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Target index name for metrics (OpenSearch will create if it not exists).
   ## This is a Golang template (see https://pkg.go.dev/text/template)
   ## You can also specify
-  ## metric name (`{{Name}}`), tag value (`{{Tag "tag_name"}}`), field value (`{{Field "feild_name"}}`) 
-  ## If the tag does not exist, the default tag value will be used.
-  # default_tag_value = ""
+  ## metric name (`{{.Name}}`), tag value (`{{.Tag "tag_name"}}`), field value (`{{.Field "feild_name"}}`) 
+  ## If the tag does not exist, the default tag value will be empty string "".
   ## the timestamp (`{{.Time.Format "xxxxxxxxx"}}`).
-  ## For example: "telegraf-{{.Time.Format "2006-01-02"}}-{{Tag "host"}}" would set it to telegraf-2023-07-27-HostName
+  ## For example: "telegraf-{{.Time.Format "2006-01-02"}}-{{.Tag "host"}}" would set it to telegraf-2023-07-27-HostName
   index_name = ""
 
   ## Timeout
@@ -107,7 +106,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_pipeline = "my_pipeline"
 
   ## Pipeline Name
-  ## Additionally, you can specify a tag name using the notation (`{{Tag "tag_name"}}`)
+  ## Additionally, you can specify a tag name using the notation (`{{.Tag "tag_name"}}`)
   ## If the tag does not exist, the default tag value will be used.
   # default_tag_value = ""
   ## If the tag does not exist, the default pipeline will be used as the

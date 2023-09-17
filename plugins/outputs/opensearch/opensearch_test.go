@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/docker/go-connections/nat"
@@ -38,7 +39,6 @@ func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container 
 
 func TestGetIndexName(t *testing.T) {
 	e := &Opensearch{
-		DefaultTagValue: "none",
 		Log:             testutil.Logger{},
 	}
 
@@ -63,20 +63,20 @@ func TestGetIndexName(t *testing.T) {
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{},
-			`indexname-{{Tag "tag2"}}-{{.Time.Format "2006-01-02"}}`,
-			"indexname-none-2014-12-01",
+			`indexname-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}`,
+			"indexname--2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1"},
-			`indexname-{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+			`indexname-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 			"indexname-value1-2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			`indexname-{{Tag "tag1"}}-{{Tag "tag2"}}-{{Tag "tag3"}}-{{.Time.Format "2006-01-02"}}`,
-			"indexname-value1-value2-none-2014-12-01",
+			`indexname-{{.Tag "tag1"}}-{{.Tag "tag2"}}-{{.Tag "tag3"}}-{{.Time.Format "2006-01-02"}}`,
+			"indexname-value1-value2--2014-12-01",
 		},
 	}
 	for _, test := range tests {
@@ -85,7 +85,7 @@ func TestGetIndexName(t *testing.T) {
 		for key, val := range test.Tags {
 			mockMetric.AddTag(key, val)
 		}
-		e.IndexName = test.IndexName
+		e.indexTmpl, _ = template.New("index").Parse(test.IndexName)
 		indexName, err := e.GetIndexName(mockMetric)
 		require.NoError(t, err)
 		if indexName != test.Expected {
@@ -109,7 +109,7 @@ func TestGetPipelineName(t *testing.T) {
 		{
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
-			`{{Tag "es-pipeline"}}`,
+			`{{.Tag "es-pipeline"}}`,
 			"myDefaultPipeline",
 		},
 		{
@@ -121,18 +121,19 @@ func TestGetPipelineName(t *testing.T) {
 		{
 			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
 			[]string{},
-			`{{Tag "es-pipeline"}}`,
+			`{{.Tag "es-pipeline"}}`,
 			"myOtherPipeline",
 		},
 		{
 			map[string]string{"tag1": "pipeline2", "es-pipeline": "myOtherPipeline"},
 			[]string{},
-			`{{Tag "tag1"}}`,
+			`{{.Tag "tag1"}}`,
 			"pipeline2",
 		},
 	}
 	for _, test := range tests {
 		e.UsePipeline = test.UsePipeline
+		e.pipelineTmpl, _ = template.New("index").Parse(test.UsePipeline)
 		mockMetric := testutil.MockMetrics()[0]
 		for key, val := range test.Tags {
 			mockMetric.AddTag(key, val)
@@ -165,13 +166,13 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      `test-{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:      `test-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     true,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	var indexName, err = e.GetIndexName(testutil.MockMetrics()[0])
 	require.NoError(t, err)
 	e.IndexName = indexName
@@ -203,13 +204,13 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:           urls,
-		IndexName:      `test-{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:      `test-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     false,
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	err := e.Connect()
 	require.NoError(t, err)
 
@@ -237,14 +238,14 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:            urls,
-		IndexName:       `{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
 		EnableGzip:      false,
 		ManageTemplate:  false,
 		Log:             testutil.Logger{},
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	err := e.Connect()
 	require.NoError(t, err)
 

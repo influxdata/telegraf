@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -37,7 +38,7 @@ func TestConnectAndWriteIntegrationV2(t *testing.T) {
 		HealthCheckTimeout:  config.Duration(time.Second * 1),
 		Log:                 testutil.Logger{},
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	// Verify that we can connect to Opensearch
 	require.NoError(t, e.Connect())
 
@@ -116,7 +117,7 @@ func TestConnectAndWriteMetricWithNaNValueNoneIntegrationV2(t *testing.T) {
 		testutil.TestMetric(math.Inf(1)),
 		testutil.TestMetric(math.Inf(-1)),
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	// Verify that we can connect to Opensearch
 	err := e.Connect()
 	require.NoError(t, err)
@@ -158,7 +159,7 @@ func TestConnectAndWriteMetricWithNaNValueDropIntegrationV2(t *testing.T) {
 		testutil.TestMetric(math.Inf(1)),
 		testutil.TestMetric(math.Inf(-1)),
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	// Verify that we can connect to Opensearch
 	err := e.Connect()
 	require.NoError(t, err)
@@ -224,7 +225,7 @@ func TestConnectAndWriteMetricWithNaNValueReplacementIntegrationV2(t *testing.T)
 			testutil.TestMetric(math.Inf(1)),
 			testutil.TestMetric(math.Inf(-1)),
 		}
-
+		e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 		err := e.Connect()
 		require.NoError(t, err)
 
@@ -292,6 +293,7 @@ func TestTemplateManagementIntegrationV2(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 
 	err := e.Connect()
 	require.NoError(t, err)
@@ -314,7 +316,7 @@ func TestTemplateInvalidIndexPatternIntegrationV2(t *testing.T) {
 
 	e := &Opensearch{
 		URLs:              urls,
-		IndexName:         `{{Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:         `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        false,
 		ManageTemplate:    true,
@@ -322,7 +324,7 @@ func TestTemplateInvalidIndexPatternIntegrationV2(t *testing.T) {
 		OverwriteTemplate: true,
 		Log:               testutil.Logger{},
 	}
-
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
 	err := e.Connect()
 	require.Error(t, err)
 }
