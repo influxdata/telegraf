@@ -78,7 +78,7 @@ func (o *Opensearch) Init() error {
 	// Determine if we should process NaN and inf values
 	valOptions := []string{"", "none", "drop", "replace"}
 	if err := choice.Check(o.FloatHandling, valOptions); err != nil {
-		return fmt.Errorf("invalid float_handling type %q", o.FloatHandling)
+		return fmt.Errorf("config float_handling type %w", err)
 	}
 
 	if o.FloatHandling == "" {
@@ -315,7 +315,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 		for _, metric := range metrics {
 			pipelineName, err := osInst.getPipelineName(metric);
 			if err != nil {
-				osInst.Log.Errorf("error while evaluating pipeline name: %s for pipeline %s", err, pipelineName)
+				osInst.Log.Errorf("error while evaluating pipeline name: %w for pipeline %s", err, pipelineName)
 			}
 			
 			if pipelineName != "" {
