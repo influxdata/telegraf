@@ -24,12 +24,6 @@ var (
 )
 
 // executeCommand wraps os/exec functions.
-//
-//	@param name the command's name.
-//	@param arg the command's arguments.
-//	@return string the result of command execution.
-//	@return error
-//
 //nolint:unparam // currently the command is always `lctl`
 func executeCommand(name string, arg ...string) (string, error) {
 	cmd := execCommand(name, arg...)
@@ -41,9 +35,6 @@ func executeCommand(name string, arg ...string) (string, error) {
 }
 
 // parseRecoveryStatus parses the result of recovery_status
-//
-//	@param content the result of recovery_status
-//	@return int64 1 represents complete.
 func parseRecoveryStatus(content string) int64 {
 	status := recoveryStatusPattern.FindStringSubmatch(content)
 	if strings.ToLower(strings.TrimSpace(status[1])) == "complete" {
@@ -64,9 +55,6 @@ type Jobstat struct {
 }
 
 // parseJobStats parses the result of job_stats.
-//
-//	@param content the result of job_stats
-//	@return map
 func parseJobStats(content string) map[string][]*Jobstat {
 	result := make(map[string][]*Jobstat)
 
@@ -138,9 +126,6 @@ type Stat struct {
 }
 
 // parseStats parses the result of stats.
-//
-//	@param content the result of stats.
-//	@return []*Stat
 func parseStats(content string) []*Stat {
 	stats := make([]*Stat, 0)
 	scanner := bufio.NewScanner(strings.NewReader(content))
@@ -180,9 +165,6 @@ func parseStats(content string) []*Stat {
 }
 
 // gatherHealth gathers health of lustre nodes.
-//
-//	@param measurement
-//	@param acc
 func gatherHealth(measurement string, acc telegraf.Accumulator) {
 	content, err := executeCommand("lctl", "get_param", "-n", "health_check")
 	if err != nil {
@@ -202,10 +184,6 @@ func gatherHealth(measurement string, acc telegraf.Accumulator) {
 }
 
 // parserVolumesName parsers volumes's name from command `lctl get_param -N obdfilter.*`
-//
-//	@param content the result returned by command.
-//	@return []string volumes' name.
-//	@return error
 func parserVolumesName(content string) []string {
 	volumes := make([]string, 0)
 	vsName := volumesPattern.FindAllStringSubmatch(content, -1)
