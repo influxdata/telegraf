@@ -169,7 +169,7 @@ func (o *OpcUAClient) Connect() error {
 		}
 
 		if o.Client != nil {
-			o.Log.Warnf("Closing connection due to Connect called while already instantiated", u)
+			o.Log.Warnf("Closing connection to %q as already connected", u)
 			if err := o.Client.Close(); err != nil {
 				// Only log the error but to not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).

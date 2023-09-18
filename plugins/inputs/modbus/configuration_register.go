@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 )
 
 //go:embed sample_register.conf
@@ -176,12 +177,12 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition, type
 func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) error {
 	nameEncountered := map[string]bool{}
 	for _, item := range fieldDefs {
-		//check empty name
+		// check empty name
 		if item.Name == "" {
 			return fmt.Errorf("empty name in %q", registerType)
 		}
 
-		//search name duplicate
+		// search name duplicate
 		canonicalName := item.Measurement + "." + item.Name
 		if nameEncountered[canonicalName] {
 			return fmt.Errorf("name %q is duplicated in measurement %q %q - %q", item.Name, item.Measurement, registerType, item.Name)
@@ -258,6 +259,14 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 }
 
 func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
+	if dataType == "FLOAT32" {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "input.modbus", "data_type", "FLOAT32", telegraf.DeprecationInfo{
+			Since:     "v1.16.0",
+			RemovalIn: "v2.0.0",
+			Notice:    "Use 'UFIXED' instead",
+		})
+	}
+
 	// Handle our special types
 	switch dataType {
 	case "FIXED":

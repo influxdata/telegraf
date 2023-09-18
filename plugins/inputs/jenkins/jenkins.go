@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,7 @@ type Jenkins struct {
 	MaxBuildAge       config.Duration `toml:"max_build_age"`
 	MaxSubJobDepth    int             `toml:"max_subjob_depth"`
 	MaxSubJobPerLayer int             `toml:"max_subjob_per_layer"`
+	NodeLabelsAsTag   bool            `toml:"node_labels_as_tag"`
 	JobExclude        []string        `toml:"job_exclude"`
 	JobInclude        []string        `toml:"job_include"`
 	jobFilter         filter.Filter
@@ -70,7 +72,7 @@ func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		if err = j.initialize(client); err != nil {
+		if err := j.initialize(client); err != nil {
 			return err
 		}
 	}
@@ -171,6 +173,20 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 	fields["num_executors"] = n.NumExecutors
+
+	if j.NodeLabelsAsTag {
+		labels := make([]string, 0, len(n.AssignedLabels))
+		for _, label := range n.AssignedLabels {
+			labels = append(labels, strings.ReplaceAll(label.Name, ",", "_"))
+		}
+
+		if len(labels) == 0 {
+			tags["labels"] = "none"
+		} else {
+			sort.Strings(labels)
+			tags["labels"] = strings.Join(labels, ",")
+		}
+	}
 
 	if monitorData.HudsonNodeMonitorsResponseTimeMonitor != nil {
 		fields["response_time"] = monitorData.HudsonNodeMonitorsResponseTimeMonitor.Average
@@ -313,10 +329,15 @@ type nodeResponse struct {
 }
 
 type node struct {
-	DisplayName  string      `json:"displayName"`
-	Offline      bool        `json:"offline"`
-	NumExecutors int         `json:"numExecutors"`
-	MonitorData  monitorData `json:"monitorData"`
+	DisplayName    string      `json:"displayName"`
+	Offline        bool        `json:"offline"`
+	NumExecutors   int         `json:"numExecutors"`
+	MonitorData    monitorData `json:"monitorData"`
+	AssignedLabels []label     `json:"assignedLabels"`
+}
+
+type label struct {
+	Name string `json:"name"`
 }
 
 type monitorData struct {

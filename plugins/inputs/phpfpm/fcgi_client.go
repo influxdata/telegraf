@@ -48,7 +48,7 @@ func (c *conn) Request(env map[string]string, requestData string) (retout []byte
 	}
 
 	if len(requestData) > 0 {
-		if err = c.writeRecord(typeStdin, reqID, []byte(requestData)); err != nil {
+		if err := c.writeRecord(typeStdin, reqID, []byte(requestData)); err != nil {
 			return nil, nil, err
 		}
 	}

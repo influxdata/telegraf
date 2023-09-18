@@ -1,0 +1,2 @@
+solr_admin,core=core1 deleted_docs=102815i,max_docs=7620303i,num_docs=7517488i,size_in_bytes=1784635686i
+solr_admin,core=main deleted_docs=619275i,max_docs=169562700i,num_docs=168943425i,size_in_bytes=247497521642i

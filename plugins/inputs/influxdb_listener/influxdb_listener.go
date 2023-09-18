@@ -43,6 +43,8 @@ type InfluxDBListener struct {
 	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;parser now handles lines of unlimited length and option is ignored"`
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
+	TokenSharedSecret  string          `toml:"token_shared_secret"`
+	TokenUsername      string          `toml:"token_username"`
 	DatabaseTag        string          `toml:"database_tag"`
 	RetentionPolicyTag string          `toml:"retention_policy_tag"`
 	ParserType         string          `toml:"parser_type"`
@@ -78,11 +80,20 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *InfluxDBListener) routes() {
-	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
-		func(_ http.ResponseWriter) {
-			h.authFailures.Incr(1)
-		},
-	)
+	var authHandler func(http.Handler) http.Handler
+	if h.TokenSharedSecret != "" {
+		authHandler = internal.JWTAuthHandler(h.TokenSharedSecret, h.TokenUsername,
+			func(_ http.ResponseWriter) {
+				h.authFailures.Incr(1)
+			},
+		)
+	} else {
+		authHandler = internal.BasicAuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
+			func(_ http.ResponseWriter) {
+				h.authFailures.Incr(1)
+			},
+		)
+	}
 
 	h.mux.Handle("/write", authHandler(h.handleWrite()))
 	h.mux.Handle("/query", authHandler(h.handleQuery()))
@@ -91,6 +102,14 @@ func (h *InfluxDBListener) routes() {
 }
 
 func (h *InfluxDBListener) Init() error {
+	// Check the config setting
+	if (h.BasicUsername != "" || h.BasicPassword != "") && (h.TokenSharedSecret != "" || h.TokenUsername != "") {
+		return errors.New("cannot use basic-auth and tokens at the same time")
+	}
+	if h.TokenSharedSecret != "" && h.TokenUsername == "" || h.TokenSharedSecret == "" && h.TokenUsername != "" {
+		return errors.New("neither 'token_shared_secret' nor 'token_username' can be empty for token authentication")
+	}
+
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}

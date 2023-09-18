@@ -352,6 +352,7 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,
@@ -385,6 +386,7 @@ go_gc_duration_seconds_count 42`
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "",
 		MetricVersion: 2,
@@ -444,6 +446,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,

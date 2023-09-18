@@ -33,7 +33,7 @@ to use them.
   ## Timeout for HTTP message
   # timeout = "5s"
 
-  ## HTTP method, one of: "POST" or "PUT"
+  ## HTTP method, one of: "POST" or "PUT" or "PATCH"
   # method = "POST"
 
   ## HTTP Basic Auth credentials
@@ -82,11 +82,6 @@ to use them.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Additional HTTP headers
-  # [outputs.http.headers]
-  #   # Should be set manually to "application/json" for json data_format
-  #   Content-Type = "text/plain; charset=utf-8"
-
   ## MaxIdleConns controls the maximum number of idle (keep-alive)
   ## connections across all hosts. Zero means no limit.
   # max_idle_conn = 0
@@ -129,6 +124,15 @@ to use them.
 
   ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
   # non_retryable_statuscodes = [409, 413]
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Additional HTTP headers
+  # [outputs.http.headers]
+  #   ## Should be set manually to "application/json" for json data_format
+  #   Content-Type = "text/plain; charset=utf-8"
 ```
 
 ### Google API Auth

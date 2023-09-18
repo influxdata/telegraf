@@ -179,6 +179,48 @@ cpu_time_idle{host="example.org"} 42 1574279268000
 cpu_time_idle{host="example.org"} 42
 `),
 		},
+		{
+			name: "untyped forced to counter",
+			config: FormatConfig{
+				TypeMappings: MetricTypes{Counter: []string{"cpu_time_idle"}},
+			},
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"host": "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle counter
+cpu_time_idle{host="example.org"} 42
+`),
+		},
+		{
+			name: "untyped forced to gauge",
+			config: FormatConfig{
+				TypeMappings: MetricTypes{Gauge: []string{"cpu_time_idle"}},
+			},
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"host": "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle gauge
+cpu_time_idle{host="example.org"} 42
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -188,8 +230,10 @@ cpu_time_idle{host="example.org"} 42
 					ExportTimestamp: tt.config.ExportTimestamp,
 					StringAsLabel:   tt.config.StringAsLabel,
 					CompactEncoding: tt.config.CompactEncoding,
+					TypeMappings:    tt.config.TypeMappings,
 				},
 			}
+			require.NoError(t, s.Init())
 
 			actual, err := s.Serialize(tt.metric)
 			require.NoError(t, err)

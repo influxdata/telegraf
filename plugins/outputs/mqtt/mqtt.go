@@ -167,7 +167,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 	for _, msg := range topicMessages {
 		if err := m.client.Publish(msg.topic, msg.payload); err != nil {
-			m.Log.Warn("Could not publish message to MQTT server, %s", err)
+			m.Log.Warnf("Could not publish message to MQTT server: %v", err)
 		}
 	}
 
@@ -179,7 +179,7 @@ func (m *MQTT) collectNonBatch(hostname string, metrics []telegraf.Metric) []mes
 	for _, metric := range metrics {
 		topic, err := m.generator.Generate(hostname, metric)
 		if err != nil {
-			m.Log.Warnf("Generating topic name failed: %w", err)
+			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
 			continue
 		}
@@ -201,7 +201,7 @@ func (m *MQTT) collectBatch(hostname string, metrics []telegraf.Metric) []messag
 	for _, metric := range metrics {
 		topic, err := m.generator.Generate(hostname, metric)
 		if err != nil {
-			m.Log.Warnf("Generating topic name failed: %w", err)
+			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
 			continue
 		}
@@ -225,7 +225,7 @@ func (m *MQTT) collectField(hostname string, metrics []telegraf.Metric) []messag
 	for _, metric := range metrics {
 		topic, err := m.generator.Generate(hostname, metric)
 		if err != nil {
-			m.Log.Warnf("Generating topic name failed: %w", err)
+			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
 			continue
 		}
@@ -249,14 +249,14 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 	for _, metric := range metrics {
 		topic, err := m.generator.Generate(hostname, metric)
 		if err != nil {
-			m.Log.Warnf("Generating topic name failed: %w", err)
+			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
 			continue
 		}
 
 		msgs, nodeID, err := m.collectHomieDeviceMessages(topic, metric)
 		if err != nil {
-			m.Log.Warnf(err.Error())
+			m.Log.Warn(err.Error())
 			m.Log.Debugf("metric was: %v", metric)
 			continue
 		}

@@ -627,7 +627,7 @@ func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *Ope
 		return &container, o, err
 	}
 
-	if err = indexer.Close(context.Background()); err != nil {
+	if err := indexer.Close(context.Background()); err != nil {
 		return &container, o, err
 	}
 

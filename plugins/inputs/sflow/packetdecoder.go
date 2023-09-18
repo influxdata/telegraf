@@ -63,7 +63,7 @@ func (d *PacketDecoder) DecodeOnePacket(r io.Reader) (*V5Format, error) {
 		return nil, fmt.Errorf("Version %d not supported, only version 5", p.Version)
 	}
 	var addressIPType AddressType
-	if err = read(r, &addressIPType, "address ip type"); err != nil {
+	if err := read(r, &addressIPType, "address ip type"); err != nil {
 		return nil, err
 	}
 	switch addressIPType {
@@ -76,16 +76,16 @@ func (d *PacketDecoder) DecodeOnePacket(r io.Reader) (*V5Format, error) {
 	default:
 		return nil, fmt.Errorf("Unknown address IP type %d", addressIPType)
 	}
-	if err = read(r, &p.AgentAddress.IP, "Agent Address IP"); err != nil {
+	if err := read(r, &p.AgentAddress.IP, "Agent Address IP"); err != nil {
 		return nil, err
 	}
-	if err = read(r, &p.SubAgentID, "SubAgentID"); err != nil {
+	if err := read(r, &p.SubAgentID, "SubAgentID"); err != nil {
 		return nil, err
 	}
-	if err = read(r, &p.SequenceNumber, "SequenceNumber"); err != nil {
+	if err := read(r, &p.SequenceNumber, "SequenceNumber"); err != nil {
 		return nil, err
 	}
-	if err = read(r, &p.Uptime, "Uptime"); err != nil {
+	if err := read(r, &p.Uptime, "Uptime"); err != nil {
 		return nil, err
 	}
 
@@ -394,7 +394,7 @@ func (d *PacketDecoder) decodeIPv6Header(r io.Reader) (h IPV6Header, err error) 
 	h.DSCP = uint8((fourByteBlock & 0xFC00000) >> 22)
 	h.ECN = uint8((fourByteBlock & 0x300000) >> 20)
 
-	// flowLabel := fourByteBlock & 0xFFFFF // not currently being used.
+	// The flowLabel is available via fourByteBlock & 0xFFFFF
 	if err := read(r, &h.PayloadLength, "PayloadLength"); err != nil {
 		return h, err
 	}

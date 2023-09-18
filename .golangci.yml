@@ -83,7 +83,10 @@ linters-settings:
       - builtinShadowDecl
       - caseOrder
       - codegenComment
+      - commentedOutCode
       - deferInLoop
+      - dupArg
+      - deprecatedComment
       - dupBranchBody
       - dupCase
       - dupSubExpr
@@ -92,12 +95,20 @@ linters-settings:
       - evalOrder
       - exitAfterDefer
       - externalErrorReassign
+      - filepathJoin
+      - flagName
+      - mapKey
       - nilValReturn
+      - offBy1
       - regexpPattern
+      - sloppyTestFuncName
+      - sloppyReassign
       - sloppyTypeAssert
       - sortSlice
       - sprintfQuotedString
       - sqlQuery
+      - syncMapLoadAndDelete
+      - truncateCmp
       - uncheckedInlineErr
       - unnecessaryDefer
       - weakCond
@@ -142,6 +153,19 @@ linters-settings:
       # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
       # Default: "0600"
       G306: "0640"
+  govet:
+    settings:
+      ## Check the logging function like it would be a printf
+      printf:
+        funcs:
+          - (github.com/influxdata/telegraf.Logger).Debugf
+          - (github.com/influxdata/telegraf.Logger).Infof
+          - (github.com/influxdata/telegraf.Logger).Warnf
+          - (github.com/influxdata/telegraf.Logger).Errorf
+          - (github.com/influxdata/telegraf.Logger).Debug
+          - (github.com/influxdata/telegraf.Logger).Info
+          - (github.com/influxdata/telegraf.Logger).Warn
+          - (github.com/influxdata/telegraf.Logger).Error
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
@@ -276,7 +300,7 @@ issues:
       linters:
         - govet
 
-    - path: cmd/telegraf/(main|printer).go
+    - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     - path: _test\.go

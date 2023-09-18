@@ -147,7 +147,7 @@ func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
 		c.Log.Debug("Received keepalive event")
 	default:
 		// Received a yet unsupported event type
-		c.Log.Debug("Received unsupported event: %q", se.Event)
+		c.Log.Debugf("Received unsupported event: %q", se.Event)
 	}
 }
 

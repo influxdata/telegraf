@@ -26,12 +26,20 @@ type Redfish struct {
 	Username         string          `toml:"username"`
 	Password         string          `toml:"password"`
 	ComputerSystemID string          `toml:"computer_system_id"`
+	IncludeTagSets   []string        `toml:"include_tag_sets"`
 	Timeout          config.Duration `toml:"timeout"`
 
+	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
 	baseURL *url.URL
 }
+
+const (
+	// tag sets used for including redfish OData link parent data
+	tagSetChassisLocation = "chassis.location"
+	tagSetChassis         = "chassis"
+)
 
 type System struct {
 	Hostname string `json:"hostname"`
@@ -43,11 +51,19 @@ type System struct {
 }
 
 type Chassis struct {
-	Location *Location
-	Power    struct {
+	ChassisType  string
+	Location     *Location
+	Manufacturer string
+	Model        string
+	PartNumber   string
+	Power        struct {
 		Ref string `json:"@odata.id"`
 	}
-	Thermal struct {
+	PowerState   string
+	SKU          string
+	SerialNumber string
+	Status       Status
+	Thermal      struct {
 		Ref string `json:"@odata.id"`
 	}
 }
@@ -145,6 +161,11 @@ func (r *Redfish) Init() error {
 
 	if r.ComputerSystemID == "" {
 		return fmt.Errorf("did not provide the computer system ID of the resource")
+	}
+
+	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
+	for _, setLabel := range r.IncludeTagSets {
+		r.tagSet[setLabel] = true
 	}
 
 	var err error
@@ -245,6 +266,18 @@ func (r *Redfish) getThermal(ref string) (*Thermal, error) {
 	return thermal, nil
 }
 
+func setChassisTags(chassis *Chassis, tags map[string]string) {
+	tags["chassis_chassistype"] = chassis.ChassisType
+	tags["chassis_manufacturer"] = chassis.Manufacturer
+	tags["chassis_model"] = chassis.Model
+	tags["chassis_partnumber"] = chassis.PartNumber
+	tags["chassis_powerstate"] = chassis.PowerState
+	tags["chassis_sku"] = chassis.SKU
+	tags["chassis_serialnumber"] = chassis.SerialNumber
+	tags["chassis_state"] = chassis.Status.State
+	tags["chassis_health"] = chassis.Status.Health
+}
+
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	address, _, err := net.SplitHostPort(r.baseURL.Host)
 	if err != nil {
@@ -275,11 +308,14 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
+			}
+			if _, ok := r.tagSet[tagSetChassis]; ok {
+				setChassisTags(chassis, tags)
 			}
 
 			fields := make(map[string]interface{})
@@ -300,11 +336,14 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
+			}
+			if _, ok := r.tagSet[tagSetChassis]; ok {
+				setChassisTags(chassis, tags)
 			}
 
 			if j.ReadingUnits != nil && *j.ReadingUnits == "RPM" {
@@ -331,11 +370,14 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 				"name":      j.Name,
 				"source":    system.Hostname,
 			}
-			if chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
+			}
+			if _, ok := r.tagSet[tagSetChassis]; ok {
+				setChassisTags(chassis, tags)
 			}
 
 			fields := map[string]interface{}{
@@ -361,11 +403,14 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
+			}
+			if _, ok := r.tagSet[tagSetChassis]; ok {
+				setChassisTags(chassis, tags)
 			}
 
 			fields := make(map[string]interface{})
@@ -385,11 +430,14 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if chassis.Location != nil {
+			if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 				tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 				tags["room"] = chassis.Location.PostalAddress.Room
 				tags["rack"] = chassis.Location.Placement.Rack
 				tags["row"] = chassis.Location.Placement.Row
+			}
+			if _, ok := r.tagSet[tagSetChassis]; ok {
+				setChassisTags(chassis, tags)
 			}
 
 			fields := make(map[string]interface{})
@@ -407,6 +455,9 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("redfish", func() telegraf.Input {
-		return &Redfish{}
+		return &Redfish{
+			// default tag set of chassis.location required for backwards compatibility
+			IncludeTagSets: []string{tagSetChassisLocation},
+		}
 	})
 }

@@ -78,7 +78,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
+### Permissions
+
+Some files or directories may require elevated permissions. As such a user may
+need to provide telegraf with higher levels of permissions to access and produce
+metrics.
+
 ## Metrics
+
+For descriptions of these tags and fields, consider reading one of the
+following:
+
+- [Linux Kernel /proc Filesystem][kernel /proc]
+- [proc manpage][manpage]
+
+[kernel /proc]: https://www.kernel.org/doc/html/latest/filesystems/proc.html
+[manpage]: https://man7.org/linux/man-pages/man5/proc.5.html
+
+Below are an example set of tags and fields:
 
 - procstat
   - tags:
@@ -111,10 +128,15 @@ the `win_perf_counters` input plugin as a more mature alternative.
     - cpu_usage (float)
     - involuntary_context_switches (int)
     - major_faults (int)
-    - memory_data (int)
-    - memory_locked (int)
+    - memory_anonymous (int)
+    - memory_private_clean (int)
+    - memory_private_dirty (int)
+    - memory_pss (int)
+    - memory_referenced (int)
     - memory_rss (int)
-    - memory_stack (int)
+    - memory_shared_clean (int)
+    - memory_shared_dirty (int)
+    - memory_size (int)
     - memory_swap (int)
     - memory_usage (float)
     - memory_vms (int)

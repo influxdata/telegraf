@@ -302,6 +302,55 @@ func TestEnvironmentSubstitutionNewBehavior(t *testing.T) {
 	}
 }
 
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		setEnv   func(*testing.T)
+		contents string
+		expected string
+		errmsg   string
+	}{
+		{
+			name: "empty var name",
+			contents: `
+# Environment variables can be used anywhere in this config file, simply surround
+# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
+# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})Should output ${NOT_SET:-${FALLBACK}}
+`,
+			expected: "\n\n\n\n",
+		},
+		{
+			name: "comment in command (issue #13643)",
+			contents: `
+			[[inputs.exec]]
+			  commands = ["echo \"abc#def\""]
+			`,
+			expected: `
+			[[inputs.exec]]
+			  commands = ["echo \"abc#def\""]
+			`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv != nil {
+				tt.setEnv(t)
+			}
+			tbl, err := parseConfig([]byte(tt.contents))
+			if tt.errmsg != "" {
+				require.ErrorContains(t, err, tt.errmsg)
+				return
+			}
+
+			require.NoError(t, err)
+			if len(tt.expected) > 0 {
+				require.EqualValues(t, tt.expected, string(tbl.Data))
+			}
+		})
+	}
+}
+
 func TestURLRetries3Fails(t *testing.T) {
 	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0

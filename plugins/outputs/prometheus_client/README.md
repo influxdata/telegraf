@@ -12,6 +12,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `basic_password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -62,6 +70,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Export metric collection time.
   # export_timestamp = false
+
+  ## Specify the metric type explicitly.
+  ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
+  # [outputs.prometheus_client.prometheus_metric_types]
+  #   counter = []
+  #   gauge = []
 ```
 
 ## Metrics

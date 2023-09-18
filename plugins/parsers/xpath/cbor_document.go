@@ -44,19 +44,8 @@ func (d *cborDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 	// Climb up the tree and collect the node names
 	n := nativeNode.Parent
 	for n != nil && n != nativeRelativeTo {
-		kind := reflect.Invalid
-		if n.Parent != nil && n.Parent.Value() != nil {
-			kind = reflect.TypeOf(n.Parent.Value()).Kind()
-		}
-
-		switch kind {
-		case reflect.Slice, reflect.Array:
-			// Determine the index for array elements
-			names = append(names, d.index(n))
-		default:
-			// Use the name if not an array
-			names = append(names, n.Name)
-		}
+		nodeName := d.GetNodeName(n, sep, false)
+		names = append(names, nodeName)
 		n = n.Parent
 	}
 
@@ -71,6 +60,31 @@ func (d *cborDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 	}
 
 	return nodepath[:len(nodepath)-1]
+}
+
+func (d *cborDocument) GetNodeName(node dataNode, sep string, withParent bool) string {
+	// If this panics it's a programming error as we changed the document type while processing
+	nativeNode := node.(*cborquery.Node)
+
+	name := nativeNode.Name
+
+	// Check if the node is part of an array. If so, determine the index and
+	// concatenate the parent name and the index.
+	kind := reflect.Invalid
+	if nativeNode.Parent != nil && nativeNode.Parent.Value() != nil {
+		kind = reflect.TypeOf(nativeNode.Parent.Value()).Kind()
+	}
+
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		// Determine the index for array elements
+		if name == "" && nativeNode.Parent != nil && withParent {
+			name = nativeNode.Parent.Name + sep
+		}
+		return name + d.index(nativeNode)
+	}
+
+	return name
 }
 
 func (d *cborDocument) OutputXML(node dataNode) string {

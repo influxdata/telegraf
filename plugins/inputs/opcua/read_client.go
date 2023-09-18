@@ -52,9 +52,14 @@ func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, 
 }
 
 func (o *ReadClient) Connect() error {
-	err := o.OpcUAClient.Connect()
-	if err != nil {
-		return err
+	if err := o.OpcUAClient.Connect(); err != nil {
+		return fmt.Errorf("connect failed: %w", err)
+	}
+
+	// Make sure we setup the node-ids correctly after reconnect
+	// as the server might be restarted and IDs changed
+	if err := o.OpcUAInputClient.InitNodeIDs(); err != nil {
+		return fmt.Errorf("initializing node IDs failed: %w", err)
 	}
 
 	readValueIds := make([]*ua.ReadValueID, 0, len(o.NodeIDs))
@@ -67,7 +72,7 @@ func (o *ReadClient) Connect() error {
 			NodesToRegister: o.NodeIDs,
 		})
 		if err != nil {
-			return fmt.Errorf("registerNodes failed: %w", err)
+			return fmt.Errorf("registering nodes failed: %w", err)
 		}
 
 		for _, v := range regResp.RegisteredNodeIDs {
@@ -81,8 +86,7 @@ func (o *ReadClient) Connect() error {
 		NodesToRead:        readValueIds,
 	}
 
-	err = o.read()
-	if err != nil {
+	if err := o.read(); err != nil {
 		return fmt.Errorf("get data failed: %w", err)
 	}
 

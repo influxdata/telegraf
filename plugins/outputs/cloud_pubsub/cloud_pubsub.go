@@ -189,7 +189,7 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 
 		b, err = ps.compressData(b)
 		if err != nil {
-			ps.Log.Errorf("unable to compress message with %s: %w", ps.ContentEncoding, err)
+			ps.Log.Errorf("Unable to compress message with %s: %v", ps.ContentEncoding, err)
 			continue
 		}
 

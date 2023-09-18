@@ -205,6 +205,17 @@ This example illustrates the use of secret-store(s) in plugins
   bucket = "replace_with_your_bucket_name"
 ```
 
+### Notes
+
+When using plugins supporting secrets, Telegraf locks the memory pages
+containing the secrets. Therefore, the locked memory limit has to be set to a
+suitable value. Telegraf will check the limit and the number of used secrets at
+startup and will warn if your limit is too low. In this case, please increase
+the limit via `ulimit -l`.
+
+If you are running Telegraf in an jail you might need to allow locked pages in
+that jail by setting `allow.mlock = 1;` in your config.
+
 ## Intervals
 
 Intervals are durations of time and can be specified for supporting settings by
@@ -649,6 +660,12 @@ for time-based filtering. An introduction to the CEL language can be found
 [here][CEL intro]. Further details, such as available functions and expressions,
 are provided in the [language definition][CEL lang] as well as in the
 [extension documentation][CEL ext].
+
+**NOTE:** Expressions that may be valid and compile, but fail at runtime will
+result in the expression reporting as `true`. The metrics will pass through
+as a result. An example is when reading a non-existing field. If this happens,
+the evaluation is aborted, an error is logged, and the expression is reported as
+`true`, so the metric passes.
 
 > NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
 > slower compared to `namepass`/`namedrop` and friends. So consider to use the

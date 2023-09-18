@@ -70,6 +70,7 @@ type MQTTConsumer struct {
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
+	ClientTrace            bool                 `toml:"client_trace"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	parser                 telegraf.Parser
 
@@ -104,6 +105,14 @@ func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {
+	if m.ClientTrace {
+		log := &mqttLogger{m.Log}
+		mqtt.ERROR = log
+		mqtt.CRITICAL = log
+		mqtt.WARN = log
+		mqtt.DEBUG = log
+	}
+
 	m.state = Disconnected
 	if m.PersistentSession && m.ClientID == "" {
 		return errors.New("persistent_session requires client_id")

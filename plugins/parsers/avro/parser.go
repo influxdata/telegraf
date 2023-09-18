@@ -26,6 +26,7 @@ import (
 type Parser struct {
 	MetricName      string            `toml:"metric_name"`
 	SchemaRegistry  string            `toml:"avro_schema_registry"`
+	CaCertPath      string            `toml:"avro_schema_registry_cert"`
 	Schema          string            `toml:"avro_schema"`
 	Format          string            `toml:"avro_format"`
 	Measurement     string            `toml:"avro_measurement"`
@@ -53,16 +54,20 @@ func (p *Parser) Init() error {
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
-	if p.TimestampFormat == "" {
-		if p.Timestamp != "" {
-			return errors.New("if 'timestamp' field is specified, 'timestamp_format' must be as well")
-		}
-		if p.TimestampFormat != "unix" && p.TimestampFormat != "unix_us" && p.TimestampFormat != "unix_ms" && p.TimestampFormat != "unix_ns" {
-			return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
-		}
+	switch p.TimestampFormat {
+	case "":
+		p.TimestampFormat = "unix"
+	case "unix", "unix_ns", "unix_us", "unix_ms":
+		// Valid values
+	default:
+		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
 	if p.SchemaRegistry != "" {
-		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
+		registry, err := newSchemaRegistry(p.SchemaRegistry, p.CaCertPath)
+		if err != nil {
+			return fmt.Errorf("error connecting to the schema registry %q: %w", p.SchemaRegistry, err)
+		}
+		p.registryObj = registry
 	}
 
 	return nil
@@ -172,24 +177,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// If you have specified your fields in the config, you
 		// get what you asked for.
 		fieldList = p.Fields
-
-		// Except...if you specify the timestamp field, and it's
-		// not listed in your fields, you'll get it anyway.
-		// This will randomize your field ordering, which isn't
-		// ideal.  If you care, list the timestamp field.
-		if p.Timestamp != "" {
-			// quick list-to-set-to-list implementation
-			fieldSet := make(map[string]bool)
-			for k := range fieldList {
-				fieldSet[fieldList[k]] = true
-			}
-			fieldSet[p.Timestamp] = true
-			var newList []string
-			for s := range fieldSet {
-				newList = append(newList, s)
-			}
-			fieldList = newList
-		}
 	} else {
 		for k := range data {
 			// Otherwise, that which is not a tag is a field
@@ -255,7 +242,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	var timestamp time.Time
 	if p.Timestamp != "" {
-		rawTime := fmt.Sprintf("%v", fields[p.Timestamp])
+		rawTime := fmt.Sprintf("%v", data[p.Timestamp])
 		var err error
 		timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, nil)
 		if err != nil {

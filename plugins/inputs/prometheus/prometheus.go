@@ -166,24 +166,22 @@ func (p *Prometheus) Init() error {
 		p.MonitorKubernetesPodsMethod = MonitorMethodAnnotations
 	}
 
-	if p.isNodeScrapeScope || p.MonitorKubernetesPodsMethod != MonitorMethodAnnotations {
-		// Parse label and field selectors - will be used to filter pods after cAdvisor call
-		var err error
-		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
-		if err != nil {
-			return fmt.Errorf("error parsing the specified label selector(s): %w", err)
-		}
-		p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
-		if err != nil {
-			return fmt.Errorf("error parsing the specified field selector(s): %w", err)
-		}
-		isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
-		if !isValid {
-			return fmt.Errorf("the field selector %q is not supported for pods", invalidSelector)
-		}
-
-		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	// Parse label and field selectors - will be used to filter pods after cAdvisor call
+	var err error
+	p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
+	if err != nil {
+		return fmt.Errorf("error parsing the specified label selector(s): %w", err)
 	}
+	p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
+	if err != nil {
+		return fmt.Errorf("error parsing the specified field selector(s): %w", err)
+	}
+	isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
+	if !isValid {
+		return fmt.Errorf("the field selector %q is not supported for pods", invalidSelector)
+	}
+
+	p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 
 	for k, vs := range p.NamespaceAnnotationPass {
 		tagFilter := models.TagFilter{}
@@ -412,10 +410,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.SetBasicAuth(p.Username, p.Password)
 	}
 
-	if p.HTTPHeaders != nil {
-		for key, value := range p.HTTPHeaders {
-			req.Header.Set(key, value)
-		}
+	for key, value := range p.HTTPHeaders {
+		req.Header.Set(key, value)
 	}
 
 	var resp *http.Response

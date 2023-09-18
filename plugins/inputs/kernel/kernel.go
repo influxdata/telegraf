@@ -8,8 +8,8 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,8 +28,27 @@ var (
 )
 
 type Kernel struct {
+	ConfigCollect []string `toml:"collect"`
+
+	optCollect      map[string]bool
 	statFile        string
 	entropyStatFile string
+	ksmStatsDir     string
+}
+
+func (k *Kernel) Init() error {
+	k.optCollect = make(map[string]bool, len(k.ConfigCollect))
+	for _, v := range k.ConfigCollect {
+		k.optCollect[v] = true
+	}
+
+	if k.optCollect["ksm"] {
+		if _, err := os.Stat(k.ksmStatsDir); os.IsNotExist(err) {
+			// ksm probably not enabled in the kernel, bail out early
+			return fmt.Errorf("directory %q does not exist. Is KSM enabled in this kernel?", k.ksmStatsDir)
+		}
+	}
+	return nil
 }
 
 func (*Kernel) SampleConfig() string {
@@ -37,18 +56,12 @@ func (*Kernel) SampleConfig() string {
 }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
-	data, err := k.getProcStat()
+	data, err := k.getProcValueBytes(k.statFile)
 	if err != nil {
 		return err
 	}
 
-	entropyData, err := os.ReadFile(k.entropyStatFile)
-	if err != nil {
-		return err
-	}
-
-	entropyString := string(entropyData)
-	entropyValue, err := strconv.ParseInt(strings.TrimSpace(entropyString), 10, 64)
+	entropyValue, err := k.getProcValueInt(k.entropyStatFile)
 	if err != nil {
 		return err
 	}
@@ -98,24 +111,70 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	if k.optCollect["ksm"] {
+		stats := []string{
+			"full_scans", "max_page_sharing",
+			"merge_across_nodes", "pages_shared",
+			"pages_sharing", "pages_to_scan",
+			"pages_unshared", "pages_volatile",
+			"run", "sleep_millisecs",
+			"stable_node_chains", "stable_node_chains_prune_millisecs",
+			"stable_node_dups", "use_zero_pages",
+		}
+		// these exist in very recent Linux versions only, but useful to include if there.
+		extraStats := []string{"general_profit"}
+
+		for _, f := range stats {
+			m, err := k.getProcValueInt(filepath.Join(k.ksmStatsDir, f))
+			if err != nil {
+				return err
+			}
+
+			fields["ksm_"+f] = m
+		}
+
+		for _, f := range extraStats {
+			m, err := k.getProcValueInt(filepath.Join(k.ksmStatsDir, f))
+			if err != nil {
+				// if an extraStats metric doesn't exist in our kernel version, ignore it.
+				continue
+			}
+
+			fields["ksm_"+f] = m
+		}
+	}
 	acc.AddCounter("kernel", fields, map[string]string{})
 
 	return nil
 }
 
-func (k *Kernel) getProcStat() ([]byte, error) {
-	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("kernel: %s does not exist", k.statFile)
+func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("Path %q does not exist", path)
 	} else if err != nil {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(k.statFile)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read from %q: %w", path, err)
 	}
 
 	return data, nil
+}
+
+func (k *Kernel) getProcValueInt(path string) (int64, error) {
+	data, err := k.getProcValueBytes(path)
+	if err != nil {
+		return -1, err
+	}
+
+	m, err := strconv.ParseInt(string(bytes.TrimSpace(data)), 10, 64)
+	if err != nil {
+		return -1, fmt.Errorf("failed to parse %q as an integer: %w", data, err)
+	}
+
+	return m, nil
 }
 
 func init() {
@@ -123,6 +182,7 @@ func init() {
 		return &Kernel{
 			statFile:        "/proc/stat",
 			entropyStatFile: "/proc/sys/kernel/random/entropy_avail",
+			ksmStatsDir:     "/sys/kernel/mm/ksm",
 		}
 	})
 }

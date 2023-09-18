@@ -641,7 +641,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			vals[i] = sql.RawBytes{}
 			valPtrs[i] = &vals[i]
 		}
-		if err = rows.Scan(valPtrs...); err != nil {
+		if err := rows.Scan(valPtrs...); err != nil {
 			return err
 		}
 
@@ -763,7 +763,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 		var key string
 		var val sql.RawBytes
 
-		if err = rows.Scan(&key, &val); err != nil {
+		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
 

@@ -5,7 +5,7 @@ Request Handler][1].
 
 More about [performance statistics][2].
 
-Tested from 3.5 to 7.*
+Tested from 3.5 to 9.3
 
 [1]: https://cwiki.apache.org/confluence/display/solr/MBean+Request+Handler
 
@@ -27,13 +27,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.solr]]
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]
-  ##
+
   ## specify a list of one or more Solr cores (default - all)
-  # cores = ["main"]
-  ##
+  # cores = ["*"]
+  
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
+
+  ## Timeout for HTTP requests
+  # timeout = "5s"
 ```
 
 ## Metrics

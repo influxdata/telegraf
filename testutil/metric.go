@@ -118,6 +118,35 @@ func newMetricDiff(metric telegraf.Metric) *metricDiff {
 	return m
 }
 
+func newMetricStructureDiff(metric telegraf.Metric) *metricDiff {
+	if metric == nil {
+		return nil
+	}
+
+	m := &metricDiff{}
+	m.Measurement = metric.Name()
+
+	m.Tags = append(m.Tags, metric.TagList()...)
+	sort.Slice(m.Tags, func(i, j int) bool {
+		return m.Tags[i].Key < m.Tags[j].Key
+	})
+
+	for _, f := range metric.FieldList() {
+		sf := &telegraf.Field{
+			Key:   f.Key,
+			Value: reflect.Zero(reflect.TypeOf(f.Value)).Interface(),
+		}
+		m.Fields = append(m.Fields, sf)
+	}
+	sort.Slice(m.Fields, func(i, j int) bool {
+		return m.Fields[i].Key < m.Fields[j].Key
+	})
+
+	m.Type = metric.Type()
+	m.Time = metric.Time()
+	return m
+}
+
 // SortMetrics enables sorting metrics before comparison.
 func SortMetrics() cmp.Option {
 	return cmpopts.SortSlices(lessFunc)
@@ -143,7 +172,7 @@ func IgnoreFields(names ...string) cmp.Option {
 	)
 }
 
-// return disables comparison of the tags with the given names.
+// IgnoreTags disables comparison of the tags with the given names.
 // The tag-names are case-sensitive!
 func IgnoreTags(names ...string) cmp.Option {
 	return cmpopts.IgnoreSliceElements(
@@ -207,6 +236,30 @@ func RequireMetricsEqual(t testing.TB, expected, actual []telegraf.Metric, opts 
 	rhs := make([]*metricDiff, 0, len(actual))
 	for _, m := range actual {
 		rhs = append(rhs, newMetricDiff(m))
+	}
+
+	opts = append(opts, cmpopts.EquateNaNs())
+	if diff := cmp.Diff(lhs, rhs, opts...); diff != "" {
+		t.Fatalf("[]telegraf.Metric\n--- expected\n+++ actual\n%s", diff)
+	}
+}
+
+// RequireMetricsStructureEqual halts the test with an error if the array of
+// metrics is structural different. Structure means that the metric differs
+// in either name, tag key/values, time (if not ignored) or fields. For fields
+// ONLY the name and type are compared NOT the value.
+func RequireMetricsStructureEqual(t testing.TB, expected, actual []telegraf.Metric, opts ...cmp.Option) {
+	if x, ok := t.(helper); ok {
+		x.Helper()
+	}
+
+	lhs := make([]*metricDiff, 0, len(expected))
+	for _, m := range expected {
+		lhs = append(lhs, newMetricStructureDiff(m))
+	}
+	rhs := make([]*metricDiff, 0, len(actual))
+	for _, m := range actual {
+		rhs = append(rhs, newMetricStructureDiff(m))
 	}
 
 	opts = append(opts, cmpopts.EquateNaNs())
