@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const namespace = "lustre2"
+const namespace = "lustre2_lctl"
 
 //go:embed sample.conf
 var sampleConfig string
