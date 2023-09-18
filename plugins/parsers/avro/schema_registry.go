@@ -29,14 +29,13 @@ type schemaRegistry struct {
 const schemaByID = "%s/schemas/ids/%d"
 
 func newSchemaRegistry(addr string, caCertPath string) (*schemaRegistry, error) {
-	caCert, err := os.ReadFile(caCertPath)
-	if err != nil {
-		return nil, err
-	}
-
 	var client *http.Client
 	var tlsCfg *tls.Config
 	if caCertPath != "" {
+		caCert, err := os.ReadFile(caCertPath)
+		if err != nil {
+			return nil, err
+		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsCfg = &tls.Config{
