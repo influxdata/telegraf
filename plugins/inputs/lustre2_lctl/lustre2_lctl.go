@@ -28,6 +28,15 @@ func (*Lustre2Lctl) SampleConfig() string {
 	return sampleConfig
 }
 
+func (l *Lustre2Lctl) Init() error {
+	var err error
+	c.path, err = exec.LookPath("lctl")
+	if err != nil {
+		return errors.New("lctl not found: verify that lctl is installed and that lctl is in your PATH")
+	}
+	return nil
+}
+
 // Gather reads stats from all lustre targets
 func (l *Lustre2Lctl) Gather(acc telegraf.Accumulator) error {
 	gatherHealth(namespace, acc)
