@@ -1,4 +1,4 @@
-# Lustre Input Plugin
+# Lustre lctl Input Plugin
 
 The [Lustre][]® file system is an open-source, parallel file system that
 supports many requirements of leadership class HPC simulation environments.
@@ -46,51 +46,62 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     "osc.*.active",
     "mdc.*.active",
   ]
-
 ```
 
 ## Metrics
 
 ### OST
 
-* tags
-  * volume (the name of volume)
-  * jobid
-  * unit
-* fields
-  * ost_health_check (uint)
-  * ost_recovery_status (uint)
-  * ost_jobstats_*_samples (uint)
-  * ost_jobstats_*_max     (uint)
-  * ost_jobstats_*_min     (uint)
-  * ost_jobstats_*_sum     (uint)
-  * ost_jobstats_*_sumsq   (uint)
-  * ost_capacity_kbytestotal (uint)
-  * ost_capacity_kbytesavail (uint)
-  * ost_capacity_kbytesfree (uint)
+* lustre2_lctl
+  * tags
+    * volume (the name of volume)
+    * jobid
+    * unit
+  * fields
+    * health_check (int)
+    * ost_recovery_status (int)
+    * ost_jobstats_*_samples (int)
+    * ost_jobstats_*_max     (int)
+    * ost_jobstats_*_min     (int)
+    * ost_jobstats_*_sum     (int)
+    * ost_jobstats_*_sumsq   (int)
+    * ost_stats_*_samples (int)
+    * ost_stats_*_min (int)
+    * ost_stats_*_max (int)
+    * ost_stats_*_sum (int)
+    * ost_stats_*_sumsq (int)
+    * ost_capacity_kbytestotal (int)
+    * ost_capacity_kbytesavail (int)
+    * ost_capacity_kbytesfree (int)
 
 ### MDT
 
-* tags
-  * volume (the name of volume)
-  * jobid
-  * unit
-* fields
-  * mdt_health_check (uint)
-  * mdt_recovery_status (uint)
-  * mdt_jobstats_*_samples (uint)
-  * mdt_jobstats_*_max     (uint)
-  * mdt_jobstats_*_min     (uint)
-  * mdt_jobstats_*_sum     (uint)
-  * mdt_jobstats_*_sumsq   (uint)
+* lustre2_lclt
+  * tags
+    * volume (the name of volume)
+    * jobid
+    * unit
+  * fields
+    * mdt_recovery_status (int)
+    * mdt_jobstats_*_samples (int)
+    * mdt_jobstats_*_max     (int)
+    * mdt_jobstats_*_min     (int)
+    * mdt_jobstats_*_sum     (int)
+    * mdt_jobstats_*_sumsq   (int)
+    * mdt_stats_*_sample (int)
+    * mdt_stats_*_min (int)
+    * mdt_stats_*_max (int)
+    * mdt_stats_*_sum (int)
+    * mdt_stats_*_sumsq (int)
 
 ### Client
 
-* tags
-  * volume
-* fields
-  * osc_volume_active (uint)
-  * mdc_volume_active (uint)
+* lustre2_lctl
+  * tags
+    * volume
+  * fields
+    * osc_volume_active (int)
+    * mdc_volume_active (int)
 
 ## Troubleshooting
 
@@ -102,9 +113,10 @@ corresponding to the above metric fields.
 ## Example Output
 
 ```text
-lustre2_client_osc_volume_active{host="ln0",volume="THL9-OST001f"} 1
-lustre2_client_mdc_volume_active{host="ln0",volume="THL9-MDT0000"} 1
-lustre2_client_health_check{host="ln0"} 1
+lustre2_lctl,host=ost114 health_check=1i 1695018430000000000
+lustre2_lctl_ost,host=ost114,volume=OST0004 recovery_status=1i 1695018430000000000
+lustre2_lctl_ost,host=ost114,volume=OST0005 recovery_status=1i 1695018430000000000
+lustre2_lctl_ost,host=ost114,volume=OST0004 capacity_kbytestotal=46488188776i 1695018430000000000
 ```
 
 [lustre]: http://lustre.org/

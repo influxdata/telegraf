@@ -24,6 +24,7 @@ var (
 )
 
 // executeCommand wraps os/exec functions.
+//
 //nolint:unparam // currently the command is always `lctl`
 func executeCommand(name string, arg ...string) (string, error) {
 	cmd := execCommand(name, arg...)

@@ -5,9 +5,10 @@ package lustre2_lctl
 
 import (
 	_ "embed"
-
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"os/exec"
 )
 
 const namespace = "lustre2_lctl"
@@ -29,10 +30,9 @@ func (*Lustre2Lctl) SampleConfig() string {
 }
 
 func (l *Lustre2Lctl) Init() error {
-	var err error
-	c.path, err = exec.LookPath("lctl")
+	_, err := exec.LookPath("lctl")
 	if err != nil {
-		return errors.New("lctl not found: verify that lctl is installed and that lctl is in your PATH")
+		return fmt.Errorf("lctl not found: verify that lctl is installed and that lctl is in your PATH:%w", err)
 	}
 	return nil
 }
