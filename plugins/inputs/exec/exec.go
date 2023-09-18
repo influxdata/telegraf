@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/kballard/go-shellquote"
@@ -72,6 +73,7 @@ func (c CommandRunner) Run(
 	}
 
 	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if len(environments) > 0 {
 		cmd.Env = append(os.Environ(), environments...)
