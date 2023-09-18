@@ -87,13 +87,13 @@ func (o *Opensearch) Init() error {
 
 	indexTmpl, err := template.New("index").Parse(o.IndexName)
 	if err != nil {
-		return fmt.Errorf("error parsing indextemplate %w", err)
+		return fmt.Errorf("error parsing index_name template: %w", err)
 	}
 	o.indexTmpl = indexTmpl
 
 	pipelineTmpl, err := template.New("index").Parse(o.UsePipeline)
 	if err != nil {
-		return fmt.Errorf("error parsing pipelineTemplate for UsePipeline %w", err)
+		return fmt.Errorf("error parsing use_pipeline template: %w", err)
 	}
 	o.pipelineTmpl = pipelineTmpl
 

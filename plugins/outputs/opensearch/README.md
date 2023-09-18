@@ -107,11 +107,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Pipeline Name
   ## Additionally, you can specify a tag name using the notation (`{{.Tag "tag_name"}}`)
-  ## If the tag does not exist, the default tag value will be used.
-  # default_tag_value = ""
-  ## If the tag does not exist, the default pipeline will be used as the
-  ## pipeline. If no default pipeline is set, no pipeline is used for the
-  ## metric.
+  ## which will be used as the pipeline name (e.g. "{{.Tag "os_pipeline"}}").
+  ## If the tag does not exist, the default pipeline will be used as the pipeline.
+  ## If no default pipeline is set, no pipeline is used for the metric.
   # default_pipeline = ""
 ```
 
@@ -123,8 +121,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 For example: "telegraf-{{.Time.Format "2006-01-02"}}" would set it to telegraf-2023-07-27
 You can also specify
-metric name (`{{Name}}`), tag value (`{{Tag "tag_name"}}`), field value (`{{Field "feild_name"}}`) 
-If the tag does not exist, the default tag value will be used. default_tag_value = ""
+metric name (`{{ .Name }}`), tag value (`{{ .Tag "tag_name" }}`), field value (`{{ .Field "feild_name" }}`) 
+If the tag does not exist, the default tag value will be empty string ""
 
 ## Permissions
 
