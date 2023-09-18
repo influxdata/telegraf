@@ -78,7 +78,7 @@ func (o *Opensearch) Init() error {
 	// Determine if we should process NaN and inf values
 	valOptions := []string{"", "none", "drop", "replace"}
 	if err := choice.Check(o.FloatHandling, valOptions); err != nil {
-		return fmt.Errorf("config float_handling type %w", err)
+		return fmt.Errorf("config float_handling type: %w", err)
 	}
 
 	if o.FloatHandling == "" {
