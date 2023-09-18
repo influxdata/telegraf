@@ -7,20 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	osExec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
-
-	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -61,41 +55,6 @@ type Runner interface {
 }
 
 type CommandRunner struct{}
-
-func (c CommandRunner) Run(
-	command string,
-	environments []string,
-	timeout time.Duration,
-) ([]byte, []byte, error) {
-	splitCmd, err := shellquote.Split(command)
-	if err != nil || len(splitCmd) == 0 {
-		return nil, nil, fmt.Errorf("exec: unable to parse command: %w", err)
-	}
-
-	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	if len(environments) > 0 {
-		cmd.Env = append(os.Environ(), environments...)
-	}
-
-	var (
-		out    bytes.Buffer
-		stderr bytes.Buffer
-	)
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-
-	runErr := internal.RunTimeout(cmd, timeout)
-
-	out = removeWindowsCarriageReturns(out)
-	if stderr.Len() > 0 && !telegraf.Debug {
-		stderr = removeWindowsCarriageReturns(stderr)
-		stderr = c.truncate(stderr)
-	}
-
-	return out.Bytes(), stderr.Bytes(), runErr
-}
 
 func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 	// Limit the number of bytes.
