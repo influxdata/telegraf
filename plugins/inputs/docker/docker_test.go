@@ -112,7 +112,7 @@ var baseClient = MockClient{
 		return NodeList, nil
 	},
 	DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
-		return DiskUsage, nil
+		return diskUsage, nil
 	},
 	CloseF: func() error {
 		return nil
@@ -457,7 +457,7 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 					return NodeList, nil
 				},
 				DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
-					return DiskUsage, nil
+					return diskUsage, nil
 				},
 				CloseF: func() error {
 					return nil
@@ -1566,11 +1566,9 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t,
 		"docker_disk_usage",
-
 		map[string]interface{}{
 			"layers_size": int64(1e10),
 		},
-
 		map[string]string{
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
@@ -1579,11 +1577,9 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t,
 		"docker_disk_usage",
-
 		map[string]interface{}{
 			"size_root_fs": int64(123456789),
 			"size_rw":      int64(0)},
-
 		map[string]string{
 			"container_image":   "some_image",
 			"container_version": "1.0.0-alpine",
@@ -1595,11 +1591,9 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t,
 		"docker_disk_usage",
-
 		map[string]interface{}{
 			"size":        int64(123456789),
 			"shared_size": int64(0)},
-
 		map[string]string{
 			"image_id":       "some_imageid",
 			"image_name":     "some_image_tag",
@@ -1611,11 +1605,9 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t,
 		"docker_disk_usage",
-
 		map[string]interface{}{
 			"size":        int64(425484494),
 			"shared_size": int64(0)},
-
 		map[string]string{
 			"image_id":       "7f4a1cc74046",
 			"image_name":     "telegraf",
@@ -1627,11 +1619,9 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t,
 		"docker_disk_usage",
-
 		map[string]interface{}{
 			"size": int64(123456789),
 		},
-
 		map[string]string{
 			"volume_name":    "some_volume",
 			"engine_host":    "absol",

@@ -929,8 +929,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 	// Images
 	for _, image := range du.Images {
 		fields := map[string]interface{}{
-			"size": image.Size,
-			// "virtual_size": image.VirtualSize, // deprecated
+			"size":        image.Size,
 			"shared_size": image.SharedSize,
 		}
 
@@ -940,7 +939,6 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"image_id":       image.ID[7:19], // remove "sha256:" and keep the first 12 characters
 		}
 
-		// TODO: how to handle multiple repo tags?
 		if len(image.RepoTags) > 0 {
 			imageName, imageVersion := dockerint.ParseImage(image.RepoTags[0])
 			tags["image_name"] = imageName
@@ -959,13 +957,11 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 		tags := map[string]string{
 			"engine_host":    d.engineHost,
 			"server_version": d.serverVersion,
-			"volume_name":    volume.Name, // TODO: limit to first 12 characters if hash?
+			"volume_name":    volume.Name,
 		}
 
 		acc.AddFields(duName, fields, tags, now)
 	}
-
-	// Build Cache is not implemented
 }
 
 func copyTags(in map[string]string) map[string]string {
