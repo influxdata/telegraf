@@ -397,18 +397,6 @@ func TestWriteIgnoredErrors(t *testing.T) {
 		expectedErr bool
 	}{
 		{
-			name: "points too old",
-			err:  errors.New(errStringPointsTooOld),
-		},
-		{
-			name: "points out of order",
-			err:  errors.New(errStringPointsOutOfOrder),
-		},
-		{
-			name: "points too frequent",
-			err:  errors.New(errStringPointsTooFrequent),
-		},
-		{
 			name:        "other errors reported",
 			err:         errors.New("test"),
 			expectedErr: true,
@@ -431,14 +419,8 @@ func TestWriteIgnoredErrors(t *testing.T) {
 				client:    c,
 			}
 
-			err = s.Connect()
-			require.NoError(t, err)
-			err = s.Write(testutil.MockMetrics())
-			if tt.expectedErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, s.Connect())
+			require.Error(t, s.Write(testutil.MockMetrics()))
 		})
 	}
 }
