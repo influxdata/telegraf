@@ -2,12 +2,13 @@ package extr
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
@@ -613,6 +614,31 @@ func TestSerializeBatchArrays3(t *testing.T) {
 		fmt.Printf("--- MATCHES S1 ---\n")
 		fmt.Printf("S1:\n%v\n\n",string(expS1))
 	}
+}
+
+func TestSerializeBatchArraysMiddle(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnumber": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"type_@0_ipv6Addresses_ipv6Settings": "LinkLocalAddress",
+	}
+
+	m1 := metric.New("TestArraysMiddle", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"testArraysMiddle":[{"device":{"serialnumber":"ABC-123"},"items":[{"ipv6Settings":{"ipv6Addresses":[{"type":"LinkLocalAddress"}]}}],"name":"TestArraysMiddle","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
+
 }
 
 

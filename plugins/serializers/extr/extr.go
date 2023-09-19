@@ -3,12 +3,13 @@ package extr
 import (
 	"encoding/json"
 	"errors"
-	"github.com/influxdata/telegraf"
 	"math"
 	"reflect"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/influxdata/telegraf"
 )
 
 // Fixed map keys
@@ -222,31 +223,19 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 				itemKey = ""
 			}
 
-			myMap, myIndex, isArray, err := splitKey(item, itemKey, fKey)
+			myMap, myIndex, err := splitKey(item, itemKey, fKey)
 			if err != nil {
 				continue
 			}
 
-			if isArray == true {
-
-				rt := reflect.TypeOf(myMap[myIndex])
-				if rt.Kind() != reflect.Slice {
-					// Make it a slice if it isn't already
-					myMap[myIndex] = make([]interface{}, 0)
-				}
-				
-				myMap[myIndex] = append(myMap[myIndex].([]interface{}), fValue)
-
-			} else {
-				myMap[myIndex] = fValue
-			}
+			myMap[myIndex] = fValue
 
 		} else if id == minStr || id == maxStr || id == avgStr || id == oldStr || id == newStr {
 
 			// Found _min,_max,_avg or _old,_new field.
 			itemKey := ""
 
-			myMap, myIndex, _, err := splitKey(item, itemKey, fKey)
+			myMap, myIndex, err := splitKey(item, itemKey, fKey)
 			if err != nil {
 				continue
 			}
@@ -256,6 +245,8 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 		}
 	}
 
+	item = populateArrays(item)
+	
 	return item
 }
 
@@ -359,12 +350,11 @@ func buildMap(startMap map[string]interface{}, startKey string, s []string, numK
 
 // Split key into tokens and build nested map based on elements of fKey
 // Top level map is passed along with that maps name. i.e. input["keys"] or input["tags"]
-func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (map[string]interface{}, string, bool, error) {
+func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (map[string]interface{}, string, error) {
 
 	// topMap - Current items array items[]
 	// topMapName - Top map name
 	// fKey - Current key string i.e. j_foo_bar, k_foo_bar
-	isArray := false
 
 	// Split fKey into tokens.  Already removed type, _key, _min, _max, etc.
 	// i.e.           rtrId   // 1 level
@@ -379,14 +369,6 @@ func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (ma
 	// Returns an array of strings
 	// i.e. j_foo_bar --> [j foo bar]
 	s := strings.Split(fKey, "_")
-
-	// Check if this is an array @j_foo_bar.  First letter of first
-	// element is @ sign.
-	if strings.HasPrefix(s[0], "@") {
-		isArray = true
-		// Get rid of array identifier @xxx_
-		s = s[1:]
-	}
 
 	// Convert / to _
 	for i, _ := range s {
@@ -412,10 +394,92 @@ func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (ma
 
 	if len(s) <= 0 {
 		// This is okay for a top level data element.. i.e.psuTemp_min=100
-		return topMap, topMapName, isArray, nil
+		return topMap, topMapName, nil
 	}
 
 	myMap, myIndex, err := buildMap(topMap, topMapName, s, numKeys)
 
-	return myMap, myIndex, isArray, err
+	return myMap, myIndex, err
+}
+
+// To specify an array, precede the fieldKey with \@uniquevalue_.
+// The unique value string can be anything, as long as it makes the metric unique.
+//        @1_sysCap_lldp=11,@xx_sysCap_lldp=43,@abc_sysCap=87
+//        --> {"lldp":{"sysCap":[11,43,87]}}
+//
+// Array symbol (@) can be at any position of the fieldKey. Tag, immediately following the array symbol,
+// becomes an array, for example:
+// type_@0_ipv6Addresses_ipv6Settings="LinkLocalAddress",scope_@0_ipv6Addresses_ipv6Settings="LinkLocal",address_@0_ipv6Addresses_ipv6Settings="2001" ->
+//  {
+//     "ipv6Settings": {
+//         "ipv6Addresses": [
+//             {
+//                 "address": "2001",
+//                 "scope": "LinkLocal",
+//                 "type": "LinkLocalAddress"
+//             }
+//         ]
+//     }
+// }
+// The following set of functions traverse the output item.
+// When a map is detected where key starts with '@',
+// The map is replaced with array of map values
+func populateArrays(m map[string]interface{}) map[string]interface{} {
+	for k, v := range m {
+		m[k] = walkElement(v)
+	}
+	return m
+}
+
+func walkElement(v interface{}) interface{} {
+	vt := reflect.TypeOf(v)
+	if vt.Kind() == reflect.Ptr || vt.Kind() == reflect.Interface {
+		vt = vt.Elem()
+	}
+	switch vt.Kind() {
+	case reflect.Map:
+		if mv, ok := v.(map[string]interface{}); ok {
+			return walkMap(mv)
+		} else {
+			return v
+		}
+	case reflect.Array, reflect.Slice:
+		if mv, ok := v.([]interface{}); ok {
+			return walkArray(mv)
+		} else {
+			return v
+		}
+	}
+	return v
+}
+
+func walkMap(docMap map[string]interface{}) interface{} {
+	map2array := false
+	for k, _ := range docMap {
+		if k[0] == '@' {
+			map2array = true
+		}
+		break
+	}
+	if map2array {
+		// Its an array, converting map values to slice
+		av := make([]interface{}, len(docMap), len(docMap))
+		idx := 0
+		for _, v := range docMap {
+			av[idx] = walkElement(v)
+			idx++
+		}
+		return av
+	}
+	for k, v := range docMap {
+		docMap[k] = walkElement(v)
+	}
+	return docMap
+}
+
+func walkArray(x []interface{}) interface{} {
+	for i := 0; i < len(x); i++ {
+		x[i] = walkElement(x[i])
+	}
+	return x
 }

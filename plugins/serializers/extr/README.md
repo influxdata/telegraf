@@ -46,6 +46,23 @@ The `extr` output data format converts metrics into JSON documents, performing t
         @1_sysCap_lldp=11,@xx_sysCap_lldp=43,@abc_sysCap=87
         --> {"lldp":{"sysCap":[11,43,87]}}
 
+- Array symbol (@) can be at any position of the fieldKey. Tag, immediately following the array symbol,
+becomes an array, for example:
+```
+type_@0_ipv6Addresses_ipv6Settings="LinkLocalAddress",scope_@0_ipv6Addresses_ipv6Settings="LinkLocal",address_@0_ipv6Addresses_ipv6Settings="2001" ->
+ {
+    "ipv6Settings": {
+        "ipv6Addresses": [
+            {
+                "address": "2001",
+                "scope": "LinkLocal",
+                "type": "LinkLocalAddress"
+            }
+        ]
+    }
+}
+```
+
 *extr serializer batches metrics by default.
 
 ## Configuration
