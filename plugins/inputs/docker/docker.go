@@ -213,18 +213,17 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 
 	// Get disk usage data
 	if len(d.StorageObjects) > 0 {
-		objectTypes := []types.DiskUsageObject{}
+		objectTypes := make([]types.DiskUsageObject, 0, len(d.StorageObjects))
 
 		for _, object := range d.StorageObjects {
-			if object == "container" {
+			switch object {
+			case "container":
 				objectTypes = append(objectTypes, types.ContainerObject)
-			} else if object == "image" {
+			case "image":
 				objectTypes = append(objectTypes, types.ImageObject)
-			} else if object == "volume" {
+			case "volume":
 				objectTypes = append(objectTypes, types.VolumeObject)
-				// } else if object == "build-cache" {
-				// 	du_opts.Types = append(du_opts.Types, types.BuildCacheObject)
-			} else {
+			default:
 				d.Log.Warnf("Unrecognized storage object type: %s", object)
 			}
 		}

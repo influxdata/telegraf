@@ -544,7 +544,7 @@ func containerInspect() types.ContainerJSON {
 	}
 }
 
-var DiskUsage = types.DiskUsage{
+var diskUsage = types.DiskUsage{
 	LayersSize: 1e10,
 	Containers: []*types.Container{
 		{Names: []string{"/some_container"}, Image: "some_image:1.0.0-alpine", SizeRw: 0, SizeRootFs: 123456789},

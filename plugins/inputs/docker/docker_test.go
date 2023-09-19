@@ -1559,8 +1559,7 @@ func TestDockerGatherDiskUsage(t *testing.T) {
 		newClient: func(string, *tls.Config) (Client, error) { return &baseClient, nil },
 	}
 
-	err := acc.GatherError(d.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(d.Gather))
 
 	duOpts := types.DiskUsageOptions{Types: []types.DiskUsageObject{}}
 	d.gatherDiskUsage(&acc, duOpts)
