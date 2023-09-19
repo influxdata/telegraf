@@ -71,6 +71,7 @@ type Docker struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
+	objectTypes     []types.DiskUsageObject
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -122,6 +123,21 @@ func (d *Docker) Init() error {
 			d.TotalInclude = []string{"cpu"}
 		} else {
 			d.TotalInclude = []string{}
+		}
+	}
+
+	d.objectTypes = make([]types.DiskUsageObject, 0, len(d.StorageObjects))
+
+	for _, object := range d.StorageObjects {
+		switch object {
+		case "container":
+			d.objectTypes = append(d.objectTypes, types.ContainerObject)
+		case "image":
+			d.objectTypes = append(d.objectTypes, types.ImageObject)
+		case "volume":
+			d.objectTypes = append(d.objectTypes, types.VolumeObject)
+		default:
+			d.Log.Warnf("Unrecognized storage object type: %s", object)
 		}
 	}
 
@@ -212,23 +228,8 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	// Get disk usage data
-	if len(d.StorageObjects) > 0 {
-		objectTypes := make([]types.DiskUsageObject, 0, len(d.StorageObjects))
-
-		for _, object := range d.StorageObjects {
-			switch object {
-			case "container":
-				objectTypes = append(objectTypes, types.ContainerObject)
-			case "image":
-				objectTypes = append(objectTypes, types.ImageObject)
-			case "volume":
-				objectTypes = append(objectTypes, types.VolumeObject)
-			default:
-				d.Log.Warnf("Unrecognized storage object type: %s", object)
-			}
-		}
-
-		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: objectTypes})
+	if len(d.objectTypes) > 0 {
+		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: d.objectTypes})
 	}
 
 	return nil
