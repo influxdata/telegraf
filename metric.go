@@ -126,7 +126,7 @@ type Metric interface {
 
 // TemplateMetric is an interface to use in templates (e.g text/template)
 // to generate complex strings from metric properties
-// e.g. '{{.Neasurement}}-{{.Tag "foo"}}-{{.Field "bar"}}'
+// e.g. '{{.Name}}-{{.Tag "foo"}}-{{.Field "bar"}}'
 type TemplateMetric interface {
 	Name() string
 	Field(key string) interface{}
@@ -135,4 +135,10 @@ type TemplateMetric interface {
 	Tags() map[string]string
 	Time() time.Time
 	String() string
+}
+
+type UnwrappableMetric interface {
+	// Unwrap allows to access the underlying raw metric if an implementation
+	// wraps it in the first place.
+	Unwrap() Metric
 }
