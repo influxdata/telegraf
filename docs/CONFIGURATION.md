@@ -662,10 +662,10 @@ are provided in the [language definition][CEL lang] as well as in the
 [extension documentation][CEL ext].
 
 **NOTE:** Expressions that may be valid and compile, but fail at runtime will
-result in the expression reporting as `true`. The metrics will pass through
+result in the expression reporting as `false`. The metrics will not pass through
 as a result. An example is when reading a non-existing field. If this happens,
 the evaluation is aborted, an error is logged, and the expression is reported as
-`true`, so the metric passes.
+`false`, so the metric is dropped.
 
 > NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
 > slower compared to `namepass`/`namedrop` and friends. So consider to use the
