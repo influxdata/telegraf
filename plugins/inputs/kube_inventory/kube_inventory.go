@@ -4,8 +4,12 @@ package kube_inventory
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +32,7 @@ const (
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
+	URL_KUBELET       string          `toml:"url_kubelet"`
 	BearerToken       string          `toml:"bearer_token"`
 	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
@@ -42,7 +47,8 @@ type KubernetesInventory struct {
 	Log             telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
-	client *client
+	client     *client
+	httpClient *http.Client
 
 	selectorFilter filter.Filter
 }
@@ -139,6 +145,57 @@ func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 		m = 1
 	}
 	return int64(f * m)
+}
+func (k *KubernetesInventory) LoadJSON(url string, v interface{}) error {
+	var req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	var resp *http.Response
+	tlsCfg, err := k.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	if k.httpClient == nil {
+		if k.ResponseTimeout < config.Duration(time.Second) {
+			k.ResponseTimeout = config.Duration(time.Second * 5)
+		}
+		k.httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsCfg,
+			},
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Timeout: time.Duration(k.ResponseTimeout),
+		}
+	}
+
+	if k.BearerToken != "" {
+		token, err := os.ReadFile(k.BearerToken)
+		if err != nil {
+			return err
+		}
+		k.BearerTokenString = strings.TrimSpace(string(token))
+	}
+	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
+	req.Header.Add("Accept", "application/json")
+	resp, err = k.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(v)
+	if err != nil {
+		return fmt.Errorf("error parsing response: %w", err)
+	}
+
+	return nil
 }
 
 func (ki *KubernetesInventory) createSelectorFilters() error {

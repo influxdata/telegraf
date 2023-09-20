@@ -2,15 +2,24 @@ package kube_inventory
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/influxdata/telegraf"
 )
 
 func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	list, err := ki.client.getPods(ctx, ki.NodeName)
+	var list *v1.PodList
+	var err error
+
+	if ki.URL_KUBELET != "" {
+		err = ki.LoadJSON(fmt.Sprintf("%s/pods", ki.URL_KUBELET), list)
+	} else {
+		list, err = ki.client.getPods(ctx, ki.NodeName)
+	}
 	if err != nil {
 		acc.AddError(err)
 		return
