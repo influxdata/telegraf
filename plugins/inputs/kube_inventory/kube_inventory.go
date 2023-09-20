@@ -47,8 +47,8 @@ type KubernetesInventory struct {
 	Log             telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
-	client     *client
-	httpClient *http.Client
+	client      *client
+	shttpClient *http.Client
 
 	selectorFilter filter.Filter
 }
