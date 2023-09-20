@@ -135,12 +135,9 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	}
 
 	var auth []amqp.Authentication
-
-	
 	
 	if strings.ToUpper(a.AuthMethod) == "EXTERNAL" {
 		auth = []amqp.Authentication{&externalAuth{}}
-
 	} else if !a.Username.Empty() || !a.Password.Empty() {
 		username, err := a.Username.Get()
 		if err != nil {
