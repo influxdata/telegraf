@@ -14,8 +14,8 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 	var list *corev1.PodList
 	var err error
 
-	if ki.URL_KUBELET != "" {
-		err = ki.LoadJSON(fmt.Sprintf("%s/pods", ki.URL_KUBELET), list)
+	if ki.KubeletURL != "" {
+		err = ki.LoadJSON(fmt.Sprintf("%s/pods", ki.KubeletURL), list)
 	} else {
 		list, err = ki.client.getPods(ctx, ki.NodeName)
 	}
