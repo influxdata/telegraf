@@ -320,12 +320,12 @@ func (w *Wavefront) Close() error {
 
 func (w *Wavefront) makeAuthOptions() ([]wavefront.Option, error) {
 	if !w.Token.Empty() {
-		b, err := w.Token.Get()
+		tsecret, err := w.Token.Get()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse token value: %w", err)
 		}
-		token := string(b)
-		config.ReleaseSecret(b)
+		token := tsecret.StringCopy()
+		tsecret.Destroy()
 
 		return []wavefront.Option{
 			wavefront.APIToken(token),
@@ -333,31 +333,31 @@ func (w *Wavefront) makeAuthOptions() ([]wavefront.Option, error) {
 	}
 
 	if !w.AuthCSPAPIToken.Empty() {
-		b, err := w.AuthCSPAPIToken.Get()
+		tsecret, err := w.AuthCSPAPIToken.Get()
 		if err != nil {
 			return nil, fmt.Errorf("failed to CSP API token value: %w", err)
 		}
-		apiToken := string(b)
-		config.ReleaseSecret(b)
+		apiToken := tsecret.StringCopy()
+		tsecret.Destroy()
 		return []wavefront.Option{
 			wavefront.CSPAPIToken(apiToken, wavefront.CSPBaseURL(w.CSPBaseURL)),
 		}, nil
 	}
 
 	if w.AuthCSPClientCredentials != nil {
-		appIDBytes, err := w.AuthCSPClientCredentials.AppID.Get()
+		appIDSecret, err := w.AuthCSPClientCredentials.AppID.Get()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse Client Credentials App ID value: %w", err)
 		}
-		appID := string(appIDBytes)
-		config.ReleaseSecret(appIDBytes)
+		appID := appIDSecret.StringCopy()
+		appIDSecret.Destroy()
 
-		appSecretBytes, err := w.AuthCSPClientCredentials.AppSecret.Get()
+		appSecret, err := w.AuthCSPClientCredentials.AppSecret.Get()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse Client Credentials App Secret value: %w", err)
 		}
-		cspAppSecret := string(appSecretBytes)
-		config.ReleaseSecret(appSecretBytes)
+		cspAppSecret := appSecret.StringCopy()
+		appSecret.Destroy()
 
 		options := []wavefront.CSPOption{
 			wavefront.CSPBaseURL(w.CSPBaseURL),

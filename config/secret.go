@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/awnumar/memguard"
-
 	"github.com/influxdata/telegraf"
 )
 
@@ -26,12 +24,48 @@ var secretStorePattern = regexp.MustCompile(`^\w+$`)
 // in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 
+// secretCount is the number of secrets use in Telegraf
 var secretCount atomic.Int64
+
+// selectedImpl is the configured implementation for secrets
+var selectedImpl secretImpl = &protectedSecretImpl{}
+
+// secretImpl represents an abstraction for different implementations of secrets
+type secretImpl interface {
+	Container(secret []byte) secretContainer
+	EmptyBuffer() SecretBuffer
+	Wipe(secret []byte)
+}
+
+// secretContainer represents an abstraction of the container holding the
+// actual secret value
+type secretContainer interface {
+	Destroy()
+	Equals(ref []byte) (bool, error)
+	Buffer() (SecretBuffer, error)
+	AsBuffer(secret []byte) SecretBuffer
+	Replace(secret []byte)
+}
+
+// SecretBuffer allows to access the content of the secret
+type SecretBuffer interface {
+	Size() int
+	Grow(capacity int)
+	Bytes() []byte
+	String() string
+	StringCopy() string
+	Destroy()
+}
 
 // Secret safely stores sensitive data such as a password or token
 type Secret struct {
-	enclave   *memguard.Enclave
+	// container is the implementation for holding the secret. It can be
+	// protected or not depending on the concrete implementation.
+	container secretContainer
+
+	// resolvers are the functions for resolving a given secret-id (key)
 	resolvers map[string]telegraf.ResolveFunc
+
 	// unlinked contains all references in the secret that are not yet
 	// linked to the corresponding secret store.
 	unlinked []string
@@ -71,10 +105,10 @@ func (s *Secret) init(secret []byte) {
 
 	// Find all parts that need to be resolved and return them
 	s.unlinked = secretPattern.FindAllString(string(secret), -1)
-
-	// Setup the enclave
-	s.enclave = memguard.NewEnclave(secret)
 	s.resolvers = nil
+
+	// Setup the container implementation
+	s.container = selectedImpl.Container(secret)
 }
 
 // Destroy the secret content
@@ -83,16 +117,10 @@ func (s *Secret) Destroy() {
 	s.unlinked = nil
 	s.notempty = false
 
-	if s.enclave == nil {
-		return
+	if s.container != nil {
+		s.container.Destroy()
+		s.container = nil
 	}
-
-	// Wipe the secret from memory
-	lockbuf, err := s.enclave.Open()
-	if err == nil {
-		lockbuf.Destroy()
-	}
-	s.enclave = nil
 
 	// Keep track of the number of secrets...
 	secretCount.Add(-1)
@@ -105,7 +133,7 @@ func (s *Secret) Empty() bool {
 
 // EqualTo performs a constant-time comparison of the secret to the given reference
 func (s *Secret) EqualTo(ref []byte) (bool, error) {
-	if s.enclave == nil {
+	if s.container == nil {
 		return false, nil
 	}
 
@@ -113,20 +141,13 @@ func (s *Secret) EqualTo(ref []byte) (bool, error) {
 		return false, fmt.Errorf("unlinked parts in secret: %v", strings.Join(s.unlinked, ";"))
 	}
 
-	// Get a locked-buffer of the secret to perform the comparison
-	lockbuf, err := s.enclave.Open()
-	if err != nil {
-		return false, fmt.Errorf("opening enclave failed: %w", err)
-	}
-	defer lockbuf.Destroy()
-
-	return lockbuf.EqualTo(ref), nil
+	return s.container.Equals(ref)
 }
 
 // Get return the string representation of the secret
-func (s *Secret) Get() ([]byte, error) {
-	if s.enclave == nil {
-		return nil, nil
+func (s *Secret) Get() (SecretBuffer, error) {
+	if s.container == nil {
+		return selectedImpl.EmptyBuffer(), nil
 	}
 
 	if len(s.unlinked) > 0 {
@@ -134,22 +155,19 @@ func (s *Secret) Get() ([]byte, error) {
 	}
 
 	// Decrypt the secret so we can return it
-	lockbuf, err := s.enclave.Open()
+	buffer, err := s.container.Buffer()
 	if err != nil {
-		return nil, fmt.Errorf("opening enclave failed: %w", err)
+		return nil, err
 	}
-	defer lockbuf.Destroy()
-	secret := lockbuf.Bytes()
 
+	// We've got a static secret so simply return the buffer
 	if len(s.resolvers) == 0 {
-		// Make a copy as we cannot access lockbuf after Destroy, i.e.
-		// after this function finishes.
-		newsecret := append([]byte{}, secret...)
-		return newsecret, protect(newsecret)
+		return buffer, nil
 	}
+	defer buffer.Destroy()
 
 	replaceErrs := make([]string, 0)
-	newsecret := secretPattern.ReplaceAllFunc(secret, func(match []byte) []byte {
+	newsecret := secretPattern.ReplaceAllFunc(buffer.Bytes(), func(match []byte) []byte {
 		resolver, found := s.resolvers[string(match)]
 		if !found {
 			replaceErrs = append(replaceErrs, fmt.Sprintf("no resolver for %q", match))
@@ -164,11 +182,11 @@ func (s *Secret) Get() ([]byte, error) {
 		return replacement
 	})
 	if len(replaceErrs) > 0 {
-		memguard.WipeBytes(newsecret)
+		selectedImpl.Wipe(newsecret)
 		return nil, fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
 	}
 
-	return newsecret, protect(newsecret)
+	return s.container.AsBuffer(newsecret), nil
 }
 
 // Set overwrites the secret's value with a new one. Please note, the secret
@@ -182,7 +200,7 @@ func (s *Secret) Set(value []byte) error {
 	}
 
 	// Set the new secret
-	s.enclave = memguard.NewEnclave(secret)
+	s.container.Replace(secret)
 	s.resolvers = res
 	s.notempty = len(value) > 0
 
@@ -198,27 +216,26 @@ func (s *Secret) GetUnlinked() []string {
 // secret-store resolvers.
 func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 	// Decrypt the secret so we can return it
-	if s.enclave == nil {
+	if s.container == nil {
 		return nil
 	}
-	lockbuf, err := s.enclave.Open()
+	buffer, err := s.container.Buffer()
 	if err != nil {
-		return fmt.Errorf("opening enclave failed: %w", err)
+		return err
 	}
-	defer lockbuf.Destroy()
-	secret := lockbuf.Bytes()
+	defer buffer.Destroy()
 
 	// Iterate through the parts and try to resolve them. For static parts
 	// we directly replace them, while for dynamic ones we store the resolver.
-	newsecret, res, replaceErrs := resolve(secret, resolvers)
+	newsecret, res, replaceErrs := resolve(buffer.Bytes(), resolvers)
 	if len(replaceErrs) > 0 {
 		return fmt.Errorf("linking secrets failed: %s", strings.Join(replaceErrs, ";"))
 	}
 	s.resolvers = res
 
 	// Store the secret if it has changed
-	if string(secret) != string(newsecret) {
-		s.enclave = memguard.NewEnclave(newsecret)
+	if buffer.String() != string(newsecret) {
+		s.container.Replace(newsecret)
 	}
 
 	// All linked now

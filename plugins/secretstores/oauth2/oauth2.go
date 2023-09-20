@@ -120,19 +120,20 @@ func (o *OAuth2) Init() error {
 
 		csecret, err := c.ClientSecret.Get()
 		if err != nil {
+			cid.Destroy()
 			return fmt.Errorf("getting client secret for %q failed: %w", c.Key, err)
 		}
 
 		// Setup the configuration
 		cfg := &clientcredentials.Config{
-			ClientID:     string(cid),
-			ClientSecret: string(csecret),
+			ClientID:     cid.StringCopy(),
+			ClientSecret: csecret.StringCopy(),
 			TokenURL:     endpoint.TokenURL,
 			Scopes:       c.Scopes,
 			AuthStyle:    endpoint.AuthStyle,
 		}
-		config.ReleaseSecret(cid)
-		config.ReleaseSecret(csecret)
+		cid.Destroy()
+		csecret.Destroy()
 
 		// Add the parameters if any
 		for k, v := range c.Params {

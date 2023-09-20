@@ -1,7 +1,6 @@
 package postgresql
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"net"
@@ -106,8 +105,8 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 	if err != nil {
 		return fmt.Errorf("getting address failed: %w", err)
 	}
-	addr := string(addrSecret)
-	defer config.ReleaseSecret(addrSecret)
+	addr := addrSecret.StringCopy()
+	defer addrSecret.Destroy()
 
 	if p.Address.Empty() || addr == "localhost" {
 		addr = "host=localhost sslmode=disable"
@@ -161,15 +160,15 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 	if err != nil {
 		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
-	defer config.ReleaseSecret(addr)
+	defer addr.Destroy()
 
 	var canonicalizedAddress string
-	if bytes.HasPrefix(addr, []byte("postgres://")) || bytes.HasPrefix(addr, []byte("postgresql://")) {
-		if canonicalizedAddress, err = parseURL(string(addr)); err != nil {
+	if strings.HasPrefix(addr.String(), "postgres://") || strings.HasPrefix(addr.String(), "postgresql://") {
+		if canonicalizedAddress, err = parseURL(addr.StringCopy()); err != nil {
 			return sanitizedAddress, err
 		}
 	} else {
-		canonicalizedAddress = string(addr)
+		canonicalizedAddress = addr.StringCopy()
 	}
 
 	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil

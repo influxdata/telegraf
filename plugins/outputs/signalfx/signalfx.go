@@ -86,8 +86,8 @@ func (s *SignalFx) Connect() error {
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	client.AuthToken = string(token)
-	config.ReleaseSecret(token)
+	client.AuthToken = token.StringCopy()
+	token.Destroy()
 
 	if s.IngestURL != "" {
 		client.DatapointEndpoint = datapointEndpointForIngestURL(s.IngestURL)

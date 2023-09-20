@@ -21,7 +21,6 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -106,13 +105,13 @@ func (cf *ClientFactory) testClient(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
+		defer username.Destroy()
 		password, err := cf.parent.Password.Get()
 		if err != nil {
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-		auth := url.UserPassword(string(username), string(password))
+		defer password.Destroy()
+		auth := url.UserPassword(username.StringCopy(), password.StringCopy())
 
 		if err := cf.client.Client.SessionManager.Login(ctx2, auth); err != nil {
 			return fmt.Errorf("renewing authentication failed: %w", err)
@@ -143,12 +142,12 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		}
 		password, err := vs.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		vSphereURL.User = url.UserPassword(string(username), string(password))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		vSphereURL.User = url.UserPassword(username.StringCopy(), password.StringCopy())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	vs.Log.Debugf("Creating client: %s", vSphereURL.Host)

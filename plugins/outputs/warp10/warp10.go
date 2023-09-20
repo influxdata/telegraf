@@ -131,8 +131,8 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	req.Header.Set("X-Warp10-Token", string(token))
-	config.ReleaseSecret(token)
+	req.Header.Set("X-Warp10-Token", token.StringCopy())
+	token.Destroy()
 
 	resp, err := w.client.Do(req)
 	if err != nil {

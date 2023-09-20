@@ -17,6 +17,8 @@ import (
 type mqttv5Client struct {
 	client     *mqttv5auto.ConnectionManager
 	options    mqttv5auto.ClientConfig
+	username   config.Secret
+	password   config.Secret
 	timeout    time.Duration
 	qos        int
 	retain     bool
@@ -46,19 +48,6 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 		}
 		opts.ClientID = "Telegraf-Output-" + id
 	}
-
-	user, err := cfg.Username.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting username failed: %w", err)
-	}
-	pass, err := cfg.Password.Get()
-	if err != nil {
-		config.ReleaseSecret(user)
-		return nil, fmt.Errorf("getting password failed: %w", err)
-	}
-	opts.SetUsernamePassword(string(user), pass)
-	config.ReleaseSecret(user)
-	config.ReleaseSecret(pass)
 
 	tlsCfg, err := cfg.ClientConfig.TLSConfig()
 	if err != nil {
@@ -107,6 +96,8 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 	return &mqttv5Client{
 		options:    opts,
 		timeout:    time.Duration(cfg.Timeout),
+		username:   cfg.Username,
+		password:   config.Password,
 		qos:        cfg.QoS,
 		retain:     cfg.Retain,
 		properties: properties,
@@ -114,6 +105,18 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 }
 
 func (m *mqttv5Client) Connect() (bool, error) {
+	user, err := m.username.Get()
+	if err != nil {
+		return false, fmt.Errorf("getting username failed: %w", err)
+	}
+	defer user.Destroy()
+	pass, err := m.password.Get()
+	if err != nil {
+		return false, fmt.Errorf("getting password failed: %w", err)
+	}
+	defer pass.Destroy()
+	m.options.SetUsernamePassword(user.String(), pass.Bytes())
+
 	client, err := mqttv5auto.NewConnection(context.Background(), m.options)
 	if err != nil {
 		return false, err

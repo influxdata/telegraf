@@ -112,10 +112,7 @@ func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
 // Returns:
 //
 //	error: Any error that may have occurred
-func (h *HTTP) gatherURL(
-	acc telegraf.Accumulator,
-	url string,
-) error {
+func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	body := makeRequestBodyReader(h.ContentEncoding, h.Body)
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
@@ -127,7 +124,8 @@ func (h *HTTP) gatherURL(
 		if err != nil {
 			return err
 		}
-		bearer := "Bearer " + strings.TrimSpace(string(token))
+		bearer := "Bearer " + strings.TrimSpace(token.StringCopy())
+		token.Destroy()
 		request.Header.Set("Authorization", bearer)
 	} else if h.TokenFile != "" {
 		token, err := os.ReadFile(h.BearerToken)
@@ -209,15 +207,15 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := h.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
-	request.SetBasicAuth(string(username), string(password))
+	request.SetBasicAuth(username.StringCopy(), password.StringCopy())
 
 	return nil
 }

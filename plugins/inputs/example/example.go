@@ -73,7 +73,7 @@ func (m *Example) Init() error {
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	// Initialze your internal states
 	m.count = 1

@@ -218,8 +218,8 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(err)
 			continue
 		}
-		dsn := string(dnsSecret)
-		config.ReleaseSecret(dnsSecret)
+		dsn := dnsSecret.StringCopy()
+		dnsSecret.Destroy()
 
 		for _, query := range s.queries {
 			wg.Add(1)
@@ -272,8 +272,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			// Use the DSN (connection string) directly. In this case,
 			// empty username/password causes use of Windows
 			// integrated authentication.
-			pool, err = sql.Open("mssql", string(dsn))
-			config.ReleaseSecret(dsn)
+			pool, err = sql.Open("mssql", dsn.StringCopy())
+			dsn.Destroy()
 			if err != nil {
 				acc.AddError(err)
 				continue
@@ -300,8 +300,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				continue
 			}
-			connector, err := mssql.NewAccessTokenConnector(string(dsn), tokenProvider)
-			config.ReleaseSecret(dsn)
+			connector, err := mssql.NewAccessTokenConnector(dsn.StringCopy(), tokenProvider)
+			dsn.Destroy()
 			if err != nil {
 				acc.AddError(fmt.Errorf("error creating the SQL connector: %w", err))
 				continue

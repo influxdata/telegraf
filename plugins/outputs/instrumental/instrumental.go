@@ -177,14 +177,13 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	tokenSecret, err := i.APIToken.Get()
+	token, err := i.APIToken.Get()
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	token := string(tokenSecret)
-	config.ReleaseSecret(tokenSecret)
+	defer token.Destroy()
 
-	if _, err := fmt.Fprintf(conn, HandshakeFormat, token); err != nil {
+	if _, err := fmt.Fprintf(conn, HandshakeFormat, token.String()); err != nil {
 		return err
 	}
 

@@ -107,16 +107,16 @@ func (s *MongoDB) Init() error {
 		}
 		password, err := s.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
-			Username:      string(username),
-			Password:      string(password),
+			Username:      username.StringCopy(),
+			Password:      password.StringCopy(),
 		}
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		username.Destroy()
+		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 	case "X509":
 		//format connection string to include tls/x509 options

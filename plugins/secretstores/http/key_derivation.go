@@ -39,15 +39,15 @@ func (k *KDFConfig) generatePBKDF2HMAC(hf hashFunc, keylen int) (config.Secret, 
 	if err != nil {
 		return config.Secret{}, config.Secret{}, fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(passwd)
+	defer passwd.Destroy()
 
 	salt, err := k.Salt.Get()
 	if err != nil {
 		return config.Secret{}, config.Secret{}, fmt.Errorf("getting salt failed: %w", err)
 	}
-	defer config.ReleaseSecret(salt)
+	defer salt.Destroy()
 
-	rawkey := pbkdf2.Key(passwd, salt, k.Iterations, keylen, hf)
+	rawkey := pbkdf2.Key(passwd.Bytes(), salt.Bytes(), k.Iterations, keylen, hf)
 	key := config.NewSecret([]byte(hex.EncodeToString(rawkey)))
 	return key, config.Secret{}, nil
 }

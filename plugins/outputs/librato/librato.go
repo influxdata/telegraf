@@ -149,12 +149,12 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 	}
 	token, err := l.APIToken.Get()
 	if err != nil {
-		config.ReleaseSecret(user)
+		user.Destroy()
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	req.SetBasicAuth(string(user), string(token))
-	config.ReleaseSecret(user)
-	config.ReleaseSecret(token)
+	req.SetBasicAuth(user.StringCopy(), token.StringCopy())
+	user.Destroy()
+	token.Destroy()
 
 	resp, err := l.client.Do(req)
 	if err != nil {
