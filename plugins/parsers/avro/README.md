@@ -11,6 +11,7 @@ The message is supposed to be encoded as follows:
 | 5-    | Data       | Serialized data.                                 |
 
 The metric name will be set according the following priority:
+
   1. Try to get metric name from the message field if it is set in the 
      `avro_measurement_field` option.
   2. If the name is not determined, then try to get it from 
@@ -19,6 +20,7 @@ The metric name will be set according the following priority:
      schema definition in the following format `[schema_namespace.]schema_name`,
      where schema namespace is optional and will be added only if it is specified 
      in the schema definition. 
+     
 In case if the metric name could not be determined according to these steps the error 
 will be rised and the message will not be parsed.
 
