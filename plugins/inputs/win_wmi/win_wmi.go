@@ -149,15 +149,17 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	result := resultRaw.ToIDispatch()
 	defer resultRaw.Clear()
 
-	count, err := oleInt64(result, "Count")
-	if err != nil {
-		return fmt.Errorf("failed getting Count: %w", err)
-	}
+	q.Log.Info(result)
 
 	q.Log.Info("getting count property:")
 	v, ok := result.GetProperty("Count")
 	q.Log.Info(ok)
 	q.Log.Info(v)
+
+	count, err := oleInt64(result, "Count")
+	if err != nil {
+		return fmt.Errorf("failed getting Count: %w", err)
+	}
 
 	for i := int64(0); i < count; i++ {
 		// item is a SWbemObject
