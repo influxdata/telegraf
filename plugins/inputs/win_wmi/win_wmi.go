@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -141,6 +142,7 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	defer serviceRaw.Clear()
 
 	// result is a SWBemObjectSet
+	q.Log = models.NewLogger("input", "query", "")
 	q.Log.Infof("running query: %s\n", q.query)
 	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", q.query)
 	if err != nil {
@@ -149,12 +151,10 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	result := resultRaw.ToIDispatch()
 	defer resultRaw.Clear()
 
-	q.Log.Info(result)
-
 	q.Log.Info("getting count property:")
 	v, ok := result.GetProperty("Count")
-	q.Log.Info(ok)
-	q.Log.Info(v)
+	q.Log.Infof(" - error: %s\n", ok)
+	q.Log.Infof(" - value: %v\n", v)
 
 	count, err := oleInt64(result, "Count")
 	if err != nil {
