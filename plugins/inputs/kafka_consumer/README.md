@@ -43,11 +43,11 @@ to use them.
   ## Kafka brokers.
   brokers = ["localhost:9092"]
 
-  ## Set the minimal supported Kafka version. Should be a string contains 
+  ## Set the minimal supported Kafka version. Should be a string contains
   ## 4 digits in case if it is 0 version and 3 digits for versions starting
   ## from 1.0.0 separated by dot. This setting enables the use of new
   ## Kafka features and APIs.  Must be 0.10.2.0(used as default) or greater.
-  ## Please, check the list of supported versions at 
+  ## Please, check the list of supported versions at
   ## https://pkg.go.dev/github.com/Shopify/sarama#SupportedVersions
   ##   ex: kafka_version = "2.6.0"
   ##   ex: kafka_version = "0.10.2.0"
@@ -64,10 +64,10 @@ to use them.
   # topic_tag = ""
 
   ## The list of Kafka message headers that should be pass as metric tags
-  ## works only for Kafka version 0.11+, on lower versions the message headers 
+  ## works only for Kafka version 0.11+, on lower versions the message headers
   ## are not available
   # msg_headers_to_tags = []
-  
+
   ## Optional Client id
   # client_id = "Telegraf"
 
