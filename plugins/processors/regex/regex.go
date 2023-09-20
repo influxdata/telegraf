@@ -42,6 +42,7 @@ type converter struct {
 
 	filter filter.Filter
 	re     *regexp.Regexp
+	groups []string
 	apply  func(m telegraf.Metric)
 }
 

@@ -765,43 +765,58 @@ func TestMultipleConversions(t *testing.T) {
 	require.Equal(t, expectedTags, processed[0].Tags())
 }
 
-func TestMultipleConversionsNamesGroups(t *testing.T) {
+func TestNamedGroups(t *testing.T) {
 	regex := Regex{
 		Tags: []converter{
 			{
-				Key:         "resp_code",
-				Pattern:     "^(?P<resp_code_group>\\d)\\d\\d$",
-				Replacement: "${1}xx",
-				ResultKey:   "resp_code_group",
+				Key:     "resp_code",
+				Pattern: "^(?P<resp_code_group>\\d)\\d\\d$",
 			},
 		},
 		Fields: []converter{
 			{
 				Key:     "request",
-				Pattern: `^/api(?P<method>/[\w/]+/.*category=(?P<search_category>\w+).*)`,
+				Pattern: `^/api/(?P<method>[\w/]+)/.*category=(?P<search_category>\w+).*`,
 			},
 		},
 		Log: testutil.Logger{},
 	}
 	require.NoError(t, regex.Init())
 
-	processed := regex.Apply(newM2())
+	input := testutil.MustMetric(
+		"access_log",
+		map[string]string{
+			"verb":      "GET",
+			"resp_code": "200",
+		},
+		map[string]interface{}{
+			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+			"ignore_number": int64(200),
+			"ignore_bool":   true,
+		},
+		time.Unix(1695243874, 0),
+	)
 
-	expectedFields := map[string]interface{}{
-		"request":         "/api/search/?category=plugins&q=regex&sort=asc",
-		"method":          "/search/",
-		"search_category": "plugins",
-		"ignore_number":   int64(200),
-		"ignore_bool":     true,
+	expected := []telegraf.Metric{
+		metric.New(
+			"access_log",
+			map[string]string{
+				"verb":            "GET",
+				"resp_code":       "200",
+				"resp_code_group": "2",
+			},
+			map[string]interface{}{
+				"request":         "/api/search/?category=plugins&q=regex&sort=asc",
+				"method":          "search",
+				"search_category": "plugins",
+				"ignore_number":   int64(200),
+				"ignore_bool":     true,
+			},
+			time.Unix(1695243874, 0),
+		),
 	}
-	expectedTags := map[string]string{
-		"verb":            "GET",
-		"resp_code":       "200",
-		"resp_code_group": "2xx",
-	}
-
-	require.Equal(t, expectedFields, processed[0].Fields())
-	require.Equal(t, expectedTags, processed[0].Tags())
+	actual := regex.Apply(input)
+	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
 func TestNoMatches(t *testing.T) {

@@ -10,6 +10,13 @@ import (
 )
 
 func (c *converter) setup(ct converterType) error {
+	// Compile the pattern
+	re, err := regexp.Compile(c.Pattern)
+	if err != nil {
+		return err
+	}
+	c.re = re
+
 	switch ct {
 	case convertTags, convertFields:
 		if c.Key == "" {
@@ -20,6 +27,21 @@ func (c *converter) setup(ct converterType) error {
 			return err
 		}
 		c.filter = f
+
+		// Check for named groups
+		if c.ResultKey == "" && c.Replacement == "" {
+			groups := c.re.SubexpNames()
+			allNamed := len(groups) > 1
+			for _, g := range groups[1:] {
+				if g == "" {
+					allNamed = false
+					break
+				}
+			}
+			if allNamed {
+				c.groups = groups[1:]
+			}
+		}
 	case convertTagRename, convertFieldRename:
 		switch c.ResultKey {
 		case "":
@@ -30,13 +52,6 @@ func (c *converter) setup(ct converterType) error {
 			return fmt.Errorf("invalid metrics result_key %q", c.ResultKey)
 		}
 	}
-
-	// Compile the pattern
-	re, err := regexp.Compile(c.Pattern)
-	if err != nil {
-		return err
-	}
-	c.re = re
 
 	// Select the application function
 	switch ct {
@@ -61,6 +76,25 @@ func (c *converter) applyTags(m telegraf.Metric) {
 			continue
 		}
 
+		// Handle named groups
+		if len(c.groups) > 0 {
+			matches := c.re.FindStringSubmatch(tag.Value)
+			for i, match := range matches[1:] {
+				if match == "" {
+					continue
+				}
+				name := c.groups[i]
+				if c.Append {
+					if v, ok := m.GetTag(name); ok {
+						match = v + match
+					}
+				}
+				m.AddTag(name, match)
+			}
+			continue
+		}
+
+		// Handle explicit replacements
 		newKey := tag.Key
 		if c.ResultKey != "" {
 			newKey = c.ResultKey
@@ -84,6 +118,24 @@ func (c *converter) applyFields(m telegraf.Metric) {
 
 		value, ok := field.Value.(string)
 		if !ok || !c.re.MatchString(value) {
+			continue
+		}
+
+		// Handle named groups
+		if len(c.groups) > 0 {
+			matches := c.re.FindStringSubmatch(value)
+			for i, match := range matches[1:] {
+				if match == "" {
+					continue
+				}
+				name := c.groups[i]
+				if c.Append {
+					if v, ok := m.GetTag(name); ok {
+						match = v + match
+					}
+				}
+				m.AddField(name, match)
+			}
 			continue
 		}
 
