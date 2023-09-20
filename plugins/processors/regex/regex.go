@@ -39,26 +39,8 @@ type converter struct {
 	ResultKey   string `toml:"result_key"`
 	Append      bool   `toml:"append"`
 
-	re *regexp.Regexp
-}
-
-func (c *converter) setup(ct converterType) error {
-	switch ct {
-	case convertTagRename, convertFieldRename:
-		switch c.ResultKey {
-		case "":
-			c.ResultKey = "keep"
-		case "overwrite", "keep":
-			// Do nothing as those are valid choices
-		default:
-			return fmt.Errorf("invalid metrics result_key %q", c.ResultKey)
-		}
-	}
-
-	var err error
-	c.re, err = regexp.Compile(c.Pattern)
-
-	return err
+	re    *regexp.Regexp
+	apply func(m telegraf.Metric)
 }
 
 func (*Regex) SampleConfig() string {
@@ -116,132 +98,28 @@ func (r *Regex) Init() error {
 
 func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		for _, converter := range r.Tags {
-			if converter.Key == "*" {
-				for _, tag := range metric.TagList() {
-					regex := converter.re
-					if regex.MatchString(tag.Value) {
-						newValue := regex.ReplaceAllString(tag.Value, converter.Replacement)
-						updateTag(converter, metric, tag.Key, newValue)
-					}
-				}
-			} else if value, ok := metric.GetTag(converter.Key); ok {
-				if key, newValue := r.convert(converter, value); newValue != "" {
-					updateTag(converter, metric, key, newValue)
-				}
-			}
+		for _, c := range r.Tags {
+			c.apply(metric)
 		}
 
-		for _, converter := range r.Fields {
-			if value, ok := metric.GetField(converter.Key); ok {
-				if v, ok := value.(string); ok {
-					if key, newValue := r.convert(converter, v); newValue != "" {
-						metric.AddField(key, newValue)
-					}
-				}
-			}
+		for _, c := range r.Fields {
+			c.apply(metric)
 		}
 
-		for _, converter := range r.TagRename {
-			regex := converter.re
-			replacements := make(map[string]string)
-			for _, tag := range metric.TagList() {
-				name := tag.Key
-				if regex.MatchString(name) {
-					newName := regex.ReplaceAllString(name, converter.Replacement)
-
-					if !metric.HasTag(newName) {
-						// There is no colliding tag, we can just change the name.
-						tag.Key = newName
-						continue
-					}
-
-					if converter.ResultKey == "overwrite" {
-						// We got a colliding tag, remember the replacement and do it later
-						replacements[name] = newName
-					}
-				}
-			}
-			// We needed to postpone the replacement as we cannot modify the tag-list
-			// while iterating it as this will result in invalid memory dereference panic.
-			for oldName, newName := range replacements {
-				value, ok := metric.GetTag(oldName)
-				if !ok {
-					// Just in case the tag got removed in the meantime
-					continue
-				}
-				metric.AddTag(newName, value)
-				metric.RemoveTag(oldName)
-			}
+		for _, c := range r.TagRename {
+			c.apply(metric)
 		}
 
-		for _, converter := range r.FieldRename {
-			regex := converter.re
-			replacements := make(map[string]string)
-			for _, field := range metric.FieldList() {
-				name := field.Key
-				if regex.MatchString(name) {
-					newName := regex.ReplaceAllString(name, converter.Replacement)
-
-					if !metric.HasField(newName) {
-						// There is no colliding field, we can just change the name.
-						field.Key = newName
-						continue
-					}
-
-					if converter.ResultKey == "overwrite" {
-						// We got a colliding field, remember the replacement and do it later
-						replacements[name] = newName
-					}
-				}
-			}
-			// We needed to postpone the replacement as we cannot modify the field-list
-			// while iterating it as this will result in invalid memory dereference panic.
-			for oldName, newName := range replacements {
-				value, ok := metric.GetField(oldName)
-				if !ok {
-					// Just in case the field got removed in the meantime
-					continue
-				}
-				metric.AddField(newName, value)
-				metric.RemoveField(oldName)
-			}
+		for _, c := range r.FieldRename {
+			c.apply(metric)
 		}
 
-		for _, converter := range r.MetricRename {
-			regex := converter.re
-			value := metric.Name()
-			if regex.MatchString(value) {
-				newValue := regex.ReplaceAllString(value, converter.Replacement)
-				metric.SetName(newValue)
-			}
+		for _, c := range r.MetricRename {
+			c.apply(metric)
 		}
 	}
 
 	return in
-}
-
-func (r *Regex) convert(c converter, src string) (key string, value string) {
-	regex := c.re
-
-	if c.ResultKey == "" || regex.MatchString(src) {
-		value = regex.ReplaceAllString(src, c.Replacement)
-	}
-
-	if c.ResultKey != "" {
-		return c.ResultKey, value
-	}
-
-	return c.Key, value
-}
-
-func updateTag(converter converter, metric telegraf.Metric, key string, newValue string) {
-	if converter.Append {
-		if v, ok := metric.GetTag(key); ok {
-			newValue = v + newValue
-		}
-	}
-	metric.AddTag(key, newValue)
 }
 
 func init() {

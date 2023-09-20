@@ -88,23 +88,25 @@ func TestFieldConversions(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		regex := Regex{
-			Fields: []converter{test.converter},
-			Log:    testutil.Logger{},
-		}
-		require.NoError(t, regex.Init())
+	for _, tt := range tests {
+		t.Run(tt.message, func(t *testing.T) {
+			regex := Regex{
+				Fields: []converter{tt.converter},
+				Log:    testutil.Logger{},
+			}
+			require.NoError(t, regex.Init())
 
-		processed := regex.Apply(newM1())
+			processed := regex.Apply(newM1())
 
-		expectedTags := map[string]string{
-			"verb":      "GET",
-			"resp_code": "200",
-		}
+			expectedTags := map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			}
 
-		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
-		require.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
-		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+			require.Equal(t, tt.expectedFields, processed[0].Fields(), tt.message)
+			require.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
+			require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+		})
 	}
 }
 
@@ -757,6 +759,45 @@ func TestMultipleConversions(t *testing.T) {
 		"resp_code":       "200",
 		"resp_code_group": "2xx",
 		"resp_code_text":  "OK",
+	}
+
+	require.Equal(t, expectedFields, processed[0].Fields())
+	require.Equal(t, expectedTags, processed[0].Tags())
+}
+
+func TestMultipleConversionsNamesGroups(t *testing.T) {
+	regex := Regex{
+		Tags: []converter{
+			{
+				Key:         "resp_code",
+				Pattern:     "^(?P<resp_code_group>\\d)\\d\\d$",
+				Replacement: "${1}xx",
+				ResultKey:   "resp_code_group",
+			},
+		},
+		Fields: []converter{
+			{
+				Key:     "request",
+				Pattern: `^/api(?P<method>/[\w/]+/.*category=(?P<search_category>\w+).*)`,
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, regex.Init())
+
+	processed := regex.Apply(newM2())
+
+	expectedFields := map[string]interface{}{
+		"request":         "/api/search/?category=plugins&q=regex&sort=asc",
+		"method":          "/search/",
+		"search_category": "plugins",
+		"ignore_number":   int64(200),
+		"ignore_bool":     true,
+	}
+	expectedTags := map[string]string{
+		"verb":            "GET",
+		"resp_code":       "200",
+		"resp_code_group": "2xx",
 	}
 
 	require.Equal(t, expectedFields, processed[0].Fields())
