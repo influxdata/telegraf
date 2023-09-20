@@ -221,7 +221,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		sField := p.MeasurementField
 		sMetric, err := internal.ToString(data[sField])
 		if err != nil {
-			p.Log.Warnf("Could not convert %v to string for metric name %q: %w", data[sField], sField, err)
+			p.Log.Warnf("Could not convert %v to string for metric name %q: %s", data[sField], sField, err.Error())
 		} else {
 			name = sMetric
 		}
