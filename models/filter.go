@@ -147,12 +147,12 @@ func (f *Filter) Select(metric telegraf.Metric) (bool, error) {
 			"time":   metric.Time(),
 		})
 		if err != nil {
-			return true, err
+			return false, err
 		}
 		if r, ok := result.Value().(bool); ok {
 			return r, nil
 		}
-		return true, fmt.Errorf("invalid result type %T", result.Value())
+		return false, fmt.Errorf("invalid result type %T", result.Value())
 	}
 
 	return true, nil
