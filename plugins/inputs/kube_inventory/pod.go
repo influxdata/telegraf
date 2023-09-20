@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/influxdata/telegraf"
 )
 
 func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	var list *v1.PodList
+	var list *corev1.PodList
 	var err error
 
 	if ki.URL_KUBELET != "" {
