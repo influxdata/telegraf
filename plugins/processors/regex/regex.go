@@ -7,12 +7,21 @@ import (
 	"regexp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+type converterType int
+
+const (
+	convertTags = iota
+	convertFields
+	convertTagRename
+	convertFieldRename
+	convertMetricRename
+)
 
 type Regex struct {
 	Tags         []converter     `toml:"tags"`
@@ -21,7 +30,6 @@ type Regex struct {
 	FieldRename  []converter     `toml:"field_rename"`
 	MetricRename []converter     `toml:"metric_rename"`
 	Log          telegraf.Logger `toml:"-"`
-	regexCache   map[string]*regexp.Regexp
 }
 
 type converter struct {
@@ -30,6 +38,27 @@ type converter struct {
 	Replacement string `toml:"replacement"`
 	ResultKey   string `toml:"result_key"`
 	Append      bool   `toml:"append"`
+
+	re *regexp.Regexp
+}
+
+func (c *converter) setup(ct converterType) error {
+	switch ct {
+	case convertTagRename, convertFieldRename:
+		switch c.ResultKey {
+		case "":
+			c.ResultKey = "keep"
+		case "overwrite", "keep":
+			// Do nothing as those are valid choices
+		default:
+			return fmt.Errorf("invalid metrics result_key %q", c.ResultKey)
+		}
+	}
+
+	var err error
+	c.re, err = regexp.Compile(c.Pattern)
+
+	return err
 }
 
 func (*Regex) SampleConfig() string {
@@ -37,56 +66,38 @@ func (*Regex) SampleConfig() string {
 }
 
 func (r *Regex) Init() error {
-	r.regexCache = make(map[string]*regexp.Regexp)
-
 	// Compile the regular expressions
-	for _, c := range r.Tags {
-		if _, compiled := r.regexCache[c.Pattern]; !compiled {
-			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+	for i := range r.Tags {
+		if err := r.Tags[i].setup(convertTags); err != nil {
+			return fmt.Errorf("'tags' %w", err)
 		}
 	}
-	for _, c := range r.Fields {
-		if _, compiled := r.regexCache[c.Pattern]; !compiled {
-			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+	for i := range r.Fields {
+		if err := r.Fields[i].setup(convertFields); err != nil {
+			return fmt.Errorf("'fields' %w", err)
 		}
 	}
 
-	resultOptions := []string{"overwrite", "keep"}
-	for _, c := range r.TagRename {
+	for i, c := range r.TagRename {
 		if c.Key != "" {
 			r.Log.Info("'tag_rename' section contains a key which is ignored during processing")
 		}
-
-		if c.ResultKey == "" {
-			c.ResultKey = "keep"
-		}
-		if err := choice.Check(c.ResultKey, resultOptions); err != nil {
-			return fmt.Errorf("invalid metrics result_key: %w", err)
-		}
-
-		if _, compiled := r.regexCache[c.Pattern]; !compiled {
-			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		if err := r.TagRename[i].setup(convertTagRename); err != nil {
+			return fmt.Errorf("'tag_rename' %w", err)
 		}
 	}
 
-	for _, c := range r.FieldRename {
+	for i, c := range r.FieldRename {
 		if c.Key != "" {
 			r.Log.Info("'field_rename' section contains a key which is ignored during processing")
 		}
 
-		if c.ResultKey == "" {
-			c.ResultKey = "keep"
-		}
-		if err := choice.Check(c.ResultKey, resultOptions); err != nil {
-			return fmt.Errorf("invalid metrics result_key: %w", err)
-		}
-
-		if _, compiled := r.regexCache[c.Pattern]; !compiled {
-			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		if err := r.FieldRename[i].setup(convertFieldRename); err != nil {
+			return fmt.Errorf("'field_rename' %w", err)
 		}
 	}
 
-	for _, c := range r.MetricRename {
+	for i, c := range r.MetricRename {
 		if c.Key != "" {
 			r.Log.Info("'metric_rename' section contains a key which is ignored during processing")
 		}
@@ -95,8 +106,8 @@ func (r *Regex) Init() error {
 			r.Log.Info("'metric_rename' section contains a 'result_key' ignored during processing as metrics will ALWAYS the name")
 		}
 
-		if _, compiled := r.regexCache[c.Pattern]; !compiled {
-			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		if err := r.MetricRename[i].setup(convertMetricRename); err != nil {
+			return fmt.Errorf("'metric_rename' %w", err)
 		}
 	}
 
@@ -108,7 +119,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		for _, converter := range r.Tags {
 			if converter.Key == "*" {
 				for _, tag := range metric.TagList() {
-					regex := r.regexCache[converter.Pattern]
+					regex := converter.re
 					if regex.MatchString(tag.Value) {
 						newValue := regex.ReplaceAllString(tag.Value, converter.Replacement)
 						updateTag(converter, metric, tag.Key, newValue)
@@ -132,7 +143,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		for _, converter := range r.TagRename {
-			regex := r.regexCache[converter.Pattern]
+			regex := converter.re
 			replacements := make(map[string]string)
 			for _, tag := range metric.TagList() {
 				name := tag.Key
@@ -165,7 +176,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		for _, converter := range r.FieldRename {
-			regex := r.regexCache[converter.Pattern]
+			regex := converter.re
 			replacements := make(map[string]string)
 			for _, field := range metric.FieldList() {
 				name := field.Key
@@ -198,7 +209,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		for _, converter := range r.MetricRename {
-			regex := r.regexCache[converter.Pattern]
+			regex := converter.re
 			value := metric.Name()
 			if regex.MatchString(value) {
 				newValue := regex.ReplaceAllString(value, converter.Replacement)
@@ -211,7 +222,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (r *Regex) convert(c converter, src string) (key string, value string) {
-	regex := r.regexCache[c.Pattern]
+	regex := c.re
 
 	if c.ResultKey == "" || regex.MatchString(src) {
 		value = regex.ReplaceAllString(src, c.Replacement)
