@@ -11,19 +11,20 @@ import (
 )
 
 func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	var list *corev1.PodList
+	var list corev1.PodList
+	listRef := &list
 	var err error
 
 	if ki.KubeletURL != "" {
-		err = ki.LoadJSON(fmt.Sprintf("%s/pods", ki.KubeletURL), list)
+		err = ki.LoadJSON(fmt.Sprintf("%s/pods", ki.KubeletURL), listRef)
 	} else {
-		list, err = ki.client.getPods(ctx, ki.NodeName)
+		listRef, err = ki.client.getPods(ctx, ki.NodeName)
 	}
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
-	for _, p := range list.Items {
+	for _, p := range listRef.Items {
 		ki.gatherPod(p, acc)
 	}
 }
