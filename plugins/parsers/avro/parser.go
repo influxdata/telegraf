@@ -24,22 +24,22 @@ import (
 // an attached schema or schema fingerprint
 
 type Parser struct {
-	MetricName      string            `toml:"metric_name"`
-	SchemaRegistry  string            `toml:"avro_schema_registry"`
-	CaCertPath      string            `toml:"avro_schema_registry_cert"`
-	Schema          string            `toml:"avro_schema"`
-	Format          string            `toml:"avro_format"`
-	Measurement     string            `toml:"avro_measurement"`
+	MetricName       string            `toml:"metric_name"`
+	SchemaRegistry   string            `toml:"avro_schema_registry"`
+	CaCertPath       string            `toml:"avro_schema_registry_cert"`
+	Schema           string            `toml:"avro_schema"`
+	Format           string            `toml:"avro_format"`
+	Measurement      string            `toml:"avro_measurement"`
 	MeasurementField string            `toml:"avro_measurement_field"`
-	Tags            []string          `toml:"avro_tags"`
-	Fields          []string          `toml:"avro_fields"`
-	Timestamp       string            `toml:"avro_timestamp"`
-	TimestampFormat string            `toml:"avro_timestamp_format"`
-	FieldSeparator  string            `toml:"avro_field_separator"`
-	UnionMode       string            `toml:"avro_union_mode"`
-	DefaultTags     map[string]string `toml:"tags"`
-	Log         telegraf.Logger `toml:"-"`
-	registryObj *schemaRegistry
+	Tags             []string          `toml:"avro_tags"`
+	Fields           []string          `toml:"avro_fields"`
+	Timestamp        string            `toml:"avro_timestamp"`
+	TimestampFormat  string            `toml:"avro_timestamp_format"`
+	FieldSeparator   string            `toml:"avro_field_separator"`
+	UnionMode        string            `toml:"avro_union_mode"`
+	DefaultTags      map[string]string `toml:"tags"`
+	Log              telegraf.Logger   `toml:"-"`
+	registryObj      *schemaRegistry
 }
 
 func (p *Parser) Init() error {
