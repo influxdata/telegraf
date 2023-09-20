@@ -32,7 +32,7 @@ const (
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
-	URL_KUBELET       string          `toml:"url_kubelet"`
+	KubeletURL        string          `toml:"url_kubelet"`
 	BearerToken       string          `toml:"bearer_token"`
 	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
@@ -146,42 +146,42 @@ func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 	}
 	return int64(f * m)
 }
-func (k *KubernetesInventory) LoadJSON(url string, v interface{}) error {
+func (ki *KubernetesInventory) LoadJSON(url string, v interface{}) error {
 	var req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 	var resp *http.Response
-	tlsCfg, err := k.ClientConfig.TLSConfig()
+	tlsCfg, err := ki.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
 
-	if k.httpClient == nil {
-		if k.ResponseTimeout < config.Duration(time.Second) {
-			k.ResponseTimeout = config.Duration(time.Second * 5)
+	if ki.httpClient == nil {
+		if ki.ResponseTimeout < config.Duration(time.Second) {
+			ki.ResponseTimeout = config.Duration(time.Second * 5)
 		}
-		k.httpClient = &http.Client{
+		ki.httpClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsCfg,
 			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
-			Timeout: time.Duration(k.ResponseTimeout),
+			Timeout: time.Duration(ki.ResponseTimeout),
 		}
 	}
 
-	if k.BearerToken != "" {
-		token, err := os.ReadFile(k.BearerToken)
+	if ki.BearerToken != "" {
+		token, err := os.ReadFile(ki.BearerToken)
 		if err != nil {
 			return err
 		}
-		k.BearerTokenString = strings.TrimSpace(string(token))
+		ki.BearerTokenString = strings.TrimSpace(string(token))
 	}
-	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
+	req.Header.Set("Authorization", "Bearer "+ki.BearerTokenString)
 	req.Header.Add("Accept", "application/json")
-	resp, err = k.httpClient.Do(req)
+	resp, err = ki.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
