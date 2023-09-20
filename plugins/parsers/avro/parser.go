@@ -57,7 +57,7 @@ func (p *Parser) Init() error {
 	case "flatten", "nullable", "any":
 		// Do nothing as those are valid settings
 	default:
-		return fmt.Errorf("unknown 'avro_union_mode' %q", p.Format)
+		return fmt.Errorf("unknown avro_union_mode %q", p.Format)
 	}
 
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {

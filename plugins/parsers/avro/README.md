@@ -107,28 +107,10 @@ the error will be rised and the message will not be parsed.
   ## If this were set to "_", then it would be a_0="a", a_1="b".
   # avro_field_separator = "_"
 
-  ## Used to determine what to do with Avro unions with multiple
-  ## allowable types.  If empty, the default is "flatten".  When "flatten" is
-  ## set, then if you have an Avro union type of '[ "int", "float" ]'
-  ## for field "a", and you have avro_field_separator set to "_", then
-  ## measurements of "a" will go into Telegraf fields "a_int" and
-  ## "a_float" depending on their type.  This keeps InfluxDB happy with
-  ## your data (see below).
-  ## One common use of Avro union types is to mark fields as optional
-  ## by specifying '[ "null", "<type>" ]' as the union type.  If this is
-  ## set to "nullable", the plugin will not change the field name by adding
-  ## the type, but will silently discard fields whose values are null.
-  ## However, the measurement will still contain any other fields.
-  ## The last possible value is "any".  With this value, the plugin will
-  ## not change the field name and will just put in whatever value it
-  ## receives.
-  ## WARNING: if you use "nullable" with more than one non-null type, or
-  ## if you use "any", and Telegraf is feeding InfluxDB, InfluxDB will
-  ## associate that field with the first type it sees for a given
-  ## its value.  If it receives another measurement with a different
-  ## type in that field, it will discard that entire measurement.  Be
-  ## sure you know what you're doing if you use the "any" type, or
-  ## "nullable" with more than one non-null type.
+  ## Define handling of union types. Possible values are:
+  ##   flatten  -- add type suffix to field name (default)
+  ##   nullable -- do not modify field name but discard "null" field values
+  ##   any      -- do not modify field name and set field value to the received type
   # avro_union_mode = "flatten"
 
   ## Default values for given tags: optional
