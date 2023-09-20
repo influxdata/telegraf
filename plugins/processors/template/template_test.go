@@ -1,12 +1,14 @@
 package template
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -262,4 +264,40 @@ func TestDot(t *testing.T) {
 	expected := m.Copy()
 	expected.AddTag("metric", "test1 map[tag1:value1] map[value:1.23] 1257894000000000000")
 	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}
+
+func TestTracking(t *testing.T) {
+	// Create a tracking metric and tap the delivery information
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, 1)
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+	m := testutil.TestMetric(1.23)
+	input, _ := metric.WithTracking(m, notify)
+
+	// Create an expectation
+	e := m.Copy()
+	e.AddTag("metric", "test1 map[tag1:value1] map[value:1.23] 1257894000000000000")
+	expected := []telegraf.Metric{e}
+
+	// Configure the plugin
+	plugin := TemplateProcessor{Tag: "metric", Template: "{{.}}"}
+	require.NoError(t, plugin.Init())
+
+	// Process expected metrics and compare with resulting metrics
+	actual := plugin.Apply(input)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	input.Accept()
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(delivered) > 0
+	}, time.Second, 100*time.Millisecond, "%d delivered but 1 expected", len(delivered))
 }

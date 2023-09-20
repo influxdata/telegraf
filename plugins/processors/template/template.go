@@ -29,13 +29,17 @@ func (*TemplateProcessor) SampleConfig() string {
 
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// for each metric in "in" array
-	for _, metric := range in {
-		m, ok := metric.(telegraf.TemplateMetric)
+	for _, raw := range in {
+		m := raw
+		if wm, ok := raw.(telegraf.UnwrappableMetric); ok {
+			m = wm.Unwrap()
+		}
+		tm, ok := m.(telegraf.TemplateMetric)
 		if !ok {
-			r.Log.Errorf("metric of type %T is not a template metric", metric)
+			r.Log.Errorf("metric of type %T is not a template metric", raw)
 			continue
 		}
-		newM := TemplateMetric{m}
+		newM := TemplateMetric{tm}
 
 		var b strings.Builder
 		if err := r.tmplTag.Execute(&b, &newM); err != nil {
@@ -51,8 +55,9 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 		value := b.String()
 
-		metric.AddTag(tag, value)
+		raw.AddTag(tag, value)
 	}
+
 	return in
 }
 
