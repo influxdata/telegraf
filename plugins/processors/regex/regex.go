@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -39,8 +40,9 @@ type converter struct {
 	ResultKey   string `toml:"result_key"`
 	Append      bool   `toml:"append"`
 
-	re    *regexp.Regexp
-	apply func(m telegraf.Metric)
+	filter filter.Filter
+	re     *regexp.Regexp
+	apply  func(m telegraf.Metric)
 }
 
 func (*Regex) SampleConfig() string {

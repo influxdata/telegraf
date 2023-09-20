@@ -925,3 +925,53 @@ func TestAnyTagConversion(t *testing.T) {
 		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }
+
+func TestAnyFieldConversion(t *testing.T) {
+	tests := []struct {
+		message        string
+		converter      converter
+		expectedFields map[string]interface{}
+	}{
+		{
+			message: "Should change existing fields",
+			converter: converter{
+				Key:         "*",
+				Pattern:     "[0-9]{4}",
+				Replacement: "{ID}",
+			},
+			expectedFields: map[string]interface{}{
+				"counter": int64(42),
+				"id":      "{ID}",
+				"user_id": "{ID}",
+				"status":  "1",
+				"request": "/users/{ID}/",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		regex := Regex{
+			Fields: []converter{test.converter},
+			Log:    testutil.Logger{},
+		}
+		require.NoError(t, regex.Init())
+
+		input := metric.New("access_log",
+			map[string]string{},
+			map[string]interface{}{
+				"counter": int64(42),
+				"id":      "1234",
+				"user_id": "2300",
+				"status":  "1",
+				"request": "/users/2300/",
+			},
+			time.Now(),
+		)
+
+		processed := regex.Apply(input)
+
+		require.Empty(t, processed[0].Tags(), test.message, "Should not change tags")
+		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
+		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+	}
+}

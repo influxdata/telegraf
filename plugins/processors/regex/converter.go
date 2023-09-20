@@ -1,14 +1,25 @@
 package regex
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 func (c *converter) setup(ct converterType) error {
 	switch ct {
+	case convertTags, convertFields:
+		if c.Key == "" {
+			return errors.New("key required")
+		}
+		f, err := filter.Compile([]string{c.Key})
+		if err != nil {
+			return err
+		}
+		c.filter = f
 	case convertTagRename, convertFieldRename:
 		switch c.ResultKey {
 		case "":
@@ -45,58 +56,45 @@ func (c *converter) setup(ct converterType) error {
 }
 
 func (c *converter) applyTags(m telegraf.Metric) {
-	if c.Key == "*" {
-		for _, tag := range m.TagList() {
-			if c.re.MatchString(tag.Value) {
-				newValue := c.re.ReplaceAllString(tag.Value, c.Replacement)
-				if c.Append {
-					if v, ok := m.GetTag(tag.Key); ok {
-						newValue = v + newValue
-					}
-				}
-				m.AddTag(tag.Key, newValue)
+	for _, tag := range m.TagList() {
+		if !c.filter.Match(tag.Key) || !c.re.MatchString(tag.Value) {
+			continue
+		}
+
+		newKey := tag.Key
+		if c.ResultKey != "" {
+			newKey = c.ResultKey
+		}
+
+		newValue := c.re.ReplaceAllString(tag.Value, c.Replacement)
+		if c.Append {
+			if v, ok := m.GetTag(newKey); ok {
+				newValue = v + newValue
 			}
 		}
-		return
+		m.AddTag(newKey, newValue)
 	}
-
-	newKey := c.Key
-	if c.ResultKey != "" {
-		newKey = c.ResultKey
-	}
-
-	value, ok := m.GetTag(c.Key)
-	if !ok || !c.re.MatchString(value) {
-		return
-	}
-	newValue := c.re.ReplaceAllString(value, c.Replacement)
-
-	if c.Append {
-		if v, ok := m.GetTag(newKey); ok {
-			newValue = v + newValue
-		}
-	}
-	m.AddTag(newKey, newValue)
 }
 
 func (c *converter) applyFields(m telegraf.Metric) {
-	value, ok := m.GetField(c.Key)
-	if !ok {
-		return
-	}
+	for _, field := range m.FieldList() {
+		if !c.filter.Match(field.Key) {
+			continue
+		}
 
-	v, ok := value.(string)
-	if !ok || !c.re.MatchString(v) {
-		return
-	}
+		value, ok := field.Value.(string)
+		if !ok || !c.re.MatchString(value) {
+			continue
+		}
 
-	newKey := c.Key
-	if c.ResultKey != "" {
-		newKey = c.ResultKey
-	}
+		newKey := field.Key
+		if c.ResultKey != "" {
+			newKey = c.ResultKey
+		}
 
-	newValue := c.re.ReplaceAllString(v, c.Replacement)
-	m.AddField(newKey, newValue)
+		newValue := c.re.ReplaceAllString(value, c.Replacement)
+		m.AddField(newKey, newValue)
+	}
 }
 
 func (c *converter) applyTagRename(m telegraf.Metric) {
