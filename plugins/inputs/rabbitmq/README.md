@@ -26,7 +26,6 @@ to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
-
 ## Configuration
 
 ```toml @sample.conf
