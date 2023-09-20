@@ -113,7 +113,7 @@ func (c *client) getPods(ctx context.Context, nodeName string) (*corev1.PodList,
 	defer cancel()
 	var fieldSelector string
 	if nodeName != "" {
-		fieldSelector = "spec.nodeName=%s=" + nodeName
+		fieldSelector = "spec.nodeName=" + nodeName
 	}
 	return c.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
 }
