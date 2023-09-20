@@ -12,17 +12,17 @@ The message is supposed to be encoded as follows:
 
 The metric name will be set according the following priority:
 
-  1. Try to get metric name from the message field if it is set in the 
+  1. Try to get metric name from the message field if it is set in the
      `avro_measurement_field` option.
-  2. If the name is not determined, then try to get it from 
-     `avro_measurement` option as the static value. 
-  3. If the name is still not determined, then try to get it from the 
+  2. If the name is not determined, then try to get it from
+     `avro_measurement` option as the static value.
+  3. If the name is still not determined, then try to get it from the
      schema definition in the following format `[schema_namespace.]schema_name`,
-     where schema namespace is optional and will be added only if it is specified 
-     in the schema definition. 
-     
-In case if the metric name could not be determined according to these steps the error 
-will be rised and the message will not be parsed.
+     where schema namespace is optional and will be added only if it is specified
+     in the schema definition.
+
+In case if the metric name could not be determined according to these steps
+the error will be rised and the message will not be parsed.
 
 ## Configuration
 
