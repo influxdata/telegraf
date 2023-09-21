@@ -139,6 +139,7 @@ func (c *converter) applyFields(m telegraf.Metric) {
 			continue
 		}
 
+		// Handle explicit replacements
 		newKey := field.Key
 		if c.ResultKey != "" {
 			newKey = c.ResultKey

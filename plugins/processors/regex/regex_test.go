@@ -776,7 +776,7 @@ func TestNamedGroups(t *testing.T) {
 		Fields: []converter{
 			{
 				Key:     "request",
-				Pattern: `^/api/(?P<method>[\w/]+)/.*category=(?P<search_category>\w+).*`,
+				Pattern: `^/api/(?P<method>\w+)[/?].*category=(?P<search_category>\w+)&(?:.*)`,
 			},
 		},
 		Log: testutil.Logger{},
