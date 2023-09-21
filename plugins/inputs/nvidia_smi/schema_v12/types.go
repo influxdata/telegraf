@@ -214,8 +214,18 @@ type smi struct {
 			RxUtil                string `xml:"rx_util"`
 			TxUtil                string `xml:"tx_util"`
 		} `xml:"pci"`
-		PerformanceState    string   `xml:"performance_state"`
-		PersistenceMode     string   `xml:"persistence_mode"`
+		PerformanceState string `xml:"performance_state"`
+		PersistenceMode  string `xml:"persistence_mode"`
+		PowerReadings    struct {
+			PowerState         string `xml:"power_state"`
+			PowerManagement    string `xml:"power_management"`
+			PowerDraw          string `xml:"power_draw"`
+			PowerLimit         string `xml:"power_limit"`
+			DefaultPowerLimit  string `xml:"default_power_limit"`
+			EnforcedPowerLimit string `xml:"enforced_power_limit"`
+			MinPowerLimit      string `xml:"min_power_limit"`
+			MaxPowerLimit      string `xml:"max_power_limit"`
+		} `xml:"power_readings"`
 		Processes           struct{} `xml:"processes"`
 		ProductArchitecture string   `xml:"product_architecture"`
 		ProductBrand        string   `xml:"product_brand"`
