@@ -18,8 +18,10 @@ import (
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -55,9 +57,18 @@ func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monitoring
 	if xg := md["x-goog-api-client"]; len(xg) == 0 || !strings.Contains(xg[0], "gl-go/") {
 		return nil, fmt.Errorf("x-goog-api-client = %v, expected gl-go key", xg)
 	}
+
 	s.reqs = append(s.reqs, req)
 	if s.err != nil {
-		return nil, s.err
+		var statusResp *status.Status
+		switch s.err.Error() {
+		case "InvalidArgument":
+			statusResp = status.New(codes.InvalidArgument, s.err.Error())
+		default:
+			statusResp = status.New(codes.Unknown, s.err.Error())
+		}
+
+		return nil, statusResp.Err()
 	}
 	return s.resps[0].(*emptypb.Empty), nil
 }
@@ -398,8 +409,13 @@ func TestWriteIgnoredErrors(t *testing.T) {
 	}{
 		{
 			name:        "other errors reported",
-			err:         errors.New("test"),
+			err:         errors.New("Unknown"),
 			expectedErr: true,
+		},
+		{
+			name:        "invalid argument",
+			err:         errors.New("InvalidArgument"),
+			expectedErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -420,7 +436,11 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			}
 
 			require.NoError(t, s.Connect())
-			require.Error(t, s.Write(testutil.MockMetrics()))
+			if tt.expectedErr {
+				require.Error(t, s.Write(testutil.MockMetrics()))
+			} else {
+				require.NoError(t, s.Write(testutil.MockMetrics()))
+			}
 		})
 	}
 }
