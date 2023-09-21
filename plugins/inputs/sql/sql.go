@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -375,6 +376,13 @@ func (s *SQL) setupConnection() error {
 	}
 	dsn := string(dsnSecret)
 	config.ReleaseSecret(dsnSecret)
+
+	// Replaces special characters in the oracle connection string
+	if s.driverName == "oracle" {
+		escaped := url.PathEscape(dsn)
+		dsn = strings.ReplaceAll(escaped, "%2F", "/")
+		s.Log.Debugf("Connection %#v", dsn)
+	}
 
 	s.Log.Debug("Connecting...")
 	s.db, err = dbsql.Open(s.driverName, dsn)
