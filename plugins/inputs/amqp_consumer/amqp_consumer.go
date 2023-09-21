@@ -143,16 +143,19 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
+		usernameStr := string(username)
 		defer config.ReleaseSecret(username)
 		password, err := a.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
+		passwordStr := string(password)
 		defer config.ReleaseSecret(password)
+		
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: string(username),
-				Password: string(password),
+				Username: usernameStr,
+				Password: passwordStr,
 			},
 		}
 	}
