@@ -3,6 +3,7 @@ package postgresql_extensible
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"io"
@@ -88,6 +89,10 @@ func ReadQueryFromFile(filePath string) (string, error) {
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
+	return nil
+}
+
+func (p *Postgresql) GatherContext(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		err        error
 		sqlQuery   string
@@ -99,7 +104,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	// Retrieving the database version
 	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
-	if err = p.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+	if err = p.DB.QueryRowContext(ctx, query).Scan(&dbVersion); err != nil {
 		dbVersion = 0
 	}
 
@@ -128,16 +133,16 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		maxVer := p.Query[i].MaxVersion
 
 		if p.Query[i].MinVersion <= dbVersion && (maxVer == 0 || maxVer > dbVersion) {
-			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
+			p.gatherMetricsFromQuery(ctx, acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
 		}
 	}
 	return nil
 }
 
-func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery string, tagValue string, timestamp string, measName string) {
+func (p *Postgresql) gatherMetricsFromQuery(ctx context.Context, acc telegraf.Accumulator, sqlQuery string, tagValue string, timestamp string, measName string) {
 	var columns []string
 
-	rows, err := p.DB.Query(sqlQuery)
+	rows, err := p.DB.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		acc.AddError(err)
 		return
