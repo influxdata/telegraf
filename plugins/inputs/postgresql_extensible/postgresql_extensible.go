@@ -210,20 +210,20 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 				return err
 			}
 		default:
-			database, err := p.GetConnectDatabase(tagAddress)
-			if err != nil {
-				return err
-			}
-			if _, err := dbname.WriteString(database); err != nil {
+			if tagAddress != "" {
+				if _, err := dbname.WriteString(tagAddress); err != nil {
+					return err
+				}
+			} else if _, err := dbname.WriteString("postgres"); err != nil {
 				return err
 			}
 		}
 	} else {
-		database, err := p.GetConnectDatabase(tagAddress)
-		if err != nil {
-			return err
-		}
-		if _, err := dbname.WriteString(database); err != nil {
+		if tagAddress != "" {
+			if _, err := dbname.WriteString(tagAddress); err != nil {
+				return err
+			}
+		} else if _, err := dbname.WriteString("postgres"); err != nil {
 			return err
 		}
 	}
