@@ -210,7 +210,7 @@ func (a *Agent) Run(ctx context.Context) error {
 func (a *Agent) initPlugins() error {
 	for _, input := range a.Config.Inputs {
 		// Share the snmp translator setting with plugins that need it.
-		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
+		if tp, ok := input.InputCtx.(snmp.TranslatorPlugin); ok {
 			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
 		}
 		err := input.Init()
@@ -252,7 +252,7 @@ func (a *Agent) initPersister() error {
 	}
 
 	for _, input := range a.Config.Inputs {
-		plugin, ok := input.Input.(telegraf.StatefulPlugin)
+		plugin, ok := input.InputCtx.(telegraf.StatefulPlugin)
 		if !ok {
 			continue
 		}
@@ -330,7 +330,7 @@ func (a *Agent) startInputs(
 	}
 
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
+		if si, ok := input.InputCtx.(telegraf.ServiceInput); ok {
 			// Service input plugins are not normally subject to timestamp
 			// rounding except for when precision is set on the input plugin.
 			//
@@ -435,7 +435,7 @@ func (a *Agent) testStartInputs(
 	}
 
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
+		if si, ok := input.InputCtx.(telegraf.ServiceInput); ok {
 			// Service input plugins are not subject to timestamp rounding.
 			// This only applies to the accumulator passed to Start(), the
 			// Gather() accumulator does apply rounding according to the
@@ -494,7 +494,7 @@ func (a *Agent) testRunInputs(
 			case "cpu", "mongodb", "procstat":
 				nulAcc := NewAccumulator(input, nul)
 				nulAcc.SetPrecision(getPrecision(precision, interval))
-				if err := input.Input.Gather(nulAcc); err != nil {
+				if err := input.InputCtx.GatherContext(ctx, nulAcc); err != nil {
 					nulAcc.AddError(err)
 				}
 
@@ -504,7 +504,7 @@ func (a *Agent) testRunInputs(
 			acc := NewAccumulator(input, unit.dst)
 			acc.SetPrecision(getPrecision(precision, interval))
 
-			if err := input.Input.Gather(acc); err != nil {
+			if err := input.InputCtx.GatherContext(ctx, acc); err != nil {
 				acc.AddError(err)
 			}
 		}(input)
@@ -525,7 +525,7 @@ func (a *Agent) testRunInputs(
 // stopServiceInputs stops all service inputs.
 func stopServiceInputs(inputs []*models.RunningInput) {
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
+		if si, ok := input.InputCtx.(telegraf.ServiceInput); ok {
 			si.Stop()
 		}
 	}
@@ -572,7 +572,6 @@ func (a *Agent) gatherOnce(
 	interval time.Duration,
 ) error {
 	done := make(chan error)
-
 	go func() {
 		done <- input.Gather(ctx, acc)
 	}()

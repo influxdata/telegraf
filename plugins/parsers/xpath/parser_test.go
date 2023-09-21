@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"context"
 	"math"
 	"os"
 	"path/filepath"
@@ -1454,7 +1455,7 @@ func TestMultipleConfigs(t *testing.T) {
 			var errs []error
 			for _, input := range cfg.Inputs {
 				require.NoError(t, input.Init())
-				err := input.Gather(&acc)
+				err := input.Gather(context.Background(), &acc)
 				if err != nil {
 					errs = append(errs, err)
 				}

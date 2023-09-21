@@ -1,6 +1,7 @@
 package avro
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -69,7 +70,7 @@ func TestCases(t *testing.T) {
 			for _, input := range cfg.Inputs {
 				require.NoError(t, input.Init())
 
-				if err := input.Gather(&acc); err != nil {
+				if err := input.Gather(context.Background(), &acc); err != nil {
 					actualErrors = append(actualErrors, err.Error())
 				}
 			}

@@ -15,8 +15,6 @@ var (
 )
 
 type RunningInput struct {
-	Input telegraf.Input
-	// If Input implements InputCtx then GatherCtx will be called
 	InputCtx telegraf.InputCtx
 	Config   *InputConfig
 
@@ -28,7 +26,7 @@ type RunningInput struct {
 	GatherTimeouts  selfstat.Stat
 }
 
-func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
+func NewRunningInput(inputCtx telegraf.InputCtx, config *InputConfig) *RunningInput {
 	tags := map[string]string{"input": config.Name}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
@@ -40,11 +38,10 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		inputErrorsRegister.Incr(1)
 		GlobalGatherErrors.Incr(1)
 	})
-	SetLoggerOnPlugin(input, logger)
+	SetLoggerOnPlugin(inputCtx, logger)
 
-	ri := RunningInput{
-		Input:    input,
-		InputCtx: nil,
+	return &RunningInput{
+		InputCtx: inputCtx,
 		Config:   config,
 		MetricsGathered: selfstat.Register(
 			"gather",
@@ -63,11 +60,6 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		),
 		log: logger,
 	}
-	ictx, isInputCtx := input.(telegraf.InputCtx)
-	if isInputCtx {
-		ri.InputCtx = ictx
-	}
-	return &ri
 }
 
 // InputConfig is the common config for all inputs.
@@ -98,7 +90,7 @@ func (r *RunningInput) LogName() string {
 }
 
 func (r *RunningInput) Init() error {
-	if p, ok := r.Input.(telegraf.Initializer); ok {
+	if p, ok := r.InputCtx.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
 			return err
@@ -108,7 +100,7 @@ func (r *RunningInput) Init() error {
 }
 
 func (r *RunningInput) ID() string {
-	if p, ok := r.Input.(telegraf.PluginWithID); ok {
+	if p, ok := r.InputCtx.(telegraf.PluginWithID); ok {
 		return p.ID()
 	}
 	return r.Config.ID
@@ -153,13 +145,9 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 
-func (r *RunningInput) Gather(ctx context.Context, acc telegraf.Accumulator) (err error) {
+func (r *RunningInput) Gather(ctx context.Context, acc telegraf.Accumulator) error {
 	start := time.Now()
-	if r.InputCtx != nil {
-		err = r.InputCtx.GatherContext(ctx, acc)
-	} else {
-		err = r.Input.Gather(acc)
-	}
+	err := r.InputCtx.GatherContext(ctx, acc)
 	elapsed := time.Since(start)
 	r.GatherTime.Incr(elapsed.Nanoseconds())
 	return err
@@ -176,4 +164,16 @@ func (r *RunningInput) Log() telegraf.Logger {
 func (r *RunningInput) IncrGatherTimeouts() {
 	GlobalGatherTimeouts.Incr(1)
 	r.GatherTimeouts.Incr(1)
+}
+
+type inputCtxAdapter struct {
+	telegraf.Input
+}
+
+func NewInputCtxAdapter(input telegraf.Input) inputCtxAdapter {
+	return inputCtxAdapter{input}
+}
+
+func (i inputCtxAdapter) GatherContext(_ context.Context, acc telegraf.Accumulator) error {
+	return i.Gather(acc)
 }

@@ -1285,56 +1285,34 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
+	// Handle removed, deprecated plugins
+	if di, deprecated := inputs.Deprecations[name]; deprecated {
+		printHistoricPluginDeprecationNotice("inputs", name, di)
+		return fmt.Errorf("plugin deprecated")
+	}
+
+	var rp *models.RunningInput
 	creator, ok := inputs.Inputs[name]
 	if !ok {
-		// Handle removed, deprecated plugins
-		if di, deprecated := inputs.Deprecations[name]; deprecated {
-			printHistoricPluginDeprecationNotice("inputs", name, di)
-			return fmt.Errorf("plugin deprecated")
+		creatorCtx, ok := inputs.InputsCtx[name]
+		if !ok {
+			return fmt.Errorf("undefined but requested input: %s", name)
 		}
+		inputCtx := creatorCtx()
 
-		return fmt.Errorf("undefined but requested input: %s", name)
-	}
-	input := creator()
-
-	// If the input has a SetParser or SetParserFunc function, it can accept
-	// arbitrary data-formats, so build the requested parser and set it.
-	if t, ok := input.(telegraf.ParserPlugin); ok {
-		missCountThreshold = 1
-		parser, err := c.addParser("inputs", name, table)
+		pluginConfig, err := c.prepareInput(inputCtx, name, table, &missCountThreshold)
 		if err != nil {
-			return fmt.Errorf("adding parser failed: %w", err)
-		}
-		t.SetParser(parser)
-	}
-
-	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
-		missCountThreshold = 1
-		if !c.probeParser("inputs", name, table) {
-			return errors.New("parser not found")
-		}
-		t.SetParserFunc(func() (telegraf.Parser, error) {
-			return c.addParser("inputs", name, table)
-		})
-	}
-
-	pluginConfig, err := c.buildInput(name, table)
-	if err != nil {
-		return err
-	}
-
-	if err := c.toml.UnmarshalTable(table, input); err != nil {
-		return err
-	}
-
-	if err := c.printUserDeprecation("inputs", name, input); err != nil {
-		return err
-	}
-
-	if c, ok := interface{}(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
-		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}
+		rp = models.NewRunningInput(inputCtx, pluginConfig)
+	} else {
+		input := creator()
+
+		pluginConfig, err := c.prepareInput(input, name, table, &missCountThreshold)
+		if err != nil {
+			return err
+		}
+		rp = models.NewRunningInput(models.NewInputCtxAdapter(input), pluginConfig)
 	}
 
 	// Check the number of misses against the threshold
@@ -1347,11 +1325,53 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		}
 	}
 
-	rp := models.NewRunningInput(input, pluginConfig)
 	rp.SetDefaultTags(c.Tags)
 	c.Inputs = append(c.Inputs, rp)
 
 	return nil
+}
+
+func (c *Config) prepareInput(input telegraf.PluginDescriber, name string, table *ast.Table, missCountThreshold *int) (*models.InputConfig, error) {
+	// If the input has a SetParser or SetParserFunc function, it can accept
+	// arbitrary data-formats, so build the requested parser and set it.
+	if t, ok := input.(telegraf.ParserPlugin); ok {
+		*missCountThreshold = 1
+		parser, err := c.addParser("inputs", name, table)
+		if err != nil {
+			return nil, fmt.Errorf("adding parser failed: %w", err)
+		}
+		t.SetParser(parser)
+	}
+
+	if t, ok := input.(telegraf.ParserFuncPlugin); ok {
+		*missCountThreshold = 1
+		if !c.probeParser("inputs", name, table) {
+			return nil, errors.New("parser not found")
+		}
+		t.SetParserFunc(func() (telegraf.Parser, error) {
+			return c.addParser("inputs", name, table)
+		})
+	}
+
+	pluginConfig, err := c.buildInput(name, table)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.toml.UnmarshalTable(table, input); err != nil {
+		return nil, err
+	}
+
+	if err := c.printUserDeprecation("inputs", name, input); err != nil {
+		return nil, err
+	}
+
+	if c, ok := interface{}(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+		if _, err := c.TLSConfig(); err != nil {
+			return nil, err
+		}
+	}
+	return pluginConfig, nil
 }
 
 // buildAggregator parses Aggregator specific items from the ast.Table,

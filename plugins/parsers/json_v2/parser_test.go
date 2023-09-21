@@ -1,6 +1,7 @@
 package json_v2_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sort"
@@ -61,7 +62,7 @@ func TestMultipleConfigs(t *testing.T) {
 			var actualErrorMsgs []string
 			for _, input := range cfg.Inputs {
 				require.NoError(t, input.Init())
-				if err := input.Gather(&acc); err != nil {
+				if err := input.Gather(context.Background(), &acc); err != nil {
 					actualErrorMsgs = append(actualErrorMsgs, err.Error())
 				}
 			}

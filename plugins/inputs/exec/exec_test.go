@@ -7,6 +7,7 @@ package exec
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"runtime"
 	"testing"
@@ -440,9 +441,9 @@ func TestCases(t *testing.T) {
 
 	var acc testutil.Accumulator
 	// Run gather once
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(context.Background(), &acc))
 	// Run gather a second time
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(context.Background(), &acc))
 	require.Eventuallyf(t, func() bool {
 		acc.Lock()
 		defer acc.Unlock()
