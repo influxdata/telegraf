@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	osExec "os/exec"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -27,9 +26,7 @@ func (c CommandRunner) Run(
 	}
 
 	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if len(environments) > 0 {
 		cmd.Env = append(os.Environ(), environments...)
