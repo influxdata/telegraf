@@ -552,7 +552,7 @@ func (a *Agent) gatherLoop(
 	for {
 		select {
 		case <-ticker.Elapsed():
-			err := a.gatherOnce(acc, input, ticker, interval)
+			err := a.gatherOnce(ctx, acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -565,14 +565,16 @@ func (a *Agent) gatherLoop(
 // gatherOnce runs the input's Gather function once, logging a warning each
 // interval it fails to complete before.
 func (a *Agent) gatherOnce(
+	ctx context.Context,
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	ticker Ticker,
 	interval time.Duration,
 ) error {
 	done := make(chan error)
+
 	go func() {
-		done <- input.Gather(acc)
+		done <- input.Gather(ctx, acc)
 	}()
 
 	// Only warn after interval seconds, even if the interval is started late.

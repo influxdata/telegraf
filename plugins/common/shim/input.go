@@ -81,6 +81,8 @@ func (s *Shim) startGathering(ctx context.Context, input telegraf.Input, acc tel
 	}
 	t := time.NewTicker(pollInterval)
 	defer t.Stop()
+	ictx, isInputCtx := input.(telegraf.InputCtx)
+
 	for {
 		// give priority to stopping.
 		if hasQuit(ctx) {
@@ -91,12 +93,24 @@ func (s *Shim) startGathering(ctx context.Context, input telegraf.Input, acc tel
 		case <-ctx.Done():
 			return
 		case <-s.gatherPromptCh:
-			if err := input.Gather(acc); err != nil {
-				fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+			if isInputCtx {
+				if err := ictx.GatherContext(ctx, acc); err != nil {
+					fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+				}
+			} else {
+				if err := input.Gather(acc); err != nil {
+					fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+				}
 			}
 		case <-t.C:
-			if err := input.Gather(acc); err != nil {
-				fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+			if isInputCtx {
+				if err := ictx.GatherContext(ctx, acc); err != nil {
+					fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+				}
+			} else {
+				if err := input.Gather(acc); err != nil {
+					fmt.Fprintf(s.stderr, "failed to gather metrics: %s\n", err)
+				}
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -14,8 +15,10 @@ var (
 )
 
 type RunningInput struct {
-	Input  telegraf.Input
-	Config *InputConfig
+	Input telegraf.Input
+	// If Input implements InputCtx then GatherCtx will be called
+	InputCtx telegraf.InputCtx
+	Config   *InputConfig
 
 	log         telegraf.Logger
 	defaultTags map[string]string
@@ -39,9 +42,10 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	})
 	SetLoggerOnPlugin(input, logger)
 
-	return &RunningInput{
-		Input:  input,
-		Config: config,
+	ri := RunningInput{
+		Input:    input,
+		InputCtx: nil,
+		Config:   config,
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
@@ -59,6 +63,11 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		),
 		log: logger,
 	}
+	ictx, isInputCtx := input.(telegraf.InputCtx)
+	if isInputCtx {
+		ri.InputCtx = ictx
+	}
+	return &ri
 }
 
 // InputConfig is the common config for all inputs.
@@ -144,9 +153,13 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 
-func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
+func (r *RunningInput) Gather(ctx context.Context, acc telegraf.Accumulator) (err error) {
 	start := time.Now()
-	err := r.Input.Gather(acc)
+	if r.InputCtx != nil {
+		err = r.InputCtx.GatherContext(ctx, acc)
+	} else {
+		err = r.Input.Gather(acc)
+	}
 	elapsed := time.Since(start)
 	r.GatherTime.Incr(elapsed.Nanoseconds())
 	return err
