@@ -125,11 +125,11 @@ _value_.
 
 A tag or field is renamed if the given `pattern` matches the name. The new name
 is specified via the `replacement` option. Optionally, the `result_key` can be
-set to either `overwrite` (default) or `keep` to control the behavior in case
+set to either `overwrite` or `keep` (default) to control the behavior in case
 the target tag/field already exists. For `overwrite` the target tag/field is
-replaced by the source key. With this (default) setting, the source tag/field
-is removed in any case. When using the `keep` setting, the target tag/field as
-well as the source is left unchanged and no renaming takes place.
+replaced by the source key. With this setting, the source tag/field
+is removed in any case. When using the `keep` setting (default), the target
+tag/field as well as the source is left unchanged and no renaming takes place.
 
 ### Metric _name_ conversions
 
