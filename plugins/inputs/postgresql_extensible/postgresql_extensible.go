@@ -88,10 +88,6 @@ func ReadQueryFromFile(filePath string) (string, error) {
 	return string(query), err
 }
 
-func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	return nil
-}
-
 func (p *Postgresql) GatherContext(ctx context.Context, acc telegraf.Accumulator) error {
 	var (
 		err        error
@@ -286,7 +282,7 @@ COLUMN:
 }
 
 func init() {
-	inputs.Add("postgresql_extensible", func() telegraf.Input {
+	inputs.AddCtx("postgresql_extensible", func() telegraf.InputCtx {
 		return &Postgresql{
 			Service: postgresql.Service{
 				MaxIdle:     1,
