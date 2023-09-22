@@ -28,6 +28,7 @@ type MockClient struct {
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
 	DiskUsageF        func(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
+	ClientVersionF    func() string
 	CloseF            func() error
 }
 
@@ -85,6 +86,10 @@ func (c *MockClient) DiskUsage(
 	return c.DiskUsageF(ctx, options)
 }
 
+func (c *MockClient) ClientVersion() string {
+	return c.ClientVersionF()
+}
+
 func (c *MockClient) Close() error {
 	return c.CloseF()
 }
@@ -113,6 +118,9 @@ var baseClient = MockClient{
 	},
 	DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
 		return diskUsage, nil
+	},
+	ClientVersionF: func() string {
+		return version
 	},
 	CloseF: func() error {
 		return nil
@@ -458,6 +466,9 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
 					return diskUsage, nil
+				},
+				ClientVersionF: func() string {
+					return version
 				},
 				CloseF: func() error {
 					return nil

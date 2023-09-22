@@ -555,3 +555,5 @@ var diskUsage = types.DiskUsage{
 	},
 	Volumes: []*volume.Volume{{Name: "some_volume", UsageData: &volume.UsageData{Size: 123456789}}},
 }
+
+var version = "1.43"

@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
@@ -90,6 +91,9 @@ var (
 	containerStates        = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
 	containerMetricClasses = []string{"cpu", "network", "blkio"}
 	now                    = time.Now
+
+	minVersion          = semver.MustParse("1.23")
+	minDiskUsageVersion = semver.MustParse("1.42")
 )
 
 func (*Docker) SampleConfig() string {
@@ -152,6 +156,19 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		d.client = c
+
+		version, err := semver.NewVersion(d.client.ClientVersion())
+		if err != nil {
+			return err
+		}
+
+		if version.LessThan(minVersion) {
+			d.Log.Warnf("Unsupported api version (%v.%v), upgrade to docker engine 1.12 or later (api version 1.24)",
+				version.Major(), version.Minor())
+		} else if version.LessThan(minDiskUsageVersion) && len(d.objectTypes) > 0 {
+			d.Log.Warnf("Unsupported api version for disk usage (%v.%v), upgrade to docker engine 23.0 or later (api version 1.42)",
+				version.Major(), version.Minor())
+		}
 	}
 
 	// Close any idle connections in the end of gathering
