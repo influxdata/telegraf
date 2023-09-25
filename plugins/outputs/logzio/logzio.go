@@ -147,7 +147,7 @@ func (l *Logzio) authURL() (string, error) {
 	}
 	defer token.Destroy()
 
-	return fmt.Sprintf("%s/?token=%s", l.URL, token.String()), nil
+	return fmt.Sprintf("%s/?token=%s", l.URL, token.TemporaryString()), nil
 }
 
 func (l *Logzio) parseMetric(metric telegraf.Metric) *Metric {

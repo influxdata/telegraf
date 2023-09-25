@@ -46,8 +46,8 @@ func (r *RedisTimeSeries) Connect() error {
 
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
-		Username: username.StringCopy(),
-		Password: password.StringCopy(),
+		Username: username.String(),
+		Password: password.String(),
 		DB:       r.Database,
 	})
 	return r.client.Ping().Err()

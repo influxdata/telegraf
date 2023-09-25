@@ -67,7 +67,7 @@ func (c *Clarify) Init() error {
 			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		creds := clarify.BasicAuthCredentials(username.StringCopy(), password.StringCopy())
+		creds := clarify.BasicAuthCredentials(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
 		c.client = creds.Client(ctx)

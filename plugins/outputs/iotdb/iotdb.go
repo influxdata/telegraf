@@ -92,8 +92,8 @@ func (s *IoTDB) Connect() error {
 	sessionConf := &client.Config{
 		Host:     s.Host,
 		Port:     s.Port,
-		UserName: username.StringCopy(),
-		Password: password.StringCopy(),
+		UserName: username.String(),
+		Password: password.String(),
 	}
 	username.Destroy()
 	password.Destroy()

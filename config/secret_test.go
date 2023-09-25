@@ -20,7 +20,7 @@ func TestSecretConstantManually(t *testing.T) {
 	retrieved, err := s.Get()
 	require.NoError(t, err)
 	defer retrieved.Destroy()
-	require.EqualValues(t, mysecret, retrieved.String())
+	require.EqualValues(t, mysecret, retrieved.TemporaryString())
 }
 
 func TestLinking(t *testing.T) {
@@ -36,7 +36,7 @@ func TestLinking(t *testing.T) {
 	retrieved, err := s.Get()
 	require.NoError(t, err)
 	defer retrieved.Destroy()
-	require.EqualValues(t, "a resolved secret", retrieved.String())
+	require.EqualValues(t, "a resolved secret", retrieved.TemporaryString())
 }
 
 func TestLinkingResolverError(t *testing.T) {
@@ -164,7 +164,7 @@ func TestSecretConstant(t *testing.T) {
 			require.NoError(t, err)
 			defer secret.Destroy()
 
-			require.EqualValues(t, tt.expected, secret.String())
+			require.EqualValues(t, tt.expected, secret.TemporaryString())
 		})
 	}
 }
@@ -315,7 +315,7 @@ func TestSecretUnquote(t *testing.T) {
 			require.NoError(t, err)
 			defer secret.Destroy()
 
-			require.EqualValues(t, plugin.Expected, secret.String())
+			require.EqualValues(t, plugin.Expected, secret.TemporaryString())
 		})
 	}
 }
@@ -345,7 +345,7 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 	require.NoError(t, err)
 	defer secret.Destroy()
 
-	require.EqualValues(t, "an env secret", secret.String())
+	require.EqualValues(t, "an env secret", secret.TemporaryString())
 }
 
 func TestSecretStoreStatic(t *testing.T) {
@@ -384,7 +384,7 @@ func TestSecretStoreStatic(t *testing.T) {
 		plugin := input.Input.(*MockupSecretPlugin)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		require.EqualValues(t, expected[i], secret.String())
+		require.EqualValues(t, expected[i], secret.TemporaryString())
 		secret.Destroy()
 	}
 }
@@ -430,7 +430,7 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 		plugin := input.Input.(*MockupSecretPlugin)
 		secret, err := plugin.Secret.Get()
 		require.NoError(t, err)
-		require.EqualValues(t, expected[i], secret.String())
+		require.EqualValues(t, expected[i], secret.TemporaryString())
 		secret.Destroy()
 	}
 }
@@ -509,7 +509,7 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 	require.NoError(t, err)
 	defer secret.Destroy()
 
-	require.EqualValues(t, "Ood Bnar", secret.String())
+	require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
 
 	for _, v := range sequence {
 		store.Secrets["secret"] = []byte(v)
@@ -517,7 +517,7 @@ func TestSecretStoreStaticChanging(t *testing.T) {
 		require.NoError(t, err)
 
 		// The secret should not change as the store is marked non-dyamic!
-		require.EqualValues(t, "Ood Bnar", secret.String())
+		require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
 		secret.Destroy()
 	}
 }
@@ -553,7 +553,7 @@ func TestSecretStoreDynamic(t *testing.T) {
 		require.NoError(t, err)
 
 		// The secret should not change as the store is marked non-dynamic!
-		require.EqualValues(t, v, secret.String())
+		require.EqualValues(t, v, secret.TemporaryString())
 		secret.Destroy()
 	}
 }
@@ -621,13 +621,13 @@ func TestSecretSet(t *testing.T) {
 	secret, err := plugin.Secret.Get()
 	require.NoError(t, err)
 	defer secret.Destroy()
-	require.EqualValues(t, "a secret", secret.String())
+	require.EqualValues(t, "a secret", secret.TemporaryString())
 
 	require.NoError(t, plugin.Secret.Set([]byte("another secret")))
 	newsecret, err := plugin.Secret.Get()
 	require.NoError(t, err)
 	defer newsecret.Destroy()
-	require.EqualValues(t, "another secret", newsecret.String())
+	require.EqualValues(t, "another secret", newsecret.TemporaryString())
 }
 
 func TestSecretSetResolve(t *testing.T) {
@@ -655,13 +655,13 @@ func TestSecretSetResolve(t *testing.T) {
 	secret, err := plugin.Secret.Get()
 	require.NoError(t, err)
 	defer secret.Destroy()
-	require.EqualValues(t, "Ood Bnar", secret.String())
+	require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
 
 	require.NoError(t, plugin.Secret.Set([]byte("@{mock:secret} is cool")))
 	newsecret, err := plugin.Secret.Get()
 	require.NoError(t, err)
 	defer newsecret.Destroy()
-	require.EqualValues(t, "Ood Bnar is cool", newsecret.String())
+	require.EqualValues(t, "Ood Bnar is cool", newsecret.TemporaryString())
 }
 
 func TestSecretSetResolveInvalid(t *testing.T) {
@@ -689,7 +689,7 @@ func TestSecretSetResolveInvalid(t *testing.T) {
 	secret, err := plugin.Secret.Get()
 	require.NoError(t, err)
 	defer secret.Destroy()
-	require.EqualValues(t, "Ood Bnar", secret.String())
+	require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
 
 	err = plugin.Secret.Set([]byte("@{mock:another_secret}"))
 	require.ErrorContains(t, err, `linking new secrets failed: unlinked part "@{mock:another_secret}"`)

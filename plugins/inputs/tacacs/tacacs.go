@@ -162,7 +162,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 		return nil
 	}
 
-	reply, err = session.Continue(ctx, username.StringCopy())
+	reply, err = session.Continue(ctx, username.String())
 	if err != nil {
 		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
@@ -179,7 +179,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 		return nil
 	}
 
-	reply, err = session.Continue(ctx, password.StringCopy())
+	reply, err = session.Continue(ctx, password.String())
 	if err != nil {
 		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)

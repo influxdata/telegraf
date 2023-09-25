@@ -105,7 +105,7 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 	if err != nil {
 		return fmt.Errorf("getting address failed: %w", err)
 	}
-	addr := addrSecret.StringCopy()
+	addr := addrSecret.String()
 	defer addrSecret.Destroy()
 
 	if p.Address.Empty() || addr == "localhost" {
@@ -163,12 +163,12 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 	defer addr.Destroy()
 
 	var canonicalizedAddress string
-	if strings.HasPrefix(addr.String(), "postgres://") || strings.HasPrefix(addr.String(), "postgresql://") {
-		if canonicalizedAddress, err = parseURL(addr.StringCopy()); err != nil {
+	if strings.HasPrefix(addr.TemporaryString(), "postgres://") || strings.HasPrefix(addr.TemporaryString(), "postgresql://") {
+		if canonicalizedAddress, err = parseURL(addr.String()); err != nil {
 			return sanitizedAddress, err
 		}
 	} else {
-		canonicalizedAddress = addr.StringCopy()
+		canonicalizedAddress = addr.String()
 	}
 
 	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil

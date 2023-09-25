@@ -295,8 +295,8 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 
 	c.tokenManager = token.TokenManager{
 		Url:        c.url,
-		Username:   username.StringCopy(),
-		Password:   password.StringCopy(),
+		Username:   username.String(),
+		Password:   password.String(),
 		Connection: c.connection,
 	}
 	username.Destroy()

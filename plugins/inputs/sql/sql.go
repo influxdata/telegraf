@@ -372,7 +372,7 @@ func (s *SQL) setupConnection() error {
 	if err != nil {
 		return fmt.Errorf("getting DSN failed: %w", err)
 	}
-	dsn := dsnSecret.StringCopy()
+	dsn := dsnSecret.String()
 	dsnSecret.Destroy()
 
 	s.Log.Debug("Connecting...")

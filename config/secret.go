@@ -49,11 +49,25 @@ type secretContainer interface {
 
 // SecretBuffer allows to access the content of the secret
 type SecretBuffer interface {
+	// Size returns the length of the buffer content
 	Size() int
+	// Grow will grow the capacity of the underlying buffer to the given size
 	Grow(capacity int)
+	// Bytes returns the content of the buffer as bytes.
+	// NOTE: The returned bytes shall NOT be accessed after destroying the
+	// buffer using 'Destroy()' as the underlying the memory area might be
+	// wiped and invalid.
 	Bytes() []byte
+	// TemporaryString returns the content of the buffer as a string.
+	// NOTE: The returned String shall NOT be accessed after destroying the
+	// buffer using 'Destroy()' as the underlying the memory area might be
+	// wiped and invalid.
+	TemporaryString() string
+	// String returns a copy of the underlying buffer's content as string.
+	// It is safe to use the returned value after destroying the buffer.
 	String() string
-	StringCopy() string
+	// Destroy will wipe the buffer's content and destroy the underlying
+	// buffer. Do not access the buffer after destroying it.
 	Destroy()
 }
 
@@ -70,7 +84,7 @@ type Secret struct {
 	// linked to the corresponding secret store.
 	unlinked []string
 
-	// Denotes if the secret is completely empty
+	// notempty denotes if the secret is completely empty
 	notempty bool
 }
 
@@ -234,7 +248,7 @@ func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 	s.resolvers = res
 
 	// Store the secret if it has changed
-	if buffer.String() != string(newsecret) {
+	if buffer.TemporaryString() != string(newsecret) {
 		s.container.Replace(newsecret)
 	}
 

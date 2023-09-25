@@ -183,7 +183,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	}
 	defer token.Destroy()
 
-	if _, err := fmt.Fprintf(conn, HandshakeFormat, token.String()); err != nil {
+	if _, err := fmt.Fprintf(conn, HandshakeFormat, token.TemporaryString()); err != nil {
 		return err
 	}
 

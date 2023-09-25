@@ -107,7 +107,7 @@ func (q *STOMP) getAuthOption() (func(*stomp.Conn) error, error) {
 		return nil, fmt.Errorf("getting password failed: %w", err)
 	}
 	defer password.Destroy()
-	return stomp.ConnOpt.Login(username.StringCopy(), password.StringCopy()), nil
+	return stomp.ConnOpt.Login(username.String(), password.String()), nil
 }
 
 func init() {

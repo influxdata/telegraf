@@ -111,7 +111,7 @@ func (cf *ClientFactory) testClient(ctx context.Context) error {
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		defer password.Destroy()
-		auth := url.UserPassword(username.StringCopy(), password.StringCopy())
+		auth := url.UserPassword(username.String(), password.String())
 
 		if err := cf.client.Client.SessionManager.Login(ctx2, auth); err != nil {
 			return fmt.Errorf("renewing authentication failed: %w", err)
@@ -145,7 +145,7 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		vSphereURL.User = url.UserPassword(username.StringCopy(), password.StringCopy())
+		vSphereURL.User = url.UserPassword(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
 	}

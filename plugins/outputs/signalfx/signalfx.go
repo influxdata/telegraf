@@ -86,7 +86,7 @@ func (s *SignalFx) Connect() error {
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	client.AuthToken = token.StringCopy()
+	client.AuthToken = token.String()
 	token.Destroy()
 
 	if s.IngestURL != "" {

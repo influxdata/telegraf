@@ -115,7 +115,7 @@ func (m *mqttv5Client) Connect() (bool, error) {
 		return false, fmt.Errorf("getting password failed: %w", err)
 	}
 	defer pass.Destroy()
-	m.options.SetUsernamePassword(user.String(), pass.Bytes())
+	m.options.SetUsernamePassword(user.TemporaryString(), pass.Bytes())
 
 	client, err := mqttv5auto.NewConnection(context.Background(), m.options)
 	if err != nil {

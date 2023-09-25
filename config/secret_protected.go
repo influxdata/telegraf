@@ -54,14 +54,14 @@ func (lb *lockedBuffer) Bytes() []byte {
 	return lb.buf.Bytes()
 }
 
-func (lb *lockedBuffer) String() string {
+func (lb *lockedBuffer) TemporaryString() string {
 	if lb.buf == nil {
 		return ""
 	}
 	return lb.buf.String()
 }
 
-func (lb *lockedBuffer) StringCopy() string {
+func (lb *lockedBuffer) String() string {
 	if lb.buf == nil {
 		return ""
 	}

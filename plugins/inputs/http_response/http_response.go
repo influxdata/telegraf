@@ -413,7 +413,7 @@ func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 	defer password.Destroy()
-	request.SetBasicAuth(username.StringCopy(), password.StringCopy())
+	request.SetBasicAuth(username.String(), password.String())
 
 	return nil
 }

@@ -475,7 +475,7 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		fns = append(fns, elastic.SetBasicAuth(username.StringCopy(), password.StringCopy()))
+		fns = append(fns, elastic.SetBasicAuth(username.String(), password.String()))
 		username.Destroy()
 		password.Destroy()
 	}
@@ -485,7 +485,7 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting token failed: %w", err)
 		}
-		auth := []string{"Bearer " + token.StringCopy()}
+		auth := []string{"Bearer " + token.String()}
 		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
 		token.Destroy()
 	}

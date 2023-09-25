@@ -42,13 +42,13 @@ func TestKDF(t *testing.T) {
 			key, err := skey.Get()
 			require.NoError(t, err)
 			defer key.Destroy()
-			require.Equal(t, tt.key, key.String())
+			require.Equal(t, tt.key, key.TemporaryString())
 
 			if tt.iv != "" {
 				iv, err := siv.Get()
 				require.NoError(t, err)
 				defer iv.Destroy()
-				require.Equal(t, tt.iv, iv.String())
+				require.Equal(t, tt.iv, iv.TemporaryString())
 			} else {
 				require.True(t, siv.Empty())
 			}

@@ -126,8 +126,8 @@ func (o *OAuth2) Init() error {
 
 		// Setup the configuration
 		cfg := &clientcredentials.Config{
-			ClientID:     cid.StringCopy(),
-			ClientSecret: csecret.StringCopy(),
+			ClientID:     cid.String(),
+			ClientSecret: csecret.String(),
 			TokenURL:     endpoint.TokenURL,
 			Scopes:       c.Scopes,
 			AuthStyle:    endpoint.AuthStyle,

@@ -48,14 +48,14 @@ func (j *Jose) Init() error {
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		defer passwd.Destroy()
-		promptFunc = keyring.FixedStringPrompt(passwd.StringCopy())
+		promptFunc = keyring.FixedStringPrompt(passwd.String())
 	} else if !config.Password.Empty() {
 		passwd, err := config.Password.Get()
 		if err != nil {
 			return fmt.Errorf("getting global password failed: %w", err)
 		}
 		defer passwd.Destroy()
-		promptFunc = keyring.FixedStringPrompt(passwd.StringCopy())
+		promptFunc = keyring.FixedStringPrompt(passwd.String())
 	}
 
 	// Setup the actual keyring

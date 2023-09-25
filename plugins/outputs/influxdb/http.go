@@ -503,7 +503,7 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		req.SetBasicAuth(username.StringCopy(), password.StringCopy())
+		req.SetBasicAuth(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
 	}

@@ -53,7 +53,7 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		opts.SetUsername(user.StringCopy())
+		opts.SetUsername(user.String())
 		user.Destroy()
 	}
 	if !cfg.Password.Empty() {
@@ -61,7 +61,7 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		opts.SetPassword(password.StringCopy())
+		opts.SetPassword(password.String())
 		password.Destroy()
 	}
 

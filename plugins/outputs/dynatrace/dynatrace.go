@@ -156,7 +156,7 @@ func (d *Dynatrace) send(msg string) error {
 		if err != nil {
 			return fmt.Errorf("getting token failed: %w", err)
 		}
-		req.Header.Add("Authorization", "Api-Token "+token.StringCopy())
+		req.Header.Add("Authorization", "Api-Token "+token.String())
 		token.Destroy()
 	}
 	// add user-agent header to identify metric source

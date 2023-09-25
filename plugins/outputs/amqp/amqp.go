@@ -309,8 +309,8 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		defer password.Destroy()
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: username.StringCopy(),
-				Password: password.StringCopy(),
+				Username: username.String(),
+				Password: password.String(),
 			},
 		}
 	}

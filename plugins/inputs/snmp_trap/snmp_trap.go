@@ -192,21 +192,21 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		secname := secnameSecret.StringCopy()
+		secname := secnameSecret.String()
 		secnameSecret.Destroy()
 
 		privPasswdSecret, err := s.PrivPassword.Get()
 		if err != nil {
 			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		privPasswd := privPasswdSecret.StringCopy()
+		privPasswd := privPasswdSecret.String()
 		privPasswdSecret.Destroy()
 
 		authPasswdSecret, err := s.AuthPassword.Get()
 		if err != nil {
 			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		authPasswd := authPasswdSecret.StringCopy()
+		authPasswd := authPasswdSecret.String()
 		authPasswdSecret.Destroy()
 
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{

@@ -61,7 +61,7 @@ func (n *NATS) Connect() error {
 			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		opts = append(opts, nats.UserInfo(username.StringCopy(), password.StringCopy()))
+		opts = append(opts, nats.UserInfo(username.String(), password.String()))
 		username.Destroy()
 		password.Destroy()
 	}

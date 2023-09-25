@@ -144,7 +144,7 @@ func (p *PrometheusClient) Init() error {
 	if err != nil {
 		return err
 	}
-	password := psecret.StringCopy()
+	password := psecret.String()
 	psecret.Destroy()
 
 	authHandler := internal.BasicAuthHandler(p.BasicUsername, password, "prometheus", onAuthError)

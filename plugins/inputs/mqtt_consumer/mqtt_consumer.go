@@ -370,7 +370,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		opts.SetUsername(user.StringCopy())
+		opts.SetUsername(user.String())
 		user.Destroy()
 	}
 
@@ -379,7 +379,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		opts.SetPassword(password.StringCopy())
+		opts.SetPassword(password.String())
 		password.Destroy()
 	}
 	if len(m.Servers) == 0 {

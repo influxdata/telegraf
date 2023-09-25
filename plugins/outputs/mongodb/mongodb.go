@@ -112,8 +112,8 @@ func (s *MongoDB) Init() error {
 		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
-			Username:      username.StringCopy(),
-			Password:      password.StringCopy(),
+			Username:      username.String(),
+			Password:      password.String(),
 		}
 		username.Destroy()
 		password.Destroy()

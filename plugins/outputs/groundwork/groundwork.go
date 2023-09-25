@@ -87,8 +87,8 @@ func (g *Groundwork) Init() error {
 		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
-			UserName:           username.StringCopy(),
-			Password:           password.StringCopy(),
+			UserName:           username.String(),
+			Password:           password.String(),
 			IsDynamicInventory: true,
 		},
 	}

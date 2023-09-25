@@ -119,8 +119,8 @@ func (o *OpensearchQuery) newClient() error {
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
-		Username:  username.StringCopy(),
-		Password:  password.StringCopy(),
+		Username:  username.String(),
+		Password:  password.String(),
 	}
 
 	if o.InsecureSkipVerify {

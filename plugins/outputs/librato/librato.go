@@ -152,7 +152,7 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 		user.Destroy()
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	req.SetBasicAuth(user.StringCopy(), token.StringCopy())
+	req.SetBasicAuth(user.String(), token.String())
 	user.Destroy()
 	token.Destroy()
 

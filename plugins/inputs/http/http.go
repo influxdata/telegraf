@@ -124,7 +124,7 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 		if err != nil {
 			return err
 		}
-		bearer := "Bearer " + strings.TrimSpace(token.StringCopy())
+		bearer := "Bearer " + strings.TrimSpace(token.String())
 		token.Destroy()
 		request.Header.Set("Authorization", bearer)
 	} else if h.TokenFile != "" {
@@ -215,7 +215,7 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	}
 	defer password.Destroy()
 
-	request.SetBasicAuth(username.StringCopy(), password.StringCopy())
+	request.SetBasicAuth(username.String(), password.String())
 
 	return nil
 }
