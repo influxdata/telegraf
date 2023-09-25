@@ -64,6 +64,16 @@ _N.B._ the `include_mounts` and `exclude_mounts` arguments are both applied to
 the local mount location (e.g. /mnt/NFS), not the server export
 (e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
 
+## Location of mountstats
+
+If you have mounted the /proc file system in a container, to tell this plugin
+where to find the new location, set the `MOUNT_PROC` environment variable. For
+example, in a Docker compose file, if /proc is mounted to /host/proc, then use:
+
+```yaml
+MOUNT_PROC: /host/proc/self/mountstats
+```
+
 ### References
 
 1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
