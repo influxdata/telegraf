@@ -36,18 +36,18 @@ func (r *RedisTimeSeries) Connect() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
-		Username: string(username),
-		Password: string(password),
+		Username: username.String(),
+		Password: password.String(),
 		DB:       r.Database,
 	})
 	return r.client.Ping().Err()

@@ -96,12 +96,12 @@ func (a *AesEncryptor) Init() error {
 		if err != nil {
 			return fmt.Errorf("getting key failed: %w", err)
 		}
-		key := make([]byte, hex.DecodedLen(len(encodedKey)))
-		if _, err := hex.Decode(key, encodedKey); err != nil {
-			config.ReleaseSecret(encodedKey)
+		key := make([]byte, hex.DecodedLen(len(encodedKey.Bytes())))
+		_, err = hex.Decode(key, encodedKey.Bytes())
+		encodedKey.Destroy()
+		if err != nil {
 			return fmt.Errorf("decoding key failed: %w", err)
 		}
-		config.ReleaseSecret(encodedKey)
 		actuallen := len(key)
 		memguard.WipeBytes(key)
 
@@ -118,8 +118,8 @@ func (a *AesEncryptor) Init() error {
 	if err != nil {
 		return fmt.Errorf("getting IV failed: %w", err)
 	}
-	ivlen := len(encodedIV)
-	config.ReleaseSecret(encodedIV)
+	ivlen := len(encodedIV.Bytes())
+	encodedIV.Destroy()
 	if ivlen != 2*aes.BlockSize {
 		return errors.New("init vector size must match block size")
 	}
@@ -140,12 +140,12 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting key failed: %w", err)
 	}
-	key := make([]byte, hex.DecodedLen(len(encodedKey)))
-	if _, err := hex.Decode(key, encodedKey); err != nil {
-		config.ReleaseSecret(encodedKey)
+	key := make([]byte, hex.DecodedLen(len(encodedKey.Bytes())))
+	_, err = hex.Decode(key, encodedKey.Bytes())
+	encodedKey.Destroy()
+	if err != nil {
 		return nil, fmt.Errorf("decoding key failed: %w", err)
 	}
-	config.ReleaseSecret(encodedKey)
 
 	// Setup AES
 	block, err := aes.NewCipher(key)
@@ -158,9 +158,9 @@ func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting initialization-vector failed: %w", err)
 	}
-	iv := make([]byte, hex.DecodedLen(len(encodedIV)))
-	_, err = hex.Decode(iv, encodedIV)
-	config.ReleaseSecret(encodedIV)
+	iv := make([]byte, hex.DecodedLen(len(encodedIV.Bytes())))
+	_, err = hex.Decode(iv, encodedIV.Bytes())
+	encodedIV.Destroy()
 	if err != nil {
 		memguard.WipeBytes(iv)
 		return nil, fmt.Errorf("decoding init vector failed: %w", err)

@@ -8,10 +8,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
-
-	"github.com/influxdata/telegraf/config"
 )
 
 func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
@@ -119,7 +118,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 									}
 								}
 								_, _ = fmt.Printf("    %-30s  %s\n", k, string(v))
-								config.ReleaseSecret(v)
+								memguard.WipeBytes(v)
 							}
 						}
 

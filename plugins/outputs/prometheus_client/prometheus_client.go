@@ -140,14 +140,14 @@ func (p *PrometheusClient) Init() error {
 		ipRange = append(ipRange, ipNet)
 	}
 
-	password, err := p.BasicPassword.Get()
+	psecret, err := p.BasicPassword.Get()
 	if err != nil {
 		return err
 	}
-	passwordStr := string(password)
-	defer config.ReleaseSecret(password)
+	password := psecret.String()
+	psecret.Destroy()
 
-	authHandler := internal.BasicAuthHandler(p.BasicUsername, passwordStr, "prometheus", onAuthError)
+	authHandler := internal.BasicAuthHandler(p.BasicUsername, password, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

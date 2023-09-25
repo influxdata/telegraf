@@ -75,28 +75,35 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %w", err)
 	}
-	defer config.ReleaseSecret(secret)
+	defer secret.Destroy()
 
 	username, err := r.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	// Create the radius packet with PAP authentication
-	packet := radius.New(radius.CodeAccessRequest, secret)
-	err = rfc2865.UserName_Set(packet, username)
-	if err != nil {
+	packet := radius.New(radius.CodeAccessRequest, secret.Bytes())
+	if err := rfc2865.UserName_Set(packet, username.Bytes()); err != nil {
 		return fmt.Errorf("setting username for radius auth failed: %w", err)
 	}
-	err = rfc2865.UserPassword_Set(packet, password)
-	if err != nil {
+
+	// The radius client requires the password in a buffer with capacity being
+	// a multiple of 16 for internal operations. To not expose the password we
+	// grow the (potentially protected) buffer to the required capacity.
+	capacity := password.Size()
+	if capacity%16 != 0 {
+		password.Grow(capacity + 16 - capacity%16)
+	}
+
+	if err := rfc2865.UserPassword_Set(packet, password.Bytes()[:capacity]); err != nil {
 		return fmt.Errorf("setting password for radius auth failed: %w", err)
 	}
 
