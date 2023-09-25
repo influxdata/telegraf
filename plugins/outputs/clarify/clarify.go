@@ -64,12 +64,12 @@ func (c *Clarify) Init() error {
 		}
 		password, err := c.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		creds := clarify.BasicAuthCredentials(string(username), string(password))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		creds := clarify.BasicAuthCredentials(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 		c.client = creds.Client(ctx)
 		return nil
 	}

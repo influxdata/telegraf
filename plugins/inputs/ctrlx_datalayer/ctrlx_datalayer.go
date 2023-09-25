@@ -289,17 +289,18 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 
 	password, err := c.Password.Get()
 	if err != nil {
+		username.Destroy()
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 
 	c.tokenManager = token.TokenManager{
 		Url:        c.url,
-		Username:   string(username),
-		Password:   string(password),
+		Username:   username.String(),
+		Password:   password.String(),
 		Connection: c.connection,
 	}
-	config.ReleaseSecret(username)
-	config.ReleaseSecret(password)
+	username.Destroy()
+	password.Destroy()
 
 	c.acc = acc
 

@@ -301,16 +301,16 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
+		defer username.Destroy()
 		password, err := q.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
+		defer password.Destroy()
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: string(username),
-				Password: string(password),
+				Username: username.String(),
+				Password: password.String(),
 			},
 		}
 	}
