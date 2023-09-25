@@ -16,7 +16,7 @@ func (o *OS) createKeyringConfig() (keyring.Config, error) {
 		if err != nil {
 			return keyring.Config{}, fmt.Errorf("getting password failed: %w", err)
 		}
-		promptFunc = keyring.FixedStringPrompt(passwd.StringCopy())
+		promptFunc = keyring.FixedStringPrompt(passwd.String())
 		passwd.Destroy()
 	}
 
