@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -11,20 +10,13 @@ import (
 )
 
 func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	var list corev1.PodList
-	listRef := &list
-	var err error
+	list, err := ki.client.getPods(ctx, ki.NodeName)
 
-	if ki.KubeletURL != "" {
-		err = ki.LoadJSON(fmt.Sprintf("%s/pods", ki.KubeletURL), listRef)
-	} else {
-		listRef, err = ki.client.getPods(ctx, ki.NodeName)
-	}
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
-	for _, p := range listRef.Items {
+	for _, p := range list.Items {
 		ki.gatherPod(p, acc)
 	}
 }

@@ -52,9 +52,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If empty in-cluster config with POD's service account token will be used.
   # url = ""
 
-  ## URL for the kubelet, if set it will be used to collect the pods resource metrics
-  # url_kubelet = "http://127.0.0.1:10255"
-
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
