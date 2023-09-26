@@ -177,19 +177,21 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 			continue
 		}
 
-		numaNodePath := filepath.Join(telemDirPath, "device", "numa_node")
-		numaNodeSymlink, err := filepath.EvalSymlinks(numaNodePath)
+		telemDevicePath := filepath.Join(telemDirPath, "device")
+		telemDeviceSymlink, err := filepath.EvalSymlinks(telemDevicePath)
 		if err != nil {
-			return fmt.Errorf("error while evaluating symlink %q: %w", numaNodePath, err)
+			return fmt.Errorf("error while evaluating symlink %q: %w", telemDeviceSymlink, err)
 		}
 
-		numaNode, err := os.ReadFile(numaNodeSymlink)
+		numaNodePath := filepath.Join(telemDeviceSymlink, "..", "numa_node")
+
+		numaNode, err := os.ReadFile(numaNodePath)
 		if err != nil {
-			return fmt.Errorf("error while reading symlink %q: %w", numaNodeSymlink, err)
+			return fmt.Errorf("error while reading numa_node file %q: %w", numaNodePath, err)
 		}
 		numaNodeString := strings.TrimSpace(string(numaNode))
 		if numaNodeString == "" {
-			return fmt.Errorf("numa_node file %q is empty", numaNodeSymlink)
+			return fmt.Errorf("numa_node file %q is empty", numaNodePath)
 		}
 
 		fi := fileInfo{
