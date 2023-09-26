@@ -100,9 +100,8 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting token failed: %w", err)
 	}
-	headers["Authorization"] = "Token " + string(token)
-	config.ReleaseSecret(token)
-
+	headers["Authorization"] = "Token " + token.String()
+	token.Destroy()
 	for k, v := range cfg.Headers {
 		headers[k] = v
 	}

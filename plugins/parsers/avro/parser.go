@@ -24,18 +24,19 @@ import (
 // an attached schema or schema fingerprint
 
 type Parser struct {
-	MetricName      string            `toml:"metric_name"`
-	SchemaRegistry  string            `toml:"avro_schema_registry"`
-	CaCertPath      string            `toml:"avro_schema_registry_cert"`
-	Schema          string            `toml:"avro_schema"`
-	Format          string            `toml:"avro_format"`
-	Measurement     string            `toml:"avro_measurement"`
-	Tags            []string          `toml:"avro_tags"`
-	Fields          []string          `toml:"avro_fields"`
-	Timestamp       string            `toml:"avro_timestamp"`
-	TimestampFormat string            `toml:"avro_timestamp_format"`
-	FieldSeparator  string            `toml:"avro_field_separator"`
-	DefaultTags     map[string]string `toml:"tags"`
+	MetricName       string            `toml:"metric_name"`
+	SchemaRegistry   string            `toml:"avro_schema_registry"`
+	CaCertPath       string            `toml:"avro_schema_registry_cert"`
+	Schema           string            `toml:"avro_schema"`
+	Format           string            `toml:"avro_format"`
+	Measurement      string            `toml:"avro_measurement"`
+	MeasurementField string            `toml:"avro_measurement_field"`
+	Tags             []string          `toml:"avro_tags"`
+	Fields           []string          `toml:"avro_fields"`
+	Timestamp        string            `toml:"avro_timestamp"`
+	TimestampFormat  string            `toml:"avro_timestamp_format"`
+	FieldSeparator   string            `toml:"avro_field_separator"`
+	DefaultTags      map[string]string `toml:"tags"`
 
 	Log         telegraf.Logger `toml:"-"`
 	registryObj *schemaRegistry
@@ -212,9 +213,26 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// A telegraf metric needs at least one field.
 		return nil, errors.New("number of fields is 0; unable to create metric")
 	}
+
+	// If measurement field name is specified in the configuration
+	// take value from that field and do not include it into fields or tags
+	name := ""
+	if p.MeasurementField != "" {
+		sField := p.MeasurementField
+		sMetric, err := internal.ToString(data[sField])
+		if err != nil {
+			p.Log.Warnf("Could not convert %v to string for metric name %q: %s", data[sField], sField, err.Error())
+		} else {
+			name = sMetric
+		}
+	}
 	// Now some fancy stuff to extract the measurement.
 	// If it's set in the configuration, use that.
-	name := p.Measurement
+	if name == "" {
+		// If field name is not specified or field does not exist and
+		// metric name set in the configuration, use that.
+		name = p.Measurement
+	}
 	separator := "."
 	if name == "" {
 		// Try using the namespace defined in the schema. In case there

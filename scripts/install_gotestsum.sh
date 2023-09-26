@@ -4,21 +4,28 @@ set -eux
 
 OS=$1
 EXE=$2
-VERSION="1.7.0"
+VERSION="1.10.1"
+ARCH=$(uname -m)
 
-WINDOWS_SHA="7ae12ddb171375f0c14d6a09dd27a5c1d1fc72edeea674e3d6e7489a533b40c1"
-DARWIN_SHA="a8e2351604882af1a67601cbeeacdcfa9b17fc2f6fbac291cf5d434efdf2d85b"
-LINUX_SHA="b5c98cc408c75e76a097354d9487dca114996e821b3af29a0442aa6c9159bd40"
+WINDOWS_SHA="3a409d05e6d0b89b7860b3a1d66bd855831a276ac25a05d33700f330f554d315"
+DARWIN_ARM64_SHA="01be1b28f7c2558af6191050671a97e783eab5ceb813ea8bfac739d5759de596"
+LINUX_SHA="44be2c02d4cf99cdd61edcb27851ef98ef8724a2ae3355b438bd108e9abb9056"
+
+if [ "$ARCH" = 'arm64' ]; then
+    GO_ARCH="arm64"
+elif [ "$ARCH" = 'x86_64' ]; then
+    GO_ARCH="amd64"
+fi
 
 setup_gotestsum () {
     echo "installing gotestsum"
-    curl -L "https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_${OS}_amd64.tar.gz" --output gotestsum.tar.gz
+    curl -L "https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_${OS}_${GO_ARCH}.tar.gz" --output gotestsum.tar.gz
 
     if [ "$OS" = "windows" ]; then
         SHA=$WINDOWS_SHA
         SHATOOL="sha256sum"
     elif [ "$OS" = "darwin" ]; then
-        SHA=$DARWIN_SHA
+        SHA=$DARWIN_ARM64_SHA
         SHATOOL="shasum --algorithm 256"
     elif [ "$OS" = "linux" ]; then
         SHA=$LINUX_SHA
@@ -39,7 +46,7 @@ if test -f "${EXE}"; then
     echo "$v is installed, required version is ${VERSION}"
     if [ "$v" != "gotestsum version ${VERSION}" ]; then
         setup_gotestsum
-        ${EXE} --version
+        ./"${EXE}" --version
     fi
 else
     setup_gotestsum

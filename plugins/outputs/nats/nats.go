@@ -58,12 +58,12 @@ func (n *NATS) Connect() error {
 		}
 		password, err := n.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		opts = append(opts, nats.UserInfo(string(username), string(password)))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		opts = append(opts, nats.UserInfo(username.String(), password.String()))
+		username.Destroy()
+		password.Destroy()
 	}
 
 	if n.Credentials != "" {

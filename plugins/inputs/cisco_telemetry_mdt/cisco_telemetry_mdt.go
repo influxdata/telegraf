@@ -361,7 +361,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
-		c.acc.AddError(fmt.Errorf("failed to decode: %w", err))
+		c.acc.AddError(fmt.Errorf("failed to decode: %w: %s", err, msg.String()))
 		return
 	}
 

@@ -407,13 +407,13 @@ func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 	password, err := h.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
-	request.SetBasicAuth(string(username), string(password))
+	defer password.Destroy()
+	request.SetBasicAuth(username.String(), password.String())
 
 	return nil
 }

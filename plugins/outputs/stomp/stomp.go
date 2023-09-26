@@ -101,13 +101,13 @@ func (q *STOMP) getAuthOption() (func(*stomp.Conn) error, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 	password, err := q.Password.Get()
 	if err != nil {
 		return nil, fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
-	return stomp.ConnOpt.Login(string(username), string(password)), nil
+	defer password.Destroy()
+	return stomp.ConnOpt.Login(username.String(), password.String()), nil
 }
 
 func init() {

@@ -10,6 +10,20 @@ The message is supposed to be encoded as follows:
 | 1-4   | Schema ID  | 4-byte schema ID as returned by Schema Registry. |
 | 5-    | Data       | Serialized data.                                 |
 
+The metric name will be set according the following priority:
+
+  1. Try to get metric name from the message field if it is set in the
+     `avro_measurement_field` option.
+  2. If the name is not determined, then try to get it from
+     `avro_measurement` option as the static value.
+  3. If the name is still not determined, then try to get it from the
+     schema definition in the following format `[schema_namespace.]schema_name`,
+     where schema namespace is optional and will be added only if it is specified
+     in the schema definition.
+
+In case if the metric name could not be determined according to these steps
+the error will be rised and the message will not be parsed.
+
 ## Configuration
 
 ```toml
@@ -62,6 +76,11 @@ The message is supposed to be encoded as follows:
   #          ]
   #      }
   #'''
+
+  ## Measurement field name; The meauserment name will be taken 
+  ## from this field. If not set, determine measurement name
+  ## from the following 'avro_measurement' option
+  # avro_measurement_field = "field_name"
 
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")

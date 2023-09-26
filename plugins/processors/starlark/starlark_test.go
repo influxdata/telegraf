@@ -3237,6 +3237,29 @@ def apply(metric):
 				),
 			},
 		},
+		{
+			name: "filter by field value",
+			source: `
+def apply(metric):
+	match = metric.tags.get("bar") == "yeah" or metric.tags.get("tag_1") == "foo"
+	match = match and metric.fields.get("value_1") > 5 and metric.fields.get("value_2") < 3.5
+	if match:
+		return metric
+	return None
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "foo",
+					},
+					map[string]interface{}{
+						"value_1": 42,
+						"value_2": 3.1415,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {

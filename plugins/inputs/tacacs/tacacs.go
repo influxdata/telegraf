@@ -120,21 +120,21 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %w", err)
 	}
-	defer config.ReleaseSecret(secret)
+	defer secret.Destroy()
 
-	client.ConnConfig.Secret = secret
+	client.ConnConfig.Secret = secret.Bytes()
 
 	username, err := t.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := t.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	ctx := context.Background()
 	if t.ResponseTimeout > 0 {
@@ -162,7 +162,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 		return nil
 	}
 
-	reply, err = session.Continue(ctx, string(username))
+	reply, err = session.Continue(ctx, username.String())
 	if err != nil {
 		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on tacacs authentication continue username request to %s : %w", client.Addr, err)
@@ -179,7 +179,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 		return nil
 	}
 
-	reply, err = session.Continue(ctx, string(password))
+	reply, err = session.Continue(ctx, password.String())
 	if err != nil {
 		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 			return fmt.Errorf("error on tacacs authentication continue password request to %s : %w", client.Addr, err)
