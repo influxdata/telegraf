@@ -703,9 +703,8 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 func (p *Parser) checkResult(result gjson.Result, path string, optional bool) (bool, error) {
 	if !result.Exists() {
 		if optional {
-			// If path is marked as optional don't error if path doesn't return a result
 			p.Log.Debugf("the path %s doesn't exist", path)
-			return true, nil
+			return true, fmt.Errorf("the path %s doesn't exist", path)
 		}
 
 		return false, fmt.Errorf("the path %s doesn't exist", path)
