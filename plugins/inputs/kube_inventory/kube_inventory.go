@@ -43,7 +43,6 @@ type KubernetesInventory struct {
 
 	SelectorInclude []string        `toml:"selector_include"`
 	SelectorExclude []string        `toml:"selector_exclude"`
-	NodeName        string          `toml:"node_name"`
 	Log             telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig

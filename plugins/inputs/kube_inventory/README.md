@@ -58,9 +58,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
-  ## Node name to filter to. No filtering by default.
-  # node_name = ""
-
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
   ## Ignored if url is empty and in-cluster config is used.

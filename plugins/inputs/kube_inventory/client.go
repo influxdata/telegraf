@@ -86,14 +86,10 @@ func (c *client) getIngress(ctx context.Context) (*netv1.IngressList, error) {
 	return c.NetworkingV1().Ingresses(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getNodes(ctx context.Context, name string) (*corev1.NodeList, error) {
+func (c *client) getNodes(ctx context.Context) (*corev1.NodeList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	var fieldSelector string
-	if name != "" {
-		fieldSelector = "metadata.name=" + name
-	}
-	return c.CoreV1().Nodes().List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
+	return c.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
@@ -108,14 +104,11 @@ func (c *client) getPersistentVolumeClaims(ctx context.Context) (*corev1.Persist
 	return c.CoreV1().PersistentVolumeClaims(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getPods(ctx context.Context, nodeName string) (*corev1.PodList, error) {
+func (c *client) getPods(ctx context.Context) (*corev1.PodList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	var fieldSelector string
-	if nodeName != "" {
-		fieldSelector = "spec.nodeName=" + nodeName
-	}
-	return c.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
+
+	return c.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getServices(ctx context.Context) (*corev1.ServiceList, error) {

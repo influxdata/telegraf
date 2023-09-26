@@ -9,7 +9,7 @@ import (
 )
 
 func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	list, err := ki.client.getNodes(ctx, ki.NodeName)
+	list, err := ki.client.getNodes(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
