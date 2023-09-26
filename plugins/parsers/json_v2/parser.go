@@ -145,7 +145,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 			if result.Type == gjson.Null {
 				p.Log.Debugf("Message: %s", input)
-				return nil, fmt.Errorf("the timestamp path %s returned NULL", c.TimestampPath)
+				return nil, fmt.Errorf("the timestamp path %q returned NULL", c.TimestampPath)
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
@@ -218,7 +218,7 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 		}
 
 		if result.IsObject() {
-			p.Log.Debugf("Found object in the path: %s, ignoring it please use 'object' to gather metrics from objects", c.Path)
+			p.Log.Debugf("Found object in the path %q, ignoring it please use 'object' to gather metrics from objects", c.Path)
 			continue
 		}
 
@@ -703,11 +703,11 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 func (p *Parser) checkResult(result gjson.Result, path string, optional bool) (bool, error) {
 	if !result.Exists() {
 		if optional {
-			p.Log.Debugf("the path %s doesn't exist", path)
-			return true, fmt.Errorf("the path %s doesn't exist", path)
+			p.Log.Debugf("the path %q doesn't exist", path)
+			return true, fmt.Errorf("the path %q doesn't exist", path)
 		}
 
-		return false, fmt.Errorf("the path %s doesn't exist", path)
+		return false, fmt.Errorf("the path %q doesn't exist", path)
 	}
 
 	return false, nil

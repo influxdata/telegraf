@@ -386,7 +386,6 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	// Setup the basic connection options
 	options := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
-		grpc.WithBlock(),
 	}
 
 	// Add keep-alive settings
