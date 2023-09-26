@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -29,7 +28,6 @@ const (
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
-	KubeletURL        string          `toml:"url_kubelet"`
 	BearerToken       string          `toml:"bearer_token"`
 	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
@@ -44,8 +42,7 @@ type KubernetesInventory struct {
 	Log             telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
-	client     *client
-	httpClient *http.Client
+	client *client
 
 	selectorFilter filter.Filter
 }
