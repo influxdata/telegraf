@@ -350,29 +350,27 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 		return nil, err
 	}
 
-	username, err := r.Username.Get()
-	if err != nil {
-		return nil, err
-	}
-	defer username.Destroy()
-	usernameStr := username.String()
-
-	if usernameStr == "" {
-		usernameStr = DefaultUsername
-	}
-
-	password, err := r.Password.Get()
-	if err != nil {
-		return nil, err
-	}
-	defer password.Destroy()
-	passwordStr := password.String()
-
-	if passwordStr == "" {
-		passwordStr = DefaultPassword
+	username := DefaultUsername
+	if !r.Username.Empty() {
+		usernameSecret, err := r.Username.Get()
+		if err != nil {
+			return nil, err
+		}
+		defer usernameSecret.Destroy()
+		username = usernameSecret.String()
 	}
 
-	req.SetBasicAuth(usernameStr, passwordStr)
+	password := DefaultPassword
+	if !r.Password.Empty() {
+		passwordSecret, err := r.Password.Get()
+		if err != nil {
+			return nil, err
+		}
+		defer passwordSecret.Destroy()
+		password = passwordSecret.String()
+	}
+
+	req.SetBasicAuth(username, password)
 
 	resp, err := r.client.Do(req)
 	if err != nil {
