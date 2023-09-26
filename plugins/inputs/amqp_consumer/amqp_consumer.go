@@ -30,8 +30,8 @@ type semaphore chan empty
 type AMQPConsumer struct {
 	URL                    string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers                []string          `toml:"brokers"`
-	Username               string            `toml:"username"`
-	Password               string            `toml:"password"`
+	Username               config.Secret     `toml:"username"`
+	Password               config.Secret     `toml:"password"`
 	Exchange               string            `toml:"exchange"`
 	ExchangeType           string            `toml:"exchange_type"`
 	ExchangeDurability     string            `toml:"exchange_durability"`
@@ -135,17 +135,29 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	}
 
 	var auth []amqp.Authentication
+	
 	if strings.ToUpper(a.AuthMethod) == "EXTERNAL" {
 		auth = []amqp.Authentication{&externalAuth{}}
-	} else if a.Username != "" || a.Password != "" {
+	} else if !a.Username.Empty() || !a.Password.Empty() {
+		username, err := a.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		defer username.Destroy()
+		
+		password, err := a.Password.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		defer password.Destroy()
+		
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: a.Username,
-				Password: a.Password,
+				Username: username.String(),
+				Password: password.String(),
 			},
 		}
 	}
-
 	amqpConfig := amqp.Config{
 		TLSClientConfig: tlsCfg,
 		SASL:            auth, // if nil, it will be PLAIN
