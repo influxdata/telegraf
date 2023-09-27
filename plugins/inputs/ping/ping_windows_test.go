@@ -42,26 +42,26 @@ Approximate round trip times in milli-seconds:
 `
 
 func TestHost(t *testing.T) {
-	trans, recReply, recPacket, avg, min, max, err := processPingOutput(winPLPingOutput)
+	stats, err := processPingOutput(winPLPingOutput)
 	require.NoError(t, err)
-	require.Equal(t, 4, trans, "4 packets were transmitted")
-	require.Equal(t, 4, recReply, "4 packets were reply")
-	require.Equal(t, 4, recPacket, "4 packets were received")
-	require.Equal(t, 50, avg, "Average 50")
-	require.Equal(t, 46, min, "Min 46")
-	require.Equal(t, 57, max, "max 57")
+	require.Equal(t, 4, stats.packetsTransmitted, "4 packets were transmitted")
+	require.Equal(t, 4, stats.replyReceived, "4 packets were reply")
+	require.Equal(t, 4, stats.packetsReceived, "4 packets were received")
+	require.Equal(t, 50, stats.avg, "Average 50")
+	require.Equal(t, 46, stats.min, "Min 46")
+	require.Equal(t, 57, stats.max, "max 57")
 
-	trans, recReply, recPacket, avg, min, max, err = processPingOutput(winENPingOutput)
+	stats, err = processPingOutput(winENPingOutput)
 	require.NoError(t, err)
-	require.Equal(t, 4, trans, "4 packets were transmitted")
-	require.Equal(t, 4, recReply, "4 packets were reply")
-	require.Equal(t, 4, recPacket, "4 packets were received")
-	require.Equal(t, 50, avg, "Average 50")
-	require.Equal(t, 50, min, "Min 50")
-	require.Equal(t, 52, max, "Max 52")
+	require.Equal(t, 4, stats.packetsTransmitted, "4 packets were transmitted")
+	require.Equal(t, 4, stats.replyReceived, "4 packets were reply")
+	require.Equal(t, 4, stats.packetsReceived, "4 packets were received")
+	require.Equal(t, 50, stats.avg, "Average 50")
+	require.Equal(t, 50, stats.min, "Min 50")
+	require.Equal(t, 52, stats.max, "Max 52")
 }
 
-func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return winENPingOutput, nil
 }
 
@@ -73,7 +73,7 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
@@ -104,7 +104,7 @@ Statystyka badania ping dla 195.187.242.157:
              (100% straty),
 `
 
-func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return errorPingOutput, errors.New("No packets received")
 }
 
@@ -118,7 +118,9 @@ func TestBadPingGather(t *testing.T) {
 		pingHost: mockErrorHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
 	tags := map[string]string{"url": "www.amazon.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
@@ -163,7 +165,7 @@ Szacunkowy czas błądzenia pakietów w millisekundach:
     Minimum = 114 ms, Maksimum = 119 ms, Czas średni = 115 ms
 `
 
-func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -176,7 +178,9 @@ func TestLossyPingGather(t *testing.T) {
 		pingHost: mockLossyHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 9,
@@ -224,7 +228,7 @@ Options:
 
 `
 
-func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -237,7 +241,9 @@ func TestFatalPingGather(t *testing.T) {
 		pingHost: mockFatalHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+
 	require.True(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should have packet measurements")
 	require.False(t, acc.HasInt64Field("ping", "packets_transmitted"),
@@ -267,7 +273,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockUnreachableHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockUnreachableHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return UnreachablePingOutput, errors.New("So very bad")
 }
 
@@ -283,7 +289,8 @@ func TestUnreachablePingGather(t *testing.T) {
 		pingHost: mockUnreachableHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
@@ -317,7 +324,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockTTLExpiredPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockTTLExpiredPinger(_ string, _ float64, _ ...string) (string, error) {
 	return TTLExpiredPingOutput, errors.New("So very bad")
 }
 
@@ -331,7 +338,8 @@ func TestTTLExpiredPingGather(t *testing.T) {
 		pingHost: mockTTLExpiredPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
@@ -365,5 +373,7 @@ func TestPingBinary(t *testing.T) {
 			return "", nil
 		},
 	}
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+	require.EqualValues(t, "www.google.com: fatal error processing ping output", err.Error())
 }

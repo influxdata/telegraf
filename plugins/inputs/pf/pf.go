@@ -4,6 +4,7 @@ package pf
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -37,7 +38,7 @@ func (pf *PF) Gather(acc telegraf.Accumulator) error {
 	if pf.PfctlCommand == "" {
 		var err error
 		if pf.PfctlCommand, pf.PfctlArgs, err = pf.buildPfctlCmd(); err != nil {
-			acc.AddError(fmt.Errorf("Can't construct pfctl commandline: %s", err))
+			acc.AddError(fmt.Errorf("can't construct pfctl commandline: %w", err))
 			return nil
 		}
 	}
@@ -54,10 +55,10 @@ func (pf *PF) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var errParseHeader = fmt.Errorf("Cannot find header in %s output", pfctlCommand)
+var errParseHeader = fmt.Errorf("cannot find header in %s output", pfctlCommand)
 
 func errMissingData(tag string) error {
-	return fmt.Errorf("struct data for tag \"%s\" not found in %s output", tag, pfctlCommand)
+	return fmt.Errorf("struct data for tag %q not found in %s output", tag, pfctlCommand)
 }
 
 type pfctlOutputStanza struct {
@@ -186,11 +187,11 @@ func (pf *PF) callPfctl() (string, error) {
 	cmd := execCommand(pf.PfctlCommand, pf.PfctlArgs...)
 	out, oerr := cmd.Output()
 	if oerr != nil {
-		ee, ok := oerr.(*exec.ExitError)
-		if !ok {
-			return string(out), fmt.Errorf("error running %s: %s: (unable to get stderr)", pfctlCommand, oerr)
+		var ee *exec.ExitError
+		if !errors.As(oerr, &ee) {
+			return string(out), fmt.Errorf("error running %q: %w: (unable to get stderr)", pfctlCommand, oerr)
 		}
-		return string(out), fmt.Errorf("error running %s: %s: %s", pfctlCommand, oerr, ee.Stderr)
+		return string(out), fmt.Errorf("error running %q: %w - %s", pfctlCommand, oerr, ee.Stderr)
 	}
 	return string(out), oerr
 }
@@ -201,14 +202,14 @@ var execCommand = exec.Command
 func (pf *PF) buildPfctlCmd() (string, []string, error) {
 	cmd, err := execLookPath(pfctlCommand)
 	if err != nil {
-		return "", nil, fmt.Errorf("can't locate %s: %v", pfctlCommand, err)
+		return "", nil, fmt.Errorf("can't locate %q: %w", pfctlCommand, err)
 	}
 	args := []string{"-s", "info"}
 	if pf.UseSudo {
 		args = append([]string{cmd}, args...)
 		cmd, err = execLookPath("sudo")
 		if err != nil {
-			return "", nil, fmt.Errorf("can't locate sudo: %v", err)
+			return "", nil, fmt.Errorf("can't locate sudo: %w", err)
 		}
 	}
 	return cmd, args, nil

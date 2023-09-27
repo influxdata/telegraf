@@ -26,6 +26,18 @@ type translator interface {
 	lookup(oid string) (snmp.MibEntry, error)
 }
 
+type wrapLog struct {
+	telegraf.Logger
+}
+
+func (l wrapLog) Printf(format string, args ...interface{}) {
+	l.Debugf(format, args...)
+}
+
+func (l wrapLog) Print(args ...interface{}) {
+	l.Debug(args...)
+}
+
 type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
 	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
@@ -104,7 +116,12 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.acc = acc
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
-	s.listener.Params = gosnmp.Default
+
+	// gosnmp.Default is a pointer, using this more than once
+	// has side effects
+	defaults := *gosnmp.Default
+	s.listener.Params = &defaults
+	s.listener.Params.Logger = gosnmp.NewLogger(wrapLog{s.Log})
 
 	switch s.Version {
 	case "3":
@@ -128,7 +145,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		case "authpriv":
 			s.listener.Params.MsgFlags = gosnmp.AuthPriv
 		default:
-			return fmt.Errorf("unknown security level '%s'", s.SecLevel)
+			return fmt.Errorf("unknown security level %q", s.SecLevel)
 		}
 
 		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
@@ -148,7 +165,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		case "":
 			authenticationProtocol = gosnmp.NoAuth
 		default:
-			return fmt.Errorf("unknown authentication protocol '%s'", s.AuthProtocol)
+			return fmt.Errorf("unknown authentication protocol %q", s.AuthProtocol)
 		}
 
 		var privacyProtocol gosnmp.SnmpV3PrivProtocol
@@ -168,31 +185,37 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		case "":
 			privacyProtocol = gosnmp.NoPriv
 		default:
-			return fmt.Errorf("unknown privacy protocol '%s'", s.PrivProtocol)
+			return fmt.Errorf("unknown privacy protocol %q", s.PrivProtocol)
 		}
 
-		secname, err := s.SecName.Get()
+		secnameSecret, err := s.SecName.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		privPasswd, err := s.PrivPassword.Get()
+		secname := secnameSecret.String()
+		secnameSecret.Destroy()
+
+		privPasswdSecret, err := s.PrivPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		authPasswd, err := s.AuthPassword.Get()
+		privPasswd := privPasswdSecret.String()
+		privPasswdSecret.Destroy()
+
+		authPasswdSecret, err := s.AuthPassword.Get()
 		if err != nil {
-			return fmt.Errorf("getting secname failed: %v", err)
+			return fmt.Errorf("getting secname failed: %w", err)
 		}
+		authPasswd := authPasswdSecret.String()
+		authPasswdSecret.Destroy()
+
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
-			UserName:                 string(secname),
+			UserName:                 secname,
 			PrivacyProtocol:          privacyProtocol,
-			PrivacyPassphrase:        string(privPasswd),
-			AuthenticationPassphrase: string(authPasswd),
+			PrivacyPassphrase:        privPasswd,
+			AuthenticationPassphrase: authPasswd,
 			AuthenticationProtocol:   authenticationProtocol,
 		}
-		config.ReleaseSecret(secname)
-		config.ReleaseSecret(privPasswd)
-		config.ReleaseSecret(authPasswd)
 	}
 
 	// wrap the handler, used in unit tests
@@ -211,7 +234,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	// gosnmp.TrapListener currently supports udp only.  For forward
 	// compatibility, require udp in the service address
 	if protocol != "udp" {
-		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, s.ServiceAddress)
+		return fmt.Errorf("unknown protocol %q in %q", protocol, s.ServiceAddress)
 	}
 
 	// If (*TrapListener).Listen immediately returns an error we need

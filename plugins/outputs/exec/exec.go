@@ -4,6 +4,7 @@ package exec
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -66,7 +67,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	buffer.Write(serializedMetrics) //nolint:revive // from buffer.go: "err is always nil"
+	buffer.Write(serializedMetrics)
 
 	if buffer.Len() <= 0 {
 		return nil
@@ -100,7 +101,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, environment
 	s := stderr
 
 	if err != nil {
-		if err == internal.ErrTimeout {
+		if errors.Is(err, internal.ErrTimeout) {
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 
@@ -114,10 +115,10 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, environment
 		}
 
 		if status, ok := internal.ExitStatus(err); ok {
-			return fmt.Errorf("%q exited %d with %s", command, status, err.Error())
+			return fmt.Errorf("%q exited %d with %w", command, status, err)
 		}
 
-		return fmt.Errorf("%q failed with %s", command, err.Error())
+		return fmt.Errorf("%q failed with %w", command, err)
 	}
 
 	c.cmd = cmd
@@ -140,7 +141,7 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 		buf.Truncate(i)
 	}
 	if didTruncate {
-		buf.WriteString("...") //nolint:revive // from buffer.go: "err is always nil"
+		buf.WriteString("...")
 	}
 	return buf.String()
 }
@@ -164,7 +165,7 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 			if len(byt) > 0 {
 				_, _ = buf.Write(byt)
 			}
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return buf
 			}
 		}

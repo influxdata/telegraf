@@ -6,7 +6,6 @@ import (
 
 	mqttv3 "github.com/eclipse/paho.mqtt.golang" // Library that supports v3.1.1
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -54,16 +53,16 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		opts.SetUsername(string(user))
-		config.ReleaseSecret(user)
+		opts.SetUsername(user.String())
+		user.Destroy()
 	}
 	if !cfg.Password.Empty() {
 		password, err := cfg.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		opts.SetPassword(string(password))
-		config.ReleaseSecret(password)
+		opts.SetPassword(password.String())
+		password.Destroy()
 	}
 
 	servers, err := parseServers(cfg.Servers)
@@ -107,7 +106,9 @@ func (m *mqttv311Client) Connect() (bool, error) {
 
 func (m *mqttv311Client) Publish(topic string, body []byte) error {
 	token := m.client.Publish(topic, byte(m.qos), m.retain, body)
-	token.WaitTimeout(m.timeout)
+	if !token.WaitTimeout(m.timeout) {
+		return internal.ErrTimeout
+	}
 	return token.Error()
 }
 
@@ -123,7 +124,7 @@ func (m *mqttv311Client) AddRoute(topic string, callback mqttv3.MessageHandler) 
 
 func (m *mqttv311Client) Close() error {
 	if m.client.IsConnected() {
-		m.client.Disconnect(20)
+		m.client.Disconnect(100)
 	}
 	return nil
 }

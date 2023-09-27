@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	_ "embed"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
@@ -58,7 +59,6 @@ type SumoLogic struct {
 	client     *http.Client
 	serializer serializers.Serializer
 
-	err     error
 	headers map[string]string
 }
 
@@ -67,30 +67,6 @@ func (*SumoLogic) SampleConfig() string {
 }
 
 func (s *SumoLogic) SetSerializer(serializer serializers.Serializer) {
-	if s.headers == nil {
-		s.headers = make(map[string]string)
-	}
-
-	switch sr := serializer.(type) {
-	case *carbon2.Serializer:
-		s.headers[contentTypeHeader] = carbon2ContentType
-
-		// In case Carbon2 is used and the metrics format was unset, default to
-		// include field in metric name.
-		if sr.IsMetricsFormatUnset() {
-			sr.SetMetricsFormat(carbon2.Carbon2FormatMetricIncludesField)
-		}
-
-	case *graphite.GraphiteSerializer:
-		s.headers[contentTypeHeader] = graphiteContentType
-
-	case *prometheus.Serializer:
-		s.headers[contentTypeHeader] = prometheusContentType
-
-	default:
-		s.err = errors.Errorf("unsupported serializer %T", serializer)
-	}
-
 	s.serializer = serializer
 }
 
@@ -104,8 +80,24 @@ func (s *SumoLogic) createClient() *http.Client {
 }
 
 func (s *SumoLogic) Connect() error {
-	if s.err != nil {
-		return errors.Wrap(s.err, "sumologic: incorrect configuration")
+	s.headers = make(map[string]string)
+
+	var serializer serializers.Serializer
+	if unwrapped, ok := s.serializer.(*models.RunningSerializer); ok {
+		serializer = unwrapped.Serializer
+	} else {
+		serializer = s.serializer
+	}
+
+	switch serializer.(type) {
+	case *carbon2.Serializer:
+		s.headers[contentTypeHeader] = carbon2ContentType
+	case *graphite.GraphiteSerializer:
+		s.headers[contentTypeHeader] = graphiteContentType
+	case *prometheus.Serializer:
+		s.headers[contentTypeHeader] = prometheusContentType
+	default:
+		return fmt.Errorf("unsupported serializer %T", serializer)
 	}
 
 	if s.Timeout == 0 {
@@ -118,13 +110,10 @@ func (s *SumoLogic) Connect() error {
 }
 
 func (s *SumoLogic) Close() error {
-	return s.err
+	return nil
 }
 
 func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
-	if s.err != nil {
-		return errors.Wrap(s.err, "sumologic: incorrect configuration")
-	}
 	if s.serializer == nil {
 		return errors.New("sumologic: serializer unset")
 	}
@@ -169,7 +158,7 @@ func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 		return err
 	}
 
-	if err = gz.Close(); err != nil {
+	if err := gz.Close(); err != nil {
 		return err
 	}
 
@@ -193,15 +182,12 @@ func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return errors.Wrapf(err, "sumologic: failed sending request to [%s]", s.URL)
+		return fmt.Errorf("sumologic: failed sending request to %q: %w", s.URL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return errors.Errorf(
-			"sumologic: when writing to [%s] received status code: %d",
-			s.URL, resp.StatusCode,
-		)
+		return fmt.Errorf("sumologic: when writing to %q received status code: %d", s.URL, resp.StatusCode)
 	}
 
 	return nil

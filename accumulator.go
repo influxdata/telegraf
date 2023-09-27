@@ -38,7 +38,7 @@ type Accumulator interface {
 		tags map[string]string,
 		t ...time.Time)
 
-	// AddMetric adds an metric to the accumulator.
+	// AddMetric adds a metric to the accumulator.
 	AddMetric(Metric)
 
 	// SetPrecision sets the timestamp rounding precision. All metrics
@@ -73,7 +73,7 @@ type DeliveryInfo interface {
 type TrackingAccumulator interface {
 	Accumulator
 
-	// Add the Metric and arrange for tracking feedback after processing..
+	// Add the Metric and arrange for tracking feedback after processing.
 	AddTrackingMetric(m Metric) TrackingID
 
 	// Add a group of Metrics and arrange for a signal when the group has been

@@ -9,8 +9,11 @@ costs.
 
 Requires `project` to specify where Stackdriver metrics will be delivered to.
 
-Metrics are grouped by the `namespace` variable and metric key - eg:
-`custom.googleapis.com/telegraf/system/load5`
+By default, Metrics are grouped by the `namespace` variable and metric key -
+eg: `custom.googleapis.com/telegraf/system/load5`. However, this is not the
+best practice. Setting `metric_name_format = "official"` will produce a more
+easily queried format of: `metric_type_prefix/[namespace_]name_key/kind`. If
+the global namespace is not set, it is omitted as well.
 
 [Resource type](https://cloud.google.com/monitoring/api/resources) is configured
 by the `resource_type` variable (default `global`).
@@ -36,10 +39,39 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   project = "erudite-bloom-151019"
 
   ## The namespace for the metric descriptor
+  ## This is optional and users are encouraged to set the namespace as a
+  ## resource label instead. If omitted it is not included in the metric name.
   namespace = "telegraf"
+
+  ## Metric Type Prefix
+  ## The DNS name used with the metric type as a prefix.
+  # metric_type_prefix = "custom.googleapis.com"
+
+  ## Metric Name Format
+  ## Specifies the layout of the metric name, choose from:
+  ##  * path: 'metric_type_prefix_namespace_name_key'
+  ##  * official: 'metric_type_prefix/namespace_name_key/kind'
+  # metric_name_format = "path"
+
+  ## Metric Data Type
+  ## By default, telegraf will use whatever type the metric comes in as.
+  ## However, for some use cases, forcing int64, may be preferred for values:
+  ##   * source: use whatever was passed in
+  ##   * double: preferred datatype to allow queries by PromQL.
+  # metric_data_type = "source"
+
+  ## Tags as resource labels
+  ## Tags defined in this option, when they exist, are added as a resource
+  ## label and not included as a metric label. The values from tags override
+  ## the values defined under the resource_labels config options.
+  # tags_as_resource_label = []
 
   ## Custom resource type
   # resource_type = "generic_node"
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
 
   ## Additional resource labels
   # [outputs.stackdriver.resource_labels]

@@ -49,8 +49,11 @@ type step struct {
 	latest float64
 
 	Name  string  `toml:"name"`
-	Start float64 `toml:"min"`
-	Step  float64 `toml:"max"`
+	Start float64 `toml:"start"`
+	Step  float64 `toml:"step"`
+
+	Min float64 `toml:"min" deprecated:"1.28.2;use 'start' instead"`
+	Max float64 `toml:"max" deprecated:"1.28.2;use 'step' instead"`
 }
 
 type stock struct {
@@ -66,7 +69,18 @@ func (*Mock) SampleConfig() string {
 }
 
 func (m *Mock) Init() error {
-	m.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	m.rand = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: not security critical
+
+	// backward compatibility
+	for _, step := range m.Step {
+		if step.Min != 0 && step.Start == 0 {
+			step.Start = step.Min
+		}
+		if step.Max != 0 && step.Step == 0 {
+			step.Step = step.Max
+		}
+	}
+
 	return nil
 }
 

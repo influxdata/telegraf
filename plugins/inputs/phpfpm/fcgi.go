@@ -120,7 +120,7 @@ type record struct {
 }
 
 func (rec *record) read(r io.Reader) (err error) {
-	if err = binary.Read(r, binary.BigEndian, &rec.h); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &rec.h); err != nil {
 		return err
 	}
 	if rec.h.Version != 1 {
@@ -229,7 +229,7 @@ type bufWriter struct {
 
 func (w *bufWriter) Close() error {
 	if err := w.Writer.Flush(); err != nil {
-		w.closer.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+		w.closer.Close()
 		return err
 	}
 	return w.closer.Close()

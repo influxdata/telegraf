@@ -117,7 +117,7 @@ func gatherQemuData(px *Proxmox, acc telegraf.Accumulator) {
 func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 	vmStats, err := getVMStats(px, rt)
 	if err != nil {
-		px.Log.Error("Error getting VM stats: %v", err)
+		px.Log.Errorf("Error getting VM stats: %v", err)
 		return
 	}
 

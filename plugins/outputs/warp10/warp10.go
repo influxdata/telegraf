@@ -4,6 +4,7 @@ package warp10
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -122,7 +123,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	addr := w.WarpURL + "/api/v0/update"
 	req, err := http.NewRequest("POST", addr, bytes.NewBufferString(payload))
 	if err != nil {
-		return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+		return fmt.Errorf("unable to create new request %q: %w", addr, err)
 	}
 
 	req.Header.Set("Content-Type", "text/plain")
@@ -130,8 +131,8 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	req.Header.Set("X-Warp10-Token", string(token))
-	config.ReleaseSecret(token)
+	req.Header.Set("X-Warp10-Token", token.String())
+	token.Destroy()
 
 	resp, err := w.client.Do(req)
 	if err != nil {
@@ -142,14 +143,14 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	if resp.StatusCode != http.StatusOK {
 		if w.PrintErrorBody {
 			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
+			return errors.New(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
 		}
 
 		if len(resp.Status) < w.MaxStringErrorSize {
-			return fmt.Errorf(w.WarpURL + ": " + resp.Status)
+			return errors.New(w.WarpURL + ": " + resp.Status)
 		}
 
-		return fmt.Errorf(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
+		return errors.New(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
 	}
 
 	return nil
@@ -198,7 +199,38 @@ func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
 }
 
+/*
+Warp10 supports Infinity/-Infinity/NaN
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// Infinity
+'>
+PARSE
+
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// -Infinity
+'>
+PARSE
+
+<'
+// class{label=value} 42.0
+0// class-1{label=value}{attribute=value} 42
+=1// NaN
+'>
+PARSE
+*/
 func floatToString(inputNum float64) string {
+	switch {
+	case math.IsNaN(inputNum):
+		return "NaN"
+	case math.IsInf(inputNum, -1):
+		return "-Infinity"
+	case math.IsInf(inputNum, 1):
+		return "Infinity"
+	}
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 

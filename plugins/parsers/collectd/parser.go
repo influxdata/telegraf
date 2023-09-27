@@ -68,7 +68,7 @@ func (p *Parser) Init() error {
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	valueLists, err := network.Parse(buf, p.popts)
 	if err != nil {
-		return nil, fmt.Errorf("collectd parser error: %s", err)
+		return nil, fmt.Errorf("collectd parser error: %w", err)
 	}
 
 	metrics := []telegraf.Metric{}
@@ -205,13 +205,4 @@ func init() {
 				AuthFile: DefaultAuthFile,
 			}
 		})
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.AuthFile = config.CollectdAuthFile
-	p.SecurityLevel = config.CollectdSecurityLevel
-	p.TypesDB = config.CollectdTypesDB
-	p.ParseMultiValue = config.CollectdSplit
-
-	return p.Init()
 }

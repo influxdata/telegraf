@@ -23,7 +23,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var req prompb.WriteRequest
 
 	if err := req.Unmarshal(buf); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal request body: %s", err)
+		return nil, fmt.Errorf("unable to unmarshal request body: %w", err)
 	}
 
 	now := time.Now()
@@ -70,11 +70,11 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("No metrics in line")
+		return nil, fmt.Errorf("no metrics in line")
 	}
 
 	if len(metrics) > 1 {
-		return nil, fmt.Errorf("More than one metric in line")
+		return nil, fmt.Errorf("more than one metric in line")
 	}
 
 	return metrics[0], nil
@@ -82,10 +82,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
-}
-
-func (p *Parser) InitFromConfig(_ *parsers.Config) error {
-	return nil
 }
 
 func init() {

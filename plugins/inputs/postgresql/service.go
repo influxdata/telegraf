@@ -1,7 +1,6 @@
 package postgresql
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"net"
@@ -102,18 +101,21 @@ var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
-	addr, err := p.Address.Get()
+	addrSecret, err := p.Address.Get()
 	if err != nil {
-		return fmt.Errorf("getting address failed: %v", err)
+		return fmt.Errorf("getting address failed: %w", err)
 	}
-	defer config.ReleaseSecret(addr)
+	addr := addrSecret.String()
+	defer addrSecret.Destroy()
 
-	if p.Address.Empty() || string(addr) == "localhost" {
-		addr = []byte("host=localhost sslmode=disable")
-		p.Address = config.NewSecret(addr)
+	if p.Address.Empty() || addr == "localhost" {
+		addr = "host=localhost sslmode=disable"
+		if err := p.Address.Set([]byte(addr)); err != nil {
+			return err
+		}
 	}
 
-	connConfig, err := pgx.ParseConfig(string(addr))
+	connConfig, err := pgx.ParseConfig(addr)
 	if err != nil {
 		return err
 	}
@@ -143,7 +145,7 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 
 // Stop stops the services and closes any necessary channels and connections
 func (p *Service) Stop() {
-	p.DB.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+	p.DB.Close()
 }
 
 var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)
@@ -156,18 +158,32 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 
 	addr, err := p.Address.Get()
 	if err != nil {
-		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %v", err)
+		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
-	defer config.ReleaseSecret(addr)
+	defer addr.Destroy()
 
 	var canonicalizedAddress string
-	if bytes.HasPrefix(addr, []byte("postgres://")) || bytes.HasPrefix(addr, []byte("postgresql://")) {
-		if canonicalizedAddress, err = parseURL(string(addr)); err != nil {
+	if strings.HasPrefix(addr.TemporaryString(), "postgres://") || strings.HasPrefix(addr.TemporaryString(), "postgresql://") {
+		if canonicalizedAddress, err = parseURL(addr.String()); err != nil {
 			return sanitizedAddress, err
 		}
 	} else {
-		canonicalizedAddress = string(addr)
+		canonicalizedAddress = addr.String()
 	}
 
 	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil
+}
+
+// GetConnectDatabase utility function for getting the database to which the connection was made
+func (p *Service) GetConnectDatabase(connectionString string) (string, error) {
+	connConfig, err := pgx.ParseConfig(connectionString)
+	if err != nil {
+		return "", fmt.Errorf("connection string parsing failed: %w", err)
+	}
+
+	if len(connConfig.Database) != 0 {
+		return connConfig.Database, nil
+	}
+
+	return "postgres", nil
 }

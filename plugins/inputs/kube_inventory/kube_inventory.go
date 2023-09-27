@@ -112,6 +112,8 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"statefulsets":           collectStatefulSets,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
+	"resourcequotas":         collectResourceQuotas,
+	"secrets":                collectSecrets,
 }
 
 func atoi(s string) int64 {
@@ -148,7 +150,7 @@ func (ki *KubernetesInventory) createSelectorFilters() error {
 	return nil
 }
 
-var (
+const (
 	daemonSetMeasurement             = "kubernetes_daemonset"
 	deploymentMeasurement            = "kubernetes_deployment"
 	endpointMeasurement              = "kubernetes_endpoint"
@@ -156,9 +158,11 @@ var (
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
-	podContainerMeasurement          = "kubernetes_pod_container"
+	podContainerMeasurement          = "kubernetes_pod_container" //nolint:gosec // G101: Potential hardcoded credentials - false positive
 	serviceMeasurement               = "kubernetes_service"
 	statefulSetMeasurement           = "kubernetes_statefulset"
+	resourcequotaMeasurement         = "kubernetes_resourcequota" //nolint:gosec // G101: Potential hardcoded credentials - false positive
+	certificateMeasurement           = "kubernetes_certificate"
 )
 
 func init() {

@@ -10,8 +10,8 @@ import (
 )
 
 var imagesRPM = []string{
+	"fedora/38",
 	"fedora/37",
-	"fedora/36",
 	"centos/7",
 	"centos/9-Stream",
 	"amazonlinux/current",
@@ -20,10 +20,8 @@ var imagesRPM = []string{
 }
 
 var imagesDEB = []string{
-	"debian/buster",
 	"debian/bullseye",
 	"debian/bookworm",
-	"ubuntu/bionic",
 	"ubuntu/focal",
 	"ubuntu/jammy",
 }
@@ -38,6 +36,7 @@ func main() {
 				Name:        "package",
 				Usage:       ".deb or .rpm file for upgrade testing",
 				Destination: &packageFile,
+				Required:    true,
 			},
 			&cli.StringFlag{
 				Name:        "image",
@@ -46,11 +45,15 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			if _, err := os.Stat(packageFile); err != nil {
+				return fmt.Errorf("unknown package file: %w", err)
+			}
+
 			if image != "" && packageFile != "" {
-				fmt.Printf("test package '%s' on image '%s'\n", packageFile, image)
+				fmt.Printf("test package %q on image %q\n", packageFile, image)
 				return launchTests(packageFile, []string{image})
 			} else if packageFile != "" {
-				fmt.Printf("test package '%s' on all applicable images\n", packageFile)
+				fmt.Printf("test package %q on all applicable images\n", packageFile)
 
 				extension := filepath.Ext(packageFile)
 				switch extension {
@@ -63,7 +66,7 @@ func main() {
 				}
 			}
 
-			return fmt.Errorf("please provide at least a package to test")
+			return nil
 		},
 	}
 

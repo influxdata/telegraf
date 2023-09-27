@@ -11,12 +11,13 @@ lib]. The only exception are _integer_ fields that need to be specified in a
 
 ## Supported data formats
 
-| name                                    | `data_format` setting | comment |
-| --------------------------------------- | --------------------- | ------- |
-| [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
-| [JSON][json]                            | `"xpath_json"`        |         |
-| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol-buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
+| name                                         | `data_format` setting | comment |
+| -------------------------------------------- | --------------------- | ------- |
+| [Extensible Markup Language (XML)][xml]      | `"xml"`               |         |
+| [Concise Binary Object Representation][cbor] | `"xpath_cbor"`        | [see additional notes](#concise-binary-object-representation-notes)|
+| [JSON][json]                                 | `"xpath_json"`        |         |
+| [MessagePack][msgpack]                       | `"xpath_msgpack"`     |         |
+| [Protocol-buffers][protobuf]                 | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
 ### Protocol-buffers additional settings
 
@@ -90,6 +91,15 @@ This is a list of known headers and the corresponding values for
 [GRPC]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 [PDNS]: https://docs.powerdns.com/recursor/lua-config/protobuf.html
 
+### Concise Binary Object Representation notes
+
+Concise Binary Object Representation support numeric keys in the data. However,
+XML (and this parser) expects node names to be strings starting with a letter.
+To be compatible with these requirements, numeric nodes will be prefixed with
+a lower case `n` and converted to strings. This means that if you for example
+have a node with the key `123` in CBOR you will need to query `n123` in your
+XPath expressions.
+
 ## Configuration
 
 ```toml
@@ -122,7 +132,7 @@ This is a list of known headers and the corresponding values for
   # xpath_allow_empty_selection = false
 
   ## Get native data-types for all data-format that contain type information.
-  ## Currently, protobuf, msgpack and JSON support native data-types
+  ## Currently, CBOR, protobuf, msgpack and JSON support native data-types.
   # xpath_native_types = false
 
   ## Multiple parsing sections are allowed
@@ -140,12 +150,22 @@ This is a list of known headers and the corresponding values for
     ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
     ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
     # timestamp_format = "2006-01-02T15:04:05Z"
+    ## Optional: Timezone of the parsed time
+    ## This will locate the parsed time to the given timezone. Please note that
+    ## for times with timezone-offsets (e.g. RFC3339) the timestamp is unchanged.
+    ## This is ignored for all (unix) timestamp formats.
+    # timezone = "UTC"
 
     ## Optional: List of fields to convert to hex-strings if they are
     ## containing byte-arrays. This might be the case for e.g. protocol-buffer
     ## messages encoding data as byte-arrays. Wildcard patterns are allowed.
     ## By default, all byte-array-fields are converted to string.
     # fields_bytes_as_hex = []
+
+    ## Optional: List of fields to convert to base64-strings if they
+    ## contain byte-arrays. Resulting string will generally be shorter
+    ## than using hex encoding. Base64 encoding is RFC4648 compliant.
+    # fields_bytes_as_base64 = []
 
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]
@@ -265,7 +285,8 @@ in the metric.
 __Please note__: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of
-specifying fields.
+specifying fields. In this case _explicitly_ defined tags and fields take
+_precedence_ over the batch instances if both use the same tag/field name.
 
 ### metric_selection (optional)
 
@@ -286,7 +307,7 @@ By specifying `metric_name` you can override the metric/measurement name with
 the result of the given [XPath][xpath] query. If not specified, the default
 metric name is used.
 
-### timestamp, timestamp_format (optional)
+### timestamp, timestamp_format, timezone (optional)
 
 By default the current time will be used for all created metrics. To set the
 time from values in the XML document you can specify a [XPath][xpath] query in
@@ -297,6 +318,16 @@ an accepted [Go "reference time"][time const]. Consult the Go [time][time parse]
 package for details and additional examples on how to set the time format.  If
 `timestamp_format` is omitted `unix` format is assumed as result of the
 `timestamp` query.
+
+The `timezone` setting will be used to locate the parsed time in the given
+timezone. This is helpful for cases where the time does not contain timezone
+information, e.g. `2023-03-09 14:04:40` and is not located in _UTC_, which is
+the default setting. It is also possible to set the `timezone` to `Local` which
+used the configured host timezone.
+
+For time formats with timezone information, e.g. RFC3339, the resulting
+timestamp is unchanged. The `timezone` setting is ignored for all `unix`
+timestamp formats.
 
 ### tags sub-section
 
@@ -592,13 +623,14 @@ respectively. The `field_name` derives the name of the first attribute of the
 node, while `field_value` derives the value of the first attribute and converts
 the result to a number.
 
-[xpath lib]:    https://github.com/antchfx/xpath
+[cbor]:         https://cbor.io/
 [json]:         https://www.json.org/
 [msgpack]:      https://msgpack.org/
 [protobuf]:     https://developers.google.com/protocol-buffers
-[xml]:          https://www.w3.org/XML/
-[xpath]:        https://www.w3.org/TR/xpath/
-[xpather]:      http://xpather.com/
-[xpath tester]: https://codebeautify.org/Xpath-Tester
 [time const]:   https://golang.org/pkg/time/#pkg-constants
 [time parse]:   https://golang.org/pkg/time/#Parse
+[xml]:          https://www.w3.org/XML/
+[xpath]:        https://www.w3.org/TR/xpath/
+[xpath lib]:    https://github.com/antchfx/xpath
+[xpath tester]: https://codebeautify.org/Xpath-Tester
+[xpather]:      http://xpather.com/

@@ -1,0 +1,2524 @@
+[
+    {
+        "update": {
+            "timestamp": "1688641479762000000",
+            "prefix": {
+                "elem": [
+                    {
+                        "name": "components"
+                    },
+                    {
+                        "name": "component",
+                        "key": {
+                            "name": "FPC0:CPU0"
+                        }
+                    },
+                    {
+                        "name": "properties"
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-size"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "671088216"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "187929304"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-utilization"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "28"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifd-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "97240"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifd-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "442"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifd-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifd-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifl-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "95272"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifl-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "132"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifl-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-ifl-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-iff-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "38640"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-iff-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "178"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-iff-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-iff-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "82592"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "914609"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "914255"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rtt-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "7212"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rtt-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "25"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rtt-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rtt-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-nh-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "180544"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-nh-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "519"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-nh-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "21"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-nh-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-filter-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "144380"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-filter-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2674"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-filter-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "739"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-filter-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "41488"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "383"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "53"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-halp-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "482008"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-halp-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "102"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-halp-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-cos-halp-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-mac-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "20"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-mac-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-mac-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-rt-mac-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpdl-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "364"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpdl-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "16"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpdl-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "9"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpdl-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "56"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "4"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-syms-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "104"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-syms-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "4"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-syms-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-fpb-syms-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-agent-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "19548"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-agent-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1679742"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-agent-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1679691"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-agent-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-an-stats-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "5503680"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-an-stats-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "10192"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-an-stats-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-an-stats-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-resolve-bind-point-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "72"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-resolve-bind-point-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "12"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-resolve-bind-point-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "6"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-resolve-bind-point-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-entry-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "95436"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-entry-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2812"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-entry-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1435"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-entry-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-tcam-entry-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "33920"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-tcam-entry-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "546"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-tcam-entry-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-tcam-entry-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-id-entry-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "448"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-id-entry-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "40"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-id-entry-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "24"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-id-entry-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-bmap-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "9216"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-bmap-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "62"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-bmap-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "24"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-bmap-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-hw-hdl-rule-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "49172"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-hw-hdl-rule-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2257"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-hw-hdl-rule-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1140"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-hw-hdl-rule-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-lagmatch-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "72"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-lagmatch-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-lagmatch-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-lagmatch-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-cntr-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "372008"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-cntr-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "4444"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-cntr-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1628"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-cntr-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-policer-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "192544"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-policer-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "600"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-policer-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "240"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-policer-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-misc-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "984"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-misc-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "83"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-misc-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-dfw-misc-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-halp-unknown-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "92"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-halp-unknown-allocations"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-halp-unknown-frees"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-kernel-halp-unknown-allocations-failed"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-dma-size"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "67108864"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-dma-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "4655312"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-dma-utilization"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "6"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-pkt-dma-desc-size"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "12582912"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-pkt-dma-desc-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "10257712"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-pkt-dma-desc-utilization"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "81"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-bcm-sdk-size"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "268435456"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-bcm-sdk-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "157163104"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-bcm-sdk-utilization"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "58"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-packet-dma-size"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "113246208"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-packet-dma-bytes-allocated"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "56030424"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "property",
+                                "key": {
+                                    "name": "mem-util-packet-dma-utilization"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "value"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "49"
+                    }
+                }
+            ]
+        }
+    }
+]

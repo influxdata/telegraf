@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -49,19 +48,23 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
-	Log telegraf.Logger
+	ContentEncoding      string          `toml:"content_encoding"`
+	MaxDecompressionSize config.Size     `toml:"max_decompression_size"`
+	Log                  telegraf.Logger `toml:"-"`
 
 	sub     subscription
 	stubSub func() subscription
 
 	cancel context.CancelFunc
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
 
-	undelivered map[telegraf.TrackingID]message
-	sem         semaphore
+	undelivered  map[telegraf.TrackingID]message
+	sem          semaphore
+	decoder      internal.ContentDecoder
+	decoderMutex sync.Mutex
 }
 
 func (*PubSub) SampleConfig() string {
@@ -74,7 +77,7 @@ func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
 }
 
 // SetParser implements ParserInput interface.
-func (ps *PubSub) SetParser(parser parsers.Parser) {
+func (ps *PubSub) SetParser(parser telegraf.Parser) {
 	ps.parser = parser
 }
 
@@ -82,14 +85,6 @@ func (ps *PubSub) SetParser(parser parsers.Parser) {
 // Two goroutines are started - one pulling for the subscription, one
 // receiving delivery notifications from the accumulator.
 func (ps *PubSub) Start(ac telegraf.Accumulator) error {
-	if ps.Subscription == "" {
-		return fmt.Errorf(`"subscription" is required`)
-	}
-
-	if ps.Project == "" {
-		return fmt.Errorf(`"project" is required`)
-	}
-
 	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
 	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
 
@@ -102,7 +97,7 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 	} else {
 		subRef, err := ps.getGCPSubscription(ps.Subscription)
 		if err != nil {
-			return fmt.Errorf("unable to create subscription handle: %v", err)
+			return fmt.Errorf("unable to create subscription handle: %w", err)
 		}
 		ps.sub = subRef
 	}
@@ -157,11 +152,11 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
-			ps.acc.AddError(fmt.Errorf("unable to add message from subscription %s: %v", ps.sub.ID(), err))
+			ps.acc.AddError(fmt.Errorf("unable to add message from subscription %s: %w", ps.sub.ID(), err))
 		}
 	})
 	if err != nil {
-		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
+		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %w", ps.sub.ID(), err))
 	} else {
 		ps.Log.Info("Subscription pull ended (no error, most likely stopped)")
 	}
@@ -176,21 +171,20 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
-	var data []byte
-	if ps.Base64Data {
-		strData, err := base64.StdEncoding.DecodeString(string(msg.Data()))
-		if err != nil {
-			return fmt.Errorf("unable to base64 decode message: %v", err)
-		}
-		data = strData
-	} else {
-		data = msg.Data()
+	data, err := ps.decompressData(msg.Data())
+	if err != nil {
+		return fmt.Errorf("unable to decompress %s message: %w", ps.ContentEncoding, err)
+	}
+
+	data, err = ps.decodeB64Data(data)
+	if err != nil {
+		return fmt.Errorf("unable to decode base64 message: %w", err)
 	}
 
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
 		msg.Ack()
-		return err
+		return fmt.Errorf("unable to parse message: %w", err)
 	}
 
 	if len(metrics) == 0 {
@@ -215,6 +209,33 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	ps.undelivered[id] = msg
 
 	return nil
+}
+
+func (ps *PubSub) decompressData(data []byte) ([]byte, error) {
+	if ps.ContentEncoding == "identity" {
+		return data, nil
+	}
+
+	ps.decoderMutex.Lock()
+	defer ps.decoderMutex.Unlock()
+	data, err := ps.decoder.Decode(data)
+	if err != nil {
+		return nil, err
+	}
+
+	decompressedData := make([]byte, len(data))
+	copy(decompressedData, data)
+	data = decompressedData
+
+	return data, nil
+}
+
+func (ps *PubSub) decodeB64Data(data []byte) ([]byte, error) {
+	if ps.Base64Data {
+		return base64.StdEncoding.DecodeString(string(data))
+	}
+
+	return data, nil
 }
 
 func (ps *PubSub) waitForDelivery(parentCtx context.Context) {
@@ -266,7 +287,7 @@ func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
 		option.WithUserAgent(internal.ProductToken()),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate PubSub client: %v", err)
+		return nil, fmt.Errorf("unable to generate PubSub client: %w", err)
 	}
 	return client, nil
 }
@@ -284,6 +305,35 @@ func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
 	}
 	return &gcpSubscription{s}, nil
+}
+
+func (ps *PubSub) Init() error {
+	if ps.Subscription == "" {
+		return fmt.Errorf(`"subscription" is required`)
+	}
+
+	if ps.Project == "" {
+		return fmt.Errorf(`"project" is required`)
+	}
+
+	switch ps.ContentEncoding {
+	case "", "identity":
+		ps.ContentEncoding = "identity"
+	case "gzip":
+		var err error
+		var options []internal.DecodingOption
+		if ps.MaxDecompressionSize > 0 {
+			options = append(options, internal.WithMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
+		}
+		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, options...)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid value %q for content_encoding", ps.ContentEncoding)
+	}
+
+	return nil
 }
 
 func init() {

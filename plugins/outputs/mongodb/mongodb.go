@@ -28,12 +28,12 @@ func (s *MongoDB) getCollections(ctx context.Context) error {
 	s.collections = map[string]bson.M{}
 	collections, err := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
 	if err != nil {
-		return fmt.Errorf("unable to execute ListCollections: %v", err)
+		return fmt.Errorf("unable to execute ListCollections: %w", err)
 	}
 	for collections.Next(ctx) {
 		var collection bson.M
-		if err := collections.Decode(&collection); err != nil {
-			return fmt.Errorf("unable to decode ListCollections: %v", err)
+		if err = collections.Decode(&collection); err != nil {
+			return fmt.Errorf("unable to decode ListCollections: %w", err)
 		}
 		name, ok := collection["name"].(string)
 		if !ok {
@@ -107,16 +107,16 @@ func (s *MongoDB) Init() error {
 		}
 		password, err := s.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
-			Username:      string(username),
-			Password:      string(password),
+			Username:      username.String(),
+			Password:      password.String(),
 		}
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		username.Destroy()
+		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 	case "X509":
 		//format connection string to include tls/x509 options
@@ -169,7 +169,7 @@ func (s *MongoDB) createTimeSeriesCollection(databaseCollection string) error {
 		cco.SetTimeSeriesOptions(tso)
 		err := s.client.Database(s.MetricDatabase).CreateCollection(ctx, databaseCollection, cco)
 		if err != nil {
-			return fmt.Errorf("unable to create time series collection: %v", err)
+			return fmt.Errorf("unable to create time series collection: %w", err)
 		}
 		s.collections[databaseCollection] = bson.M{}
 	}
@@ -180,11 +180,11 @@ func (s *MongoDB) Connect() error {
 	ctx := context.Background()
 	client, err := mongo.Connect(ctx, s.clientOptions)
 	if err != nil {
-		return fmt.Errorf("unable to connect: %v", err)
+		return fmt.Errorf("unable to connect: %w", err)
 	}
 	s.client = client
-	if err := s.getCollections(ctx); err != nil {
-		return fmt.Errorf("unable to get collections from specified metric database: %v", err)
+	if err = s.getCollections(ctx); err != nil {
+		return fmt.Errorf("unable to get collections from specified metric database: %w", err)
 	}
 	return nil
 }

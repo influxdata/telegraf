@@ -75,14 +75,14 @@ func (dpdk *dpdk) Init() error {
 	}
 
 	var err error
-	if err = isSocket(dpdk.SocketPath); err != nil {
+	if err := isSocket(dpdk.SocketPath); err != nil {
 		return err
 	}
 
 	dpdk.rawdevCommands = []string{"/rawdev/xstats"}
 	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/link_status"}
 
-	if err = dpdk.validateCommands(); err != nil {
+	if err := dpdk.validateCommands(); err != nil {
 		return err
 	}
 
@@ -96,7 +96,7 @@ func (dpdk *dpdk) Init() error {
 
 	dpdk.ethdevExcludedCommandsFilter, err = filter.Compile(dpdk.EthdevConfig.EthdevExcludeCommands)
 	if err != nil {
-		return fmt.Errorf("error occurred during filter prepation for ethdev excluded commands - %v", err)
+		return fmt.Errorf("error occurred during filter prepation for ethdev excluded commands: %w", err)
 	}
 
 	dpdk.connector = newDpdkConnector(dpdk.SocketPath, dpdk.AccessTimeout)
@@ -118,15 +118,15 @@ func (dpdk *dpdk) validateCommands() error {
 		}
 
 		if commandWithParams[0] != '/' {
-			return fmt.Errorf("'%v' command should start with '/'", commandWithParams)
+			return fmt.Errorf("%q command should start with '/'", commandWithParams)
 		}
 
 		if commandWithoutParams := stripParams(commandWithParams); len(commandWithoutParams) >= maxCommandLength {
-			return fmt.Errorf("'%v' command is too long. It shall be less than %v characters", commandWithoutParams, maxCommandLength)
+			return fmt.Errorf("%q command is too long. It shall be less than %v characters", commandWithoutParams, maxCommandLength)
 		}
 
 		if len(commandWithParams) >= maxCommandLengthWithParams {
-			return fmt.Errorf("command with parameters '%v' shall be less than %v characters", commandWithParams, maxCommandLengthWithParams)
+			return fmt.Errorf("command with parameters %q shall be less than %v characters", commandWithParams, maxCommandLengthWithParams)
 		}
 	}
 
@@ -154,7 +154,7 @@ func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator) []string {
 		ethdevCommands := removeSubset(dpdk.ethdevCommands, dpdk.ethdevExcludedCommandsFilter)
 		ethdevCommands, err := dpdk.appendCommandsWithParamsFromList(ethdevListCommand, ethdevCommands)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error occurred during fetching of %v params - %v", ethdevListCommand, err))
+			acc.AddError(fmt.Errorf("error occurred during fetching of %q params: %w", ethdevListCommand, err))
 		}
 
 		commands = append(commands, ethdevCommands...)
@@ -163,7 +163,7 @@ func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator) []string {
 	if choice.Contains("rawdev", dpdk.DeviceTypes) {
 		rawdevCommands, err := dpdk.appendCommandsWithParamsFromList(rawdevListCommand, dpdk.rawdevCommands)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error occurred during fetching of %v params - %v", rawdevListCommand, err))
+			acc.AddError(fmt.Errorf("error occurred during fetching of %q params: %w", rawdevListCommand, err))
 		}
 
 		commands = append(commands, rawdevCommands...)
@@ -206,21 +206,21 @@ func (dpdk *dpdk) processCommand(acc telegraf.Accumulator, commandWithParams str
 	var parsedResponse map[string]interface{}
 	err = json.Unmarshal(buf, &parsedResponse)
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to unmarshall json response from %v command - %v", commandWithParams, err))
+		acc.AddError(fmt.Errorf("failed to unmarshall json response from %q command: %w", commandWithParams, err))
 		return
 	}
 
 	command := stripParams(commandWithParams)
 	value := parsedResponse[command]
 	if isEmpty(value) {
-		acc.AddError(fmt.Errorf("got empty json on '%v' command", commandWithParams))
+		acc.AddError(fmt.Errorf("got empty json on %q command", commandWithParams))
 		return
 	}
 
 	jf := jsonparser.JSONFlattener{}
 	err = jf.FullFlattenJSON("", value, true, true)
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to flatten response - %v", err))
+		acc.AddError(fmt.Errorf("failed to flatten response: %w", err))
 		return
 	}
 

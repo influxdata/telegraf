@@ -130,41 +130,41 @@ func (t *Timestream) Connect() error {
 	}
 
 	if t.MappingMode != MappingModeSingleTable && t.MappingMode != MappingModeMultiTable {
-		return fmt.Errorf("correct MappingMode key values are: '%s', '%s'",
+		return fmt.Errorf("correct MappingMode key values are: %q, %q",
 			MappingModeSingleTable, MappingModeMultiTable)
 	}
 
 	if t.MappingMode == MappingModeSingleTable {
 		if t.SingleTableName == "" {
-			return fmt.Errorf("in '%s' mapping mode, SingleTableName key is required", MappingModeSingleTable)
+			return fmt.Errorf("in %q mapping mode, SingleTableName key is required", MappingModeSingleTable)
 		}
 
 		if t.SingleTableDimensionNameForTelegrafMeasurementName == "" && !t.UseMultiMeasureRecords {
-			return fmt.Errorf("in '%s' mapping mode, SingleTableDimensionNameForTelegrafMeasurementName key is required",
+			return fmt.Errorf("in %q mapping mode, SingleTableDimensionNameForTelegrafMeasurementName key is required",
 				MappingModeSingleTable)
 		}
 
 		// When using MappingModeSingleTable with UseMultiMeasureRecords enabled,
 		// measurementName ( from line protocol ) is mapped to multiMeasure name in timestream.
 		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords != "" {
-			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is invalid", MappingModeMultiTable)
+			return fmt.Errorf("in %q mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is invalid", MappingModeMultiTable)
 		}
 	}
 
 	if t.MappingMode == MappingModeMultiTable {
 		if t.SingleTableName != "" {
-			return fmt.Errorf("in '%s' mapping mode, do not specify SingleTableName key", MappingModeMultiTable)
+			return fmt.Errorf("in %q mapping mode, do not specify SingleTableName key", MappingModeMultiTable)
 		}
 
 		if t.SingleTableDimensionNameForTelegrafMeasurementName != "" {
-			return fmt.Errorf("in '%s' mapping mode, do not specify SingleTableDimensionNameForTelegrafMeasurementName key", MappingModeMultiTable)
+			return fmt.Errorf("in %q mapping mode, do not specify SingleTableDimensionNameForTelegrafMeasurementName key", MappingModeMultiTable)
 		}
 
 		// When using MappingModeMultiTable ( data is ingested to multiple tables ) with
 		// UseMultiMeasureRecords enabled, measurementName is used as tableName in timestream and
 		// we require MeasureNameForMultiMeasureRecords to be configured.
 		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords == "" {
-			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is required", MappingModeMultiTable)
+			return fmt.Errorf("in %q mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is required", MappingModeMultiTable)
 		}
 	}
 
@@ -182,7 +182,7 @@ func (t *Timestream) Connect() error {
 		t.MaxWriteGoRoutinesCount = MaxWriteRoutinesDefault
 	}
 
-	t.Log.Infof("Constructing Timestream client for '%s' mode", t.MappingMode)
+	t.Log.Infof("Constructing Timestream client for %q mode", t.MappingMode)
 
 	svc, err := WriteFactory(&t.CredentialConfig)
 	if err != nil {
@@ -190,17 +190,17 @@ func (t *Timestream) Connect() error {
 	}
 
 	if t.DescribeDatabaseOnStart {
-		t.Log.Infof("Describing database '%s' in region '%s'", t.DatabaseName, t.Region)
+		t.Log.Infof("Describing database %q in region %q", t.DatabaseName, t.Region)
 
 		describeDatabaseInput := &timestreamwrite.DescribeDatabaseInput{
 			DatabaseName: aws.String(t.DatabaseName),
 		}
 		describeDatabaseOutput, err := svc.DescribeDatabase(context.Background(), describeDatabaseInput)
 		if err != nil {
-			t.Log.Errorf("Couldn't describe database '%s'. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
+			t.Log.Errorf("Couldn't describe database %q. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
 			return err
 		}
-		t.Log.Infof("Describe database '%s' returned: '%s'.", t.DatabaseName, describeDatabaseOutput)
+		t.Log.Infof("Describe database %q returned %v", t.DatabaseName, describeDatabaseOutput)
 	}
 
 	t.svc = svc
@@ -279,42 +279,41 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 		var notFound *types.ResourceNotFoundException
 		if errors.As(err, &notFound) {
 			if resourceNotFoundRetry {
-				t.Log.Warnf("Failed to write to Timestream database '%s' table '%s'. Error: '%s'",
+				t.Log.Warnf("Failed to write to Timestream database %q table %q: %s",
 					t.DatabaseName, *writeRecordsInput.TableName, notFound)
 				return t.createTableAndRetry(writeRecordsInput)
 			}
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
 			// log error and return error to telegraf to retry in next flush interval
 			// We need this is to avoid data drop when there are no tables present in the database
-			return fmt.Errorf("failed to write to Timestream database '%s' table '%s', Error: '%s'",
-				t.DatabaseName, *writeRecordsInput.TableName, err)
+			return fmt.Errorf("failed to write to Timestream database %q table %q: %w", t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 
 		var rejected *types.RejectedRecordsException
 		if errors.As(err, &rejected) {
 			t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
 			for _, rr := range rejected.RejectedRecords {
-				t.Log.Errorf("reject reason: '%s', record index: '%d'", aws.ToString(rr.Reason), rr.RecordIndex)
+				t.Log.Errorf("reject reason: %q, record index: '%d'", aws.ToString(rr.Reason), rr.RecordIndex)
 			}
 			return nil
 		}
 
 		var throttling *types.ThrottlingException
 		if errors.As(err, &throttling) {
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+			return fmt.Errorf("unable to write to Timestream database %q table %q: %w",
 				t.DatabaseName, *writeRecordsInput.TableName, throttling)
 		}
 
 		var internal *types.InternalServerException
 		if errors.As(err, &internal) {
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+			return fmt.Errorf("unable to write to Timestream database %q table %q: %w",
 				t.DatabaseName, *writeRecordsInput.TableName, internal)
 		}
 
 		var operation *smithy.OperationError
 		if !errors.As(err, &operation) {
 			// Retry other, non-aws errors.
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+			return fmt.Errorf("unable to write to Timestream database %q table %q: %w",
 				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 		t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
@@ -323,25 +322,25 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 }
 
 func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
-	t.Log.Errorf("Failed to write to Timestream database '%s' table '%s'. Skipping metric! Error: '%s'",
-		t.DatabaseName, *tableName, err)
+	t.Log.Errorf("Failed to write to Timestream database %q table %q: %s. Skipping metric!",
+		t.DatabaseName, *tableName, err.Error())
 }
 
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
 	if t.CreateTableIfNotExists {
 		t.Log.Infof(
-			"Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.",
+			"Trying to create table %q in database %q, as 'CreateTableIfNotExists' config key is 'true'.",
 			*writeRecordsInput.TableName,
 			t.DatabaseName,
 		)
 		err := t.createTable(writeRecordsInput.TableName)
 		if err == nil {
-			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
+			t.Log.Infof("Table %q in database %q created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
 			return t.writeToTimestream(writeRecordsInput, false)
 		}
-		t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
+		t.Log.Errorf("Failed to create table %q in database %q: %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err.Error())
 	} else {
-		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!",
+		t.Log.Errorf("Not trying to create table %q in database %q, as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!",
 			*writeRecordsInput.TableName, t.DatabaseName)
 	}
 	return nil
@@ -368,7 +367,8 @@ func (t *Timestream) createTable(tableName *string) error {
 
 	_, err := t.svc.CreateTable(context.Background(), createTableInput)
 	if err != nil {
-		if _, ok := err.(*types.ConflictException); ok {
+		var e *types.ConflictException
+		if errors.As(err, &e) {
 			// if the table was created in the meantime, it's ok.
 			return nil
 		}
@@ -469,7 +469,7 @@ func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Reco
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
-			t.Log.Warnf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+			t.Log.Warnf("Skipping field %q. The type %q is not supported in Timestream as MeasureValue. "+
 				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
 				fieldName, reflect.TypeOf(fieldValue))
 			continue
@@ -503,7 +503,7 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
-			t.Log.Warnf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+			t.Log.Warnf("Skipping field %q. The type %q is not supported in Timestream as MeasureValue. "+
 				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
 				fieldName, reflect.TypeOf(fieldValue))
 			continue

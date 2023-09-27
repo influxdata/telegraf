@@ -21,8 +21,9 @@ var (
 )
 
 type Fail2ban struct {
+	UseSudo bool   `toml:"use_sudo"`
+	Socket  string `toml:"socket"`
 	path    string
-	UseSudo bool
 }
 
 var metricsTargets = []struct {
@@ -50,7 +51,7 @@ func (f *Fail2ban) Init() error {
 	if f.path == "" {
 		path, err := exec.LookPath(cmd)
 		if err != nil {
-			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+			return fmt.Errorf("looking up %q failed: %w", cmd, err)
 		}
 		f.path = path
 	}
@@ -69,19 +70,22 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	}
 
 	name := f.path
-	var arg []string
+	var args []string
 
 	if f.UseSudo {
 		name = "sudo"
-		arg = append(arg, f.path)
+		args = append(args, f.path)
 	}
 
-	args := append(arg, "status")
+	if f.Socket != "" {
+		args = append(args, "--socket", f.Socket)
+	}
+	args = append(args, "status")
 
 	cmd := execCommand(name, args...)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	lines := strings.Split(string(out), "\n")
 	const targetString = "Jail list:"
@@ -97,12 +101,15 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, jail := range jails {
+		// Skip over empty jails
+		if jail == "" {
+			continue
+		}
 		fields := make(map[string]interface{})
-		args := append(arg, "status", jail)
-		cmd := execCommand(name, args...)
+		cmd := execCommand(name, append(args, jail)...)
 		out, err := cmd.Output()
 		if err != nil {
-			return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+			return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 		}
 
 		lines := strings.Split(string(out), "\n")

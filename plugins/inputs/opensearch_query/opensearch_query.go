@@ -12,12 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opensearch-project/opensearch-go/v2"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	influxtls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/opensearch-project/opensearch-go/v2"
-	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
 //go:embed sample.conf
@@ -69,7 +70,7 @@ func (o *OpensearchQuery) Init() error {
 
 	err := o.newClient()
 	if err != nil {
-		o.Log.Errorf("error creating OpenSearch client: %w", err)
+		o.Log.Errorf("Error creating OpenSearch client: %v", err)
 	}
 
 	for i, agg := range o.Aggregations {
@@ -90,7 +91,7 @@ func (o *OpensearchQuery) Init() error {
 func (o *OpensearchQuery) initAggregation(agg osAggregation, i int) (err error) {
 	for _, metricField := range agg.MetricFields {
 		if _, ok := agg.mapMetricFields[metricField]; !ok {
-			return fmt.Errorf("metric field '%s' not found on index '%s'", metricField, agg.Index)
+			return fmt.Errorf("metric field %q not found on index %q", metricField, agg.Index)
 		}
 	}
 
@@ -108,17 +109,18 @@ func (o *OpensearchQuery) newClient() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
+
 	password, err := o.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
-		Username:  string(username),
-		Password:  string(password),
+		Username:  username.String(),
+		Password:  password.String(),
 	}
 
 	if o.InsecureSkipVerify {
@@ -143,7 +145,7 @@ func (o *OpensearchQuery) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := o.osAggregationQuery(acc, agg)
 			if err != nil {
-				acc.AddError(fmt.Errorf("opensearch query aggregation %s: %s ", agg.MeasurementName, err))
+				acc.AddError(fmt.Errorf("opensearch query aggregation %q: %w ", agg.MeasurementName, err))
 			}
 		}(agg)
 	}
@@ -212,7 +214,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 		return nil, err
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("Opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
+		return nil, fmt.Errorf("opensearch SearchRequest failure: [%d] %s", resp.StatusCode, resp.Status())
 	}
 	defer resp.Body.Close()
 

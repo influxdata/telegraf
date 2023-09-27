@@ -3,6 +3,7 @@ package udp_listener
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -48,7 +48,7 @@ type UDPListener struct {
 	// malformed tracks the number of malformed packets
 	malformed int
 
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	// Keep the accumulator in this struct
 	acc telegraf.Accumulator
@@ -82,7 +82,7 @@ func (u *UDPListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *UDPListener) SetParser(parser parsers.Parser) {
+func (u *UDPListener) SetParser(parser telegraf.Parser) {
 	u.parser = parser
 }
 
@@ -120,7 +120,7 @@ func (u *UDPListener) Stop() {
 	defer u.Unlock()
 	close(u.done)
 	u.wg.Wait()
-	u.listener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+	u.listener.Close()
 	close(u.in)
 	u.Log.Infof("Stopped service on %q", u.ServiceAddress)
 }
@@ -140,7 +140,7 @@ func (u *UDPListener) udpListen() error {
 	if u.UDPBufferSize > 0 {
 		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
 		if err != nil {
-			return fmt.Errorf("failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
+			return fmt.Errorf("failed to set UDP read buffer to %d: %w", u.UDPBufferSize, err)
 		}
 	}
 
@@ -164,7 +164,8 @@ func (u *UDPListener) udpListenLoop() {
 
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {
-				if err, ok := err.(net.Error); !ok || !err.Timeout() {
+				var netErr net.Error
+				if !errors.As(err, &netErr) || !netErr.Timeout() {
 					u.Log.Error(err.Error())
 				}
 				continue

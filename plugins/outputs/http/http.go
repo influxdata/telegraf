@@ -15,6 +15,8 @@ import (
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/idtoken"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -23,8 +25,6 @@ import (
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/idtoken"
 )
 
 //go:embed sample.conf
@@ -85,7 +85,7 @@ func (h *HTTP) Connect() error {
 		h.Method = http.MethodPost
 	}
 	h.Method = strings.ToUpper(h.Method)
-	if h.Method != http.MethodPost && h.Method != http.MethodPut {
+	if h.Method != http.MethodPost && h.Method != http.MethodPut && h.Method != http.MethodPatch {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
@@ -105,11 +105,8 @@ func (h *HTTP) Close() error {
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
-	var reqBody []byte
-
 	if h.UseBatchFormat {
-		var err error
-		reqBody, err = h.serializer.SerializeBatch(metrics)
+		reqBody, err := h.serializer.SerializeBatch(metrics)
 		if err != nil {
 			return err
 		}
@@ -118,8 +115,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		var err error
-		reqBody, err = h.serializer.Serialize(metric)
+		reqBody, err := h.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
@@ -183,14 +179,14 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := h.Password.Get()
 		if err != nil {
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-
-		req.SetBasicAuth(string(username), string(password))
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	// google api auth
@@ -239,7 +235,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
+		return fmt.Errorf("when writing to [%s] received error: %w", h.URL, err)
 	}
 
 	return nil
@@ -262,12 +258,12 @@ func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Tok
 
 	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
 	if err != nil {
-		return nil, fmt.Errorf("error creating oauth2 token source: %s", err)
+		return nil, fmt.Errorf("error creating oauth2 token source: %w", err)
 	}
 
 	token, err := ts.Token()
 	if err != nil {
-		return nil, fmt.Errorf("error fetching oauth2 token: %s", err)
+		return nil, fmt.Errorf("error fetching oauth2 token: %w", err)
 	}
 
 	h.oauth2Token = token

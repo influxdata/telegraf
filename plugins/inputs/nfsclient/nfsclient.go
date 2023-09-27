@@ -4,6 +4,7 @@ package nfsclient
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -50,8 +51,9 @@ func convertToUint64(line []string) ([]uint64, error) {
 	for _, l := range line[1:] {
 		val, err := strconv.ParseUint(l, 10, 64)
 		if err != nil {
-			if numError, ok := err.(*strconv.NumError); ok {
-				if numError.Err == strconv.ErrRange {
+			var numError *strconv.NumError
+			if errors.As(err, &numError) {
+				if errors.Is(numError.Err, strconv.ErrRange) {
 					return nil, fmt.Errorf("errrange: line:[%v] raw:[%v] -> parsed:[%v]", line, l, val)
 				}
 			}
@@ -294,9 +296,19 @@ func (*NFSClient) SampleConfig() string {
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
+	if _, err := os.Stat(n.mountstatsPath); os.IsNotExist(err) {
+		return err
+	}
+
+	// Attempt to read the file to see if we have permissions before opening
+	// which can lead to a panic
+	if _, err := os.ReadFile(n.mountstatsPath); err != nil {
+		return err
+	}
+
 	file, err := os.Open(n.mountstatsPath)
 	if err != nil {
-		n.Log.Errorf("Failed opening the [%s] file: %s ", file, err)
+		n.Log.Errorf("Failed opening the %q file: %v ", file.Name(), err)
 		return err
 	}
 	defer file.Close()
@@ -306,12 +318,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	if err := scanner.Err(); err != nil {
-		n.Log.Errorf("%s", err)
-		return err
-	}
-
-	return nil
+	return scanner.Err()
 }
 
 func (n *NFSClient) Init() error {

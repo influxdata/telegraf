@@ -4,6 +4,7 @@ package instrumental
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -14,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
@@ -28,6 +28,7 @@ var (
 
 type Instrumental struct {
 	Host       string          `toml:"host"`
+	Port       int             `toml:"port"`
 	APIToken   config.Secret   `toml:"api_token"`
 	Prefix     string          `toml:"prefix"`
 	DataFormat string          `toml:"data_format"`
@@ -38,11 +39,13 @@ type Instrumental struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	conn net.Conn
+	conn       net.Conn
+	serializer *graphite.GraphiteSerializer
 }
 
 const (
 	DefaultHost     = "collector.instrumentalapp.com"
+	DefaultPort     = 8000
 	HelloMessage    = "hello version go/telegraf/1.1\n"
 	AuthFormat      = "authenticate %s\n"
 	HandshakeFormat = HelloMessage + AuthFormat
@@ -52,8 +55,25 @@ func (*Instrumental) SampleConfig() string {
 	return sampleConfig
 }
 
+func (i *Instrumental) Init() error {
+	s := &graphite.GraphiteSerializer{
+		Prefix:          i.Prefix,
+		Template:        i.Template,
+		TagSanitizeMode: "strict",
+		Separator:       ".",
+		Templates:       i.Templates,
+	}
+	if err := s.Init(); err != nil {
+		return err
+	}
+	i.serializer = s
+
+	return nil
+}
+
 func (i *Instrumental) Connect() error {
-	connection, err := net.DialTimeout("tcp", i.Host+":8000", time.Duration(i.Timeout))
+	addr := fmt.Sprintf("%s:%d", i.Host, i.Port)
+	connection, err := net.DialTimeout("tcp", addr, time.Duration(i.Timeout))
 
 	if err != nil {
 		i.conn = nil
@@ -79,13 +99,8 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
-			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %s", err)
+			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %w", err)
 		}
-	}
-
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, "strict", ".", i.Templates)
-	if err != nil {
-		return err
 	}
 
 	var points []string
@@ -106,7 +121,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		metricType = m.Tags()["metric_type"]
 		m.RemoveTag("metric_type")
 
-		buf, err := s.Serialize(m)
+		buf, err := i.serializer.Serialize(m)
 		if err != nil {
 			i.Log.Debugf("Could not serialize metric: %v", err)
 			continue
@@ -145,10 +160,8 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	}
 
 	allPoints := strings.Join(points, "")
-	_, err = fmt.Fprint(i.conn, allPoints)
-
-	if err != nil {
-		if err == io.EOF {
+	if _, err := fmt.Fprint(i.conn, allPoints); err != nil {
+		if errors.Is(err, io.EOF) {
 			_ = i.Close()
 		}
 
@@ -168,9 +181,9 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	if err != nil {
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	defer config.ReleaseSecret(token)
+	defer token.Destroy()
 
-	if _, err := fmt.Fprintf(conn, HandshakeFormat, string(token)); err != nil {
+	if _, err := fmt.Fprintf(conn, HandshakeFormat, token.TemporaryString()); err != nil {
 		return err
 	}
 
@@ -192,6 +205,7 @@ func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
+			Port:     DefaultPort,
 			Template: graphite.DefaultTemplate,
 		}
 	})

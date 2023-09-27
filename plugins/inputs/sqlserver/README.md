@@ -12,6 +12,7 @@ supplied by SQL Server.
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
 - Azure SQL Elastic Pool
+- Azure Arc-enabled SQL Managed Instance
 
 ## Additional Setup
 
@@ -135,7 +136,7 @@ to use them.
   ## All connection parameters are optional.
   ## By default, the host is localhost, listening on default port, TCP 1433.
   ##   for Windows, the user is the currently running AD user (SSO).
-  ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
+  ##   See https://github.com/microsoft/go-mssqldb for detailed connection
   ##   parameters, in particular, tls connections can be created like so:
   ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
   servers = [
@@ -178,6 +179,10 @@ to use them.
   ## Queries enabled by default for database_type = "AzureSQLPool" are -
   ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats,
   ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
+
+  ## Queries enabled by default for database_type = "AzureArcSQLManagedInstance" are -
+  ## AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats,
+  ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
 
   ## Following are old config settings
   ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
@@ -286,7 +291,7 @@ in a connection string.
 To enable support for AAD authentication, we leverage the existing AAD
 authentication support.
 
-- Please see [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
+- Please see [SQL Server driver for Go](https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication)
 
 ### How to use AAD Auth with MSI
 
@@ -534,7 +539,7 @@ gathered.
 
 ## Example Output
 
-```shell
+```text
 sqlserver_cpu_other_process_cpu{host="servername",measurement_db_type="SQLServer",sql_instance="SERVERNAME:INST"} 9
 sqlserver_performance{counter="Log File(s) Size (KB)",counter_type="65792",host="servername",instance="instance_name",measurement_db_type="SQLServer",object="MSSQL$INSTANCE_NAME:Databases",sql_instance="SERVERNAME:INSTANCE_NAME"} 1.048568e+06
 ```

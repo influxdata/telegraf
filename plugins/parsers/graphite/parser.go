@@ -108,7 +108,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	// Parse value.
 	v, err := strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return nil, fmt.Errorf(`field "%s" value: %s`, fields[0], err)
+		return nil, fmt.Errorf(`field %q value: %w`, fields[0], err)
 	}
 
 	fieldValues := map[string]interface{}{}
@@ -125,7 +125,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// Parse timestamp.
 		unixTime, err := strconv.ParseFloat(fields[2], 64)
 		if err != nil {
-			return nil, fmt.Errorf(`field "%s" time: %s`, fields[0], err)
+			return nil, fmt.Errorf(`field %q time: %w`, fields[0], err)
 		}
 
 		// -1 is a special value that gets converted to current UTC time
@@ -195,12 +195,4 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 func init() {
 	parsers.Add("graphite", func(_ string) telegraf.Parser { return &Parser{} })
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Templates = append(p.Templates, config.Templates...)
-	p.Separator = config.Separator
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
 }

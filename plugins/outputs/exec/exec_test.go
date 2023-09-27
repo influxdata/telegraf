@@ -10,7 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -57,7 +57,8 @@ func TestExec(t *testing.T) {
 				runner:  &CommandRunner{},
 			}
 
-			s := serializers.NewInfluxSerializer()
+			s := &influx.Serializer{}
+			require.NoError(t, s.Init())
 			e.SetSerializer(s)
 
 			require.NoError(t, e.Connect())

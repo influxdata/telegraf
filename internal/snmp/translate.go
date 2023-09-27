@@ -135,7 +135,7 @@ func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 			return nil
 		})
 		if err != nil {
-			return folders, fmt.Errorf("couldn't walk path %q: %v", mibPath, err)
+			return folders, fmt.Errorf("couldn't walk path %q: %w", mibPath, err)
 		}
 	}
 	return folders, nil

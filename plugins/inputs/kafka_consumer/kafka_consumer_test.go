@@ -21,7 +21,7 @@ import (
 	kafkaOutput "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -293,12 +293,16 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 
 func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parser := value.Parser{
-		MetricName: "cpu",
-		DataType:   "int",
+
+	parserFunc := func() (telegraf.Parser, error) {
+		parser := &value.Parser{
+			MetricName: "cpu",
+			DataType:   "int",
+		}
+		err := parser.Init()
+		return parser, err
 	}
-	require.NoError(t, parser.Init())
-	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
+	cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -326,12 +330,15 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 
 func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parser := value.Parser{
-		MetricName: "cpu",
-		DataType:   "int",
+	parserFunc := func() (telegraf.Parser, error) {
+		parser := &value.Parser{
+			MetricName: "cpu",
+			DataType:   "int",
+		}
+		err := parser.Init()
+		return parser, err
 	}
-	require.NoError(t, parser.Init())
-	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
+	cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -444,12 +451,15 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := &testutil.Accumulator{}
-			parser := value.Parser{
-				MetricName: "cpu",
-				DataType:   "int",
+			parserFunc := func() (telegraf.Parser, error) {
+				parser := &value.Parser{
+					MetricName: "cpu",
+					DataType:   "int",
+				}
+				err := parser.Init()
+				return parser, err
 			}
-			require.NoError(t, parser.Init())
-			cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
+			cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag
 
@@ -476,11 +486,15 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}
 
 	var tests = []struct {
-		name               string
-		connectionStrategy string
+		name                 string
+		connectionStrategy   string
+		topics               []string
+		topicRegexps         []string
+		topicRefreshInterval config.Duration
 	}{
-		{"connection strategy startup", "startup"},
-		{"connection strategy defer", "defer"},
+		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
+		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
+		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
 	}
 
 	for _, tt := range tests {
@@ -513,7 +527,6 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			defer zookeeper.Terminate()
 
 			t.Logf("rt: starting broker")
-			topic := "Test"
 			container := testutil.Container{
 				Name:         "telegraf-test-kafka-consumer",
 				Image:        "wurstmeister/kafka",
@@ -522,7 +535,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
 					"KAFKA_ADVERTISED_PORT":      "9092",
 					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
-					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", topic),
+					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", "Test"),
 				},
 				Networks:   []string{networkName},
 				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
@@ -540,10 +553,11 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			output, ok := creator().(*kafkaOutput.Kafka)
 			require.True(t, ok)
 
-			s := serializers.NewInfluxSerializer()
+			s := &influxSerializer.Serializer{}
+			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers
-			output.Topic = topic
+			output.Topic = "Test"
 			output.Log = testutil.Logger{}
 
 			require.NoError(t, output.Init())
@@ -554,13 +568,17 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			input := KafkaConsumer{
 				Brokers:                brokers,
 				Log:                    testutil.Logger{},
-				Topics:                 []string{topic},
+				Topics:                 tt.topics,
+				TopicRegexps:           tt.topicRegexps,
 				MaxUndeliveredMessages: 1,
 				ConnectionStrategy:     tt.connectionStrategy,
 			}
-			parser := &influx.Parser{}
-			require.NoError(t, parser.Init())
-			input.SetParser(parser)
+			parserFunc := func() (telegraf.Parser, error) {
+				parser := &influx.Parser{}
+				err := parser.Init()
+				return parser, err
+			}
+			input.SetParserFunc(parserFunc)
 			require.NoError(t, input.Init())
 
 			acc := testutil.Accumulator{}
@@ -592,7 +610,7 @@ func TestExponentialBackoff(t *testing.T) {
 	max := 3
 
 	// get an unused port by listening on next available port, then closing it
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	require.NoError(t, listener.Close())
@@ -616,9 +634,12 @@ func TestExponentialBackoff(t *testing.T) {
 			},
 		},
 	}
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-	input.SetParser(parser)
+	parserFunc := func() (telegraf.Parser, error) {
+		parser := &influx.Parser{}
+		err := parser.Init()
+		return parser, err
+	}
+	input.SetParserFunc(parserFunc)
 
 	//time how long initialization (connection) takes
 	start := time.Now()
@@ -661,9 +682,12 @@ func TestExponentialBackoffDefault(t *testing.T) {
 			},
 		},
 	}
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-	input.SetParser(parser)
+	parserFunc := func() (telegraf.Parser, error) {
+		parser := &influx.Parser{}
+		err := parser.Init()
+		return parser, err
+	}
+	input.SetParserFunc(parserFunc)
 
 	require.NoError(t, input.Init())
 

@@ -83,39 +83,33 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	pidCount := 0
 	now := time.Now()
 	newProcs := make(map[PID]Process, len(p.procs))
+	tags := make(map[string]string)
 	pidTags := p.findPids()
 	for _, pidTag := range pidTags {
 		pids := pidTag.PIDS
-		tags := pidTag.Tags
 		err := pidTag.Err
 		pidCount += len(pids)
+		for key, value := range pidTag.Tags {
+			tags[key] = value
+		}
 		if err != nil {
 			fields := map[string]interface{}{
 				"pid_count":   0,
 				"running":     0,
 				"result_code": 1,
 			}
-			tags := map[string]string{
-				"pid_finder": p.PidFinder,
-				"result":     "lookup_error",
-			}
+			tags["pid_finder"] = p.PidFinder
+			tags["result"] = "lookup_error"
 			acc.AddFields("procstat_lookup", fields, tags, now)
 			return err
 		}
 
-		p.updateProcesses(pids, tags, p.procs, newProcs)
+		p.updateProcesses(pids, pidTag.Tags, p.procs, newProcs)
 	}
 
 	p.procs = newProcs
 	for _, proc := range p.procs {
 		p.addMetric(proc, acc, now)
-	}
-
-	tags := make(map[string]string)
-	for _, pidTag := range pidTags {
-		for key, value := range pidTag.Tags {
-			tags[key] = value
-		}
 	}
 
 	fields := map[string]interface{}{
@@ -231,15 +225,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
+	// This only returns values for RSS and VMS
 	mem, err := proc.MemoryInfo()
 	if err == nil {
 		fields[prefix+"memory_rss"] = mem.RSS
 		fields[prefix+"memory_vms"] = mem.VMS
-		fields[prefix+"memory_swap"] = mem.Swap
-		fields[prefix+"memory_data"] = mem.Data
-		fields[prefix+"memory_stack"] = mem.Stack
-		fields[prefix+"memory_locked"] = mem.Locked
 	}
+
+	collectMemmap(proc, prefix, fields)
 
 	memPerc, err := proc.MemoryPercent()
 	if err == nil {
@@ -288,6 +281,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 	ppid, err := proc.Ppid()
 	if err == nil {
 		fields[prefix+"ppid"] = ppid
+	}
+
+	status, err := proc.Status()
+	if err == nil {
+		fields[prefix+"status"] = status[0]
 	}
 
 	acc.AddFields("procstat", fields, proc.Tags(), t)
@@ -432,7 +430,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 		}
 		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
+			return nil, fmt.Errorf("invalid pid %q", kv[1])
 		}
 		pids = append(pids, PID(pid))
 	}
@@ -448,7 +446,7 @@ func (p *Procstat) cgroupPIDs() []PidsTags {
 
 	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		return []PidsTags{{nil, nil, fmt.Errorf("glob failed '%s'", err)}}
+		return []PidsTags{{nil, nil, fmt.Errorf("glob failed: %w", err)}}
 	}
 
 	pidTags := make([]PidsTags, 0, len(items))
@@ -483,7 +481,7 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 		}
 		pid, err := strconv.ParseInt(string(pidBS), 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", pidBS)
+			return nil, fmt.Errorf("invalid pid %q", pidBS)
 		}
 		pids = append(pids, PID(pid))
 	}

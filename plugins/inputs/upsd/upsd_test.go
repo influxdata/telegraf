@@ -44,6 +44,7 @@ func TestUpsdGather(t *testing.T) {
 					"nominal_input_voltage":   float64(230),
 					"nominal_power":           int64(700),
 					"output_voltage":          float64(230),
+					"real_power":              float64(41),
 					"status_flags":            uint64(8),
 					"time_left_ns":            int64(600000000000),
 					"ups_status":              "OL",
@@ -72,6 +73,7 @@ func TestUpsdGather(t *testing.T) {
 					"nominal_input_voltage":   float64(230),
 					"nominal_power":           int64(700),
 					"output_voltage":          float64(230),
+					"real_power":              float64(41),
 					"status_flags":            uint64(8),
 					"time_left_ns":            int64(600000000000),
 					"ups_status":              "OL",
@@ -99,6 +101,7 @@ func TestUpsdGather(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+				acc.AssertContainsFields(t, "upsd", tt.fields)
 				acc.AssertContainsTaggedFields(t, "upsd", tt.fields, tt.tags)
 			}
 			cancel()
@@ -242,11 +245,12 @@ VAR fake device.model "Model 12345"
 VAR fake input.voltage "242.0"
 VAR fake ups.load "23.0"
 VAR fake battery.charge "100.0"
-VAR fake battery.runtime "600"
+VAR fake battery.runtime "600.00"
 VAR fake output.voltage "230.0"
 VAR fake battery.voltage "13.4"
 VAR fake input.voltage.nominal "230.0"
 VAR fake battery.voltage.nominal "24.0"
+VAR fake ups.realpower "41.0"
 VAR fake ups.realpower.nominal "700"
 VAR fake ups.firmware "CUSTOM_FIRMWARE"
 VAR fake battery.mfr.date "2016-07-26"
@@ -264,6 +268,7 @@ END LIST VAR fake
 	m = appendVariable(m, "battery.voltage", "NUMBER")
 	m = appendVariable(m, "input.voltage.nominal", "NUMBER")
 	m = appendVariable(m, "battery.voltage.nominal", "NUMBER")
+	m = appendVariable(m, "ups.realpower", "NUMBER")
 	m = appendVariable(m, "ups.realpower.nominal", "NUMBER")
 	m = appendVariable(m, "ups.firmware", "STRING:64")
 	m = appendVariable(m, "battery.mfr.date", "STRING:64")

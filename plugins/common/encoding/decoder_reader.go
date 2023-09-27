@@ -133,7 +133,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 		if r.src0 != r.src1 || r.err != nil {
 			var err error
 			r.dst0 = 0
-			r.dst1, n, err = r.t.Transform(r.dst, r.src[r.src0:r.src1], r.err == io.EOF)
+			r.dst1, n, err = r.t.Transform(r.dst, r.src[r.src0:r.src1], errors.Is(r.err, io.EOF))
 			r.src0 += n
 
 			switch {
@@ -145,16 +145,16 @@ func (r *Reader) Read(p []byte) (int, error) {
 				// cannot read more bytes into src.
 				r.transformComplete = r.err != nil
 				continue
-			case err == ErrShortDst && (r.dst1 != 0 || n != 0):
+			case errors.Is(err, ErrShortDst) && (r.dst1 != 0 || n != 0):
 				// Make room in dst by copying out, and try again.
 				continue
-			case err == ErrShortSrc && r.src1-r.src0 != len(r.src) && r.err == nil:
+			case errors.Is(err, ErrShortSrc) && r.src1-r.src0 != len(r.src) && r.err == nil:
 				// Read more bytes into src via the code below, and try again.
 			default:
 				r.transformComplete = true
 				// The reader error (r.err) takes precedence over the
 				// transformer error (err) unless r.err is nil or io.EOF.
-				if r.err == nil || r.err == io.EOF {
+				if r.err == nil || errors.Is(r.err, io.EOF) {
 					r.err = err
 				}
 				continue

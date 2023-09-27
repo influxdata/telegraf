@@ -51,33 +51,6 @@ to use them.
   ##   ex: version = "1.1.0"
   # version = ""
 
-  ## Optional topic suffix configuration.
-  ## If the section is omitted, no suffix is used.
-  ## Following topic suffix methods are supported:
-  ##   measurement - suffix equals to separator + measurement's name
-  ##   tags        - suffix equals to separator + specified tags' values
-  ##                 interleaved with separator
-
-  ## Suffix equals to "_" + measurement name
-  # [outputs.kafka.topic_suffix]
-  #   method = "measurement"
-  #   separator = "_"
-
-  ## Suffix equals to "__" + measurement's "foo" tag value.
-  ##   If there's no such a tag, suffix equals to an empty string
-  # [outputs.kafka.topic_suffix]
-  #   method = "tags"
-  #   keys = ["foo"]
-  #   separator = "__"
-
-  ## Suffix equals to "_" + measurement's "foo" and "bar"
-  ##   tag values, separated by "_". If there is no such tags,
-  ##   their values treated as empty strings.
-  # [outputs.kafka.topic_suffix]
-  #   method = "tags"
-  #   keys = ["foo", "bar"]
-  #   separator = "_"
-
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
   ## send the message to.  This tag is prefered over the routing_key option.
@@ -161,7 +134,7 @@ to use them.
   ## (defaults to PLAIN)
   # sasl_mechanism = ""
 
-  ## used if sasl_mechanism is GSSAPI (experimental)
+  ## used if sasl_mechanism is GSSAPI
   # sasl_gssapi_service_name = ""
   # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
   # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
@@ -170,8 +143,12 @@ to use them.
   # sasl_gssapi_key_tab_path = ""
   # sasl_gssapi_disable_pafxfast = false
 
-  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  ## Access token used if sasl_mechanism is OAUTHBEARER
   # sasl_access_token = ""
+
+  ## Arbitrary key value string pairs to pass as a TOML table. For example:
+  # {logicalCluster = "cluster-042", poolId = "pool-027"}
+  # sasl_extensions = {}
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
@@ -184,6 +161,37 @@ to use them.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Optional topic suffix configuration.
+  ## If the section is omitted, no suffix is used.
+  ## Following topic suffix methods are supported:
+  ##   measurement - suffix equals to separator + measurement's name
+  ##   tags        - suffix equals to separator + specified tags' values
+  ##                 interleaved with separator
+
+  ## Suffix equals to "_" + measurement name
+  # [outputs.kafka.topic_suffix]
+  #   method = "measurement"
+  #   separator = "_"
+
+  ## Suffix equals to "__" + measurement's "foo" tag value.
+  ## If there's no such a tag, suffix equals to an empty string
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo"]
+  #   separator = "__"
+
+  ## Suffix equals to "_" + measurement's "foo" and "bar"
+  ## tag values, separated by "_". If there is no such tags,
+  ## their values treated as empty strings.
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo", "bar"]
+  #   separator = "_"
 ```
 
 ### `max_retry`

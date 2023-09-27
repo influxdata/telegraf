@@ -134,7 +134,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 		output := strings.Join(batch, "\n")
 		if output != "" {
 			if err := d.send(output); err != nil {
-				return fmt.Errorf("error processing data:, %s", err.Error())
+				return fmt.Errorf("error processing data: %w", err)
 			}
 		}
 	}
@@ -147,7 +147,7 @@ func (d *Dynatrace) send(msg string) error {
 	req, err := http.NewRequest("POST", d.URL, bytes.NewBufferString(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while creating HTTP request: %w", err)
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
 
@@ -156,8 +156,8 @@ func (d *Dynatrace) send(msg string) error {
 		if err != nil {
 			return fmt.Errorf("getting token failed: %w", err)
 		}
-		req.Header.Add("Authorization", "Api-Token "+string(token))
-		config.ReleaseSecret(token)
+		req.Header.Add("Authorization", "Api-Token "+token.String())
+		token.Destroy()
 	}
 	// add user-agent header to identify metric source
 	req.Header.Add("User-Agent", "telegraf")
@@ -165,12 +165,12 @@ func (d *Dynatrace) send(msg string) error {
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		return fmt.Errorf("error while sending HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while sending HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
-		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
+		return fmt.Errorf("request failed with response code: %d", resp.StatusCode)
 	}
 
 	// print metric line results as info log

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -17,13 +18,16 @@ import (
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -53,9 +57,18 @@ func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monitoring
 	if xg := md["x-goog-api-client"]; len(xg) == 0 || !strings.Contains(xg[0], "gl-go/") {
 		return nil, fmt.Errorf("x-goog-api-client = %v, expected gl-go key", xg)
 	}
+
 	s.reqs = append(s.reqs, req)
 	if s.err != nil {
-		return nil, s.err
+		var statusResp *status.Status
+		switch s.err.Error() {
+		case "InvalidArgument":
+			statusResp = status.New(codes.InvalidArgument, s.err.Error())
+		default:
+			statusResp = status.New(codes.Unknown, s.err.Error())
+		}
+
+		return nil, statusResp.Err()
 	}
 	return s.resps[0].(*emptypb.Empty), nil
 }
@@ -314,14 +327,16 @@ func TestWriteBatchable(t *testing.T) {
 	err = s.Write(metrics)
 	require.NoError(t, err)
 
-	require.Len(t, mockMetric.reqs, 2)
+	require.Len(t, mockMetric.reqs, 5)
+
+	// Request 1 with two time series
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Len(t, request.TimeSeries, 6)
+	require.Len(t, request.TimeSeries, 2)
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
 		EndTime: &timestamppb.Timestamp{
-			Seconds: 3,
+			Seconds: 1,
 		},
 	})
 	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
@@ -343,31 +358,47 @@ func TestWriteBatchable(t *testing.T) {
 		},
 	})
 
-	ts = request.TimeSeries[2]
+	// Request 2 with 1 time series
+	request = mockMetric.reqs[1].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 1)
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+	require.Equal(t, &monitoringpb.TimeInterval{
+		EndTime: &timestamppb.Timestamp{
+			Seconds: 2,
+		},
+	}, request.TimeSeries[0].Points[0].Interval)
+
+	// Request 3 with 1 time series with 1 point
+	request = mockMetric.reqs[2].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 3)
+	require.Len(t, request.TimeSeries[0].Points, 1)
+	require.Len(t, request.TimeSeries[1].Points, 1)
+	require.Len(t, request.TimeSeries[2].Points, 1)
+	require.Equal(t, &monitoringpb.TimeInterval{
 		EndTime: &timestamppb.Timestamp{
 			Seconds: 3,
 		},
-	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
-			Int64Value: int64(43),
-		},
-	})
+	}, request.TimeSeries[0].Points[0].Interval)
 
-	ts = request.TimeSeries[4]
-	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+	// Request 4 with 1 time series with 1 point
+	request = mockMetric.reqs[3].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 1)
+	require.Len(t, request.TimeSeries[0].Points, 1)
+	require.Equal(t, &monitoringpb.TimeInterval{
+		EndTime: &timestamppb.Timestamp{
+			Seconds: 4,
+		},
+	}, request.TimeSeries[0].Points[0].Interval)
+
+	// Request 5 with 1 time series with 1 point
+	request = mockMetric.reqs[4].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 1)
+	require.Len(t, request.TimeSeries[0].Points, 1)
+	require.Equal(t, &monitoringpb.TimeInterval{
 		EndTime: &timestamppb.Timestamp{
 			Seconds: 5,
 		},
-	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
-			Int64Value: int64(43),
-		},
-	})
+	}, request.TimeSeries[0].Points[0].Interval)
 }
 
 func TestWriteIgnoredErrors(t *testing.T) {
@@ -377,21 +408,14 @@ func TestWriteIgnoredErrors(t *testing.T) {
 		expectedErr bool
 	}{
 		{
-			name: "points too old",
-			err:  errors.New(errStringPointsTooOld),
-		},
-		{
-			name: "points out of order",
-			err:  errors.New(errStringPointsOutOfOrder),
-		},
-		{
-			name: "points too frequent",
-			err:  errors.New(errStringPointsTooFrequent),
-		},
-		{
 			name:        "other errors reported",
-			err:         errors.New("test"),
+			err:         errors.New("Unknown"),
 			expectedErr: true,
+		},
+		{
+			name:        "invalid argument",
+			err:         errors.New("InvalidArgument"),
+			expectedErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -411,13 +435,11 @@ func TestWriteIgnoredErrors(t *testing.T) {
 				client:    c,
 			}
 
-			err = s.Connect()
-			require.NoError(t, err)
-			err = s.Write(testutil.MockMetrics())
+			require.NoError(t, s.Connect())
 			if tt.expectedErr {
-				require.Error(t, err)
+				require.Error(t, s.Write(testutil.MockMetrics()))
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, s.Write(testutil.MockMetrics()))
 			}
 		})
 	}
@@ -522,7 +544,7 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 
 	for idx, m := range metrics {
 		for _, f := range m.FieldList() {
-			value, err := getStackdriverTypedValue(f.Value)
+			value, err := s.getStackdriverTypedValue(f.Value)
 			require.NoError(t, err)
 			require.NotNilf(t, value, "Got nil value for metric %q field %q", m, f)
 
@@ -551,4 +573,222 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestStackdriverTypedValuesSource(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "foo",
+		MetricDataType:   "source",
+	}
+
+	tests := []struct {
+		name     string
+		key      string
+		expected string
+		value    any
+	}{
+		{
+			name:     "float",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    float64(44.0),
+		},
+		{
+			name:     "int64",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_Int64Value",
+			value:    int64(46),
+		},
+		{
+			name:     "uint",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_Int64Value",
+			value:    uint64(46),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			typedValue, err := s.getStackdriverTypedValue(tt.value)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, reflect.TypeOf(typedValue.Value).String())
+		})
+	}
+}
+
+func TestStackdriverTypedValuesInt64(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "foo",
+		MetricDataType:   "double",
+	}
+
+	tests := []struct {
+		name     string
+		key      string
+		expected string
+		value    any
+	}{
+		{
+			name:     "int",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    42,
+		},
+		{
+			name:     "float",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    float64(44.0),
+		},
+		{
+			name:     "int64",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    int64(46),
+		},
+		{
+			name:     "uint",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    uint64(46),
+		},
+		{
+			name:     "numeric string",
+			key:      "key",
+			expected: "*monitoringpb.TypedValue_DoubleValue",
+			value:    "3.2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			typedValue, err := s.getStackdriverTypedValue(tt.value)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, reflect.TypeOf(typedValue.Value).String())
+		})
+	}
+}
+
+func TestStackdriverMetricNamePath(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "foo",
+		MetricNameFormat: "path",
+	}
+	m := testutil.MustMetric("uptime",
+		map[string]string{
+			"foo": "bar",
+		},
+		map[string]interface{}{
+			"value": 42,
+		},
+		time.Now(),
+		telegraf.Gauge,
+	)
+	require.Equal(t, "foo/namespace/uptime/key", s.generateMetricName(m, "key"))
+}
+
+func TestStackdriverMetricNameOfficial(t *testing.T) {
+	s := &Stackdriver{
+		Namespace:        "namespace",
+		MetricTypePrefix: "prometheus.googleapis.com",
+		MetricNameFormat: "official",
+	}
+
+	tests := []struct {
+		name     string
+		key      string
+		expected string
+		metric   telegraf.Metric
+	}{
+		{
+			name:     "gauge",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/gauge",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Gauge,
+			),
+		},
+		{
+			name:     "untyped",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/unknown",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Untyped,
+			),
+		},
+		{
+			name:     "histogram",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/histogram",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:     "counter",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key/counter",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		},
+		{
+			name:     "summary",
+			key:      "key",
+			expected: "prometheus.googleapis.com/namespace_uptime_key",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Summary,
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, s.generateMetricName(tt.metric, tt.key))
+		})
+	}
+}
+
+func TestStackdriverValueInvalid(t *testing.T) {
+	s := &Stackdriver{
+		MetricDataType: "foobar",
+	}
+	require.Error(t, s.Init())
+}
+
+func TestStackdriverMetricNameInvalid(t *testing.T) {
+	s := &Stackdriver{
+		MetricNameFormat: "foobar",
+	}
+	require.Error(t, s.Init())
 }

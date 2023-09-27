@@ -227,7 +227,7 @@ func (l *LeoFS) gatherServer(
 		}
 		fVal, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			return fmt.Errorf("Unable to parse the value:%s, err:%s", val, err)
+			return fmt.Errorf("unable to parse the value %q: %w", val, err)
 		}
 		fields[key] = fVal
 		i++

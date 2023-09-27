@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -49,7 +50,7 @@ func (n *Nomad) Init() error {
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("setting up TLS configuration failed: %v", err)
+		return fmt.Errorf("setting up TLS configuration failed: %w", err)
 	}
 
 	n.roundTripper = &http.Transport{
@@ -85,7 +86,7 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 
 	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -95,7 +96,7 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
-		return fmt.Errorf("error parsing json response: %s", err)
+		return fmt.Errorf("error parsing json response: %w", err)
 	}
 
 	return nil
@@ -103,9 +104,9 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 
 // buildNomadMetrics, it builds all the metrics and adds them to the accumulator)
 func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary) error {
-	t, err := time.Parse(timeLayout, summaryMetrics.Timestamp)
+	t, err := internal.ParseTimestamp(timeLayout, summaryMetrics.Timestamp, nil)
 	if err != nil {
-		return fmt.Errorf("error parsing time: %s", err)
+		return fmt.Errorf("error parsing time: %w", err)
 	}
 
 	for _, counters := range summaryMetrics.Counters {

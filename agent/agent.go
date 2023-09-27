@@ -2,11 +2,11 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 
@@ -106,9 +106,21 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.initPlugins(); err != nil {
 		return err
+	}
+
+	if a.Config.Persister != nil {
+		log.Printf("D! [agent] Initializing plugin states")
+		if err := a.initPersister(); err != nil {
+			return err
+		}
+		if err := a.Config.Persister.Load(); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			log.Print("I! [agent] State file does not exist... Skip restoring states...")
+		}
 	}
 
 	startTime := time.Now()
@@ -183,6 +195,13 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	wg.Wait()
 
+	if a.Config.Persister != nil {
+		log.Printf("D! [agent] Persisting plugin states")
+		if err := a.Config.Persister.Store(); err != nil {
+			return err
+		}
+	}
+
 	log.Printf("D! [agent] Stopped Successfully")
 	return err
 }
@@ -196,38 +215,107 @@ func (a *Agent) initPlugins() error {
 		}
 		err := input.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize input %s: %v",
-				input.LogName(), err)
+			return fmt.Errorf("could not initialize input %s: %w", input.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.Processors {
 		err := processor.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.LogName(), err)
+			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
 		err := aggregator.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize aggregator %s: %v",
-				aggregator.LogName(), err)
+			return fmt.Errorf("could not initialize aggregator %s: %w", aggregator.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.AggProcessors {
 		err := processor.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.LogName(), err)
+			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
 		err := output.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize output %s: %v",
-				output.LogName(), err)
+			return fmt.Errorf("could not initialize output %s: %w", output.LogName(), err)
 		}
 	}
+	return nil
+}
+
+// initPersister initializes the persister and registers the plugins.
+func (a *Agent) initPersister() error {
+	if err := a.Config.Persister.Init(); err != nil {
+		return err
+	}
+
+	for _, input := range a.Config.Inputs {
+		plugin, ok := input.Input.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := input.LogName()
+		id := input.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register input %s: %w", name, err)
+		}
+	}
+
+	for _, processor := range a.Config.Processors {
+		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := processor.LogName()
+		id := processor.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register processor %s: %w", name, err)
+		}
+	}
+
+	for _, aggregator := range a.Config.Aggregators {
+		plugin, ok := aggregator.Aggregator.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := aggregator.LogName()
+		id := aggregator.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register aggregator %s: %w", name, err)
+		}
+	}
+
+	for _, processor := range a.Config.AggProcessors {
+		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := processor.LogName()
+		id := processor.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register aggregating processor %s: %w", name, err)
+		}
+	}
+
+	for _, output := range a.Config.Outputs {
+		plugin, ok := output.Output.(telegraf.StatefulPlugin)
+		if !ok {
+			continue
+		}
+
+		name := output.LogName()
+		id := output.ID()
+		if err := a.Config.Persister.Register(id, plugin); err != nil {
+			return fmt.Errorf("could not register output %s: %w", name, err)
+		}
+	}
+
 	return nil
 }
 
@@ -500,6 +588,7 @@ func (a *Agent) gatherOnce(
 		case <-slowWarning.C:
 			log.Printf("W! [%s] Collection took longer than expected; not complete after interval of %s",
 				input.LogName(), interval)
+			input.IncrGatherTimeouts()
 		case <-ticker.Elapsed():
 			log.Printf("D! [%s] Previous collection has not completed; scheduled collection skipped",
 				input.LogName())
@@ -513,14 +602,16 @@ func (a *Agent) startProcessors(
 	dst chan<- telegraf.Metric,
 	processors models.RunningProcessors,
 ) (chan<- telegraf.Metric, []*processorUnit, error) {
-	// Sort from last to first
-	sort.SliceStable(processors, func(i, j int) bool {
-		return processors[i].Config.Order > processors[j].Config.Order
-	})
-
 	var src chan telegraf.Metric
 	units := make([]*processorUnit, 0, len(processors))
-	for _, processor := range processors {
+	// The processor chain is constructed from the output side starting from
+	// the output(s) and walking the way back to the input(s). However, the
+	// processor-list is sorted by order and/or by appearance in the config,
+	// i.e. in input-to-output direction. Therefore, reverse the processor list
+	// to reflect the order/definition order in the processing chain.
+	for i := len(processors) - 1; i >= 0; i-- {
+		processor := processors[i]
+
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)
 
@@ -678,7 +769,6 @@ func (a *Agent) push(
 		select {
 		case <-time.After(until):
 			aggregator.Push(acc)
-			break
 		case <-ctx.Done():
 			aggregator.Push(acc)
 			return
@@ -687,7 +777,7 @@ func (a *Agent) push(
 }
 
 // startOutputs calls Connect on all outputs and returns the source channel.
-// If an error occurs calling Connect all stared plugins have Close called.
+// If an error occurs calling Connect, all started plugins have Close called.
 func (a *Agent) startOutputs(
 	ctx context.Context,
 	outputs []*models.RunningOutput,
@@ -715,7 +805,7 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 	err := output.Output.Connect()
 	if err != nil {
 		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
-			"error was '%s'", output.LogName(), err)
+			"error was %q", output.LogName(), err)
 
 		err := internal.SleepContext(ctx, 15*time.Second)
 		if err != nil {
@@ -873,9 +963,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s := influx.NewSerializer()
-		s.SetFieldSortOrder(influx.SortFields)
-
+		s := &influx.Serializer{SortFields: true}
 		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {

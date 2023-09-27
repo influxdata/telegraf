@@ -1,4 +1,4 @@
-// Command handling for secret-stores' "secret" command
+// Command handling for secret-stores' "secrets" command
 package main
 
 import (
@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/telegraf/config"
+	"github.com/awnumar/memguard"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
 )
@@ -78,6 +78,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 							config:     cCtx.StringSlice("config"),
 							configDir:  cCtx.StringSlice("config-directory"),
 							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
 							debug:      cCtx.Bool("debug"),
 						}
 						w := WindowFlags{}
@@ -117,7 +118,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 									}
 								}
 								_, _ = fmt.Printf("    %-30s  %s\n", k, string(v))
-								config.ReleaseSecret(v)
+								memguard.WipeBytes(v)
 							}
 						}
 
@@ -155,6 +156,7 @@ with the ID 'mystore'.
 							config:     cCtx.StringSlice("config"),
 							configDir:  cCtx.StringSlice("config-directory"),
 							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
 							debug:      cCtx.Bool("debug"),
 						}
 						w := WindowFlags{}
@@ -218,6 +220,7 @@ you will be prompted to enter the value of the secret.
 							config:     cCtx.StringSlice("config"),
 							configDir:  cCtx.StringSlice("config-directory"),
 							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
 							debug:      cCtx.Bool("debug"),
 						}
 						w := WindowFlags{}
@@ -232,7 +235,7 @@ you will be prompted to enter the value of the secret.
 						key := args.Get(1)
 						value := args.Get(2)
 						if value == "" {
-							fmt.Printf("enter secret: ")
+							fmt.Printf("Enter secret value: ")
 							b, err := term.ReadPassword(int(os.Stdin.Fd()))
 							if err != nil {
 								return err

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -17,20 +17,25 @@ const (
 	expNewFile   = "test1,tag1=value1 value=1 1257894000000000000\n"
 	expExistFile = "cpu,cpu=cpu0 value=100 1455312810012459582\n" +
 		"test1,tag1=value1 value=1 1257894000000000000\n"
+	maxDecompressionSize = 1024 * 1024
 )
 
 func TestFileExistingFile(t *testing.T) {
 	fh := createFile(t)
-	s := serializers.NewInfluxSerializer()
+
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	f := File{
-		Files:      []string{fh.Name()},
-		serializer: s,
+		Files:            []string{fh.Name()},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
-	err := f.Connect()
-	require.NoError(t, err)
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Connect())
 
-	err = f.Write(testutil.MockMetrics())
+	err := f.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
 	validateFile(t, fh.Name(), expExistFile)
@@ -40,14 +45,19 @@ func TestFileExistingFile(t *testing.T) {
 }
 
 func TestFileNewFile(t *testing.T) {
-	s := serializers.NewInfluxSerializer()
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	fh := tmpFile(t)
 	f := File{
-		Files:      []string{fh},
-		serializer: s,
+		Files:            []string{fh},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -64,13 +74,18 @@ func TestFileExistingFiles(t *testing.T) {
 	fh2 := createFile(t)
 	fh3 := createFile(t)
 
-	s := serializers.NewInfluxSerializer()
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	f := File{
-		Files:      []string{fh1.Name(), fh2.Name(), fh3.Name()},
-		serializer: s,
+		Files:            []string{fh1.Name(), fh2.Name(), fh3.Name()},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -84,17 +99,100 @@ func TestFileExistingFiles(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestFileNewFiles(t *testing.T) {
-	s := serializers.NewInfluxSerializer()
+func TestNewGzipCompressedFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	fh1 := tmpFile(t)
 	fh2 := tmpFile(t)
 	fh3 := tmpFile(t)
 	f := File{
-		Files:      []string{fh1, fh2, fh3},
-		serializer: s,
+		Files:                []string{fh1, fh2, fh3},
+		serializer:           s,
+		CompressionAlgorithm: "gzip",
+		CompressionLevel:     -1,
 	}
 
-	err := f.Connect()
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Connect())
+
+	require.NoError(t, f.Write(testutil.MockMetrics()))
+
+	validateGzipCompressedFile(t, fh1, expNewFile)
+	validateGzipCompressedFile(t, fh2, expNewFile)
+	validateGzipCompressedFile(t, fh3, expNewFile)
+
+	require.NoError(t, f.Close())
+}
+
+func TestNewZlibCompressedFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	fh1 := tmpFile(t)
+	fh2 := tmpFile(t)
+	fh3 := tmpFile(t)
+	f := File{
+		Files:                []string{fh1, fh2, fh3},
+		serializer:           s,
+		CompressionAlgorithm: "zlib",
+		CompressionLevel:     -1,
+	}
+
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Connect())
+
+	require.NoError(t, f.Write(testutil.MockMetrics()))
+
+	validateZlibCompressedFile(t, fh1, expNewFile)
+	validateZlibCompressedFile(t, fh2, expNewFile)
+	validateZlibCompressedFile(t, fh3, expNewFile)
+
+	require.NoError(t, f.Close())
+}
+
+func TestNewZstdCompressedFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	fh1 := tmpFile(t)
+	fh2 := tmpFile(t)
+	fh3 := tmpFile(t)
+	f := File{
+		Files:                []string{fh1, fh2, fh3},
+		serializer:           s,
+		CompressionAlgorithm: "zstd",
+		CompressionLevel:     -1,
+	}
+
+	require.NoError(t, f.Init())
+	require.NoError(t, f.Connect())
+
+	require.NoError(t, f.Write(testutil.MockMetrics()))
+
+	validateZstdCompressedFile(t, fh1, expNewFile)
+	validateZstdCompressedFile(t, fh2, expNewFile)
+	validateZstdCompressedFile(t, fh3, expNewFile)
+
+	require.NoError(t, f.Close())
+}
+
+func TestFileNewFiles(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	fh1 := tmpFile(t)
+	fh2 := tmpFile(t)
+	fh3 := tmpFile(t)
+	f := File{
+		Files:            []string{fh1, fh2, fh3},
+		serializer:       s,
+		CompressionLevel: -1,
+	}
+
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -112,13 +210,18 @@ func TestFileBoth(t *testing.T) {
 	fh1 := createFile(t)
 	fh2 := tmpFile(t)
 
-	s := serializers.NewInfluxSerializer()
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	f := File{
-		Files:      []string{fh1.Name(), fh2},
-		serializer: s,
+		Files:            []string{fh1.Name(), fh2},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -137,13 +240,18 @@ func TestFileStdout(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	s := serializers.NewInfluxSerializer()
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
 	f := File{
-		Files:      []string{"stdout"},
-		serializer: s,
+		Files:            []string{"stdout"},
+		serializer:       s,
+		CompressionLevel: -1,
 	}
 
-	err := f.Connect()
+	err := f.Init()
+	require.NoError(t, err)
+	err = f.Connect()
 	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
@@ -192,6 +300,36 @@ func tmpFile(t *testing.T) string {
 
 func validateFile(t *testing.T, fileName, expS string) {
 	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
+}
+
+func validateZstdCompressedFile(t *testing.T, fileName, expS string) {
+	decoder, err := internal.NewContentDecoder("zstd", internal.WithMaxDecompressionSize(maxDecompressionSize))
+	require.NoError(t, err)
+	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	buf, err = decoder.Decode(buf)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
+}
+
+func validateGzipCompressedFile(t *testing.T, fileName, expS string) {
+	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	rfr, err := internal.NewContentDecoder("gzip", internal.WithMaxDecompressionSize(maxDecompressionSize))
+	require.NoError(t, err)
+	buf, err = rfr.Decode(buf)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
+}
+
+func validateZlibCompressedFile(t *testing.T, fileName, expS string) {
+	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	rfr, err := internal.NewContentDecoder("zlib", internal.WithMaxDecompressionSize(maxDecompressionSize))
+	require.NoError(t, err)
+	buf, err = rfr.Decode(buf)
 	require.NoError(t, err)
 	require.Equal(t, expS, string(buf))
 }

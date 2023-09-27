@@ -63,8 +63,9 @@ type MetadataIamToken struct {
 }
 
 const (
-	defaultRequestTimeout    = time.Second * 20
-	defaultEndpointURL       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
+	defaultRequestTimeout = time.Second * 20
+	defaultEndpointURL    = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
+	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
@@ -125,7 +126,7 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 		for _, field := range m.FieldList() {
 			value, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				a.Log.Errorf("skipping value: %w", err.Error())
+				a.Log.Errorf("Skipping value: %v", err)
 				continue
 			}
 
@@ -158,7 +159,7 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error) {
 	req, err := http.NewRequest("GET", metadataURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %v", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 	req.Header.Set("Metadata-Flavor", "Google")
 	resp, err := c.Do(req)
@@ -179,20 +180,20 @@ func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error)
 }
 
 func (a *YandexCloudMonitoring) getFolderIDFromMetadata() (string, error) {
-	a.Log.Infof("getting folder ID in %s", a.MetadataFolderURL)
+	a.Log.Infof("Getting folder ID in %s", a.MetadataFolderURL)
 	body, err := getResponseFromMetadata(a.client, a.MetadataFolderURL)
 	if err != nil {
 		return "", err
 	}
 	folderID := string(body)
 	if folderID == "" {
-		return "", fmt.Errorf("unable to fetch folder id from URL %s: %v", a.MetadataFolderURL, err)
+		return "", fmt.Errorf("unable to fetch folder id from URL %s: %w", a.MetadataFolderURL, err)
 	}
 	return folderID, nil
 }
 
 func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
-	a.Log.Debugf("getting new IAM token in %s", a.MetadataTokenURL)
+	a.Log.Debugf("Getting new IAM token in %s", a.MetadataTokenURL)
 	body, err := getResponseFromMetadata(a.client, a.MetadataTokenURL)
 	if err != nil {
 		return "", 0, err
@@ -202,7 +203,7 @@ func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 		return "", 0, err
 	}
 	if metadata.AccessToken == "" || metadata.ExpiresIn == 0 {
-		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %v", a.MetadataTokenURL, err)
+		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %w", a.MetadataTokenURL, err)
 	}
 	return metadata.AccessToken, int(metadata.ExpiresIn), nil
 }
@@ -229,7 +230,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
-	a.Log.Debugf("sending metrics to %s", req.URL.String())
+	a.Log.Debugf("Sending metrics to %s", req.URL.String())
 	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {

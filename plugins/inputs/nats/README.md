@@ -18,6 +18,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Provides metrics about the state of a NATS server
+# This plugin does NOT support FreeBSD
 [[inputs.nats]]
   ## The address of the monitoring endpoint of the NATS server
   server = "http://localhost:8222"
@@ -49,6 +50,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
+```text
 nats,server=http://localhost:8222 uptime=117158348682i,mem=6647808i,subscriptions=0i,out_bytes=0i,connections=0i,in_msgs=0i,total_connections=0i,cores=2i,cpu=0,slow_consumers=0i,routes=0i,remotes=0i,out_msgs=0i,in_bytes=0i 1517015107000000000
 ```

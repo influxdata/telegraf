@@ -2,6 +2,7 @@ package input
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -75,12 +76,20 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 {
+		return errors.New("no groups or root nodes provided to gather from")
+	}
+	for _, group := range o.Groups {
+		if len(group.Nodes) == 0 {
+			return errors.New("group has no nodes to collect from")
+		}
+	}
+
 	return nil
 }
 
 func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputClient, error) {
-	err := o.Validate()
-	if err != nil {
+	if err := o.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -97,15 +106,13 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	log.Debug("Initialising node to metric mapping")
-	err = c.InitNodeMetricMapping()
-	if err != nil {
+	if err := c.InitNodeMetricMapping(); err != nil {
 		return nil, err
 	}
 
 	c.initLastReceivedValues()
 
-	err = c.initNodeIDs()
-	return c, err
+	return c, nil
 }
 
 // NodeMetricMapping mapping from a single node to a metric
@@ -198,11 +205,11 @@ func newMP(n *NodeMetricMapping) metricParts {
 	var sb strings.Builder
 	for i, key := range keys {
 		if i != 0 {
-			sb.WriteString(", ") //nolint:revive // writes to a string-builder will always succeed
+			sb.WriteString(", ")
 		}
-		sb.WriteString(key)               //nolint:revive // writes to a string-builder will always succeed
-		sb.WriteString("=")               //nolint:revive // writes to a string-builder will always succeed
-		sb.WriteString(n.MetricTags[key]) //nolint:revive // writes to a string-builder will always succeed
+		sb.WriteString(key)
+		sb.WriteString("=")
+		sb.WriteString(n.MetricTags[key])
 	}
 	x := metricParts{
 		metricName: n.metricName,
@@ -236,7 +243,7 @@ func tagsSliceToMap(tags [][]string) (map[string]string, error) {
 
 func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping) error {
 	if nmm.Tag.FieldName == "" {
-		return fmt.Errorf("empty name in '%s'", nmm.Tag.FieldName)
+		return fmt.Errorf("empty name in %q", nmm.Tag.FieldName)
 	}
 
 	if len(nmm.Tag.Namespace) == 0 {
@@ -249,19 +256,19 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 
 	mp := newMP(nmm)
 	if _, exists := existing[mp]; exists {
-		return fmt.Errorf("name '%s' is duplicated (metric name '%s', tags '%s')",
+		return fmt.Errorf("name %q is duplicated (metric name %q, tags %q)",
 			mp.fieldName, mp.metricName, mp.tags)
 	}
 
 	switch nmm.Tag.IdentifierType {
 	case "i":
 		if _, err := strconv.Atoi(nmm.Tag.Identifier); err != nil {
-			return fmt.Errorf("identifier type '%s' does not match the type of identifier '%s'", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
+			return fmt.Errorf("identifier type %q does not match the type of identifier %q", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
 		}
 	case "s", "g", "b":
 		// Valid identifier type - do nothing.
 	default:
-		return fmt.Errorf("invalid identifier type '%s' in '%s'", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
+		return fmt.Errorf("invalid identifier type %q in %q", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
 	}
 
 	existing[mp] = struct{}{}
@@ -327,7 +334,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	return nil
 }
 
-func (o *OpcUAInputClient) initNodeIDs() error {
+func (o *OpcUAInputClient) InitNodeIDs() error {
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
 	for _, node := range o.NodeMetricMapping {
 		nid, err := ua.ParseNodeID(node.Tag.NodeID())
@@ -382,7 +389,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.LastReceivedData[nodeIdx].Quality))
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
-		o.Log.Debugf("status not OK for node '%s'(metric name '%s', tags '%s')",
+		o.Log.Debugf("status not OK for node %q(metric name %q, tags %q)",
 			mp.fieldName, mp.metricName, mp.tags)
 	}
 

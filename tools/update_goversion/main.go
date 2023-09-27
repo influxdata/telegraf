@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,20 +29,12 @@ func (f FileInfo) Update() error {
 	re := regexp.MustCompile(f.Regex)
 	newContents := re.ReplaceAll(b, []byte(f.Replace))
 
-	err = os.WriteFile(f.FileName, newContents, 0664)
+	err = os.WriteFile(f.FileName, newContents, 0640)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// removeZeroPatch cleans version in case the user provides the minor version as "1.19.0" but require "1.19"
-func removeZeroPatch(version string) string {
-	if strings.HasSuffix(version, ".0") {
-		return strings.Trim(version, ".0")
-	}
-	return version
 }
 
 // removePatch cleans version from "1.20.1" to "1.20" (think go.mod entry)
@@ -52,8 +45,6 @@ func removePatch(version string) string {
 
 // findHash will search the downloads table for the hashes matching the artifacts list
 func findHashes(body io.Reader, version string) (map[string]string, error) {
-	version = removeZeroPatch(version)
-
 	htmlTokens := html.NewTokenizer(body)
 	artifacts := []string{
 		fmt.Sprintf("go%s.linux-amd64.tar.gz", version),
@@ -72,7 +63,7 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 		//the end of the file, or the HTML was malformed
 		if tokenType == html.ErrorToken {
 			err := htmlTokens.Err()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				//end of the file, break out of the loop
 				break
 			}
@@ -146,8 +137,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	for file, hash := range hashes {
+		fmt.Printf("%s  %s\n", hash, file)
+	}
 
-	zeroPatchVersion := removeZeroPatch(version)
 	noPatchVersion := removePatch(version)
 
 	files := []FileInfo{
@@ -157,9 +150,14 @@ func main() {
 			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
-			FileName: ".github/workflows/golangci-lint.yml",
-			Regex:    `(go-version).*`,
-			Replace:  fmt.Sprintf("$1: '%s'", noPatchVersion),
+			FileName: ".circleci/config.yml",
+			Regex:    `(default): (\d.\d*.\d)`,
+			Replace:  fmt.Sprintf("$1: %s", version),
+		},
+		{
+			FileName: ".github/workflows/govulncheck.yml",
+			Regex:    `(go-version-input).*`,
+			Replace:  fmt.Sprintf("$1: %s", version),
 		},
 		{
 			FileName: "go.mod",
@@ -172,39 +170,44 @@ func main() {
 			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
+			FileName: "README.md",
+			Regex:    `(Telegraf requires Go version) (\d.\d*)`,
+			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
+		},
+		{
 			FileName: "scripts/ci.docker",
 			Regex:    `(FROM golang):(\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1:%s", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1=%q", version),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1=%q", version),
 		},
 		{
 			FileName: "scripts/installgo_windows.sh",
 			Regex:    `(GO_VERSION)=("\d.\d*.\d")`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", zeroPatchVersion),
+			Replace:  fmt.Sprintf("$1=%q", version),
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",
 			Regex:    `(GO_VERSION_SHA)=".*"`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.linux-amd64.tar.gz", zeroPatchVersion)]),
+			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.linux-amd64.tar.gz", version)]),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION_SHA_arm64)=".*"`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.darwin-arm64.tar.gz", zeroPatchVersion)]),
+			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-arm64.tar.gz", version)]),
 		},
 		{
 			FileName: "scripts/installgo_mac.sh",
 			Regex:    `(GO_VERSION_SHA_amd64)=".*"`,
-			Replace:  fmt.Sprintf("$1=\"%s\"", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", zeroPatchVersion)]),
+			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", version)]),
 		},
 	}
 

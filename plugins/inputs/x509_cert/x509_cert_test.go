@@ -1,8 +1,13 @@
 package x509_cert
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"net"
@@ -15,11 +20,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pion/dtls/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -76,7 +83,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 				}
 			}
 
-			ln, err := tls.Listen("tcp", ":0", cfg)
+			ln, err := tls.Listen("tcp", "127.0.0.1:0", cfg)
 			require.NoError(t, err)
 			defer ln.Close()
 
@@ -465,4 +472,201 @@ func TestServerName(t *testing.T) {
 			require.Equal(t, test.expected, sc.serverName(u))
 		})
 	}
+}
+
+// Bases on code from
+// https://medium.com/@shaneutt/create-sign-x509-certificates-in-golang-8ac4ae49f903
+func TestClassification(t *testing.T) {
+	start := time.Now()
+	end := time.Now().AddDate(0, 0, 1)
+	tmpDir, err := os.MkdirTemp("", "telegraf-x509-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Create the CA certificate
+	caPriv, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(342350),
+		Subject: pkix.Name{
+			Organization: []string{"Testing Inc."},
+			Country:      []string{"US"},
+			CommonName:   "Root CA",
+		},
+		NotBefore:             start,
+		NotAfter:              end,
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPriv.PublicKey, caPriv)
+	require.NoError(t, err)
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caBytes})
+
+	// Write CA cert
+	f, err := os.Create(filepath.Join(tmpDir, "ca.pem"))
+	require.NoError(t, err)
+	_, err = f.Write(caPEM)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	// Create an intermediate certificate
+	intermediatePriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	intermediate := &x509.Certificate{
+		SerialNumber: big.NewInt(342351),
+		Subject: pkix.Name{
+			Organization: []string{"Testing Inc."},
+			Country:      []string{"US"},
+			CommonName:   "Intermediate CA",
+		},
+		NotBefore:             start,
+		NotAfter:              end,
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+	intermediateBytes, err := x509.CreateCertificate(rand.Reader, intermediate, ca, &intermediatePriv.PublicKey, caPriv)
+	require.NoError(t, err)
+	intermediatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: intermediateBytes})
+
+	// Create a leaf certificate
+	leafPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	leaf := &x509.Certificate{
+		SerialNumber: big.NewInt(342352),
+		Subject: pkix.Name{
+			Organization: []string{"Testing Inc."},
+			Country:      []string{"US"},
+			CommonName:   "My server",
+		},
+		NotBefore:   start,
+		NotAfter:    end,
+		IsCA:        false,
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+	}
+	leafBytes, err := x509.CreateCertificate(rand.Reader, leaf, intermediate, &leafPriv.PublicKey, intermediatePriv)
+	require.NoError(t, err)
+	leafPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafBytes})
+
+	// Write the chain
+	out := append(leafPEM, intermediatePEM...)
+	out = append(out, caPEM...)
+	f, err = os.Create(filepath.Join(tmpDir, "cert.pem"))
+	require.NoError(t, err)
+	_, err = f.Write(out)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	// Create the actual test
+	certURI := "file://" + filepath.Join(tmpDir, "cert.pem")
+	plugin := &X509Cert{
+		Sources: []string{certURI},
+		ClientConfig: _tls.ClientConfig{
+			TLSCA: filepath.Join(tmpDir, "ca.pem"),
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"x509_cert",
+			map[string]string{
+				"common_name":          "My server",
+				"country":              "US",
+				"issuer_common_name":   "Intermediate CA",
+				"issuer_serial_number": "",
+				"ocsp_stapled":         "no",
+				"organization":         "Testing Inc.",
+				"public_key_algorithm": "RSA",
+				"san":                  "127.0.0.1",
+				"serial_number":        "53950",
+				"signature_algorithm":  "SHA256-RSA",
+				"source":               filepath.ToSlash(certURI),
+				"type":                 "leaf",
+				"verification":         "valid",
+			},
+			map[string]interface{}{
+				"age":               int64(0),
+				"expiry":            int64(86399),
+				"startdate":         start.Unix(),
+				"enddate":           end.Unix(),
+				"verification_code": int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"x509_cert",
+			map[string]string{
+				"common_name":          "Intermediate CA",
+				"country":              "US",
+				"issuer_common_name":   "Root CA",
+				"issuer_serial_number": "",
+				"ocsp_stapled":         "no",
+				"organization":         "Testing Inc.",
+				"public_key_algorithm": "RSA",
+				"san":                  "",
+				"serial_number":        "5394f",
+				"signature_algorithm":  "SHA256-RSA",
+				"source":               filepath.ToSlash(certURI),
+				"type":                 "intermediate",
+				"verification":         "valid",
+			},
+			map[string]interface{}{
+				"age":               int64(0),
+				"expiry":            int64(86399),
+				"startdate":         start.Unix(),
+				"enddate":           end.Unix(),
+				"verification_code": int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"x509_cert",
+			map[string]string{
+				"common_name":          "Root CA",
+				"country":              "US",
+				"issuer_common_name":   "Root CA",
+				"issuer_serial_number": "",
+				"ocsp_stapled":         "no",
+				"organization":         "Testing Inc.",
+				"public_key_algorithm": "RSA",
+				"san":                  "",
+				"serial_number":        "5394e",
+				"signature_algorithm":  "SHA256-RSA",
+				"source":               filepath.ToSlash(certURI),
+				"type":                 "root",
+				"verification":         "valid",
+			},
+			map[string]interface{}{
+				"age":               int64(0),
+				"expiry":            int64(86399),
+				"startdate":         start.Unix(),
+				"enddate":           end.Unix(),
+				"verification_code": int64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	opts := []cmp.Option{
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+		// We need to ignore those fields as they are timing sensitive.
+		testutil.IgnoreFields("age", "expiry"),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, opts...)
 }

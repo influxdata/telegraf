@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-//go:build !windows
+//go:build linux
 
 // Package lustre2 (doesn't aim for Windows)
 // Lustre 2.x Telegraf plugin
@@ -381,7 +381,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 			client = ""
 		}
 
-		//lines, err := internal.ReadLines(file)
 		wholeFile, err := os.ReadFile(file)
 		if err != nil {
 			return err
@@ -443,7 +442,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 
 // Gather reads stats from all lustre targets
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
-	//l.allFields = make(map[string]map[string]interface{})
 	l.allFields = make(map[tags]map[string]interface{})
 
 	if len(l.OstProcfiles) == 0 {

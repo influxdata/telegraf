@@ -124,7 +124,7 @@ func (*Logstash) SampleConfig() string {
 func (logstash *Logstash) Init() error {
 	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
 	if err != nil {
-		return fmt.Errorf(`cannot verify "collect" setting: %v`, err)
+		return fmt.Errorf(`cannot verify "collect" setting: %w`, err)
 	}
 	return nil
 }
@@ -325,11 +325,7 @@ func (logstash *Logstash) gatherPluginsStats(
 	return nil
 }
 
-func (logstash *Logstash) gatherQueueStats(
-	queue *PipelineQueue,
-	tags map[string]string,
-	accumulator telegraf.Accumulator,
-) error {
+func (logstash *Logstash) gatherQueueStats(queue PipelineQueue, tags map[string]string, acc telegraf.Accumulator) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -369,7 +365,7 @@ func (logstash *Logstash) gatherQueueStats(
 		}
 	}
 
-	accumulator.AddFields("logstash_queue", queueFields, queueTags)
+	acc.AddFields("logstash_queue", queueFields, queueTags)
 
 	return nil
 }
@@ -410,7 +406,7 @@ func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegr
 		return err
 	}
 
-	err = logstash.gatherQueueStats(&pipelineStats.Pipeline.Queue, tags, accumulator)
+	err = logstash.gatherQueueStats(pipelineStats.Pipeline.Queue, tags, accumulator)
 	if err != nil {
 		return err
 	}
@@ -456,7 +452,7 @@ func (logstash *Logstash) gatherPipelinesStats(address string, accumulator teleg
 			return err
 		}
 
-		err = logstash.gatherQueueStats(&pipeline.Queue, tags, accumulator)
+		err = logstash.gatherQueueStats(pipeline.Queue, tags, accumulator)
 		if err != nil {
 			return err
 		}

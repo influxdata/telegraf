@@ -113,7 +113,7 @@ func (p *Process) cmdStart() error {
 	p.Log.Infof("Starting process: %s %s", p.name, p.args)
 
 	if err := p.Cmd.Start(); err != nil {
-		return fmt.Errorf("error starting process: %s", err)
+		return fmt.Errorf("error starting process: %w", err)
 	}
 	atomic.StoreInt32(&p.pid, int32(p.Cmd.Process.Pid))
 	return nil

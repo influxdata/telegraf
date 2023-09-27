@@ -64,14 +64,14 @@ func (n *Vault) Init() error {
 	if n.TokenFile != "" {
 		token, err := os.ReadFile(n.TokenFile)
 		if err != nil {
-			return fmt.Errorf("reading file failed: %v", err)
+			return fmt.Errorf("reading file failed: %w", err)
 		}
 		n.Token = strings.TrimSpace(string(token))
 	}
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("setting up TLS configuration failed: %v", err)
+		return fmt.Errorf("setting up TLS configuration failed: %w", err)
 	}
 
 	n.roundTripper = &http.Transport{
@@ -104,7 +104,7 @@ func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 
 	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return nil, fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -115,7 +115,7 @@ func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 	var metrics SysMetrics
 	err = json.NewDecoder(resp.Body).Decode(&metrics)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing json response: %s", err)
+		return nil, fmt.Errorf("error parsing json response: %w", err)
 	}
 
 	return &metrics, nil
@@ -123,9 +123,9 @@ func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 
 // buildVaultMetrics, it builds all the metrics and adds them to the accumulator
 func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
-	t, err := time.Parse(timeLayout, sysMetrics.Timestamp)
+	t, err := internal.ParseTimestamp(timeLayout, sysMetrics.Timestamp, nil)
 	if err != nil {
-		return fmt.Errorf("error parsing time: %s", err)
+		return fmt.Errorf("error parsing time: %w", err)
 	}
 
 	for _, counters := range sysMetrics.Counters {
@@ -133,7 +133,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		for key, val := range counters.baseInfo.Labels {
 			convertedVal, err := internal.ToString(val)
 			if err != nil {
-				return fmt.Errorf("converting counter %s=%v failed: %v", key, val, err)
+				return fmt.Errorf("converting counter %s=%v failed: %w", key, val, err)
 			}
 			tags[key] = convertedVal
 		}
@@ -155,7 +155,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		for key, val := range gauges.baseInfo.Labels {
 			convertedVal, err := internal.ToString(val)
 			if err != nil {
-				return fmt.Errorf("converting gauges %s=%v failed: %v", key, val, err)
+				return fmt.Errorf("converting gauges %s=%v failed: %w", key, val, err)
 			}
 			tags[key] = convertedVal
 		}
@@ -172,7 +172,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		for key, val := range summary.baseInfo.Labels {
 			convertedVal, err := internal.ToString(val)
 			if err != nil {
-				return fmt.Errorf("converting summary %s=%v failed: %v", key, val, err)
+				return fmt.Errorf("converting summary %s=%v failed: %w", key, val, err)
 			}
 			tags[key] = convertedVal
 		}

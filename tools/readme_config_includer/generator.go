@@ -52,9 +52,9 @@ func extractIncludeBlock(txt []byte, includesEx *regexp.Regexp, root string) *in
 		if len(inc) != 2 {
 			continue
 		}
-		include := filepath.FromSlash(string(inc[1]))
+		include := string(inc[1])
 		// Make absolute paths relative to the include-root if any
-		if filepath.IsAbs(include) {
+		if strings.HasPrefix(include, "/") {
 			if root == "" {
 				log.Printf("Ignoring absolute include %q without include root...", include)
 				continue
@@ -78,13 +78,13 @@ func extractIncludeBlock(txt []byte, includesEx *regexp.Regexp, root string) *in
 func insertInclude(buf *bytes.Buffer, include string) error {
 	file, err := os.Open(include)
 	if err != nil {
-		return fmt.Errorf("opening include %q failed: %v", include, err)
+		return fmt.Errorf("opening include %q failed: %w", include, err)
 	}
 	defer file.Close()
 
 	// Write the include and make sure we get a newline
 	if _, err := io.Copy(buf, file); err != nil {
-		return fmt.Errorf("inserting include %q failed: %v", include, err)
+		return fmt.Errorf("inserting include %q failed: %w", include, err)
 	}
 	return nil
 }
@@ -98,20 +98,19 @@ func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	}
 
 	// Insert all includes in the order they occurred
-	for _, include := range b.Includes {
+	for i, include := range b.Includes {
+		if i > 0 {
+			// Add a separating newline between included blocks
+			if _, err := buf.Write([]byte("\n")); err != nil {
+				return errors.New("adding newline failed")
+			}
+		}
 		if err := insertInclude(buf, include); err != nil {
 			return err
 		}
 	}
 	// Make sure we add a trailing newline
-	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
-	}
-
-	// Insert newlines before and after
-	if b.Newlines {
+	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) || b.Newlines {
 		if _, err := buf.Write([]byte("\n")); err != nil {
 			return errors.New("adding newline failed")
 		}
@@ -256,6 +255,6 @@ func main() {
 	}
 	defer file.Close()
 	if _, err := output.WriteTo(file); err != nil {
-		log.Fatalf("Writing output file failed: %v", err)
+		log.Panicf("Writing output file failed: %v", err)
 	}
 }

@@ -16,7 +16,6 @@ func ParseImage(image string) (imageName string, imageVersion string) {
 		domain, remainder = image[:i], image[i+1:]
 	}
 
-	imageName = ""
 	imageVersion = "unknown"
 	i = strings.LastIndex(remainder, ":")
 	if i > -1 {

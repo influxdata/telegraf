@@ -35,10 +35,22 @@ method is used, otherwise the [Template Pattern][templates] is used.
   #  "host.measurement.tags.field"
   #]
 
+  ## Strict sanitization regex
+  ## This is the default sanitization regex that is used on data passed to the
+  ## graphite serializer. Users can add additional characters here if required.
+  ## Be aware that the characters, '/' '@' '*' are always replaced with '_',
+  ## '..' is replaced with '.', and '\' is removed even if added to the
+  ## following regex.
+  # graphite_strict_sanitize_regex = '[^a-zA-Z0-9-:._=\p{L}]'
+
   ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
   # graphite_tag_support = false
-  ## Enable Graphite tags to support the full list of allowed characters
-  # graphite_tag_new_sanitize = false
+
+  ## Applied sanitization mode when graphite tag support is enabled.
+  ## * strict - uses the regex specified above
+  ## * compatible - allows for greater number of characters
+  # graphite_tag_sanitize_mode = "strict"
+
   ## Character for separating metric name and field for Graphite tags
   # graphite_separator = "."
 ```

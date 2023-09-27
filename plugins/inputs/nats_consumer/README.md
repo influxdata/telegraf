@@ -6,6 +6,17 @@ creates metrics using one of the supported [input data formats][].
 A [Queue Group][queue group] is used when subscribing to subjects so multiple
 instances of telegraf can read from a NATS cluster in parallel.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -92,4 +103,4 @@ Which data you will get depends on the subjects you consume from nats
 ## Example Output
 
 Depends on the nats subject input
-nats_consumer,host=[] value=1.9 1655972309339341000
+nats_consumer,host=foo,subject=recvsubj value=1.9 1655972309339341000

@@ -2,16 +2,20 @@
 package wavefront
 
 import (
+	cryptoTls "crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
@@ -21,24 +25,35 @@ var sampleConfig string
 
 const maxTagLength = 254
 
-type Wavefront struct {
-	URL                  string                          `toml:"url"`
-	Token                config.Secret                   `toml:"token"`
-	Host                 string                          `toml:"host" deprecated:"2.4.0;use url instead"`
-	Port                 int                             `toml:"port" deprecated:"2.4.0;use url instead"`
-	Prefix               string                          `toml:"prefix"`
-	SimpleFields         bool                            `toml:"simple_fields"`
-	MetricSeparator      string                          `toml:"metric_separator"`
-	ConvertPaths         bool                            `toml:"convert_paths"`
-	ConvertBool          bool                            `toml:"convert_bool"`
-	HTTPMaximumBatchSize int                             `toml:"http_maximum_batch_size"`
-	UseRegex             bool                            `toml:"use_regex"`
-	UseStrict            bool                            `toml:"use_strict"`
-	TruncateTags         bool                            `toml:"truncate_tags"`
-	ImmediateFlush       bool                            `toml:"immediate_flush"`
-	SourceOverride       []string                        `toml:"source_override"`
-	StringToNumber       map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+type authCSPClientCredentials struct {
+	AppID     config.Secret `toml:"app_id"`
+	AppSecret config.Secret `toml:"app_secret"`
+	OrgID     *string       `toml:"org_id"`
+}
 
+type Wavefront struct {
+	URL                      string                          `toml:"url"`
+	Token                    config.Secret                   `toml:"token"`
+	CSPBaseURL               string                          `toml:"auth_csp_base_url"`
+	AuthCSPAPIToken          config.Secret                   `toml:"auth_csp_api_token"`
+	AuthCSPClientCredentials *authCSPClientCredentials       `toml:"auth_csp_client_credentials"`
+	Host                     string                          `toml:"host" deprecated:"2.4.0;use url instead"`
+	Port                     int                             `toml:"port" deprecated:"2.4.0;use url instead"`
+	Prefix                   string                          `toml:"prefix"`
+	SimpleFields             bool                            `toml:"simple_fields"`
+	MetricSeparator          string                          `toml:"metric_separator"`
+	ConvertPaths             bool                            `toml:"convert_paths"`
+	ConvertBool              bool                            `toml:"convert_bool"`
+	HTTPMaximumBatchSize     int                             `toml:"http_maximum_batch_size"`
+	Timeout                  config.Duration                 `toml:"timeout"`
+	UseRegex                 bool                            `toml:"use_regex"`
+	UseStrict                bool                            `toml:"use_strict"`
+	TruncateTags             bool                            `toml:"truncate_tags"`
+	ImmediateFlush           bool                            `toml:"immediate_flush"`
+	SendInternalMetrics      bool                            `toml:"send_internal_metrics"`
+	SourceOverride           []string                        `toml:"source_override"`
+	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+	tls.ClientConfig
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
 }
@@ -54,28 +69,41 @@ func (*Wavefront) SampleConfig() string {
 	return sampleConfig
 }
 
-func (w *Wavefront) senderURLFromURLAndToken() (string, error) {
-	newURL, err := url.Parse(w.URL)
+func (w *Wavefront) parseConnectionURL() (string, error) {
+	if w.URL == "" {
+		if w.Host == "" || w.Port <= 0 {
+			return "", errors.New("no URL specified")
+		}
+		generatedURL := fmt.Sprintf("http://%s:%d", w.Host, w.Port)
+		w.Log.Warnf("translating host/port into url: %s\n", generatedURL)
+		return generatedURL, nil
+	}
+
+	u, err := url.ParseRequestURI(w.URL)
 	if err != nil {
 		return "", fmt.Errorf("could not parse the provided URL: %s", w.URL)
 	}
 
-	token := "DUMMY_TOKEN"
-	if !w.Token.Empty() {
-		b, err := w.Token.Get()
-		if err != nil {
-			return "", fmt.Errorf("getting token failed: %w", err)
-		}
-		token = string(b)
-		config.ReleaseSecret(b)
-	}
-	newURL.User = url.User(token)
-
-	return newURL.String(), nil
+	return u.String(), nil
 }
 
-func senderURLFromHostAndPort(host string, port int) string {
-	return fmt.Sprintf("http://%s:%d", host, port)
+func (w *Wavefront) createSender(connectionURL string, flushSeconds int, tlsConfig *cryptoTls.Config) (wavefront.Sender, error) {
+	timeout := time.Duration(w.Timeout)
+	options := []wavefront.Option{
+		wavefront.BatchSize(w.HTTPMaximumBatchSize),
+		wavefront.FlushIntervalSeconds(flushSeconds),
+		wavefront.TLSConfigOptions(tlsConfig),
+		wavefront.Timeout(timeout),
+		wavefront.SendInternalMetrics(w.SendInternalMetrics),
+	}
+
+	authOptions, err := w.makeAuthOptions()
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, authOptions...)
+
+	return wavefront.NewSender(connectionURL, options...)
 }
 
 func (w *Wavefront) Connect() error {
@@ -83,24 +111,17 @@ func (w *Wavefront) Connect() error {
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
-	var connectionURL string
-	if w.URL != "" {
-		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
-		connectionURLWithToken, err := w.senderURLFromURLAndToken()
-		if err != nil {
-			return err
-		}
-		connectionURL = connectionURLWithToken
-	} else {
-		w.Log.Warnf("configuration with host/port is deprecated. Please use url.")
-		w.Log.Debugf("connecting over http using Host: %q and Port: %d", w.Host, w.Port)
-		connectionURL = senderURLFromHostAndPort(w.Host, w.Port)
+	connectionURL, err := w.parseConnectionURL()
+	if err != nil {
+		return err
 	}
 
-	sender, err := wavefront.NewSender(connectionURL,
-		wavefront.BatchSize(w.HTTPMaximumBatchSize),
-		wavefront.FlushIntervalSeconds(flushSeconds),
-	)
+	tlsConfig, err := w.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	sender, err := w.createSender(connectionURL, flushSeconds, tlsConfig)
 
 	if err != nil {
 		return fmt.Errorf("could not create Wavefront Sender for the provided url")
@@ -123,20 +144,22 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				if isRetryable(err) {
-					if flushErr := w.sender.Flush(); flushErr != nil {
-						w.Log.Errorf("wavefront flushing error: %v", flushErr)
+					// The internal buffer in the Wavefront SDK is full. To prevent data loss,
+					// we flush the buffer (which is a blocking operation) and try again.
+					w.Log.Debug("SDK buffer overrun, forcibly flushing the buffer")
+					if err = w.sender.Flush(); err != nil {
+						return fmt.Errorf("wavefront flushing error: %w", err)
 					}
-					return fmt.Errorf("wavefront sending error: %v", err)
+					// Try again.
+					err = w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
+					if err != nil {
+						if isRetryable(err) {
+							return fmt.Errorf("wavefront sending error: %w", err)
+						}
+					}
 				}
-				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-				w.Log.Debugf(
-					"Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ",
-					point.Metric,
-					point.Value,
-					point.Timestamp,
-					point.Source,
-					point.Tags,
-				)
+				w.Log.Errorf("Non-retryable error during Wavefront.Write: %v", err)
+				w.Log.Debugf("Non-retryable metric data: %+v", point)
 			}
 		}
 	}
@@ -295,6 +318,62 @@ func (w *Wavefront) Close() error {
 	return nil
 }
 
+func (w *Wavefront) makeAuthOptions() ([]wavefront.Option, error) {
+	if !w.Token.Empty() {
+		tsecret, err := w.Token.Get()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse token value: %w", err)
+		}
+		token := tsecret.String()
+		tsecret.Destroy()
+
+		return []wavefront.Option{
+			wavefront.APIToken(token),
+		}, nil
+	}
+
+	if !w.AuthCSPAPIToken.Empty() {
+		tsecret, err := w.AuthCSPAPIToken.Get()
+		if err != nil {
+			return nil, fmt.Errorf("failed to CSP API token value: %w", err)
+		}
+		apiToken := tsecret.String()
+		tsecret.Destroy()
+		return []wavefront.Option{
+			wavefront.CSPAPIToken(apiToken, wavefront.CSPBaseURL(w.CSPBaseURL)),
+		}, nil
+	}
+
+	if w.AuthCSPClientCredentials != nil {
+		appIDSecret, err := w.AuthCSPClientCredentials.AppID.Get()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Client Credentials App ID value: %w", err)
+		}
+		appID := appIDSecret.String()
+		appIDSecret.Destroy()
+
+		appSecret, err := w.AuthCSPClientCredentials.AppSecret.Get()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Client Credentials App Secret value: %w", err)
+		}
+		cspAppSecret := appSecret.String()
+		appSecret.Destroy()
+
+		options := []wavefront.CSPOption{
+			wavefront.CSPBaseURL(w.CSPBaseURL),
+		}
+
+		if w.AuthCSPClientCredentials.OrgID != nil {
+			options = append(options, wavefront.CSPOrgID(*w.AuthCSPClientCredentials.OrgID))
+		}
+		return []wavefront.Option{
+			wavefront.CSPClientCredentials(appID, cspAppSecret, options...),
+		}, nil
+	}
+
+	return nil, nil
+}
+
 func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
 		return &Wavefront{
@@ -303,7 +382,10 @@ func init() {
 			ConvertBool:          true,
 			TruncateTags:         false,
 			ImmediateFlush:       true,
+			SendInternalMetrics:  true,
 			HTTPMaximumBatchSize: 10000,
+			Timeout:              config.Duration(10 * time.Second),
+			CSPBaseURL:           "https://console.cloud.vmware.com",
 		}
 	})
 }

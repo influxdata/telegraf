@@ -27,19 +27,15 @@ type Execd struct {
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
-	parser           telegraf.Parser
-	serializerConfig *serializers.Config
-	serializer       serializers.Serializer
-	acc              telegraf.Accumulator
-	process          *process.Process
+	parser     telegraf.Parser
+	serializer serializers.Serializer
+	acc        telegraf.Accumulator
+	process    *process.Process
 }
 
 func New() *Execd {
 	return &Execd{
 		RestartDelay: config.Duration(10 * time.Second),
-		serializerConfig: &serializers.Config{
-			DataFormat: "influx",
-		},
 	}
 }
 
@@ -47,18 +43,18 @@ func (e *Execd) SetParser(p telegraf.Parser) {
 	e.parser = p
 }
 
+func (e *Execd) SetSerializer(s telegraf.Serializer) {
+	e.serializer = s
+}
+
 func (*Execd) SampleConfig() string {
 	return sampleConfig
 }
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
-	var err error
-	e.serializer, err = serializers.NewSerializer(e.serializerConfig)
-	if err != nil {
-		return fmt.Errorf("error creating serializer: %w", err)
-	}
 	e.acc = acc
 
+	var err error
 	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
@@ -139,11 +135,12 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 
 		if err != nil {
 			// Stop parsing when we've reached the end.
-			if err == influx.EOF {
+			if errors.Is(err, influx.EOF) {
 				break
 			}
 
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
 				// Continue past parse errors.
 				e.acc.AddError(parseErr)
 				continue

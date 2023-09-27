@@ -188,7 +188,9 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 		datums = append(datums, d...)
 	}
 
-	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data metrics per call
+	// PutMetricData only supports up to 1000 data metrics per call
+	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
+	const maxDatumsPerCall = 1000
 
 	for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
 		err := c.WriteToCloudWatch(partition)

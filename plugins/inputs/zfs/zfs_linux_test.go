@@ -7,8 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const arcstatsContents = `5 1 0x01 86 4128 23617128247 12081618582809582
@@ -192,19 +193,22 @@ scatter_page_alloc_retry        4    99311
 scatter_sg_table_retry          4    99221
 `
 
-var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
-
 func TestZfsPoolMetrics(t *testing.T) {
-	err := os.MkdirAll(testKstatPath, 0755)
+	tmpDir, err := os.MkdirTemp("", "telegraf-zfs-pool")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testKstatPath := tmpDir + "/telegraf/proc/spl/kstat/zfs"
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
-	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
+	err = os.MkdirAll(testKstatPath+"/HOME", 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(poolIoContents), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(poolIoContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0640)
 	require.NoError(t, err)
 
 	poolMetrics := getPoolMetrics()
@@ -229,7 +233,7 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
-	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20a", []byte(objsetContents), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20a", []byte(objsetContents), 0640)
 	require.NoError(t, err)
 
 	acc.Metrics = nil
@@ -241,37 +245,42 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	poolMetrics = getPoolMetricsNewFormat()
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestZfsGeneratesMetrics(t *testing.T) {
-	err := os.MkdirAll(testKstatPath, 0755)
+	tmpDir, err := os.MkdirTemp("", "telegraf-zfs-generates")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testKstatPath := tmpDir + "/telegraf/proc/spl/kstat/zfs"
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
-	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(""), 0644)
+	err = os.MkdirAll(testKstatPath+"/HOME", 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(""), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
+	err = os.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
+	err = os.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/dmu_tx", []byte(dmuTxContents), 0644)
+	err = os.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/dmu_tx", []byte(dmuTxContents), 0640)
+	require.NoError(t, err)
+
+	err = os.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0640)
 	require.NoError(t, err)
 
 	intMetrics := getKstatMetricsAll()
@@ -291,10 +300,10 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	acc.Metrics = nil
 
 	//two pools, all metrics
-	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
+	err = os.MkdirAll(testKstatPath+"/STORAGE", 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
+	err = os.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0640)
 	require.NoError(t, err)
 
 	tags = map[string]string{
@@ -318,9 +327,6 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	acc3.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestGetTags(t *testing.T) {

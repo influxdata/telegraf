@@ -2,7 +2,8 @@ ifneq (,$(filter $(OS),Windows_NT Windows))
 	EXEEXT=.exe
 endif
 
-next_version := $(file < build_version.txt)
+cat := $(if $(filter $(OS),sh.exe),type,cat)
+next_version := $(shell $(cat) build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>/dev/null)
 
 branch := $(shell git rev-parse --abbrev-ref HEAD)
@@ -74,6 +75,7 @@ all: deps docs telegraf
 help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
+	@echo '  config       - generate the config from current repo state'
 	@echo '  deps         - download dependencies'
 	@echo '  docs         - embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
@@ -110,19 +112,24 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/config_includer/generator$(EXEEXT) ./tools/config_includer/generator.go
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	GOOS=linux go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
-	GOOS=windows go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
-	GOOS=darwin go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	go generate -run="tools/config_includer/generator" ./plugins/$*/...
+	go generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
+
+.PHONY: config
+config:
+	@echo "generating default config"
+	go run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
 docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -167,7 +174,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -218,6 +225,7 @@ check-deps:
 clean:
 	rm -f telegraf
 	rm -f telegraf.exe
+	rm -f etc/telegraf.conf
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
 	rm -rf cmd/telegraf/versioninfo.json
@@ -241,8 +249,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.20.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.20.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.21.1 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.21.1
 
 .PHONY: install
 install: $(buildbin)
@@ -255,7 +263,7 @@ install: $(buildbin)
 	@cp -fv $(buildbin) $(DESTDIR)$(bindir)
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)$(sysconfdir)/telegraf/telegraf.conf$(conf_suffix); fi
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/logrotate.d/telegraf $(DESTDIR)$(sysconfdir)/logrotate.d; fi
-	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf_windows.conf $(DESTDIR)/telegraf.conf; fi
+	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)/telegraf.conf; fi
 	@if [ $(GOOS) = "linux" ]; then mkdir -pv $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/telegraf.service $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/init.sh $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
@@ -327,7 +335,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: docs $(include_packages)
+package: docs config $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -140,7 +141,7 @@ func (c *LXDClient) Exec(name string, command ...string) error {
 	rc := int(opAPI.Metadata["return"].(float64))
 
 	if rc != 0 {
-		return fmt.Errorf(output.String())
+		return errors.New(output.String())
 	}
 
 	fmt.Println(output.String())
@@ -153,7 +154,7 @@ func (c *LXDClient) Push(name string, src string, dst string) error {
 	fmt.Printf("cp %s %s%s\n", src, name, dst)
 	f, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("error reading %s: %v", src, err)
+		return fmt.Errorf("error reading %s: %w", src, err)
 	}
 	defer f.Close()
 

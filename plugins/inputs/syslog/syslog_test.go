@@ -35,14 +35,14 @@ func TestAddress(t *testing.T) {
 		Address: "localhost:6514",
 	}
 	err = rec.Start(&testutil.Accumulator{})
-	require.EqualError(t, err, "missing protocol within address 'localhost:6514'")
+	require.EqualError(t, err, `missing protocol within address "localhost:6514"`)
 	require.Error(t, err)
 
 	rec = &Syslog{
 		Address: "unsupported://example.com:6514",
 	}
 	err = rec.Start(&testutil.Accumulator{})
-	require.EqualError(t, err, "unknown protocol 'unsupported' in 'example.com:6514'")
+	require.EqualError(t, err, `unknown protocol "unsupported" in "example.com:6514"`)
 	require.Error(t, err)
 
 	tmpdir := t.TempDir()

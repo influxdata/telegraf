@@ -13,6 +13,7 @@ import (
 	"github.com/vjeantet/grok"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -317,7 +318,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				timestamp = time.Unix(0, iv)
 			}
 		case SyslogTimestamp:
-			ts, err := time.ParseInLocation(time.Stamp, v, p.loc)
+			ts, err := internal.ParseTimestamp(time.Stamp, v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {
 					ts = ts.AddDate(timestamp.Year(), 0, 0)
@@ -330,7 +331,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			var foundTs bool
 			// first try timestamp layouts that we've already found
 			for _, layout := range p.foundTsLayouts {
-				ts, err := time.ParseInLocation(layout, v, p.loc)
+				ts, err := internal.ParseTimestamp(layout, v, p.loc)
 				if err == nil {
 					timestamp = ts
 					foundTs = true
@@ -341,7 +342,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			// layouts.
 			if !foundTs {
 				for _, layout := range timeLayouts {
-					ts, err := time.ParseInLocation(layout, v, p.loc)
+					ts, err := internal.ParseTimestamp(layout, v, p.loc)
 					if err == nil {
 						timestamp = ts
 						foundTs = true
@@ -360,7 +361,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// goodbye!
 		default:
 			v = strings.ReplaceAll(v, ",", ".")
-			ts, err := time.ParseInLocation(t, v, p.loc)
+			ts, err := internal.ParseTimestamp(t, v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {
 					ts = ts.AddDate(timestamp.Year(), 0, 0)
@@ -387,7 +388,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		metrics = append(metrics, m)
+		if m != nil {
+			metrics = append(metrics, m)
+		}
 		return metrics, nil
 	}
 
@@ -572,21 +575,6 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 	return ts.Add(t.incr*t.incrn + t.rollover)
 }
 
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Measurement = config.MetricName
-	p.DefaultTags = config.DefaultTags
-	p.CustomPatterns = config.GrokCustomPatterns
-	p.CustomPatternFiles = config.GrokCustomPatternFiles
-	p.NamedPatterns = config.GrokNamedPatterns
-	p.Patterns = config.GrokPatterns
-	p.Timezone = config.GrokTimezone
-	p.UniqueTimestamp = config.GrokUniqueTimestamp
-	p.Multiline = config.GrokMultiline
-
-	return p.Init()
-}
-
 func (p *Parser) Init() error {
 	if len(p.Patterns) == 0 {
 		p.Patterns = []string{"%{COMBINED_LOG_FORMAT}"}
@@ -597,7 +585,7 @@ func (p *Parser) Init() error {
 	}
 
 	if p.Timezone == "" {
-		p.Timezone = "Canada/Eastern"
+		p.Timezone = "UTC"
 	}
 
 	return p.Compile()

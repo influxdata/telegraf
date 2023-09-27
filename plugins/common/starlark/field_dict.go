@@ -19,17 +19,17 @@ type FieldDict struct {
 
 func (d FieldDict) String() string {
 	buf := new(strings.Builder)
-	buf.WriteString("{") //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString("{")
 	sep := ""
 	for _, item := range d.Items() {
 		k, v := item[0], item[1]
-		buf.WriteString(sep)        //nolint:revive // from builder.go: "It returns the length of r and a nil error."
-		buf.WriteString(k.String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
-		buf.WriteString(": ")       //nolint:revive // from builder.go: "It returns the length of r and a nil error."
-		buf.WriteString(v.String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(sep)
+		buf.WriteString(k.String())
+		buf.WriteString(": ")
+		buf.WriteString(v.String())
 		sep = ", "
 	}
-	buf.WriteString("}") //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString("}")
 	return buf.String()
 }
 
@@ -243,7 +243,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 			if err != nil {
 				return starlark.None, err
 			}
-			if err = dict.SetKey(sKey, sValue); err != nil {
+			if err := dict.SetKey(sKey, sValue); err != nil {
 				return starlark.None, err
 			}
 		}

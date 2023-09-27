@@ -129,6 +129,10 @@ func (p *testProc) MemoryInfo() (*process.MemoryInfoStat, error) {
 	return &process.MemoryInfoStat{}, nil
 }
 
+func (p *testProc) MemoryMaps(bool) (*[]process.MemoryMapsStat, error) {
+	return &[]process.MemoryMapsStat{}, nil
+}
+
 func (p *testProc) Name() (string, error) {
 	return "test_proc", nil
 }
@@ -167,6 +171,10 @@ func (p *testProc) RlimitUsage(_ bool) ([]process.RlimitStat, error) {
 
 func (p *testProc) Ppid() (int32, error) {
 	return 0, nil
+}
+
+func (p *testProc) Status() ([]string, error) {
+	return []string{"running"}, nil
 }
 
 var pid = PID(42)
@@ -385,7 +393,7 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		t.Skip("no cgroups in windows")
 	}
 	td := t.TempDir()
-	err := os.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0644)
+	err := os.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0640)
 	require.NoError(t, err)
 
 	p := Procstat{

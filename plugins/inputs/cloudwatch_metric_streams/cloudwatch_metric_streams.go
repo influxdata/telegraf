@@ -392,7 +392,7 @@ func (cms *CloudWatchMetricStreams) authenticateIfSet(handler http.HandlerFunc, 
 // Stop cleans up all resources
 func (cms *CloudWatchMetricStreams) Stop() {
 	if cms.listener != nil {
-		cms.listener.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+		cms.listener.Close()
 	}
 	cms.wg.Wait()
 }

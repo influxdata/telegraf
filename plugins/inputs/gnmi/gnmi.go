@@ -3,7 +3,6 @@ package gnmi
 
 import (
 	"context"
-	"crypto/tls"
 	_ "embed"
 	"fmt"
 	"path"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -36,29 +36,34 @@ device model and the following response data:
 %+v
 This message is only printed once.`
 
+// Currently supported GNMI Extensions
+var supportedExtensions = []string{"juniper_header"}
+
 // gNMI plugin instance
 type GNMI struct {
-	Addresses        []string          `toml:"addresses"`
-	Subscriptions    []Subscription    `toml:"subscription"`
-	TagSubscriptions []TagSubscription `toml:"tag_subscription"`
-	Aliases          map[string]string `toml:"aliases"`
-	Encoding         string            `toml:"encoding"`
-	Origin           string            `toml:"origin"`
-	Prefix           string            `toml:"prefix"`
-	Target           string            `toml:"target"`
-	UpdatesOnly      bool              `toml:"updates_only"`
-	Username         string            `toml:"username"`
-	Password         string            `toml:"password"`
-	Redial           config.Duration   `toml:"redial"`
-	MaxMsgSize       config.Size       `toml:"max_msg_size"`
-	Trace            bool              `toml:"dump_responses"`
-	EnableTLS        bool              `toml:"enable_tls"`
-	Log              telegraf.Logger   `toml:"-"`
+	Addresses           []string          `toml:"addresses"`
+	Subscriptions       []Subscription    `toml:"subscription"`
+	TagSubscriptions    []TagSubscription `toml:"tag_subscription"`
+	Aliases             map[string]string `toml:"aliases"`
+	Encoding            string            `toml:"encoding"`
+	Origin              string            `toml:"origin"`
+	Prefix              string            `toml:"prefix"`
+	Target              string            `toml:"target"`
+	UpdatesOnly         bool              `toml:"updates_only"`
+	VendorSpecific      []string          `toml:"vendor_specific"`
+	Username            string            `toml:"username"`
+	Password            string            `toml:"password"`
+	Redial              config.Duration   `toml:"redial"`
+	MaxMsgSize          config.Size       `toml:"max_msg_size"`
+	Trace               bool              `toml:"dump_responses"`
+	CanonicalFieldNames bool              `toml:"canonical_field_names"`
+	TrimFieldNames      bool              `toml:"trim_field_names"`
+	EnableTLS           bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
+	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
 	internalAliases map[string]string
-	acc             telegraf.Accumulator
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 }
@@ -94,17 +99,35 @@ func (*GNMI) SampleConfig() string {
 	return sampleConfig
 }
 
-// Start the http listener service
-func (c *GNMI) Start(acc telegraf.Accumulator) error {
-	var err error
-	var ctx context.Context
-	var tlscfg *tls.Config
-	var request *gnmiLib.SubscribeRequest
-	c.acc = acc
-	ctx, c.cancel = context.WithCancel(context.Background())
+func (c *GNMI) Init() error {
+	// Check options
+	if time.Duration(c.Redial) <= 0 {
+		return fmt.Errorf("redial duration must be positive")
+	}
 
+	// Check vendor_specific options configured by user
+	if err := choice.CheckSlice(c.VendorSpecific, supportedExtensions); err != nil {
+		return fmt.Errorf("unsupported vendor_specific option: %w", err)
+	}
+
+	// Use the new TLS option for enabling
+	// Honor deprecated option
+	enable := (c.ClientConfig.Enable != nil && *c.ClientConfig.Enable) || c.EnableTLS
+	c.ClientConfig.Enable = &enable
+
+	// Split the subscriptions into "normal" and "tag" subscription
+	// and prepare them.
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
 		subscription := c.Subscriptions[i]
+
+		// Check the subscription
+		if subscription.Name == "" {
+			return fmt.Errorf("empty 'name' found for subscription %d", i+1)
+		}
+		if subscription.Path == "" {
+			return fmt.Errorf("empty 'path' found for subscription %d", i+1)
+		}
+
 		// Support and convert legacy TagOnly subscriptions
 		if subscription.TagOnly {
 			tagSub := TagSubscription{
@@ -116,12 +139,12 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			c.Subscriptions = append(c.Subscriptions[:i], c.Subscriptions[i+1:]...)
 			continue
 		}
-		if err = subscription.buildFullPath(c); err != nil {
+		if err := subscription.buildFullPath(c); err != nil {
 			return err
 		}
 	}
 	for idx := range c.TagSubscriptions {
-		if err = c.TagSubscriptions[idx].buildFullPath(c); err != nil {
+		if err := c.TagSubscriptions[idx].buildFullPath(c); err != nil {
 			return err
 		}
 		if c.TagSubscriptions[idx].TagOnly != c.TagSubscriptions[0].TagOnly {
@@ -145,27 +168,8 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	// Validate configuration
-	if request, err = c.newSubscribeRequest(); err != nil {
-		return err
-	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
-		return fmt.Errorf("redial duration must be positive")
-	}
-
-	// Parse TLS config
-	if c.EnableTLS {
-		if tlscfg, err = c.ClientConfig.TLSConfig(); err != nil {
-			return err
-		}
-	}
-
-	if len(c.Username) > 0 {
-		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
-	}
-
 	// Invert explicit alias list and prefill subscription names
 	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
-
 	for _, s := range c.Subscriptions {
 		if err := s.buildAlias(c.internalAliases); err != nil {
 			return err
@@ -176,18 +180,52 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
 	for alias, encodingPath := range c.Aliases {
 		c.internalAliases[encodingPath] = alias
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
+
+	return nil
+}
+
+func (c *GNMI) Start(acc telegraf.Accumulator) error {
+	// Validate configuration
+	request, err := c.newSubscribeRequest()
+	if err != nil {
+		return err
+	}
+
+	// Generate TLS config if enabled
+	tlscfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	// Prepare the context, optionally with credentials
+	var ctx context.Context
+	ctx, c.cancel = context.WithCancel(context.Background())
+	if len(c.Username) > 0 {
+		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
+	}
 
 	// Create a goroutine for each device, dial and subscribe
 	c.wg.Add(len(c.Addresses))
 	for _, addr := range c.Addresses {
 		go func(addr string) {
 			defer c.wg.Done()
-			h := newHandler(addr, c.internalAliases, c.TagSubscriptions, int(c.MaxMsgSize), c.Log, c.Trace)
+
+			h := handler{
+				address:             addr,
+				aliases:             c.internalAliases,
+				tagsubs:             c.TagSubscriptions,
+				maxMsgSize:          int(c.MaxMsgSize),
+				vendorExt:           c.VendorSpecific,
+				tagStore:            newTagStore(c.TagSubscriptions),
+				trace:               c.Trace,
+				canonicalFieldNames: c.CanonicalFieldNames,
+				trimSlash:           c.TrimFieldNames,
+				log:                 c.Log,
+			}
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
@@ -325,34 +363,25 @@ func (s *Subscription) buildFullPath(c *GNMI) error {
 }
 
 func (s *Subscription) buildAlias(aliases map[string]string) error {
-	var err error
-	var gnmiLongPath, gnmiShortPath *gnmiLib.Path
-
 	// Build the subscription path without keys
-	if gnmiLongPath, err = parsePath(s.Origin, s.Path, ""); err != nil {
-		return err
-	}
-	if gnmiShortPath, err = parsePath("", s.Path, ""); err != nil {
+	gnmiPath, err := parsePath(s.Origin, s.Path, "")
+	if err != nil {
 		return err
 	}
 
-	longPath, _, err := handlePath(gnmiLongPath, nil, nil, "")
+	origin, spath, _, err := handlePath(gnmiPath, nil, nil, "")
 	if err != nil {
-		return fmt.Errorf("handling long-path failed: %v", err)
-	}
-	shortPath, _, err := handlePath(gnmiShortPath, nil, nil, "")
-	if err != nil {
-		return fmt.Errorf("handling short-path failed: %v", err)
+		return fmt.Errorf("handling path failed: %w", err)
 	}
 
 	// If the user didn't provide a measurement name, use last path element
 	name := s.Name
-	if len(name) == 0 {
-		name = path.Base(shortPath)
+	if name == "" {
+		name = path.Base(spath)
 	}
-	if len(name) > 0 {
-		aliases[longPath] = name
-		aliases[shortPath] = name
+	if name != "" {
+		aliases[origin+spath] = name
+		aliases[spath] = name
 	}
 	return nil
 }

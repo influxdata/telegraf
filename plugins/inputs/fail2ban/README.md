@@ -24,7 +24,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
   ## Use sudo to run fail2ban-client
-  use_sudo = false
+  # use_sudo = false
+
+  ## Use the given socket instead of the default one
+  # socket = "/var/run/fail2ban/fail2ban.sock"
 ```
 
 ## Using sudo
@@ -60,6 +63,12 @@ Defaults!FAIL2BAN !logfile, !syslog, !pam_session
 
 ## Example Output
 
+```text
+fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
+```
+
+### Execute the binary directly
+
 ```shell
 # fail2ban-client status sshd
 Status for the jail: sshd
@@ -71,8 +80,4 @@ Status for the jail: sshd
    |- Currently banned: 2
    |- Total banned:     10
    `- Banned IP list:   192.168.0.1 192.168.0.2
-```
-
-```shell
-fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
 ```

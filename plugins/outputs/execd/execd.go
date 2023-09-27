@@ -24,6 +24,7 @@ type Execd struct {
 	Environment              []string        `toml:"environment"`
 	RestartDelay             config.Duration `toml:"restart_delay"`
 	IgnoreSerializationError bool            `toml:"ignore_serialization_error"`
+	UseBatchFormat           bool            `toml:"use_batch_format"`
 	Log                      telegraf.Logger
 
 	process    *process.Process
@@ -78,18 +79,29 @@ func (e *Execd) Close() error {
 }
 
 func (e *Execd) Write(metrics []telegraf.Metric) error {
+	if e.UseBatchFormat {
+		b, err := e.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return fmt.Errorf("error serializing metrics: %w", err)
+		}
+
+		if _, err = e.process.Stdin.Write(b); err != nil {
+			return fmt.Errorf("error writing metrics: %w", err)
+		}
+		return nil
+	}
 	for _, m := range metrics {
 		b, err := e.serializer.Serialize(m)
 		if err != nil {
 			if !e.IgnoreSerializationError {
 				return fmt.Errorf("error serializing metrics: %w", err)
 			}
-			e.Log.Error("Skipping metric due to a serialization error: %w", err)
+			e.Log.Errorf("Skipping metric due to a serialization error: %v", err)
 			continue
 		}
 
 		if _, err = e.process.Stdin.Write(b); err != nil {
-			return fmt.Errorf("error writing metrics %s", err)
+			return fmt.Errorf("error writing metrics: %w", err)
 		}
 	}
 	return nil

@@ -21,6 +21,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gathers huge pages measurements.
+# This plugin ONLY supports Linux
 [[inputs.hugepages]]
   ## Supported huge page types:
   ##   - "root"     - based on root huge page control directory:
@@ -72,12 +73,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-$ ./telegraf -config telegraf.conf -input-filter hugepages -test
-> hugepages_root,host=ubuntu,size_kb=1048576 free=0i,mempolicy=8i,overcommit=0i,reserved=0i,surplus=0i,total=8i 1646258020000000000
-> hugepages_root,host=ubuntu,size_kb=2048 free=883i,mempolicy=2048i,overcommit=0i,reserved=0i,surplus=0i,total=2048i 1646258020000000000
-> hugepages_per_node,host=ubuntu,size_kb=1048576,node=0 free=0i,surplus=0i,total=4i 1646258020000000000
-> hugepages_per_node,host=ubuntu,size_kb=2048,node=0 free=434i,surplus=0i,total=1024i 1646258020000000000
-> hugepages_per_node,host=ubuntu,size_kb=1048576,node=1 free=0i,surplus=0i,total=4i 1646258020000000000
-> hugepages_per_node,host=ubuntu,size_kb=2048,node=1 free=449i,surplus=0i,total=1024i 1646258020000000000
-> hugepages_meminfo,host=ubuntu anonymous_kb=0i,file_kb=0i,free=883i,reserved=0i,shared_kb=0i,size_kb=2048i,surplus=0i,tlb_kb=12582912i,total=2048i 1646258020000000000
+hugepages_root,host=ubuntu,size_kb=1048576 free=0i,mempolicy=8i,overcommit=0i,reserved=0i,surplus=0i,total=8i 1646258020000000000
+hugepages_root,host=ubuntu,size_kb=2048 free=883i,mempolicy=2048i,overcommit=0i,reserved=0i,surplus=0i,total=2048i 1646258020000000000
+hugepages_per_node,host=ubuntu,size_kb=1048576,node=0 free=0i,surplus=0i,total=4i 1646258020000000000
+hugepages_per_node,host=ubuntu,size_kb=2048,node=0 free=434i,surplus=0i,total=1024i 1646258020000000000
+hugepages_per_node,host=ubuntu,size_kb=1048576,node=1 free=0i,surplus=0i,total=4i 1646258020000000000
+hugepages_per_node,host=ubuntu,size_kb=2048,node=1 free=449i,surplus=0i,total=1024i 1646258020000000000
+hugepages_meminfo,host=ubuntu anonymous_kb=0i,file_kb=0i,free=883i,reserved=0i,shared_kb=0i,size_kb=2048i,surplus=0i,tlb_kb=12582912i,total=2048i 1646258020000000000
 ```

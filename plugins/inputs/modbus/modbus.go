@@ -3,6 +3,7 @@ package modbus
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -32,25 +33,37 @@ type ModbusWorkarounds struct {
 	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
 }
 
+// According to github.com/grid-x/serial
+type RS485Config struct {
+	DelayRtsBeforeSend config.Duration `toml:"delay_rts_before_send"`
+	DelayRtsAfterSend  config.Duration `toml:"delay_rts_after_send"`
+	RtsHighDuringSend  bool            `toml:"rts_high_during_send"`
+	RtsHighAfterSend   bool            `toml:"rts_high_after_send"`
+	RxDuringTx         bool            `toml:"rx_during_tx"`
+}
+
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string            `toml:"name"`
-	Controller       string            `toml:"controller"`
-	TransmissionMode string            `toml:"transmission_mode"`
-	BaudRate         int               `toml:"baud_rate"`
-	DataBits         int               `toml:"data_bits"`
-	Parity           string            `toml:"parity"`
-	StopBits         int               `toml:"stop_bits"`
-	Timeout          config.Duration   `toml:"timeout"`
-	Retries          int               `toml:"busy_retries"`
-	RetriesWaitTime  config.Duration   `toml:"busy_retries_wait"`
-	DebugConnection  bool              `toml:"debug_connection"`
-	Workarounds      ModbusWorkarounds `toml:"workarounds"`
-	Log              telegraf.Logger   `toml:"-"`
-	// Register configuration
-	ConfigurationType string `toml:"configuration_type"`
+	Name              string            `toml:"name"`
+	Controller        string            `toml:"controller"`
+	TransmissionMode  string            `toml:"transmission_mode"`
+	BaudRate          int               `toml:"baud_rate"`
+	DataBits          int               `toml:"data_bits"`
+	Parity            string            `toml:"parity"`
+	StopBits          int               `toml:"stop_bits"`
+	RS485             *RS485Config      `toml:"rs485"`
+	Timeout           config.Duration   `toml:"timeout"`
+	Retries           int               `toml:"busy_retries"`
+	RetriesWaitTime   config.Duration   `toml:"busy_retries_wait"`
+	DebugConnection   bool              `toml:"debug_connection"`
+	Workarounds       ModbusWorkarounds `toml:"workarounds"`
+	ConfigurationType string            `toml:"configuration_type"`
+	Log               telegraf.Logger   `toml:"-"`
+
+	// Configuration type specific settings
 	ConfigurationOriginal
 	ConfigurationPerRequest
+	ConfigurationPerMetric
 
 	// Connection handling
 	client      mb.Client
@@ -85,6 +98,7 @@ type field struct {
 	omit        bool
 	converter   fieldConverterFunc
 	value       interface{}
+	tags        map[string]string
 }
 
 const (
@@ -96,10 +110,11 @@ const (
 
 // SampleConfig returns a basic configuration for the plugin
 func (m *Modbus) SampleConfig() string {
-	configs := []Configuration{}
-	cfgOriginal := m.ConfigurationOriginal
-	cfgPerRequest := m.ConfigurationPerRequest
-	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+	configs := []Configuration{
+		&m.ConfigurationOriginal,
+		&m.ConfigurationPerRequest,
+		&m.ConfigurationPerMetric,
+	}
 
 	totalConfig := sampleConfigStart
 	for _, c := range configs {
@@ -125,28 +140,34 @@ func (m *Modbus) Init() error {
 	switch m.ConfigurationType {
 	case "", "register":
 		m.ConfigurationOriginal.workarounds = m.Workarounds
+		m.ConfigurationOriginal.logger = m.Log
 		cfg = &m.ConfigurationOriginal
 	case "request":
 		m.ConfigurationPerRequest.workarounds = m.Workarounds
+		m.ConfigurationPerRequest.logger = m.Log
 		cfg = &m.ConfigurationPerRequest
+	case "metric":
+		m.ConfigurationPerMetric.workarounds = m.Workarounds
+		m.ConfigurationPerMetric.logger = m.Log
+		cfg = &m.ConfigurationPerMetric
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuration invalid: %v", err)
+		return fmt.Errorf("configuration invalid: %w", err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuration: %v", err)
+		return fmt.Errorf("cannot process configuration: %w", err)
 	}
 	m.requests = r
 
 	// Setup client
 	if err := m.initClient(); err != nil {
-		return fmt.Errorf("initializing client failed: %v", err)
+		return fmt.Errorf("initializing client failed: %w", err)
 	}
 	for slaveID, rqs := range m.requests {
 		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
@@ -192,8 +213,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
 			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
-			mberr, ok := err.(*mb.Error)
-			if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+			var mbErr *mb.Error
+			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 				m.Log.Debugf("Reconnecting to %s...", m.Controller)
 				if err := m.disconnect(); err != nil {
 					return fmt.Errorf("disconnecting failed: %w", err)
@@ -284,6 +305,14 @@ func (m *Modbus) initClient() error {
 			if m.DebugConnection {
 				handler.Logger = m
 			}
+			if m.RS485 != nil {
+				handler.RS485.Enabled = true
+				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
+				handler.RS485.DelayRtsAfterSend = time.Duration(m.RS485.DelayRtsAfterSend)
+				handler.RS485.RtsHighDuringSend = m.RS485.RtsHighDuringSend
+				handler.RS485.RtsHighAfterSend = m.RS485.RtsHighAfterSend
+				handler.RS485.RxDuringTx = m.RS485.RxDuringTx
+			}
 			m.handler = handler
 		case "ASCII":
 			handler := mb.NewASCIIClientHandler(path)
@@ -294,6 +323,14 @@ func (m *Modbus) initClient() error {
 			handler.StopBits = m.StopBits
 			if m.DebugConnection {
 				handler.Logger = m
+			}
+			if m.RS485 != nil {
+				handler.RS485.Enabled = true
+				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
+				handler.RS485.DelayRtsAfterSend = time.Duration(m.RS485.DelayRtsAfterSend)
+				handler.RS485.RtsHighDuringSend = m.RS485.RtsHighDuringSend
+				handler.RS485.RtsHighAfterSend = m.RS485.RtsHighAfterSend
+				handler.RS485.RxDuringTx = m.RS485.RxDuringTx
 			}
 			m.handler = handler
 		default:
@@ -337,8 +374,8 @@ func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
 		}
 
 		// Exit in case a non-recoverable error occurred
-		mberr, ok := err.(*mb.Error)
-		if !ok || mberr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
+		var mbErr *mb.Error
+		if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 			return err
 		}
 
@@ -378,8 +415,9 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
-			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+			v := (bytes[idx] >> bit) & 0x01
+			request.fields[i].value = field.converter([]byte{v})
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, v, request.fields[i].value)
 		}
 
 		// Some (serial) devices require a pause between requests...
@@ -404,8 +442,9 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
-			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+			v := (bytes[idx] >> bit) & 0x01
+			request.fields[i].value = field.converter([]byte{v})
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, v, request.fields[i].value)
 		}
 
 		// Some (serial) devices require a pause between requests...
@@ -471,16 +510,15 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
-		// Collect tags from global and per-request
-		rtags := map[string]string{}
-		for k, v := range tags {
-			rtags[k] = v
-		}
-		for k, v := range request.tags {
-			rtags[k] = v
-		}
-
 		for _, field := range request.fields {
+			// Collect tags from global and per-request
+			ftags := map[string]string{}
+			for k, v := range tags {
+				ftags[k] = v
+			}
+			for k, v := range field.tags {
+				ftags[k] = v
+			}
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
 			if field.measurement != "" {
@@ -488,7 +526,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
+			grouper.Add(measurement, ftags, timestamp, field.name, field.value)
 		}
 	}
 

@@ -300,8 +300,8 @@ func writeValueList(valueLists []api.ValueList) (*network.Buffer, error) {
 	buffer := network.NewBuffer(0)
 
 	ctx := context.Background()
-	for _, vl := range valueLists {
-		err := buffer.Write(ctx, &vl)
+	for i := range valueLists {
+		err := buffer.Write(ctx, &valueLists[i])
 		if err != nil {
 			return nil, err
 		}

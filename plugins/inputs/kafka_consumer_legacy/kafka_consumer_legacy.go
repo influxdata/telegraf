@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -32,7 +31,7 @@ type Kafka struct {
 	PointBuffer int
 
 	Offset string
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	Log telegraf.Logger
 
@@ -56,7 +55,7 @@ func (*Kafka) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *Kafka) SetParser(parser parsers.Parser) {
+func (k *Kafka) SetParser(parser telegraf.Parser) {
 	k.parser = parser
 }
 
@@ -75,7 +74,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	case "newest":
 		config.Offsets.Initial = sarama.OffsetNewest
 	default:
-		k.Log.Infof("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+		k.Log.Infof("WARNING: Kafka consumer invalid offset %q, using 'oldest'\n",
 			k.Offset)
 		config.Offsets.Initial = sarama.OffsetOldest
 	}
@@ -114,7 +113,7 @@ func (k *Kafka) receiver() {
 			return
 		case err := <-k.errs:
 			if err != nil {
-				k.acc.AddError(fmt.Errorf("consumer Error: %s", err))
+				k.acc.AddError(fmt.Errorf("consumer error: %w", err))
 			}
 		case msg := <-k.in:
 			if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
@@ -123,8 +122,7 @@ func (k *Kafka) receiver() {
 			} else {
 				metrics, err := k.parser.Parse(msg.Value)
 				if err != nil {
-					k.acc.AddError(fmt.Errorf("Message Parse Error\nmessage: %s\nerror: %s",
-						string(msg.Value), err.Error()))
+					k.acc.AddError(fmt.Errorf("error during parsing message %q: %w", string(msg.Value), err))
 				}
 				for _, metric := range metrics {
 					k.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
@@ -138,7 +136,7 @@ func (k *Kafka) receiver() {
 				err := k.Consumer.CommitUpto(msg)
 				k.Unlock()
 				if err != nil {
-					k.acc.AddError(fmt.Errorf("committing to consumer failed: %v", err))
+					k.acc.AddError(fmt.Errorf("committing to consumer failed: %w", err))
 				}
 			}
 		}
@@ -150,7 +148,7 @@ func (k *Kafka) Stop() {
 	defer k.Unlock()
 	close(k.done)
 	if err := k.Consumer.Close(); err != nil {
-		k.acc.AddError(fmt.Errorf("error closing consumer: %s", err.Error()))
+		k.acc.AddError(fmt.Errorf("error closing consumer: %w", err))
 	}
 }
 

@@ -8,5 +8,5 @@ import (
 )
 
 func servicesPath() string {
-	return filepath.Join(os.Getenv("WINDIR"), `system32\drivers\etc\services`)
+	return filepath.Join(os.Getenv("WINDIR"), "system32", "drivers", "etc", "services")
 }

@@ -3,6 +3,7 @@ package prometheus
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -50,17 +51,17 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		for {
 			mf := &dto.MetricFamily{}
 			if _, ierr := pbutil.ReadDelimited(reader, mf); ierr != nil {
-				if ierr == io.EOF {
+				if errors.Is(ierr, io.EOF) {
 					break
 				}
-				return nil, fmt.Errorf("reading metric family protocol buffer failed: %s", ierr)
+				return nil, fmt.Errorf("reading metric family protocol buffer failed: %w", ierr)
 			}
 			metricFamilies[mf.GetName()] = mf
 		}
 	} else {
 		metricFamilies, err = parser.TextToMetricFamilies(reader)
 		if err != nil {
-			return nil, fmt.Errorf("reading text format failed: %s", err)
+			return nil, fmt.Errorf("reading text format failed: %w", err)
 		}
 	}
 
@@ -206,11 +207,6 @@ func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 		t = now
 	}
 	return t
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.IgnoreTimestamp = config.PrometheusIgnoreTimestamp
-	return nil
 }
 
 func init() {

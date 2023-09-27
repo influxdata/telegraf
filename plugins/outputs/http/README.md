@@ -33,7 +33,7 @@ to use them.
   ## Timeout for HTTP message
   # timeout = "5s"
 
-  ## HTTP method, one of: "POST" or "PUT"
+  ## HTTP method, one of: "POST" or "PUT" or "PATCH"
   # method = "POST"
 
   ## HTTP Basic Auth credentials
@@ -44,6 +44,7 @@ to use them.
   # client_id = "clientid"
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
+  # audience = ""
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## Goole API Auth
@@ -81,11 +82,6 @@ to use them.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Additional HTTP headers
-  # [outputs.http.headers]
-  #   # Should be set manually to "application/json" for json data_format
-  #   Content-Type = "text/plain; charset=utf-8"
-
   ## MaxIdleConns controls the maximum number of idle (keep-alive)
   ## connections across all hosts. Zero means no limit.
   # max_idle_conn = 0
@@ -104,6 +100,11 @@ to use them.
   #region = "us-east-1"
 
   ## Amazon Credentials
+  ## Amazon Credentials are not built unless the following aws_service
+  ## setting is set to a non-empty string. It may need to match the name of
+  ## the service output to as well
+  #aws_service = "execute-api"
+
   ## Credentials are loaded in the following order
   ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
   ## 2) Assumed credentials via STS if role_arn is specified
@@ -123,6 +124,15 @@ to use them.
 
   ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
   # non_retryable_statuscodes = [409, 413]
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Additional HTTP headers
+  # [outputs.http.headers]
+  #   ## Should be set manually to "application/json" for json data_format
+  #   Content-Type = "text/plain; charset=utf-8"
 ```
 
 ### Google API Auth

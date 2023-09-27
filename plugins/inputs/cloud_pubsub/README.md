@@ -3,6 +3,17 @@
 The GCP PubSub plugin ingests metrics from [Google Cloud PubSub][pubsub]
 and creates metrics using one of the supported [input data formats][].
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -90,6 +101,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## PubSub message data before parsing. Many GCP services that
   ## output JSON to Google PubSub base64-encode the JSON payload.
   # base64_data = false
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
+  ## If content encoding is not "identity", sets the maximum allowed size, 
+  ## in bytes, for a message payload when it's decompressed. Can be increased 
+  ## for larger payloads or reduced to protect against decompression bombs.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  # max_decompression_size = "500MB"
 ```
 
 ### Multiple Subscriptions and Topics

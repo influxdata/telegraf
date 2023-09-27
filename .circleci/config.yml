@@ -8,32 +8,19 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.20.1'
+      - image: 'quay.io/influxdb/telegraf-ci:1.21.1'
     environment:
       GOFLAGS: -p=4
   mac:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
-    resource_class: medium
+    resource_class: macos.m1.medium.gen1
     macos:
-      xcode: 13.2.0
+      xcode: 14.2.0
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=4
 
 commands:
-  generate-config:
-    parameters:
-      os:
-        type: string
-        default: "linux"
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/build'
-      - run: ./scripts/generate_config.sh << parameters.os >>
-      - store_artifacts:
-          path: './new-config'
-          destination: 'new-config'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
@@ -50,35 +37,66 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
+      goversion:
+        type: string
+        default: 1.21.1
     steps:
-      - checkout
       - check-changed-files-or-halt
+      - restore_cache:
+          name: "Restore binaries from cache"
+          key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
           steps:
-            - restore_cache:
-                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - attach_workspace:
                 at: '/go'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
           steps:
-            - restore_cache:
-                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_mac.sh'
       - when:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf /c/Go
+            - run: rm -rf '/c/Program Files/Go'
             - run: choco feature enable -n allowGlobalConfirmation
-            - restore_cache:
-                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
+      - run: go env
+      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - run:
+                name: golangci-lint cache status
+                command: GOGC=20 /go/bin/golangci-lint cache status
+            - run:
+                name: golangci-lint run
+                command: GOGC=20 /go/bin/golangci-lint run --verbose
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run:
+                name: golangci-lint cache status
+                command: $HOME/go/bin/golangci-lint cache status
+            - run:
+                name: golangci-lint run
+                command: $HOME/go/bin/golangci-lint run --verbose
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run:
+                name: golangci-lint cache status
+                command: $HOME/go/bin/golangci-lint.exe cache status
+            - run:
+                name: golangci-lint run
+                command: $HOME/go/bin/golangci-lint.exe run --verbose
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -108,19 +126,19 @@ commands:
             equal: [ linux, << parameters.os >> ]
           steps:
             - save_cache:
-                name: 'Saving cache'
-                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                name: 'Saving binaries to cache'
+                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
+                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - save_cache:
-                name: 'Saving cache'
-                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                name: 'Saving binaries to cache'
+                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
+                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '/usr/local/Cellar/go'
                   - '/usr/local/bin/go'
                   - '/usr/local/bin/gofmt'
@@ -129,11 +147,11 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - save_cache:
-                name: 'Saving cache'
-                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                name: 'Saving binaries to cache'
+                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - 'C:\Go'
-                  - 'C:\Users\circleci\project\gotestsum.exe'
+                  - '~\project\gotestsum.exe'
+                  - 'C:\Program Files\Go'
   package-build:
     parameters:
       type:
@@ -173,13 +191,22 @@ commands:
           root: './build'
           paths:
             - 'dist'
+
 jobs:
   test-go-linux:
     executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.1
+      cache_version:
+        type: string
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
+          name: "Restore Go caches"
+          key: linux-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
@@ -188,26 +215,43 @@ jobs:
       - run: 'make check-deps'
       - test-go
       - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
+          name: "Save Go caches"
+          key: linux-amd64-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
+            - '~/.cache/golangci-lint'
+            - '~/.cache/go-build'
       - persist_to_workspace:
           root: '/go'
           paths:
             - '*'
   test-go-linux-386:
     executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.1
+      cache_version:
+        type: string
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
+          name: "Restore Go caches"
+          key: linux-386-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'GOARCH=386 make deps'
       - run: 'GOARCH=386 make tidy'
       - run: 'GOARCH=386 make check'
       - test-go:
           arch: "386"
+      - save_cache:
+          name: "Save Go caches"
+          key: linux-386-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          paths:
+            - '/go/pkg/mod'
+            - '~/.cache/golangci-lint'
+            - '~/.cache/go-build'
   test-integration:
     machine:
       image: ubuntu-2204:current
@@ -220,33 +264,80 @@ jobs:
       - run: 'make test-integration'
   test-go-mac:
     executor: mac
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.1
+      cache_version:
+        type: string
+        default: "v2"
     steps:
+      - checkout
+      - restore_cache:
+          name: "Restore Go caches"
+          key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
+          arch: arm64
+      - save_cache:
+          name: "Save Go caches"
+          key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          paths:
+            - '~/go/pkg/mod'
+            - '~/Library/Caches/golangci-lint'
+            - '~/Library/Caches/go-build'
   test-go-windows:
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.1
+      cache_version:
+        type: string
+        default: "v2"
     executor:
         name: win/default
         shell: bash.exe
         size: xlarge
     steps:
+      - checkout
+      - restore_cache:
+          name: "Restore Go caches"
+          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
+      - save_cache:
+          name: "Save Go caches"
+          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          paths:
+            - '~\go\pkg\mod'
+            - '~\AppData\Local\golangci-lint'
+            - '~\AppData\Local\go-build'
 
   test-licenses:
     executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.1
+      cache_version:
+        type: string
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
+          name: "Restore Go caches"
+          key: linux-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
       - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
+          name: "Save Go caches"
+          key: linux-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
+            - '~/.cache/golangci-lint'
+            - '~/.cache/go-build'
 
   windows-package:
     parameters:
@@ -392,6 +483,24 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
+  release:
+    executor: telegraf-ci
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - run:
+          command: |
+            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/releases/ \
+              --exclude "*" \
+              --include "telegraf*.DIGESTS" \
+              --include "telegraf*.digests" \
+              --include "telegraf*.asc" \
+              --include "telegraf*.deb" \
+              --include "telegraf*.dmg" \
+              --include "telegraf*.rpm" \
+              --include "telegraf*.tar.gz" \
+              --include "telegraf*.zip" \
+              --acl public-read
   docker-nightly:
     machine:
       image: ubuntu-2004:current
@@ -494,17 +603,59 @@ jobs:
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
-  generate-config:
-    executor: telegraf-ci
+  package-sign:
+    circleci_ip_ranges: true
+    docker:
+      - image: quay.io/influxdb/rsign:latest
+        auth:
+          username: $QUAY_RSIGN_USERNAME
+          password: $QUAY_RSIGN_PASSWORD
     steps:
-      - generate-config
-  generate-config-win:
-    executor:
-        name: win/default
-        shell: bash.exe
-    steps:
-      - generate-config:
-          os: windows
+      - add_ssh_keys:
+          fingerprints:
+            - 3b:c0:fe:a0:8a:93:33:69:de:22:ac:20:a6:ed:6b:e5
+      - attach_workspace:
+          at: .
+      - run: |
+          cd dist
+
+          # Generate the *.DIGESTS files. This must be done before the signing
+          # step so that the *.DIGEST files are also signed.
+          for target in *
+          do
+            sha256sum "${target}" > "${target}.DIGESTS"
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              # rsign is shipped on Alpine Linux which uses "busybox ash" instead
+              # of bash. ash is somewhat more posix compliant and is missing some
+              # extensions and niceties from bash.
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip|*.DIGESTS)
+                rsign "${target}"
+              ;;
+            esac
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip)
+                # Print sha256 hash and target for artifacts all in one file
+                # for use later during the release.
+                cat "${target}.DIGESTS" >> "telegraf-${CIRCLE_TAG}.DIGESTS"
+              ;;
+            esac
+          done
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - dist
+      - store_artifacts:
+          path: ./dist
 
 workflows:
   version: 2
@@ -641,20 +792,6 @@ workflows:
                 - master
             tags:
               only: /.*/
-      - 'generate-config':
-          requires:
-            - 'amd64-package'
-          filters:
-            branches:
-              only:
-                - master
-      - 'generate-config-win':
-          requires:
-            - 'windows-package'
-          filters:
-            branches:
-              only:
-                - master
       - 'share-artifacts':
           requires:
             - 'i386-package'
@@ -694,6 +831,25 @@ workflows:
                 only: /.*/
               branches:
                 ignore: /.*/
+      - 'package-sign':
+          requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 'riscv64-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'arm64-package'
+            - 'armhf-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
       - 'package-consolidate':
            requires:
             - 'i386-package'
@@ -708,12 +864,20 @@ workflows:
             - 'riscv64-package'
             - 'package-sign-mac'
             - 'package-sign-windows'
+            - 'package-sign'
            filters:
             tags:
               only: /.*/
             branches:
               ignore: /.*/
-
+      - 'release':
+          requires:
+            - 'package-consolidate'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
   nightly:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]

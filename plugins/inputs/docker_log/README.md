@@ -31,8 +31,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   # endpoint = "unix:///var/run/docker.sock"
 
-  ## When true, container logs are read from the beginning; otherwise
-  ## reading begins at the end of the log.
+  ## When true, container logs are read from the beginning; otherwise reading
+  ## begins at the end of the log. If state-persistence is enabled for Telegraf,
+  ## the reading continues at the last previously processed timestamp.
   # from_beginning = false
 
   ## Timeout for Docker API calls.
@@ -99,7 +100,7 @@ for containers that have no explicit hostname set, as defined by docker.
 
 ## Example Output
 
-```shell
+```text
 docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! [agent] Config: Interval:10s, Quiet:false, Hostname:\"371ee5d3e587\", Flush Interval:10s" 1560913872000000000
 docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Tags enabled: host=371ee5d3e587" 1560913872000000000
 docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Loaded outputs: file" 1560913872000000000

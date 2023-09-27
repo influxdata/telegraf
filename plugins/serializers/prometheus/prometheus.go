@@ -2,53 +2,66 @@ package prometheus
 
 import (
 	"bytes"
+	"fmt"
 	"time"
 
 	"github.com/prometheus/common/expfmt"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-// TimestampExport controls if the output contains timestamps.
-type TimestampExport int
+type MetricTypes struct {
+	Counter []string `toml:"counter"`
+	Gauge   []string `toml:"gauge"`
 
-const (
-	NoExportTimestamp TimestampExport = iota
-	ExportTimestamp
-)
+	filterCounter filter.Filter
+	filterGauge   filter.Filter
+}
 
-// MetricSortOrder controls if the output is sorted.
-type MetricSortOrder int
+func (mt *MetricTypes) Init() error {
+	// Setup the explicit type mappings
+	var err error
+	mt.filterCounter, err = filter.Compile(mt.Counter)
+	if err != nil {
+		return fmt.Errorf("creating counter filter failed: %w", err)
+	}
+	mt.filterGauge, err = filter.Compile(mt.Gauge)
+	if err != nil {
+		return fmt.Errorf("creating gauge filter failed: %w", err)
+	}
+	return nil
+}
 
-const (
-	NoSortMetrics MetricSortOrder = iota
-	SortMetrics
-)
-
-// StringHandling defines how to process string fields.
-type StringHandling int
-
-const (
-	DiscardStrings StringHandling = iota
-	StringAsLabel
-)
+func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.ValueType {
+	metricType := m.Type()
+	if mt.filterCounter != nil && mt.filterCounter.Match(name) {
+		metricType = telegraf.Counter
+	}
+	if mt.filterGauge != nil && mt.filterGauge.Match(name) {
+		metricType = telegraf.Gauge
+	}
+	return metricType
+}
 
 type FormatConfig struct {
-	TimestampExport TimestampExport
-	MetricSortOrder MetricSortOrder
-	StringHandling  StringHandling
+	ExportTimestamp bool `toml:"prometheus_export_timestamp"`
+	SortMetrics     bool `toml:"prometheus_sort_metrics"`
+	StringAsLabel   bool `toml:"prometheus_string_as_label"`
 	// CompactEncoding defines whether to include
 	// HELP metadata in Prometheus payload. Setting to true
 	// helps to reduce payload size.
-	CompactEncoding bool
+	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
+	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
 }
 
 type Serializer struct {
-	config FormatConfig
+	FormatConfig
 }
 
-func NewSerializer(config FormatConfig) *Serializer {
-	return &Serializer{config: config}
+func (s *Serializer) Init() error {
+	return s.FormatConfig.TypeMappings.Init()
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -56,7 +69,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	coll := NewCollection(s.config)
+	coll := NewCollection(s.FormatConfig)
 	for _, metric := range metrics {
 		coll.Add(metric, time.Now())
 	}
@@ -71,4 +84,22 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func init() {
+	serializers.Add("prometheus",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.FormatConfig.CompactEncoding = cfg.PrometheusCompactEncoding
+	s.FormatConfig.SortMetrics = cfg.PrometheusSortMetrics
+	s.FormatConfig.StringAsLabel = cfg.PrometheusStringAsLabel
+	s.FormatConfig.ExportTimestamp = cfg.PrometheusExportTimestamp
+
+	return nil
 }

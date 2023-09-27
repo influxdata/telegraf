@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
@@ -39,7 +39,7 @@ type GCS struct {
 	Log    telegraf.Logger
 	offSet OffSet
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	client *storage.Client
 
 	ctx context.Context
@@ -65,7 +65,7 @@ func (gcs *GCS) SampleConfig() string {
 	return sampleConfig
 }
 
-func (gcs *GCS) SetParser(parser parsers.Parser) {
+func (gcs *GCS) SetParser(parser telegraf.Parser) {
 	gcs.parser = parser
 }
 
@@ -82,13 +82,13 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 	for {
 		attrs, err := it.Next()
 
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			gcs.Log.Infof("Iterated all the keys")
 			break
 		}
 
 		if err != nil {
-			gcs.Log.Errorf("Error during iteration of keys", err)
+			gcs.Log.Errorf("Error during iteration of keys: %v", err)
 			return err
 		}
 
@@ -96,8 +96,8 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 
 		if !gcs.shoudIgnore(name) {
 			if err := gcs.processMeasurementsInObject(name, bucket, acc); err != nil {
-				gcs.Log.Errorf("Could not process object: %v in bucket: %v", name, bucketName, err)
-				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT: %v IN BUCKET: %v", name, err))
+				gcs.Log.Errorf("Could not process object %q in bucket %q: %v", name, bucketName, err)
+				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT %q IN BUCKET %q: %w", name, bucketName, err))
 			}
 		}
 
@@ -279,6 +279,6 @@ func init() {
 
 func (gcs *GCS) closeReader(r *storage.Reader) {
 	if err := r.Close(); err != nil {
-		gcs.Log.Errorf("Could not close reader", err)
+		gcs.Log.Errorf("Could not close reader: %v", err)
 	}
 }

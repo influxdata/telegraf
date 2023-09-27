@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Server interface {
@@ -33,7 +34,13 @@ func (p *PprofServer) Start(address string) {
 
 		log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
 
-		if err := http.ListenAndServe(address, nil); err != nil {
+		server := &http.Server{
+			Addr:         address,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+
+		if err := server.ListenAndServe(); err != nil {
 			p.err <- fmt.Errorf("E! %w", err)
 		}
 		close(p.err)

@@ -1,0 +1,2 @@
+[[processors.processor]]
+  metricpass = '("state" in tags && tags.state == "on") || time > timestamp("2023-04-24T00:00:00Z")'

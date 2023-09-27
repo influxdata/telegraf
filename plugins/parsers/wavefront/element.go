@@ -92,7 +92,7 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	p.writeBuf.Reset()
-	for tok != EOF && tok == Number {
+	for tok == Number {
 		if _, err := p.writeBuf.WriteString(lit); err != nil {
 			return fmt.Errorf("unable to write: %w", err)
 		}
@@ -136,7 +136,7 @@ func (ep *LoopedParser) parse(p *PointParser, pt *Point) error {
 			return err
 		}
 		err = ep.wsParser.parse(p, pt)
-		if err == ErrEOF {
+		if errors.Is(err, ErrEOF) {
 			break
 		}
 	}
@@ -170,7 +170,7 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 
 func (ep *WhiteSpaceParser) parse(p *PointParser, _ *Point) error {
 	tok := Ws
-	for tok != EOF && tok == Ws {
+	for tok == Ws {
 		tok, _ = p.scan()
 	}
 

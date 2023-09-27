@@ -89,7 +89,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 
 			contents, err := os.ReadFile(fName)
 			if err != nil {
-				acc.AddError(fmt.Errorf("failed to read file '%s': %v", fName, err))
+				acc.AddError(fmt.Errorf("failed to read file %q: %w", fName, err))
 				continue
 			}
 
@@ -97,7 +97,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 			fields[metricKey], err = strconv.ParseFloat(v, 64)
 			if err != nil {
 				acc.AddError(fmt.Errorf("failed to parse metric, expected number but "+
-					" found '%s': %v", v, err))
+					" found %q: %w", v, err))
 			}
 		}
 	}
@@ -106,7 +106,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 		perCPU := metric == "percpu"
 		stats, err := c.ps.NetConntrack(perCPU)
 		if err != nil {
-			acc.AddError(fmt.Errorf("failed to retrieve conntrack statistics: %v", err))
+			acc.AddError(fmt.Errorf("failed to retrieve conntrack statistics: %w", err))
 		}
 
 		if len(stats) == 0 {

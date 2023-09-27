@@ -3,28 +3,21 @@
 package os
 
 import (
-	_ "embed"
 	"fmt"
 
 	"github.com/99designs/keyring"
-
-	"github.com/influxdata/telegraf/config"
 )
 
-//go:embed sample_darwin.conf
-var sampleConfig string
-
 func (o *OS) createKeyringConfig() (keyring.Config, error) {
-	passwd, err := o.Password.Get()
-	if err != nil {
-		return keyring.Config{}, fmt.Errorf("getting password failed: %v", err)
-	}
-	defer config.ReleaseSecret(passwd)
-
 	// Create the prompt-function in case we need it
 	promptFunc := keyring.TerminalPrompt
-	if len(passwd) != 0 {
-		promptFunc = keyring.FixedStringPrompt(string(passwd))
+	if !o.Password.Empty() {
+		passwd, err := o.Password.Get()
+		if err != nil {
+			return keyring.Config{}, fmt.Errorf("getting password failed: %w", err)
+		}
+		promptFunc = keyring.FixedStringPrompt(passwd.String())
+		passwd.Destroy()
 	}
 
 	return keyring.Config{

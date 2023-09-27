@@ -76,6 +76,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gather packets and bytes throughput from iptables
+# This plugin ONLY supports Linux
 [[inputs.iptables]]
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
@@ -116,16 +117,18 @@ The `ruleid` is the comment associated to the rule.
 
 ## Example Output
 
+```shell
+iptables -nvL INPUT
+```
+
 ```text
-$ iptables -nvL INPUT
 Chain INPUT (policy DROP 0 packets, 0 bytes)
 pkts bytes target     prot opt in     out     source               destination
 100   1024   ACCEPT     tcp  --  *      *       192.168.0.0/24       0.0.0.0/0            tcp dpt:22 /* ssh */
  42   2048   ACCEPT     tcp  --  *      *       192.168.0.0/24       0.0.0.0/0            tcp dpt:80 /* httpd */
 ```
 
-```shell
-$ ./telegraf --config telegraf.conf --input-filter iptables --test
+```text
 iptables,table=filter,chain=INPUT,ruleid=ssh pkts=100i,bytes=1024i 1453831884664956455
 iptables,table=filter,chain=INPUT,ruleid=httpd pkts=42i,bytes=2048i 1453831884664956455
 ```

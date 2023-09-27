@@ -7,6 +7,17 @@ from listed sensors using Junos Telemetry Interface. Refer to
 
 [1]: https://www.juniper.net/documentation/en_US/junos/topics/concept/junos-telemetry-interface-oveview.html
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -54,6 +65,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
    "/interfaces",
   ]
 
+  ## Timestamp Source
+  ## Set to 'collection' for time of collection, and 'data' for using the time
+  ## provided by the _timestamp field.
+  # timestamp_source = "collection"
+
   ## Optional TLS Config
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -67,6 +83,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
   ## Failed streams/calls will not be retried if 0 is provided
   retry_delay = "1000ms"
+
+  ## Period for sending keep-alive packets on idle connections
+  ## This is helpful to identify broken connections to the server
+  # keep_alive_period = "10s"
 
   ## To treat all string values as tags, set this to true
   str_as_tags = false

@@ -85,7 +85,7 @@ func (d *IntelDLB) Init() error {
 		d.Log.Debugf("Using default eventdev commands '%v'", eventdevDefaultCommands)
 	}
 
-	if err = validateEventdevCommands(d.EventdevCommands); err != nil {
+	if err := validateEventdevCommands(d.EventdevCommands); err != nil {
 		return err
 	}
 
@@ -108,7 +108,7 @@ func (d *IntelDLB) Init() error {
 func (d *IntelDLB) Gather(acc telegraf.Accumulator) error {
 	err := d.gatherMetricsFromSocket(acc)
 	if err != nil {
-		socketErr := fmt.Errorf("gathering metrics from socket by given commands failed: %v", err)
+		socketErr := fmt.Errorf("gathering metrics from socket by given commands failed: %w", err)
 		if d.UnreachableSocketBehavior == "error" {
 			return socketErr
 		}
@@ -117,7 +117,7 @@ func (d *IntelDLB) Gather(acc telegraf.Accumulator) error {
 
 	err = d.gatherRasMetrics(acc)
 	if err != nil {
-		return fmt.Errorf("gathering RAS metrics failed: %v", err)
+		return fmt.Errorf("gathering RAS metrics failed: %w", err)
 	}
 
 	return nil
@@ -156,12 +156,12 @@ func (d *IntelDLB) readRasMetrics(devicePath, metricPath string) (map[string]int
 	for _, metric := range metrics {
 		metricPart := strings.Split(metric, " ")
 		if len(metricPart) < 2 {
-			return nil, fmt.Errorf("error occurred: no value to parse - %+q", metricPart)
+			return nil, fmt.Errorf("no value to parse: %+q", metricPart)
 		}
 
 		metricVal, err := strconv.ParseUint(metricPart[1], 10, 10)
 		if err != nil {
-			return nil, fmt.Errorf("error occurred: failed to parse value '%s': '%s'", metricPart[1], err)
+			return nil, fmt.Errorf("failed to parse value %q: %w", metricPart[1], err)
 		}
 		rasMetric[metricPart[0]] = metricVal
 	}
@@ -305,7 +305,7 @@ func (d *IntelDLB) setInitMessageLength() error {
 	buf := make([]byte, d.maxInitMessageLength)
 	messageLength, err := d.connection.Read(buf)
 	if err != nil {
-		return d.closeSocketAndThrowError("custom", fmt.Errorf("failed to read InitMessage from socket - %v", err))
+		return d.closeSocketAndThrowError("custom", fmt.Errorf("failed to read InitMessage from socket: %w", err))
 	}
 	if messageLength > len(buf) {
 		return d.closeSocketAndThrowError("custom", fmt.Errorf("socket reply length is bigger than default buffer length"))
@@ -446,7 +446,7 @@ func checkSocketPath(path string) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("cannot get system information of '%v' file: %v", path, err)
+		return fmt.Errorf("cannot get system information of %q file: %w", path, err)
 	}
 
 	if pathInfo.Mode()&os.ModeSocket != os.ModeSocket {

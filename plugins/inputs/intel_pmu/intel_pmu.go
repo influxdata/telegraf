@@ -5,6 +5,7 @@ package intel_pmu
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -128,10 +129,10 @@ func (*IntelPMU) SampleConfig() string {
 func (i *IntelPMU) Init() error {
 	err := checkFiles(i.EventListPaths, i.fileInfo)
 	if err != nil {
-		return fmt.Errorf("error during event definitions paths validation: %v", err)
+		return fmt.Errorf("error during event definitions paths validation: %w", err)
 	}
 
-	reader, err := newReader(i.EventListPaths)
+	reader, err := newReader(i.Log, i.EventListPaths)
 	if err != nil {
 		return err
 	}
@@ -152,22 +153,22 @@ func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolv
 
 	err := parser.parseEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("error during parsing configuration sections: %v", err)
+		return fmt.Errorf("error during parsing configuration sections: %w", err)
 	}
 
 	err = resolver.resolveEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("error during events resolving: %v", err)
+		return fmt.Errorf("error during events resolving: %w", err)
 	}
 
 	err = i.checkFileDescriptors()
 	if err != nil {
-		return fmt.Errorf("error during file descriptors checking: %v", err)
+		return fmt.Errorf("error during file descriptors checking: %w", err)
 	}
 
 	err = activator.activateEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("error during events activation: %v", err)
+		return fmt.Errorf("error during events activation: %w", err)
 	}
 	return nil
 }
@@ -175,11 +176,11 @@ func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolv
 func (i *IntelPMU) checkFileDescriptors() error {
 	coreFd, err := estimateCoresFd(i.CoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate number of core events file descriptors: %v", err)
+		return fmt.Errorf("failed to estimate number of core events file descriptors: %w", err)
 	}
 	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %v", err)
+		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %w", err)
 	}
 	if coreFd > math.MaxUint64-uncoreFd {
 		return fmt.Errorf("requested number of file descriptors exceeds uint64")
@@ -189,7 +190,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	// maximum file descriptors enforced on a kernel level
 	maxFd, err := readMaxFD(i.fileInfo)
 	if err != nil {
-		i.Log.Warnf("cannot obtain number of available file descriptors: %v", err)
+		i.Log.Warnf("Cannot obtain number of available file descriptors: %v", err)
 	} else if allFd > maxFd {
 		return fmt.Errorf("required file descriptors number `%d` exceeds maximum number of available file descriptors `%d`"+
 			": consider increasing the maximum number", allFd, maxFd)
@@ -198,7 +199,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	// soft limit for current process
 	limit, err := i.fileInfo.fileLimit()
 	if err != nil {
-		i.Log.Warnf("cannot obtain limit value of open files: %v", err)
+		i.Log.Warnf("Cannot obtain limit value of open files: %v", err)
 	} else if allFd > limit {
 		return fmt.Errorf("required file descriptors number `%d` exceeds soft limit of open files `%d`"+
 			": consider increasing the limit", allFd, limit)
@@ -213,20 +214,20 @@ func (i *IntelPMU) Gather(acc telegraf.Accumulator) error {
 	}
 	coreMetrics, uncoreMetrics, err := i.entitiesReader.readEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to read entities events values: %v", err)
+		return fmt.Errorf("failed to read entities events values: %w", err)
 	}
 
 	for id, m := range coreMetrics {
 		scaled := ia.EventScaledValue(m.values)
 		if !scaled.IsUint64() {
-			return fmt.Errorf("cannot process `%s` scaled value `%s`: exceeds uint64", m.name, scaled.String())
+			return fmt.Errorf("cannot process %q scaled value %q: exceeds uint64", m.name, scaled.String())
 		}
 		coreMetrics[id].scaled = scaled.Uint64()
 	}
 	for id, m := range uncoreMetrics {
 		scaled := ia.EventScaledValue(m.values)
 		if !scaled.IsUint64() {
-			return fmt.Errorf("cannot process `%s` scaled value `%s`: exceeds uint64", m.name, scaled.String())
+			return fmt.Errorf("cannot process %q scaled value %q: exceeds uint64", m.name, scaled.String())
 		}
 		uncoreMetrics[id].scaled = scaled.Uint64()
 	}
@@ -248,7 +249,7 @@ func (i *IntelPMU) Stop() {
 			}
 			err := event.Deactivate()
 			if err != nil {
-				i.Log.Warnf("failed to deactivate core event `%s`: %v", event, err)
+				i.Log.Warnf("Failed to deactivate core event %q: %v", event, err)
 			}
 		}
 	}
@@ -263,19 +264,24 @@ func (i *IntelPMU) Stop() {
 				}
 				err := event.Deactivate()
 				if err != nil {
-					i.Log.Warnf("failed to deactivate uncore event `%s`: %v", event, err)
+					i.Log.Warnf("Failed to deactivate uncore event %q: %v", event, err)
 				}
 			}
 		}
 	}
 }
 
-func newReader(files []string) (*ia.JSONFilesReader, error) {
+func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error) {
 	reader := ia.NewFilesReader()
 	for _, file := range files {
 		err := reader.AddFiles(file)
 		if err != nil {
-			return nil, fmt.Errorf("failed to add files to reader: %v", err)
+			var deprecatedFormatError *ia.DeprecatedFormatError
+			if errors.As(err, &deprecatedFormatError) {
+				log.Warnf("%v. See the perfmon repo for updated event files", deprecatedFormatError)
+				continue
+			}
+			return nil, fmt.Errorf("failed to add files to reader: %w", err)
 		}
 	}
 	return reader, nil
@@ -325,10 +331,10 @@ func multiplyAndAdd(factorA uint64, factorB uint64, sum uint64) (uint64, error) 
 	bigB := new(big.Int).SetUint64(factorB)
 	activeEvents := new(big.Int).Mul(bigA, bigB)
 	if !activeEvents.IsUint64() {
-		return 0, fmt.Errorf("value `%s` cannot be represented as uint64", activeEvents.String())
+		return 0, fmt.Errorf("value %q cannot be represented as uint64", activeEvents.String())
 	}
 	if sum > math.MaxUint64-activeEvents.Uint64() {
-		return 0, fmt.Errorf("value `%s` exceeds uint64", new(big.Int).Add(activeEvents, new(big.Int).SetUint64(sum)))
+		return 0, fmt.Errorf("value %q exceeds uint64", new(big.Int).Add(activeEvents, new(big.Int).SetUint64(sum)))
 	}
 	sum += activeEvents.Uint64()
 	return sum, nil
@@ -340,11 +346,11 @@ func readMaxFD(reader fileInfoProvider) (uint64, error) {
 	}
 	buf, err := reader.readFile(fileMaxPath)
 	if err != nil {
-		return 0, fmt.Errorf("cannot open `%s` file: %v", fileMaxPath, err)
+		return 0, fmt.Errorf("cannot open file %q: %w", fileMaxPath, err)
 	}
 	max, err := strconv.ParseUint(strings.Trim(string(buf), "\n "), 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("cannot parse file content of `%s`: %v", fileMaxPath, err)
+		return 0, fmt.Errorf("cannot parse file content of %q: %w", fileMaxPath, err)
 	}
 	return max, nil
 }
@@ -362,16 +368,16 @@ func checkFiles(paths []string, fileInfo fileInfoProvider) error {
 		lInfo, err := fileInfo.lstat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return fmt.Errorf("file `%s` doesn't exist", path)
+				return fmt.Errorf("file %q doesn't exist", path)
 			}
-			return fmt.Errorf("cannot obtain file info of `%s`: %v", path, err)
+			return fmt.Errorf("cannot obtain file info of %q: %w", path, err)
 		}
 		mode := lInfo.Mode()
 		if mode&os.ModeSymlink != 0 {
-			return fmt.Errorf("file %s is a symlink", path)
+			return fmt.Errorf("file %q is a symlink", path)
 		}
 		if !mode.IsRegular() {
-			return fmt.Errorf("file `%s` doesn't point to a reagular file", path)
+			return fmt.Errorf("file %q doesn't point to a reagular file", path)
 		}
 	}
 	return nil

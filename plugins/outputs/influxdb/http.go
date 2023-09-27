@@ -155,7 +155,10 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 	}
 
 	if cfg.Serializer == nil {
-		cfg.Serializer = influx.NewSerializer()
+		cfg.Serializer = &influx.Serializer{}
+		if err := cfg.Serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
 
 	var transport *http.Transport
@@ -205,6 +208,7 @@ func (c *httpClient) Database() string {
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context, database string) error {
+	//nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 	query := fmt.Sprintf(`CREATE DATABASE "%s"`, escapeIdentifier.Replace(database))
 
 	req, err := c.makeQueryRequest(query)
@@ -330,7 +334,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
 	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
-		return fmt.Errorf("failed making write url: %s", err.Error())
+		return fmt.Errorf("failed making write url: %w", err)
 	}
 
 	reader := c.requestBodyReader(metrics)
@@ -338,13 +342,13 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
-		return fmt.Errorf("failed making write req: %s", err.Error())
+		return fmt.Errorf("failed making write req: %w", err)
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
-		return fmt.Errorf("failed doing req: %s", err.Error())
+		return fmt.Errorf("failed doing req: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -461,7 +465,7 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 
 	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
+		return nil, fmt.Errorf("failed creating new request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
@@ -494,14 +498,14 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := c.config.Password.Get()
 		if err != nil {
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-
-		req.SetBasicAuth(string(username), string(password))
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	for header, value := range c.config.Headers {

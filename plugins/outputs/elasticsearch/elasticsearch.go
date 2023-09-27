@@ -169,7 +169,7 @@ func (a *Elasticsearch) Connect() error {
 
 	elasticURL, err := url.Parse(a.URLs[0])
 	if err != nil {
-		return fmt.Errorf("parsing URL failed: %v", err)
+		return fmt.Errorf("parsing URL failed: %w", err)
 	}
 
 	clientOptions = append(clientOptions,
@@ -205,7 +205,7 @@ func (a *Elasticsearch) Connect() error {
 	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
 
 	if err != nil {
-		return fmt.Errorf("elasticsearch version check failed: %s", err)
+		return fmt.Errorf("elasticsearch version check failed: %w", err)
 	}
 
 	// quit if ES version is not supported
@@ -237,9 +237,9 @@ func GetPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
 	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
-	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10)) //nolint:revive // from buffer.go: "err is always nil"
-	buffer.WriteString(m.Name())                                           //nolint:revive // from buffer.go: "err is always nil"
-	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))                 //nolint:revive // from buffer.go: "err is always nil"
+	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
+	buffer.WriteString(m.Name())
+	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))
 
 	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 }
@@ -310,7 +310,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	res, err := bulkRequest.Do(ctx)
 
 	if err != nil {
-		return fmt.Errorf("error sending bulk request to Elasticsearch: %s", err)
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
 
 	if res.Errors {
@@ -338,7 +338,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
 
 	if errExists != nil {
-		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
+		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %w", a.TemplateName, errExists)
 	}
 
 	templatePattern := a.IndexName
@@ -370,7 +370,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
 		if errCreateTemplate != nil {
-			return fmt.Errorf("elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
+			return fmt.Errorf("elasticsearch failed to create index template %s: %w", a.TemplateName, errCreateTemplate)
 		}
 
 		a.Log.Debugf("Template %s created or updated\n", a.TemplateName)
@@ -426,7 +426,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			a.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
+			a.Log.Debugf("Tag %q not found, using %q on index name instead\n", key, a.DefaultTagValue)
 			tagValues = append(tagValues, a.DefaultTagValue)
 		}
 	}
@@ -470,14 +470,14 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := a.Password.Get()
 		if err != nil {
+			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-
-		fns = append(fns, elastic.SetBasicAuth(string(username), string(password)))
+		fns = append(fns, elastic.SetBasicAuth(username.String(), password.String()))
+		username.Destroy()
+		password.Destroy()
 	}
 
 	if !a.AuthBearerToken.Empty() {
@@ -485,10 +485,9 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting token failed: %w", err)
 		}
-		defer config.ReleaseSecret(token)
-
-		auth := []string{"Bearer " + string(token)}
+		auth := []string{"Bearer " + token.String()}
 		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
+		token.Destroy()
 	}
 	return fns, nil
 }

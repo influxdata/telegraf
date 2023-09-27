@@ -19,7 +19,7 @@ func TempSocket(tb testing.TB) string {
 	// If the name of the test is long, the path length could exceed 104
 	// characters, and this would result in listen unix ...: bind: invalid argument
 	if runtime.GOOS == "darwin" {
-		sock := filepath.Join("/tmp", "sock")
+		sock := "/tmp/sock"
 
 		tb.Cleanup(func() {
 			require.NoError(tb, os.RemoveAll(sock))

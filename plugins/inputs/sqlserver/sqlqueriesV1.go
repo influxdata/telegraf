@@ -2,7 +2,7 @@
 package sqlserver
 
 import (
-	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
+	_ "github.com/microsoft/go-mssqldb" // go-mssqldb initialization
 )
 
 // Queries V1

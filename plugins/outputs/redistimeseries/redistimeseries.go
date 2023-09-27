@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/go-redis/redis/v7"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -35,18 +36,18 @@ func (r *RedisTimeSeries) Connect() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
-		Username: string(username),
-		Password: string(password),
+		Username: username.String(),
+		Password: password.String(),
 		DB:       r.Database,
 	})
 	return r.client.Ping().Err()
@@ -80,7 +81,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 			addSlice = append(addSlice, tags...)
 
 			if err := r.client.Do(addSlice...).Err(); err != nil {
-				return fmt.Errorf("adding sample failed: %v", err)
+				return fmt.Errorf("adding sample failed: %w", err)
 			}
 		}
 	}

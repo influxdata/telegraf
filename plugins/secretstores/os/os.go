@@ -4,14 +4,19 @@
 package os
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 
 	"github.com/99designs/keyring"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 type OS struct {
 	ID         string        `toml:"id"`
@@ -43,11 +48,11 @@ func (o *OS) Init() error {
 	// Setup the actual keyring
 	cfg, err := o.createKeyringConfig()
 	if err != nil {
-		return fmt.Errorf("getting keyring config failed: %v", err)
+		return fmt.Errorf("getting keyring config failed: %w", err)
 	}
 	kr, err := keyring.Open(cfg)
 	if err != nil {
-		return fmt.Errorf("opening keyring failed: %v", err)
+		return fmt.Errorf("opening keyring failed: %w", err)
 	}
 	o.ring = kr
 

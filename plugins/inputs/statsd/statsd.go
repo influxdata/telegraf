@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -13,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -76,7 +75,9 @@ type Statsd struct {
 	DeleteCounters  bool     `toml:"delete_counters"`
 	DeleteSets      bool     `toml:"delete_sets"`
 	DeleteTimings   bool     `toml:"delete_timings"`
-	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
+	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;1.30.0;use 'metric_separator' instead"`
+
+	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string `toml:"metric_separator"`
@@ -157,6 +158,8 @@ type Statsd struct {
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
 	PendingMessages    selfstat.Stat
+
+	lastGatherTime time.Time
 }
 
 type input struct {
@@ -227,6 +230,9 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{
 			defaultFieldName: m.value,
 		}
+		if s.EnableAggregationTemporality {
+			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	s.distributions = make([]cacheddistributions, 0)
@@ -253,6 +259,9 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 				fields[name] = stats.Percentile(float64(percentile))
 			}
 		}
+		if s.EnableAggregationTemporality {
+			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
 
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
@@ -261,6 +270,10 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.gauges {
+		if s.EnableAggregationTemporality && m.fields != nil {
+			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
+
 		acc.AddGauge(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteGauges {
@@ -268,6 +281,10 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.counters {
+		if s.EnableAggregationTemporality && m.fields != nil {
+			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
+
 		acc.AddCounter(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteCounters {
@@ -279,6 +296,10 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		for field, set := range m.fields {
 			fields[field] = int64(len(set))
 		}
+		if s.EnableAggregationTemporality {
+			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
+
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	if s.DeleteSets {
@@ -287,6 +308,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 
 	s.expireCachedMetrics()
 
+	s.lastGatherTime = now
 	return nil
 }
 
@@ -298,6 +320,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.acc = ac
 
 	// Make data structures
+	s.lastGatherTime = time.Now()
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -306,6 +329,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 
 	s.Lock()
 	defer s.Unlock()
+
 	//
 	tags := map[string]string{
 		"address": s.ServiceAddress,
@@ -410,12 +434,12 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 			}
 
 			if s.TCPKeepAlive {
-				if err = conn.SetKeepAlive(true); err != nil {
+				if err := conn.SetKeepAlive(true); err != nil {
 					return err
 				}
 
 				if s.TCPKeepAlivePeriod != nil {
-					if err = conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
+					if err := conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
 						return err
 					}
 				}
@@ -519,7 +543,7 @@ func (s *Statsd) parser() error {
 					}
 				default:
 					if err := s.parseStatsdLine(line); err != nil {
-						if errors.Cause(err) != errParsing {
+						if !errors.Is(err, errParsing) {
 							// Ignore parsing errors but error out on
 							// everything else...
 							return err
@@ -645,6 +669,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		switch m.mtype {
 		case "c":
 			m.tags["metric_type"] = "counter"
+
+			if s.EnableAggregationTemporality {
+				if s.DeleteCounters {
+					m.tags["temporality"] = "delta"
+				} else {
+					m.tags["temporality"] = "cumulative"
+				}
+			}
 		case "g":
 			m.tags["metric_type"] = "gauge"
 		case "s":
@@ -869,7 +901,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		s.wg.Done()
-		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		conn.Close()
 
 		// Add one connection potential back to channel when this one closes
 		s.accept <- true
@@ -901,8 +933,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
-			b.Write(scanner.Bytes()) //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
-			b.WriteByte('\n')        //nolint:revive // Writes to a bytes buffer always succeed, so do not check the errors here
+			b.Write(scanner.Bytes())
+			b.WriteByte('\n')
 
 			select {
 			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
@@ -921,7 +953,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
-	conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+	conn.Close()
 	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
@@ -945,9 +977,14 @@ func (s *Statsd) Stop() {
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
-		s.UDPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		if s.UDPlistener != nil {
+			s.UDPlistener.Close()
+		}
 	} else {
-		s.TCPlistener.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		if s.TCPlistener != nil {
+			s.TCPlistener.Close()
+		}
+
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping
@@ -959,7 +996,7 @@ func (s *Statsd) Stop() {
 		}
 		s.cleanup.Unlock()
 		for _, conn := range conns {
-			conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+			conn.Close()
 		}
 	}
 	s.Unlock()

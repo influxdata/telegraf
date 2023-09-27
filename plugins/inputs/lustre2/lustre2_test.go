@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build linux
 
 package lustre2
 
@@ -6,11 +6,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-	"github.com/influxdata/toml/ast"
 )
 
 // Set config file variables to point to fake directory structure instead of /proc?
@@ -132,28 +132,32 @@ const mdtJobStatsContents = `job_stats:
 `
 
 func TestLustre2GeneratesMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName, 0755)
+	err = os.MkdirAll(mdtdir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	osddir := tempdir + "/osd-ldiskfs/"
-	err = os.MkdirAll(osddir+"/"+ostName, 0755)
+	err = os.MkdirAll(osddir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
-	err = os.MkdirAll(obddir+"/"+ostName, 0755)
+	err = os.MkdirAll(obddir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(mdtdir+"/"+ostName+"/md_stats", []byte(mdtProcContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/md_stats", []byte(mdtProcContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(osddir+"/"+ostName+"/stats", []byte(osdldiskfsProcContents), 0644)
+	err = os.WriteFile(osddir+"/"+ostName+"/stats", []byte(osdldiskfsProcContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(obddir+"/"+ostName+"/stats", []byte(obdfilterProcContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/stats", []byte(obdfilterProcContents), 0640)
 	require.NoError(t, err)
 
 	// Begin by testing standard Lustre stats
@@ -198,27 +202,28 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2GeneratesClientMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre-client")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 	clientName := "10.2.4.27@o2ib1"
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0755)
+	err = os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
-	err = os.MkdirAll(obddir+"/"+ostName+"/exports/"+clientName, 0755)
+	err = os.MkdirAll(obddir+"/"+ostName+"/exports/"+clientName, 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(mdtdir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(mdtProcContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(mdtProcContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(obddir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(obdfilterProcContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(obdfilterProcContents), 0640)
 	require.NoError(t, err)
 
 	// Begin by testing standard Lustre stats
@@ -261,28 +266,29 @@ func TestLustre2GeneratesClientMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre-jobstats")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tempdir := tmpDir + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 	jobNames := []string{"cluster-testjob1", "testjob2"}
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName, 0755)
+	err = os.MkdirAll(mdtdir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
-	err = os.MkdirAll(obddir+"/"+ostName, 0755)
+	err = os.MkdirAll(obddir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(mdtdir+"/"+ostName+"/job_stats", []byte(mdtJobStatsContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/job_stats", []byte(mdtJobStatsContents), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(obddir+"/"+ostName+"/job_stats", []byte(obdfilterJobStatsContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/job_stats", []byte(obdfilterJobStatsContents), 0640)
 	require.NoError(t, err)
 
 	// Test Lustre Jobstats
@@ -389,11 +395,6 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	for index := 0; index < len(fields); index++ {
 		acc.AssertContainsTaggedFields(t, "lustre2", fields[index], tags[index])
 	}
-
-	// run this over both tags
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2CanParseConfiguration(t *testing.T) {

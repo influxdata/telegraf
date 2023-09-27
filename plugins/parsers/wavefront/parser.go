@@ -204,7 +204,7 @@ func (p *PointParser) unscanTokens(n int) {
 func (p *PointParser) reset(buf []byte) {
 	// reset the scan buffer and write new byte
 	p.scanBuf.Reset()
-	p.scanBuf.Write(buf) //nolint:revive // from buffer.go: "err is always nil"
+	p.scanBuf.Write(buf)
 
 	if p.s == nil {
 		p.s = NewScanner(&p.scanBuf)
@@ -213,10 +213,6 @@ func (p *PointParser) reset(buf []byte) {
 		p.s.r.Reset(&p.scanBuf)
 	}
 	p.buf.n = 0
-}
-
-func (p *Parser) InitFromConfig(_ *parsers.Config) error {
-	return p.Init()
 }
 
 func init() {

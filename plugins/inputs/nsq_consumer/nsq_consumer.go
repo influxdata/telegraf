@@ -4,14 +4,14 @@ package nsq_consumer
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"sync"
 
-	nsq "github.com/nsqio/go-nsq"
+	"github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -44,7 +44,7 @@ type NSQConsumer struct {
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	parser   parsers.Parser
+	parser   telegraf.Parser
 	consumer *nsq.Consumer
 
 	Log telegraf.Logger
@@ -60,7 +60,7 @@ func (*NSQConsumer) SampleConfig() string {
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format
-func (n *NSQConsumer) SetParser(parser parsers.Parser) {
+func (n *NSQConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
 }
 
@@ -117,14 +117,14 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 
 	if len(n.Nsqlookupd) > 0 {
 		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
-		if err != nil && err != nsq.ErrAlreadyConnected {
+		if err != nil && !errors.Is(err, nsq.ErrAlreadyConnected) {
 			return err
 		}
 	}
 
 	if len(n.Nsqd) > 0 {
 		err := n.consumer.ConnectToNSQDs(n.Nsqd)
-		if err != nil && err != nsq.ErrAlreadyConnected {
+		if err != nil && !errors.Is(err, nsq.ErrAlreadyConnected) {
 			return err
 		}
 	}

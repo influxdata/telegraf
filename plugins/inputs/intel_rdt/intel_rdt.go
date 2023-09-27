@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -122,7 +123,7 @@ func (r *IntelRDT) Initialize() error {
 	if r.SamplingInterval == 0 {
 		r.SamplingInterval = defaultSamplingInterval
 	}
-	if err = validateInterval(r.SamplingInterval); err != nil {
+	if err := validateInterval(r.SamplingInterval); err != nil {
 		return err
 	}
 	r.parsedCores, err = parseCoresConfig(r.Cores)
@@ -335,7 +336,7 @@ func shutDownPqos(pqos *exec.Cmd) error {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		for {
-			if err := pqos.Process.Signal(syscall.Signal(0)); err == os.ErrProcessDone {
+			if err := pqos.Process.Signal(syscall.Signal(0)); errors.Is(err, os.ErrProcessDone) {
 				return nil
 			} else if ctx.Err() != nil {
 				break
@@ -347,7 +348,7 @@ func shutDownPqos(pqos *exec.Cmd) error {
 		// fixed in https://github.com/intel/intel-cmt-cat/issues/197
 		err := pqos.Process.Kill()
 		if err != nil {
-			return fmt.Errorf("failed to shut down pqos: %v", err)
+			return fmt.Errorf("failed to shut down pqos: %w", err)
 		}
 	}
 	return nil
@@ -401,7 +402,6 @@ func validatePqosPath(pqosPath string) error {
 
 func parseCoresConfig(cores []string) ([]string, error) {
 	var allCores []int
-	configError := fmt.Errorf("wrong cores input config data format")
 
 	parsedCores := make([]string, 0, len(cores))
 	for _, singleCoreGroup := range cores {
@@ -411,10 +411,10 @@ func parseCoresConfig(cores []string) ([]string, error) {
 		for _, coreStr := range separatedCores {
 			actualCores, err := validateAndParseCores(coreStr)
 			if err != nil {
-				return nil, fmt.Errorf("%v: %v", configError, err)
+				return nil, fmt.Errorf("wrong cores input config data format: %w", err)
 			}
 			if checkForDuplicates(allCores, actualCores) {
-				return nil, fmt.Errorf("%v: %v", configError, "core value cannot be duplicated")
+				return nil, errors.New("wrong cores input config data format: core value cannot be duplicated")
 			}
 			actualGroupOfCores = append(actualGroupOfCores, actualCores...)
 			allCores = append(allCores, actualGroupOfCores...)
@@ -497,7 +497,7 @@ func validateInterval(interval int32) error {
 func splitMeasurementLine(line string) ([]string, error) {
 	values := strings.Split(line, ",")
 	if len(values) < 8 {
-		return nil, fmt.Errorf(fmt.Sprintf("not valid line format from pqos: %s", values))
+		return nil, fmt.Errorf("not valid line format from pqos: %s", values)
 	}
 	return values, nil
 }

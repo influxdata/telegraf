@@ -15,6 +15,20 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+type roundTripTimeStats struct {
+	min    float64
+	avg    float64
+	max    float64
+	stddev float64
+}
+
+type statistics struct {
+	packetsTransmitted int
+	packetsReceived    int
+	ttl                int
+	roundTripTimeStats
+}
+
 func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
@@ -26,7 +40,8 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		// the output.
 		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
-		if exitError, ok := err.(*exec.ExitError); ok {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
 				fields["result_code"] = status
@@ -47,9 +62,9 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 			// Combine go err + stderr output
 			out = strings.TrimSpace(out)
 			if len(out) > 0 {
-				acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
+				acc.AddError(fmt.Errorf("host %q: %w - %s", u, err, out))
 			} else {
-				acc.AddError(fmt.Errorf("host %s: %s", u, err))
+				acc.AddError(fmt.Errorf("host %q: %w", u, err))
 			}
 			fields["result_code"] = 2
 			acc.AddFields("ping", fields, tags)
@@ -59,18 +74,18 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	stats, err := processPingOutput(out)
 	if err != nil {
 		// fatal error
-		acc.AddError(fmt.Errorf("%s: %s", err, u))
+		acc.AddError(fmt.Errorf("%q: %w", u, err))
 		fields["result_code"] = 2
 		acc.AddFields("ping", fields, tags)
 		return
 	}
 
 	// Calculate packet loss percentage
-	loss := float64(stats.trans-stats.recv) / float64(stats.trans) * 100.0
+	percentPacketLoss := float64(stats.packetsTransmitted-stats.packetsReceived) / float64(stats.packetsTransmitted) * 100.0
 
-	fields["packets_transmitted"] = stats.trans
-	fields["packets_received"] = stats.recv
-	fields["percent_packet_loss"] = loss
+	fields["packets_transmitted"] = stats.packetsTransmitted
+	fields["packets_received"] = stats.packetsReceived
+	fields["percent_packet_loss"] = percentPacketLoss
 	if stats.ttl >= 0 {
 		fields["ttl"] = stats.ttl
 	}
@@ -164,11 +179,11 @@ func (p *Ping) args(url string, system string) []string {
 //	round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
-func processPingOutput(out string) (stats, error) {
-	stats := stats{
-		trans: 0,
-		recv:  0,
-		ttl:   -1,
+func processPingOutput(out string) (statistics, error) {
+	stats := statistics{
+		packetsTransmitted: 0,
+		packetsReceived:    0,
+		ttl:                -1,
 		roundTripTimeStats: roundTripTimeStats{
 			min:    -1.0,
 			avg:    -1.0,
@@ -185,7 +200,7 @@ func processPingOutput(out string) (stats, error) {
 		if stats.ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			stats.ttl, err = getTTL(line)
 		} else if strings.Contains(line, "transmitted") && strings.Contains(line, "received") {
-			stats.trans, stats.recv, err = getPacketStats(line)
+			stats.packetsTransmitted, stats.packetsReceived, err = getPacketStats(line)
 			if err != nil {
 				return stats, err
 			}
@@ -200,7 +215,7 @@ func processPingOutput(out string) (stats, error) {
 }
 
 func getPacketStats(line string) (trans int, recv int, err error) {
-	trans, recv = 0, 0
+	recv = 0
 
 	stats := strings.Split(line, ", ")
 	// Transmitted packets

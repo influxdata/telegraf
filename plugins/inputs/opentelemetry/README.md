@@ -3,6 +3,17 @@
 This plugin receives traces, metrics and logs from
 [OpenTelemetry](https://opentelemetry.io) clients and agents via gRPC.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -23,6 +34,29 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Override the default (5s) new connection timeout
   # timeout = "5s"
+
+  ## Override the default span attributes to be used as line protocol tags.
+  ## These are always included as tags:
+  ## - trace ID
+  ## - span ID
+  ## The default values are strongly recommended for use with Jaeger:
+  ## - service.name
+  ## - span.name
+  ## Other common attributes can be found here:
+  ## - https://github.com/open-telemetry/opentelemetry-collector/tree/main/semconv
+  # span_dimensions = ["service.name", "span.name"]
+
+  ## Override the default log record attributes to be used as line protocol tags.
+  ## These are always included as tags, if available:
+  ## - trace ID
+  ## - span ID
+  ## The default values:
+  ## - service.name
+  ## Other common attributes can be found here:
+  ## - https://github.com/open-telemetry/opentelemetry-collector/tree/main/semconv
+  ## When using InfluxDB for both logs and traces, be certain that log_record_dimensions
+  ## matches the span_dimensions value.
+  # log_record_dimensions = ["service.name"]
 
   ## Override the default (prometheus-v1) metrics schema.
   ## Supports: "prometheus-v1", "prometheus-v2"
@@ -76,7 +110,7 @@ spans end_time_unix_nano="2021-02-19 20:50:25.6896741 +0000 UTC",instrumentation
 
 ### `prometheus-v1`
 
-```shell
+```text
 cpu_temp,foo=bar gauge=87.332
 http_requests_total,method=post,code=200 counter=1027
 http_requests_total,method=post,code=400 counter=3
@@ -86,7 +120,7 @@ rpc_duration_seconds 0.01=3102,0.05=3272,0.5=4773,0.9=9001,0.99=76656,sum=1.7560
 
 ### `prometheus-v2`
 
-```shell
+```text
 prometheus,foo=bar cpu_temp=87.332
 prometheus,method=post,code=200 http_requests_total=1027
 prometheus,method=post,code=400 http_requests_total=3

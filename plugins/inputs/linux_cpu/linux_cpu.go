@@ -5,6 +5,7 @@ package linux_cpu
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -187,7 +188,7 @@ func validatePath(propPath string) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("cannot get system information for CPU property: [%s] - %v", propPath, err)
+		return fmt.Errorf("cannot get system information for CPU property %q: %w", propPath, err)
 	}
 
 	_ = f.Close() // File is not written to, closing should be safe
@@ -204,10 +205,10 @@ func readUintFromFile(propPath string) (uint64, error) {
 	buffer := make([]byte, 22)
 
 	n, err := f.Read(buffer)
-	if err != nil && err != io.EOF {
-		return 0, fmt.Errorf("error on reading file, err: %v", err)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return 0, fmt.Errorf("error on reading file: %w", err)
 	} else if n == 0 {
-		return 0, fmt.Errorf("error on reading file, file is empty")
+		return 0, fmt.Errorf("error on reading file: file is empty")
 	}
 
 	return strconv.ParseUint(string(buffer[:n-1]), 10, 64)

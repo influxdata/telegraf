@@ -5,6 +5,7 @@ package logger
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"log"
 	"os/exec"
 	"testing"
@@ -30,7 +31,12 @@ type Event struct {
 func getEventLog(t *testing.T, since time.Time) []Event {
 	timeStr := since.UTC().Format(time.RFC3339)
 	timeStr = timeStr[:19]
-	cmd := exec.Command("wevtutil", "qe", "Application", "/rd:true", "/q:Event[System[TimeCreated[@SystemTime >= '"+timeStr+"'] and Provider[@Name='telegraf']]]")
+	args := []string{
+		"qe",
+		"Application",
+		"/rd:true",
+		fmt.Sprintf("/q:Event[System[TimeCreated[@SystemTime >= %q] and Provider[@Name='telegraf']]]", timeStr)}
+	cmd := exec.Command("wevtutil", args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -48,7 +54,7 @@ func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	prepareLogger(t)
+	testPrepareLogger(t)
 
 	config := LogConfig{
 		LogTarget: LogTargetEventlog,
@@ -73,7 +79,7 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
-	prepareLogger(t)
+	testPrepareLogger(t)
 
 	config := LogConfig{
 		LogTarget: LogTargetEventlog,
@@ -93,9 +99,9 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	require.Contains(t, events, Event{Message: "Error message", Level: Error})
 }
 
-func prepareLogger(t *testing.T) {
+func testPrepareLogger(tb testing.TB) {
 	eventLog, err := eventlog.Open("telegraf")
-	require.NoError(t, err)
-	require.NotNil(t, eventLog)
+	require.NoError(tb, err)
+	require.NotNil(tb, eventLog)
 	registerLogger(LogTargetEventlog, &eventLoggerCreator{logger: eventLog})
 }

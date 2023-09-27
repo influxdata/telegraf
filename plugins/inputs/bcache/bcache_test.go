@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build linux
 
 package bcache
 
@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -22,21 +23,23 @@ const (
 	cacheReadaheads     = "2"
 )
 
-var (
-	testBcachePath           = os.TempDir() + "/telegraf/sys/fs/bcache"
-	testBcacheUUIDPath       = testBcachePath + "/663955a3-765a-4737-a9fd-8250a7a78411"
-	testBcacheDevPath        = os.TempDir() + "/telegraf/sys/devices/virtual/block/bcache0"
-	testBcacheBackingDevPath = os.TempDir() + "/telegraf/sys/devices/virtual/block/md10"
-)
-
 func TestBcacheGeneratesMetrics(t *testing.T) {
-	err := os.MkdirAll(testBcacheUUIDPath, 0755)
+	tmpDir, err := os.MkdirTemp("", "telegraf-bcache")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testBcachePath := tmpDir + "/telegraf-bcache/sys/fs/bcache"
+	testBcacheUUIDPath := testBcachePath + "/663955a3-765a-4737-a9fd-8250a7a78411"
+	testBcacheDevPath := tmpDir + "/telegraf/sys/devices/virtual/block/bcache0"
+	testBcacheBackingDevPath := tmpDir + "/telegraf/sys/devices/virtual/block/md10"
+
+	err = os.MkdirAll(testBcacheUUIDPath, 0750)
 	require.NoError(t, err)
 
-	err = os.MkdirAll(testBcacheDevPath, 0755)
+	err = os.MkdirAll(testBcacheDevPath, 0750)
 	require.NoError(t, err)
 
-	err = os.MkdirAll(testBcacheBackingDevPath+"/bcache", 0755)
+	err = os.MkdirAll(testBcacheBackingDevPath+"/bcache", 0750)
 	require.NoError(t, err)
 
 	err = os.Symlink(testBcacheBackingDevPath+"/bcache", testBcacheUUIDPath+"/bdev0")
@@ -45,43 +48,34 @@ func TestBcacheGeneratesMetrics(t *testing.T) {
 	err = os.Symlink(testBcacheDevPath, testBcacheUUIDPath+"/bdev0/dev")
 	require.NoError(t, err)
 
-	err = os.MkdirAll(testBcacheUUIDPath+"/bdev0/stats_total", 0755)
+	err = os.MkdirAll(testBcacheUUIDPath+"/bdev0/stats_total", 0750)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/dirty_data",
-		[]byte(dirtyData), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/dirty_data", []byte(dirtyData), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/bypassed",
-		[]byte(bypassed), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/bypassed", []byte(bypassed), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_hits",
-		[]byte(cacheBypassHits), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_hits", []byte(cacheBypassHits), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_misses",
-		[]byte(cacheBypassMisses), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_misses", []byte(cacheBypassMisses), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hit_ratio",
-		[]byte(cacheHitRatio), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hit_ratio", []byte(cacheHitRatio), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hits",
-		[]byte(cacheHits), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hits", []byte(cacheHits), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_miss_collisions",
-		[]byte(cacheMissCollisions), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_miss_collisions", []byte(cacheMissCollisions), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_misses",
-		[]byte(cacheMisses), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_misses", []byte(cacheMisses), 0640)
 	require.NoError(t, err)
 
-	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_readaheads",
-		[]byte(cacheReadaheads), 0644)
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_readaheads", []byte(cacheReadaheads), 0640)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -116,7 +110,4 @@ func TestBcacheGeneratesMetrics(t *testing.T) {
 	err = b.Gather(&acc)
 	require.NoError(t, err)
 	acc.AssertContainsTaggedFields(t, "bcache", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }

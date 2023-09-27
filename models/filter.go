@@ -1,7 +1,15 @@
 package models
 
 import (
+	"errors"
 	"fmt"
+	"time"
+
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/checker/decls"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/ext"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -12,6 +20,15 @@ type TagFilter struct {
 	Name   string
 	Values []string
 	filter filter.Filter
+}
+
+func (tf *TagFilter) Compile() error {
+	f, err := filter.Compile(tf.Values)
+	if err != nil {
+		return err
+	}
+	tf.filter = f
+	return nil
 }
 
 // Filter containing drop/pass and tagdrop/tagpass rules
@@ -34,82 +51,111 @@ type Filter struct {
 	TagInclude       []string
 	tagIncludeFilter filter.Filter
 
+	// New metric-filtering interface
+	MetricPass   string
+	metricFilter cel.Program
+
+	selectActive bool
+	modifyActive bool
+
 	isActive bool
 }
 
 // Compile all Filter lists into filter.Filter objects.
 func (f *Filter) Compile() error {
-	if len(f.NameDrop) == 0 &&
-		len(f.NamePass) == 0 &&
-		len(f.FieldDrop) == 0 &&
-		len(f.FieldPass) == 0 &&
-		len(f.TagInclude) == 0 &&
-		len(f.TagExclude) == 0 &&
-		len(f.TagPassFilters) == 0 &&
-		len(f.TagDropFilters) == 0 {
+	f.selectActive = len(f.NamePass) > 0 || len(f.NameDrop) > 0
+	f.selectActive = f.selectActive || len(f.TagPassFilters) > 0 || len(f.TagDropFilters) > 0
+	f.selectActive = f.selectActive || f.MetricPass != ""
+
+	f.modifyActive = len(f.FieldPass) > 0 || len(f.FieldDrop) > 0
+	f.modifyActive = f.modifyActive || len(f.TagInclude) > 0 || len(f.TagExclude) > 0
+
+	f.isActive = f.selectActive || f.modifyActive
+
+	if !f.isActive {
 		return nil
 	}
 
-	f.isActive = true
-	var err error
-	f.nameDropFilter, err = filter.Compile(f.NameDrop)
-	if err != nil {
-		return fmt.Errorf("error compiling 'namedrop', %s", err)
-	}
-	f.namePassFilter, err = filter.Compile(f.NamePass)
-	if err != nil {
-		return fmt.Errorf("error compiling 'namepass', %s", err)
-	}
-
-	f.fieldDropFilter, err = filter.Compile(f.FieldDrop)
-	if err != nil {
-		return fmt.Errorf("error compiling 'fielddrop', %s", err)
-	}
-	f.fieldPassFilter, err = filter.Compile(f.FieldPass)
-	if err != nil {
-		return fmt.Errorf("error compiling 'fieldpass', %s", err)
-	}
-
-	f.tagExcludeFilter, err = filter.Compile(f.TagExclude)
-	if err != nil {
-		return fmt.Errorf("error compiling 'tagexclude', %s", err)
-	}
-	f.tagIncludeFilter, err = filter.Compile(f.TagInclude)
-	if err != nil {
-		return fmt.Errorf("error compiling 'taginclude', %s", err)
-	}
-
-	for i := range f.TagDropFilters {
-		f.TagDropFilters[i].filter, err = filter.Compile(f.TagDropFilters[i].Values)
+	if f.selectActive {
+		var err error
+		f.nameDropFilter, err = filter.Compile(f.NameDrop)
 		if err != nil {
-			return fmt.Errorf("error compiling 'tagdrop', %s", err)
+			return fmt.Errorf("error compiling 'namedrop', %w", err)
+		}
+		f.namePassFilter, err = filter.Compile(f.NamePass)
+		if err != nil {
+			return fmt.Errorf("error compiling 'namepass', %w", err)
+		}
+
+		for i := range f.TagPassFilters {
+			if err := f.TagPassFilters[i].Compile(); err != nil {
+				return fmt.Errorf("error compiling 'tagpass', %w", err)
+			}
+		}
+		for i := range f.TagDropFilters {
+			if err := f.TagDropFilters[i].Compile(); err != nil {
+				return fmt.Errorf("error compiling 'tagdrop', %w", err)
+			}
 		}
 	}
-	for i := range f.TagPassFilters {
-		f.TagPassFilters[i].filter, err = filter.Compile(f.TagPassFilters[i].Values)
+
+	if f.modifyActive {
+		var err error
+		f.fieldDropFilter, err = filter.Compile(f.FieldDrop)
 		if err != nil {
-			return fmt.Errorf("error compiling 'tagpass', %s", err)
+			return fmt.Errorf("error compiling 'fielddrop', %w", err)
+		}
+		f.fieldPassFilter, err = filter.Compile(f.FieldPass)
+		if err != nil {
+			return fmt.Errorf("error compiling 'fieldpass', %w", err)
+		}
+
+		f.tagExcludeFilter, err = filter.Compile(f.TagExclude)
+		if err != nil {
+			return fmt.Errorf("error compiling 'tagexclude', %w", err)
+		}
+		f.tagIncludeFilter, err = filter.Compile(f.TagInclude)
+		if err != nil {
+			return fmt.Errorf("error compiling 'taginclude', %w", err)
 		}
 	}
-	return nil
+
+	return f.compileMetricFilter()
 }
 
 // Select returns true if the metric matches according to the
-// namepass/namedrop and tagpass/tagdrop filters.  The metric is not modified.
-func (f *Filter) Select(metric telegraf.Metric) bool {
-	if !f.isActive {
-		return true
+// namepass/namedrop, tagpass/tagdrop and metric filters.
+// The metric is not modified.
+func (f *Filter) Select(metric telegraf.Metric) (bool, error) {
+	if !f.selectActive {
+		return true, nil
 	}
 
 	if !f.shouldNamePass(metric.Name()) {
-		return false
+		return false, nil
 	}
 
 	if !f.shouldTagsPass(metric.TagList()) {
-		return false
+		return false, nil
 	}
 
-	return true
+	if f.metricFilter != nil {
+		result, _, err := f.metricFilter.Eval(map[string]interface{}{
+			"name":   metric.Name(),
+			"tags":   metric.Tags(),
+			"fields": metric.Fields(),
+			"time":   metric.Time(),
+		})
+		if err != nil {
+			return true, err
+		}
+		if r, ok := result.Value().(bool); ok {
+			return r, nil
+		}
+		return true, fmt.Errorf("invalid result type %T", result.Value())
+	}
+
+	return true, nil
 }
 
 // Modify removes any tags and fields from the metric according to the
@@ -153,64 +199,13 @@ func (f *Filter) shouldNamePass(key string) bool {
 // shouldFieldPass returns true if the metric should pass, false if it should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldFieldPass(key string) bool {
-	if f.fieldPassFilter != nil && f.fieldDropFilter != nil {
-		return f.fieldPassFilter.Match(key) && !f.fieldDropFilter.Match(key)
-	} else if f.fieldPassFilter != nil {
-		return f.fieldPassFilter.Match(key)
-	} else if f.fieldDropFilter != nil {
-		return !f.fieldDropFilter.Match(key)
-	}
-	return true
+	return ShouldPassFilters(f.fieldPassFilter, f.fieldDropFilter, key)
 }
 
 // shouldTagsPass returns true if the metric should pass, false if it should drop
 // based on the tagdrop/tagpass filter parameters
 func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
-	pass := func(f *Filter) bool {
-		for _, pat := range f.TagPassFilters {
-			if pat.filter == nil {
-				continue
-			}
-			for _, tag := range tags {
-				if tag.Key == pat.Name {
-					if pat.filter.Match(tag.Value) {
-						return true
-					}
-				}
-			}
-		}
-		return false
-	}
-
-	drop := func(f *Filter) bool {
-		for _, pat := range f.TagDropFilters {
-			if pat.filter == nil {
-				continue
-			}
-			for _, tag := range tags {
-				if tag.Key == pat.Name {
-					if pat.filter.Match(tag.Value) {
-						return false
-					}
-				}
-			}
-		}
-		return true
-	}
-
-	// Add additional logic in case where both parameters are set.
-	// see: https://github.com/influxdata/telegraf/issues/2860
-	if f.TagPassFilters != nil && f.TagDropFilters != nil {
-		// return true only in case when tag pass and won't be dropped (true, true).
-		// in case when the same tag should be passed and dropped it will be dropped (true, false).
-		return pass(f) && drop(f)
-	} else if f.TagPassFilters != nil {
-		return pass(f)
-	} else if f.TagDropFilters != nil {
-		return drop(f)
-	}
-
-	return true
+	return ShouldTagsPass(f.TagPassFilters, f.TagDropFilters, tags)
 }
 
 // filterFields removes fields according to fieldpass/fielddrop.
@@ -251,4 +246,115 @@ func (f *Filter) filterTags(metric telegraf.Metric) {
 	for _, key := range filterKeys {
 		metric.RemoveTag(key)
 	}
+}
+
+// Compile the metric filter
+func (f *Filter) compileMetricFilter() error {
+	// Reset internal state
+	f.metricFilter = nil
+
+	// Initialize the expression
+	expression := f.MetricPass
+
+	// Check if we need to call into CEL at all and quit early
+	if expression == "" {
+		return nil
+	}
+
+	// Declare the computation environment for the filter including custom functions
+	env, err := cel.NewEnv(
+		cel.Declarations(
+			decls.NewVar("name", decls.String),
+			decls.NewVar("tags", decls.NewMapType(decls.String, decls.String)),
+			decls.NewVar("fields", decls.NewMapType(decls.String, decls.Dyn)),
+			decls.NewVar("time", decls.Timestamp),
+		),
+		cel.Function(
+			"now",
+			cel.Overload("now", nil, cel.TimestampType),
+			cel.SingletonFunctionBinding(func(_ ...ref.Val) ref.Val { return types.Timestamp{Time: time.Now()} }),
+		),
+		ext.Encoders(),
+		ext.Math(),
+		ext.Strings(),
+	)
+	if err != nil {
+		return fmt.Errorf("creating environment failed: %w", err)
+	}
+
+	// Compile the program
+	ast, issues := env.Compile(expression)
+	if issues.Err() != nil {
+		return issues.Err()
+	}
+	// Check if we got a boolean expression needed for filtering
+	if ast.OutputType() != cel.BoolType {
+		return errors.New("expression needs to return a boolean")
+	}
+
+	// Get the final program
+	options := cel.EvalOptions(
+		cel.OptOptimize,
+	)
+	f.metricFilter, err = env.Program(ast, options)
+	return err
+}
+
+func ShouldPassFilters(include filter.Filter, exclude filter.Filter, key string) bool {
+	if include != nil && exclude != nil {
+		return include.Match(key) && !exclude.Match(key)
+	} else if include != nil {
+		return include.Match(key)
+	} else if exclude != nil {
+		return !exclude.Match(key)
+	}
+	return true
+}
+
+func ShouldTagsPass(passFilters []TagFilter, dropFilters []TagFilter, tags []*telegraf.Tag) bool {
+	pass := func(tpf []TagFilter) bool {
+		for _, pat := range tpf {
+			if pat.filter == nil {
+				continue
+			}
+			for _, tag := range tags {
+				if tag.Key == pat.Name {
+					if pat.filter.Match(tag.Value) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+
+	drop := func(tdf []TagFilter) bool {
+		for _, pat := range tdf {
+			if pat.filter == nil {
+				continue
+			}
+			for _, tag := range tags {
+				if tag.Key == pat.Name {
+					if pat.filter.Match(tag.Value) {
+						return false
+					}
+				}
+			}
+		}
+		return true
+	}
+
+	// Add additional logic in case where both parameters are set.
+	// see: https://github.com/influxdata/telegraf/issues/2860
+	if passFilters != nil && dropFilters != nil {
+		// return true only in case when tag pass and won't be dropped (true, true).
+		// in case when the same tag should be passed and dropped it will be dropped (true, false).
+		return pass(passFilters) && drop(dropFilters)
+	} else if passFilters != nil {
+		return pass(passFilters)
+	} else if dropFilters != nil {
+		return drop(dropFilters)
+	}
+
+	return true
 }

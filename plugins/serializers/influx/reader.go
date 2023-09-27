@@ -2,6 +2,7 @@ package influx
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
 
@@ -22,7 +23,7 @@ func NewReader(metrics []telegraf.Metric, serializer *Serializer) io.Reader {
 		metrics:    metrics,
 		serializer: serializer,
 		offset:     0,
-		buf:        bytes.NewBuffer(make([]byte, 0, serializer.maxLineBytes)),
+		buf:        bytes.NewBuffer(make([]byte, 0, serializer.MaxLineBytes)),
 	}
 }
 
@@ -53,7 +54,8 @@ func (r *reader) Read(p []byte) (int, error) {
 		r.offset++
 		if err != nil {
 			r.buf.Reset()
-			if _, ok := err.(*MetricError); ok {
+			var mErr *MetricError
+			if errors.As(err, &mErr) {
 				continue
 			}
 			// Since we are serializing multiple metrics, don't fail the

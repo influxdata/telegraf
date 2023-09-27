@@ -37,7 +37,7 @@ func (c *Config) validateTemplates() error {
 		}
 
 		if len(parts) > 3 {
-			return fmt.Errorf("invalid template format: '%s'", t)
+			return fmt.Errorf("invalid template format: %q", t)
 		}
 
 		template := t
@@ -66,7 +66,7 @@ func (c *Config) validateTemplates() error {
 
 		// Prevent duplicate filters in the config
 		if _, ok := filters[filter]; ok {
-			return fmt.Errorf("duplicate filter '%s' found at position: %d", filter, i)
+			return fmt.Errorf("duplicate filter %q found at position: %d", filter, i)
 		}
 		filters[filter] = struct{}{}
 
@@ -98,7 +98,7 @@ func (c *Config) validateTemplate(template string) error {
 	}
 
 	if !hasMeasurement {
-		return fmt.Errorf("no measurement in template `%s`", template)
+		return fmt.Errorf("no measurement in template %q", template)
 	}
 
 	return nil
@@ -120,11 +120,11 @@ func (c *Config) validateFilter(filter string) error {
 func (c *Config) validateTag(keyValue string) error {
 	parts := strings.Split(keyValue, "=")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid template tags: '%s'", keyValue)
+		return fmt.Errorf("invalid template tags: %q", keyValue)
 	}
 
 	if parts[0] == "" || parts[1] == "" {
-		return fmt.Errorf("invalid template tags: %s'", keyValue)
+		return fmt.Errorf("invalid template tags: %q", keyValue)
 	}
 
 	return nil

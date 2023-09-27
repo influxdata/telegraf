@@ -64,7 +64,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	if r.client == nil {
 		err := r.Connect()
 		if err != nil {
-			return fmt.Errorf("failed to (re)connect to Riemann, error: %s", err)
+			return fmt.Errorf("failed to (re)connect to Riemann: %w", err)
 		}
 	}
 
@@ -76,8 +76,8 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	var senderr = r.client.SendMulti(events)
 	if senderr != nil {
-		r.Close() //nolint:revive // There is another error which will be returned here
-		return fmt.Errorf("failed to send riemann message (will try to reconnect), error: %s", senderr)
+		r.Close()
+		return fmt.Errorf("failed to send riemann message (will try to reconnect): %w", senderr)
 	}
 
 	return nil

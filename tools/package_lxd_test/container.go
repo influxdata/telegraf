@@ -7,10 +7,9 @@ import (
 	"time"
 )
 
-const influxDataRPMRepo = `
-[influxdata]
+const influxDataRPMRepo = `[influxdata]
 name = InfluxData Repository - Stable
-baseurl = https://repos.influxdata.com/stable/\$basearch/main
+baseurl = https://repos.influxdata.com/stable/x86_64/main
 enabled = 1
 gpgcheck = 1
 gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
@@ -32,12 +31,12 @@ func (c *Container) Create(image string) error {
 	c.client = LXDClient{}
 	err := c.client.Connect()
 	if err != nil {
-		return fmt.Errorf("failed to connect to lxd: %v", err)
+		return fmt.Errorf("failed to connect to lxd: %w", err)
 	}
 
 	err = c.client.Create(c.Name, "images", image)
 	if err != nil {
-		return fmt.Errorf("failed to create instance: %v", err)
+		return fmt.Errorf("failed to create instance: %w", err)
 	}
 
 	// at this point the container is created, so on any error during setup
@@ -45,7 +44,7 @@ func (c *Container) Create(image string) error {
 	err = c.client.Start(c.Name)
 	if err != nil {
 		c.Delete()
-		return fmt.Errorf("failed to start instance: %v", err)
+		return fmt.Errorf("failed to start instance: %w", err)
 	}
 
 	if err := c.detectPackageManager(); err != nil {
@@ -103,6 +102,17 @@ func (c *Container) CheckStatus(serviceName string) error {
 		"--",
 		"echo '[[inputs.cpu]]\n[[outputs.file]]' | "+
 			"tee /etc/telegraf/telegraf.conf",
+	)
+	if err != nil {
+		return err
+	}
+
+	err = c.client.Exec(
+		c.Name,
+		"bash",
+		"-c",
+		"--",
+		"ls -la /etc/telegraf/",
 	)
 	if err != nil {
 		return err
@@ -177,6 +187,12 @@ func (c *Container) configureApt() error {
 		return err
 	}
 
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/apt/sources.list.d/influxdata.list",
+	)
+
 	err = c.client.Exec(c.Name, "apt-get", "update")
 	if err != nil {
 		return err
@@ -190,11 +206,17 @@ func (c *Container) configureYum() error {
 	err := c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
-		fmt.Sprintf("echo \"%s\" > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
+		fmt.Sprintf("echo -e %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
 	}
+
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/yum.repos.d/influxdata.repo",
+	)
 
 	// will return a non-zero return code if there are packages to update
 	return c.client.Exec(c.Name, "bash", "-c", "yum check-update || true")
@@ -205,11 +227,17 @@ func (c *Container) configureDnf() error {
 	err := c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
-		fmt.Sprintf("echo \"%s\" > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
+		fmt.Sprintf("echo -e %q > /etc/yum.repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
 	}
+
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/yum.repos.d/influxdata.repo",
+	)
 
 	// will return a non-zero return code if there are packages to update
 	return c.client.Exec(c.Name, "bash", "-c", "dnf check-update || true")
@@ -219,11 +247,17 @@ func (c *Container) configureDnf() error {
 func (c *Container) configureZypper() error {
 	err := c.client.Exec(
 		c.Name,
-		"echo", fmt.Sprintf("\"%s\"", influxDataRPMRepo), ">", "/etc/zypp/repos.d/influxdata.repo",
+		"echo", fmt.Sprintf("%q", influxDataRPMRepo), ">", "/etc/zypp/repos.d/influxdata.repo",
 	)
 	if err != nil {
 		return err
 	}
+
+	_ = c.client.Exec(
+		c.Name,
+		"bash", "-c", "--",
+		"cat /etc/zypp/repos.d/influxdata.repo",
+	)
 
 	return c.client.Exec(c.Name, "zypper", "refresh")
 }
@@ -279,7 +313,7 @@ func (c *Container) setupRepo() error {
 
 // Wait for the network to come up on a container
 func (c *Container) waitForNetwork() error {
-	var exponentialBackoffCeilingSecs int64 = 16
+	var exponentialBackoffCeilingSecs int64 = 128
 
 	attempts := 0
 	for {
@@ -287,12 +321,13 @@ func (c *Container) waitForNetwork() error {
 			return nil
 		}
 
-		// uses exponetnial backoff to try after 1, 2, 4, 8, and 16 seconds
+		// uses exponetnial backoff to try after 1, 2, 4, 8, 16, etc. seconds
 		delaySecs := int64(math.Pow(2, float64(attempts)))
 		if delaySecs > exponentialBackoffCeilingSecs {
 			break
 		}
 
+		fmt.Printf("waiting for network, sleeping for %d second(s)\n", delaySecs)
 		time.Sleep(time.Duration(delaySecs) * time.Second)
 		attempts++
 	}

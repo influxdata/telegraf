@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -45,6 +44,7 @@ type SocketListener struct {
 	KeepAlivePeriod      *config.Duration `toml:"keep_alive_period"`
 	SocketMode           string           `toml:"socket_mode"`
 	ContentEncoding      string           `toml:"content_encoding"`
+	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
 	SplittingStrategy    string           `toml:"splitting_strategy"`
 	SplittingDelimiter   string           `toml:"splitting_delimiter"`
 	SplittingLength      int              `toml:"splitting_length"`
@@ -53,7 +53,7 @@ type SocketListener struct {
 	tlsint.ServerConfig
 
 	wg       sync.WaitGroup
-	parser   parsers.Parser
+	parser   telegraf.Parser
 	splitter bufio.SplitFunc
 
 	listener listener
@@ -88,7 +88,7 @@ func (sl *SocketListener) Init() error {
 		case "le":
 			order = binary.LittleEndian
 		default:
-			return fmt.Errorf("invalid 'endianess' %q", sl.SplittingLengthField.Endianness)
+			return fmt.Errorf("invalid 'endianness' %q", sl.SplittingLengthField.Endianness)
 		}
 
 		switch sl.SplittingLengthField.Bytes {
@@ -195,8 +195,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	case "udp", "udp4", "udp6":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:             sl.ContentEncoding,
+			MaxDecompressionSize: int64(sl.MaxDecompressionSize),
+			Parser:               sl.parser,
 		}
 		if err := psl.setupUDP(u, ifname, int(sl.ReadBufferSize)); err != nil {
 			return err
@@ -204,8 +205,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.listener = psl
 	case "ip", "ip4", "ip6":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:             sl.ContentEncoding,
+			MaxDecompressionSize: int64(sl.MaxDecompressionSize),
+			Parser:               sl.parser,
 		}
 		if err := psl.setupIP(u); err != nil {
 			return err
@@ -213,8 +215,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.listener = psl
 	case "unixgram":
 		psl := &packetListener{
-			Encoding: sl.ContentEncoding,
-			Parser:   sl.parser,
+			Encoding:             sl.ContentEncoding,
+			MaxDecompressionSize: int64(sl.MaxDecompressionSize),
+			Parser:               sl.parser,
 		}
 		if err := psl.setupUnixgram(u, sl.SocketMode); err != nil {
 			return err

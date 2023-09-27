@@ -83,18 +83,21 @@ func (s *IoTDB) Connect() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
 	password, err := s.Password.Get()
 	if err != nil {
+		username.Destroy()
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 	sessionConf := &client.Config{
 		Host:     s.Host,
 		Port:     s.Port,
-		UserName: string(username),
-		Password: string(password),
+		UserName: username.String(),
+		Password: password.String(),
 	}
+	username.Destroy()
+	password.Destroy()
+
 	var ss = client.NewSession(sessionConf)
 	s.session = &ss
 	timeoutInMs := int(time.Duration(s.Timeout).Milliseconds())

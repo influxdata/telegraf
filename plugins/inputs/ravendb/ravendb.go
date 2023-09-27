@@ -126,7 +126,7 @@ func (r *RavenDB) requestJSON(u string, target interface{}) error {
 
 	r.Log.Debugf("%s: %s", u, resp.Status)
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("invalid response code to request '%s': %d - %s", r.URL, resp.StatusCode, resp.Status)
+		return fmt.Errorf("invalid response code to request %q: %d - %s", r.URL, resp.StatusCode, resp.Status)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(target)
@@ -262,6 +262,11 @@ func (r *RavenDB) gatherDatabases(acc telegraf.Accumulator) {
 			"storage_indexes_used_data_file_in_mb":        dbResponse.Storage.IndexesUsedDataFileInMb,
 			"storage_total_allocated_storage_file_in_mb":  dbResponse.Storage.TotalAllocatedStorageFileInMb,
 			"storage_total_free_space_in_mb":              dbResponse.Storage.TotalFreeSpaceInMb,
+			"storage_io_read_operations":                  dbResponse.Storage.IoReadOperations,
+			"storage_io_write_operations":                 dbResponse.Storage.IoWriteOperations,
+			"storage_read_throughput_in_kb":               dbResponse.Storage.ReadThroughputInKb,
+			"storage_write_throughput_in_kb":              dbResponse.Storage.WriteThroughputInKb,
+			"storage_queue_length":                        dbResponse.Storage.QueueLength,
 			"time_since_last_backup_in_sec":               dbResponse.TimeSinceLastBackupInSec,
 			"uptime_in_sec":                               dbResponse.UptimeInSec,
 		}

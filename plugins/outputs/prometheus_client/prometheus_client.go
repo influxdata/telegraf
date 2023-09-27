@@ -23,15 +23,18 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
 	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
+	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-var (
+const (
 	defaultListen             = ":9273"
 	defaultPath               = "/metrics"
 	defaultExpirationInterval = config.Duration(60 * time.Second)
+	defaultReadTimeout        = 10 * time.Second
+	defaultWriteTimeout       = 10 * time.Second
 )
 
 type Collector interface {
@@ -41,19 +44,22 @@ type Collector interface {
 }
 
 type PrometheusClient struct {
-	Listen             string          `toml:"listen"`
-	MetricVersion      int             `toml:"metric_version"`
-	BasicUsername      string          `toml:"basic_username"`
-	BasicPassword      string          `toml:"basic_password"`
-	IPRange            []string        `toml:"ip_range"`
-	ExpirationInterval config.Duration `toml:"expiration_interval"`
-	Path               string          `toml:"path"`
-	CollectorsExclude  []string        `toml:"collectors_exclude"`
-	StringAsLabel      bool            `toml:"string_as_label"`
-	ExportTimestamp    bool            `toml:"export_timestamp"`
-	tlsint.ServerConfig
+	Listen             string                 `toml:"listen"`
+	ReadTimeout        config.Duration        `toml:"read_timeout"`
+	WriteTimeout       config.Duration        `toml:"write_timeout"`
+	MetricVersion      int                    `toml:"metric_version"`
+	BasicUsername      string                 `toml:"basic_username"`
+	BasicPassword      config.Secret          `toml:"basic_password"`
+	IPRange            []string               `toml:"ip_range"`
+	ExpirationInterval config.Duration        `toml:"expiration_interval"`
+	Path               string                 `toml:"path"`
+	CollectorsExclude  []string               `toml:"collectors_exclude"`
+	StringAsLabel      bool                   `toml:"string_as_label"`
+	ExportTimestamp    bool                   `toml:"export_timestamp"`
+	TypeMappings       serializer.MetricTypes `toml:"metric_types"`
+	Log                telegraf.Logger        `toml:"-"`
 
-	Log telegraf.Logger `toml:"-"`
+	tlsint.ServerConfig
 
 	server    *http.Server
 	url       *url.URL
@@ -92,17 +98,32 @@ func (p *PrometheusClient) Init() error {
 		}
 	}
 
+	if err := p.TypeMappings.Init(); err != nil {
+		return err
+	}
+
 	switch p.MetricVersion {
 	default:
 		fallthrough
 	case 1:
-		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.Log)
+		p.collector = v1.NewCollector(
+			time.Duration(p.ExpirationInterval),
+			p.StringAsLabel,
+			p.ExportTimestamp,
+			p.TypeMappings,
+			p.Log,
+		)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
 		}
 	case 2:
-		p.collector = v2.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp)
+		p.collector = v2.NewCollector(
+			time.Duration(p.ExpirationInterval),
+			p.StringAsLabel,
+			p.ExportTimestamp,
+			p.TypeMappings,
+		)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
@@ -113,13 +134,20 @@ func (p *PrometheusClient) Init() error {
 	for _, cidr := range p.IPRange {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
-			return fmt.Errorf("error parsing ip_range: %v", err)
+			return fmt.Errorf("error parsing ip_range: %w", err)
 		}
 
 		ipRange = append(ipRange, ipNet)
 	}
 
-	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
+	psecret, err := p.BasicPassword.Get()
+	if err != nil {
+		return err
+	}
+	password := psecret.String()
+	psecret.Destroy()
+
+	authHandler := internal.BasicAuthHandler(p.BasicUsername, password, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -141,10 +169,19 @@ func (p *PrometheusClient) Init() error {
 		return err
 	}
 
+	if p.ReadTimeout < config.Duration(time.Second) {
+		p.ReadTimeout = config.Duration(defaultReadTimeout)
+	}
+	if p.WriteTimeout < config.Duration(time.Second) {
+		p.WriteTimeout = config.Duration(defaultWriteTimeout)
+	}
+
 	p.server = &http.Server{
-		Addr:      p.Listen,
-		Handler:   mux,
-		TLSConfig: tlsConfig,
+		Addr:         p.Listen,
+		Handler:      mux,
+		TLSConfig:    tlsConfig,
+		ReadTimeout:  time.Duration(p.ReadTimeout),
+		WriteTimeout: time.Duration(p.WriteTimeout),
 	}
 
 	return nil

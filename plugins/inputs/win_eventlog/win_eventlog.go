@@ -11,6 +11,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -29,60 +30,111 @@ var sampleConfig string
 
 // WinEventLog config
 type WinEventLog struct {
-	Locale                 uint32   `toml:"locale"`
-	EventlogName           string   `toml:"eventlog_name"`
-	Query                  string   `toml:"xpath_query"`
-	ProcessUserData        bool     `toml:"process_userdata"`
-	ProcessEventData       bool     `toml:"process_eventdata"`
-	Separator              string   `toml:"separator"`
-	OnlyFirstLineOfMessage bool     `toml:"only_first_line_of_message"`
-	TimeStampFromEvent     bool     `toml:"timestamp_from_event"`
-	EventTags              []string `toml:"event_tags"`
-	EventFields            []string `toml:"event_fields"`
-	ExcludeFields          []string `toml:"exclude_fields"`
-	ExcludeEmpty           []string `toml:"exclude_empty"`
-	subscription           EvtHandle
-	buf                    []byte
-	Log                    telegraf.Logger
+	Locale                 uint32          `toml:"locale"`
+	EventlogName           string          `toml:"eventlog_name"`
+	Query                  string          `toml:"xpath_query"`
+	FromBeginning          bool            `toml:"from_beginning"`
+	ProcessUserData        bool            `toml:"process_userdata"`
+	ProcessEventData       bool            `toml:"process_eventdata"`
+	Separator              string          `toml:"separator"`
+	OnlyFirstLineOfMessage bool            `toml:"only_first_line_of_message"`
+	TimeStampFromEvent     bool            `toml:"timestamp_from_event"`
+	EventTags              []string        `toml:"event_tags"`
+	EventFields            []string        `toml:"event_fields"`
+	ExcludeFields          []string        `toml:"exclude_fields"`
+	ExcludeEmpty           []string        `toml:"exclude_empty"`
+	Log                    telegraf.Logger `toml:"-"`
+
+	subscription     EvtHandle
+	subscriptionFlag EvtSubscribeFlag
+	bookmark         EvtHandle
 }
 
-var bufferSize = 1 << 14
+const bufferSize = 1 << 14
 
 func (*WinEventLog) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather Windows Event Log entries
-func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
-
-	var err error
-	if w.subscription == 0 {
-		w.subscription, err = w.evtSubscribe(w.EventlogName, w.Query)
-		if err != nil {
-			return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
-		}
+func (w *WinEventLog) Init() error {
+	w.subscriptionFlag = EvtSubscribeToFutureEvents
+	if w.FromBeginning {
+		w.subscriptionFlag = EvtSubscribeStartAtOldestRecord
 	}
+
+	bookmark, err := _EvtCreateBookmark(nil)
+	if err != nil {
+		return err
+	}
+	w.bookmark = bookmark
+
+	return nil
+}
+
+func (w *WinEventLog) Start(_ telegraf.Accumulator) error {
+	subscription, err := w.evtSubscribe()
+	if err != nil {
+		return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
+	}
+	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
 
-loop:
+	return nil
+}
+
+func (w *WinEventLog) Stop() {
+	_ = _EvtClose(w.subscription)
+}
+
+func (w *WinEventLog) GetState() interface{} {
+	bookmarkXML, err := w.renderBookmark(w.bookmark)
+	if err != nil {
+		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
+		return ""
+	}
+	return bookmarkXML
+}
+
+func (w *WinEventLog) SetState(state interface{}) error {
+	bookmarkXML, ok := state.(string)
+	if !ok {
+		return fmt.Errorf("invalid type %T for state", state)
+	}
+
+	ptr, err := syscall.UTF16PtrFromString(bookmarkXML)
+	if err != nil {
+		return fmt.Errorf("convertion to pointer failed: %w", err)
+	}
+
+	bookmark, err := _EvtCreateBookmark(ptr)
+	if err != nil {
+		return fmt.Errorf("creating bookmark failed: %w", err)
+	}
+	w.bookmark = bookmark
+	w.subscriptionFlag = EvtSubscribeStartAfterBookmark
+
+	return nil
+}
+
+// Gather Windows Event Log entries
+func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	for {
 		events, err := w.fetchEvents(w.subscription)
 		if err != nil {
-			switch {
-			case err == ERROR_NO_MORE_ITEMS:
-				break loop
-			case err != nil:
-				w.Log.Errorf("Error getting events: %v", err)
-				return err
+			if errors.Is(err, ERROR_NO_MORE_ITEMS) {
+				break
 			}
+			w.Log.Errorf("Error getting events: %v", err)
+			return err
 		}
 
-		for _, event := range events {
+		for i := range events {
 			// Prepare fields names usage counter
 			var fieldsUsage = map[string]int{}
 
 			tags := map[string]string{}
 			fields := map[string]interface{}{}
+			event := events[i]
 			evt := reflect.ValueOf(&event).Elem()
 			timeStamp := time.Now()
 			// Walk through all fields of Event struct to process System tags or fields
@@ -101,7 +153,7 @@ loop:
 					fieldName = "ProcessID"
 					// Look up Process Name from pid
 					if should, _ := w.shouldProcessField("ProcessName"); should {
-						_, _, processName, err := GetFromSnapProcess(fieldValue)
+						processName, err := GetFromSnapProcess(fieldValue)
 						if err == nil {
 							computedValues["ProcessName"] = processName
 						}
@@ -244,27 +296,28 @@ func (w *WinEventLog) shouldExcludeEmptyField(field string, fieldType string, fi
 	return false
 }
 
-func (w *WinEventLog) evtSubscribe(logName, xquery string) (EvtHandle, error) {
-	var logNamePtr, xqueryPtr *uint16
-
+func (w *WinEventLog) evtSubscribe() (EvtHandle, error) {
 	sigEvent, err := windows.CreateEvent(nil, 0, 0, nil)
 	if err != nil {
 		return 0, err
 	}
 	defer windows.CloseHandle(sigEvent)
 
-	logNamePtr, err = syscall.UTF16PtrFromString(logName)
+	logNamePtr, err := syscall.UTF16PtrFromString(w.EventlogName)
 	if err != nil {
 		return 0, err
 	}
 
-	xqueryPtr, err = syscall.UTF16PtrFromString(xquery)
+	xqueryPtr, err := syscall.UTF16PtrFromString(w.Query)
 	if err != nil {
 		return 0, err
 	}
 
-	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr,
-		0, 0, 0, EvtSubscribeToFutureEvents)
+	var bookmark EvtHandle
+	if w.subscriptionFlag == EvtSubscribeStartAfterBookmark {
+		bookmark = w.bookmark
+	}
+	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr, bookmark, 0, 0, w.subscriptionFlag)
 	if err != nil {
 		return 0, err
 	}
@@ -282,7 +335,7 @@ func (w *WinEventLog) fetchEventHandles(subsHandle EvtHandle) ([]EvtHandle, erro
 
 	err := _EvtNext(subsHandle, eventsNumber, &eventHandles[0], 0, 0, &evtReturned)
 	if err != nil {
-		if err == ERROR_INVALID_OPERATION && evtReturned == 0 {
+		if errors.Is(err, ERROR_INVALID_OPERATION) && evtReturned == 0 {
 			return nil, ERROR_NO_MORE_ITEMS
 		}
 		return nil, err
@@ -299,49 +352,69 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 		return nil, err
 	}
 
+	var evterr error
 	for _, eventHandle := range eventHandles {
-		if eventHandle != 0 {
-			event, err := w.renderEvent(eventHandle)
-			if err == nil {
-				events = append(events, event)
-			}
+		if eventHandle == 0 {
+			continue
 		}
+		if event, err := w.renderEvent(eventHandle); err == nil {
+			events = append(events, event)
+		}
+		if err := _EvtUpdateBookmark(w.bookmark, eventHandle); err != nil && evterr == nil {
+			evterr = err
+		}
+
+		if err := _EvtClose(eventHandle); err != nil && evterr == nil {
+			evterr = err
+		}
+	}
+	return events, evterr
+}
+
+func (w *WinEventLog) renderBookmark(bookmark EvtHandle) (string, error) {
+	var bufferUsed, propertyCount uint32
+
+	buf := make([]byte, bufferSize)
+	err := _EvtRender(0, bookmark, EvtRenderBookmark, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
+	if err != nil {
+		return "", err
 	}
 
-	for i := 0; i < len(eventHandles); i++ {
-		err := _EvtClose(eventHandles[i])
-		if err != nil {
-			return events, err
-		}
+	x, err := DecodeUTF16(buf[:bufferUsed])
+	if err != nil {
+		return "", err
 	}
-	return events, nil
+	if x[len(x)-1] == 0 {
+		x = x[:len(x)-1]
+	}
+	return string(x), err
 }
 
 func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	var bufferUsed, propertyCount uint32
 
+	buf := make([]byte, bufferSize)
 	event := Event{}
-	err := _EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(w.buf)), &w.buf[0], &bufferUsed, &propertyCount)
+	err := _EvtRender(0, eventHandle, EvtRenderEventXML, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
 	if err != nil {
 		return event, err
 	}
 
-	eventXML, err := DecodeUTF16(w.buf[:bufferUsed])
+	eventXML, err := DecodeUTF16(buf[:bufferUsed])
 	if err != nil {
 		return event, err
 	}
 
-	err = xml.Unmarshal([]byte(eventXML), &event)
+	err = xml.Unmarshal(eventXML, &event)
 	if err != nil {
-		// We can return event without most text values,
-		// that way we will not loose information
+		//nolint:nilerr // We can return event without most text values, that way we will not lose information
 		// This can happen when processing Forwarded Events
 		return event, nil
 	}
 
 	// Do resolve local messages the usual way, while using built-in information for events forwarded by WEC.
 	// This is a safety measure as the underlying Windows-internal EvtFormatMessage might segfault in cases
-	// where the publisher (i.e. the remote machine which forwared the event) is unavailable e.g. due to
+	// where the publisher (i.e. the remote machine which forwarded the event) is unavailable e.g. due to
 	// a reboot. See https://github.com/influxdata/telegraf/issues/12328 for the full story.
 	if event.RenderingInfo == nil {
 		return w.renderLocalMessage(event, eventHandle)
@@ -354,9 +427,9 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 func (w *WinEventLog) renderLocalMessage(event Event, eventHandle EvtHandle) (Event, error) {
 	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
 	if err != nil {
-		return event, nil
+		return event, nil //nolint:nilerr // We can return event without most values
 	}
-	defer _EvtClose(publisherHandle)
+	defer _EvtClose(publisherHandle) //nolint:errcheck // Ignore error returned during Close
 
 	// Populating text values
 	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
@@ -421,7 +494,7 @@ func formatEventString(
 	var bufferUsed uint32
 	err := _EvtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag,
 		0, nil, &bufferUsed)
-	if err != nil && err != ERROR_INSUFFICIENT_BUFFER {
+	if err != nil && !errors.Is(err, ERROR_INSUFFICIENT_BUFFER) {
 		return "", err
 	}
 
@@ -483,7 +556,6 @@ func openPublisherMetadata(
 func init() {
 	inputs.Add("win_eventlog", func() telegraf.Input {
 		return &WinEventLog{
-			buf:                    make([]byte, bufferSize),
 			ProcessUserData:        true,
 			ProcessEventData:       true,
 			Separator:              "_",

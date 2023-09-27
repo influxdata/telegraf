@@ -4,6 +4,7 @@ package mysql
 import (
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -25,31 +26,31 @@ import (
 var sampleConfig string
 
 type Mysql struct {
-	Servers                             []config.Secret `toml:"servers"`
-	PerfEventsStatementsDigestTextLimit int64           `toml:"perf_events_statements_digest_text_limit"`
-	PerfEventsStatementsLimit           int64           `toml:"perf_events_statements_limit"`
-	PerfEventsStatementsTimeLimit       int64           `toml:"perf_events_statements_time_limit"`
-	TableSchemaDatabases                []string        `toml:"table_schema_databases"`
-	GatherProcessList                   bool            `toml:"gather_process_list"`
-	GatherUserStatistics                bool            `toml:"gather_user_statistics"`
-	GatherInfoSchemaAutoInc             bool            `toml:"gather_info_schema_auto_inc"`
-	GatherInnoDBMetrics                 bool            `toml:"gather_innodb_metrics"`
-	GatherSlaveStatus                   bool            `toml:"gather_slave_status"`
-	GatherAllSlaveChannels              bool            `toml:"gather_all_slave_channels"`
-	MariadbDialect                      bool            `toml:"mariadb_dialect"`
-	GatherBinaryLogs                    bool            `toml:"gather_binary_logs"`
-	GatherTableIOWaits                  bool            `toml:"gather_table_io_waits"`
-	GatherTableLockWaits                bool            `toml:"gather_table_lock_waits"`
-	GatherIndexIOWaits                  bool            `toml:"gather_index_io_waits"`
-	GatherEventWaits                    bool            `toml:"gather_event_waits"`
-	GatherTableSchema                   bool            `toml:"gather_table_schema"`
-	GatherFileEventsStats               bool            `toml:"gather_file_events_stats"`
-	GatherPerfEventsStatements          bool            `toml:"gather_perf_events_statements"`
-	GatherGlobalVars                    bool            `toml:"gather_global_variables"`
-	GatherPerfSummaryPerAccountPerEvent bool            `toml:"gather_perf_sum_per_acc_per_event"`
-	PerfSummaryEvents                   []string        `toml:"perf_summary_events"`
-	IntervalSlow                        config.Duration `toml:"interval_slow"`
-	MetricVersion                       int             `toml:"metric_version"`
+	Servers                             []*config.Secret `toml:"servers"`
+	PerfEventsStatementsDigestTextLimit int64            `toml:"perf_events_statements_digest_text_limit"`
+	PerfEventsStatementsLimit           int64            `toml:"perf_events_statements_limit"`
+	PerfEventsStatementsTimeLimit       int64            `toml:"perf_events_statements_time_limit"`
+	TableSchemaDatabases                []string         `toml:"table_schema_databases"`
+	GatherProcessList                   bool             `toml:"gather_process_list"`
+	GatherUserStatistics                bool             `toml:"gather_user_statistics"`
+	GatherInfoSchemaAutoInc             bool             `toml:"gather_info_schema_auto_inc"`
+	GatherInnoDBMetrics                 bool             `toml:"gather_innodb_metrics"`
+	GatherSlaveStatus                   bool             `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool             `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool             `toml:"mariadb_dialect"`
+	GatherBinaryLogs                    bool             `toml:"gather_binary_logs"`
+	GatherTableIOWaits                  bool             `toml:"gather_table_io_waits"`
+	GatherTableLockWaits                bool             `toml:"gather_table_lock_waits"`
+	GatherIndexIOWaits                  bool             `toml:"gather_index_io_waits"`
+	GatherEventWaits                    bool             `toml:"gather_event_waits"`
+	GatherTableSchema                   bool             `toml:"gather_table_schema"`
+	GatherFileEventsStats               bool             `toml:"gather_file_events_stats"`
+	GatherPerfEventsStatements          bool             `toml:"gather_perf_events_statements"`
+	GatherGlobalVars                    bool             `toml:"gather_global_variables"`
+	GatherPerfSummaryPerAccountPerEvent bool             `toml:"gather_perf_sum_per_acc_per_event"`
+	PerfSummaryEvents                   []string         `toml:"perf_summary_events"`
+	IntervalSlow                        config.Duration  `toml:"interval_slow"`
+	MetricVersion                       int              `toml:"metric_version"`
 
 	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -79,7 +80,8 @@ func (m *Mysql) Init() error {
 
 	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
-		m.Servers = append(m.Servers, config.NewSecret([]byte(localhost)))
+		s := config.NewSecret([]byte(localhost))
+		m.Servers = append(m.Servers, &s)
 	}
 
 	// Register the TLS configuration. Due to the registry being a global
@@ -93,7 +95,7 @@ func (m *Mysql) Init() error {
 	tlsid := "custom-" + tlsuuid.String()
 	tlsConfig, err := m.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("registering TLS config: %s", err)
+		return fmt.Errorf("registering TLS config: %w", err)
 	}
 	if tlsConfig != nil {
 		if err := mysql.RegisterTLSConfig(tlsid, tlsConfig); err != nil {
@@ -103,12 +105,12 @@ func (m *Mysql) Init() error {
 
 	// Adapt the DSN string
 	for i, server := range m.Servers {
-		s, err := server.Get()
+		dsnSecret, err := server.Get()
 		if err != nil {
-			return fmt.Errorf("getting server %d failed", i)
+			return fmt.Errorf("getting server %d failed: %w", i, err)
 		}
-		dsn := string(s)
-		config.ReleaseSecret(s)
+		dsn := dsnSecret.String()
+		dsnSecret.Destroy()
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
@@ -124,8 +126,10 @@ func (m *Mysql) Init() error {
 			conf.TLSConfig = tlsid
 		}
 
-		server.Destroy()
-		m.Servers[i] = config.NewSecret([]byte(conf.FormatDSN()))
+		if err := server.Set([]byte(conf.FormatDSN())); err != nil {
+			return fmt.Errorf("replacing server %q failed: %w", dsn, err)
+		}
+		m.Servers[i] = server
 	}
 
 	return nil
@@ -137,7 +141,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	// Loop through each server and collect metrics
 	for _, server := range m.Servers {
 		wg.Add(1)
-		go func(s config.Secret) {
+		go func(s *config.Secret) {
 			defer wg.Done()
 			acc.AddError(m.gatherServer(s, acc))
 		}(server)
@@ -270,7 +274,7 @@ const (
         EXECUTE IMMEDIATE CONCAT("
             SELECT NAME, COUNT
             FROM information_schema.INNODB_METRICS
-            WHERE ", IF(version() REGEXP '10\.[1-4].*',"status='enabled'", "ENABLED=1"), "
+            WHERE ", IF(version() REGEXP '10\.[1-4]\\..*',"status='enabled'", "ENABLED=1"), "
         ");
 	`
 	perfTableIOWaitsQuery = `
@@ -410,13 +414,13 @@ const (
 	`
 )
 
-func (m *Mysql) gatherServer(server config.Secret, acc telegraf.Accumulator) error {
-	s, err := server.Get()
+func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) error {
+	dsnSecret, err := server.Get()
 	if err != nil {
 		return err
 	}
-	dsn := string(s)
-	config.ReleaseSecret(s)
+	dsn := dsnSecret.String()
+	dsnSecret.Destroy()
 	servtag := getDSNTag(dsn)
 
 	db, err := sql.Open("mysql", dsn)
@@ -571,7 +575,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.A
 
 		value, err := m.parseGlobalVariables(key, val)
 		if err != nil {
-			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %v", key, string(val), err)
+			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %w", key, string(val), err)
 			if m.MetricVersion < 2 {
 				m.Log.Debug(errString)
 			} else {
@@ -637,7 +641,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			vals[i] = sql.RawBytes{}
 			valPtrs[i] = &vals[i]
 		}
-		if err = rows.Scan(valPtrs...); err != nil {
+		if err := rows.Scan(valPtrs...); err != nil {
 			return err
 		}
 
@@ -668,7 +672,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 
 			value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName())
 			if err != nil {
-				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %v", colName, string(colValue), err)
+				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %w", colName, string(colValue), err)
 				if m.MetricVersion < 2 {
 					m.Log.Debug(errString)
 				} else {
@@ -759,7 +763,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 		var key string
 		var val sql.RawBytes
 
-		if err = rows.Scan(&key, &val); err != nil {
+		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
 
@@ -787,42 +791,42 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			case "Queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["queries"] = i
 				}
 			case "Questions":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["questions"] = i
 				}
 			case "Slow_queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["slow_queries"] = i
 				}
 			case "Connections":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["connections"] = i
 				}
 			case "Syncs":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["syncs"] = i
 				}
 			case "Uptime":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error parsing mysql %q int value: %w", key, err))
 				} else {
 					fields["uptime"] = i
 				}
@@ -831,7 +835,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			key = strings.ToLower(key)
 			value, err := v2.ConvertGlobalStatus(key, val)
 			if err != nil {
-				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %v", key, string(val), err))
+				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %w", key, string(val), err))
 			} else {
 				fields[key] = value
 			}
@@ -1304,7 +1308,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, servtag string, acc telegraf.Acc
 		key = strings.ToLower(key)
 		value, err := m.parseValueByDatabaseTypeName(val, "BIGINT")
 		if err != nil {
-			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %v", key, string(val), err))
+			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %w", key, string(val), err))
 			continue
 		}
 
@@ -1469,7 +1473,7 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegra
 	var tableName string
 	err := db.QueryRow(perfSchemaTablesQuery, "table_lock_waits_summary_by_table").Scan(&tableName)
 	switch {
-	case err == sql.ErrNoRows:
+	case errors.Is(err, sql.ErrNoRows):
 		return nil
 	case err != nil:
 		return err
@@ -1694,7 +1698,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 
 	var (
 		schemaName, digest, digestText       string
-		count, queryTime, errors, warnings   float64
+		count, queryTime, errs, warnings     float64
 		rowsAffected, rowsSent, rowsExamined float64
 		tmpTables, tmpDiskTables             float64
 		sortMergePasses, sortRows            float64
@@ -1708,7 +1712,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 	for rows.Next() {
 		err = rows.Scan(
 			&schemaName, &digest, &digestText,
-			&count, &queryTime, &errors, &warnings,
+			&count, &queryTime, &errs, &warnings,
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
 			&sortMergePasses, &sortRows,
@@ -1725,7 +1729,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 		fields := map[string]interface{}{
 			"events_statements_total":                   count,
 			"events_statements_seconds_total":           queryTime / picoSeconds,
-			"events_statements_errors_total":            errors,
+			"events_statements_errors_total":            errs,
 			"events_statements_warnings_total":          warnings,
 			"events_statements_rows_affected_total":     rowsAffected,
 			"events_statements_rows_sent_total":         rowsSent,

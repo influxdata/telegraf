@@ -46,8 +46,9 @@ func execCmd(arg0 string, args ...string) ([]byte, error) {
 
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
-		if err, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(err.Stderr, "\r\n"), err)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(exitErr.Stderr, "\r\n"), err)
 		}
 		return nil, err
 	}
@@ -194,7 +195,8 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
 	} else {
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
+		var execErr *exec.Error
+		if errors.As(err, &execErr) && errors.Is(execErr, exec.ErrNotFound) {
 			// Silently discard error if snmptranslate not found and we have a numeric OID.
 			// Meaning we can get by without the lookup.
 			return "", oid, oid, "", nil
@@ -246,7 +248,12 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 				}
 				if i := strings.Index(obj, "("); i != -1 {
 					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
+					if j := strings.Index(obj, ")"); j != -1 {
+						oidNum += "." + obj[:j]
+					} else {
+						return "", "", "", "", fmt.Errorf("getting OID number from: %s", obj)
+					}
+
 				} else {
 					oidNum += "." + obj
 				}

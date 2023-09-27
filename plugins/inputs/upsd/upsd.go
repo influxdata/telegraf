@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	nut "github.com/robbiet480/go.nut"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	nut "github.com/robbiet480/go.nut"
 )
 
 //go:embed sample.conf
@@ -29,8 +30,6 @@ type Upsd struct {
 	ForceFloat bool   `toml:"force_float"`
 
 	Log telegraf.Logger `toml:"-"`
-
-	batteryRuntimeTypeWarningIssued bool
 }
 
 func (*Upsd) SampleConfig() string {
@@ -66,10 +65,14 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	// For compatibility with the apcupsd plugin's output we map the status string status into a bit-format
 	status := u.mapStatus(metrics, tags)
 
-	timeLeftS, ok := metrics["battery.runtime"].(int64)
-	if !ok && !u.batteryRuntimeTypeWarningIssued {
-		u.Log.Warnf("'battery.runtime' type is not int64")
-		u.batteryRuntimeTypeWarningIssued = true
+	timeLeftS, err := internal.ToFloat64(metrics["battery.runtime"])
+	if err != nil {
+		u.Log.Warnf("Type for 'battery.runtime' is not supported: %v", err)
+	}
+
+	timeLeftNS, err := internal.ToInt64(timeLeftS * 1_000_000_000)
+	if err != nil {
+		u.Log.Warnf("Converting 'battery.runtime' to 'time_left_ns' failed: %v", err)
 	}
 
 	fields := map[string]interface{}{
@@ -79,7 +82,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"ups_status":       metrics["ups.status"],
 
 		//Compatibility with apcupsd metrics format
-		"time_left_ns": timeLeftS * 1_000_000_000,
+		"time_left_ns": timeLeftNS,
 	}
 
 	floatValues := map[string]string{
@@ -96,6 +99,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"nominal_input_voltage":   "input.voltage.nominal",
 		"nominal_power":           "ups.realpower.nominal",
 		"output_voltage":          "output.voltage",
+		"real_power":              "ups.realpower",
 		"ups_delay_shutdown":      "ups.delay.shutdown",
 		"ups_delay_start":         "ups.delay.start",
 	}
@@ -113,7 +117,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		// Force expected float values to actually being float (e.g. if delivered as int)
 		float, err := internal.ToFloat64(metrics[rawValue])
 		if err != nil {
-			acc.AddError(fmt.Errorf("converting %s=%v failed: %v", rawValue, metrics[rawValue], err))
+			acc.AddError(fmt.Errorf("converting %s=%v failed: %w", rawValue, metrics[rawValue], err))
 			continue
 		}
 		fields[key] = float
@@ -121,7 +125,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 
 	val, err := internal.ToString(metrics["ups.firmware"])
 	if err != nil {
-		acc.AddError(fmt.Errorf("converting ups.firmware=%v failed: %v", metrics["ups.firmware"], err))
+		acc.AddError(fmt.Errorf("converting ups.firmware=%q failed: %w", metrics["ups.firmware"], err))
 	} else {
 		fields["firmware"] = val
 	}

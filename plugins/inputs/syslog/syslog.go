@@ -93,11 +93,11 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
 		s.isStream = false
 	default:
-		return fmt.Errorf("unknown protocol '%s' in '%s'", scheme, s.Address)
+		return fmt.Errorf("unknown protocol %q in %q", scheme, s.Address)
 	}
 
 	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
-		os.Remove(s.Address) //nolint:revive // Accept success and failure in case the file does not exist
+		os.Remove(s.Address)
 	}
 
 	if s.isStream {
@@ -139,7 +139,7 @@ func (s *Syslog) Stop() {
 	defer s.mu.Unlock()
 
 	if s.Closer != nil {
-		s.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		s.Close()
 	}
 	s.wg.Wait()
 }
@@ -150,12 +150,12 @@ func (s *Syslog) Stop() {
 func getAddressParts(a string) (scheme string, host string, err error) {
 	parts := strings.SplitN(a, "://", 2)
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("missing protocol within address '%s'", a)
+		return "", "", fmt.Errorf("missing protocol within address %q", a)
 	}
 
 	u, err := url.Parse(filepath.ToSlash(a)) //convert backslashes to slashes (to make Windows path a valid URL)
 	if err != nil {
-		return "", "", fmt.Errorf("could not parse address '%s': %v", a, err)
+		return "", "", fmt.Errorf("could not parse address %q: %w", a, err)
 	}
 	switch u.Scheme {
 	case "unix", "unixpacket", "unixgram":
@@ -241,7 +241,7 @@ func (s *Syslog) listenStream(acc telegraf.Accumulator) {
 		s.connectionsMu.Unlock()
 
 		if err := s.setKeepAlive(tcpConn); err != nil {
-			acc.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", s.Address, err))
+			acc.AddError(fmt.Errorf("unable to configure keep alive %q: %w", s.Address, err))
 		}
 
 		go s.handle(conn, acc)
@@ -265,7 +265,7 @@ func (s *Syslog) removeConnection(c net.Conn) {
 func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	defer func() {
 		s.removeConnection(conn)
-		conn.Close() //nolint:revive // Ignore the returned error as we cannot do anything about it anyway
+		conn.Close()
 	}()
 
 	var p syslog.Parser
@@ -274,7 +274,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		s.store(*r, conn.RemoteAddr(), acc)
 		if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
 			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
-				acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
+				acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
 			}
 		}
 	}
@@ -301,7 +301,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
-			acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
+			acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
 		}
 	}
 }
@@ -416,7 +416,7 @@ type unixCloser struct {
 
 func (uc unixCloser) Close() error {
 	err := uc.closer.Close()
-	os.Remove(uc.path) //nolint:revive // Accept success and failure in case the file does not exist
+	os.Remove(uc.path)
 	return err
 }
 

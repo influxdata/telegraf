@@ -5,15 +5,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -161,6 +164,102 @@ func TestWriteBasicAuth(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestWriteToken(t *testing.T) {
+	plugin := &InfluxDBListener{
+		ServiceAddress:    "localhost:0",
+		TokenSharedSecret: "a S3cr3T $sTr1ng",
+		TokenUsername:     "John Doe",
+		Log:               testutil.Logger{},
+		timeFunc:          time.Now,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a valid token
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": plugin.TokenUsername,
+		"exp":      time.Now().Add(5 * time.Minute).Unix(),
+	}).SignedString([]byte(plugin.TokenSharedSecret))
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", createURL(plugin, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.Header.Add("Authentication", "Bearer "+token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestWriteTokenInvalidUser(t *testing.T) {
+	plugin := &InfluxDBListener{
+		ServiceAddress:    "localhost:0",
+		TokenSharedSecret: "a S3cr3T $sTr1ng",
+		TokenUsername:     "John Doe",
+		Log:               testutil.Logger{},
+		timeFunc:          time.Now,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a valid token
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": "peter",
+		"exp":      time.Now().Add(5 * time.Minute).Unix(),
+	}).SignedString([]byte(plugin.TokenSharedSecret))
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", createURL(plugin, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.Header.Add("Authentication", "Bearer "+token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestWriteTokenExpired(t *testing.T) {
+	plugin := &InfluxDBListener{
+		ServiceAddress:    "localhost:0",
+		TokenSharedSecret: "a S3cr3T $sTr1ng",
+		TokenUsername:     "John Doe",
+		Log:               testutil.Logger{},
+		timeFunc:          time.Now,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a valid token
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": plugin.TokenUsername,
+		"exp":      time.Now().Add(-5 * time.Minute).Unix(),
+	}).SignedString([]byte(plugin.TokenSharedSecret))
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", createURL(plugin, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.Header.Add("Authentication", "Bearer "+token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusUnauthorized, resp.StatusCode)
+	require.EqualValues(t, "token expired", strings.TrimSpace(string(body)))
 }
 
 func TestWriteKeepDatabase(t *testing.T) {

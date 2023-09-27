@@ -26,16 +26,17 @@ import (
 var sampleConfig string
 
 type RedisCommand struct {
-	Command []interface{}
-	Field   string
-	Type    string
+	Command []interface{} `toml:"command"`
+	Field   string        `toml:"field"`
+	Type    string        `toml:"type"`
 }
 
 type Redis struct {
-	Commands []*RedisCommand
-	Servers  []string
-	Username string
-	Password string
+	Commands []*RedisCommand `toml:"commands"`
+	Servers  []string        `toml:"servers"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -238,7 +239,7 @@ func (r *Redis) connect() error {
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
+			return fmt.Errorf("unable to parse to address %q: %w", serv, err)
 		}
 
 		username := ""
@@ -329,7 +330,7 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
 			if strings.Contains(err.Error(), "unexpected type=") {
-				return fmt.Errorf("could not get command result: %s", err)
+				return fmt.Errorf("could not get command result: %w", err)
 			}
 
 			return err
@@ -417,6 +418,11 @@ func gatherInfoOutput(
 			if section == "Replication" && replicationSlaveMetricPrefix.MatchString(name) {
 				kline := strings.TrimSpace(parts[1])
 				gatherReplicationLine(name, kline, acc, tags)
+				continue
+			}
+			if section == "Errorstats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherErrorstatsLine(name, kline, acc, tags)
 				continue
 			}
 
@@ -536,7 +542,7 @@ func gatherCommandstateLine(
 		switch kv[0] {
 		case "calls":
 			fallthrough
-		case "usec":
+		case "usec", "rejected_calls", "failed_calls":
 			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
 				fields[kv[0]] = ival
@@ -595,6 +601,30 @@ func gatherReplicationLine(
 	}
 
 	acc.AddFields("redis_replication", fields, tags)
+}
+
+// Parse the special Errorstats lines.
+// Example:
+//
+// errorstat_ERR:count=37
+// errorstat_MOVED:count=3626
+func gatherErrorstatsLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	globalTags map[string]string,
+) {
+	tags := make(map[string]string, len(globalTags)+1)
+	for k, v := range globalTags {
+		tags[k] = v
+	}
+	tags["err"] = strings.TrimPrefix(name, "errorstat_")
+	kv := strings.Split(line, "=")
+	ival, err := strconv.ParseInt(kv[1], 10, 64)
+	if err == nil {
+		fields := map[string]interface{}{"total": ival}
+		acc.AddFields("redis_errorstat", fields, tags)
+	}
 }
 
 func init() {

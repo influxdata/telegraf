@@ -10,8 +10,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"golang.org/x/sys/unix"
 )
+
+type DiskIO struct {
+	ps system.PS
+
+	Devices          []string
+	DeviceTags       []string
+	NameTemplates    []string
+	SkipSerialNumber bool
+
+	Log telegraf.Logger
+
+	infoCache    map[string]diskInfoCache
+	deviceFilter filter.Filter
+}
 
 type diskInfoCache struct {
 	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
@@ -83,10 +100,10 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		}
 		if l[:2] == "S:" {
 			if devlinks.Len() > 0 {
-				devlinks.WriteString(" ") //nolint:revive // this will never fail
+				devlinks.WriteString(" ")
 			}
-			devlinks.WriteString("/dev/") //nolint:revive // this will never fail
-			devlinks.WriteString(l[2:])   //nolint:revive // this will never fail
+			devlinks.WriteString("/dev/")
+			devlinks.WriteString(l[2:])
 			continue
 		}
 		if l[:2] != "E:" {
@@ -115,7 +132,7 @@ func resolveName(name string) string {
 		return name
 	}
 	// Try to prepend "/dev"
-	resolved, err = filepath.EvalSymlinks(filepath.Join("/dev", name))
+	resolved, err = filepath.EvalSymlinks("/dev/" + name)
 	if err != nil {
 		return name
 	}

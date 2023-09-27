@@ -7,6 +7,7 @@ import (
 	"bufio"
 	_ "embed"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -85,7 +86,7 @@ func (s *Sysstat) Init() error {
 	if s.Sadf == "" {
 		sadf, err := exec.LookPath(cmd)
 		if err != nil {
-			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+			return fmt.Errorf("looking up %q failed: %w", cmd, err)
 		}
 		s.Sadf = sadf
 	}
@@ -113,9 +114,10 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 
 	tmpfile, err := os.CreateTemp("", "sysstat-*")
 	if err != nil {
-		return fmt.Errorf("failed to create tmp file: %s", err)
+		return fmt.Errorf("failed to create tmp file: %w", err)
 	}
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 
 	ts := time.Now().Add(time.Duration(s.interval) * time.Second)
 	if err := s.collect(tmpfile.Name()); err != nil {
@@ -159,7 +161,7 @@ func (s *Sysstat) collect(tempfile string) error {
 	cmd := execCommand(s.Sadc, options...)
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return fmt.Errorf("failed to run command %q: %w - %q", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	return nil
 }
@@ -202,7 +204,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, tmpfile string,
 		return err
 	}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("running command '%s' failed: %s", strings.Join(cmd.Args, " "), err)
+		return fmt.Errorf("running command %q failed: %w", strings.Join(cmd.Args, " "), err)
 	}
 
 	r := bufio.NewReader(stdout)
@@ -218,7 +220,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, tmpfile string,
 	m := make(map[string]groupData)
 	for {
 		record, err := csvReader.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -272,8 +274,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, tmpfile string,
 		}
 	}
 	if err := internal.WaitTimeout(cmd, time.Second*5); err != nil {
-		return fmt.Errorf("command %s failed with %s",
-			strings.Join(cmd.Args, " "), err)
+		return fmt.Errorf("command %q failed with: %w", strings.Join(cmd.Args, " "), err)
 	}
 	return nil
 }

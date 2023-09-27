@@ -90,7 +90,7 @@ func (s *SFlow) Gather(_ telegraf.Accumulator) error {
 
 func (s *SFlow) Stop() {
 	if s.closer != nil {
-		s.closer.Close() //nolint:revive // ignore the returned error as we cannot do anything about it anyway
+		s.closer.Close()
 	}
 	s.wg.Wait()
 }
@@ -115,7 +115,7 @@ func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
 
 func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
 	if err := s.decoder.Decode(bytes.NewBuffer(buf)); err != nil {
-		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
+		acc.AddError(fmt.Errorf("unable to parse incoming packet: %w", err))
 	}
 }
 

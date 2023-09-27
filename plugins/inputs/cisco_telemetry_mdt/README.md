@@ -12,6 +12,17 @@ later, IOS XE 16.10 and later, as well as NX-OS 7.x and later platforms.
 The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and
 later.
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -33,7 +44,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  ## Address and port to host telemetry listener
  service_address = ":57000"
 
- ## Grpc Maximum Message Size, default is 4MB, increase the size.
+ ## Grpc Maximum Message Size, default is 4MB, increase the size. This is
+ ## stored as a uint32, and limited to 4294967295.
  max_msg_size = 4000000
 
  ## Enable TLS; grpc transport only.
@@ -47,8 +59,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
  # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 
-  ## Include the delete field in every telemetry message.
-  # include_delete_field = false
+ ## Include the delete field in every telemetry message.
+ # include_delete_field = false
+
+ ## Specify custom name for incoming MDT source field.
+ # source_field_name = "mdt_source"
 
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
@@ -97,7 +112,7 @@ Additional tags (such as interface_name) may be included depending on the path.
 
 ## Example Output
 
-```shell
+```text
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet2,source=csr1kv,subscription=101 in-unicast-pkts=27i,in-multicast-pkts=0i,discontinuity-time="2019-05-23T07:40:23.000362+00:00",in-octets=5233i,in-errors=0i,out-multicast-pkts=0i,out-discards=0i,in-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,out-unicast-pkts=0i,out-broadcast-pkts=0i,out-octets=0i,out-errors=0i 1559150462624000000
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet1,source=csr1kv,subscription=101 in-octets=3394770806i,in-broadcast-pkts=0i,in-multicast-pkts=0i,out-broadcast-pkts=0i,in-unknown-protos=0i,out-octets=350212i,in-unicast-pkts=9477273i,in-discards=0i,out-unicast-pkts=2726i,out-discards=0i,discontinuity-time="2019-05-23T07:40:23.000363+00:00",in-errors=30i,out-multicast-pkts=0i,out-errors=0i 1559150462624000000
 ```
@@ -143,4 +158,5 @@ multicast pim    NXAPI         show ip pim route vrf all
 multicast pim    NXAPI         show ip pim rp vrf all
 multicast pim    NXAPI         show ip pim statistics vrf all
 multicast pim    NXAPI         show ip pim vrf all
+microburst       NATIVE        path microburst
 ```

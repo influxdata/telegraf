@@ -7,62 +7,62 @@ import (
 	"math"
 	"time"
 
-	jsonata "github.com/blues/jsonata-go"
+	"github.com/blues/jsonata-go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-type FormatConfig struct {
-	TimestampUnits      time.Duration
-	TimestampFormat     string
-	Transformation      string
-	NestedFieldsInclude []string
-	NestedFieldsExclude []string
-}
-
 type Serializer struct {
-	TimestampUnits  time.Duration
-	TimestampFormat string
+	TimestampUnits      config.Duration `toml:"json_timestamp_units"`
+	TimestampFormat     string          `toml:"json_timestamp_format"`
+	Transformation      string          `toml:"json_transformation"`
+	NestedFieldsInclude []string        `toml:"json_nested_fields_include"`
+	NestedFieldsExclude []string        `toml:"json_nested_fields_exclude"`
 
-	transformation *jsonata.Expr
-	nestedfields   filter.Filter
+	nestedfields filter.Filter
 }
 
-func NewSerializer(cfg FormatConfig) (*Serializer, error) {
-	s := &Serializer{
-		TimestampUnits:  truncateDuration(cfg.TimestampUnits),
-		TimestampFormat: cfg.TimestampFormat,
+func (s *Serializer) Init() error {
+	// Default precision is 1s
+	if s.TimestampUnits <= 0 {
+		s.TimestampUnits = config.Duration(time.Second)
 	}
 
-	if cfg.Transformation != "" {
-		e, err := jsonata.Compile(cfg.Transformation)
-		if err != nil {
-			return nil, err
+	// Search for the power of ten less than the duration
+	d := time.Nanosecond
+	t := time.Duration(s.TimestampUnits)
+	for {
+		if d*10 > t {
+			t = d
+			break
 		}
-		s.transformation = e
+		d = d * 10
 	}
+	s.TimestampUnits = config.Duration(t)
 
-	if len(cfg.NestedFieldsInclude) > 0 || len(cfg.NestedFieldsExclude) > 0 {
-		f, err := filter.NewIncludeExcludeFilter(cfg.NestedFieldsInclude, cfg.NestedFieldsExclude)
+	if len(s.NestedFieldsInclude) > 0 || len(s.NestedFieldsExclude) > 0 {
+		f, err := filter.NewIncludeExcludeFilter(s.NestedFieldsInclude, s.NestedFieldsExclude)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		s.nestedfields = f
 	}
 
-	return s, nil
+	return nil
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	var obj interface{}
 	obj = s.createObject(metric)
 
-	if s.transformation != nil {
+	if s.Transformation != "" {
 		var err error
 		if obj, err = s.transform(obj); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
-				return nil, fmt.Errorf("%v (maybe configured for batch mode?)", err)
+				return nil, fmt.Errorf("%w (maybe configured for batch mode?)", err)
 			}
 			return nil, err
 		}
@@ -89,11 +89,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		"metrics": objects,
 	}
 
-	if s.transformation != nil {
+	if s.Transformation != "" {
 		var err error
 		if obj, err = s.transform(obj); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
-				return nil, fmt.Errorf("%v (maybe configured for non-batch mode?)", err)
+				return nil, fmt.Errorf("%w (maybe configured for non-batch mode?)", err)
 			}
 			return nil, err
 		}
@@ -150,21 +150,29 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 }
 
 func (s *Serializer) transform(obj interface{}) (interface{}, error) {
-	return s.transformation.Eval(obj)
+	transformation, err := jsonata.Compile(s.Transformation)
+	if err != nil {
+		return nil, err
+	}
+
+	return transformation.Eval(obj)
 }
 
-func truncateDuration(units time.Duration) time.Duration {
-	// Default precision is 1s
-	if units <= 0 {
-		return time.Second
-	}
+func init() {
+	serializers.Add("json",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
 
-	// Search for the power of ten less than the duration
-	d := time.Nanosecond
-	for {
-		if d*10 > units {
-			return d
-		}
-		d = d * 10
-	}
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.TimestampUnits = config.Duration(cfg.TimestampUnits)
+	s.TimestampFormat = cfg.TimestampFormat
+	s.Transformation = cfg.Transformation
+	s.NestedFieldsInclude = cfg.JSONNestedFieldInclude
+	s.NestedFieldsExclude = cfg.JSONNestedFieldExclude
+
+	return nil
 }

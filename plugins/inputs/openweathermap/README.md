@@ -80,11 +80,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-```shell
-> weather,city=San\ Francisco,city_id=5391959,condition_id=803,condition_main=Clouds,country=US,forecast=114h,host=robot pressure=1027,temperature=10.09,wind_degrees=34,wind_speed=1.24,condition_description="broken clouds",cloudiness=80i,humidity=67i,rain=0,feels_like=8.9,condition_icon="04n" 1645952400000000000
-> weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=117h,host=robot humidity=65i,rain=0,temperature=10.12,wind_degrees=31,cloudiness=90i,pressure=1026,feels_like=8.88,wind_speed=1.31,condition_description="overcast clouds",condition_icon="04n" 1645963200000000000
-> weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=120h,host=robot cloudiness=100i,humidity=61i,rain=0,temperature=10.28,wind_speed=1.94,condition_icon="04d",pressure=1027,feels_like=8.96,wind_degrees=16,condition_description="overcast clouds" 1645974000000000000
-
+```text
+weather,city=San\ Francisco,city_id=5391959,condition_id=803,condition_main=Clouds,country=US,forecast=114h,host=robot pressure=1027,temperature=10.09,wind_degrees=34,wind_speed=1.24,condition_description="broken clouds",cloudiness=80i,humidity=67i,rain=0,feels_like=8.9,condition_icon="04n" 1645952400000000000
+weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=117h,host=robot humidity=65i,rain=0,temperature=10.12,wind_degrees=31,cloudiness=90i,pressure=1026,feels_like=8.88,wind_speed=1.31,condition_description="overcast clouds",condition_icon="04n" 1645963200000000000
+weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=120h,host=robot cloudiness=100i,humidity=61i,rain=0,temperature=10.28,wind_speed=1.94,condition_icon="04d",pressure=1027,feels_like=8.96,wind_degrees=16,condition_description="overcast clouds" 1645974000000000000
 ```
 
 [api key]: https://openweathermap.org/appid

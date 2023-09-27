@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/binary"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -603,6 +604,109 @@ func TestApply(t *testing.T) {
 					time.Unix(0, 0)),
 			},
 		},
+		{
+			name:        "override with timestamp",
+			parseFields: []string{"value"},
+			merge:       "override-with-timestamp",
+			parser: &json.Parser{
+				TimeKey:    "timestamp",
+				TimeFormat: "2006-01-02 15:04:05",
+			},
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": `{"timestamp": "2020-06-27 19:43:40", "value": 42.1}`,
+				},
+				time.Unix(0, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value": float64(42.1),
+					},
+					time.Unix(1593287020, 0)),
+			},
+		},
+		{
+			name:        "non-string field with binary parser",
+			parseFields: []string{"value"},
+			merge:       "override",
+			parser: &binary.Parser{
+				Configs: []binary.Config{
+					{
+						MetricName: "parser",
+						Entries: []binary.Entry{
+							{
+								Name: "alarm_0",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_1",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_2",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_3",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_4",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_5",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_6",
+								Type: "bool",
+								Bits: 1,
+							},
+							{
+								Name: "alarm_7",
+								Type: "bool",
+								Bits: 1,
+							},
+						},
+					},
+				},
+			},
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": uint8(13),
+				},
+				time.Unix(1593287020, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value":   uint8(13),
+						"alarm_0": false,
+						"alarm_1": false,
+						"alarm_2": false,
+						"alarm_3": false,
+						"alarm_4": true,
+						"alarm_5": true,
+						"alarm_6": false,
+						"alarm_7": true,
+					},
+					time.Unix(1593287020, 0)),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -621,9 +725,20 @@ func TestApply(t *testing.T) {
 
 			output := plugin.Apply(tt.input)
 			t.Logf("Testing: %s", tt.name)
-			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
+
+			// check timestamp when using with-timestamp merge type
+			if tt.merge == "override-with-timestamp" {
+				testutil.RequireMetricsEqual(t, tt.expected, output)
+			} else {
+				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
+			}
 		})
 	}
+}
+
+func TestInvalidMerge(t *testing.T) {
+	plugin := Parser{Merge: "fake"}
+	require.Error(t, plugin.Init())
 }
 
 func TestBadApply(t *testing.T) {

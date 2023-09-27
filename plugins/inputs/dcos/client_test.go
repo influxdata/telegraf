@@ -8,9 +8,10 @@ import (
 	"net/url"
 	"testing"
 
-	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/influxdata/telegraf/testutil"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var privateKey = testutil.NewPKI("../../../testutil/pki").ReadServerKey()

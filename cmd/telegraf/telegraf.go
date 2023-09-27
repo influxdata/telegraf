@@ -32,16 +32,18 @@ import (
 var stop chan struct{}
 
 type GlobalFlags struct {
-	config      []string
-	configDir   []string
-	testWait    int
-	watchConfig string
-	pidFile     string
-	plugindDir  string
-	test        bool
-	debug       bool
-	once        bool
-	quiet       bool
+	config         []string
+	configDir      []string
+	testWait       int
+	watchConfig    string
+	pidFile        string
+	plugindDir     string
+	password       string
+	oldEnvBehavior bool
+	test           bool
+	debug          bool
+	once           bool
+	quiet          bool
 }
 
 type WindowFlags struct {
@@ -81,6 +83,14 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.secretstoreFilters = f.secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
+
+	// Set global password
+	if g.password != "" {
+		config.Password = config.NewSecret([]byte(g.password))
+	}
+
+	// Set environment replacement behavior
+	config.OldEnvVarReplacement = g.oldEnvBehavior
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {
@@ -97,6 +107,7 @@ func (t *Telegraf) ListSecretStores() ([]string, error) {
 }
 
 func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
+	t.quiet = true
 	c, err := t.loadConfiguration()
 	if err != nil {
 		return nil, err
@@ -111,6 +122,7 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 }
 
 func (t *Telegraf) reloadLoop() error {
+	reloadConfig := false
 	cfg, err := t.loadConfiguration()
 	if err != nil {
 		return err
@@ -151,10 +163,11 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx, cfg)
-		if err != nil && err != context.Canceled {
-			return fmt.Errorf("[telegraf] Error running agent: %v", err)
+		err := t.runAgent(ctx, cfg, reloadConfig)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("[telegraf] Error running agent: %w", err)
 		}
+		reloadConfig = true
 	}
 
 	return nil
@@ -203,6 +216,7 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
+	c.Agent.Quiet = t.quiet
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
@@ -218,10 +232,13 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 		configFiles = append(configFiles, files...)
 	}
 
-	// providing no "config" or "config-directory" flag(s) should load default
-	// configuration files
+	// load default config paths if none are found
 	if len(configFiles) == 0 {
-		configFiles = append(configFiles, "")
+		defaultFiles, err := config.GetDefaultConfigPath()
+		if err != nil {
+			return nil, fmt.Errorf("unable to load default config paths: %w", err)
+		}
+		configFiles = append(configFiles, defaultFiles...)
 	}
 
 	t.configFiles = configFiles
@@ -231,7 +248,14 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	return c, nil
 }
 
-func (t *Telegraf) runAgent(ctx context.Context, c *config.Config) error {
+func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig bool) error {
+	var err error
+	if reloadConfig {
+		if c, err = t.loadConfiguration(); err != nil {
+			return err
+		}
+	}
+
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("no outputs found, did you provide a valid config file?")
 	}
@@ -264,7 +288,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config) error {
 		return err
 	}
 
-	log.Printf("I! Starting Telegraf %s%s", internal.Version, internal.Customized)
+	log.Printf("I! Starting Telegraf %s%s brought to you by InfluxData the makers of InfluxDB", internal.Version, internal.Customized)
 	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret-stores",
 		len(inputs.Inputs),
 		len(aggregators.Aggregators),
@@ -300,6 +324,18 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config) error {
 		log.Printf("W! Deprecated secretstores: %d and %d options", count[0], count[1])
 	}
 
+	// Compute the amount of locked memory needed for the secrets
+	required := 2 * c.NumberSecrets * uint64(os.Getpagesize())
+	available := getLockedMemoryLimit()
+	if required > available {
+		required /= 1024
+		available /= 1024
+		log.Printf("I! Found %d secrets...", c.NumberSecrets)
+		msg := fmt.Sprintf("Insufficient lockable memory %dkb when %dkb is required.", available, required)
+		msg += " Please increase the limit for Telegraf in your Operating System!"
+		log.Printf("W! " + color.RedString(msg))
+	}
+
 	ag := agent.NewAgent(c)
 
 	// Notify systemd that telegraf is ready
@@ -319,7 +355,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config) error {
 	}
 
 	if t.pidFile != "" {
-		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(t.pidFile, os.O_CREATE|os.O_WRONLY, 0640)
 		if err != nil {
 			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {

@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const (
@@ -292,7 +292,7 @@ func (c *ClusterClient) doGet(ctx context.Context, address string, v interface{}
 		return err
 	}
 	defer func() {
-		resp.Body.Close() //nolint:revive // we cannot do anything if the closing fails
+		resp.Body.Close()
 		<-c.semaphore
 	}()
 

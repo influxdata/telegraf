@@ -21,7 +21,7 @@ user-specified configurations.
   ## Specify the endianness of the data.
   ## Available values are "be" (big-endian), "le" (little-endian) and "host",
   ## where "host" means the same endianness as the machine running Telegraf.
-  # endianess = "host"
+  # endianness = "host"
 
   ## Interpret input as string containing hex-encoded data.
   # hex_encoding = false
@@ -58,7 +58,7 @@ user-specified configurations.
     ##  timezone    --  Timezone of "time" entries. Only applies to "time" assignments.
     ##                  Can be "utc", "local" or any valid Golang timezone (e.g. "Europe/Berlin")
     entries = [
-      { type = "string", assignment = "measurement", terminator: "null" },
+      { type = "string", assignment = "measurement", terminator = "null" },
       { name = "address", type = "uint16", assignment = "tag" },
       { name = "value",   type = "float64" },
       { type = "unix", assignment = "time" },
@@ -282,7 +282,7 @@ you can use the following configuration
 [[inputs.file]]
   files = ["messageA.bin", "messageB.bin", "messageC.bin"]
   data_format = "binary"
-  endianess = "le"
+  endianness = "le"
 
   [[inputs.file.binary]]
     metric_name = "messageA"
@@ -330,9 +330,9 @@ the correct configuration by comparing the 3rd byte (containing
 the message type). This will lead to the following output
 
 ```text
-> metricA,address=383,failure=false count=42i,value=3.1415 1658835984000000000
-> metricB value=3737169374i 1658847037000000000
-> metricC x=2.718280076980591,y=0.0000000000000000000000000000000006626070178575745 1658835984000000000
+metricA,address=383,failure=false count=42i,value=3.1415 1658835984000000000
+metricB value=3737169374i 1658847037000000000
+metricC x=2.718280076980591,y=0.0000000000000000000000000000000006626070178575745 1658835984000000000
 ```
 
 where `metricB` uses the parsing time as timestamp due to missing

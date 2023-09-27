@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
@@ -29,21 +30,35 @@ func (*NetIOStats) SampleConfig() string {
 	return sampleConfig
 }
 
+func (n *NetIOStats) Init() error {
+	if !n.IgnoreProtocolStats {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.net", "ignore_protocol_stats", "false",
+			telegraf.DeprecationInfo{
+				Since:     "1.27.3",
+				RemovalIn: "1.36.0",
+				Notice:    "use the 'inputs.nstat' plugin instead",
+			},
+		)
+	}
+
+	return nil
+}
+
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	netio, err := n.ps.NetIO()
 	if err != nil {
-		return fmt.Errorf("error getting net io info: %s", err)
+		return fmt.Errorf("error getting net io info: %w", err)
 	}
 
 	if n.filter == nil {
 		if n.filter, err = filter.Compile(n.Interfaces); err != nil {
-			return fmt.Errorf("error compiling filter: %s", err)
+			return fmt.Errorf("error compiling filter: %w", err)
 		}
 	}
 
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return fmt.Errorf("error getting list of interfaces: %s", err)
+		return fmt.Errorf("error getting list of interfaces: %w", err)
 	}
 	interfacesByName := map[string]net.Interface{}
 	for _, iface := range interfaces {

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/vishvananda/netns"
 
 	"github.com/influxdata/telegraf"
@@ -19,6 +18,44 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+const (
+	tagInterface     = "interface"
+	tagNamespace     = "namespace"
+	tagDriverName    = "driver"
+	fieldInterfaceUp = "interface_up"
+)
+
+var downInterfacesBehaviors = []string{"expose", "skip"}
+
+type Ethtool struct {
+	// This is the list of interface names to include
+	InterfaceInclude []string `toml:"interface_include"`
+
+	// This is the list of interface names to ignore
+	InterfaceExclude []string `toml:"interface_exclude"`
+
+	// Behavior regarding metrics for downed interfaces
+	DownInterfaces string `toml:" down_interfaces"`
+
+	// This is the list of namespace names to include
+	NamespaceInclude []string `toml:"namespace_include"`
+
+	// This is the list of namespace names to ignore
+	NamespaceExclude []string `toml:"namespace_exclude"`
+
+	// Normalization on the key names
+	NormalizeKeys []string `toml:"normalize_keys"`
+
+	Log telegraf.Logger `toml:"-"`
+
+	interfaceFilter   filter.Filter
+	namespaceFilter   filter.Filter
+	includeNamespaces bool
+
+	// the ethtool command
+	command Command
+}
 
 type CommandEthtool struct {
 	Log                 telegraf.Logger
@@ -115,8 +152,7 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 
 	driverName, err := e.command.DriverName(iface)
 	if err != nil {
-		driverErr := errors.Wrapf(err, "%s driver", iface.Name)
-		acc.AddError(driverErr)
+		acc.AddError(fmt.Errorf("%q driver: %w", iface.Name, err))
 		return
 	}
 
@@ -125,13 +161,22 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 	fields := make(map[string]interface{})
 	stats, err := e.command.Stats(iface)
 	if err != nil {
-		statsErr := errors.Wrapf(err, "%s stats", iface.Name)
-		acc.AddError(statsErr)
+		acc.AddError(fmt.Errorf("%q stats: %w", iface.Name, err))
 		return
 	}
 
 	fields[fieldInterfaceUp] = interfaceUp(iface)
 	for k, v := range stats {
+		fields[e.normalizeKey(k)] = v
+	}
+
+	cmdget, err := e.command.Get(iface)
+	// error text is directly from running ethtool and syscalls
+	if err != nil && err.Error() != "operation not supported" {
+		acc.AddError(fmt.Errorf("%q get: %w", iface.Name, err))
+		return
+	}
+	for k, v := range cmdget {
 		fields[e.normalizeKey(k)] = v
 	}
 
@@ -224,6 +269,10 @@ func (c *CommandEthtool) Stats(intf NamespacedInterface) (stats map[string]uint6
 	return intf.Namespace.Stats(intf)
 }
 
+func (c *CommandEthtool) Get(intf NamespacedInterface) (stats map[string]uint64, err error) {
+	return intf.Namespace.Get(intf)
+}
+
 func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterface, error) {
 	const namespaceDirectory = "/var/run/netns"
 
@@ -232,6 +281,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 		c.Log.Errorf("Could not get initial namespace: %s", err)
 		return nil, err
 	}
+	defer initialNamespace.Close()
 
 	// Gather the list of namespace names to from which to retrieve interfaces.
 	initialNamespaceIsNamed := false
@@ -256,7 +306,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 
 			handle, err := netns.GetFromPath(filepath.Join(namespaceDirectory, name))
 			if err != nil {
-				c.Log.Warnf(`Could not get handle for namespace "%s": %s`, name, err)
+				c.Log.Warnf("Could not get handle for namespace %q: %s", name, err.Error())
 				continue
 			}
 			handles[name] = handle
@@ -282,7 +332,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 				Log:    c.Log,
 			}
 			if err := c.namespaceGoroutines[namespace].Start(); err != nil {
-				c.Log.Errorf(`Failed to start goroutine for namespace "%s": %s`, namespace, err)
+				c.Log.Errorf("Failed to start goroutine for namespace %q: %s", namespace, err.Error())
 				delete(c.namespaceGoroutines, namespace)
 				continue
 			}
@@ -290,7 +340,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 
 		interfaces, err := c.namespaceGoroutines[namespace].Interfaces()
 		if err != nil {
-			c.Log.Warnf(`Could not get interfaces from namespace "%s": %s`, namespace, err)
+			c.Log.Warnf("Could not get interfaces from namespace %q: %s", namespace, err.Error())
 			continue
 		}
 		allInterfaces = append(allInterfaces, interfaces...)

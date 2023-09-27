@@ -129,7 +129,7 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 	copy(lmetrics.Gauges, tempGauges[start:end])
 	metricsBytes, err := json.Marshal(lmetrics)
 	if err != nil {
-		return fmt.Errorf("unable to marshal Metrics, %s", err.Error())
+		return fmt.Errorf("unable to marshal Metrics: %w", err)
 	}
 
 	l.Log.Debugf("Librato request: %v", string(metricsBytes))
@@ -139,7 +139,7 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 		l.APIUrl,
 		bytes.NewBuffer(metricsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", err.Error())
+		return fmt.Errorf("unable to create http.Request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -149,17 +149,17 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 	}
 	token, err := l.APIToken.Get()
 	if err != nil {
-		config.ReleaseSecret(user)
+		user.Destroy()
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	req.SetBasicAuth(string(user), string(token))
-	config.ReleaseSecret(user)
-	config.ReleaseSecret(token)
+	req.SetBasicAuth(user.String(), token.String())
+	user.Destroy()
+	token.Destroy()
 
 	resp, err := l.client.Do(req)
 	if err != nil {
 		l.Log.Debugf("Error POSTing metrics: %v", err.Error())
-		return fmt.Errorf("error POSTing metrics, %s", err.Error())
+		return fmt.Errorf("error POSTing metrics: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -206,7 +206,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			continue
 		}
 		if err := gauge.setValue(value); err != nil {
-			return gauges, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+			return gauges, fmt.Errorf("unable to extract value from Fields: %w", err)
 		}
 		gauges = append(gauges, gauge)
 	}

@@ -20,20 +20,6 @@ var (
 	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
 )
 
-type DiskIO struct {
-	ps system.PS
-
-	Devices          []string
-	DeviceTags       []string
-	NameTemplates    []string
-	SkipSerialNumber bool
-
-	Log telegraf.Logger
-
-	infoCache    map[string]diskInfoCache
-	deviceFilter filter.Filter
-}
-
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")
@@ -48,7 +34,7 @@ func (d *DiskIO) Init() error {
 		if hasMeta(device) {
 			deviceFilter, err := filter.Compile(d.Devices)
 			if err != nil {
-				return fmt.Errorf("error compiling device pattern: %s", err.Error())
+				return fmt.Errorf("error compiling device pattern: %w", err)
 			}
 			d.deviceFilter = deviceFilter
 		}
@@ -66,7 +52,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 
 	diskio, err := d.ps.DiskIO(devices)
 	if err != nil {
-		return fmt.Errorf("error getting disk io info: %s", err.Error())
+		return fmt.Errorf("error getting disk io info: %w", err)
 	}
 
 	for _, io := range diskio {

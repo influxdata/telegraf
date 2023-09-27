@@ -117,7 +117,7 @@ func (n *OpenWeatherMap) createHTTPClient() *http.Client {
 func (n *OpenWeatherMap) gatherURL(addr string) (*Status, error) {
 	resp, err := n.client.Get(addr)
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", addr, err)
+		return nil, fmt.Errorf("error making HTTP request to %q: %w", addr, err)
 	}
 	defer resp.Body.Close()
 
@@ -197,7 +197,7 @@ func gatherWeatherURL(r io.Reader) (*Status, error) {
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
-		return nil, fmt.Errorf("error while decoding JSON response: %s", err)
+		return nil, fmt.Errorf("error while decoding JSON response: %w", err)
 	}
 	return status, nil
 }

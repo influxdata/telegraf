@@ -4,6 +4,7 @@ package amqp
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -161,7 +162,8 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			// If this is the first attempt to publish and the connection is
 			// closed, try to reconnect and retry once.
 
-			if aerr, ok := err.(*amqp.Error); first && ok && aerr == amqp.ErrClosed {
+			var aerr *amqp.Error
+			if first && errors.As(err, &aerr) && errors.Is(aerr, amqp.ErrClosed) {
 				q.client = nil
 				err := q.publish(key, body)
 				if err != nil {
@@ -299,16 +301,16 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
+		defer username.Destroy()
 		password, err := q.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
+		defer password.Destroy()
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: string(username),
-				Password: string(password),
+				Username: username.String(),
+				Password: password.String(),
 			},
 		}
 	}

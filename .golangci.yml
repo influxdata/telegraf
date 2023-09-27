@@ -1,7 +1,6 @@
 linters:
   disable-all: true
   enable:
-    # - telegraflinter
     - asasalint
     - asciicheck
     - bidichk
@@ -10,9 +9,12 @@ linters:
     - dogsled
     - errcheck
     - errname
+    - errorlint
     - exportloopref
     - gocheckcompilerdirectives
+    - gocritic
     - goprintffuncname
+    - gosec
     - gosimple
     - govet
     - ineffassign
@@ -36,44 +38,134 @@ linters:
 
 linters-settings:
   depguard:
-    # Kind of list is passed in.
-    # Allowed values: allowlist|denylist
-    # Default: denylist
-    list-type: denylist
-    # Check the list against standard lib.
-    # Default: false
-    include-go-root: true
-    # A list of packages for the list type specified.
-    # Can accept both string prefixes and string glob patterns.
-    # Default: []
-    packages:
-      - log
-    # A list of packages for the list type specified.
-    # Specify an error message to output when a denied package is used.
-    # Default: []
-    packages-with-error-message:
-      - log: 'Use injected telegraf.Logger instead'
-    # Specify rules by which the linter ignores certain files for consideration.
-    # Can accept both string prefixes and string glob patterns.
-    # The ! character in front of the rule is a special character
-    # which signals that the linter should negate the rule.
-    # This allows for more precise control, but it is only available for glob patterns.
-    # Default: []
-    ignore-file-rules:
-      - "**/agent/**"
-      - "**/cmd/**"
-      - "**/config/**"
-      - "**/filter/**"
-      - "**/internal/**"
-      - "**/logger/**"
-      - "**/metric/**"
-      - "**/models/**"
-      - "**/plugins/serializers/**"
-      - "**/scripts/**"
-      - "**/selfstat/**"
-      - "**/testutil/**"
-      - "**/tools/**"
-      - "**/*_test.go"
+    rules:
+      # Name of a rule.
+      main:
+        # Packages that are not allowed where the value is a suggestion.
+        deny:
+          - pkg: log
+            desc: 'Use injected telegraf.Logger instead'
+        # List of file globs that will match this list of settings to compare against.
+        # Default: $all
+        files:
+          - "!**/agent/**"
+          - "!**/cmd/**"
+          - "!**/config/**"
+          - "!**/filter/**"
+          - "!**/internal/**"
+          - "!**/logger/**"
+          - "!**/metric/**"
+          - "!**/models/**"
+          - "!**/plugins/serializers/**"
+          - "!**/scripts/**"
+          - "!**/selfstat/**"
+          - "!**/testutil/**"
+          - "!**/tools/**"
+          - "!**/*_test.go"
+  errcheck:
+    # List of functions to exclude from checking, where each entry is a single function to exclude.
+    # See https://github.com/kisielk/errcheck#excluding-functions for details.
+    exclude-functions:
+      - "(*hash/maphash.Hash).Write"
+      - "(*hash/maphash.Hash).WriteByte"
+      - "(*hash/maphash.Hash).WriteString"
+  gocritic:
+    # Which checks should be enabled; can't be combined with 'disabled-checks'.
+    # See https://go-critic.github.io/overview#checks-overview.
+    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
+    # By default, list of stable checks is used.
+    enabled-checks:
+      - argOrder
+      - badCall
+      - badCond
+      - badLock
+      - badSorting
+      - builtinShadowDecl
+      - caseOrder
+      - codegenComment
+      - commentedOutCode
+      - deferInLoop
+      - dupArg
+      - deprecatedComment
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - dynamicFmtString
+      - emptyDecl
+      - evalOrder
+      - exitAfterDefer
+      - externalErrorReassign
+      - filepathJoin
+      - flagName
+      - mapKey
+      - nilValReturn
+      - offBy1
+      - regexpPattern
+      - sloppyTestFuncName
+      - sloppyReassign
+      - sloppyTypeAssert
+      - sortSlice
+      - sprintfQuotedString
+      - sqlQuery
+      - syncMapLoadAndDelete
+      - truncateCmp
+      - uncheckedInlineErr
+      - unnecessaryDefer
+      - weakCond
+  gosec:
+    # To select a subset of rules to run.
+    # Available rules: https://github.com/securego/gosec#available-rules
+    # Default: [] - means include all rules
+    includes:
+      - G101
+      - G102
+      - G103
+      - G106
+      - G107
+      - G108
+      - G109
+      - G110
+      - G111
+      - G112
+      - G114
+      - G201
+      - G202
+      - G203
+      - G301
+      - G302
+      - G303
+      - G305
+      - G306
+      - G401
+      - G403
+      - G404
+      - G501
+      - G502
+      - G503
+      - G505
+      - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
+    # To specify the configuration of rules.
+    config:
+      # Maximum allowed permissions mode for os.OpenFile and os.Chmod
+      # Default: "0600"
+      G302: "0640"
+      # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
+      # Default: "0600"
+      G306: "0640"
+  govet:
+    settings:
+      ## Check the logging function like it would be a printf
+      printf:
+        funcs:
+          - (github.com/influxdata/telegraf.Logger).Debugf
+          - (github.com/influxdata/telegraf.Logger).Infof
+          - (github.com/influxdata/telegraf.Logger).Warnf
+          - (github.com/influxdata/telegraf.Logger).Errorf
+          - (github.com/influxdata/telegraf.Logger).Debug
+          - (github.com/influxdata/telegraf.Logger).Info
+          - (github.com/influxdata/telegraf.Logger).Warn
+          - (github.com/influxdata/telegraf.Logger).Error
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
@@ -139,8 +231,6 @@ linters-settings:
       - name: time-naming
       - name: unconditional-recursion
       - name: unexported-naming
-      - name: unhandled-error
-        arguments: [ "fmt.Printf", "fmt.Println", "fmt.Print", "fmt.Fprintf", "fmt.Fprint", "fmt.Fprintln" ]
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
@@ -187,19 +277,43 @@ issues:
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
 
+  # List of regexps of issue texts to exclude.
+  #
+  # But independently of this option we use default exclude patterns,
+  # it can be disabled by `exclude-use-default: false`.
+  # To list all excluded by default patterns execute `golangci-lint run --help`
+  #
+  # Default: https://golangci-lint.run/usage/false-positives/#default-exclusions
   exclude:
-    - don't use an underscore in package name #revive:var-naming
+    # revive:var-naming
+    - don't use an underscore in package name
+    # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close.*|.*Flush|.*Disconnect|.*Clear|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+    # EXC0013 revive: Annoying issue about not having a comment. The rare codebase has such comments
+    - package comment should be of the form "(.+)...
+    # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
+    - should have a package comment
 
+  # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     - path: plugins/parsers/influx
       linters:
         - govet
 
-    - path: cmd/telegraf/(main|printer).go
-      text: "Error return value of `outputBuffer.Write` is not checked"
+    - path: cmd/telegraf/(main|printer|cmd_plugins).go
+      text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
-    - path: cmd/telegraf/(main|printer).go
-      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+    - path: _test\.go
+      text: "Potential hardcoded credentials" #gosec:G101
+
+    - path: _test\.go
+      text: "Use of weak random number generator" #gosec:G404
+
+  # Independently of option `exclude` we use default exclude patterns,
+  # it can be disabled by this option.
+  # To list all excluded by default patterns execute `golangci-lint run --help`.
+  # Default: true.
+  exclude-use-default: false
 
 # output configuration options
 output:

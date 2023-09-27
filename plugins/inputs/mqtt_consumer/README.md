@@ -3,6 +3,17 @@
 The [MQTT][mqtt] consumer plugin reads from the specified MQTT topics
 and creates metrics using one of the supported [input data formats][].
 
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listens and waits for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -88,6 +99,12 @@ to use them.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Client trace messages
+  ## When set to true, and debug mode enabled in the agent settings, the MQTT
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
+  # client_trace = false
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

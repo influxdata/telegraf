@@ -3,6 +3,7 @@ package template
 
 import (
 	_ "embed"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -17,7 +18,9 @@ type TemplateProcessor struct {
 	Tag      string          `toml:"tag"`
 	Template string          `toml:"template"`
 	Log      telegraf.Logger `toml:"-"`
-	tmpl     *template.Template
+
+	tmplTag   *template.Template
+	tmplValue *template.Template
 }
 
 func (*TemplateProcessor) SampleConfig() string {
@@ -26,28 +29,51 @@ func (*TemplateProcessor) SampleConfig() string {
 
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// for each metric in "in" array
-	for _, metric := range in {
-		var b strings.Builder
-		newM := TemplateMetric{metric}
-
-		// supply TemplateMetric and Template from configuration to Template.Execute
-		err := r.tmpl.Execute(&b, &newM)
-		if err != nil {
-			r.Log.Errorf("failed to execute template: %v", err)
+	for _, raw := range in {
+		m := raw
+		if wm, ok := raw.(telegraf.UnwrappableMetric); ok {
+			m = wm.Unwrap()
+		}
+		tm, ok := m.(telegraf.TemplateMetric)
+		if !ok {
+			r.Log.Errorf("metric of type %T is not a template metric", raw)
 			continue
 		}
+		newM := TemplateMetric{tm}
 
-		metric.AddTag(r.Tag, b.String())
+		var b strings.Builder
+		if err := r.tmplTag.Execute(&b, &newM); err != nil {
+			r.Log.Errorf("failed to execute tag name template: %v", err)
+			continue
+		}
+		tag := b.String()
+
+		b.Reset()
+		if err := r.tmplValue.Execute(&b, &newM); err != nil {
+			r.Log.Errorf("failed to execute value template: %v", err)
+			continue
+		}
+		value := b.String()
+
+		raw.AddTag(tag, value)
 	}
+
 	return in
 }
 
 func (r *TemplateProcessor) Init() error {
-	// create template
-	t, err := template.New("configured_template").Parse(r.Template)
+	var err error
 
-	r.tmpl = t
-	return err
+	r.tmplTag, err = template.New("tag template").Parse(r.Tag)
+	if err != nil {
+		return fmt.Errorf("creating tag name template failed: %w", err)
+	}
+
+	r.tmplValue, err = template.New("value template").Parse(r.Template)
+	if err != nil {
+		return fmt.Errorf("creating value template failed: %w", err)
+	}
+	return nil
 }
 
 func init() {

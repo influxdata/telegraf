@@ -1,14 +1,16 @@
 package syslog
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func timeMustParse(value string) time.Time {
@@ -94,8 +96,9 @@ func testRFC3164(t *testing.T, protocol string, address string, bestEffort bool)
 			_, err = conn.Write(tc.data)
 			conn.Close()
 			if err != nil {
-				if err, ok := err.(*net.OpError); ok {
-					if err.Err.Error() == "write: message too long" {
+				var opErr *net.OpError
+				if errors.As(err, &opErr) {
+					if opErr.Err.Error() == "write: message too long" {
 						return
 					}
 				}

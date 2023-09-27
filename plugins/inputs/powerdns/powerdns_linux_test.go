@@ -13,6 +13,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type statServer struct{}
+
+func (s statServer) serverSocket(l net.Listener) {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			return
+		}
+
+		go func(c net.Conn) {
+			buf := make([]byte, 1024)
+			n, _ := c.Read(buf)
+
+			data := buf[:n]
+			if string(data) == "show * \n" {
+				c.Write([]byte(metrics)) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
+				c.Close()
+			}
+		}(conn)
+	}
+}
+
 func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
 	randomNumber := int64(5239846799706671610)

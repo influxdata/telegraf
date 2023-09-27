@@ -21,7 +21,6 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -106,13 +105,13 @@ func (cf *ClientFactory) testClient(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
+		defer username.Destroy()
 		password, err := cf.parent.Password.Get()
 		if err != nil {
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-		auth := url.UserPassword(string(username), string(password))
+		defer password.Destroy()
+		auth := url.UserPassword(username.String(), password.String())
 
 		if err := cf.client.Client.SessionManager.Login(ctx2, auth); err != nil {
 			return fmt.Errorf("renewing authentication failed: %w", err)
@@ -141,13 +140,14 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := vs.Password.Get()
 		if err != nil {
+			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-		vSphereURL.User = url.UserPassword(string(username), string(password))
+		vSphereURL.User = url.UserPassword(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	vs.Log.Debugf("Creating client: %s", vSphereURL.Host)
@@ -165,6 +165,15 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 			return nil, err
 		}
 	}
+
+	// Set the proxy dependent on the settings
+	proxy, err := vs.HTTPProxy.Proxy()
+	if err != nil {
+		return nil, fmt.Errorf("creating proxy failed: %w", err)
+	}
+	transport := soapClient.DefaultTransport()
+	transport.Proxy = proxy
+	soapClient.Client.Transport = transport
 
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(vs.Timeout))
 	defer cancel1()

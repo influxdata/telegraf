@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -42,6 +43,8 @@ type InfluxDBListener struct {
 	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;parser now handles lines of unlimited length and option is ignored"`
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
+	TokenSharedSecret  string          `toml:"token_shared_secret"`
+	TokenUsername      string          `toml:"token_username"`
 	DatabaseTag        string          `toml:"database_tag"`
 	RetentionPolicyTag string          `toml:"retention_policy_tag"`
 	ParserType         string          `toml:"parser_type"`
@@ -77,11 +80,20 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *InfluxDBListener) routes() {
-	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
-		func(_ http.ResponseWriter) {
-			h.authFailures.Incr(1)
-		},
-	)
+	var authHandler func(http.Handler) http.Handler
+	if h.TokenSharedSecret != "" {
+		authHandler = internal.JWTAuthHandler(h.TokenSharedSecret, h.TokenUsername,
+			func(_ http.ResponseWriter) {
+				h.authFailures.Incr(1)
+			},
+		)
+	} else {
+		authHandler = internal.BasicAuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
+			func(_ http.ResponseWriter) {
+				h.authFailures.Incr(1)
+			},
+		)
+	}
 
 	h.mux.Handle("/write", authHandler(h.handleWrite()))
 	h.mux.Handle("/query", authHandler(h.handleQuery()))
@@ -90,6 +102,14 @@ func (h *InfluxDBListener) routes() {
 }
 
 func (h *InfluxDBListener) Init() error {
+	// Check the config setting
+	if (h.BasicUsername != "" || h.BasicPassword != "") && (h.TokenSharedSecret != "" || h.TokenUsername != "") {
+		return errors.New("cannot use basic-auth and tokens at the same time")
+	}
+	if h.TokenSharedSecret != "" && h.TokenUsername == "" || h.TokenSharedSecret == "" && h.TokenUsername != "" {
+		return errors.New("neither 'token_shared_secret' nor 'token_username' can be empty for token authentication")
+	}
+
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
@@ -152,7 +172,7 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 
 	go func() {
 		err = h.server.Serve(h.listener)
-		if err != http.ErrServerClosed {
+		if !errors.Is(err, http.ErrServerClosed) {
 			h.Log.Infof("Error serving HTTP on %s", h.ServiceAddress)
 		}
 	}()
@@ -286,7 +306,8 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		lastPos = pos
 
 		// Continue parsing metrics even if some are malformed
-		if parseErr, ok := err.(*influx.ParseError); ok {
+		var parseErr *influx.ParseError
+		if errors.As(err, &parseErr) {
 			parseErrorCount++
 			errStr := parseErr.Error()
 			if firstParseErrorStr == "" {
@@ -309,7 +330,7 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 
 		h.acc.AddMetric(m)
 	}
-	if err != influx.EOF {
+	if !errors.Is(err, influx.EOF) {
 		h.Log.Debugf("Error parsing the request body: %v", err.Error())
 		if err := badRequest(res, err.Error()); err != nil {
 			h.Log.Debugf("error in bad-request: %v", err)
@@ -401,7 +422,8 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		m, err = parser.Next()
 
 		// Continue parsing metrics even if some are malformed
-		if parseErr, ok := err.(*influx_upstream.ParseError); ok {
+		var parseErr *influx_upstream.ParseError
+		if errors.As(err, &parseErr) {
 			parseErrorCount++
 			errStr := parseErr.Error()
 			if firstParseErrorStr == "" {
@@ -424,7 +446,7 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 
 		h.acc.AddMetric(m)
 	}
-	if err != influx_upstream.ErrEOF {
+	if !errors.Is(err, influx_upstream.ErrEOF) {
 		h.Log.Debugf("Error parsing the request body: %v", err.Error())
 		if err := badRequest(res, err.Error()); err != nil {
 			h.Log.Debugf("error in bad-request: %v", err)

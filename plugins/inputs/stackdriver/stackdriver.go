@@ -147,7 +147,7 @@ func (smc *stackdriverMetricClient) ListMetricDescriptors(
 		for {
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
-				if mdErr != iterator.Done {
+				if !errors.Is(mdErr, iterator.Done) {
 					smc.log.Errorf("Failed iterating metric descriptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
@@ -176,7 +176,7 @@ func (smc *stackdriverMetricClient) ListTimeSeries(
 		for {
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
-				if tsErr != iterator.Done {
+				if !errors.Is(tsErr, iterator.Done) {
 					smc.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
 				}
 				break
@@ -265,7 +265,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 		"has_substring",
 		"one_of",
 	}
-	filterString := fmt.Sprintf(`metric.type = "%s"`, metricType)
+	filterString := fmt.Sprintf(`metric.type = %q`, metricType)
 	if s.Filter == nil {
 		return filterString
 	}
@@ -408,7 +408,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	if s.client == nil {
 		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to create stackdriver monitoring client: %v", err)
+			return fmt.Errorf("failed to create stackdriver monitoring client: %w", err)
 		}
 
 		tags := map[string]string{

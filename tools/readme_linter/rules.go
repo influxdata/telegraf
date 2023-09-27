@@ -13,6 +13,17 @@ func firstSection(t *T, root ast.Node) error {
 	var n ast.Node
 	n = root.FirstChild()
 
+	// Ignore HTML comments such as linter ignore sections
+	for {
+		if n == nil {
+			break
+		}
+		if _, ok := n.(*ast.HTMLBlock); !ok {
+			break
+		}
+		n = n.NextSibling()
+	}
+
 	t.assertKind(ast.KindHeading, n)
 	t.assertHeadingLevel(1, n)
 	t.assertFirstChildRegexp(` Plugin$`, n)
@@ -94,8 +105,6 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 			for _, seg := range segs.Sliced(0, segs.Len()) {
 				line := t.line(seg.Start)
 				paraLines = append(paraLines, line)
-				// t.printFileLine(line)
-				// fmt.Printf("paragraph line\n")
 			}
 		}
 
@@ -106,8 +115,6 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 			length := cur - last - 1 // -1 to exclude the newline
 			if length > threshold {
 				longLines = append(longLines, i)
-				// t.printFileLine(i)
-				// fmt.Printf("long line\n")
 			}
 			last = cur
 		}

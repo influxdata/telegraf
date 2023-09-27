@@ -8,54 +8,48 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-type format string
-
-const (
-	carbon2FormatFieldEmpty          = format("")
-	Carbon2FormatFieldSeparate       = format("field_separate")
-	Carbon2FormatMetricIncludesField = format("metric_includes_field")
-)
-
-var formats = map[format]struct{}{
-	carbon2FormatFieldEmpty:          {},
-	Carbon2FormatFieldSeparate:       {},
-	Carbon2FormatMetricIncludesField: {},
-}
-
-const (
-	DefaultSanitizeReplaceChar = ":"
-	sanitizedChars             = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
-)
+const sanitizedChars = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
 
 type Serializer struct {
-	metricsFormat    format
+	Format              string          `toml:"carbon2_format"`
+	SanitizeReplaceChar string          `toml:"carbon2_sanitize_replace_char"`
+	Log                 telegraf.Logger `toml:"-"`
+
 	sanitizeReplacer *strings.Replacer
+	template         string
 }
 
-func NewSerializer(metricsFormat string, sanitizeReplaceChar string) (*Serializer, error) {
-	if sanitizeReplaceChar == "" {
-		sanitizeReplaceChar = DefaultSanitizeReplaceChar
-	} else if len(sanitizeReplaceChar) > 1 {
-		return nil, errors.New("sanitize replace char has to be a singular character")
+func (s *Serializer) Init() error {
+	if s.SanitizeReplaceChar == "" {
+		s.SanitizeReplaceChar = ":"
 	}
 
-	var f = format(metricsFormat)
-
-	if _, ok := formats[f]; !ok {
-		return nil, fmt.Errorf("unknown carbon2 format: %s", f)
+	if len(s.SanitizeReplaceChar) > 1 {
+		return errors.New("sanitize replace char has to be a singular character")
 	}
 
-	// When unset, default to field separate.
-	if f == carbon2FormatFieldEmpty {
-		f = Carbon2FormatFieldSeparate
+	// Create replacer to replacing all characters requiring sanitization with the user-specified replacement
+	pairs := make([]string, 0, 2*len(sanitizedChars))
+	for _, c := range sanitizedChars {
+		pairs = append(pairs, string(c), s.SanitizeReplaceChar)
+	}
+	s.sanitizeReplacer = strings.NewReplacer(pairs...)
+
+	switch s.Format {
+	case "", "field_separate":
+		s.Format = "field_separate"
+		s.template = "metric=%s field=%s "
+	case "metric_includes_field":
+		s.template = "metric=%s_%s "
+	default:
+		return fmt.Errorf("unknown carbon2 format: %s", s.Format)
 	}
 
-	return &Serializer{
-		metricsFormat:    f,
-		sanitizeReplacer: createSanitizeReplacer(sanitizedChars, rune(sanitizeReplaceChar[0])),
-	}, nil
+	return nil
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -65,112 +59,69 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, metric := range metrics {
-		batch.Write(s.createObject(metric)) //nolint:revive // from buffer.go: "err is always nil"
+		batch.Write(s.createObject(metric))
 	}
 	return batch.Bytes(), nil
 }
 
 func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 	var m bytes.Buffer
-	metricsFormat := s.getMetricsFormat()
 
 	for fieldName, fieldValue := range metric.Fields() {
-		if isString(fieldValue) {
+		if _, ok := fieldValue.(string); ok {
 			continue
 		}
 
 		name := s.sanitizeReplacer.Replace(metric.Name())
 
-		switch metricsFormat {
-		case Carbon2FormatFieldSeparate:
-			m.WriteString(serializeMetricFieldSeparate(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
-
-		case Carbon2FormatMetricIncludesField:
-			m.WriteString(serializeMetricIncludeField(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
+		var value string
+		if v, ok := fieldValue.(bool); ok {
+			if v {
+				value = "1"
+			} else {
+				value = "0"
+			}
+		} else {
+			var err error
+			value, err = internal.ToString(fieldValue)
+			if err != nil {
+				s.Log.Warnf("Cannot convert %v (%T) to string", fieldValue, fieldValue)
+				continue
+			}
 		}
 
+		m.WriteString(fmt.Sprintf(s.template, strings.ReplaceAll(name, " ", "_"), strings.ReplaceAll(fieldName, " ", "_")))
 		for _, tag := range metric.TagList() {
-			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
-			m.WriteString("=")                                   //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_"))
+			m.WriteString("=")
 			value := tag.Value
 			if len(value) == 0 {
 				value = "null"
 			}
-			m.WriteString(strings.ReplaceAll(value, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
-			m.WriteString(" ")                                 //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(strings.ReplaceAll(value, " ", "_"))
+			m.WriteString(" ")
 		}
-		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString(formatValue(fieldValue))                     //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10)) //nolint:revive // from buffer.go: "err is always nil"
-		m.WriteString("\n")                                        //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(" ")
+		m.WriteString(value)
+		m.WriteString(" ")
+		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
+		m.WriteString("\n")
 	}
 	return m.Bytes()
 }
 
-func (s *Serializer) SetMetricsFormat(f format) {
-	s.metricsFormat = f
-}
-
-func (s *Serializer) getMetricsFormat() format {
-	return s.metricsFormat
-}
-
-func (s *Serializer) IsMetricsFormatUnset() bool {
-	return s.metricsFormat == carbon2FormatFieldEmpty
-}
-
-func serializeMetricFieldSeparate(name, fieldName string) string {
-	return fmt.Sprintf("metric=%s field=%s ",
-		strings.ReplaceAll(name, " ", "_"),
-		strings.ReplaceAll(fieldName, " ", "_"),
+func init() {
+	serializers.Add("carbon2",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
 	)
 }
 
-func serializeMetricIncludeField(name, fieldName string) string {
-	return fmt.Sprintf("metric=%s_%s ",
-		strings.ReplaceAll(name, " ", "_"),
-		strings.ReplaceAll(fieldName, " ", "_"),
-	)
-}
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.Format = cfg.Carbon2Format
+	s.SanitizeReplaceChar = cfg.Carbon2SanitizeReplaceChar
 
-func formatValue(fieldValue interface{}) string {
-	switch v := fieldValue.(type) {
-	case bool:
-		// Print bools as 0s and 1s
-		return fmt.Sprintf("%d", bool2int(v))
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
-func isString(v interface{}) bool {
-	switch v.(type) {
-	case string:
-		return true
-	default:
-		return false
-	}
-}
-
-func bool2int(b bool) int {
-	// Slightly more optimized than a usual if ... return ... else return ... .
-	// See: https://0x0f.me/blog/golang-compiler-optimization/
-	var i int
-	if b {
-		i = 1
-	} else {
-		i = 0
-	}
-	return i
-}
-
-// createSanitizeReplacer creates string replacer replacing all provided
-// characters with the replaceChar.
-func createSanitizeReplacer(sanitizedChars string, replaceChar rune) *strings.Replacer {
-	sanitizeCharPairs := make([]string, 0, 2*len(sanitizedChars))
-	for _, c := range sanitizedChars {
-		sanitizeCharPairs = append(sanitizeCharPairs, string(c), string(replaceChar))
-	}
-	return strings.NewReplacer(sanitizeCharPairs...)
+	return nil
 }

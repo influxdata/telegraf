@@ -9,6 +9,7 @@ import (
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 )
@@ -17,14 +18,28 @@ type OpcUAWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
 }
 
+type ConnectionState opcua.ConnState
+
+const (
+	Closed       ConnectionState = ConnectionState(opcua.Closed)
+	Connected    ConnectionState = ConnectionState(opcua.Connected)
+	Connecting   ConnectionState = ConnectionState(opcua.Connecting)
+	Disconnected ConnectionState = ConnectionState(opcua.Disconnected)
+	Reconnecting ConnectionState = ConnectionState(opcua.Reconnecting)
+)
+
+func (c ConnectionState) String() string {
+	return opcua.ConnState(c).String()
+}
+
 type OpcUAClientConfig struct {
 	Endpoint       string          `toml:"endpoint"`
 	SecurityPolicy string          `toml:"security_policy"`
 	SecurityMode   string          `toml:"security_mode"`
 	Certificate    string          `toml:"certificate"`
 	PrivateKey     string          `toml:"private_key"`
-	Username       string          `toml:"username"`
-	Password       string          `toml:"password"`
+	Username       config.Secret   `toml:"username"`
+	Password       config.Secret   `toml:"password"`
 	AuthMethod     string          `toml:"auth_method"`
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
@@ -49,13 +64,13 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	switch o.SecurityPolicy {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityPolicy, o.Endpoint)
 	}
 
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Endpoint)
+		return fmt.Errorf("invalid security type %q in %q", o.SecurityMode, o.Endpoint)
 	}
 
 	return nil
@@ -72,29 +87,15 @@ func (o *OpcUAClientConfig) CreateClient(log telegraf.Logger) (*OpcUAClient, err
 		Log:    log,
 	}
 	c.Log.Debug("Initialising OpcUAClient")
-	c.State = Disconnected
 
 	err = c.setupWorkarounds()
 	return c, err
 }
 
-// ConnectionState used for constants
-type ConnectionState int
-
-const (
-	// Disconnected constant State 0
-	Disconnected ConnectionState = iota
-	// Connecting constant State 1
-	Connecting
-	// Connected constant State 2
-	Connected
-)
-
 type OpcUAClient struct {
 	Config *OpcUAClientConfig
 	Log    telegraf.Logger
 
-	State  ConnectionState
 	Client *opcua.Client
 
 	opts  []opcua.Option
@@ -163,15 +164,12 @@ func (o *OpcUAClient) Connect() error {
 
 	switch u.Scheme {
 	case "opc.tcp":
-		o.State = Connecting
-
-		err = o.SetupOptions()
-		if err != nil {
+		if err := o.SetupOptions(); err != nil {
 			return err
 		}
 
 		if o.Client != nil {
-			o.Log.Warnf("Closing connection due to Connect called while already instantiated", u)
+			o.Log.Warnf("Closing connection to %q as already connected", u)
 			if err := o.Client.Close(); err != nil {
 				// Only log the error but to not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).
@@ -183,11 +181,8 @@ func (o *OpcUAClient) Connect() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
 		defer cancel()
 		if err := o.Client.Connect(ctx); err != nil {
-			o.State = Disconnected
-			return fmt.Errorf("error in Client Connection: %s", err)
+			return fmt.Errorf("error in Client Connection: %w", err)
 		}
-
-		o.State = Connected
 		o.Log.Debug("Connected to OPC UA Server")
 
 	default:
@@ -205,7 +200,6 @@ func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 
 	switch u.Scheme {
 	case "opc.tcp":
-		o.State = Disconnected
 		// We can't do anything about failing to close a connection
 		err := o.Client.CloseWithContext(ctx)
 		o.Client = nil
@@ -213,4 +207,11 @@ func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 	default:
 		return fmt.Errorf("invalid controller")
 	}
+}
+
+func (o *OpcUAClient) State() ConnectionState {
+	if o.Client == nil {
+		return Disconnected
+	}
+	return ConnectionState(o.Client.State())
 }

@@ -13,6 +13,16 @@ telegraf secrets help
 
 to get more information on how to do this with Telegraf.
 
+## Usage <!-- @/docs/includes/secret_usage.md -->
+
+Secrets defined by a store are referenced with `@{<store-id>:<secret_key>}`
+the Telegraf configuration. Only certain Telegraf plugins and options of
+support secret stores. To see which plugins and options support
+secrets, see their respective documentation (e.g.
+`plugins/outputs/influxdb/README.md`). If the plugin's README has the
+`Secret-store support` section, it will detail which options support secret
+store usage.
+
 ## Configuration
 
 The configuration differs slightly depending on the Operating System. We first
@@ -31,6 +41,65 @@ The `dynamic` flag allows to indicate secrets that change during the runtime of
 Telegraf. I.e. when set to `true`, the secret will be read from the secret-store
 on every access by a plugin. If set to `false`, all secrets in the secret store
 are assumed to be static and are only read once at startup of Telegraf.
+
+```toml @sample.conf
+# Operating System native secret-store
+[[secretstores.os]]
+  ## Unique identifier for the secret-store.
+  ## This id can later be used in plugins to reference the secrets
+  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  id = "secretstore"
+
+  ## Keyring Name & Collection
+  ## * Linux: keyring name used for the secrets, collection is unused
+  ## * macOS: keyring specifies the macOS' Keychain name and collection is an
+  ##     optional Keychain service name
+  ## * Windows: keys follow a fixed pattern in the form
+  ##     `<collection>:<keyring>:<key_name>`. Please keep this in mind when
+  ##     creating secrets with the Windows credential tool.
+  # keyring = "telegraf"
+  # collection = ""
+
+  ## macOS Keychain password
+  ## If no password is specified here, Telegraf will prompt for it at startup
+  ## time.
+  # password = ""
+
+  ## Allow dynamic secrets that are updated during runtime of telegraf
+  # dynamic = false
+```
+
+### Linux
+
+On Linux the kernel keyring in the `user` scope is used to store the
+secrets. The `collection` setting is ignored on Linux.
+
+### MacOS
+
+On MacOS the Keychain implementation is used. Here the `keyring` parameter
+corresponds to the Keychain name and the `collection` to the optional Keychain
+service name. Additionally a password is required to access the Keychain.
+The `password` itself is also a secret and can be a string, an environment
+variable or a reference to a secret stored in another secret-store.
+If `password` is omitted, you will be prompted for the password on startup.
+
+### Windows
+
+On Windows you can use the Credential Manager in the Control Panel or
+[Telegraf](../../../cmd/telegraf/README.md) to manage your secrets.
+
+If using the Credential Manager, click "Windows Credentials" and then
+"Add a generic credential" with the following:
+
+* _Internet or network address_: Enter the secret name in the format of:
+  `<collection>:<keyring>:<key_name>`
+* _User name_: Use `telegraf`. This field is not used, but needs something
+  entered.
+* _Password_: The actual secret value
+
+If using Telegraf, see the help output of `telegraf secrets set` to add
+secrets. Again use the `<collection>:<keyring>:<key_name>` format of the secret
+key name.
 
 ### Docker
 
@@ -54,78 +123,3 @@ capability Telegraf will panic. Users will need to start a container with the
 See [github.com/awnumar/memguard#144][memguard-issue] for more information.
 
 [memguard-issue]: https://github.com/awnumar/memguard/issues/144
-
-### Windows
-
-```toml @sample_windows.conf
-# Operating System native secret-store
-[[secretstores.os]]
-  ## Unique identifier for the secret-store.
-  ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
-  id = "secretstore"
-
-  ## Keyring of the secrets
-  ## In Windows, keys follow a fixed pattern in the form `<keyring>:<collection>:<key>`. Please keep this in mind
-  ## when creating secrets with the Windows credential tool.
-  # keyring = "telegraf"
-  # collection = ""
-
-  ## Allow dynamic secrets that are updated during runtime of telegraf
-  # dynamic = false
-```
-
-On Windows you can use the Credential Manager Control panel or
-[Telegraf](../../../cmd/telegraf/README.md) to manage your secrets.
-Please use _generic credentials_ and respect the special
-`<keyring>:<collection>:<key>` format of the secret key. The
-secret value needs to be stored in the `Password` field.
-
-### Linux
-
-```toml @sample_linux.conf
-# Operating System native secret-store
-[[secretstores.os]]
-  ## Unique identifier for the secret-store.
-  ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
-  id = "secretstore"
-
-  ## Keyring name used for the secrets
-  # keyring = "telegraf"
-
-  ## Allow dynamic secrets that are updated during runtime of telegraf
-  # dynamic = false
-```
-
-On Linux the kernel keyring in the `user` scope is used to store the
-secrets. The `collection` setting is ignored on Linux.
-
-### MacOS
-
-```toml @sample_darwin.conf
-# Operating System native secret-store
-[[secretstores.os]]
-  ## Unique identifier for the secret-store.
-  ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
-  id = "secretstore"
-
-  ## MacOS' Keychain name and service name
-  # keyring = "telegraf"
-  # collection = ""
-
-  ## MacOS' Keychain password
-  ## If no password is specified here, Telegraf will prompt for it at startup time.
-  # password = ""
-
-  ## Allow dynamic secrets that are updated during runtime of telegraf
-  # dynamic = false
-```
-
-On MacOS the Keychain implementation is used. Here the `keyring` parameter
-corresponds to the Keychain name and the `collection` to the optional Keychain
-service name. Additionally a password is required to access the Keychain.
-The `password` itself is also a secret and can be a string, an environment
-variable or a reference to a secret stored in another secret-store.
-If `password` is omitted, you will be prompted for the password on startup.

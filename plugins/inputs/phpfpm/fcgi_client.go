@@ -48,7 +48,7 @@ func (c *conn) Request(env map[string]string, requestData string) (retout []byte
 	}
 
 	if len(requestData) > 0 {
-		if err = c.writeRecord(typeStdin, reqID, []byte(requestData)); err != nil {
+		if err := c.writeRecord(typeStdin, reqID, []byte(requestData)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -61,7 +61,7 @@ READ_LOOP:
 	for {
 		err1 = rec.read(c.rwc)
 		if err1 != nil && strings.Contains(err1.Error(), "use of closed network connection") {
-			if err1 != io.EOF {
+			if !errors.Is(err1, io.EOF) {
 				err = err1
 			}
 			break

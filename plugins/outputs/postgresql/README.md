@@ -54,6 +54,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Store all fields as a JSONB object in a single 'fields' column.
   # fields_as_jsonb = false
 
+  ## Name of the timestamp column
+  ## NOTE: Some tools (e.g. Grafana) require the default name so be careful!
+  # timestamp_column_name = "time"
+
+  ## Type of the timestamp column
+  ## Currently, "timestamp without time zone" and "timestamp with time zone"
+  ## are supported
+  # timestamp_column_type = "timestamp without time zone"
+
   ## Templated statements to execute when creating a new table.
   # create_templates = [
   #   '''CREATE TABLE {{ .table }} ({{ .columns }})''',
@@ -166,7 +175,7 @@ Documentation on how to write templates can be found [sqltemplate docs][1]
 tags_as_foreign_keys = true
 create_templates = [
     '''CREATE TABLE {{ .table }} ({{ .columns }})''',
-    '''SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '1h')''',
+    '''SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '7d')''',
     '''ALTER TABLE {{ .table }} SET (timescaledb.compress, timescaledb.compress_segmentby = 'tag_id')''',
 ]
 ```
@@ -177,7 +186,7 @@ create_templates = [
 tags_as_foreign_keys = true
 create_templates = [
     '''CREATE TABLE {{ .table }} ({{ .columns }})''',
-    '''SELECT create_distributed_hypertable({{ .table|quoteLiteral }}, 'time', partitioning_column => 'tag_id', number_partitions => (SELECT count(*) FROM timescaledb_information.data_nodes)::integer, replication_factor => 2, chunk_time_interval => INTERVAL '1h')''',
+    '''SELECT create_distributed_hypertable({{ .table|quoteLiteral }}, 'time', partitioning_column => 'tag_id', number_partitions => (SELECT count(*) FROM timescaledb_information.data_nodes)::integer, replication_factor => 2, chunk_time_interval => INTERVAL '7d')''',
     '''ALTER TABLE {{ .table }} SET (timescaledb.compress, timescaledb.compress_segmentby = 'tag_id')''',
 ]
 ```
@@ -218,9 +227,9 @@ tags_as_foreign_keys = true
 schema = 'telegraf'
 create_templates = [
     '''CREATE TABLE {{ .table }} ({{ .allColumns }})''',
-    '''SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '1h')''',
+    '''SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '7d')''',
     '''ALTER TABLE {{ .table }} SET (timescaledb.compress, timescaledb.compress_segmentby = 'tag_id')''',
-    '''SELECT add_compression_policy({{ .table|quoteLiteral }}, INTERVAL '2h')''',
+    '''SELECT add_compression_policy({{ .table|quoteLiteral }}, INTERVAL '14d')''',
     '''CREATE VIEW {{ .table.WithSuffix "_data" }} AS SELECT {{ .allColumns.Selectors | join "," }} FROM {{ .table }}''',
     '''CREATE VIEW {{ .table.WithSchema "public" }} AS SELECT time, {{ (.tagTable.Columns.Tags.Concat .allColumns.Fields).Identifiers | join "," }} FROM {{ .table.WithSuffix "_data" }} t, {{ .tagTable }} tt WHERE t.tag_id = tt.tag_id''',
 ]
@@ -230,9 +239,9 @@ add_column_templates = [
     '''DROP VIEW {{ .table.WithSchema "public" }}''',
 
     '''CREATE TABLE {{ .table }} ({{ .allColumns }})''',
-    '''SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '1h')''',
+    '''SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '7d')''',
     '''ALTER TABLE {{ .table }} SET (timescaledb.compress, timescaledb.compress_segmentby = 'tag_id')''',
-    '''SELECT add_compression_policy({{ .table|quoteLiteral }}, INTERVAL '2h')''',
+    '''SELECT add_compression_policy({{ .table|quoteLiteral }}, INTERVAL '14d')''',
     '''CREATE VIEW {{ .table.WithSuffix "_data" }} AS SELECT {{ .allColumns.Selectors | join "," }} FROM {{ .table }} UNION ALL SELECT {{ (.allColumns.Union .table.Columns).Selectors | join "," }} FROM {{ .table.WithSuffix "_" .table.Columns.Hash "_data" }}''',
     '''CREATE VIEW {{ .table.WithSchema "public" }} AS SELECT time, {{ (.tagTable.Columns.Tags.Concat .allColumns.Fields).Identifiers | join "," }} FROM {{ .table.WithSuffix "_data" }} t, {{ .tagTable }} tt WHERE t.tag_id = tt.tag_id''',
 ]

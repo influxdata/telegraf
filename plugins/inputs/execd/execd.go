@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
@@ -28,10 +28,11 @@ type Execd struct {
 	Signal       string          `toml:"signal"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger `toml:"-"`
+	BufferSize   config.Size     `toml:"buffer_size"`
 
 	process      *process.Process
 	acc          telegraf.Accumulator
-	parser       parsers.Parser
+	parser       telegraf.Parser
 	outputReader func(io.Reader)
 }
 
@@ -39,7 +40,7 @@ func (*Execd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (e *Execd) SetParser(parser parsers.Parser) {
+func (e *Execd) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 	e.outputReader = e.cmdReadOut
 
@@ -82,10 +83,18 @@ func (e *Execd) Stop() {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
-	scanner := bufio.NewScanner(out)
+	rdr := bufio.NewReaderSize(out, int(e.BufferSize))
 
-	for scanner.Scan() {
-		data := scanner.Bytes()
+	for {
+		data, err := rdr.ReadBytes('\n')
+		if err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
+				break
+			}
+			e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
+			continue
+		}
+
 		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
@@ -95,10 +104,6 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 			e.acc.AddMetric(metric)
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
-	}
 }
 
 func (e *Execd) cmdReadOutStream(out io.Reader) {
@@ -107,10 +112,11 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 	for {
 		metric, err := parser.Next()
 		if err != nil {
-			if err == influx.EOF {
+			if errors.Is(err, influx.EOF) {
 				break // stream ended
 			}
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
 				// parse error.
 				e.acc.AddError(parseErr)
 				continue
@@ -148,6 +154,7 @@ func init() {
 		return &Execd{
 			Signal:       "none",
 			RestartDelay: config.Duration(10 * time.Second),
+			BufferSize:   config.Size(64 * 1024),
 		}
 	})
 }

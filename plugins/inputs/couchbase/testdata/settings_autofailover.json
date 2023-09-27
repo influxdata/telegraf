@@ -1,0 +1,11 @@
+{
+    "enabled": true,
+    "timeout": 72,
+    "count": 1,
+    "failoverOnDataDiskIssues": {
+      "enabled": true,
+      "timePeriod": 89
+    },
+    "maxCount": 2,
+    "canAbortRebalance": true
+}

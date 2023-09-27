@@ -45,6 +45,56 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "success with unencrypted pkcs#8 key",
+			client: tls.ClientConfig{
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientPKCS8KeyPath(),
+			},
+		},
+		{
+			name: "encrypted pkcs#8 key but missing password",
+			client: tls.ClientConfig{
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientEncPKCS8KeyPath(),
+			},
+			expNil: true,
+			expErr: true,
+		},
+		{
+			name: "encrypted pkcs#8 key and incorrect password",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncPKCS8KeyPath(),
+				TLSKeyPwd: "incorrect",
+			},
+			expNil: true,
+			expErr: true,
+		},
+		{
+			name: "success with encrypted pkcs#8 key and password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncPKCS8KeyPath(),
+				TLSKeyPwd: "changeme",
+			},
+		},
+		{
+			name: "error with encrypted pkcs#1 key and password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncKeyPath(),
+				TLSKeyPwd: "changeme",
+			},
+			expNil: true,
+			expErr: true,
+		},
+
+		{
 			name: "invalid ca",
 			client: tls.ClientConfig{
 				TLSCA:   pki.ClientKeyPath(),
@@ -527,4 +577,38 @@ func TestConnectWrongDNS(t *testing.T) {
 		err = resp.Body.Close()
 		require.NoError(t, err)
 	}
+}
+
+func TestEnableFlagAuto(t *testing.T) {
+	cfgEmpty := tls.ClientConfig{}
+	cfg, err := cfgEmpty.TLSConfig()
+	require.NoError(t, err)
+	require.Nil(t, cfg)
+
+	cfgSet := tls.ClientConfig{InsecureSkipVerify: true}
+	cfg, err = cfgSet.TLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+}
+
+func TestEnableFlagDisabled(t *testing.T) {
+	enabled := false
+	cfgSet := tls.ClientConfig{
+		InsecureSkipVerify: true,
+		Enable:             &enabled,
+	}
+	cfg, err := cfgSet.TLSConfig()
+	require.NoError(t, err)
+	require.Nil(t, cfg)
+}
+
+func TestEnableFlagEnabled(t *testing.T) {
+	enabled := true
+	cfgSet := tls.ClientConfig{Enable: &enabled}
+	cfg, err := cfgSet.TLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	expected := &cryptotls.Config{}
+	require.Equal(t, expected, cfg)
 }

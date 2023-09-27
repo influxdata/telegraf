@@ -56,10 +56,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - fields:
     - count (integer)
     - size_bytes (integer)
+    - oldest_file_timestamp (int, unix time nanoseconds)
+    - newest_file_timestamp (int, unix time nanoseconds)
 
 ## Example Output
 
-```shell
-filecount,directory=/var/cache/apt count=7i,size_bytes=7438336i 1530034445000000000
-filecount,directory=/tmp count=17i,size_bytes=28934786i 1530034445000000000
+```text
+filecount,directory=/var/cache/apt count=7i,size_bytes=7438336i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
+filecount,directory=/tmp count=17i,size_bytes=28934786i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
 ```

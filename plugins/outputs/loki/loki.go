@@ -32,17 +32,18 @@ const (
 )
 
 type Loki struct {
-	Domain       string            `toml:"domain"`
-	Endpoint     string            `toml:"endpoint"`
-	Timeout      config.Duration   `toml:"timeout"`
-	Username     config.Secret     `toml:"username"`
-	Password     config.Secret     `toml:"password"`
-	Headers      map[string]string `toml:"http_headers"`
-	ClientID     string            `toml:"client_id"`
-	ClientSecret string            `toml:"client_secret"`
-	TokenURL     string            `toml:"token_url"`
-	Scopes       []string          `toml:"scopes"`
-	GZipRequest  bool              `toml:"gzip_request"`
+	Domain          string            `toml:"domain"`
+	Endpoint        string            `toml:"endpoint"`
+	Timeout         config.Duration   `toml:"timeout"`
+	Username        config.Secret     `toml:"username"`
+	Password        config.Secret     `toml:"password"`
+	Headers         map[string]string `toml:"http_headers"`
+	ClientID        string            `toml:"client_id"`
+	ClientSecret    string            `toml:"client_secret"`
+	TokenURL        string            `toml:"token_url"`
+	Scopes          []string          `toml:"scopes"`
+	GZipRequest     bool              `toml:"gzip_request"`
+	MetricNameLabel string            `toml:"metric_name_label"`
 
 	url    string
 	client *http.Client
@@ -119,7 +120,9 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 	})
 
 	for _, m := range metrics {
-		m.AddTag("__name", m.Name())
+		if l.MetricNameLabel != "" {
+			m.AddTag(l.MetricNameLabel, m.Name())
+		}
 
 		tags := m.TagList()
 		var line string
@@ -158,14 +161,14 @@ func (l *Loki) writeMetrics(s Streams) error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
 		password, err := l.Password.Get()
 		if err != nil {
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
-
-		req.SetBasicAuth(string(username), string(password))
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	for k, v := range l.Headers {
@@ -197,6 +200,8 @@ func (l *Loki) writeMetrics(s Streams) error {
 
 func init() {
 	outputs.Add("loki", func() telegraf.Output {
-		return &Loki{}
+		return &Loki{
+			MetricNameLabel: "__name",
+		}
 	})
 }

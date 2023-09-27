@@ -3,10 +3,10 @@
 package ethtool
 
 import (
+	"errors"
 	"net"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -24,6 +24,7 @@ type InterfaceMock struct {
 	Stat          map[string]uint64
 	LoopBack      bool
 	InterfaceUp   bool
+	CmdGet        map[string]uint64
 }
 
 type NamespaceMock struct {
@@ -43,6 +44,10 @@ func (n *NamespaceMock) DriverName(_ NamespacedInterface) (string, error) {
 }
 
 func (n *NamespaceMock) Stats(_ NamespacedInterface) (map[string]uint64, error) {
+	return nil, errors.New("it is a test bug to invoke this function")
+}
+
+func (n *NamespaceMock) Get(_ NamespacedInterface) (map[string]uint64, error) {
 	return nil, errors.New("it is a test bug to invoke this function")
 }
 
@@ -113,6 +118,14 @@ func (c *CommandEthtoolMock) Stats(intf NamespacedInterface) (map[string]uint64,
 	i := c.InterfaceMap[intf.Name]
 	if i != nil {
 		return i.Stat, nil
+	}
+	return nil, errors.New("interface not found")
+}
+
+func (c *CommandEthtoolMock) Get(intf NamespacedInterface) (map[string]uint64, error) {
+	i := c.InterfaceMap[intf.Name]
+	if i != nil {
+		return i.CmdGet, nil
 	}
 	return nil, errors.New("interface not found")
 }
@@ -219,7 +232,13 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth1 := &InterfaceMock{"eth1", "driver1", "", eth1Stat, false, true}
+	eth1Get := map[string]uint64{
+		"autoneg": 1,
+		"duplex":  1,
+		"link":    1,
+		"speed":   1000,
+	}
+	eth1 := &InterfaceMock{"eth1", "driver1", "", eth1Stat, false, true, eth1Get}
 	interfaceMap[eth1.Name] = eth1
 
 	eth2Stat := map[string]uint64{
@@ -321,7 +340,13 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth2 := &InterfaceMock{"eth2", "driver1", "", eth2Stat, false, false}
+	eth2Get := map[string]uint64{
+		"autoneg": 0,
+		"duplex":  255,
+		"link":    0,
+		"speed":   9223372036854775807,
+	}
+	eth2 := &InterfaceMock{"eth2", "driver1", "", eth2Stat, false, false, eth2Get}
 	interfaceMap[eth2.Name] = eth2
 
 	eth3Stat := map[string]uint64{
@@ -423,7 +448,13 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth3 := &InterfaceMock{"eth3", "driver1", "namespace1", eth3Stat, false, true}
+	eth3Get := map[string]uint64{
+		"autoneg": 1,
+		"duplex":  1,
+		"link":    1,
+		"speed":   1000,
+	}
+	eth3 := &InterfaceMock{"eth3", "driver1", "namespace1", eth3Stat, false, true, eth3Get}
 	interfaceMap[eth3.Name] = eth3
 
 	eth4Stat := map[string]uint64{
@@ -525,14 +556,26 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth4 := &InterfaceMock{"eth4", "driver1", "namespace2", eth4Stat, false, true}
+	eth4Get := map[string]uint64{
+		"autoneg": 1,
+		"duplex":  1,
+		"link":    1,
+		"speed":   100,
+	}
+	eth4 := &InterfaceMock{"eth4", "driver1", "namespace2", eth4Stat, false, true, eth4Get}
 	interfaceMap[eth4.Name] = eth4
 
 	// dummy loopback including dummy stat to ensure that the ignore feature is working
 	lo0Stat := map[string]uint64{
 		"dummy": 0,
 	}
-	lo0 := &InterfaceMock{"lo0", "", "", lo0Stat, true, true}
+	lo0Get := map[string]uint64{
+		"autoneg": 1,
+		"duplex":  1,
+		"link":    1,
+		"speed":   1000,
+	}
+	lo0 := &InterfaceMock{"lo0", "", "", lo0Stat, true, true, lo0Get}
 	interfaceMap[lo0.Name] = lo0
 
 	c := &CommandEthtoolMock{interfaceMap}
@@ -573,6 +616,9 @@ func TestGather(t *testing.T) {
 	require.Len(t, acc.Metrics, 2)
 
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	for k, v := range interfaceMap["eth1"].CmdGet {
+		expectedFieldsEth1[k] = v
+	}
 	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
 	expectedFieldsEth1["interface_up"] = true
 
@@ -582,7 +628,11 @@ func TestGather(t *testing.T) {
 		"namespace": "",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
+
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	for k, v := range interfaceMap["eth2"].CmdGet {
+		expectedFieldsEth2[k] = v
+	}
 	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
 	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
@@ -608,6 +658,9 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 
 	// Should contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	for k, v := range interfaceMap["eth1"].CmdGet {
+		expectedFieldsEth1[k] = v
+	}
 	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
 	expectedFieldsEth1["interface_up"] = true
 	expectedTagsEth1 := map[string]string{
@@ -619,6 +672,9 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 
 	// Should not contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	for k, v := range interfaceMap["eth2"].CmdGet {
+		expectedFieldsEth2[k] = v
+	}
 	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
 	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
@@ -644,6 +700,9 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 
 	// Should not contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	for k, v := range interfaceMap["eth1"].CmdGet {
+		expectedFieldsEth1[k] = v
+	}
 	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
 	expectedFieldsEth1["interface_up"] = true
 	expectedTagsEth1 := map[string]string{
@@ -655,6 +714,9 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 
 	// Should contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	for k, v := range interfaceMap["eth2"].CmdGet {
+		expectedFieldsEth2[k] = v
+	}
 	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
 	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
@@ -679,6 +741,9 @@ func TestSkipMetricsForInterfaceDown(t *testing.T) {
 	require.Len(t, acc.Metrics, 1)
 
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
+	for k, v := range interfaceMap["eth1"].CmdGet {
+		expectedFieldsEth1[k] = v
+	}
 	expectedFieldsEth1["interface_up_counter"] = expectedFieldsEth1["interface_up"]
 	expectedFieldsEth1["interface_up"] = true
 
@@ -705,6 +770,9 @@ func TestGatherIncludeNamespaces(t *testing.T) {
 
 	// Should contain eth3
 	expectedFieldsEth3 := toStringMapInterface(interfaceMap["eth3"].Stat)
+	for k, v := range interfaceMap["eth3"].CmdGet {
+		expectedFieldsEth3[k] = v
+	}
 	expectedFieldsEth3["interface_up_counter"] = expectedFieldsEth3["interface_up"]
 	expectedFieldsEth3["interface_up"] = true
 	expectedTagsEth3 := map[string]string{
@@ -716,6 +784,9 @@ func TestGatherIncludeNamespaces(t *testing.T) {
 
 	// Should not contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	for k, v := range interfaceMap["eth2"].CmdGet {
+		expectedFieldsEth2[k] = v
+	}
 	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
 	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
@@ -741,6 +812,9 @@ func TestGatherIgnoreNamespaces(t *testing.T) {
 
 	// Should not contain eth4
 	expectedFieldsEth4 := toStringMapInterface(interfaceMap["eth4"].Stat)
+	for k, v := range interfaceMap["eth4"].CmdGet {
+		expectedFieldsEth4[k] = v
+	}
 	expectedFieldsEth4["interface_up_counter"] = expectedFieldsEth4["interface_up"]
 	expectedFieldsEth4["interface_up"] = true
 	expectedTagsEth4 := map[string]string{
@@ -752,6 +826,9 @@ func TestGatherIgnoreNamespaces(t *testing.T) {
 
 	// Should contain eth2
 	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
+	for k, v := range interfaceMap["eth2"].CmdGet {
+		expectedFieldsEth2[k] = v
+	}
 	expectedFieldsEth2["interface_up_counter"] = expectedFieldsEth2["interface_up"]
 	expectedFieldsEth2["interface_up"] = false
 	expectedTagsEth2 := map[string]string{
@@ -763,6 +840,9 @@ func TestGatherIgnoreNamespaces(t *testing.T) {
 
 	// Should contain eth3
 	expectedFieldsEth3 := toStringMapInterface(interfaceMap["eth3"].Stat)
+	for k, v := range interfaceMap["eth3"].CmdGet {
+		expectedFieldsEth3[k] = v
+	}
 	expectedFieldsEth3["interface_up_counter"] = expectedFieldsEth3["interface_up"]
 	expectedFieldsEth3["interface_up"] = true
 	expectedTagsEth3 := map[string]string{
@@ -880,7 +960,7 @@ func TestNormalizedKeys(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		eth0 := &InterfaceMock{"eth0", "e1000e", "", toStringMapUint(c.stats), false, true}
+		eth0 := &InterfaceMock{"eth0", "e1000e", "", toStringMapUint(c.stats), false, true, map[string]uint64{}}
 		expectedTags := map[string]string{
 			"interface": eth0.Name,
 			"driver":    eth0.DriverName,

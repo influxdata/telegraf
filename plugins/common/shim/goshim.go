@@ -101,7 +101,10 @@ func hasQuit(ctx context.Context) bool {
 }
 
 func (s *Shim) writeProcessedMetrics() error {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	if err := serializer.Init(); err != nil {
+		return fmt.Errorf("creating serializer failed: %w", err)
+	}
 	for { //nolint:gosimple // for-select used on purpose
 		select {
 		case m, open := <-s.metricCh:
@@ -110,12 +113,12 @@ func (s *Shim) writeProcessedMetrics() error {
 			}
 			b, err := serializer.Serialize(m)
 			if err != nil {
-				return fmt.Errorf("failed to serialize metric: %s", err)
+				return fmt.Errorf("failed to serialize metric: %w", err)
 			}
 			// Write this to stdout
 			_, err = fmt.Fprint(s.stdout, string(b))
 			if err != nil {
-				return fmt.Errorf("failed to write metric: %s", err)
+				return fmt.Errorf("failed to write metric: %w", err)
 			}
 		}
 	}
