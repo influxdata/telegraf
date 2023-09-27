@@ -30,7 +30,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Target index name for metrics (OpenSearch will create if it not exists).
   ## This is a Golang template (see https://pkg.go.dev/text/template)
   ## You can also specify
-  ## metric name (`{{.Name}}`), tag value (`{{.Tag "tag_name"}}`), field value (`{{.Field "feild_name"}}`) 
+  ## metric name (`{{.Name}}`), tag value (`{{.Tag "tag_name"}}`), field value (`{{.Field "feild_name"}}`)
   ## If the tag does not exist, the default tag value will be empty string "".
   ## the timestamp (`{{.Time.Format "xxxxxxxxx"}}`).
   ## For example: "telegraf-{{.Time.Format "2006-01-02"}}-{{.Tag "host"}}" would set it to telegraf-2023-07-27-HostName
@@ -119,9 +119,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   OpenSearch instance.
 * `index_name`: The target index for metrics. You can use the date format
 
-For example: "telegraf-{{.Time.Format "2006-01-02"}}" would set it to telegraf-2023-07-27
-You can also specify
-metric name (`{{ .Name }}`), tag value (`{{ .Tag "tag_name" }}`), field value (`{{ .Field "feild_name" }}`)
+For example: "telegraf-{{.Time.Format "2006-01-02"}}" would set it to
+"telegraf-2023-07-27". You can also specify metric name (`{{ .Name }}`), tag
+value (`{{ .Tag "tag_name" }}`), and field value (`{{ .Field "field_name" }}`).
+
 If the tag does not exist, the default tag value will be empty string ""
 
 ## Permissions
