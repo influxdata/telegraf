@@ -69,7 +69,7 @@ func newHTTPClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseT
 	if err != nil {
 		return nil, err
 	}
-	config := &rest.Config{
+	clientConfig := &rest.Config{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
@@ -77,7 +77,7 @@ func newHTTPClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseT
 		Timeout:         time.Duration(responseTimeout),
 		BearerTokenFile: bearerTokenFile,
 	}
-	return rest.HTTPClientFor(config)
+	return rest.HTTPClientFor(clientConfig)
 }
 func (c *client) getDaemonSets(ctx context.Context) (*appsv1.DaemonSetList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
