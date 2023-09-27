@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -62,6 +64,21 @@ func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, t
 	}, nil
 }
 
+func newHttpClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseTimeout config.Duration) (*http.Client, error) {
+	tlsCfg, err := tlsConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	config := &rest.Config{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		ContentConfig:   rest.ContentConfig{},
+		Timeout:         time.Duration(responseTimeout),
+		BearerTokenFile: bearerTokenFile,
+	}
+	return rest.HTTPClientFor(config)
+}
 func (c *client) getDaemonSets(ctx context.Context) (*appsv1.DaemonSetList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()

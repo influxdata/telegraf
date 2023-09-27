@@ -7,9 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -71,6 +69,14 @@ func (ki *KubernetesInventory) Init() error {
 
 	if err != nil {
 		return err
+	}
+	if ki.ResponseTimeout < config.Duration(time.Second) {
+		ki.ResponseTimeout = config.Duration(time.Second * 5)
+	}
+	ki.httpClient, err = newHttpClient(ki.ClientConfig, ki.BearerToken, ki.ResponseTimeout)
+
+	if err != nil {
+		ki.Log.Warn(fmt.Sprintf("unable to create http client: %s", err.Error()))
 	}
 
 	return nil
@@ -145,42 +151,14 @@ func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 	}
 	return int64(f * m)
 }
-func (ki *KubernetesInventory) LoadJSON(url string, v interface{}) error {
-	var req, err = http.NewRequest("GET", url, nil)
+func (ki *KubernetesInventory) queryPodsFromKubelet(url string, v interface{}) error {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
-	}
-	var resp *http.Response
-	tlsCfg, err := ki.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
+		return fmt.Errorf("creating new http request for url %s failed: %w", url, err)
 	}
 
-	if ki.httpClient == nil {
-		if ki.ResponseTimeout < config.Duration(time.Second) {
-			ki.ResponseTimeout = config.Duration(time.Second * 5)
-		}
-		ki.httpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsCfg,
-			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-			Timeout: time.Duration(ki.ResponseTimeout),
-		}
-	}
-
-	if ki.BearerToken != "" {
-		token, err := os.ReadFile(ki.BearerToken)
-		if err != nil {
-			return err
-		}
-		ki.BearerTokenString = strings.TrimSpace(string(token))
-	}
-	req.Header.Set("Authorization", "Bearer "+ki.BearerTokenString)
 	req.Header.Add("Accept", "application/json")
-	resp, err = ki.httpClient.Do(req)
+	resp, err := ki.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
@@ -189,8 +167,7 @@ func (ki *KubernetesInventory) LoadJSON(url string, v interface{}) error {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(v)
-	if err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 		return fmt.Errorf("error parsing response: %w", err)
 	}
 
