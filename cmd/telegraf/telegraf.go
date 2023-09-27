@@ -332,7 +332,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	// Compute the amount of locked memory needed for the secrets
-	if t.GlobalFlags.unprotected {
+	if !t.GlobalFlags.unprotected {
 		required := 3 * c.NumberSecrets * uint64(os.Getpagesize())
 		available := getLockedMemoryLimit()
 		if required > available {
