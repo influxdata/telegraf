@@ -44,15 +44,15 @@ type Opensearch struct {
 	ManageTemplate      bool          `toml:"manage_template"`
 	OverwriteTemplate   bool          `toml:"overwrite_template"`
 	pipelineName        string
-	DefaultPipeline     string `toml:"default_pipeline"`
-	UsePipeline         string `toml:"use_pipeline"`
+	DefaultPipeline     string          `toml:"default_pipeline"`
+	UsePipeline         string          `toml:"use_pipeline"`
 	Timeout             config.Duration `toml:"timeout"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	URLs                []string        `toml:"urls"`
 	Log                 telegraf.Logger `toml:"-"`
-	indexTmpl			*template.Template
-	pipelineTmpl		*template.Template
+	indexTmpl           *template.Template
+	pipelineTmpl        *template.Template
 	onSucc              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
 	onFail              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
 	configOptions       httpconfig.HTTPClientConfig
@@ -102,7 +102,7 @@ func (o *Opensearch) Init() error {
 	}
 	o.onFail = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
 		if err != nil {
-			o.Log.Errorf("error while OpenSearch bulkIndexing: %w", err)
+			o.Log.Errorf("error while OpenSearch bulkIndexing: %v", err)
 		} else {
 			o.Log.Errorf("error while OpenSearch bulkIndexing: %s: %s", res.Error.Type, res.Error.Reason)
 		}
@@ -131,7 +131,7 @@ func (o *Opensearch) Connect() error {
 
 	err := o.newClient()
 	if err != nil {
-		o.Log.Errorf("error creating OpenSearch client: %w", err)
+		o.Log.Errorf("error creating OpenSearch client: %v", err)
 	}
 
 	if o.ManageTemplate {
@@ -268,15 +268,15 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if o.UsePipeline != "" {
-			pipelineName, err := o.getPipelineName(metric);
+			pipelineName, err := o.getPipelineName(metric)
 			if err != nil {
 				return fmt.Errorf("failed to evaluate pipeline name: %w", err)
 			}
-			
+
 			if pipelineName != "" {
 				if indexers[pipelineName] != nil {
 					if err := indexers[pipelineName].Add(ctx, bulkIndxrItem); err != nil {
-						o.Log.Errorf("error adding metric entry to OpenSearch bulkIndexer: %w for pipeline %s", err, pipelineName)
+						o.Log.Errorf("error adding metric entry to OpenSearch bulkIndexer: %v for pipeline %s", err, pipelineName)
 					}
 					continue
 				}
@@ -284,7 +284,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if err := indexers["default"].Add(ctx, bulkIndxrItem); err != nil {
-			o.Log.Errorf("error adding metric entry to OpenSearch default bulkIndexer: %w", err)
+			o.Log.Errorf("error adding metric entry to OpenSearch default bulkIndexer: %v", err)
 		}
 	}
 
@@ -310,11 +310,11 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 
 	if osInst.UsePipeline != "" {
 		for _, metric := range metrics {
-			pipelineName, err := osInst.getPipelineName(metric);
+			pipelineName, err := osInst.getPipelineName(metric)
 			if err != nil {
-				osInst.Log.Errorf("error while evaluating pipeline name: %w for pipeline %s", err, pipelineName)
+				osInst.Log.Errorf("error while evaluating pipeline name: %v for pipeline %s", err, pipelineName)
 			}
-			
+
 			if pipelineName != "" {
 				// BulkIndexer supports pipeline at config level not metric level
 				if _, ok := indexers[osInst.pipelineName]; ok {
@@ -322,7 +322,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 				}
 				bulkIndxr, err := createBulkIndexer(osInst, pipelineName)
 				if err != nil {
-					osInst.Log.Errorf("error while intantiating OpenSearch NewBulkIndexer: %w for pipeline: %s", err, pipelineName)
+					osInst.Log.Errorf("error while intantiating OpenSearch NewBulkIndexer: %v for pipeline: %s", err, pipelineName)
 				} else {
 					indexers[pipelineName] = bulkIndxr
 				}
@@ -332,7 +332,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 
 	bulkIndxr, err := createBulkIndexer(osInst, "")
 	if err != nil {
-		osInst.Log.Errorf("error while intantiating OpenSearch NewBulkIndexer: %w for default pipeline", err)
+		osInst.Log.Errorf("error while intantiating OpenSearch NewBulkIndexer: %v for default pipeline", err)
 	} else {
 		indexers["default"] = bulkIndxr
 	}
@@ -382,10 +382,10 @@ func (o *Opensearch) getPipelineName(metric telegraf.Metric) (string, error) {
 		return "", fmt.Errorf("failed to evaluate valid pipelineName: %s", pipelineName)
 	}
 	o.Log.Debugf("PipelineTemplate- %s", pipelineName)
-	
+
 	if pipelineName == "" {
-        pipelineName = o.DefaultPipeline
-    }
+		pipelineName = o.DefaultPipeline
+	}
 	return pipelineName, nil
 }
 

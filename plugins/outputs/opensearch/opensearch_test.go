@@ -39,7 +39,7 @@ func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container 
 
 func TestGetIndexName(t *testing.T) {
 	e := &Opensearch{
-		Log:             testutil.Logger{},
+		Log: testutil.Logger{},
 	}
 
 	tests := []struct {
@@ -103,7 +103,7 @@ func TestGetPipelineName(t *testing.T) {
 	tests := []struct {
 		Tags            map[string]string
 		PipelineTagKeys []string
-		UsePipeline 	string
+		UsePipeline     string
 		Expected        string
 	}{
 		{

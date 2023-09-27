@@ -121,7 +121,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 For example: "telegraf-{{.Time.Format "2006-01-02"}}" would set it to telegraf-2023-07-27
 You can also specify
-metric name (`{{ .Name }}`), tag value (`{{ .Tag "tag_name" }}`), field value (`{{ .Field "feild_name" }}`) 
+metric name (`{{ .Name }}`), tag value (`{{ .Tag "tag_name" }}`), field value (`{{ .Field "feild_name" }}`)
 If the tag does not exist, the default tag value will be empty string ""
 
 ## Permissions
