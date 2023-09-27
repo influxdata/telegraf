@@ -24,16 +24,16 @@ type client struct {
 }
 
 func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
-	var config *rest.Config
+	var clientConfig *rest.Config
 	var err error
 
 	if baseURL == "" {
-		config, err = rest.InClusterConfig()
+		clientConfig, err = rest.InClusterConfig()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		config = &rest.Config{
+		clientConfig = &rest.Config{
 			TLSClientConfig: rest.TLSClientConfig{
 				ServerName: tlsConfig.ServerName,
 				Insecure:   tlsConfig.InsecureSkipVerify,
@@ -46,13 +46,13 @@ func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, t
 		}
 
 		if bearerTokenFile != "" {
-			config.BearerTokenFile = bearerTokenFile
+			clientConfig.BearerTokenFile = bearerTokenFile
 		} else if bearerToken != "" {
-			config.BearerToken = bearerToken
+			clientConfig.BearerToken = bearerToken
 		}
 	}
 
-	c, err := kubernetes.NewForConfig(config)
+	c, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, t
 	}, nil
 }
 
-func newHttpClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseTimeout config.Duration) (*http.Client, error) {
+func newHTTPClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseTimeout config.Duration) (*http.Client, error) {
 	tlsCfg, err := tlsConfig.TLSConfig()
 	if err != nil {
 		return nil, err
