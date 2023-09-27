@@ -27,6 +27,8 @@ type MockClient struct {
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	DiskUsageF        func(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
+	ClientVersionF    func() string
 	CloseF            func() error
 }
 
@@ -77,6 +79,17 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
+func (c *MockClient) DiskUsage(
+	ctx context.Context,
+	options types.DiskUsageOptions,
+) (types.DiskUsage, error) {
+	return c.DiskUsageF(ctx, options)
+}
+
+func (c *MockClient) ClientVersion() string {
+	return c.ClientVersionF()
+}
+
 func (c *MockClient) Close() error {
 	return c.CloseF()
 }
@@ -102,6 +115,12 @@ var baseClient = MockClient{
 	},
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
+	},
+	DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+		return diskUsage, nil
+	},
+	ClientVersionF: func() string {
+		return version
 	},
 	CloseF: func() error {
 		return nil
@@ -444,6 +463,12 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 					return NodeList, nil
+				},
+				DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+					return diskUsage, nil
+				},
+				ClientVersionF: func() string {
+					return version
 				},
 				CloseF: func() error {
 					return nil
@@ -1536,4 +1561,82 @@ func TestDocker_Init(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDockerGatherDiskUsage(t *testing.T) {
+	var acc testutil.Accumulator
+	d := Docker{
+		Log:       testutil.Logger{},
+		newClient: func(string, *tls.Config) (Client, error) { return &baseClient, nil },
+	}
+
+	require.NoError(t, acc.GatherError(d.Gather))
+
+	duOpts := types.DiskUsageOptions{Types: []types.DiskUsageObject{}}
+	d.gatherDiskUsage(&acc, duOpts)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"layers_size": int64(1e10),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size_root_fs": int64(123456789),
+			"size_rw":      int64(0)},
+		map[string]string{
+			"container_image":   "some_image",
+			"container_version": "1.0.0-alpine",
+			"engine_host":       "absol",
+			"server_version":    "17.09.0-ce",
+			"container_name":    "some_container",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size":        int64(123456789),
+			"shared_size": int64(0)},
+		map[string]string{
+			"image_id":       "some_imageid",
+			"image_name":     "some_image_tag",
+			"image_version":  "1.0.0-alpine",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size":        int64(425484494),
+			"shared_size": int64(0)},
+		map[string]string{
+			"image_id":       "7f4a1cc74046",
+			"image_name":     "telegraf",
+			"image_version":  "latest",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size": int64(123456789),
+		},
+		map[string]string{
+			"volume_name":    "some_volume",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
 }
