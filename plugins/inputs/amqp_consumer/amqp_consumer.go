@@ -135,7 +135,7 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	}
 
 	var auth []amqp.Authentication
-	
+
 	if strings.ToUpper(a.AuthMethod) == "EXTERNAL" {
 		auth = []amqp.Authentication{&externalAuth{}}
 	} else if !a.Username.Empty() || !a.Password.Empty() {
@@ -144,13 +144,13 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
 		defer username.Destroy()
-		
+
 		password, err := a.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
 		defer password.Destroy()
-		
+
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
 				Username: username.String(),
