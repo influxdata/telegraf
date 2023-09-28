@@ -1,8 +1,8 @@
 # Regex Processor Plugin
 
-This plugin allows to transforms tag and field _values_ as well as renaming
-tags, fields and metrics using regex patterns. Tag and field _values_ can be
-transformed using named-groups in a batch fashion.
+This plugin transforms tag and field _values_ as well as renaming tags, fields
+and metrics using regex patterns. Tag and field _values_ can be transformed
+using named-groups in a batch fashion.
 
 The regex processor **only operates on string fields**. It will not work on
 any other data types, like an integer or float.
@@ -27,32 +27,34 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   [[processors.regex.tags]]
     ## Tag(s) to process with optional glob expressions such as '*'.
     key = "resp_code"
-    ## Regular expression to match on the tag value. If the value doesn't
+    ## Regular expression to match the tag value. If the value doesn't
     ## match the tag is ignored.
     pattern = "^(\\d)\\d\\d$"
-    ## Replacement expression defining the value of the target tag. Allows to
+    ## Replacement expression defining the value of the target tag. You can
     ## use regexp groups or named groups e.g. ${1} references the first group.
     replacement = "${1}xx"
-    ## Name of the target tag. If not specified the 'key' tag, in case of
-    ## wildcards it is the currently processed one, is used as target.
+    ## Name of the target tag defaulting to 'key' if not specified.
+    ## In case of wildcards being used in `key` the currently processed
+    ## tag-name is used as target.
     # result_key = "method"
-    ## Allows to append the replacement to the target tag instead of
-    ## overwriting it.
+    ## Appends the replacement to the target tag instead of overwriting it when
+    ## set to true.
     # append = false
 
   ## Field value conversion(s). Multiple instances are allowed.
   [[processors.regex.fields]]
     ## Field(s) to process with optional glob expressions such as '*'.
     key = "request"
-    ## Regular expression to match on the tag value. If the value doesn't
+    ## Regular expression to match the field value. If the value doesn't
     ## match or the field doesn't contain a string the field is ignored.
     pattern = "^/api(?P<method>/[\\w/]+)\\S*"
-    ## Replacement expression defining the value of the target field. Allows to
+    ## Replacement expression defining the value of the target field. You can
     ## use regexp groups or named groups e.g. ${method} references the group
     ## named "method".
     replacement = "${method}"
-    ## Name of the target field. If not specified the 'key' field, in case of
-    ## wildcards it is the currently processed one, is used as target.
+    ## Name of the target field defaulting to 'key' if not specified.
+    ## In case of wildcards being used in `key` the currently processed
+    ## field-name is used as target.
     # result_key = "method"
 
   ## Rename metric fields
@@ -85,11 +87,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     replacement = "${1}"
 ```
 
+Please note, you can use multiple `tags`, `fields`, `tag_rename`, `field_rename`
+and `metric_rename` sections in one processor. All of those are applied.
+
 ### Tag and field _value_ conversions
 
-Values of tags and fields can be processing using the corresponding section.
-Multiple `[[processors.regex.tags]]` and/or `[[processors.regex.fields]]`
-sections can be specified.
 Conversions are only applied if a tag/field _name_ matches the `key` which can
 contain glob statements such as `*` (asterix) _and_ the `pattern` matches the
 tag/field _value_. For fields the field values has to be of type `string` to
@@ -119,9 +121,8 @@ value corresponds to the group's content.
 ### Tag and field _name_ conversions
 
 You can batch-rename tags and fields using the `tag_rename` and `field_rename`
-sections. Again, multiple sections can be specified. Contrary to the `tags` and
-`fields` sections, the rename operates on the tag or field _name_, not its
-_value_.
+sections. Contrary to the `tags` and `fields` sections, the rename operates on
+the tag or field _name_, not its _value_.
 
 A tag or field is renamed if the given `pattern` matches the name. The new name
 is specified via the `replacement` option. Optionally, the `result_key` can be
@@ -181,8 +182,9 @@ nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=r
 
 will result in
 
-```text
-nginx_requests,verb=GET,resp_code=2xx request="/api/search/?category=plugins&q=regex&sort=asc",method="/search/",category="plugins",referrer="-",ident="-",http_version=1.1,agent="UserAgent",ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
+```diff
+-nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
++nginx_requests,verb=GET,resp_code=2xx request="/api/search/?category=plugins&q=regex&sort=asc",method="/search/",category="plugins",referrer="-",ident="-",http_version=1.1,agent="UserAgent",ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
 ```
 
 ### Appending
@@ -201,8 +203,9 @@ nginx_requests,verb=GET,resp_code=2xx request="/api/search/?category=plugins&q=r
 
 will result in
 
-```text
-nginx_requests,verb=GET\ OK,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
+```diff
+-nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
++nginx_requests,verb=GET\ OK,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
 ```
 
 ### Named groups
@@ -218,8 +221,9 @@ nginx_requests,verb=GET\ OK,resp_code=200 request="/api/search/?category=plugins
 
 will result in
 
-```text
-nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",method="search",category="plugins",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
+```diff
+-nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
++nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",method="search",category="plugins",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
 ```
 
 ### Metric renaming
@@ -233,6 +237,7 @@ nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=r
 
 will result in
 
-```text
-nginx,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
+```diff
+-nginx_requests,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
++nginx,verb=GET,resp_code=200 request="/api/search/?category=plugins&q=regex&sort=asc",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
 ```
