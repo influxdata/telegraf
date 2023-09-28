@@ -311,6 +311,7 @@ following works:
 - github.com/signalfx/gohistogram [MIT License](https://github.com/signalfx/gohistogram/blob/master/LICENSE)
 - github.com/signalfx/golib [Apache License 2.0](https://github.com/signalfx/golib/blob/master/LICENSE)
 - github.com/signalfx/sapm-proto [Apache License 2.0](https://github.com/signalfx/sapm-proto/blob/master/LICENSE)
+- github.com/sijms/go-ora [MIT License](https://github.com/sijms/go-ora/blob/master/LICENSE)
 - github.com/sirupsen/logrus [MIT License](https://github.com/sirupsen/logrus/blob/master/LICENSE)
 - github.com/sleepinggenius2/gosmi [MIT License](https://github.com/sleepinggenius2/gosmi/blob/master/LICENSE)
 - github.com/snowflakedb/gosnowflake [Apache License 2.0](https://github.com/snowflakedb/gosnowflake/blob/master/LICENSE)
@@ -408,4 +409,3 @@ following works:
 ## Telegraf used and modified code from these projects
 
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/blob/main/LICENSE)
-- github.com/sijms/go-ora [MIT License](https://github.com/sijms/go-ora/blob/master/LICENSE)
