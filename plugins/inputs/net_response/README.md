@@ -39,7 +39,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # expect = "ssh"
 
   ## Uncomment to remove deprecated fields; recommended for new deploys
-  # fielddrop = ["result_type", "string_found"]
+  # fieldexclude = ["result_type", "string_found"]
 ```
 
 ## Metrics

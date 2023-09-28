@@ -89,5 +89,5 @@ Add filtering to the sample config, leave it commented out.
 ```toml
 [[inputs.system]]
   ## Uncomment to remove deprecated metrics.
-  # fielddrop = ["uptime_format"]
+  # fieldexclude = ["uptime_format"]
 ```

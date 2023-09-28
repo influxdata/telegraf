@@ -154,8 +154,8 @@ plugin will deterministically dropped any dimensions that exceed the 10
 dimension limit.
 
 To convert only a subset of string-typed fields as dimensions, enable
-`strings_as_dimensions` and use the [`fieldpass` or `fielddrop`
-processors][conf-processor] to limit the string-typed fields that are sent to
+`strings_as_dimensions` and use the [`fieldinclude` or `fieldexclude`
+modifiers][conf-modifiers] to limit the string-typed fields that are sent to
 the plugin.
 
-[conf-processor]: https://docs.influxdata.com/telegraf/v1.7/administration/configuration/#processor-configuration
+[conf-modifiers]: ../../../docs/CONFIGURATION.md#modifiers

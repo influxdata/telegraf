@@ -457,7 +457,7 @@ avoid measurement collisions when defining multiple plugins:
   percpu = true
   totalcpu = false
   name_override = "percpu_usage"
-  fielddrop = ["cpu_time*"]
+  fieldexclude = ["cpu_time*"]
 ```
 
 ### Output Plugins
@@ -582,7 +582,7 @@ the originals.
 
 ```toml
 [[inputs.system]]
-  fieldpass = ["load1"] # collects system load1 metric.
+  fieldinclude = ["load1"] # collects system load1 metric.
 
 [[aggregators.minmax]]
   period = "30s"        # send & clear the aggregate every 30s.
@@ -600,7 +600,7 @@ to the `namepass` parameter.
 [[inputs.swap]]
 
 [[inputs.system]]
-  fieldpass = ["load1"] # collects system load1 metric.
+  fieldinclude = ["load1"] # collects system load1 metric.
 
 [[aggregators.minmax]]
   period = "30s"        # send & clear the aggregate every 30s.
@@ -684,14 +684,14 @@ removed the metric is removed. Tags and fields are modified before a metric is
 passed to a processor, aggregator, or output plugin. When used with an input
 plugin the filter applies after the input runs.
 
-- **fieldpass**:
+- **fieldinclude**:
 An array of [glob pattern][] strings.  Only fields whose field key matches a
 pattern in this list are emitted.
 
-- **fielddrop**:
-The inverse of `fieldpass`.  Fields with a field key matching one of the
+- **fieldexclude**:
+The inverse of `fieldinclude`.  Fields with a field key matching one of the
 patterns will be discarded from the metric.  This is tested on metrics after
-they have passed the `fieldpass` test.
+they have passed the `fieldinclude` test.
 
 - **taginclude**:
 An array of [glob pattern][] strings.  Only tags with a tag key matching one of
@@ -713,7 +713,7 @@ tags and the agent `host` tag.
 [[inputs.cpu]]
   percpu = true
   totalcpu = false
-  fielddrop = ["cpu_time"]
+  fieldexclude = ["cpu_time"]
   # Don't collect CPU data for cpu6 & cpu7
   [inputs.cpu.tagdrop]
     cpu = [ "cpu6", "cpu7" ]
@@ -742,18 +742,18 @@ tags and the agent `host` tag.
     instance = ["isatap*", "Local*"]
 ```
 
-#### Using fieldpass and fielddrop
+#### Using fieldinclude and fieldexclude
 
 ```toml
 # Drop all metrics for guest & steal CPU usage
 [[inputs.cpu]]
   percpu = false
   totalcpu = true
-  fielddrop = ["usage_guest", "usage_steal"]
+  fieldexclude = ["usage_guest", "usage_steal"]
 
 # Only store inode related metrics for disks
 [[inputs.disk]]
-  fieldpass = ["inodes*"]
+  fieldinclude = ["inodes*"]
 ```
 
 #### Using namepass and namedrop

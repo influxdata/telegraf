@@ -102,7 +102,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # insecure_skip_verify = false
 
   ## Uncomment to remove deprecated metrics.
-  # fielddrop = ["terminated_reason"]
+  # fieldexclude = ["terminated_reason"]
 ```
 
 ## Kubernetes Permissions
