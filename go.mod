@@ -213,7 +213,7 @@ require (
 	modernc.org/sqlite v1.24.0
 )
 
-require github.com/sijms/go-ora/v2 v2.7.18 // indirect
+require github.com/sijms/go-ora/v2 v2.7.18
 
 require (
 	cloud.google.com/go v0.110.4 // indirect
