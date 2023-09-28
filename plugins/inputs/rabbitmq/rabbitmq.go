@@ -41,10 +41,10 @@ const DefaultClientTimeout = 4
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
 type RabbitMQ struct {
-	URL      string `toml:"url"`
-	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
-	Username string `toml:"username"`
-	Password string `toml:"password"`
+	URL      string        `toml:"url"`
+	Name     string        `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
 	tls.ClientConfig
 
 	ResponseHeaderTimeout config.Duration `toml:"header_timeout"`
@@ -350,14 +350,24 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 		return nil, err
 	}
 
-	username := r.Username
-	if username == "" {
-		username = DefaultUsername
+	username := DefaultUsername
+	if !r.Username.Empty() {
+		usernameSecret, err := r.Username.Get()
+		if err != nil {
+			return nil, err
+		}
+		defer usernameSecret.Destroy()
+		username = usernameSecret.String()
 	}
 
-	password := r.Password
-	if password == "" {
-		password = DefaultPassword
+	password := DefaultPassword
+	if !r.Password.Empty() {
+		passwordSecret, err := r.Password.Get()
+		if err != nil {
+			return nil, err
+		}
+		defer passwordSecret.Destroy()
+		password = passwordSecret.String()
 	}
 
 	req.SetBasicAuth(username, password)
