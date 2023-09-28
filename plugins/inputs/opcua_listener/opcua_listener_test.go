@@ -182,16 +182,6 @@ identifier_type = "i"
 tags = [["tag1", "val1"], ["tag2", "val2"]]
 nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 
-[inputs.opcua_listener.group.nodes.monitoring_params]
-sampling_interval = "50ms"
-queue_size = "10"
-discard_oldest = "true"
-
-[inputs.opcua_listener.group.nodes.monitoring_params.data_change_filter]
-trigger = "StatusValue"
-deadband_type = "Absolute"
-deadband_value = "100"
-
 [inputs.opcua_listener.workarounds]
 additional_valid_status_codes = ["0xC0"]
 `
@@ -252,18 +242,70 @@ additional_valid_status_codes = ["0xC0"]
 				FieldName:  "name4",
 				Identifier: "4000",
 				TagsSlice:  [][]string{{"tag1", "override"}},
+			}},
+		},
+	}, o.SubscribeClientConfig.Groups)
+	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.SubscribeClientConfig.Workarounds)
+}
+
+func TestSubscribeClientConfigWithMonitoringParams(t *testing.T) {
+	toml := `
+[[inputs.opcua_listener]]
+name = "localhost"
+endpoint = "opc.tcp://localhost:4840"
+subscription_interval = "200ms"
+
+[[inputs.opcua_listener.group]]
+name = "foo"
+namespace = "3"
+identifier_type = "i"
+tags = [["tag1", "val1"], ["tag2", "val2"]]
+nodes = [{name="name3", identifier="3000", tags=[["tag3", "val3"]]}]
+
+[inputs.opcua_listener.group.nodes.monitoring_params]
+sampling_interval = "50ms"
+queue_size = 10
+discard_oldest = true
+
+[inputs.opcua_listener.group.nodes.monitoring_params.data_change_filter]
+trigger = "StatusValue"
+deadband_type = "Absolute"
+deadband_value = 100.0
+`
+
+	c := config.NewConfig()
+	err := c.LoadConfigData([]byte(toml))
+	require.NoError(t, err)
+
+	require.Len(t, c.Inputs, 1)
+
+	o, ok := c.Inputs[0].Input.(*OpcUaListener)
+	require.True(t, ok)
+
+	queueSize := uint32(10)
+	discardOldest := true
+	deadbandValue := 100.0
+	require.Equal(t, []input.NodeGroupSettings{
+		{
+			MetricName:     "foo",
+			Namespace:      "3",
+			IdentifierType: "i",
+			TagsSlice:      [][]string{{"tag1", "val1"}, {"tag2", "val2"}},
+			Nodes: []input.NodeSettings{{
+				FieldName:  "name3",
+				Identifier: "3000",
+				TagsSlice:  [][]string{{"tag3", "val3"}},
 				MonitoringParams: input.MonitoringParameters{
 					SamplingInterval: 50000000,
-					QueueSize:        "10",
-					DiscardOldest:    "true",
-					DataChangeFilter: input.DataChangeFilter{
+					QueueSize:        &queueSize,
+					DiscardOldest:    &discardOldest,
+					DataChangeFilter: &input.DataChangeFilter{
 						Trigger:       "StatusValue",
 						DeadbandType:  "Absolute",
-						DeadbandValue: "100",
+						DeadbandValue: &deadbandValue,
 					},
 				},
 			}},
 		},
 	}, o.SubscribeClientConfig.Groups)
-	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.SubscribeClientConfig.Workarounds)
 }
