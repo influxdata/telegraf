@@ -76,7 +76,7 @@ func (ki *KubernetesInventory) Init() error {
 	ki.httpClient, err = newHTTPClient(ki.ClientConfig, ki.BearerToken, ki.ResponseTimeout)
 
 	if err != nil {
-		ki.Log.Warn(fmt.Sprintf("unable to create http client: %s", err.Error()))
+		ki.Log.Warnf("unable to create http client: %v", err)
 	}
 
 	return nil
