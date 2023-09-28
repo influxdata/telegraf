@@ -101,14 +101,13 @@ to use them.
   ##
   ## Monitoring parameters
   ## sampling_interval  - interval at which the server should check for data
-  ##                      changes (default: 0)
+  ##                      changes (default: 0s)
   ## queue_size         - size of the notification queue (default: 10)
   ## discard_oldest     - how notifications should be handled in case of full
   ##                      notification queues, possible values:
-  ##                      "true": oldest entry in queue gets deleted and new value
-  ##                              is inserted (default)
-  ##                      "false": last value added to queue gets replaced with
-  ##                               new value        
+  ##                      true: oldest value added to queue gets replaced with new
+  ##                            (default)
+  ##                      false: last value added to queue gets replaced with new
   ## data_change_filter - defines the condition under which a notification should
   ##                      be reported
   ##
@@ -116,24 +115,28 @@ to use them.
   ## trigger        - specify the conditions under which a data change notification
   ##                  should be reported, possible values:
   ##                  "Status": only report notifications if the status changes
+  ##                            (default if parameter is omitted)
   ##                  "StatusValue": report notifications if either status or value
   ##                                 changes
   ##                  "StatusValueTimestamp": report notifications if either status,
   ##                                          value or timestamp changes
-  ## deadband_type  - range for value changes where no notification should be reported
+  ## deadband_type  - range for value changes where no notification should be
+  ##                  reported, possible values:
+  ##                  "None": no filter will be applied (default if parameter is omitted)
   ##                  "Absolute": absolute change in a data value to report a notification
   ##                  "Percent": works only with nodes that have an EURange property set
   ##                             and is defined as: send notification if
   ##                             (last value - current value) >
   ##                             (deadband_value/100.0) * ((high–low) of EURange)
-  ## deadband_value - value to deadband_type
+  ## deadband_value - value to deadband_type, must be a float value, no filter is set
+  ##                  for negative values
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #   {name="", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size="10", discard_oldest="true", data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value="0"}}},
-  #   {name="", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size="10", discard_oldest="true", data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value="0"}}},
+  #   {name="node1", namespace="", identifier_type="", identifier="",
+  #   {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="None", deadband_value=0.0}}},
   # ]
   #
   ## Bracketed notation
@@ -152,13 +155,13 @@ to use them.
   #
   #   [inputs.opcua_listener.nodes.monitoring_params]
   #     sampling_interval = "0s"
-  #     queue_size = "10"
-  #     discard_oldest = "true"
+  #     queue_size = 10
+  #     discard_oldest = true
   #
   #     [inputs.opcua_listener.nodes.monitoring_params.data_change_filter]
   #       trigger = "Status"
-  #       deadband_type = "Absolute"
-  #       deadband_value = "0"
+  #       deadband_type = "None"
+  #       deadband_value = 0.0
   #
   ## Node Group
   ## Sets defaults so they aren't required in every node.
@@ -190,15 +193,15 @@ to use them.
   #
   ## Group default sampling interval. If a node in the group doesn't set its
   ## sampling interval, this is used.
-  # sampling_interval = 
+  # sampling_interval = "0s"
   #
   ## Node ID Configuration.  Array of nodes with the same settings as above.
   ## Use either the inline notation or the bracketed notation, not both.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #  {name="node1", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size="10", discard_oldest="true", data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value="10"}}},
-  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size="10", discard_oldest="true", data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value="10"}}},
+  #  {name="node1", namespace="", identifier_type="", identifier="",
+  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="None", deadband_value=0.0}}},
   #]
   #
   ## Bracketed notation
@@ -217,13 +220,13 @@ to use them.
   #
   #   [inputs.opcua_listener.group.nodes.monitoring_params]
   #     sampling_interval = "0s"
-  #     queue_size = "10"
-  #     discard_oldest = "true"
+  #     queue_size = 10
+  #     discard_oldest = true
   #
   #     [inputs.opcua_listener.group.nodes.monitoring_params.data_change_filter]
   #       trigger = "Status"
-  #       deadband_type = "Absolute"
-  #       deadband_value = "10"
+  #       deadband_type = "None"
+  #       deadband_value = 0.0
   #
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
