@@ -148,6 +148,7 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed calling method ExecQuery for query %s: %w", q.query, err)
 	}
+	q.Log.Infof("raw result: %s\n", resultRaw.ToString())
 	result := resultRaw.ToIDispatch()
 	defer resultRaw.Clear()
 
