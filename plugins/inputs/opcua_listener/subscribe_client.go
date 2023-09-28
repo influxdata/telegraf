@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -36,47 +35,33 @@ type SubscribeClient struct {
 func AssignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *input.MonitoringParameters, log telegraf.Logger) {
 	req.RequestedParameters.SamplingInterval = float64(time.Duration(monParams.SamplingInterval) / time.Millisecond)
 
-	if monParams.QueueSize != "" {
-		queueSize, err := strconv.ParseUint(monParams.QueueSize, 10, 32)
-		if err == nil {
-			req.RequestedParameters.QueueSize = uint32(queueSize)
-		} else {
-			log.Debugf(
-				"Could not parse queue_size %s into uint32. Standard value %d used instead.",
-				monParams.QueueSize,
-				req.RequestedParameters.QueueSize)
-		}
+	if monParams.QueueSize != nil {
+		req.RequestedParameters.QueueSize = *monParams.QueueSize
 	}
 
-	if monParams.DiscardOldest != "" {
-		discardOldest, err := strconv.ParseBool(monParams.DiscardOldest)
-		if err == nil {
-			req.RequestedParameters.DiscardOldest = discardOldest
-		} else {
-			log.Debugf(
-				"Could not parse discard_oldest %s into bool. Standard value %t used instead.",
-				monParams.DiscardOldest,
-				req.RequestedParameters.DiscardOldest)
-		}
+	if monParams.DiscardOldest != nil {
+		req.RequestedParameters.DiscardOldest = *monParams.DiscardOldest
 	}
 
-	if monParams.DataChangeFilter.Trigger != "" {
-		trigger := ua.DataChangeTriggerFromString(monParams.DataChangeFilter.Trigger)
-		deadbandType := uint32(ua.DeadbandTypeFromString(monParams.DataChangeFilter.DeadbandType))
-		deadbandValue, err := strconv.ParseFloat(monParams.DataChangeFilter.DeadbandValue, 64)
-
-		if err == nil && deadbandValue != 0 {
+	if monParams.DataChangeFilter != nil {
+		deadbandValue := monParams.DataChangeFilter.DeadbandValue
+		switch {
+		case deadbandValue == nil:
+			log.Warnf(
+				"No deadband value was set. No filter could be applied to '%s'.",
+				req.ItemToMonitor.NodeID)
+		case *deadbandValue < 0:
+			log.Warnf(
+				"Negative deadband value is not supported. No filter could be applied to '%s'.",
+				req.ItemToMonitor.NodeID)
+		default:
 			req.RequestedParameters.Filter = ua.NewExtensionObject(
 				&ua.DataChangeFilter{
-					Trigger:       trigger,
-					DeadbandType:  deadbandType,
-					DeadbandValue: deadbandValue,
+					Trigger:       ua.DataChangeTriggerFromString(monParams.DataChangeFilter.Trigger),
+					DeadbandType:  uint32(ua.DeadbandTypeFromString(monParams.DataChangeFilter.DeadbandType)),
+					DeadbandValue: *deadbandValue,
 				},
 			)
-		} else {
-			log.Debugf(
-				"Could not parse deadband_value %s into float64. No filter was set.",
-				monParams.DataChangeFilter.DeadbandValue)
 		}
 	}
 }

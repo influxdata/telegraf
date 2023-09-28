@@ -19,16 +19,16 @@ import (
 )
 
 type DataChangeFilter struct {
-	Trigger       string `toml:"trigger"`
-	DeadbandType  string `toml:"deadband_type"`
-	DeadbandValue string `toml:"deadband_value"`
+	Trigger       string   `toml:"trigger"`
+	DeadbandType  string   `toml:"deadband_type"`
+	DeadbandValue *float64 `toml:"deadband_value"`
 }
 
 type MonitoringParameters struct {
-	SamplingInterval config.Duration  `toml:"sampling_interval"`
-	QueueSize        string           `toml:"queue_size"`
-	DiscardOldest    string           `toml:"discard_oldest"`
-	DataChangeFilter DataChangeFilter `toml:"data_change_filter"`
+	SamplingInterval config.Duration   `toml:"sampling_interval"`
+	QueueSize        *uint32           `toml:"queue_size"`
+	DiscardOldest    *bool             `toml:"discard_oldest"`
+	DataChangeFilter *DataChangeFilter `toml:"data_change_filter"`
 }
 
 // NodeSettings describes how to map from a OPC UA node to a Metric
