@@ -700,14 +700,11 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 	return input.Value(), nil
 }
 
+// Check if gjson result exists and if a non-existing gjson result can be skipped over
 func (p *Parser) checkResult(result gjson.Result, path string, optional bool) (bool, error) {
 	if !result.Exists() {
-		if optional {
-			p.Log.Debugf("the path %q doesn't exist", path)
-			return true, fmt.Errorf("the path %q doesn't exist", path)
-		}
-
-		return false, fmt.Errorf("the path %q doesn't exist", path)
+		p.Log.Debugf("the path %q doesn't exist", path)
+		return optional, fmt.Errorf("the path %q doesn't exist", path)
 	}
 
 	return false, nil
