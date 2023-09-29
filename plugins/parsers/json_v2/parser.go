@@ -701,7 +701,7 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 }
 
 // Check if gjson result exists and return error if it does not
-func (p *Parser) checkResult(result gjson.Result, path string) (error) {
+func (p *Parser) checkResult(result gjson.Result, path string) error {
 	if !result.Exists() {
 		p.Log.Debugf("the path %q doesn't exist", path)
 		return fmt.Errorf("the path %q doesn't exist", path)
