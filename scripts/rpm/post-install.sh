@@ -26,11 +26,9 @@ fi
 
 # Set up log directories
 LOG_DIR=/var/log/telegraf
-test -d $LOG_DIR || {
-    mkdir -p $LOG_DIR
-    chown -R -L telegraf:telegraf $LOG_DIR
-    chmod 755 $LOG_DIR
-}
+mkdir -p $LOG_DIR
+chown -R -L telegraf:telegraf $LOG_DIR
+chmod 755 $LOG_DIR
 
 STATE_DIR=/var/lib/telegraf
 test -d "$STATE_DIR" || {

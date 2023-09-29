@@ -47,11 +47,9 @@ if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.s
 fi
 
 LOG_DIR=/var/log/telegraf
-test -d $LOG_DIR || {
-    mkdir -p $LOG_DIR
-    chown -R -L telegraf:telegraf $LOG_DIR
-    chmod 755 $LOG_DIR
-}
+test -d $LOG_DIR || mkdir -p $LOG_DIR
+chown -R -L telegraf:telegraf $LOG_DIR
+chmod 755 $LOG_DIR
 
 STATE_DIR=/var/lib/telegraf
 test -d "$STATE_DIR" || {
