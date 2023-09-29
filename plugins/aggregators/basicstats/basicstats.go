@@ -15,11 +15,11 @@ var sampleConfig string
 
 type BasicStats struct {
 	Stats       []string `toml:"stats"`
-	CountSuffix string   `toml:"count_suffix"`
-	MinSuffix   string   `toml:"min_suffix"`
-	MaxSuffix   string   `toml:"max_suffix"`
-	MeanSuffix  string   `toml:"mean_suffix"`
-	SumSuffix   string   `toml:"sum_suffix"`
+	CountSuffix string   `toml:"count_suffix" default:""`
+	MinSuffix   string   `toml:"min_suffix" default:""`
+	MaxSuffix   string   `toml:"max_suffix" default:""`
+	MeanSuffix  string   `toml:"mean_suffix" default:""`
+	SumSuffix   string   `toml:"sum_suffix" default:""`
 	Log         telegraf.Logger
 
 	cache       map[uint64]aggregate
