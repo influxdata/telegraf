@@ -120,9 +120,7 @@ to use them.
   ##                                 changes
   ##                  "StatusValueTimestamp": report notifications if either status,
   ##                                          value or timestamp changes
-  ## deadband_type  - range for value changes where no notification should be
-  ##                  reported, possible values:
-  ##                  "None": no filter will be applied (default if parameter is omitted)
+  ## deadband_type  - type of the deadband filter to be applied, possible values:
   ##                  "Absolute": absolute change in a data value to report a notification
   ##                  "Percent": works only with nodes that have an EURange property set
   ##                             and is defined as: send notification if
@@ -135,8 +133,8 @@ to use them.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #   {name="node1", namespace="", identifier_type="", identifier="",
-  #   {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="None", deadband_value=0.0}}},
+  #   {name="node1", namespace="", identifier_type="", identifier="",}
+  #   {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
   # ]
   #
   ## Bracketed notation
@@ -160,7 +158,7 @@ to use them.
   #
   #     [inputs.opcua_listener.nodes.monitoring_params.data_change_filter]
   #       trigger = "Status"
-  #       deadband_type = "None"
+  #       deadband_type = "Absolute"
   #       deadband_value = 0.0
   #
   ## Node Group
@@ -200,8 +198,8 @@ to use them.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #  {name="node1", namespace="", identifier_type="", identifier="",
-  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="None", deadband_value=0.0}}},
+  #  {name="node1", namespace="", identifier_type="", identifier="",}
+  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
   #]
   #
   ## Bracketed notation
@@ -225,7 +223,7 @@ to use them.
   #
   #     [inputs.opcua_listener.group.nodes.monitoring_params.data_change_filter]
   #       trigger = "Status"
-  #       deadband_type = "None"
+  #       deadband_type = "Absolute"
   #       deadband_value = 0.0
   #
   ## Enable workarounds required by some devices to work correctly
