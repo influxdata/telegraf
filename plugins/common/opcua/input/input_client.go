@@ -18,10 +18,25 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
 
+type Trigger string
+
+const (
+	Status               Trigger = "Status"
+	StatusValue          Trigger = "StatusValue"
+	StatusValueTimestamp Trigger = "StatusValueTimestamp"
+)
+
+type DeadbandType string
+
+const (
+	Absolute DeadbandType = "Absolute"
+	Percent  DeadbandType = "Percent"
+)
+
 type DataChangeFilter struct {
-	Trigger       string   `toml:"trigger"`
-	DeadbandType  string   `toml:"deadband_type"`
-	DeadbandValue *float64 `toml:"deadband_value"`
+	Trigger       Trigger      `toml:"trigger"`
+	DeadbandType  DeadbandType `toml:"deadband_type"`
+	DeadbandValue *float64     `toml:"deadband_value"`
 }
 
 type MonitoringParameters struct {
