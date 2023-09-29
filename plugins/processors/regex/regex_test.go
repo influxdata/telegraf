@@ -88,23 +88,25 @@ func TestFieldConversions(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		regex := Regex{
-			Fields: []converter{test.converter},
-			Log:    testutil.Logger{},
-		}
-		require.NoError(t, regex.Init())
+	for _, tt := range tests {
+		t.Run(tt.message, func(t *testing.T) {
+			regex := Regex{
+				Fields: []converter{tt.converter},
+				Log:    testutil.Logger{},
+			}
+			require.NoError(t, regex.Init())
 
-		processed := regex.Apply(newM1())
+			processed := regex.Apply(newM1())
 
-		expectedTags := map[string]string{
-			"verb":      "GET",
-			"resp_code": "200",
-		}
+			expectedTags := map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			}
 
-		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
-		require.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
-		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+			require.Equal(t, tt.expectedFields, processed[0].Fields(), tt.message)
+			require.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
+			require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+		})
 	}
 }
 
@@ -763,6 +765,60 @@ func TestMultipleConversions(t *testing.T) {
 	require.Equal(t, expectedTags, processed[0].Tags())
 }
 
+func TestNamedGroups(t *testing.T) {
+	regex := Regex{
+		Tags: []converter{
+			{
+				Key:     "resp_code",
+				Pattern: "^(?P<resp_code_group>\\d)\\d\\d$",
+			},
+		},
+		Fields: []converter{
+			{
+				Key:     "request",
+				Pattern: `^/api/(?P<method>\w+)[/?].*category=(?P<search_category>\w+)&(?:.*)`,
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, regex.Init())
+
+	input := testutil.MustMetric(
+		"access_log",
+		map[string]string{
+			"verb":      "GET",
+			"resp_code": "200",
+		},
+		map[string]interface{}{
+			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+			"ignore_number": int64(200),
+			"ignore_bool":   true,
+		},
+		time.Unix(1695243874, 0),
+	)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"access_log",
+			map[string]string{
+				"verb":            "GET",
+				"resp_code":       "200",
+				"resp_code_group": "2",
+			},
+			map[string]interface{}{
+				"request":         "/api/search/?category=plugins&q=regex&sort=asc",
+				"method":          "search",
+				"search_category": "plugins",
+				"ignore_number":   int64(200),
+				"ignore_bool":     true,
+			},
+			time.Unix(1695243874, 0),
+		),
+	}
+	actual := regex.Apply(input)
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
 func TestNoMatches(t *testing.T) {
 	tests := []struct {
 		message        string
@@ -881,6 +937,56 @@ func TestAnyTagConversion(t *testing.T) {
 
 		require.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
 		require.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
+		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+	}
+}
+
+func TestAnyFieldConversion(t *testing.T) {
+	tests := []struct {
+		message        string
+		converter      converter
+		expectedFields map[string]interface{}
+	}{
+		{
+			message: "Should change existing fields",
+			converter: converter{
+				Key:         "*",
+				Pattern:     "[0-9]{4}",
+				Replacement: "{ID}",
+			},
+			expectedFields: map[string]interface{}{
+				"counter": int64(42),
+				"id":      "{ID}",
+				"user_id": "{ID}",
+				"status":  "1",
+				"request": "/users/{ID}/",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		regex := Regex{
+			Fields: []converter{test.converter},
+			Log:    testutil.Logger{},
+		}
+		require.NoError(t, regex.Init())
+
+		input := metric.New("access_log",
+			map[string]string{},
+			map[string]interface{}{
+				"counter": int64(42),
+				"id":      "1234",
+				"user_id": "2300",
+				"status":  "1",
+				"request": "/users/2300/",
+			},
+			time.Now(),
+		)
+
+		processed := regex.Apply(input)
+
+		require.Empty(t, processed[0].Tags(), test.message, "Should not change tags")
+		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
 		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }

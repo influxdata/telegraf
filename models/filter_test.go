@@ -558,23 +558,18 @@ func TestFilter_MetricPass(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "python-style logical expression",
-			expression: `(name.startsWith("t") or fields.on) and "id" in fields and fields.id.contains("nwr")`,
-			expected:   true,
-		},
-		{
 			name:       "time arithmetics",
 			expression: `time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
 			expected:   true,
 		},
 		{
 			name:       "complex field filtering",
-			expression: `fields.exists(f, type(fields[f]) in [int, uint, double] and fields[f] > 20.0)`,
+			expression: `fields.exists(f, type(fields[f]) in [int, uint, double] && fields[f] > 20.0)`,
 			expected:   true,
 		},
 		{
 			name:       "complex field filtering (exactly one)",
-			expression: `fields.exists_one(f, type(fields[f]) in [int, uint, double] and fields[f] > 20.0)`,
+			expression: `fields.exists_one(f, type(fields[f]) in [int, uint, double] && fields[f] > 20.0)`,
 			expected:   false,
 		},
 	}

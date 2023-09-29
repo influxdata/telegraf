@@ -17,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-type unwrappableMetric interface{ Unwrap() telegraf.Metric }
-
 //go:embed sample.conf
 var sampleConfig string
 
@@ -68,7 +66,7 @@ func (p *Processor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, raw := range in {
 		m := raw
-		if wm, ok := raw.(unwrappableMetric); ok {
+		if wm, ok := raw.(telegraf.UnwrappableMetric); ok {
 			m = wm.Unwrap()
 		}
 

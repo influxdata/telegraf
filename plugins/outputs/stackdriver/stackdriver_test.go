@@ -18,8 +18,10 @@ import (
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -55,9 +57,18 @@ func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monitoring
 	if xg := md["x-goog-api-client"]; len(xg) == 0 || !strings.Contains(xg[0], "gl-go/") {
 		return nil, fmt.Errorf("x-goog-api-client = %v, expected gl-go key", xg)
 	}
+
 	s.reqs = append(s.reqs, req)
 	if s.err != nil {
-		return nil, s.err
+		var statusResp *status.Status
+		switch s.err.Error() {
+		case "InvalidArgument":
+			statusResp = status.New(codes.InvalidArgument, s.err.Error())
+		default:
+			statusResp = status.New(codes.Unknown, s.err.Error())
+		}
+
+		return nil, statusResp.Err()
 	}
 	return s.resps[0].(*emptypb.Empty), nil
 }
@@ -142,6 +153,70 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	require.Equal(t, request.TimeSeries[0].Resource.Type, "foo")
 	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
 	require.Equal(t, request.TimeSeries[0].Resource.Labels["mylabel"], "myvalue")
+}
+
+func TestWriteTagsAsResourceLabels(t *testing.T) {
+	expectedResponse := &emptypb.Empty{}
+	mockMetric.err = nil
+	mockMetric.reqs = nil
+	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:              fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace:            "test",
+		ResourceType:         "foo",
+		TagsAsResourceLabels: []string{"job_name"},
+		ResourceLabels: map[string]string{
+			"mylabel": "myvalue",
+		},
+		Log:    testutil.Logger{},
+		client: c,
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"job_name": "cpu",
+				"mytag":    "foo",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(2, 0),
+		),
+		testutil.MustMetric("mem",
+			map[string]string{
+				"job_name": "mem",
+				"mytag":    "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(2, 0),
+		),
+	}
+
+	require.NoError(t, s.Connect())
+	require.NoError(t, s.Write(metrics))
+	require.Len(t, mockMetric.reqs, 1)
+
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 2)
+	for _, ts := range request.TimeSeries {
+		switch ts.Metric.Type {
+		case "test_mem_value/unknown":
+			require.Equal(t, "mem", ts.Resource.Labels["job_name"])
+		case "test_cpu_value/unknown":
+			require.Equal(t, "cpu", ts.Resource.Labels["job_name"])
+		default:
+			require.False(t, true, "Unknown metric type")
+		}
+	}
 }
 
 func TestWriteAscendingTime(t *testing.T) {
@@ -397,21 +472,14 @@ func TestWriteIgnoredErrors(t *testing.T) {
 		expectedErr bool
 	}{
 		{
-			name: "points too old",
-			err:  errors.New(errStringPointsTooOld),
-		},
-		{
-			name: "points out of order",
-			err:  errors.New(errStringPointsOutOfOrder),
-		},
-		{
-			name: "points too frequent",
-			err:  errors.New(errStringPointsTooFrequent),
-		},
-		{
 			name:        "other errors reported",
-			err:         errors.New("test"),
+			err:         errors.New("Unknown"),
 			expectedErr: true,
+		},
+		{
+			name:        "invalid argument",
+			err:         errors.New("InvalidArgument"),
+			expectedErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -431,13 +499,11 @@ func TestWriteIgnoredErrors(t *testing.T) {
 				client:    c,
 			}
 
-			err = s.Connect()
-			require.NoError(t, err)
-			err = s.Write(testutil.MockMetrics())
+			require.NoError(t, s.Connect())
 			if tt.expectedErr {
-				require.Error(t, err)
+				require.Error(t, s.Write(testutil.MockMetrics()))
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, s.Write(testutil.MockMetrics()))
 			}
 		})
 	}

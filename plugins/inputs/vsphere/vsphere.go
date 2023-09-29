@@ -60,6 +60,7 @@ type VSphere struct {
 	VSANMetricExclude           []string        `toml:"vsan_metric_exclude"`
 	VSANMetricSkipVerify        bool            `toml:"vsan_metric_skip_verify"`
 	VSANClusterInclude          []string        `toml:"vsan_cluster_include"`
+	VSANInterval                config.Duration `toml:"vsan_interval"`
 	Separator                   string          `toml:"separator"`
 	CustomAttributeInclude      []string        `toml:"custom_attribute_include"`
 	CustomAttributeExclude      []string        `toml:"custom_attribute_exclude"`
@@ -180,6 +181,7 @@ func init() {
 			ObjectDiscoveryInterval:     config.Duration(time.Second * 300),
 			Timeout:                     config.Duration(time.Second * 60),
 			HistoricalInterval:          config.Duration(time.Second * 300),
+			VSANInterval:                config.Duration(time.Second * 300),
 			DisconnectedServersBehavior: "error",
 			HTTPProxy:                   proxy.HTTPProxy{UseSystemProxy: true},
 		}

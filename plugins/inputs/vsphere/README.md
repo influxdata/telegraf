@@ -40,7 +40,7 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
--# Read metrics from one or many vCenters
+# Read metrics from one or many vCenters
 [[inputs.vsphere]]
   ## List of vCenter URLs to be monitored. These three lines must be uncommented
   ## and edited for the plugin to work.
@@ -183,6 +183,10 @@ to use them.
   # vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
   ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
   # vsan_metric_skip_verify = false ## false by default.
+
+  ## Interval for sampling vSAN performance metrics, can be reduced down to
+  ## 30 seconds for vSAN 8 U1.
+  # vsan_interval = "5m"
 
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
@@ -426,7 +430,7 @@ instance. For example:
   datastore_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
   datacenter_metric_exclude = ["*"]
-  resourcepool_metric_exclude = ["*"]
+  resource_pool_metric_exclude = ["*"]
   vsan_metric_exclude = ["*"]
 
   collect_concurrency = 5

@@ -27,7 +27,7 @@ func TestRefreshFilePaths(t *testing.T) {
 	require.NoError(t, err)
 
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/**.log")},
+		Files: []string{filepath.Join(wd, "dev", "testfiles", "**.log")},
 	}
 	err = r.Init()
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestFileTag(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 	r := File{
-		Files:   []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
+		Files:   []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
 		FileTag: "filename",
 	}
 	require.NoError(t, r.Init())
@@ -67,7 +67,7 @@ func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
 	wd, _ := os.Getwd()
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
+		Files: []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
 	}
 	require.NoError(t, r.Init())
 
@@ -86,7 +86,7 @@ func TestGrokParser(t *testing.T) {
 	wd, _ := os.Getwd()
 	var acc testutil.Accumulator
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/grok_a.log")},
+		Files: []string{filepath.Join(wd, "dev", "testfiles", "grok_a.log")},
 	}
 	err := r.Init()
 	require.NoError(t, err)

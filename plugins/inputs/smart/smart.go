@@ -865,7 +865,6 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
-						acc.AddError(fmt.Errorf("error parsing %s: %q: %w", attr.Name, matches[2], err))
 						continue
 					}
 					// if the field is classified as an attribute, only add it

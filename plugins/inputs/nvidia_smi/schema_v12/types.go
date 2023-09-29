@@ -144,8 +144,31 @@ type smi struct {
 		MaxCustomerBoostClocks struct {
 			GraphicsClock string `xml:"graphics_clock"`
 		} `xml:"max_customer_boost_clocks"`
-		MigDevices string `xml:"mig_devices"`
-		MigMode    struct {
+		MigDevices struct {
+			MigDevice []struct {
+				Index             string `xml:"index"`
+				GpuInstanceID     string `xml:"gpu_instance_id"`
+				ComputeInstanceID string `xml:"compute_instance_id"`
+				EccErrorCount     struct {
+					Text          string `xml:",chardata" json:"text"`
+					VolatileCount struct {
+						SramUncorrectable string `xml:"sram_uncorrectable"`
+					} `xml:"volatile_count" json:"volatile_count"`
+				} `xml:"ecc_error_count" json:"ecc_error_count"`
+				FbMemoryUsage struct {
+					Total    string `xml:"total"`
+					Reserved string `xml:"reserved"`
+					Used     string `xml:"used"`
+					Free     string `xml:"free"`
+				} `xml:"fb_memory_usage" json:"fb_memory_usage"`
+				Bar1MemoryUsage struct {
+					Total string `xml:"total"`
+					Used  string `xml:"used"`
+					Free  string `xml:"free"`
+				} `xml:"bar1_memory_usage" json:"bar1_memory_usage"`
+			} `xml:"mig_device" json:"mig_device"`
+		} `xml:"mig_devices" json:"mig_devices"`
+		MigMode struct {
 			CurrentMig string `xml:"current_mig"`
 			PendingMig string `xml:"pending_mig"`
 		} `xml:"mig_mode"`
@@ -191,8 +214,18 @@ type smi struct {
 			RxUtil                string `xml:"rx_util"`
 			TxUtil                string `xml:"tx_util"`
 		} `xml:"pci"`
-		PerformanceState    string   `xml:"performance_state"`
-		PersistenceMode     string   `xml:"persistence_mode"`
+		PerformanceState string `xml:"performance_state"`
+		PersistenceMode  string `xml:"persistence_mode"`
+		PowerReadings    struct {
+			PowerState         string `xml:"power_state"`
+			PowerManagement    string `xml:"power_management"`
+			PowerDraw          string `xml:"power_draw"`
+			PowerLimit         string `xml:"power_limit"`
+			DefaultPowerLimit  string `xml:"default_power_limit"`
+			EnforcedPowerLimit string `xml:"enforced_power_limit"`
+			MinPowerLimit      string `xml:"min_power_limit"`
+			MaxPowerLimit      string `xml:"max_power_limit"`
+		} `xml:"power_readings"`
 		Processes           struct{} `xml:"processes"`
 		ProductArchitecture string   `xml:"product_architecture"`
 		ProductBrand        string   `xml:"product_brand"`

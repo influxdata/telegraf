@@ -90,7 +90,7 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		node     *string
+		node     string
 		response []byte
 	}{
 		{
@@ -104,7 +104,7 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 		{
 			name:     "node-level with all fields",
 			response: nodeBucketStatsResponse,
-			node:     &node,
+			node:     node,
 		},
 	}
 
@@ -169,6 +169,50 @@ func TestGatherNodeOnly(t *testing.T) {
 	require.Equal(t, 0, len(acc.Errors))
 	require.Equal(t, 7, len(acc.Metrics))
 	acc.AssertDoesNotContainMeasurement(t, "couchbase_bucket")
+}
+
+func TestGatherFailover(t *testing.T) {
+	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/pools":
+			_, _ = w.Write(readJSON(t, "testdata/pools_response.json"))
+		case "/pools/default":
+			_, _ = w.Write(readJSON(t, "testdata/pools_default_response.json"))
+		case "/pools/default/buckets":
+			_, _ = w.Write(readJSON(t, "testdata/bucket_response.json"))
+		case "/settings/autoFailover":
+			_, _ = w.Write(readJSON(t, "testdata/settings_autofailover.json"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	cb := Couchbase{
+		Servers:            []string{faker.URL},
+		ClusterBucketStats: false,
+		NodeBucketStats:    false,
+		AdditionalStats:    []string{"autofailover"},
+	}
+	require.NoError(t, cb.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, cb.gatherServer(&acc, faker.URL))
+	require.Equal(t, 0, len(acc.Errors))
+	require.Equal(t, 8, len(acc.Metrics))
+
+	var metric *testutil.Metric
+	for _, m := range acc.Metrics {
+		if m.Measurement == "couchbase_autofailover" {
+			metric = m
+			break
+		}
+	}
+
+	require.NotNil(t, metric)
+	require.Equal(t, 1, metric.Fields["count"])
+	require.Equal(t, true, metric.Fields["enabled"])
+	require.Equal(t, 2, metric.Fields["max_count"])
+	require.Equal(t, 72, metric.Fields["timeout"])
 }
 
 func readJSON(t *testing.T, jsonFilePath string) []byte {

@@ -34,6 +34,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	_ "github.com/influxdata/telegraf/plugins/serializers/all" // Blank import to have all serializers for testing
+	promserializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -446,6 +447,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("[agent]\ndebug = true"))
 	}))
 	defer ts.Close()
 
@@ -454,8 +456,7 @@ func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	configPath, err := config.GetDefaultConfigPath()
 	require.NoError(t, err)
 	require.Equal(t, []string{ts.URL}, configPath)
-	err = c.LoadConfig("")
-	require.NoError(t, err)
+	require.NoError(t, c.LoadConfig(configPath[0]))
 }
 
 func TestConfig_URLLikeFileName(t *testing.T) {
@@ -612,6 +613,7 @@ func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
 		// Ignore all unexported fields and fields not relevant for functionality
 		options := []cmp.Option{
 			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(promserializer.MetricTypes{})).Interface()),
 			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
 			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
 		}
@@ -703,6 +705,7 @@ func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
 		// Ignore all unexported fields and fields not relevant for functionality
 		options := []cmp.Option{
 			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(promserializer.MetricTypes{})).Interface()),
 			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
 			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
 		}
@@ -907,7 +910,7 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			c := config.NewConfig()
 			filenames := make([]string, 0, len(test.filename))
 			for _, fn := range test.filename {
-				filenames = append(filenames, filepath.Join("./testdata/processor_order", fn))
+				filenames = append(filenames, filepath.Join(".", "testdata", "processor_order", fn))
 			}
 			require.NoError(t, c.LoadAll(filenames...))
 

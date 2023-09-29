@@ -294,21 +294,48 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 func TestAccRow(t *testing.T) {
 	p := Postgresql{
 		Log: testutil.Logger{},
+		Service: postgresql.Service{
+			OutputAddress: "server",
+		},
 	}
 
 	var acc testutil.Accumulator
 	columns := []string{"datname", "cat"}
 
-	testRows := []fakeRow{
-		{fields: []interface{}{1, "gato"}},
-		{fields: []interface{}{nil, "gato"}},
-		{fields: []interface{}{"name", "gato"}},
+	tests := []struct {
+		fields fakeRow
+		dbName string
+		server string
+	}{
+		{
+			fields: fakeRow{
+				fields: []interface{}{1, "gato"},
+			},
+			dbName: "server",
+			server: "server",
+		},
+		{
+			fields: fakeRow{
+				fields: []interface{}{nil, "gato"},
+			},
+			dbName: "server",
+			server: "server",
+		},
+		{
+			fields: fakeRow{
+				fields: []interface{}{"name", "gato"},
+			},
+			dbName: "name",
+			server: "server",
+		},
 	}
-	for i := range testRows {
-		err := p.accRow("pgTEST", testRows[i], &acc, columns)
-		if err != nil {
-			t.Fatalf("Scan failed: %s", err)
-		}
+	for _, tt := range tests {
+		require.NoError(t, p.accRow("pgTEST", tt.fields, &acc, columns))
+		require.Equal(t, 1, len(acc.Metrics))
+		metric := acc.Metrics[0]
+		require.Equal(t, tt.dbName, metric.Tags["db"])
+		require.Equal(t, tt.server, metric.Tags["server"])
+		acc.ClearMetrics()
 	}
 }
 

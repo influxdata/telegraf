@@ -17,6 +17,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -586,6 +587,39 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 		}
 	}
 	require.True(t, haveError, "write error not found in log")
+}
+
+func TestTimestampColumnNameIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := newPostgresqlTest(t)
+	p.TimestampColumnName = "timestamp"
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		metric.New(t.Name(), map[string]string{}, map[string]interface{}{"v": 42}, time.Unix(1691747345, 0)),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	dump := dbTableDump(t, p.db, "")
+	require.Len(t, dump, 1)
+	require.EqualValues(t, 42, dump[0]["v"])
+	require.EqualValues(t, time.Unix(1691747345, 0).UTC(), dump[0]["timestamp"])
+	require.NotContains(t, dump[0], "time")
+
+	p.Logger.Clear()
+	require.NoError(t, p.Write(metrics))
+
+	stmtCount := 0
+	for _, log := range p.Logger.Logs() {
+		if strings.Contains(log.String(), "info: PG ") {
+			stmtCount++
+		}
+	}
+	require.Equal(t, 3, stmtCount) // BEGIN, COPY metrics table, COMMIT
 }
 
 func TestWriteTagTableIntegration(t *testing.T) {

@@ -24,20 +24,22 @@ import (
 // an attached schema or schema fingerprint
 
 type Parser struct {
-	MetricName      string            `toml:"metric_name"`
-	SchemaRegistry  string            `toml:"avro_schema_registry"`
-	Schema          string            `toml:"avro_schema"`
-	Format          string            `toml:"avro_format"`
-	Measurement     string            `toml:"avro_measurement"`
-	Tags            []string          `toml:"avro_tags"`
-	Fields          []string          `toml:"avro_fields"`
-	Timestamp       string            `toml:"avro_timestamp"`
-	TimestampFormat string            `toml:"avro_timestamp_format"`
-	FieldSeparator  string            `toml:"avro_field_separator"`
-	DefaultTags     map[string]string `toml:"tags"`
-
-	Log         telegraf.Logger `toml:"-"`
-	registryObj *schemaRegistry
+	MetricName       string            `toml:"metric_name"`
+	SchemaRegistry   string            `toml:"avro_schema_registry"`
+	CaCertPath       string            `toml:"avro_schema_registry_cert"`
+	Schema           string            `toml:"avro_schema"`
+	Format           string            `toml:"avro_format"`
+	Measurement      string            `toml:"avro_measurement"`
+	MeasurementField string            `toml:"avro_measurement_field"`
+	Tags             []string          `toml:"avro_tags"`
+	Fields           []string          `toml:"avro_fields"`
+	Timestamp        string            `toml:"avro_timestamp"`
+	TimestampFormat  string            `toml:"avro_timestamp_format"`
+	FieldSeparator   string            `toml:"avro_field_separator"`
+	UnionMode        string            `toml:"avro_union_mode"`
+	DefaultTags      map[string]string `toml:"tags"`
+	Log              telegraf.Logger   `toml:"-"`
+	registryObj      *schemaRegistry
 }
 
 func (p *Parser) Init() error {
@@ -49,20 +51,32 @@ func (p *Parser) Init() error {
 	default:
 		return fmt.Errorf("unknown 'avro_format' %q", p.Format)
 	}
+	switch p.UnionMode {
+	case "":
+		p.UnionMode = "flatten"
+	case "flatten", "nullable", "any":
+		// Do nothing as those are valid settings
+	default:
+		return fmt.Errorf("unknown avro_union_mode %q", p.Format)
+	}
 
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
-	if p.TimestampFormat == "" {
-		if p.Timestamp != "" {
-			return errors.New("if 'timestamp' field is specified, 'timestamp_format' must be as well")
-		}
-		if p.TimestampFormat != "unix" && p.TimestampFormat != "unix_us" && p.TimestampFormat != "unix_ms" && p.TimestampFormat != "unix_ns" {
-			return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
-		}
+	switch p.TimestampFormat {
+	case "":
+		p.TimestampFormat = "unix"
+	case "unix", "unix_ns", "unix_us", "unix_ms":
+		// Valid values
+	default:
+		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
 	if p.SchemaRegistry != "" {
-		p.registryObj = newSchemaRegistry(p.SchemaRegistry)
+		registry, err := newSchemaRegistry(p.SchemaRegistry, p.CaCertPath)
+		if err != nil {
+			return fmt.Errorf("error connecting to the schema registry %q: %w", p.SchemaRegistry, err)
+		}
+		p.registryObj = registry
 	}
 
 	return nil
@@ -147,6 +161,25 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
+func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map[string]interface{} {
+	// Helper function for the "nullable" and "any" p.UnionModes
+	// fldVal is a one-item map of string-to-something
+	ret := make(map[string]interface{})
+	if p.UnionMode == "nullable" {
+		_, ok := fldVal["null"]
+		if ok {
+			return ret // Return the empty map
+		}
+	}
+	// Otherwise, we just return the value in the fieldname.
+	// See README.md for an important warning about "any" and "nullable".
+	for _, v := range fldVal {
+		ret[fldName] = v
+		break // Not really needed, since it's a one-item map
+	}
+	return ret
+}
+
 func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
 	// Tags differ from fields, in that tags are inherently strings.
 	// fields can be of any type.
@@ -172,24 +205,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// If you have specified your fields in the config, you
 		// get what you asked for.
 		fieldList = p.Fields
-
-		// Except...if you specify the timestamp field, and it's
-		// not listed in your fields, you'll get it anyway.
-		// This will randomize your field ordering, which isn't
-		// ideal.  If you care, list the timestamp field.
-		if p.Timestamp != "" {
-			// quick list-to-set-to-list implementation
-			fieldSet := make(map[string]bool)
-			for k := range fieldList {
-				fieldSet[fieldList[k]] = true
-			}
-			fieldSet[p.Timestamp] = true
-			var newList []string
-			for s := range fieldSet {
-				newList = append(newList, s)
-			}
-			fieldList = newList
-		}
 	} else {
 		for k := range data {
 			// Otherwise, that which is not a tag is a field
@@ -208,7 +223,29 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	for _, fld := range fieldList {
 		candidate := make(map[string]interface{})
 		candidate[fld] = data[fld] // 1-item map
-		flat, err := flatten.Flatten(candidate, "", sep)
+		var flat map[string]interface{}
+		var err error
+		// Exactly how we flatten is decided by p.UnionMode
+		if p.UnionMode == "flatten" {
+			flat, err = flatten.Flatten(candidate, "", sep)
+			if err != nil {
+				return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+			}
+		} else {
+			// "nullable" or "any"
+			typedVal, ok := candidate[fld].(map[string]interface{})
+			if !ok {
+				// the "key" is not a string, so ...
+				// most likely an array?  Do the default thing
+				// and flatten the candidate.
+				flat, err = flatten.Flatten(candidate, "", sep)
+				if err != nil {
+					return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+				}
+			} else {
+				flat = p.flattenField(fld, typedVal)
+			}
+		}
 		if err != nil {
 			return nil, fmt.Errorf("flatten field %q failed: %w", fld, err)
 		}
@@ -216,7 +253,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			fields[k] = v
 		}
 	}
-
 	var schemaObj map[string]interface{}
 	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
 		return nil, fmt.Errorf("unmarshaling schema failed: %w", err)
@@ -225,9 +261,26 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// A telegraf metric needs at least one field.
 		return nil, errors.New("number of fields is 0; unable to create metric")
 	}
+
+	// If measurement field name is specified in the configuration
+	// take value from that field and do not include it into fields or tags
+	name := ""
+	if p.MeasurementField != "" {
+		sField := p.MeasurementField
+		sMetric, err := internal.ToString(data[sField])
+		if err != nil {
+			p.Log.Warnf("Could not convert %v to string for metric name %q: %s", data[sField], sField, err.Error())
+		} else {
+			name = sMetric
+		}
+	}
 	// Now some fancy stuff to extract the measurement.
 	// If it's set in the configuration, use that.
-	name := p.Measurement
+	if name == "" {
+		// If field name is not specified or field does not exist and
+		// metric name set in the configuration, use that.
+		name = p.Measurement
+	}
 	separator := "."
 	if name == "" {
 		// Try using the namespace defined in the schema. In case there
@@ -255,7 +308,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	var timestamp time.Time
 	if p.Timestamp != "" {
-		rawTime := fmt.Sprintf("%v", fields[p.Timestamp])
+		rawTime := fmt.Sprintf("%v", data[p.Timestamp])
 		var err error
 		timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, nil)
 		if err != nil {

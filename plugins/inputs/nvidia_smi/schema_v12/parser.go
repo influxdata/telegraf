@@ -36,6 +36,11 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 
 		common.SetIfUsed("str", fields, "driver_version", s.DriverVersion)
 		common.SetIfUsed("str", fields, "cuda_version", s.CudaVersion)
+		common.SetIfUsed("str", fields, "serial", gpu.Serial)
+		common.SetIfUsed("str", fields, "vbios_version", gpu.VbiosVersion)
+		common.SetIfUsed("str", fields, "display_active", gpu.DisplayActive)
+		common.SetIfUsed("str", fields, "display_mode", gpu.DisplayMode)
+		common.SetIfUsed("str", fields, "current_ecc", gpu.EccMode.CurrentEcc)
 		common.SetIfUsed("int", fields, "fan_speed", gpu.FanSpeed)
 		common.SetIfUsed("int", fields, "memory_total", gpu.FbMemoryUsage.Total)
 		common.SetIfUsed("int", fields, "memory_used", gpu.FbMemoryUsage.Used)
@@ -54,6 +59,8 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "utilization_memory", gpu.Utilization.MemoryUtil)
 		common.SetIfUsed("int", fields, "utilization_encoder", gpu.Utilization.EncoderUtil)
 		common.SetIfUsed("int", fields, "utilization_decoder", gpu.Utilization.DecoderUtil)
+		common.SetIfUsed("int", fields, "utilization_jpeg", gpu.Utilization.JpegUtil)
+		common.SetIfUsed("int", fields, "utilization_ofa", gpu.Utilization.OfaUtil)
 		common.SetIfUsed("int", fields, "pcie_link_gen_current", gpu.Pci.PciGpuLinkInfo.PcieGen.CurrentLinkGen)
 		common.SetIfUsed("int", fields, "pcie_link_width_current", gpu.Pci.PciGpuLinkInfo.LinkWidths.CurrentLinkWidth)
 		common.SetIfUsed("int", fields, "encoder_stats_session_count", gpu.EncoderStats.SessionCount)
@@ -66,9 +73,34 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SmClock)
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
+		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
+
+		for _, device := range gpu.MigDevices.MigDevice {
+			tags := map[string]string{}
+			common.SetTagIfUsed(tags, "index", device.Index)
+			common.SetTagIfUsed(tags, "gpu_index", device.GpuInstanceID)
+			common.SetTagIfUsed(tags, "compute_index", device.ComputeInstanceID)
+			common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
+			common.SetTagIfUsed(tags, "name", gpu.ProductName)
+			common.SetTagIfUsed(tags, "arch", gpu.ProductArchitecture)
+			common.SetTagIfUsed(tags, "uuid", gpu.UUID)
+			common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
+
+			fields := map[string]interface{}{}
+			common.SetIfUsed("int", fields, "sram_uncorrectable", device.EccErrorCount.VolatileCount.SramUncorrectable)
+			common.SetIfUsed("int", fields, "memory_fb_total", device.FbMemoryUsage.Total)
+			common.SetIfUsed("int", fields, "memory_fb_reserved", device.FbMemoryUsage.Reserved)
+			common.SetIfUsed("int", fields, "memory_fb_used", device.FbMemoryUsage.Used)
+			common.SetIfUsed("int", fields, "memory_fb_free", device.FbMemoryUsage.Free)
+			common.SetIfUsed("int", fields, "memory_bar1_total", device.Bar1MemoryUsage.Total)
+			common.SetIfUsed("int", fields, "memory_bar1_used", device.Bar1MemoryUsage.Used)
+			common.SetIfUsed("int", fields, "memory_bar1_free", device.Bar1MemoryUsage.Free)
+
+			acc.AddFields("nvidia_smi_mig", fields, tags, timestamp)
+		}
 	}
 
 	return nil

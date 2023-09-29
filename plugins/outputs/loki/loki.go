@@ -163,12 +163,12 @@ func (l *Loki) writeMetrics(s Streams) error {
 		}
 		password, err := l.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		req.SetBasicAuth(string(username), string(password))
-		config.ReleaseSecret(password)
-		config.ReleaseSecret(username)
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	for k, v := range l.Headers {

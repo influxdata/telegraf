@@ -10,6 +10,20 @@ The message is supposed to be encoded as follows:
 | 1-4   | Schema ID  | 4-byte schema ID as returned by Schema Registry. |
 | 5-    | Data       | Serialized data.                                 |
 
+The metric name will be set according the following priority:
+
+  1. Try to get metric name from the message field if it is set in the
+     `avro_measurement_field` option.
+  2. If the name is not determined, then try to get it from
+     `avro_measurement` option as the static value.
+  3. If the name is still not determined, then try to get it from the
+     schema definition in the following format `[schema_namespace.]schema_name`,
+     where schema namespace is optional and will be added only if it is specified
+     in the schema definition.
+
+In case if the metric name could not be determined according to these steps
+the error will be rised and the message will not be parsed.
+
 ## Configuration
 
 ```toml
@@ -31,9 +45,14 @@ The message is supposed to be encoded as follows:
   ## Supported values are "binary" (default) and "json"
   # avro_format = "binary"
 
-  ## Url of the schema registry; exactly one of schema registry and
-  ## schema must be set
+  ## URL of the schema registry which may contain username and password in the
+  ## form http[s]://[username[:password]@]<host>[:port]
+  ## NOTE: Exactly one of schema registry and schema must be set
   avro_schema_registry = "http://localhost:8081"
+
+  ## Path to the schema registry certificate. Should be specified only if
+  ## required for connection to the schema registry.
+  # avro_schema_registry_cert = "/etc/telegraf/ca_cert.crt"
 
   ## Schema string; exactly one of schema registry and schema must be set
   #avro_schema = '''
@@ -58,6 +77,11 @@ The message is supposed to be encoded as follows:
   #      }
   #'''
 
+  ## Measurement field name; The meauserment name will be taken 
+  ## from this field. If not set, determine measurement name
+  ## from the following 'avro_measurement' option
+  # avro_measurement_field = "field_name"
+
   ## Measurement string; if not set, determine measurement name from
   ## schema (as "<namespace>.<name>")
   # avro_measurement = "ratings"
@@ -74,13 +98,20 @@ The message is supposed to be encoded as follows:
   ## be used for the measurement timestamp.
   # avro_timestamp = ""
   ## If avro_timestamp is specified, avro_timestamp_format must be set
-  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'
+  ## to one of 'unix', 'unix_ms', 'unix_us', or 'unix_ns'.  It will
+  ## default to 'unix'.
   # avro_timestamp_format = "unix"
 
   ## Used to separate parts of array structures.  As above, the default
   ## is the empty string, so a=["a", "b"] becomes a0="a", a1="b".
   ## If this were set to "_", then it would be a_0="a", a_1="b".
   # avro_field_separator = "_"
+
+  ## Define handling of union types. Possible values are:
+  ##   flatten  -- add type suffix to field name (default)
+  ##   nullable -- do not modify field name but discard "null" field values
+  ##   any      -- do not modify field name and set field value to the received type
+  # avro_union_mode = "flatten"
 
   ## Default values for given tags: optional
   # tags = { "application": "hermes", "region": "central" }

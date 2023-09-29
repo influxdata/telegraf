@@ -172,7 +172,7 @@ partitionRange:
 			continue
 		}
 
-		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
+		du.Path = filepath.Join(string(os.PathSeparator), strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)

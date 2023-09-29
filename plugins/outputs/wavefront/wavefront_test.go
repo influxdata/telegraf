@@ -365,19 +365,35 @@ func TestTagLimits(t *testing.T) {
 	require.Equal(t, longKey, tags[longKey])
 }
 
-func TestSenderURLFromHostAndPort(t *testing.T) {
-	require.Equal(t, "http://localhost:2878", senderURLFromHostAndPort("localhost", 2878))
-}
-
-func TestSenderURLFromURLAndToken(t *testing.T) {
+func TestParseConnectionUrlReturnsAnErrorForInvalidUrls(t *testing.T) {
 	w := &Wavefront{
-		URL:   "https://surf.wavefront.com",
-		Token: config.NewSecret([]byte("11111111-2222-3333-4444-555555555555")),
+		URL: "invalid url",
+		Log: testutil.Logger{},
+	}
+	_, err := w.parseConnectionURL()
+	require.EqualError(t, err, "could not parse the provided URL: invalid url")
+}
+func TestParseConnectionUrlReturnsAllowsTokensInUrl(t *testing.T) {
+	w := &Wavefront{
+		URL: "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com",
+		Log: testutil.Logger{},
 	}
 
-	url, err := w.senderURLFromURLAndToken()
+	url, err := w.parseConnectionURL()
 	require.NoError(t, err)
-	require.Equal(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com", url)
+	require.Equalf(t, "https://11111111-2222-3333-4444-555555555555@surf.wavefront.com", url, "Token value should not overwrite the token embedded in url")
+}
+
+func TestParseConnectionUrlUsesHostAndPortWhenUrlIsOmitted(t *testing.T) {
+	w := &Wavefront{
+		Host: "surf.wavefront.com",
+		Port: 8080,
+		Log:  testutil.Logger{},
+	}
+
+	url, err := w.parseConnectionURL()
+	require.NoError(t, err)
+	require.Equalf(t, "http://surf.wavefront.com:8080", url, "Should combine host and port into URI")
 }
 
 func TestDefaults(t *testing.T) {
@@ -385,6 +401,45 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 	require.Equal(t, config.Duration(10*time.Second), defaultWavefront.Timeout)
 	require.Equal(t, "", defaultWavefront.TLSCA)
+}
+
+func TestMakeAuthOptions(t *testing.T) {
+	cspAPIWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	cspAPIWavefront.AuthCSPAPIToken = config.NewSecret([]byte("fake-app-token"))
+	options, err := cspAPIWavefront.makeAuthOptions()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(options))
+
+	cspClientCredsWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	cspClientCredsWavefront.AuthCSPClientCredentials = &authCSPClientCredentials{
+		AppID:     config.NewSecret([]byte("fake-app-id")),
+		AppSecret: config.NewSecret([]byte("fake-app-secret")),
+	}
+	options, err = cspClientCredsWavefront.makeAuthOptions()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(options))
+
+	orgID := "org-id"
+	cspClientCredsWithOrgIDWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	cspClientCredsWithOrgIDWavefront.AuthCSPClientCredentials = &authCSPClientCredentials{
+		AppID:     config.NewSecret([]byte("fake-app-id")),
+		AppSecret: config.NewSecret([]byte("fake-app-secret")),
+		OrgID:     &orgID,
+	}
+	options, err = cspClientCredsWithOrgIDWavefront.makeAuthOptions()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(options))
+
+	apiTokenWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	apiTokenWavefront.AuthCSPAPIToken = config.NewSecret([]byte("fake-wavefront-api-token"))
+	options, err = apiTokenWavefront.makeAuthOptions()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(options))
+
+	noAuthOptionsWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
+	options, err = noAuthOptionsWavefront.makeAuthOptions()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(options))
 }
 
 // Benchmarks to test performance of string replacement via Regex and Sanitize

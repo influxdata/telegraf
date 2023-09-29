@@ -370,8 +370,8 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		opts.SetUsername(string(user))
-		config.ReleaseSecret(user)
+		opts.SetUsername(user.String())
+		user.Destroy()
 	}
 
 	if !m.Password.Empty() {
@@ -379,8 +379,8 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		opts.SetPassword(string(password))
-		config.ReleaseSecret(password)
+		opts.SetPassword(password.String())
+		password.Destroy()
 	}
 	if len(m.Servers) == 0 {
 		return opts, fmt.Errorf("could not get host information")

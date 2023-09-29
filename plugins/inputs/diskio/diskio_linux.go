@@ -132,7 +132,7 @@ func resolveName(name string) string {
 		return name
 	}
 	// Try to prepend "/dev"
-	resolved, err = filepath.EvalSymlinks(filepath.Join("/dev", name))
+	resolved, err = filepath.EvalSymlinks("/dev/" + name)
 	if err != nil {
 		return name
 	}

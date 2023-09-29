@@ -83,12 +83,12 @@ func (w *whitelist) Parse(filename string) error {
 }
 
 func (w *whitelist) Check(pkg, version, spdx string) (ok, found bool) {
-	var pkgver semver.Version
 	v := strings.TrimSpace(version)
 	v = strings.TrimPrefix(v, "v")
-	if v != "" {
-		pkgver = *semver.New(v)
+	if v == "" {
+		return false, false
 	}
+	pkgver := *semver.New(v)
 
 	for _, entry := range *w {
 		if entry.Name != pkg {

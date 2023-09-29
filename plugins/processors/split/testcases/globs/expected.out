@@ -1,0 +1,3 @@
+metric,sensor1_status=active,sensor2_status=failed,host=foobar sensor1_channel1=4i,sensor1_channel2=2i,sensor2_channel1=1i,sensor2_channel2=2i 1684784689000000000
+sensor1,sensor1_status=active,host=foobar sensor1_channel1=4i,sensor1_channel2=2i 1684784689000000000
+sensor2,sensor2_status=failed,host=foobar sensor2_channel1=1i,sensor2_channel2=2i 1684784689000000000

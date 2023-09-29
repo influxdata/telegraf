@@ -410,10 +410,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.SetBasicAuth(p.Username, p.Password)
 	}
 
-	if p.HTTPHeaders != nil {
-		for key, value := range p.HTTPHeaders {
-			req.Header.Set(key, value)
-		}
+	for key, value := range p.HTTPHeaders {
+		req.Header.Set(key, value)
 	}
 
 	var resp *http.Response

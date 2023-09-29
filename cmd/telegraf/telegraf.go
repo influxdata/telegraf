@@ -232,10 +232,13 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 		configFiles = append(configFiles, files...)
 	}
 
-	// providing no "config" or "config-directory" flag(s) should load default
-	// configuration files
+	// load default config paths if none are found
 	if len(configFiles) == 0 {
-		configFiles = append(configFiles, "")
+		defaultFiles, err := config.GetDefaultConfigPath()
+		if err != nil {
+			return nil, fmt.Errorf("unable to load default config paths: %w", err)
+		}
+		configFiles = append(configFiles, defaultFiles...)
 	}
 
 	t.configFiles = configFiles
@@ -285,7 +288,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 		return err
 	}
 
-	log.Printf("I! Starting Telegraf %s%s", internal.Version, internal.Customized)
+	log.Printf("I! Starting Telegraf %s%s brought to you by InfluxData the makers of InfluxDB", internal.Version, internal.Customized)
 	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret-stores",
 		len(inputs.Inputs),
 		len(aggregators.Aggregators),

@@ -43,10 +43,16 @@ type Collector struct {
 	coll           *serializer.Collection
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool) *Collector {
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel bool,
+	exportTimestamp bool,
+	typeMapping serializer.MetricTypes,
+) *Collector {
 	cfg := serializer.FormatConfig{
 		StringAsLabel:   stringsAsLabel,
 		ExportTimestamp: exportTimestamp,
+		TypeMappings:    typeMapping,
 	}
 
 	return &Collector{

@@ -35,6 +35,7 @@ type semaphore chan empty
 
 type KafkaConsumer struct {
 	Brokers                []string        `toml:"brokers"`
+	Version                string          `toml:"kafka_version"`
 	ConsumerGroup          string          `toml:"consumer_group"`
 	MaxMessageLen          int             `toml:"max_message_len"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
@@ -44,6 +45,7 @@ type KafkaConsumer struct {
 	Topics                 []string        `toml:"topics"`
 	TopicRegexps           []string        `toml:"topic_regexps"`
 	TopicTag               string          `toml:"topic_tag"`
+	MsgHeadersAsTags       []string        `toml:"msg_headers_as_tags"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy     string          `toml:"connection_strategy"`
 
@@ -63,10 +65,10 @@ type KafkaConsumer struct {
 	ticker          *time.Ticker
 	fingerprint     string
 
-	parser    telegraf.Parser
-	topicLock sync.Mutex
-	wg        sync.WaitGroup
-	cancel    context.CancelFunc
+	parserFunc telegraf.ParserFunc
+	topicLock  sync.Mutex
+	wg         sync.WaitGroup
+	cancel     context.CancelFunc
 }
 
 type ConsumerGroup interface {
@@ -89,8 +91,8 @@ func (*KafkaConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
-	k.parser = parser
+func (k *KafkaConsumer) SetParserFunc(fn telegraf.ParserFunc) {
+	k.parserFunc = fn
 }
 
 func (k *KafkaConsumer) Init() error {
@@ -109,7 +111,15 @@ func (k *KafkaConsumer) Init() error {
 	cfg := sarama.NewConfig()
 
 	// Kafka version 0.10.2.0 is required for consumer groups.
+	// Try to parse version from config. If can not, set default
 	cfg.Version = sarama.V0_10_2_0
+	if k.Version != "" {
+		version, err := sarama.ParseKafkaVersion(k.Version)
+		if err != nil {
+			return fmt.Errorf("invalid version: %w", err)
+		}
+		cfg.Version = version
+	}
 
 	if err := k.SetConfig(cfg, k.Log); err != nil {
 		return fmt.Errorf("SetConfig: %w", err)
@@ -308,9 +318,18 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		k.startErrorAdder(acc)
 
 		for ctx.Err() == nil {
-			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
+			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parserFunc, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
+			//if message headers list specified, put it as map to handler
+			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
+			if len(k.MsgHeadersAsTags) > 0 {
+				for _, header := range k.MsgHeadersAsTags {
+					msgHeadersMap[header] = true
+				}
+			}
+			handler.MsgHeadersToTags = msgHeadersMap
+
 			// We need to copy allWantedTopics; the Consume() is
 			// long-running and we can easily deadlock if our
 			// topic-update-checker fires.
@@ -358,12 +377,12 @@ type Message struct {
 	session sarama.ConsumerGroupSession
 }
 
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *ConsumerGroupHandler {
+func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, fn telegraf.ParserFunc, log telegraf.Logger) *ConsumerGroupHandler {
 	handler := &ConsumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
 		undelivered: make(map[telegraf.TrackingID]Message, maxUndelivered),
-		parser:      parser,
+		parserFunc:  fn,
 		log:         log,
 	}
 	return handler
@@ -371,14 +390,15 @@ func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parse
 
 // ConsumerGroupHandler is a sarama.ConsumerGroupHandler implementation.
 type ConsumerGroupHandler struct {
-	MaxMessageLen int
-	TopicTag      string
+	MaxMessageLen    int
+	TopicTag         string
+	MsgHeadersToTags map[string]bool
 
-	acc    telegraf.TrackingAccumulator
-	sem    semaphore
-	parser telegraf.Parser
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
+	acc        telegraf.TrackingAccumulator
+	sem        semaphore
+	parserFunc telegraf.ParserFunc
+	wg         sync.WaitGroup
+	cancel     context.CancelFunc
 
 	mu          sync.Mutex
 	undelivered map[telegraf.TrackingID]Message
@@ -456,12 +476,33 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 			len(msg.Value), h.MaxMessageLen)
 	}
 
-	metrics, err := h.parser.Parse(msg.Value)
+	parser, err := h.parserFunc()
+	if err != nil {
+		return fmt.Errorf("creating parser: %w", err)
+	}
+
+	metrics, err := parser.Parse(msg.Value)
 	if err != nil {
 		h.release()
 		return err
 	}
 
+	// Check if any message header should be pass as tag
+	headerKey := ""
+	if len(h.MsgHeadersToTags) > 0 {
+		for _, header := range msg.Headers {
+			//convert to a string as the header and value are byte arrays.
+			headerKey = string(header.Key)
+			if _, exists := h.MsgHeadersToTags[headerKey]; exists {
+				// If message header should be pass as tag then add it to the metrics
+				for _, metric := range metrics {
+					metric.AddTag(headerKey, string(header.Value))
+				}
+			}
+		}
+	}
+
+	// Add topic name as tag with TopicTag name specified in the config
 	if len(h.TopicTag) > 0 {
 		for _, metric := range metrics {
 			metric.AddTag(h.TopicTag, msg.Topic)

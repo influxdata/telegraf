@@ -106,6 +106,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Initialization SQL
   # init_sql = ""
 
+  ## Maximum amount of time a connection may be idle. "0s" means connections are
+  ## never closed due to idle time.
+  # connection_max_idle_time = "0s"
+
+  ## Maximum amount of time a connection may be reused. "0s" means connections
+  ## are never closed due to age.
+  # connection_max_lifetime = "0s"
+
+  ## Maximum number of connections in the idle connection pool. 0 means unlimited.
+  # connection_max_idle = 2
+
+  ## Maximum number of open connections to the database. 0 means unlimited.
+  # connection_max_open = 0
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## Metric type to SQL type conversion
   ## The values on the left are the data types Telegraf has and the values on
   ## the right are the data types Telegraf will use when sending to a database.
@@ -122,27 +140,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  defaultvalue         = "TEXT"
   #  unsigned             = "UNSIGNED"
   #  bool                 = "BOOL"
-
-  ## This setting controls the behavior of the unsigned value. By default the
-  ## setting will take the integer value and append the unsigned value to it. The other
-  ## option is "literal", which will use the actual value the user provides to
-  ## the unsigned option. This is useful for a database like ClickHouse where
-  ## the unsigned value should use a value like "uint64".
-  # conversion_style = "unsigned_suffix"
-
-  ## Maximum amount of time a connection may be idle. "0s" means connections are
-  ## never closed due to idle time.
-  # connection_max_idle_time = "0s"
-
-  ## Maximum amount of time a connection may be reused. "0s" means connections
-  ## are never closed due to age.
-  # connection_max_lifetime = "0s"
-
-  ## Maximum number of connections in the idle connection pool. 0 means unlimited.
-  # connection_max_idle = 2
-
-  ## Maximum number of open connections to the database. 0 means unlimited.
-  # connection_max_open = 0
+  #  ## This setting controls the behavior of the unsigned value. By default the
+  #  ## setting will take the integer value and append the unsigned value to it. The other
+  #  ## option is "literal", which will use the actual value the user provides to
+  #  ## the unsigned option. This is useful for a database like ClickHouse where
+  #  ## the unsigned value should use a value like "uint64".
+  #  # conversion_style = "unsigned_suffix"
 ```
 
 ## Driver-specific information
@@ -172,9 +175,7 @@ docs](https://github.com/jackc/pgx) for more details.
 
 ### modernc.org/sqlite
 
-This driver is not available on all operating systems and architectures. It is
-only included in Linux builds on amd64, 386, arm64, arm, and Darwin on amd64. It
-is not available for Windows, FreeBSD, and other Linux and Darwin platforms.
+It is not supported on windows/386, mips, and mips64 platforms.
 
 The DSN is a filename or url with scheme "file:". See the [driver
 docs](https://modernc.org/sqlite) for details.

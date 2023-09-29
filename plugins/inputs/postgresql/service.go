@@ -1,7 +1,6 @@
 package postgresql
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"net"
@@ -106,8 +105,8 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 	if err != nil {
 		return fmt.Errorf("getting address failed: %w", err)
 	}
-	addr := string(addrSecret)
-	defer config.ReleaseSecret(addrSecret)
+	addr := addrSecret.String()
+	defer addrSecret.Destroy()
 
 	if p.Address.Empty() || addr == "localhost" {
 		addr = "host=localhost sslmode=disable"
@@ -161,22 +160,27 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 	if err != nil {
 		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
-	defer config.ReleaseSecret(addr)
+	defer addr.Destroy()
 
 	var canonicalizedAddress string
-	if bytes.HasPrefix(addr, []byte("postgres://")) || bytes.HasPrefix(addr, []byte("postgresql://")) {
-		if canonicalizedAddress, err = parseURL(string(addr)); err != nil {
+	if strings.HasPrefix(addr.TemporaryString(), "postgres://") || strings.HasPrefix(addr.TemporaryString(), "postgresql://") {
+		if canonicalizedAddress, err = parseURL(addr.String()); err != nil {
 			return sanitizedAddress, err
 		}
 	} else {
-		canonicalizedAddress = string(addr)
+		canonicalizedAddress = addr.String()
 	}
 
 	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil
 }
 
 // GetConnectDatabase utility function for getting the database to which the connection was made
+// If the user set the output address use that before parsing anything else.
 func (p *Service) GetConnectDatabase(connectionString string) (string, error) {
+	if p.OutputAddress != "" {
+		return p.OutputAddress, nil
+	}
+
 	connConfig, err := pgx.ParseConfig(connectionString)
 	if err != nil {
 		return "", fmt.Errorf("connection string parsing failed: %w", err)

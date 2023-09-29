@@ -205,3 +205,10 @@ func TestNFSClientProcessFull(t *testing.T) {
 	acc.AssertContainsFields(t, "nfs_bytes", fieldsBytes)
 	acc.AssertContainsFields(t, "nfs_xprt_tcp", fieldsXprtTCP)
 }
+
+func TestNFSClientFileDoesNotExist(t *testing.T) {
+	var acc testutil.Accumulator
+	nfsclient := NFSClient{Fullstat: true}
+	nfsclient.mountstatsPath = "/does_not_exist"
+	require.Error(t, nfsclient.Gather(&acc))
+}

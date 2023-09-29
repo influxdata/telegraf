@@ -373,8 +373,8 @@ func (s *SQL) setupConnection() error {
 	if err != nil {
 		return fmt.Errorf("getting DSN failed: %w", err)
 	}
-	dsn := string(dsnSecret)
-	config.ReleaseSecret(dsnSecret)
+	dsn := dsnSecret.String()
+	dsnSecret.Destroy()
 
 	s.Log.Debug("Connecting...")
 	s.db, err = dbsql.Open(s.driverName, dsn)

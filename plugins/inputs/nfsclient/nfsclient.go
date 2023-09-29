@@ -296,6 +296,16 @@ func (*NFSClient) SampleConfig() string {
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
+	if _, err := os.Stat(n.mountstatsPath); os.IsNotExist(err) {
+		return err
+	}
+
+	// Attempt to read the file to see if we have permissions before opening
+	// which can lead to a panic
+	if _, err := os.ReadFile(n.mountstatsPath); err != nil {
+		return err
+	}
+
 	file, err := os.Open(n.mountstatsPath)
 	if err != nil {
 		n.Log.Errorf("Failed opening the %q file: %v ", file.Name(), err)

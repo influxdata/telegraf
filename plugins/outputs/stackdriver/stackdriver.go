@@ -15,6 +15,7 @@ import (
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
@@ -54,10 +55,6 @@ const (
 
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
-
-	errStringPointsOutOfOrder  = "one or more of the points specified had an older end time than the most recent point"
-	errStringPointsTooOld      = "data points cannot be written more than 24h in the past"
-	errStringPointsTooFrequent = "one or more points were written more frequently than the maximum sampling period configured for the metric"
 )
 
 func (s *Stackdriver) Init() error {
@@ -226,7 +223,10 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 
 			// Convert any declared tag to a resource label and remove it from
 			// the metric
-			resourceLabels := s.ResourceLabels
+			resourceLabels := make(map[string]string, len(s.ResourceLabels)+len(s.TagsAsResourceLabels))
+			for k, v := range s.ResourceLabels {
+				resourceLabels[k] = v
+			}
 			for _, tag := range s.TagsAsResourceLabels {
 				if val, ok := m.GetTag(tag); ok {
 					resourceLabels[tag] = val
@@ -257,6 +257,18 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			// do some heuristics to know which one to use for queries. This
 			// only occurs when using the official name format.
 			if s.MetricNameFormat == "official" && strings.HasSuffix(timeSeries.Metric.Type, "unknown") {
+				metricKind := metricpb.MetricDescriptor_CUMULATIVE
+				startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
+				timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, endTime)
+				if err != nil {
+					s.Log.Errorf("Get time interval failed: %s", err)
+					continue
+				}
+				dataPoint := &monitoringpb.Point{
+					Interval: timeInterval,
+					Value:    value,
+				}
+
 				counterTimeSeries := &monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
 						Type:   s.generateMetricName(m, f.Key) + ":counter",
@@ -310,12 +322,13 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		// Create the time series in Stackdriver.
 		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
 		if err != nil {
-			if strings.Contains(err.Error(), errStringPointsOutOfOrder) ||
-				strings.Contains(err.Error(), errStringPointsTooOld) ||
-				strings.Contains(err.Error(), errStringPointsTooFrequent) {
-				s.Log.Debugf("Unable to write to Stackdriver: %s", err)
-				return nil
+			if errStatus, ok := status.FromError(err); ok {
+				if errStatus.Code().String() == "InvalidArgument" {
+					s.Log.Warnf("Unable to write to Stackdriver - dropping metrics: %s", err)
+					return nil
+				}
 			}
+
 			s.Log.Errorf("Unable to write to Stackdriver: %s", err)
 			return err
 		}
