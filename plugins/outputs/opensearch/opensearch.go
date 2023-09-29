@@ -31,19 +31,18 @@ import (
 var sampleConfig string
 
 type Opensearch struct {
-	Username            config.Secret `toml:"username"`
-	Password            config.Secret `toml:"password"`
-	AuthBearerToken     config.Secret `toml:"auth_bearer_token"`
-	EnableGzip          bool          `toml:"enable_gzip"`
-	EnableSniffer       bool          `toml:"enable_sniffer"`
-	FloatHandling       string        `toml:"float_handling"`
-	FloatReplacement    float64       `toml:"float_replacement_value"`
-	ForceDocumentID     bool          `toml:"force_document_id"`
-	IndexName           string        `toml:"index_name"`
-	TemplateName        string        `toml:"template_name"`
-	ManageTemplate      bool          `toml:"manage_template"`
-	OverwriteTemplate   bool          `toml:"overwrite_template"`
-	pipelineName        string
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
+	AuthBearerToken     config.Secret   `toml:"auth_bearer_token"`
+	EnableGzip          bool            `toml:"enable_gzip"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
+	FloatHandling       string          `toml:"float_handling"`
+	FloatReplacement    float64         `toml:"float_replacement_value"`
+	ForceDocumentID     bool            `toml:"force_document_id"`
+	IndexName           string          `toml:"index_name"`
+	TemplateName        string          `toml:"template_name"`
+	ManageTemplate      bool            `toml:"manage_template"`
+	OverwriteTemplate   bool            `toml:"overwrite_template"`
 	DefaultPipeline     string          `toml:"default_pipeline"`
 	UsePipeline         string          `toml:"use_pipeline"`
 	Timeout             config.Duration `toml:"timeout"`
@@ -51,12 +50,14 @@ type Opensearch struct {
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	URLs                []string        `toml:"urls"`
 	Log                 telegraf.Logger `toml:"-"`
-	indexTmpl           *template.Template
-	pipelineTmpl        *template.Template
-	onSucc              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
-	onFail              func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
-	configOptions       httpconfig.HTTPClientConfig
-	osClient            *opensearch.Client
+
+	pipelineName  string
+	indexTmpl     *template.Template
+	pipelineTmpl  *template.Template
+	onSucc        func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
+	onFail        func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
+	configOptions httpconfig.HTTPClientConfig
+	osClient      *opensearch.Client
 }
 
 //go:embed template.json
@@ -149,18 +150,18 @@ func (o *Opensearch) newClient() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := o.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
-		Username:  string(username),
-		Password:  string(password),
+		Username:  username.String(),
+		Password:  password.String(),
 	}
 
 	if o.configOptions.InsecureSkipVerify {
@@ -181,9 +182,8 @@ func (o *Opensearch) newClient() error {
 		if err != nil {
 			return fmt.Errorf("getting token failed: %w", err)
 		}
-		if string(token) != "" {
-			header.Add("Authorization", "Bearer "+string(token))
-		}
+		header.Add("Authorization", "Bearer "+token.String())
+		defer token.Destroy()
 	}
 	clientConfig.Header = header
 
