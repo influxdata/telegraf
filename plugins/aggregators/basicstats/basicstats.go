@@ -177,21 +177,21 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				fields[k+b.SumSuffix] = v.sum
 			}
 
-			// if b.statsConfig.count {
-			// 	fields[k+"b.countSuffix"] = v.count
-			// }
-			// if b.statsConfig.min {
-			// 	fields[k+"b.minSuffix"] = v.min
-			// }
-			// if b.statsConfig.max {
-			// 	fields[k+"b.maxSuffix"] = v.max
-			// }
-			// if b.statsConfig.mean {
-			// 	fields[k+"b.meanSuffix"] = v.mean
-			// }
-			// if b.statsConfig.sum {
-			// 	fields[k+"b.sumSuffix"] = v.sum
-			// }
+			if b.statsConfig.count {
+				fields[k+b.CountSuffix] = v.count
+			}
+			if b.statsConfig.min {
+				fields[k+b.MinSuffix] = v.min
+			}
+			if b.statsConfig.max {
+				fields[k+b.MaxSuffix] = v.max
+			}
+			if b.statsConfig.mean {
+				fields[k+b.MeanSuffix] = v.mean
+			}
+			if b.statsConfig.sum {
+				fields[k+b.SumSuffix] = v.sum
+			}
 
 			//v.count always >=1
 			if v.count > 1 {
