@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -308,4 +309,268 @@ deadband_value = 100.0
 			}},
 		},
 	}, o.SubscribeClientConfig.Groups)
+}
+
+func TestSubscribeClientConfigInvalidTrigger(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger: "not_valid",
+			},
+		},
+	})
+
+	_, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "trigger 'not_valid' not supported, node 'ns=3;i=1'")
+}
+
+func TestSubscribeClientConfigMissingTrigger(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			DataChangeFilter: &input.DataChangeFilter{
+				DeadbandType: "Absolute",
+			},
+		},
+	})
+
+	_, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "trigger '' not supported, node 'ns=3;i=1'")
+}
+
+func TestSubscribeClientConfigInvalidDeadbandType(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:      "Status",
+				DeadbandType: "not_valid",
+			},
+		},
+	})
+
+	_, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "deadband_type 'not_valid' not supported, node 'ns=3;i=1'")
+}
+
+func TestSubscribeClientConfigMissingDeadbandType(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger: "Status",
+			},
+		},
+	})
+
+	_, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "deadband_type '' not supported, node 'ns=3;i=1'")
+}
+
+func TestSubscribeClientConfigInvalidDeadbandValue(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	deadbandValue := -1.0
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:       "Status",
+				DeadbandType:  "Absolute",
+				DeadbandValue: &deadbandValue,
+			},
+		},
+	})
+
+	_, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "negative deadband_value not supported, node 'ns=3;i=1'")
+}
+
+func TestSubscribeClientConfigMissingDeadbandValue(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:      "Status",
+				DeadbandType: "Absolute",
+			},
+		},
+	})
+
+	_, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "deadband_value was not set, node 'ns=3;i=1'")
+}
+
+func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+
+	var queueSize uint32 = 10
+	discardOldest := true
+	deadbandValue := 10.0
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			SamplingInterval: 50000000,
+			QueueSize:        &queueSize,
+			DiscardOldest:    &discardOldest,
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:       "Status",
+				DeadbandType:  "Absolute",
+				DeadbandValue: &deadbandValue,
+			},
+		},
+	})
+
+	subClient, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+	require.Equal(t, &ua.MonitoringParameters{
+		SamplingInterval: 50,
+		QueueSize:        queueSize,
+		DiscardOldest:    discardOldest,
+		Filter: ua.NewExtensionObject(
+			&ua.DataChangeFilter{
+				Trigger:       ua.DataChangeTriggerStatus,
+				DeadbandType:  uint32(ua.DeadbandTypeAbsolute),
+				DeadbandValue: deadbandValue,
+			},
+		),
+	}, subClient.monitoredItemsReqs[0].RequestedParameters)
 }
