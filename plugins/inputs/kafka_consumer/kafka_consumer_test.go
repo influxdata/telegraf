@@ -294,15 +294,11 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &value.Parser{
-			MetricName: "cpu",
-			DataType:   "int",
-		}
-		err := parser.Init()
-		return parser, err
+	parser := value.Parser{
+		MetricName: "cpu",
+		DataType:   "int",
 	}
-	cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
+	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -330,15 +326,12 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 
 func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &value.Parser{
-			MetricName: "cpu",
-			DataType:   "int",
-		}
-		err := parser.Init()
-		return parser, err
+	parser := value.Parser{
+		MetricName: "cpu",
+		DataType:   "int",
 	}
-	cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
+	require.NoError(t, parser.Init())
+	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -451,15 +444,12 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := &testutil.Accumulator{}
-			parserFunc := func() (telegraf.Parser, error) {
-				parser := &value.Parser{
-					MetricName: "cpu",
-					DataType:   "int",
-				}
-				err := parser.Init()
-				return parser, err
+			parser := value.Parser{
+				MetricName: "cpu",
+				DataType:   "int",
 			}
-			cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
+			require.NoError(t, parser.Init())
+			cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag
 
@@ -573,12 +563,9 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 				MaxUndeliveredMessages: 1,
 				ConnectionStrategy:     tt.connectionStrategy,
 			}
-			parserFunc := func() (telegraf.Parser, error) {
-				parser := &influx.Parser{}
-				err := parser.Init()
-				return parser, err
-			}
-			input.SetParserFunc(parserFunc)
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
 			require.NoError(t, input.Init())
 
 			acc := testutil.Accumulator{}
@@ -634,12 +621,9 @@ func TestExponentialBackoff(t *testing.T) {
 			},
 		},
 	}
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &influx.Parser{}
-		err := parser.Init()
-		return parser, err
-	}
-	input.SetParserFunc(parserFunc)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
 
 	//time how long initialization (connection) takes
 	start := time.Now()
@@ -682,13 +666,9 @@ func TestExponentialBackoffDefault(t *testing.T) {
 			},
 		},
 	}
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &influx.Parser{}
-		err := parser.Init()
-		return parser, err
-	}
-	input.SetParserFunc(parserFunc)
-
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
 	require.NoError(t, input.Init())
 
 	// We don't need to start the plugin here since we're only testing
