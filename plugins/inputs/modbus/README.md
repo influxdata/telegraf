@@ -157,10 +157,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##  |---rearrange  -- Rearrange request boundaries within consecutive address ranges
     ##  |                 to reduce the number of requested registers by keeping
     ##  |                 the number of requests.
-    ##  |---aggressive -- Rearrange request boundaries similar to "rearrange" but
-    ##  |                 allow to request registers not specified by the user to
-    ##  |                 fill gaps. This usually reduces the number of requests at the
-    ##  |                 cost of more requested registers.
     ##  |---max_insert -- Rearrange request keeping the number of extra fields below the value
     ##                    provided in "optimization_max_register_fill". It is not necessary to define 'omitted'
     ##                    fields as the optimisation will add such field only where needed.

@@ -1,6 +1,41 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.28.2 [2023-10-02]
+
+### Bugfixes
+
+- [#13963](https://github.com/influxdata/telegraf/pull/13963) `inputs.cisco_telemetry_mdt` Print string message on decode failure
+- [#13937](https://github.com/influxdata/telegraf/pull/13937) `inputs.exec` Clean up grandchildren processes
+- [#13977](https://github.com/influxdata/telegraf/pull/13977) `inputs.intel_pmt` Handle telem devices without numa_node attribute
+- [#13958](https://github.com/influxdata/telegraf/pull/13958) `inputs.jti_openconfig_telemetry` Do not block gRPC dial
+- [#13997](https://github.com/influxdata/telegraf/pull/13997) `inputs.mock` Align plugin with documentation
+- [#13982](https://github.com/influxdata/telegraf/pull/13982) `inputs.nfsclient` Avoid panics, better error messages
+- [#13962](https://github.com/influxdata/telegraf/pull/13962) `inputs.nvidia_smi` Add legacy power readings to v12 schema
+- [#14011](https://github.com/influxdata/telegraf/pull/14011) `inputs.openstack` Handle dependencies between enabled services and available endpoints
+- [#13972](https://github.com/influxdata/telegraf/pull/13972) `inputs.postgresql_extensible` Restore outputaddress behavior
+- [#13927](https://github.com/influxdata/telegraf/pull/13927) `inputs.smart` Remove parsing error message
+- [#13915](https://github.com/influxdata/telegraf/pull/13915) `inputs.systemd_units` Add missing upstream states
+- [#13930](https://github.com/influxdata/telegraf/pull/13930) `outputs.cloudwatch` Increase number of metrics per write
+- [#14009](https://github.com/influxdata/telegraf/pull/14009) `outputs.stackdriver` Do not shallow copy map
+- [#13931](https://github.com/influxdata/telegraf/pull/13931) `outputs.stackdriver` Drop metrics on InvalidArgument gRPC error
+- [#14008](https://github.com/influxdata/telegraf/pull/14008) `parsers.json_v2` Handle optional fields properly
+- [#13947](https://github.com/influxdata/telegraf/pull/13947) `processors.template` Handle tracking metrics correctly
+
+### Dependency Updates
+
+- [#13941](https://github.com/influxdata/telegraf/pull/13941) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go from 1.62.470 to 1.62.563
+- [#13988](https://github.com/influxdata/telegraf/pull/13988) `deps` Bump github.com/aws/aws-sdk-go-v2/config from 1.18.27 to 1.18.42
+- [#13943](https://github.com/influxdata/telegraf/pull/13943) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.20.9 to 1.23.5
+- [#13986](https://github.com/influxdata/telegraf/pull/13986) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.80.1 to 1.120.0
+- [#13987](https://github.com/influxdata/telegraf/pull/13987) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.13.8 to 1.13.11
+- [#13985](https://github.com/influxdata/telegraf/pull/13985) `deps` Bump github.com/eclipse/paho.mqtt.golang from 1.4.2 to 1.4.3
+- [#13989](https://github.com/influxdata/telegraf/pull/13989) `deps` Bump github.com/google/uuid from 1.3.0 to 1.3.1
+- [#13942](https://github.com/influxdata/telegraf/pull/13942) `deps` Bump github.com/shirou/gopsutil/v3 from 3.23.6 to 3.23.8
+- [#14022](https://github.com/influxdata/telegraf/pull/14022) `deps` Bump github.com/vmware/govmomi from 0.28.0 to 0.32.0
+- [#13940](https://github.com/influxdata/telegraf/pull/13940) `deps` Bump golang.org/x/net from 0.14.0 to 0.15.0
+- [#13944](https://github.com/influxdata/telegraf/pull/13944) `deps` Bump k8s.io/api from 0.28.1 to 0.28.2
+
 ## v1.28.1 [2023-09-12]
 
 ### Bugfixes
