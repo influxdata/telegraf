@@ -1,0 +1,5 @@
+file,datatype=float,name=inlet-1/temperature value_f=0.20791169081775931 1695679023000000000
+file,datatype=float value_f=-0.3090169943749477,name="inlet-1/temperature" 1695679077000000000
+file,datatype=string value_s="-0.3090169943749477",name="inlet-3/flow" 1695679077000000000
+file,datatype=int value_i=95i,name="inlet-2/temperature" 1695679077000000000
+file,datatype=bool value_b=true,name="inlet-2/flow" 1695679077000000000
