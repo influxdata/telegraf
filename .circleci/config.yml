@@ -100,7 +100,9 @@ commands:
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
-            equal: [ "386", << parameters.arch >> ]
+            or:
+              - equal: [ "386", << parameters.arch >> ]
+              - equal: [ "windows", << parameters.os >> ]
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
