@@ -158,7 +158,7 @@ require (
 	github.com/redis/go-redis/v9 v9.2.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
-	github.com/robinson/gos7 v0.0.0-20230421131203-d20ac6ca08cd
+	github.com/robinson/gos7 v0.0.0-20231002085231-ebce1a99aa32
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
@@ -214,6 +214,8 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.24.0
 )
+
+require github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
 
 require (
 	cloud.google.com/go v0.110.4 // indirect
@@ -498,5 +500,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.3.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/robinson/gos7 => github.com/srebhan/gos7 v0.0.0-20230807171120-77ee3120c4eb
