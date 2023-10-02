@@ -163,7 +163,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v3 v3.23.8
 	github.com/showwin/speedtest-go v1.6.6
-	github.com/signalfx/golib/v3 v3.3.50
+	github.com/signalfx/golib/v3 v3.3.53
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.6.22
@@ -213,6 +213,8 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.24.0
 )
+
+require github.com/twmb/murmur3 v1.1.7 // indirect
 
 require (
 	cloud.google.com/go v0.110.4 // indirect
