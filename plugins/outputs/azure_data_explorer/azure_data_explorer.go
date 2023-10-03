@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -59,9 +60,7 @@ func (*AzureDataExplorer) SampleConfig() string {
 func (adx *AzureDataExplorer) Connect() error {
 	conn := kusto.NewConnectionStringBuilder(adx.Endpoint).WithDefaultAzureCredential()
 	// Since init is called before connect, we can set the connector details here including the type. This will be used for telemetry and tracing.
-	conn.SetConnectorDetails("Telegraf", "1.0.0", "", "", false, "",
-		kusto.StringPair{Key: "MetricsGrouping", Value: adx.MetricsGrouping},
-		kusto.StringPair{Key: "IngestionType", Value: adx.IngestionType})
+	conn.SetConnectorDetails("Telegraf", internal.ProductToken(), "", "", false, "")
 	client, err := kusto.New(conn)
 	if err != nil {
 		return err
