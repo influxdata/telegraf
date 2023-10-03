@@ -58,6 +58,10 @@ func (*AzureDataExplorer) SampleConfig() string {
 // Initialize the client and the ingestor
 func (adx *AzureDataExplorer) Connect() error {
 	conn := kusto.NewConnectionStringBuilder(adx.Endpoint).WithDefaultAzureCredential()
+	// Since init is called before connect, we can set the connector details here including the type. This will be used for telemetry and tracing.
+	conn.SetConnectorDetails("Telegraf", "1.0.0", "", "", false, "",
+		kusto.StringPair{Key: "MetricsGrouping", Value: adx.MetricsGrouping},
+		kusto.StringPair{Key: "IngestionType", Value: adx.IngestionType})
 	client, err := kusto.New(conn)
 	if err != nil {
 		return err
