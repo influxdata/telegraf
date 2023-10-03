@@ -641,4 +641,29 @@ func TestSerializeBatchArraysMiddle(t *testing.T) {
 
 }
 
+func TestSerializeBatchEmptyArrays(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnumber": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"@0_ipv6Addresses_ipv6Settings": "",
+	}
+
+	m1 := metric.New("TestEmptyArrays", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"testEmptyArrays":[{"device":{"serialnumber":"ABC-123"},"items":[{"ipv6Settings":{"ipv6Addresses":[]}}],"name":"TestEmptyArrays","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
+
+}
+
 

@@ -455,7 +455,7 @@ func walkElement(v interface{}) interface{} {
 
 func walkMap(docMap map[string]interface{}) interface{} {
 	map2array := false
-	for k, _ := range docMap {
+	for k := range docMap {
 		if k[0] == '@' {
 			map2array = true
 		}
@@ -463,11 +463,22 @@ func walkMap(docMap map[string]interface{}) interface{} {
 	}
 	if map2array {
 		// Its an array, converting map values to slice
-		av := make([]interface{}, len(docMap), len(docMap))
+		av := make([]interface{}, len(docMap))
 		idx := 0
 		for _, v := range docMap {
 			av[idx] = walkElement(v)
 			idx++
+		}
+		if len(av) == 1 {
+			// An array with single empty string element is considered an empty array
+			vt := reflect.TypeOf(av[0])
+			if vt.Kind() == reflect.String {
+				if s, ok := av[0].(string); ok {
+					if len(s) == 0 {
+						return make([]interface{}, 0)
+					}
+				}
+			}
 		}
 		return av
 	}
