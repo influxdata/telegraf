@@ -13,7 +13,7 @@ func determineConversion(dtype string, extra int) converterFunc {
 	switch dtype {
 	case "X":
 		return func(buf []byte) interface{} {
-			return (buf[0] & (1 << extra)) != 0
+			return buf[0] != 0
 		}
 	case "B":
 		return func(buf []byte) interface{} {
