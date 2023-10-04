@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -22,16 +24,16 @@ type client struct {
 }
 
 func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
-	var config *rest.Config
+	var clientConfig *rest.Config
 	var err error
 
 	if baseURL == "" {
-		config, err = rest.InClusterConfig()
+		clientConfig, err = rest.InClusterConfig()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		config = &rest.Config{
+		clientConfig = &rest.Config{
 			TLSClientConfig: rest.TLSClientConfig{
 				ServerName: tlsConfig.ServerName,
 				Insecure:   tlsConfig.InsecureSkipVerify,
@@ -44,13 +46,13 @@ func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, t
 		}
 
 		if bearerTokenFile != "" {
-			config.BearerTokenFile = bearerTokenFile
+			clientConfig.BearerTokenFile = bearerTokenFile
 		} else if bearerToken != "" {
-			config.BearerToken = bearerToken
+			clientConfig.BearerToken = bearerToken
 		}
 	}
 
-	c, err := kubernetes.NewForConfig(config)
+	c, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +64,21 @@ func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, t
 	}, nil
 }
 
+func newHTTPClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseTimeout config.Duration) (*http.Client, error) {
+	tlsCfg, err := tlsConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	clientConfig := &rest.Config{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		ContentConfig:   rest.ContentConfig{},
+		Timeout:         time.Duration(responseTimeout),
+		BearerTokenFile: bearerTokenFile,
+	}
+	return rest.HTTPClientFor(clientConfig)
+}
 func (c *client) getDaemonSets(ctx context.Context) (*appsv1.DaemonSetList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -111,6 +128,7 @@ func (c *client) getPersistentVolumeClaims(ctx context.Context) (*corev1.Persist
 func (c *client) getPods(ctx context.Context, nodeName string) (*corev1.PodList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
+
 	var fieldSelector string
 	if nodeName != "" {
 		fieldSelector = "spec.nodeName=" + nodeName

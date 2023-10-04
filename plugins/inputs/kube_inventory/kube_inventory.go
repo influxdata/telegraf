@@ -4,7 +4,9 @@ package kube_inventory
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -28,6 +30,7 @@ const (
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
+	KubeletURL        string          `toml:"url_kubelet"`
 	BearerToken       string          `toml:"bearer_token"`
 	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
@@ -36,13 +39,15 @@ type KubernetesInventory struct {
 	ResourceInclude   []string        `toml:"resource_include"`
 	MaxConfigMapAge   config.Duration `toml:"max_config_map_age"`
 
-	SelectorInclude []string        `toml:"selector_include"`
-	SelectorExclude []string        `toml:"selector_exclude"`
-	NodeName        string          `toml:"node_name"`
-	Log             telegraf.Logger `toml:"-"`
+	SelectorInclude []string `toml:"selector_include"`
+	SelectorExclude []string `toml:"selector_exclude"`
+
+	NodeName string          `toml:"node_name"`
+	Log      telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
-	client *client
+	client     *client
+	httpClient *http.Client
 
 	selectorFilter filter.Filter
 }
@@ -67,7 +72,17 @@ func (ki *KubernetesInventory) Init() error {
 	if err != nil {
 		return err
 	}
+	if ki.ResponseTimeout < config.Duration(time.Second) {
+		ki.ResponseTimeout = config.Duration(time.Second * 5)
+	}
+	// Only create an http client if we have a kubelet url
+	if ki.KubeletURL != "" {
+		ki.httpClient, err = newHTTPClient(ki.ClientConfig, ki.BearerToken, ki.ResponseTimeout)
 
+		if err != nil {
+			ki.Log.Warnf("unable to create http client: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -139,6 +154,28 @@ func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 		m = 1
 	}
 	return int64(f * m)
+}
+func (ki *KubernetesInventory) queryPodsFromKubelet(url string, v interface{}) error {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("creating new http request for url %s failed: %w", url, err)
+	}
+
+	req.Header.Add("Accept", "application/json")
+	resp, err := ki.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error making HTTP request to %q: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return fmt.Errorf("error parsing response: %w", err)
+	}
+
+	return nil
 }
 
 func (ki *KubernetesInventory) createSelectorFilters() error {
