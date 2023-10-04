@@ -10,7 +10,8 @@ import (
 )
 
 func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
-	list, err := ki.client.getPods(ctx)
+	list, err := ki.client.getPods(ctx, ki.NodeName)
+
 	if err != nil {
 		acc.AddError(err)
 		return

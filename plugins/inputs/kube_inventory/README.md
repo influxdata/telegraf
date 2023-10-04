@@ -55,6 +55,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
+  ## Node name to filter to. No filtering by default.
+  # node_name = ""
+
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   ##
   ## Ignored if url is empty and in-cluster config is used.
@@ -112,7 +115,6 @@ list "persistentvolumes" and "nodes". You will then need to make an [aggregated
 ClusterRole][agg] that will eventually be bound to a user or group.
 
 [rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
-
 [agg]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
 
 ```yaml
@@ -365,11 +367,11 @@ tls_key = "/run/telegraf-kubernetes-key"
 
 The node status ready can mean 3 different values.
 
-| Tag value | Corresponding field value |  Meaning |
-| --------- | ------------------------- |  -------
-| ready     | 0                         |  NotReady|
-| ready     | 1                         |  Ready   |
-| ready     | 2                         |  Unknown |
+| Tag value | Corresponding field value | Meaning  |
+| --------- | ------------------------- | -------- |
+| ready     | 0                         | NotReady |
+| ready     | 1                         | Ready    |
+| ready     | 2                         | Unknown  |
 
 ### pv `phase_type`
 
