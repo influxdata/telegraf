@@ -73,6 +73,7 @@ func (ki *KubernetesInventory) Init() error {
 	if ki.ResponseTimeout < config.Duration(time.Second) {
 		ki.ResponseTimeout = config.Duration(time.Second * 5)
 	}
+	// Only create an http client if we have a kubelet url
 	if ki.KubeletURL != "" {
 		ki.httpClient, err = newHTTPClient(ki.ClientConfig, ki.BearerToken, ki.ResponseTimeout)
 
