@@ -193,8 +193,8 @@ github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
 github.com/apache/arrow/go/v12 v12.0.1 h1:JsR2+hzYYjgSUkBSaahpqCetqZMr76djX80fF/DiJbg=
 github.com/apache/arrow/go/v12 v12.0.1/go.mod h1:weuTY7JvTG/HDPtMQxEUp7pU73vkLWMLpY67QwZ/WWw=
-github.com/apache/arrow/go/v13 v13.0.0-20230630125530-5a06b2ec2a8e h1:4qZRsjdW3DLHIzZ+aFW8iT3/CxlPQZPiP2EkLioceqQ=
-github.com/apache/arrow/go/v13 v13.0.0-20230630125530-5a06b2ec2a8e/go.mod h1:W69eByFNO0ZR30q1/7Sr9d83zcVZmF2MiP3fFYAWJOc=
+github.com/apache/arrow/go/v13 v13.0.0 h1:kELrvDQuKZo8csdWYqBQfyi431x6Zs/YJTEgUuSVcWk=
+github.com/apache/arrow/go/v13 v13.0.0/go.mod h1:W69eByFNO0ZR30q1/7Sr9d83zcVZmF2MiP3fFYAWJOc=
 github.com/apache/iotdb-client-go v0.12.2-0.20220722111104-cd17da295b46 h1:28HyUQcr8ZCyCAatR0gkf9PuLr52U2T+66tx5Th0nxI=
 github.com/apache/iotdb-client-go v0.12.2-0.20220722111104-cd17da295b46/go.mod h1:1z89VPGCUGHGqxkPW8p2Haq6WJwrRBKZN+WOjDBiQQM=
 github.com/apache/thrift v0.15.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
