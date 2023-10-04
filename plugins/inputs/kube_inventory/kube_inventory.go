@@ -39,11 +39,11 @@ type KubernetesInventory struct {
 	ResourceInclude   []string        `toml:"resource_include"`
 	MaxConfigMapAge   config.Duration `toml:"max_config_map_age"`
 
-	SelectorInclude []string        `toml:"selector_include"`
-	SelectorExclude []string        `toml:"selector_exclude"`
+	SelectorInclude []string `toml:"selector_include"`
+	SelectorExclude []string `toml:"selector_exclude"`
 
-	NodeName        string          `toml:"node_name"`
-	Log             telegraf.Logger `toml:"-"`
+	NodeName string          `toml:"node_name"`
+	Log      telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
 	client     *client
