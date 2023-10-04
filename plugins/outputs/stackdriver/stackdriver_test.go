@@ -155,6 +155,190 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	require.Equal(t, request.TimeSeries[0].Resource.Labels["mylabel"], "myvalue")
 }
 
+func TestWriteTagsAsResourceLabels(t *testing.T) {
+	expectedResponse := &emptypb.Empty{}
+	mockMetric.err = nil
+	mockMetric.reqs = nil
+	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:              fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace:            "test",
+		ResourceType:         "foo",
+		TagsAsResourceLabels: []string{"job_name"},
+		ResourceLabels: map[string]string{
+			"mylabel": "myvalue",
+		},
+		Log:    testutil.Logger{},
+		client: c,
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"job_name": "cpu",
+				"mytag":    "foo",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(2, 0),
+		),
+		testutil.MustMetric("mem",
+			map[string]string{
+				"job_name": "mem",
+				"mytag":    "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(2, 0),
+		),
+	}
+
+	require.NoError(t, s.Connect())
+	require.NoError(t, s.Write(metrics))
+	require.Len(t, mockMetric.reqs, 1)
+
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 2)
+	for _, ts := range request.TimeSeries {
+		switch ts.Metric.Type {
+		case "test_mem_value/unknown":
+			require.Equal(t, "mem", ts.Resource.Labels["job_name"])
+		case "test_cpu_value/unknown":
+			require.Equal(t, "cpu", ts.Resource.Labels["job_name"])
+		default:
+			require.False(t, true, "Unknown metric type")
+		}
+	}
+}
+
+func TestWriteMetricTypesOfficial(t *testing.T) {
+	expectedResponse := &emptypb.Empty{}
+	mockMetric.err = nil
+	mockMetric.reqs = nil
+	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace: "test",
+		ResourceLabels: map[string]string{
+			"mylabel": "myvalue",
+		},
+		MetricNameFormat: "official",
+		MetricCounter:    []string{"mem_c"},
+		MetricGauge:      []string{"mem_g"},
+		Log:              testutil.Logger{},
+		client:           c,
+	}
+	require.NoError(t, s.Init())
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("mem_g",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(3, 0),
+		),
+		testutil.MustMetric("mem_c",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(3, 0),
+		),
+	}
+
+	require.NoError(t, s.Connect())
+	require.NoError(t, s.Write(metrics))
+	require.Len(t, mockMetric.reqs, 1)
+
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 2)
+	for _, ts := range request.TimeSeries {
+		switch ts.Metric.Type {
+		case "custom.googleapis.com/test_mem_c_value/counter":
+			require.Equal(t, metricpb.MetricDescriptor_CUMULATIVE, ts.MetricKind)
+		case "custom.googleapis.com/test_mem_g_value/gauge":
+			require.Equal(t, metricpb.MetricDescriptor_GAUGE, ts.MetricKind)
+		default:
+			require.False(t, true, "Unknown metric type", ts.Metric.Type)
+		}
+	}
+}
+
+func TestWriteMetricTypesPath(t *testing.T) {
+	expectedResponse := &emptypb.Empty{}
+	mockMetric.err = nil
+	mockMetric.reqs = nil
+	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace: "test",
+		ResourceLabels: map[string]string{
+			"mylabel": "myvalue",
+		},
+		MetricNameFormat: "path",
+		MetricCounter:    []string{"mem_c"},
+		MetricGauge:      []string{"mem_g"},
+		Log:              testutil.Logger{},
+		client:           c,
+	}
+	require.NoError(t, s.Init())
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("mem_g",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(3, 0),
+		),
+		testutil.MustMetric("mem_c",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(3, 0),
+		),
+	}
+
+	require.NoError(t, s.Connect())
+	require.NoError(t, s.Write(metrics))
+	require.Len(t, mockMetric.reqs, 1)
+
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 2)
+	for _, ts := range request.TimeSeries {
+		switch ts.Metric.Type {
+		case "custom.googleapis.com/test/mem_c/value":
+			require.Equal(t, metricpb.MetricDescriptor_CUMULATIVE, ts.MetricKind)
+		case "custom.googleapis.com/test/mem_g/value":
+			require.Equal(t, metricpb.MetricDescriptor_GAUGE, ts.MetricKind)
+		default:
+			require.False(t, true, "Unknown metric type", ts.Metric.Type)
+		}
+	}
+}
+
 func TestWriteAscendingTime(t *testing.T) {
 	expectedResponse := &emptypb.Empty{}
 	mockMetric.err = nil
@@ -685,7 +869,7 @@ func TestStackdriverMetricNamePath(t *testing.T) {
 		time.Now(),
 		telegraf.Gauge,
 	)
-	require.Equal(t, "foo/namespace/uptime/key", s.generateMetricName(m, "key"))
+	require.Equal(t, "foo/namespace/uptime/key", s.generateMetricName(m, m.Type(), "key"))
 }
 
 func TestStackdriverMetricNameOfficial(t *testing.T) {
@@ -774,7 +958,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, s.generateMetricName(tt.metric, tt.key))
+			require.Equal(t, tt.expected, s.generateMetricName(tt.metric, tt.metric.Type(), tt.key))
 		})
 	}
 }

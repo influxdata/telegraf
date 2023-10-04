@@ -1,0 +1,25 @@
+{
+    "timestamp": 1695679077118.0,
+    "metrics": [
+        {
+            "value": -0.3090169943749477,
+            "name": "inlet-1/temperature",
+            "datatype": "float"
+        },
+        {
+            "value": 95,
+            "name": "inlet-2/temperature",
+            "datatype": "int"
+        },
+        {
+            "value": true,
+            "name": "inlet-2/flow",
+            "datatype": "bool"
+        },
+        {
+            "value": "-0.3090169943749477",
+            "name": "inlet-3/flow",
+            "datatype": "string"
+        }
+    ]
+}

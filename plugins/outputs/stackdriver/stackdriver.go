@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -36,10 +37,14 @@ type Stackdriver struct {
 	MetricNameFormat     string            `toml:"metric_name_format"`
 	MetricDataType       string            `toml:"metric_data_type"`
 	TagsAsResourceLabels []string          `toml:"tags_as_resource_label"`
+	MetricCounter        []string          `toml:"metric_counter"`
+	MetricGauge          []string          `toml:"metric_gauge"`
 	Log                  telegraf.Logger   `toml:"-"`
 
-	client       *monitoring.MetricClient
-	counterCache *counterCache
+	client        *monitoring.MetricClient
+	counterCache  *counterCache
+	filterCounter filter.Filter
+	filterGauge   filter.Filter
 }
 
 const (
@@ -76,6 +81,16 @@ func (s *Stackdriver) Init() error {
 	case "source", "double":
 	default:
 		return fmt.Errorf("unrecognized metric data type: %s", s.MetricDataType)
+	}
+
+	var err error
+	s.filterCounter, err = filter.Compile(s.MetricCounter)
+	if err != nil {
+		return fmt.Errorf("creating counter filter failed: %w", err)
+	}
+	s.filterGauge, err = filter.Compile(s.MetricGauge)
+	if err != nil {
+		return fmt.Errorf("creating gauge filter failed: %w", err)
 	}
 
 	return nil
@@ -201,9 +216,18 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 				continue
 			}
 
-			metricKind, err := getStackdriverMetricKind(m.Type())
+			// Set metric types based on user-provided filter
+			metricType := m.Type()
+			if s.filterCounter != nil && s.filterCounter.Match(m.Name()) {
+				metricType = telegraf.Counter
+			}
+			if s.filterGauge != nil && s.filterGauge.Match(m.Name()) {
+				metricType = telegraf.Gauge
+			}
+
+			metricKind, err := getStackdriverMetricKind(metricType)
 			if err != nil {
-				s.Log.Errorf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), m.Type(), f, err)
+				s.Log.Errorf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), metricType, f, err)
 				continue
 			}
 
@@ -223,7 +247,10 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 
 			// Convert any declared tag to a resource label and remove it from
 			// the metric
-			resourceLabels := s.ResourceLabels
+			resourceLabels := make(map[string]string, len(s.ResourceLabels)+len(s.TagsAsResourceLabels))
+			for k, v := range s.ResourceLabels {
+				resourceLabels[k] = v
+			}
 			for _, tag := range s.TagsAsResourceLabels {
 				if val, ok := m.GetTag(tag); ok {
 					resourceLabels[tag] = val
@@ -234,7 +261,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
-					Type:   s.generateMetricName(m, f.Key),
+					Type:   s.generateMetricName(m, metricType, f.Key),
 					Labels: s.getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,
@@ -268,7 +295,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 
 				counterTimeSeries := &monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
-						Type:   s.generateMetricName(m, f.Key) + ":counter",
+						Type:   s.generateMetricName(m, metricType, f.Key) + ":counter",
 						Labels: s.getStackdriverLabels(m.TagList()),
 					},
 					MetricKind: metricpb.MetricDescriptor_CUMULATIVE,
@@ -334,7 +361,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	return nil
 }
 
-func (s *Stackdriver) generateMetricName(m telegraf.Metric, key string) string {
+func (s *Stackdriver) generateMetricName(m telegraf.Metric, metricType telegraf.ValueType, key string) string {
 	if s.MetricNameFormat == "path" {
 		return path.Join(s.MetricTypePrefix, s.Namespace, m.Name(), key)
 	}
@@ -345,7 +372,7 @@ func (s *Stackdriver) generateMetricName(m telegraf.Metric, key string) string {
 	}
 
 	var kind string
-	switch m.Type() {
+	switch metricType {
 	case telegraf.Gauge:
 		kind = "gauge"
 	case telegraf.Untyped:

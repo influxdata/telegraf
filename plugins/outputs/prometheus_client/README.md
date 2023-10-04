@@ -73,7 +73,7 @@ to use them.
 
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
-  # [outputs.prometheus_client.prometheus_metric_types]
+  # [outputs.prometheus_client.metric_types]
   #   counter = []
   #   gauge = []
 ```

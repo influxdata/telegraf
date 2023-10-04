@@ -107,6 +107,12 @@ the error will be rised and the message will not be parsed.
   ## If this were set to "_", then it would be a_0="a", a_1="b".
   # avro_field_separator = "_"
 
+  ## Define handling of union types. Possible values are:
+  ##   flatten  -- add type suffix to field name (default)
+  ##   nullable -- do not modify field name but discard "null" field values
+  ##   any      -- do not modify field name and set field value to the received type
+  # avro_union_mode = "flatten"
+
   ## Default values for given tags: optional
   # tags = { "application": "hermes", "region": "central" }
 
