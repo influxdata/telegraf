@@ -73,12 +73,13 @@ func (ki *KubernetesInventory) Init() error {
 	if ki.ResponseTimeout < config.Duration(time.Second) {
 		ki.ResponseTimeout = config.Duration(time.Second * 5)
 	}
-	ki.httpClient, err = newHTTPClient(ki.ClientConfig, ki.BearerToken, ki.ResponseTimeout)
+	if ki.KubeletURL != "" {
+		ki.httpClient, err = newHTTPClient(ki.ClientConfig, ki.BearerToken, ki.ResponseTimeout)
 
-	if err != nil {
-		ki.Log.Warnf("unable to create http client: %v", err)
+		if err != nil {
+			ki.Log.Warnf("unable to create http client: %v", err)
+		}
 	}
-
 	return nil
 }
 
