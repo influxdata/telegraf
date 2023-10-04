@@ -25,7 +25,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const maxRequestsPerBatch = 20
 const addressRegexp = `^(?P<area>[A-Z]+)(?P<no>[0-9]+)\.(?P<type>[A-Z]+)(?P<start>[0-9]+)(?:\.(?P<extra>.*))?$`
 
 var (
@@ -85,6 +84,7 @@ type S7comm struct {
 	Server          string             `toml:"server"`
 	Rack            int                `toml:"rack"`
 	Slot            int                `toml:"slot"`
+	BatchMaxSize    int                `toml:"pdu_size"`
 	Timeout         config.Duration    `toml:"timeout"`
 	DebugConnection bool               `toml:"debug_connection"`
 	Configs         []metricDefinition `toml:"metric"`
@@ -223,7 +223,7 @@ func (s *S7comm) createRequests() error {
 			current.mappings = append(current.mappings, m)
 
 			// If the batch is full, start a new one
-			if len(current.items) == maxRequestsPerBatch {
+			if len(current.items) == s.BatchMaxSize {
 				s.batches = append(s.batches, current)
 				current = batch{}
 			}
@@ -402,9 +402,10 @@ func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinitio
 func init() {
 	inputs.Add("s7comm", func() telegraf.Input {
 		return &S7comm{
-			Rack:    -1,
-			Slot:    -1,
-			Timeout: config.Duration(10 * time.Second),
+			Rack:         -1,
+			Slot:         -1,
+			BatchMaxSize: 20,
+			Timeout:      config.Duration(10 * time.Second),
 		}
 	})
 }
