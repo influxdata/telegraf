@@ -32,7 +32,7 @@ type SubscribeClient struct {
 	processingCancel context.CancelFunc
 }
 
-func CheckDataChangeFilterParameters(params *input.DataChangeFilter) error {
+func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
 	switch {
 	case params.Trigger != input.Status &&
 		params.Trigger != input.StatusValue &&
