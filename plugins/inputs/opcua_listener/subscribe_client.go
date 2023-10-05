@@ -50,7 +50,7 @@ func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
 	}
 }
 
-func AssignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *input.MonitoringParameters) error {
+func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *input.MonitoringParameters) error {
 	req.RequestedParameters.SamplingInterval = float64(time.Duration(monParams.SamplingInterval) / time.Millisecond)
 
 	if monParams.QueueSize != nil {
