@@ -327,6 +327,7 @@ func (s *SQL) Init() error {
 		"mssql":     "sqlserver",
 		"maria":     "mysql",
 		"postgres":  "pgx",
+		"oracle":    "oracle",
 	}
 	s.driverName = s.Driver
 	if driver, ok := aliases[s.Driver]; ok {
