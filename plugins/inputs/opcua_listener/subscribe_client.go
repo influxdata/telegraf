@@ -62,7 +62,7 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 	}
 
 	if monParams.DataChangeFilter != nil {
-		if err := CheckDataChangeFilterParameters(monParams.DataChangeFilter); err != nil {
+		if err := checkDataChangeFilterParameters(monParams.DataChangeFilter); err != nil {
 			return fmt.Errorf(err.Error()+", node '%s'", req.ItemToMonitor.NodeID)
 		}
 
