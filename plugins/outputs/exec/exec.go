@@ -34,7 +34,6 @@ type Exec struct {
 
 	runner     Runner
 	serializer serializers.Serializer
-	outBuffer  bytes.Buffer
 }
 
 func (*Exec) SampleConfig() string {
@@ -64,7 +63,6 @@ func (e *Exec) Close() error {
 
 // Write writes the metrics to the configured command.
 func (e *Exec) Write(metrics []telegraf.Metric) error {
-	e.outBuffer.Reset()
 	var buffer bytes.Buffer
 	if e.UseBatchFormat {
 		serializedMetrics, err := e.serializer.SerializeBatch(metrics)
@@ -77,7 +75,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
-		return e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer, &e.outBuffer)
+		return e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer)
 	}
 	errs := make([]error, 0, len(metrics))
 	for _, metric := range metrics {
@@ -88,7 +86,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 		buffer.Reset()
 		buffer.Write(serializedMetric)
 
-		err = e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer, &e.outBuffer)
+		err = e.runner.Run(time.Duration(e.Timeout), e.Command, e.Environment, &buffer)
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -96,7 +94,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 
 // Runner provides an interface for running exec.Cmd.
 type Runner interface {
-	Run(time.Duration, []string, []string, io.Reader, io.Writer) error
+	Run(time.Duration, []string, []string, io.Reader) error
 }
 
 // CommandRunner runs a command with the ability to kill the process before the timeout.
@@ -106,13 +104,12 @@ type CommandRunner struct {
 }
 
 // Run runs the command.
-func (c *CommandRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader, outBuffer io.Writer) error {
+func (c *CommandRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader) error {
 	cmd := exec.Command(command[0], command[1:]...)
 	if len(environments) > 0 {
 		cmd.Env = append(os.Environ(), environments...)
 	}
 	cmd.Stdin = buffer
-	cmd.Stdout = outBuffer
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 

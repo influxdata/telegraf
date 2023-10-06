@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/influxdata/telegraf/metric"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -22,12 +23,37 @@ import (
 
 var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
 
+type MockRunner struct {
+	runs []int
+}
+
+// Run runs the command.
+func (c *MockRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader) error {
+	parser := influxParser.NewStreamParser(buffer)
+	numMetrics := 0
+
+	for {
+		_, err := parser.Next()
+		if err != nil {
+			if errors.Is(err, influxParser.EOF) {
+				break // stream ended
+			}
+			continue
+		}
+		numMetrics++
+	}
+
+	c.runs = append(c.runs, numMetrics)
+	return nil
+}
+
 func TestExternalOutputBatch(t *testing.T) {
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
+	runner := MockRunner{}
 
 	e := &Exec{
 		Command:        []string{exe, "-testoutput"},
@@ -36,9 +62,8 @@ func TestExternalOutputBatch(t *testing.T) {
 		UseBatchFormat: true,
 		serializer:     serializer,
 		Log:            testutil.Logger{},
+		runner:         &runner,
 	}
-
-	require.NoError(t, e.Init())
 
 	m := metric.New(
 		"cpu",
@@ -50,13 +75,14 @@ func TestExternalOutputBatch(t *testing.T) {
 	require.NoError(t, e.Connect())
 	require.NoError(t, e.Write([]telegraf.Metric{m, m}))
 	// Make sure it executed the command once, with 2 metrics
-	require.Equal(t, e.outBuffer.String(), "2\n")
+	require.Equal(t, []int{2}, runner.runs)
 	require.NoError(t, e.Close())
 }
 
 func TestExternalOutputNoBatch(t *testing.T) {
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
+	runner := MockRunner{}
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -68,9 +94,8 @@ func TestExternalOutputNoBatch(t *testing.T) {
 		UseBatchFormat: false,
 		serializer:     serializer,
 		Log:            testutil.Logger{},
+		runner:         &runner,
 	}
-
-	require.NoError(t, e.Init())
 
 	m := metric.New(
 		"cpu",
@@ -82,7 +107,7 @@ func TestExternalOutputNoBatch(t *testing.T) {
 	require.NoError(t, e.Connect())
 	require.NoError(t, e.Write([]telegraf.Metric{m, m}))
 	// Make sure it executed the command twice, both with a single metric
-	require.Equal(t, e.outBuffer.String(), "1\n1\n")
+	require.Equal(t, []int{1, 1}, runner.runs)
 	require.NoError(t, e.Close())
 }
 
@@ -191,7 +216,6 @@ func TestMain(m *testing.M) {
 func runOutputConsumerProgram() {
 	metricName := os.Getenv("METRIC_NAME")
 	parser := influxParser.NewStreamParser(os.Stdin)
-	numMetrics := 0
 
 	for {
 		m, err := parser.Next()
@@ -209,7 +233,6 @@ func runOutputConsumerProgram() {
 			//nolint:revive // error code is important for this "test"
 			os.Exit(1)
 		}
-		numMetrics++
 
 		expected := testutil.MustMetric(metricName,
 			map[string]string{"name": "cpu1"},
@@ -223,5 +246,4 @@ func runOutputConsumerProgram() {
 			os.Exit(1)
 		}
 	}
-	fmt.Fprintf(os.Stdout, "%d\n", numMetrics)
 }
