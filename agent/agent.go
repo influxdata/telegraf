@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"log"
 	"os"
 	"runtime"
@@ -265,9 +266,17 @@ func (a *Agent) initPersister() error {
 	}
 
 	for _, processor := range a.Config.Processors {
-		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
-		if !ok {
-			continue
+		var plugin telegraf.StatefulPlugin
+		if p, ok := processor.Processor.(processors.HasUnwrap); ok {
+			plugin, ok = p.Unwrap().(telegraf.StatefulPlugin)
+			if !ok {
+				continue
+			}
+		} else {
+			plugin, ok = processor.Processor.(telegraf.StatefulPlugin)
+			if !ok {
+				continue
+			}
 		}
 
 		name := processor.LogName()
