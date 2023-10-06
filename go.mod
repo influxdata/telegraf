@@ -214,6 +214,8 @@ require (
 	modernc.org/sqlite v1.24.0
 )
 
+require github.com/redis/go-redis/v9 v9.2.1 // indirect
+
 require (
 	cloud.google.com/go v0.110.4 // indirect
 	cloud.google.com/go/compute v1.22.0 // indirect
