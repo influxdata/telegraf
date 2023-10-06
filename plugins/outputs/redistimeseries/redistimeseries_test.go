@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,7 +28,9 @@ func TestConnectAndWrite(t *testing.T) {
 
 	address := testutil.GetLocalHost() + ":6379"
 	redis := &RedisTimeSeries{
-		Address: address,
+		Address:             address,
+		ConvertStringFields: true,
+		Timeout:             config.Duration(10 * time.Second),
 	}
 
 	// Verify that we can connect to the RedisTimeSeries server
@@ -52,7 +55,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 	redis := &RedisTimeSeries{
-		Address: fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+		Address:             fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
+		ConvertStringFields: true,
+		Timeout:             config.Duration(10 * time.Second),
 	}
 	// Verify that we can connect to the RedisTimeSeries server
 	require.NoError(t, redis.Connect())
@@ -68,7 +73,10 @@ func TestCases(t *testing.T) {
 
 	// Register the plugin
 	outputs.Add("redistimeseries", func() telegraf.Output {
-		return &RedisTimeSeries{}
+		return &RedisTimeSeries{
+			ConvertStringFields: true,
+			Timeout:             config.Duration(10 * time.Second),
+		}
 	})
 
 	for _, f := range folders {
@@ -118,10 +126,7 @@ func TestCases(t *testing.T) {
 				Image:        "redis/redis-stack-server:latest",
 				ExposedPorts: []string{servicePort},
 				Env:          map[string]string{},
-				WaitingFor: wait.ForAll(
-					//					wait.ForLog("] mode [basic] - valid"),
-					wait.ForListeningPort(nat.Port(servicePort)),
-				),
+				WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 			}
 			require.NoError(t, container.Start(), "failed to start container")
 			defer container.Terminate()
@@ -159,8 +164,23 @@ func getAllRecords(address string) []string {
 	var records []string
 	keys := client.Keys(ctx, "*")
 	for _, key := range keys.Val() {
-		result := client.TSGet(ctx, key)
-		records = append(records, fmt.Sprintf("%s: %d=%f", result.Args()[1], result.Val().Timestamp, result.Val().Value))
+		info := client.TSInfo(ctx, key)
+		var labels string
+		if l, found := info.Val()["labels"]; found {
+			lmap := l.(map[interface{}]interface{})
+			collection := make([]string, 0, len(lmap))
+			for k, v := range lmap {
+				collection = append(collection, fmt.Sprintf("%v=%v", k, v))
+			}
+			if len(collection) > 0 {
+				labels = " " + strings.Join(collection, " ")
+			}
+		}
+
+		result := client.TSRange(ctx, key, 0, int(time.Now().UnixMilli()))
+		for _, point := range result.Val() {
+			records = append(records, fmt.Sprintf("%s: %f %d%s", result.Args()[1], point.Value, point.Timestamp, labels))
+		}
 	}
 
 	return records
