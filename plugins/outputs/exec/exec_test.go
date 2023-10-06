@@ -3,11 +3,8 @@ package exec
 import (
 	"bytes"
 	"errors"
-	"flag"
-	"fmt"
 	"github.com/influxdata/telegraf/metric"
 	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -51,14 +48,9 @@ func TestExternalOutputBatch(t *testing.T) {
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
-	exe, err := os.Executable()
-	require.NoError(t, err)
 	runner := MockRunner{}
 
 	e := &Exec{
-		Command:        []string{exe, "-testoutput"},
-		Environment:    []string{"PLUGINS_OUTPUTS_EXEC_MODE=application", "METRIC_NAME=cpu"},
-		Timeout:        3000000000,
 		UseBatchFormat: true,
 		serializer:     serializer,
 		Log:            testutil.Logger{},
@@ -84,13 +76,7 @@ func TestExternalOutputNoBatch(t *testing.T) {
 	require.NoError(t, serializer.Init())
 	runner := MockRunner{}
 
-	exe, err := os.Executable()
-	require.NoError(t, err)
-
 	e := &Exec{
-		Command:        []string{exe, "-testoutput"},
-		Environment:    []string{"PLUGINS_OUTPUTS_EXEC_MODE=application", "METRIC_NAME=cpu"},
-		Timeout:        3000000000,
 		UseBatchFormat: false,
 		serializer:     serializer,
 		Log:            testutil.Logger{},
@@ -197,53 +183,4 @@ func TestExecDocs(t *testing.T) {
 
 	e = &Exec{runner: &CommandRunner{}}
 	require.NoError(t, e.Close())
-}
-
-var testoutput = flag.Bool("testoutput", false,
-	"if true, act like line input program instead of test")
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-	runMode := os.Getenv("PLUGINS_OUTPUTS_EXEC_MODE")
-	if *testoutput && runMode == "application" {
-		runOutputConsumerProgram()
-		os.Exit(0)
-	}
-	code := m.Run()
-	os.Exit(code)
-}
-
-func runOutputConsumerProgram() {
-	metricName := os.Getenv("METRIC_NAME")
-	parser := influxParser.NewStreamParser(os.Stdin)
-
-	for {
-		m, err := parser.Next()
-		if err != nil {
-			if errors.Is(err, influxParser.EOF) {
-				break // stream ended
-			}
-			var parseErr *influxParser.ParseError
-			if errors.As(err, &parseErr) {
-				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
-				//nolint:revive // error code is important for this "test"
-				os.Exit(1)
-			}
-			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
-			//nolint:revive // error code is important for this "test"
-			os.Exit(1)
-		}
-
-		expected := testutil.MustMetric(metricName,
-			map[string]string{"name": "cpu1"},
-			map[string]interface{}{"idle": 50, "sys": 30},
-			now,
-		)
-
-		if !testutil.MetricEqual(expected, m) {
-			fmt.Fprintf(os.Stderr, "metric doesn't match expected\n")
-			//nolint:revive // error code is important for this "test"
-			os.Exit(1)
-		}
-	}
 }
