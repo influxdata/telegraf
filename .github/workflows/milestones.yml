@@ -21,7 +21,7 @@ jobs:
         id: assign-milestone
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          bugfix-labels: 'fix,chore,docs,dependencies'
+          bugfix-labels: 'fix,chore,docs,test'
           minor-labels: 'feat'
           major-labels: 'breaking change'
           fallback: 'minor'
