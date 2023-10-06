@@ -66,6 +66,10 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 }
 
 func TestCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	const servicePort = "6379"
 	// Get all testcase directories
 	folders, err := os.ReadDir("testcases")
