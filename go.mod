@@ -155,6 +155,7 @@ require (
 	github.com/prometheus/procfs v0.11.0
 	github.com/prometheus/prometheus v0.46.0
 	github.com/rabbitmq/amqp091-go v1.8.1
+	github.com/redis/go-redis/v9 v9.2.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/robinson/gos7 v0.0.0-20230421131203-d20ac6ca08cd
@@ -213,8 +214,6 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.24.0
 )
-
-require github.com/redis/go-redis/v9 v9.2.1 // indirect
 
 require (
 	cloud.google.com/go v0.110.4 // indirect
