@@ -609,17 +609,17 @@ func (a *Agent) gatherOnce(
 // processors.  If an error occurs any started processors are Stopped.
 func (a *Agent) startProcessors(
 	dst chan<- telegraf.Metric,
-	processors models.RunningProcessors,
+	runningProcessors models.RunningProcessors,
 ) (chan<- telegraf.Metric, []*processorUnit, error) {
 	var src chan telegraf.Metric
-	units := make([]*processorUnit, 0, len(processors))
+	units := make([]*processorUnit, 0, len(runningProcessors))
 	// The processor chain is constructed from the output side starting from
 	// the output(s) and walking the way back to the input(s). However, the
 	// processor-list is sorted by order and/or by appearance in the config,
 	// i.e. in input-to-output direction. Therefore, reverse the processor list
 	// to reflect the order/definition order in the processing chain.
-	for i := len(processors) - 1; i >= 0; i-- {
-		processor := processors[i]
+	for i := len(runningProcessors) - 1; i >= 0; i-- {
+		processor := runningProcessors[i]
 
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)
