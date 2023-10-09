@@ -40,7 +40,7 @@ var (
 	}
 	// Word-length mapping taken from https://github.com/robinson/gos7/blob/master/client.go
 	wordLenMap = map[string]int{
-		"X":  0x01, // Bit
+		"X":  0x02, // Bit | Query as byte, as bit address can't be specified in S7DataItem
 		"B":  0x02, // Byte (8 bit)
 		"C":  0x03, // Char (8 bit)
 		"S":  0x03, // String (8 bit)
