@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 // fileService is responsible for handling operations on files.
@@ -21,7 +23,7 @@ type fileService interface {
 	getStringsMatchingPatternOnPath(path string) ([]string, error)
 	readFile(path string) ([]byte, error)
 	readFileToFloat64(reader io.Reader) (float64, int64, error)
-	readFileAtOffsetToUint64(reader io.ReaderAt, offset int64) (uint64, error)
+	readFileAtOffsetToUint64(reader io.ReaderAt, offset int64, timeout config.Duration) (uint64, error)
 }
 
 type fileServiceImpl struct {
@@ -133,19 +135,43 @@ func (fs *fileServiceImpl) readFileToFloat64(reader io.Reader) (float64, int64, 
 }
 
 // readFileAtOffsetToUint64 reads 8 bytes from passed file at given offset.
-func (fs *fileServiceImpl) readFileAtOffsetToUint64(reader io.ReaderAt, offset int64) (uint64, error) {
+func (fs *fileServiceImpl) readFileAtOffsetToUint64(reader io.ReaderAt, offset int64, timeout config.Duration) (uint64, error) {
 	buffer := make([]byte, 8)
 
 	if offset == 0 {
 		return 0, fmt.Errorf("file offset %d should not be 0", offset)
 	}
 
-	_, err := reader.ReadAt(buffer, offset)
-	if err != nil {
-		return 0, fmt.Errorf("error on reading file at offset %d: %w", offset, err)
+	if timeout == 0 {
+		_, err := reader.ReadAt(buffer, offset)
+		if err != nil {
+			return 0, fmt.Errorf("error on reading file at offset %d: %w", offset, err)
+		}
+		return binary.LittleEndian.Uint64(buffer), nil
 	}
 
-	return binary.LittleEndian.Uint64(buffer), nil
+	value := make(chan uint64)
+	errs := make(chan error)
+
+	go func() {
+		_, readErr := reader.ReadAt(buffer, offset)
+		if readErr != nil {
+			errs <- readErr
+		} else {
+			value <- binary.LittleEndian.Uint64(buffer)
+		}
+		close(value)
+		close(errs)
+	}()
+
+	select {
+	case val := <-value:
+		return val, nil
+	case err := <-errs:
+		return 0, fmt.Errorf("error on reading file at offset %d: %w", offset, err)
+	case <-time.After(time.Duration(timeout)):
+		return 0, fmt.Errorf("timeout reading file at offset %d", offset)
+	}
 }
 
 func newFileService() *fileServiceImpl {

@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 )
 
 const (
@@ -62,6 +63,7 @@ type msrServiceImpl struct {
 	msrOffsets   []int64
 	fs           fileService
 	log          telegraf.Logger
+	readTimeout  config.Duration
 }
 
 func (m *msrServiceImpl) getCPUCoresData() map[string]*msrData {
@@ -187,7 +189,7 @@ func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) 
 		return 0, fmt.Errorf("incorect name of MSR %s", msr)
 	}
 
-	value, err := m.fs.readFileAtOffsetToUint64(msrFile, msrAddress)
+	value, err := m.fs.readFileAtOffsetToUint64(msrFile, msrAddress, m.readTimeout)
 	if err != nil {
 		return 0, err
 	}
@@ -256,7 +258,7 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 }
 
 func (m *msrServiceImpl) readValueFromFileAtOffset(ctx context.Context, ch chan uint64, reader io.ReaderAt, offset int64) error {
-	value, err := m.fs.readFileAtOffsetToUint64(reader, offset)
+	value, err := m.fs.readFileAtOffsetToUint64(reader, offset, m.readTimeout)
 	if err != nil {
 		return err
 	}
@@ -309,10 +311,11 @@ func (m *msrServiceImpl) setCPUCores() error {
 	return nil
 }
 
-func newMsrServiceWithFs(logger telegraf.Logger, fs fileService) *msrServiceImpl {
+func newMsrServiceWithFs(logger telegraf.Logger, fs fileService, readTimeout config.Duration) *msrServiceImpl {
 	msrService := &msrServiceImpl{
-		fs:  fs,
-		log: logger,
+		fs:          fs,
+		log:         logger,
+		readTimeout: readTimeout,
 	}
 	err := msrService.setCPUCores()
 	if err != nil {

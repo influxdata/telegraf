@@ -5,6 +5,7 @@ package intel_powerstat
 import (
 	"context"
 	"errors"
+	"github.com/influxdata/telegraf/config"
 	"strings"
 	"testing"
 
@@ -26,7 +27,7 @@ func TestReadDataFromMsrPositive(t *testing.T) {
 	methodCallNumberForFirstValue := len(msr.msrOffsets) * len(cores)
 	methodCallNumberForSecondValue := methodCallNumberForFirstValue * 2
 
-	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
+	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything, mock.Anything).
 		Return(firstValue, nil).Times(methodCallNumberForFirstValue)
 	for _, core := range cores {
 		require.NoError(t, msr.readDataFromMsr(core, nil))
@@ -34,7 +35,7 @@ func TestReadDataFromMsrPositive(t *testing.T) {
 	fsMock.AssertNumberOfCalls(t, "readFileAtOffsetToUint64", methodCallNumberForFirstValue)
 	verifyCPUCoresData(cores, t, msr, firstValue, false, 0)
 
-	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
+	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything, mock.Anything).
 		Return(secondValue, nil).Times(methodCallNumberForFirstValue)
 	for _, core := range cores {
 		require.NoError(t, msr.readDataFromMsr(core, nil))
@@ -62,10 +63,10 @@ func TestReadDataFromMsrNegative(t *testing.T) {
 	methodCallNumberPerCore := len(msr.msrOffsets)
 
 	// Normal execution for first core.
-	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
+	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything, mock.Anything).
 		Return(firstValue, nil).Times(methodCallNumberPerCore).
 		// Fail to read file for second core.
-		On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
+		On("readFileAtOffsetToUint64", mock.Anything, mock.Anything, mock.Anything).
 		Return(uint64(0), errors.New("error reading file")).Times(methodCallNumberPerCore)
 
 	require.NoError(t, msr.readDataFromMsr(cores[0], nil))
@@ -82,11 +83,11 @@ func TestReadValueFromFileAtOffset(t *testing.T) {
 
 	prepareTestData(fsMock, cores, msr, t)
 
-	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
+	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything, mock.Anything).
 		Return(zero, errors.New("error reading file")).Once()
 	require.Error(t, msr.readValueFromFileAtOffset(ctx, testChannel, nil, 0))
 
-	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
+	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything, mock.Anything).
 		Return(zero, nil).Once()
 	require.NoError(t, msr.readValueFromFileAtOffset(ctx, testChannel, nil, 0))
 	require.Equal(t, zero, <-testChannel)
@@ -182,7 +183,8 @@ func getMsrServiceWithMockedFs() (*msrServiceImpl, *mockFileService) {
 	fsMock := &mockFileService{}
 	fsMock.On("getStringsMatchingPatternOnPath", mock.Anything).
 		Return(cores, nil).Once()
-	msr := newMsrServiceWithFs(logger, fsMock)
+	timeout := config.Duration(0)
+	msr := newMsrServiceWithFs(logger, fsMock, timeout)
 
 	return msr, fsMock
 }
