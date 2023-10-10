@@ -254,6 +254,7 @@ func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 	msg, ok := m.messages[track.ID()]
 	if !ok {
 		m.Log.Errorf("could not mark message delivered: %d", track.ID())
+		m.Log.Debugf("messages on lookup: %v", m.messages)
 		return
 	}
 
@@ -328,6 +329,7 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	id := m.acc.AddTrackingMetricGroup(metrics)
 	m.messagesMutex.Lock()
 	m.messages[id] = msg
+	m.Log.Debugf("messages after adding: %v", m.messages)
 	m.messagesMutex.Unlock()
 }
 func (m *MQTTConsumer) Stop() {
