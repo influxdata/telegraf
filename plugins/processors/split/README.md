@@ -54,11 +54,12 @@ metric to the new metric.
 
 ```toml
 [[processors.split]]
-  [[processors.split.metric]]
+  drop_original = true
+  [[processors.split.template]]
     name = "sensor1"
     tags = [ "*" ]
     fields = [ "sensor1*" ]
-  [[processors.split.metric]]
+  [[processors.split.template]]
     name = "sensor2"
     tags = [ "*" ]
     fields = [ "sensor2*" ]
