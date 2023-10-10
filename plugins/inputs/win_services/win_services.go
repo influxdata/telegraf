@@ -69,7 +69,11 @@ func (m *WinSvcMgr) Disconnect() error {
 }
 
 func (m *WinSvcMgr) OpenService(name string) (WinService, error) {
-	h, err := windows.OpenService(m.realMgr.Handle, syscall.StringToUTF16Ptr(name), windows.GENERIC_READ)
+	serviceName, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert service name %q: %w", name, err)
+	}
+	h, err := windows.OpenService(m.realMgr.Handle, serviceName, windows.GENERIC_READ)
 	if err != nil {
 		return nil, err
 	}
