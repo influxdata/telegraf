@@ -377,7 +377,6 @@ following works:
 - golang.zx2c4.com/wireguard/wgctrl [MIT License](https://github.com/WireGuard/wgctrl-go/blob/master/LICENSE.md)
 - gonum.org/v1/gonum [BSD 3-Clause "New" or "Revised" License](https://github.com/gonum/gonum/blob/master/LICENSE)
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
-- google.golang.org/appengine [Apache License 2.0](https://github.com/golang/appengine/blob/master/LICENSE)
 - google.golang.org/genproto [Apache License 2.0](https://github.com/google/go-genproto/blob/master/LICENSE)
 - google.golang.org/genproto/googleapis/api [Apache License 2.0](https://pkg.go.dev/google.golang.org/genproto/googleapis/api?tab=licenses)
 - google.golang.org/genproto/googleapis/rpc [Apache License 2.0](https://pkg.go.dev/google.golang.org/genproto/googleapis/rpc?tab=licenses)
