@@ -2,7 +2,6 @@ package gnmi
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -40,14 +39,17 @@ func newTagStore(subs []TagSubscription) *tagStore {
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values map[string]interface{}, tags map[string]string) error {
+func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values []updateField, tags map[string]string) error {
 	switch subscription.Match {
 	case "unconditional":
-		for k, v := range values {
-			tagName := subscription.Name + "/" + filepath.Base(k)
-			sv, err := internal.ToString(v)
+		for _, f := range values {
+			tagName := subscription.Name
+			if len(f.path.Elem) > 0 {
+				tagName += "/" + f.path.Elem[len(f.path.Elem)-1].Name
+			}
+			sv, err := internal.ToString(f.value)
 			if err != nil {
-				return fmt.Errorf("conversion error for %v: %w", v, err)
+				return fmt.Errorf("conversion error for %v: %w", f.value, err)
 			}
 			if sv == "" {
 				delete(s.unconditional, tagName)
@@ -68,11 +70,14 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 		}
 
 		// Add the values
-		for k, v := range values {
-			tagName := subscription.Name + "/" + filepath.Base(k)
-			sv, err := internal.ToString(v)
+		for _, f := range values {
+			tagName := subscription.Name
+			if len(f.path.Elem) > 0 {
+				tagName += "/" + f.path.Elem[len(f.path.Elem)-1].Name
+			}
+			sv, err := internal.ToString(f.value)
 			if err != nil {
-				return fmt.Errorf("conversion error for %v: %w", v, err)
+				return fmt.Errorf("conversion error for %v: %w", f.value, err)
 			}
 			if sv == "" {
 				delete(s.names[key], tagName)
@@ -92,11 +97,14 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 		}
 
 		// Add the values
-		for k, v := range values {
-			tagName := subscription.Name + "/" + filepath.Base(k)
-			sv, err := internal.ToString(v)
+		for _, f := range values {
+			tagName := subscription.Name
+			if len(f.path.Elem) > 0 {
+				tagName += "/" + f.path.Elem[len(f.path.Elem)-1].Name
+			}
+			sv, err := internal.ToString(f.value)
 			if err != nil {
-				return fmt.Errorf("conversion error for %v: %w", v, err)
+				return fmt.Errorf("conversion error for %v: %w", f.value, err)
 			}
 			if sv == "" {
 				delete(s.elements.tags[key], tagName)
@@ -141,7 +149,7 @@ func (s *tagStore) lookup(path *gnmiLib.Path, metricTags map[string]string) map[
 }
 
 func (s *tagStore) getElementsKeys(path *gnmiLib.Path, elements []string) (string, bool) {
-	keyElements := pathKeys(path)
+	keyElements := extractPathKeys(path)
 
 	// Search for the required path elements and collect a ordered
 	// list of their values to in the form

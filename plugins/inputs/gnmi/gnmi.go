@@ -5,8 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -24,9 +22,6 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
-
-// Regular expression to see if a path element contains an origin
-var originPattern = regexp.MustCompile(`^([\w-_]+):`)
 
 // Define the warning to show if we cannot get a metric name.
 const emptyNameWarning = `Got empty metric-name for response, usually indicating
@@ -364,23 +359,18 @@ func (s *Subscription) buildFullPath(c *GNMI) error {
 
 func (s *Subscription) buildAlias(aliases map[string]string) error {
 	// Build the subscription path without keys
-	gnmiPath, err := parsePath(s.Origin, s.Path, "")
+	path, err := parsePath(s.Origin, s.Path, "")
 	if err != nil {
 		return err
 	}
-
-	origin, spath, _, err := handlePath(gnmiPath, nil, nil, "")
-	if err != nil {
-		return fmt.Errorf("handling path failed: %w", err)
-	}
+	spath := pathToStringNoKeys(path)
 
 	// If the user didn't provide a measurement name, use last path element
 	name := s.Name
-	if name == "" {
-		name = path.Base(spath)
+	if name == "" && len(path.Elem) > 0 {
+		name = path.Elem[len(path.Elem)-1].Name
 	}
 	if name != "" {
-		aliases[origin+spath] = name
 		aliases[spath] = name
 	}
 	return nil

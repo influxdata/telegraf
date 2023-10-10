@@ -2,15 +2,41 @@ package gnmi
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
-	"math"
+	"regexp"
 	"strings"
 
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// Regular expression to see if a path element contains an origin
+var originPattern = regexp.MustCompile(`^([\w-_]+):`)
+
+// Convert a string to a path
+func jsonKeyToPath(p string) *gnmiLib.Path {
+	elems := strings.Split(strings.TrimSpace(p), "/")
+
+	path := &gnmiLib.Path{
+		Elem: make([]*gnmiLib.PathElem, 0, len(elems)),
+	}
+
+	for _, e := range elems {
+		path.Elem = append(path.Elem, &gnmiLib.PathElem{Name: e})
+	}
+	normalizePath(path)
+
+	return path
+}
+
+// Normalize a path to remove special device oddities
+func normalizePath(path *gnmiLib.Path) {
+	if path.Origin == "" && len(path.Elem) > 0 {
+		groups := originPattern.FindStringSubmatch(path.Elem[0].Name)
+		if len(groups) == 2 {
+			path.Origin = groups[1]
+			path.Elem[0].Name = path.Elem[0].Name[len(groups[1])+1:]
+		}
+	}
+}
 
 // Parse path to path-buffer and tag-field
 //
@@ -20,13 +46,7 @@ func handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, aliases map[stri
 
 	// Some devices do report the origin in the first path element
 	// so try to find out if this is the case.
-	if gnmiPath.Origin == "" && len(gnmiPath.Elem) > 0 {
-		groups := originPattern.FindStringSubmatch(gnmiPath.Elem[0].Name)
-		if len(groups) == 2 {
-			gnmiPath.Origin = groups[1]
-			gnmiPath.Elem[0].Name = gnmiPath.Elem[0].Name[len(groups[1])+1:]
-		}
-	}
+	normalizePath(gnmiPath)
 
 	// Prefix with origin
 	if len(gnmiPath.Origin) > 0 {
@@ -81,7 +101,7 @@ func equalPathNoKeys(a *gnmiLib.Path, b *gnmiLib.Path) bool {
 	return true
 }
 
-func pathKeys(gpath *gnmiLib.Path) []*gnmiLib.PathElem {
+func extractPathKeys(gpath *gnmiLib.Path) []*gnmiLib.PathElem {
 	var newPath []*gnmiLib.PathElem
 	for _, elem := range gpath.Elem {
 		if elem.Key != nil {
@@ -91,64 +111,50 @@ func pathKeys(gpath *gnmiLib.Path) []*gnmiLib.PathElem {
 	return newPath
 }
 
-func pathWithPrefix(prefix *gnmiLib.Path, gpath *gnmiLib.Path) *gnmiLib.Path {
+func joinPaths(prefix *gnmiLib.Path, gpath *gnmiLib.Path) *gnmiLib.Path {
 	if prefix == nil {
 		return gpath
 	}
-	fullPath := new(gnmiLib.Path)
-	fullPath.Origin = prefix.Origin
-	fullPath.Target = prefix.Target
-	fullPath.Elem = append(prefix.Elem, gpath.Elem...)
-	return fullPath
+
+	return &gnmiLib.Path{
+		Origin: prefix.Origin,
+		Target: prefix.Target,
+		Elem:   append(prefix.Elem, gpath.Elem...),
+	}
 }
 
-func gnmiToFields(name string, updateVal *gnmiLib.TypedValue) (map[string]interface{}, error) {
-	var value interface{}
-	var jsondata []byte
-
-	// Make sure a value is actually set
-	if updateVal == nil || updateVal.Value == nil {
-		return nil, nil
-	}
-
-	switch val := updateVal.Value.(type) {
-	case *gnmiLib.TypedValue_AsciiVal:
-		value = val.AsciiVal
-	case *gnmiLib.TypedValue_BoolVal:
-		value = val.BoolVal
-	case *gnmiLib.TypedValue_BytesVal:
-		value = val.BytesVal
-	case *gnmiLib.TypedValue_DoubleVal:
-		value = val.DoubleVal
-	case *gnmiLib.TypedValue_DecimalVal:
-		//nolint:staticcheck // to maintain backward compatibility with older gnmi specs
-		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
-	case *gnmiLib.TypedValue_FloatVal:
-		//nolint:staticcheck // to maintain backward compatibility with older gnmi specs
-		value = val.FloatVal
-	case *gnmiLib.TypedValue_IntVal:
-		value = val.IntVal
-	case *gnmiLib.TypedValue_StringVal:
-		value = val.StringVal
-	case *gnmiLib.TypedValue_UintVal:
-		value = val.UintVal
-	case *gnmiLib.TypedValue_JsonIetfVal:
-		jsondata = val.JsonIetfVal
-	case *gnmiLib.TypedValue_JsonVal:
-		jsondata = val.JsonVal
-	}
-
-	fields := make(map[string]interface{})
-	if value != nil {
-		fields[name] = value
-	} else if jsondata != nil {
-		if err := json.Unmarshal(jsondata, &value); err != nil {
-			return nil, fmt.Errorf("failed to parse JSON value: %w", err)
-		}
-		flattener := jsonparser.JSONFlattener{Fields: fields}
-		if err := flattener.FullFlattenJSON(name, value, true, true); err != nil {
-			return nil, fmt.Errorf("failed to flatten JSON: %w", err)
+func pathToStringNoKeys(p *gnmiLib.Path) string {
+	segments := make([]string, 0, len(p.Elem))
+	for _, e := range p.Elem {
+		if e.Name != "" {
+			segments = append(segments, e.Name)
 		}
 	}
-	return fields, nil
+	out := strings.Join(segments, "/")
+	if p.Origin != "" {
+		out = p.Origin + ":" + out
+	}
+	return out
+}
+
+func isSubPath(path, sub *gnmiLib.Path) bool {
+	// If both set an origin it has to match. Otherwise we ignore the origin
+	if path.Origin != "" && sub.Origin != "" && path.Origin != sub.Origin {
+		return false
+	}
+
+	// The "parent" path should have the same length or be shorter than the
+	// sub-path to have a chance to match
+	if len(path.Elem) > len(sub.Elem) {
+		return false
+	}
+
+	// Compare the elements and exit if we find a mismatch
+	for i, p := range path.Elem {
+		if p.Name != sub.Elem[i].Name {
+			return false
+		}
+	}
+
+	return true
 }
