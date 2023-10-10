@@ -4,25 +4,13 @@ package regex
 import (
 	_ "embed"
 	"fmt"
-	"regexp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 //go:embed sample.conf
 var sampleConfig string
-
-type converterType int
-
-const (
-	convertTags = iota
-	convertFields
-	convertTagRename
-	convertFieldRename
-	convertMetricRename
-)
 
 type Regex struct {
 	Tags         []converter     `toml:"tags"`
@@ -33,19 +21,6 @@ type Regex struct {
 	Log          telegraf.Logger `toml:"-"`
 }
 
-type converter struct {
-	Key         string `toml:"key"`
-	Pattern     string `toml:"pattern"`
-	Replacement string `toml:"replacement"`
-	ResultKey   string `toml:"result_key"`
-	Append      bool   `toml:"append"`
-
-	filter filter.Filter
-	re     *regexp.Regexp
-	groups []string
-	apply  func(m telegraf.Metric)
-}
-
 func (*Regex) SampleConfig() string {
 	return sampleConfig
 }
@@ -53,12 +28,12 @@ func (*Regex) SampleConfig() string {
 func (r *Regex) Init() error {
 	// Compile the regular expressions
 	for i := range r.Tags {
-		if err := r.Tags[i].setup(convertTags); err != nil {
+		if err := r.Tags[i].setup(convertTags, r.Log); err != nil {
 			return fmt.Errorf("'tags' %w", err)
 		}
 	}
 	for i := range r.Fields {
-		if err := r.Fields[i].setup(convertFields); err != nil {
+		if err := r.Fields[i].setup(convertFields, r.Log); err != nil {
 			return fmt.Errorf("'fields' %w", err)
 		}
 	}
@@ -67,7 +42,7 @@ func (r *Regex) Init() error {
 		if c.Key != "" {
 			r.Log.Info("'tag_rename' section contains a key which is ignored during processing")
 		}
-		if err := r.TagRename[i].setup(convertTagRename); err != nil {
+		if err := r.TagRename[i].setup(convertTagRename, r.Log); err != nil {
 			return fmt.Errorf("'tag_rename' %w", err)
 		}
 	}
@@ -77,7 +52,7 @@ func (r *Regex) Init() error {
 			r.Log.Info("'field_rename' section contains a key which is ignored during processing")
 		}
 
-		if err := r.FieldRename[i].setup(convertFieldRename); err != nil {
+		if err := r.FieldRename[i].setup(convertFieldRename, r.Log); err != nil {
 			return fmt.Errorf("'field_rename' %w", err)
 		}
 	}
@@ -91,7 +66,7 @@ func (r *Regex) Init() error {
 			r.Log.Info("'metric_rename' section contains a 'result_key' ignored during processing as metrics will ALWAYS the name")
 		}
 
-		if err := r.MetricRename[i].setup(convertMetricRename); err != nil {
+		if err := r.MetricRename[i].setup(convertMetricRename, r.Log); err != nil {
 			return fmt.Errorf("'metric_rename' %w", err)
 		}
 	}

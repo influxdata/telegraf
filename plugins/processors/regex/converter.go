@@ -9,7 +9,46 @@ import (
 	"github.com/influxdata/telegraf/filter"
 )
 
-func (c *converter) setup(ct converterType) error {
+type converterType int
+
+const (
+	convertTags = iota
+	convertFields
+	convertTagRename
+	convertFieldRename
+	convertMetricRename
+)
+
+func (ct converterType) String() string {
+	switch ct {
+	case convertTags:
+		return "tags"
+	case convertFields:
+		return "fields"
+	case convertTagRename:
+		return "tag_rename"
+	case convertFieldRename:
+		return "field_rename"
+	case convertMetricRename:
+		return "metric_rename"
+	}
+	return fmt.Sprintf("unknown %d", int(ct))
+}
+
+type converter struct {
+	Key         string `toml:"key"`
+	Pattern     string `toml:"pattern"`
+	Replacement string `toml:"replacement"`
+	ResultKey   string `toml:"result_key"`
+	Append      bool   `toml:"append"`
+
+	filter filter.Filter
+	re     *regexp.Regexp
+	groups []string
+	apply  func(m telegraf.Metric)
+}
+
+func (c *converter) setup(ct converterType, log telegraf.Logger) error {
 	// Compile the pattern
 	re, err := regexp.Compile(c.Pattern)
 	if err != nil {
@@ -39,8 +78,15 @@ func (c *converter) setup(ct converterType) error {
 				}
 			}
 			if allNamed {
+				log.Infof("%s: Using named-group mode...", ct)
 				c.groups = groups[1:]
+			} else {
+				msg := "Neither 'result_key' nor 'replacement' given with unnamed or mixed groups.\n"
+				msg += "Using explicit, empty replacement!"
+				log.Warnf("%s: %s", ct, msg)
 			}
+		} else {
+			log.Infof("%s: Using explicit mode...", ct)
 		}
 	case convertTagRename, convertFieldRename:
 		switch c.ResultKey {
