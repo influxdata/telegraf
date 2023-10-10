@@ -32,6 +32,52 @@ type SubscribeClient struct {
 	processingCancel context.CancelFunc
 }
 
+func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
+	switch {
+	case params.Trigger != input.Status &&
+		params.Trigger != input.StatusValue &&
+		params.Trigger != input.StatusValueTimestamp:
+		return fmt.Errorf("trigger '%s' not supported", params.Trigger)
+	case params.DeadbandType != input.Absolute &&
+		params.DeadbandType != input.Percent:
+		return fmt.Errorf("deadband_type '%s' not supported", params.DeadbandType)
+	case params.DeadbandValue == nil:
+		return fmt.Errorf("deadband_value was not set")
+	case *params.DeadbandValue < 0:
+		return fmt.Errorf("negative deadband_value not supported")
+	default:
+		return nil
+	}
+}
+
+func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *input.MonitoringParameters) error {
+	req.RequestedParameters.SamplingInterval = float64(time.Duration(monParams.SamplingInterval) / time.Millisecond)
+
+	if monParams.QueueSize != nil {
+		req.RequestedParameters.QueueSize = *monParams.QueueSize
+	}
+
+	if monParams.DiscardOldest != nil {
+		req.RequestedParameters.DiscardOldest = *monParams.DiscardOldest
+	}
+
+	if monParams.DataChangeFilter != nil {
+		if err := checkDataChangeFilterParameters(monParams.DataChangeFilter); err != nil {
+			return fmt.Errorf(err.Error()+", node '%s'", req.ItemToMonitor.NodeID)
+		}
+
+		req.RequestedParameters.Filter = ua.NewExtensionObject(
+			&ua.DataChangeFilter{
+				Trigger:       ua.DataChangeTriggerFromString(string(monParams.DataChangeFilter.Trigger)),
+				DeadbandType:  uint32(ua.DeadbandTypeFromString(string(monParams.DataChangeFilter.DeadbandType))),
+				DeadbandValue: *monParams.DataChangeFilter.DeadbandValue,
+			},
+		)
+	}
+
+	return nil
+}
+
 func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*SubscribeClient, error) {
 	client, err := sc.InputClientConfig.CreateInputClient(log)
 	if err != nil {
@@ -57,6 +103,9 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 	for i, nodeID := range client.NodeIDs {
 		// The node id index (i) is used as the handle for the monitored item
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
+		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
+			return nil, err
+		}
 		subClient.monitoredItemsReqs[i] = req
 	}
 
