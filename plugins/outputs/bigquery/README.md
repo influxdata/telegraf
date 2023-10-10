@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   credentials_file = "/path/to/service/account/key.json"
 
   ## Google Cloud Platform Project
-  project = "my-gcp-project"
+  # project = "*detect-project-id*"
 
   ## The namespace for the metric descriptor
   dataset = "telegraf"
@@ -37,8 +37,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Character to replace hyphens on Metric name
   # replace_hyphen_to = "_"
 ```
-
-Requires `project` to specify where BigQuery entries will be persisted.
 
 Requires `dataset` to specify under which BigQuery dataset the corresponding
 metrics tables reside.
