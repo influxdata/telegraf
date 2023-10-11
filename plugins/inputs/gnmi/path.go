@@ -64,7 +64,6 @@ func newInfoFromPath(paths ...*gnmiLib.Path) *pathInfo {
 	if paths[0] != nil {
 		info.origin = paths[0].Origin
 		info.target = paths[0].Target
-
 	}
 
 	for _, p := range paths {
@@ -140,7 +139,6 @@ func (pi *pathInfo) append(paths ...*gnmiLib.Path) *pathInfo {
 				keyInfo.kv[k] = v
 			}
 			path.keyValues = append(path.keyValues, keyInfo)
-
 		}
 	}
 

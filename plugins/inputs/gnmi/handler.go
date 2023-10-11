@@ -254,7 +254,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			key = strings.TrimLeft(key, "/.")
 		}
 		if key == "" {
-			h.log.Errorf("Invalid empty path %q with alias %q", fieldPath, &aliasPath)
+			h.log.Errorf("Invalid empty path %q with alias %q", fieldPath, aliasPath)
 			continue
 		}
 		grouper.Add(name, tags, timestamp, key, field.value)

@@ -25,9 +25,9 @@ func newFieldsFromUpdate(prefix *pathInfo, update *gnmiLib.Update) ([]updateFiel
 	case *gnmiLib.TypedValue_AsciiVal: // not handled in ToScalar
 		return []updateField{{path, v.AsciiVal}}, nil
 	case *gnmiLib.TypedValue_JsonVal: // requires special path handling
-		return processJson(path, v.JsonVal)
+		return processJSON(path, v.JsonVal)
 	case *gnmiLib.TypedValue_JsonIetfVal: // requires special path handling
-		return processJson(path, v.JsonIetfVal)
+		return processJSON(path, v.JsonIetfVal)
 	}
 
 	// Convert the protobuf "oneof" data to a Golang type.
@@ -38,7 +38,7 @@ func newFieldsFromUpdate(prefix *pathInfo, update *gnmiLib.Update) ([]updateFiel
 	return []updateField{{path, value}}, nil
 }
 
-func processJson(path *pathInfo, data []byte) ([]updateField, error) {
+func processJSON(path *pathInfo, data []byte) ([]updateField, error) {
 	var nested interface{}
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
