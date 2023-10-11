@@ -165,7 +165,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	var valueFields []updateField
 	for _, update := range response.Update.Update {
 		fullPath := prefix.append(update.Path)
-		fields, err := newFieldsFromUpdate(prefix, update)
+		fields, err := newFieldsFromUpdate(fullPath, update)
 		if err != nil {
 			h.log.Errorf("Processing update %v failed: %v", update, err)
 		}

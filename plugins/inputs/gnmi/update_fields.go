@@ -14,8 +14,7 @@ type updateField struct {
 	value interface{}
 }
 
-func newFieldsFromUpdate(prefix *pathInfo, update *gnmiLib.Update) ([]updateField, error) {
-	path := prefix.append(update.Path)
+func newFieldsFromUpdate(path *pathInfo, update *gnmiLib.Update) ([]updateField, error) {
 	if update.Val == nil || update.Val.Value == nil {
 		return []updateField{{path: path}}, nil
 	}
