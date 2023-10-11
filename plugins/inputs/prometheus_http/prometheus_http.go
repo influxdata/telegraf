@@ -74,6 +74,7 @@ type PrometheusHttp struct {
 	HttpPassword  string                  `toml:"http_password"`
 	Metrics       []*PrometheusHttpMetric `toml:"metric"`
 	Duration      config.Duration         `toml:"duration"`
+	Interval      config.Duration         `toml:"interval"`
 	From          string                  `toml:"from"`
 	Timeout       config.Duration         `toml:"timeout"`
 	Version       string                  `toml:"version"`
@@ -81,11 +82,15 @@ type PrometheusHttp struct {
 	Params        string                  `toml:"params"`
 	Prefix        string                  `toml:"prefix"`
 	SkipEmptyTags bool                    `toml:"skip_empty_tags"`
-	Files         []*PrometheusHttpFile   `toml:"file"`
+	//Availability  config.Duration         `toml:"availability,omitempty"`
+	Files []*PrometheusHttpFile `toml:"file"`
 
-	Log   telegraf.Logger `toml:"-"`
-	acc   telegraf.Accumulator
-	cache map[uint64]map[string]interface{}
+	Log telegraf.Logger `toml:"-"`
+	acc telegraf.Accumulator
+
+	requests *RateCounter
+	errors   *RateCounter
+	cache    map[uint64]map[string]interface{}
 }
 
 type PrometheusHttpPushFunc = func(when time.Time, tags map[string]string, stamp time.Time, value float64)
@@ -96,6 +101,8 @@ type PrometheusHttpDatasource interface {
 
 var description = "Collect data from Prometheus http api"
 var globalFiles = sync.Map{}
+
+const pluginName = "prometheus_http"
 
 // Description will return a short string to explain what the plugin does.
 func (*PrometheusHttp) Description() string {
@@ -209,17 +216,6 @@ func (p *PrometheusHttp) getTemplateValue(t *toolsRender.TextTemplate, value flo
 	}
 	return f, nil
 }
-
-/*func (p *PrometheusHttp) mergeMaps(maps ...map[string]interface{}) map[string]interface{} {
-
-	r := make(map[string]interface{})
-	for _, m := range maps {
-		for k, v := range m {
-			r[k] = v
-		}
-	}
-	return r
-}*/
 
 func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) interface{} {
 
@@ -441,7 +437,15 @@ func (p *PrometheusHttp) uniqueHash(pm *PrometheusHttpMetric, tgs map[string]str
 	return byteHash64(byteSha512([]byte(hash)))
 }
 
-func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric, ds PrometheusHttpDatasource) {
+func (p *PrometheusHttp) addFields(name string, value interface{}) map[string]interface{} {
+
+	m := make(map[string]interface{})
+	m[name] = value
+	return m
+}
+
+func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
+	ds PrometheusHttpDatasource, callback func(err error)) {
 
 	gid := utils.GetRoutineID()
 	p.Log.Debugf("[%d] %s start gathering %s...", gid, p.Name, pm.Name)
@@ -479,9 +483,6 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 			return
 		}
 
-		fields := make(map[string]interface{})
-		fields[pm.Name] = v
-
 		millis := when.UTC().UnixMilli()
 		tags := make(map[string]string)
 		tags["timestamp"] = strconv.Itoa(int(millis))
@@ -501,7 +502,7 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 			p.Log.Debugf("[%d] %s skipped NaN/Inf value for: %v[%v]", gid, p.Name, pm.Name, string(bs))
 			return
 		}
-		p.acc.AddFields(p.Prefix, fields, tags, stamp)
+		p.acc.AddFields(p.Prefix, p.addFields(pm.Name, v), tags, stamp)
 	}
 
 	if ds == nil {
@@ -517,12 +518,17 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 		if err != nil {
 			p.Log.Error(err)
 		}
+		callback(err)
 	}
 }
 
 func (p *PrometheusHttp) gatherMetrics(gid uint64, ds PrometheusHttpDatasource) error {
 
 	var wg sync.WaitGroup
+
+	tags := make(map[string]string)
+	tags[fmt.Sprintf("%s_name", pluginName)] = p.Name
+	tags[fmt.Sprintf("%s_url", pluginName)] = p.URL
 
 	for _, m := range p.Metrics {
 
@@ -533,9 +539,33 @@ func (p *PrometheusHttp) gatherMetrics(gid uint64, ds PrometheusHttpDatasource) 
 		}
 
 		wg.Add(1)
-		go p.setMetrics(&wg, m, ds)
+
+		go p.setMetrics(&wg, m, ds, func(err error) {
+
+			p.requests.Incr(1)
+			if err != nil {
+				p.errors.Incr(1)
+			}
+		})
 	}
 	wg.Wait()
+
+	// availability = (requests - errors) / requests * 100
+	// availability = (100 - 0) / 100 * 100 = 100%
+	// availability = (100 - 1) / 100 * 100 = 99%
+	// availability = (100 - 10) / 100 * 100 = 90%
+	// availability = (100 - 100) / 100 * 100 = 0%
+
+	fields := p.addFields("requests", p.requests.counter.Value())
+	fields["errors"] = p.errors.counter.Value()
+
+	r1 := float64(p.requests.counter.Value())
+	r2 := float64(p.errors.counter.Value())
+	if r1 > 0 {
+		fields["availability"] = (r1 - r2) / r1 * 100
+	}
+	p.acc.AddFields(pluginName, fields, tags, time.Now())
+
 	return nil
 }
 
@@ -766,11 +796,7 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 	gid := utils.GetRoutineID()
 	// Gather data
 	err := p.gatherMetrics(gid, ds)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (p *PrometheusHttp) Printf(format string, v ...interface{}) {
@@ -794,7 +820,7 @@ func (p *PrometheusHttp) Init() error {
 		p.Step = "60"
 	}
 	if p.Prefix == "" {
-		p.Prefix = "prometheus_http"
+		p.Prefix = pluginName
 	}
 
 	if len(p.Metrics) == 0 {
@@ -814,11 +840,40 @@ func (p *PrometheusHttp) Init() error {
 		p.readFiles(gid, &globalFiles)
 	}
 
+	p.requests = NewRateCounter(time.Duration(p.Interval))
+	p.errors = NewRateCounter(time.Duration(p.Interval))
+
 	return nil
 }
 
+/*
+type PrometheusHttpInput struct {
+	TagInclude []string `toml:"taginclude,omitempty"`
+	common.InputOptions
+}
+
+func migrate(tbl *ast.Table) ([]byte, string, error) {
+
+	var old PrometheusHttpInput
+	if err := toml.UnmarshalTable(tbl, &old); err != nil {
+		return nil, "", err
+	}
+	cfg := migrations.CreateTOMLStruct("inputs", "jolokia2_agent")
+	// Marshal the new configuration
+	buf, err := toml.Marshal(cfg)
+	if err != nil {
+		return nil, "", err
+	}
+	buf = append(buf, []byte("\n")...)
+
+	// Create the new content to output
+	return buf, "", nil
+}
+*/
+
 func init() {
-	inputs.Add("prometheus_http", func() telegraf.Input {
+	//migrations.AddPluginMigration(pluginName, migrate)
+	inputs.Add(pluginName, func() telegraf.Input {
 		return &PrometheusHttp{}
 	})
 }
