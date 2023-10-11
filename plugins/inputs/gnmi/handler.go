@@ -192,11 +192,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			tagUpdate = true
 			break
 		}
-		fmt.Printf("update at %q is tag: %v\n", fullPath.String(), tagUpdate)
 		if !tagUpdate {
-			for _, field := range fields {
-				fmt.Println("  adding as field update:", field.path.String())
-			}
 			valueFields = append(valueFields, fields...)
 		}
 	}
@@ -209,14 +205,8 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 	}
 
-	fmt.Printf("receive %d update with %d field updates\n", len(response.Update.Update), len(valueFields))
-	for _, field := range valueFields {
-		fmt.Println("  field update:", field.path.String())
-	}
-
 	// Parse individual update message and create measurements
 	for _, field := range valueFields {
-		fmt.Println("field update:", field.path)
 		// Prepare tags from prefix
 		fieldTags := field.path.Tags()
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
@@ -233,7 +223,6 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 
 		// Lookup alias for the metric
-		fmt.Println("field:", field.path)
 		aliasPath, name := h.lookupAlias(field.path)
 		if name == "" {
 			h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
@@ -283,8 +272,6 @@ type aliasCandidate struct {
 }
 
 func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
-	fmt.Println("lookup aliases:", h.aliases)
-	fmt.Println("lookup path:   ", info)
 	candidates := make([]aliasCandidate, 0)
 	for i, a := range h.aliases {
 		if !i.isSubPathOf(info) {
@@ -293,7 +280,6 @@ func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
 		candidates = append(candidates, aliasCandidate{i.String(), a})
 	}
 	if len(candidates) == 0 {
-		fmt.Println("-> no match")
 		return "", ""
 	}
 
@@ -301,7 +287,6 @@ func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
 	sort.SliceStable(candidates, func(i, j int) bool {
 		return len(candidates[i].path) > len(candidates[j].path)
 	})
-	fmt.Println("-> match", candidates[0])
 
 	return candidates[0].path, candidates[0].alias
 }

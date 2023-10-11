@@ -39,10 +39,6 @@ func newTagStore(subs []TagSubscription) *tagStore {
 
 // Store tags extracted from TagSubscriptions
 func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
-	fmt.Println("-----------------")
-	fmt.Println("[tagstore insert] received values:", values)
-	fmt.Println("[tagstore insert] received tags:", tags)
-
 	switch subscription.Match {
 	case "unconditional":
 		for _, f := range values {
@@ -97,11 +93,9 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		if !match || len(values) == 0 {
 			return nil
 		}
-		fmt.Println("[tagstore insert] extracted keys:", key)
 
 		// Make sure we have a valid map for the key
 		if _, exists := s.elements.tags[key]; !exists {
-			fmt.Println("[tagstore insert] exists")
 			s.elements.tags[key] = make(map[string]string)
 		}
 
@@ -123,11 +117,9 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 				s.elements.tags[key][tagName] = sv
 			}
 		}
-		fmt.Println("[tagstore insert] final tagset:", s.elements.tags[key])
 	default:
 		return fmt.Errorf("unknown match strategy %q", subscription.Match)
 	}
-	fmt.Println("-----------------")
 
 	return nil
 }
@@ -162,10 +154,6 @@ func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[stri
 }
 
 func (s *tagStore) getElementsKeys(path *pathInfo, elements []string) (string, bool) {
-	fmt.Println("[tagstore getElementsKeys]: path=", path.String())
-	fmt.Println("[tagstore getElementsKeys]: keys=", path.keyValues)
-	fmt.Println("[tagstore getElementsKeys]: elem=", elements)
-
 	// Search for the required path elements and collect a ordered
 	// list of their values to in the form
 	//    elementName1={keyA=valueA,keyB=valueB,...},...,elementNameN={keyY=valueY,keyZ=valueZ}
@@ -176,7 +164,6 @@ func (s *tagStore) getElementsKeys(path *pathInfo, elements []string) (string, b
 		var elementKVs []string
 		for _, segment := range path.keyValues {
 			if segment.name == requiredElement {
-				fmt.Printf("  required element %q: %v\n", requiredElement, segment)
 				for k, v := range segment.kv {
 					elementKVs = append(elementKVs, k+"="+v)
 				}

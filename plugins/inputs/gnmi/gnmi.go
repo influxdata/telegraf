@@ -177,8 +177,6 @@ func (c *GNMI) Init() error {
 		}
 	}
 	for alias, encodingPath := range c.Aliases {
-		ai := newInfoFromString(encodingPath)
-		fmt.Printf("alias: %q -> %+v (%q)\n", encodingPath, *ai, ai.String())
 		c.internalAliases[newInfoFromString(encodingPath)] = alias
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)

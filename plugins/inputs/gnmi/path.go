@@ -1,7 +1,6 @@
 package gnmi
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -57,7 +56,6 @@ func newInfoFromPathWithoutKeys(path *gnmiLib.Path) *pathInfo {
 }
 
 func newInfoFromPath(paths ...*gnmiLib.Path) *pathInfo {
-	fmt.Println("paths:", paths)
 	if len(paths) == 0 {
 		return nil
 	}
