@@ -2,10 +2,14 @@ package gnmi
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 )
+
+// Regular expression to see if a path element contains an origin
+var originPattern = regexp.MustCompile(`^([\w-_]+):`)
 
 type keySegment struct {
 	name string
