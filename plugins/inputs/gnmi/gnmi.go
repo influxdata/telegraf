@@ -53,12 +53,13 @@ type GNMI struct {
 	Trace               bool              `toml:"dump_responses"`
 	CanonicalFieldNames bool              `toml:"canonical_field_names"`
 	TrimFieldNames      bool              `toml:"trim_field_names"`
+	GuessPathTag        bool              `toml:"guess_path_tag"`
 	EnableTLS           bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
 	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
-	internalAliases map[string]string
+	internalAliases map[*pathInfo]string
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 }
@@ -164,7 +165,7 @@ func (c *GNMI) Init() error {
 	}
 
 	// Invert explicit alias list and prefill subscription names
-	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
+	c.internalAliases = make(map[*pathInfo]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
 	for _, s := range c.Subscriptions {
 		if err := s.buildAlias(c.internalAliases); err != nil {
 			return err
@@ -176,7 +177,9 @@ func (c *GNMI) Init() error {
 		}
 	}
 	for alias, encodingPath := range c.Aliases {
-		c.internalAliases[encodingPath] = alias
+		ai := newInfoFromString(encodingPath)
+		fmt.Printf("alias: %q -> %+v (%q)\n", encodingPath, *ai, ai.String())
+		c.internalAliases[newInfoFromString(encodingPath)] = alias
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
 
@@ -219,6 +222,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				trace:               c.Trace,
 				canonicalFieldNames: c.CanonicalFieldNames,
 				trimSlash:           c.TrimFieldNames,
+				guessPathTag:        c.GuessPathTag,
 				log:                 c.Log,
 			}
 			for ctx.Err() == nil {
@@ -357,21 +361,21 @@ func (s *Subscription) buildFullPath(c *GNMI) error {
 	return nil
 }
 
-func (s *Subscription) buildAlias(aliases map[string]string) error {
+func (s *Subscription) buildAlias(aliases map[*pathInfo]string) error {
 	// Build the subscription path without keys
 	path, err := parsePath(s.Origin, s.Path, "")
 	if err != nil {
 		return err
 	}
-	spath := pathToStringNoKeys(path)
+	info := newInfoFromPathWithoutKeys(path)
 
 	// If the user didn't provide a measurement name, use last path element
 	name := s.Name
-	if name == "" && len(path.Elem) > 0 {
-		name = path.Elem[len(path.Elem)-1].Name
+	if name == "" && len(info.segments) > 0 {
+		name = info.segments[len(info.segments)-1]
 	}
 	if name != "" {
-		aliases[spath] = name
+		aliases[info] = name
 	}
 	return nil
 }

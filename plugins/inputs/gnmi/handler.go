@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +32,7 @@ const eidJuniperTelemetryHeader = 1
 
 type handler struct {
 	address             string
-	aliases             map[string]string
+	aliases             map[*pathInfo]string
 	tagsubs             []TagSubscription
 	maxMsgSize          int
 	emptyNameWarnShown  bool
@@ -40,6 +41,7 @@ type handler struct {
 	trace               bool
 	canonicalFieldNames bool
 	trimSlash           bool
+	guessPathTag        bool
 	log                 telegraf.Logger
 }
 
@@ -150,20 +152,20 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	}
 
 	// Extract the path part valid for the whole set of updates if any
-	prefix := response.Update.Prefix
+	prefix := newInfoFromPath(response.Update.Prefix)
 
 	// Add info to the tags
 	headerTags["source"], _, _ = net.SplitHostPort(h.address)
-	if prefix != nil {
-		headerTags["path"] = pathToStringNoKeys(prefix)
+	if !prefix.empty() {
+		headerTags["path"] = prefix.String()
 	}
 
 	// Process and remove tag-updates from the response first so we can
 	// add all available tags to the metrics later.
 	var valueFields []updateField
 	for _, update := range response.Update.Update {
-		fullPath := joinPaths(response.Update.Prefix, update.Path)
-		fields, err := newFieldsFromUpdate(fullPath, update)
+		fullPath := prefix.append(update.Path)
+		fields, err := newFieldsFromUpdate(prefix, update)
 		if err != nil {
 			h.log.Errorf("Processing update %v failed: %v", update, err)
 		}
@@ -173,11 +175,14 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range headerTags {
 			tags[key] = val
 		}
+		for key, val := range fullPath.Tags() {
+			tags[key] = val
+		}
 
 		// TODO: Handle each field individually to allow in-JSON tags
 		var tagUpdate bool
 		for _, tagSub := range h.tagsubs {
-			if !equalPathNoKeys(fullPath, tagSub.fullPath) {
+			if !fullPath.equalsPathNoKeys(tagSub.fullPath) {
 				continue
 			}
 			h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
@@ -187,16 +192,38 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			tagUpdate = true
 			break
 		}
+		fmt.Printf("update at %q is tag: %v\n", fullPath.String(), tagUpdate)
 		if !tagUpdate {
+			for _, field := range fields {
+				fmt.Println("  adding as field update:", field.path.String())
+			}
 			valueFields = append(valueFields, fields...)
 		}
 	}
 
-	// Parse individual Update message and create measurements
+	// Some devices do not provide a prefix, so do some guesswork based
+	// on the paths of the fields
+	if headerTags["path"] == "" && h.guessPathTag {
+		if prefixPath := guessPrefixFromUpdate(valueFields); prefixPath != "" {
+			headerTags["path"] = prefixPath
+		}
+	}
+
+	fmt.Printf("receive %d update with %d field updates\n", len(response.Update.Update), len(valueFields))
 	for _, field := range valueFields {
+		fmt.Println("  field update:", field.path.String())
+	}
+
+	// Parse individual update message and create measurements
+	for _, field := range valueFields {
+		fmt.Println("field update:", field.path)
 		// Prepare tags from prefix
-		tags := make(map[string]string, len(headerTags))
+		fieldTags := field.path.Tags()
+		tags := make(map[string]string, len(headerTags)+len(fieldTags))
 		for key, val := range headerTags {
+			tags[key] = val
+		}
+		for key, val := range fieldTags {
 			tags[key] = val
 		}
 
@@ -206,6 +233,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 
 		// Lookup alias for the metric
+		fmt.Println("field:", field.path)
 		aliasPath, name := h.lookupAlias(field.path)
 		if name == "" {
 			h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
@@ -216,8 +244,8 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 
 		// Group metrics
-		fieldPath := pathToStringNoKeys(field.path)
-		key := fieldPath
+		fieldPath := field.path.String()
+		key := strings.ReplaceAll(fieldPath, "-", "_")
 		if h.canonicalFieldNames {
 			// Strip the origin is any for the field names
 			if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
@@ -250,26 +278,51 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 }
 
 // Try to find the alias for the given path
-func (h *handler) lookupAlias(path *gnmiLib.Path) (string, string) {
-	for aliasPath, alias := range h.aliases {
-		// TODO: Do this in init
-		var origin string
-		groups := originPattern.FindStringSubmatch(aliasPath)
-		if len(groups) == 2 {
-			origin = groups[1]
-			aliasPath = aliasPath[len(groups[1])+1:]
-		}
+type aliasCandidate struct {
+	path, alias string
+}
 
-		apath, err := parsePath(origin, aliasPath, "")
-		if err != nil {
-			panic(err)
+func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
+	fmt.Println("lookup aliases:", h.aliases)
+	fmt.Println("lookup path:   ", info)
+	candidates := make([]aliasCandidate, 0)
+	for i, a := range h.aliases {
+		if !i.isSubPathOf(info) {
+			continue
 		}
-		normalizePath(apath)
-
-		if isSubPath(apath, path) {
-			return aliasPath, alias
-		}
+		candidates = append(candidates, aliasCandidate{i.String(), a})
+	}
+	if len(candidates) == 0 {
+		fmt.Println("-> no match")
+		return "", ""
 	}
 
-	return "", ""
+	// Reverse sort the candidates by path length so we can use the longest match
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return len(candidates[i].path) > len(candidates[j].path)
+	})
+	fmt.Println("-> match", candidates[0])
+
+	return candidates[0].path, candidates[0].alias
+}
+
+func guessPrefixFromUpdate(fields []updateField) string {
+	if len(fields) == 0 {
+		return ""
+	}
+	if len(fields) == 1 {
+		dir, _ := fields[0].path.split()
+		return dir
+	}
+	commonPath := &pathInfo{
+		origin:   fields[0].path.origin,
+		segments: append([]string{}, fields[0].path.segments...),
+	}
+	for _, f := range fields[1:] {
+		commonPath.keepCommonPart(f.path)
+	}
+	if commonPath.empty() {
+		return ""
+	}
+	return commonPath.String()
 }

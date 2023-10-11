@@ -2,6 +2,7 @@ package gnmi
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -111,26 +112,47 @@ func extractPathKeys(gpath *gnmiLib.Path) []*gnmiLib.PathElem {
 	return newPath
 }
 
-func joinPaths(prefix *gnmiLib.Path, gpath *gnmiLib.Path) *gnmiLib.Path {
-	if prefix == nil {
-		return gpath
-	}
+func extractTagsFromPath(gpath *gnmiLib.Path) map[string]string {
+	fmt.Printf("# path: %v\n", pathToStringNoKeys(gpath))
+	tags := make(map[string]string)
+	var name string
+	for _, elem := range gpath.Elem {
+		if len(elem.Name) > 0 {
+			name += "/" + elem.Name
+		}
 
-	return &gnmiLib.Path{
-		Origin: prefix.Origin,
-		Target: prefix.Target,
-		Elem:   append(prefix.Elem, gpath.Elem...),
+		for key, val := range elem.Key {
+			key = strings.ReplaceAll(key, "-", "_")
+
+			// Use short-form of key if possible
+			if _, exists := tags[key]; exists {
+				fmt.Printf("* key %q exists\n", key)
+				tags[name+"/"+key] = val
+			} else {
+				fmt.Printf("* key %q does not exist\n", key)
+				tags[key] = val
+			}
+		}
 	}
+	return tags
 }
 
 func pathToStringNoKeys(p *gnmiLib.Path) string {
+	if p == nil {
+		return ""
+	}
+
 	segments := make([]string, 0, len(p.Elem))
 	for _, e := range p.Elem {
 		if e.Name != "" {
 			segments = append(segments, e.Name)
 		}
 	}
-	out := strings.Join(segments, "/")
+	if len(segments) == 0 {
+		return ""
+	}
+
+	out := "/" + strings.Join(segments, "/")
 	if p.Origin != "" {
 		out = p.Origin + ":" + out
 	}

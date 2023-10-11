@@ -10,16 +10,14 @@ import (
 )
 
 type updateField struct {
-	path  *gnmiLib.Path
+	path  *pathInfo
 	value interface{}
 }
 
-func newFieldsFromUpdate(prefix *gnmiLib.Path, update *gnmiLib.Update) ([]updateField, error) {
-	// Prepend the update path with the prefix coming from the header of
-	// the GNMI update message
-	path := joinPaths(prefix, update.Path)
+func newFieldsFromUpdate(prefix *pathInfo, update *gnmiLib.Update) ([]updateField, error) {
+	path := prefix.append(update.Path)
 	if update.Val == nil || update.Val.Value == nil {
-		return []updateField{{path, nil}}, nil
+		return []updateField{{path: path}}, nil
 	}
 
 	// Apply some special handling for special types
@@ -40,7 +38,7 @@ func newFieldsFromUpdate(prefix *gnmiLib.Path, update *gnmiLib.Update) ([]update
 	return []updateField{{path, value}}, nil
 }
 
-func processJson(prefix *gnmiLib.Path, data []byte) ([]updateField, error) {
+func processJson(path *pathInfo, data []byte) ([]updateField, error) {
 	var nested interface{}
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
@@ -53,7 +51,7 @@ func processJson(prefix *gnmiLib.Path, data []byte) ([]updateField, error) {
 	fields := make([]updateField, 0, len(entries))
 	for key, v := range entries {
 		fields = append(fields, updateField{
-			path:  joinPaths(prefix, jsonKeyToPath(key)),
+			path:  path.appendSegments(key),
 			value: v,
 		})
 	}

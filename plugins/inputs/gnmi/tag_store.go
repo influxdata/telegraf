@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf/internal"
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 )
 
 type tagStore struct {
@@ -39,13 +38,19 @@ func newTagStore(subs []TagSubscription) *tagStore {
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values []updateField, tags map[string]string) error {
+func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
+	fmt.Println("-----------------")
+	fmt.Println("[tagstore insert] received values:", values)
+	fmt.Println("[tagstore insert] received tags:", tags)
+
 	switch subscription.Match {
 	case "unconditional":
 		for _, f := range values {
 			tagName := subscription.Name
-			if len(f.path.Elem) > 0 {
-				tagName += "/" + f.path.Elem[len(f.path.Elem)-1].Name
+			if len(f.path.segments) > 0 {
+				key := f.path.segments[len(f.path.segments)-1]
+				key = strings.ReplaceAll(key, "-", "_")
+				tagName += "/" + key
 			}
 			sv, err := internal.ToString(f.value)
 			if err != nil {
@@ -72,8 +77,10 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 		// Add the values
 		for _, f := range values {
 			tagName := subscription.Name
-			if len(f.path.Elem) > 0 {
-				tagName += "/" + f.path.Elem[len(f.path.Elem)-1].Name
+			if len(f.path.segments) > 0 {
+				key := f.path.segments[len(f.path.segments)-1]
+				key = strings.ReplaceAll(key, "-", "_")
+				tagName += "/" + key
 			}
 			sv, err := internal.ToString(f.value)
 			if err != nil {
@@ -90,17 +97,21 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 		if !match || len(values) == 0 {
 			return nil
 		}
+		fmt.Println("[tagstore insert] extracted keys:", key)
 
 		// Make sure we have a valid map for the key
 		if _, exists := s.elements.tags[key]; !exists {
+			fmt.Println("[tagstore insert] exists")
 			s.elements.tags[key] = make(map[string]string)
 		}
 
 		// Add the values
 		for _, f := range values {
 			tagName := subscription.Name
-			if len(f.path.Elem) > 0 {
-				tagName += "/" + f.path.Elem[len(f.path.Elem)-1].Name
+			if len(f.path.segments) > 0 {
+				key := f.path.segments[len(f.path.segments)-1]
+				key = strings.ReplaceAll(key, "-", "_")
+				tagName += "/" + key
 			}
 			sv, err := internal.ToString(f.value)
 			if err != nil {
@@ -112,14 +123,16 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 				s.elements.tags[key][tagName] = sv
 			}
 		}
+		fmt.Println("[tagstore insert] final tagset:", s.elements.tags[key])
 	default:
 		return fmt.Errorf("unknown match strategy %q", subscription.Match)
 	}
+	fmt.Println("-----------------")
 
 	return nil
 }
 
-func (s *tagStore) lookup(path *gnmiLib.Path, metricTags map[string]string) map[string]string {
+func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[string]string {
 	// Add all unconditional tags
 	tags := make(map[string]string, len(s.unconditional))
 	for k, v := range s.unconditional {
@@ -148,8 +161,10 @@ func (s *tagStore) lookup(path *gnmiLib.Path, metricTags map[string]string) map[
 	return tags
 }
 
-func (s *tagStore) getElementsKeys(path *gnmiLib.Path, elements []string) (string, bool) {
-	keyElements := extractPathKeys(path)
+func (s *tagStore) getElementsKeys(path *pathInfo, elements []string) (string, bool) {
+	fmt.Println("[tagstore getElementsKeys]: path=", path.String())
+	fmt.Println("[tagstore getElementsKeys]: keys=", path.keyValues)
+	fmt.Println("[tagstore getElementsKeys]: elem=", elements)
 
 	// Search for the required path elements and collect a ordered
 	// list of their values to in the form
@@ -159,9 +174,10 @@ func (s *tagStore) getElementsKeys(path *gnmiLib.Path, elements []string) (strin
 	for _, requiredElement := range elements {
 		var found bool
 		var elementKVs []string
-		for _, el := range keyElements {
-			if el.Name == requiredElement {
-				for k, v := range el.Key {
+		for _, segment := range path.keyValues {
+			if segment.name == requiredElement {
+				fmt.Printf("  required element %q: %v\n", requiredElement, segment)
+				for k, v := range segment.kv {
 					elementKVs = append(elementKVs, k+"="+v)
 				}
 				found = true
