@@ -198,7 +198,7 @@ require (
 	golang.org/x/term v0.13.0
 	golang.org/x/text v0.13.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
-	gonum.org/v1/gonum v0.13.0
+	gonum.org/v1/gonum v0.14.0
 	google.golang.org/api v0.134.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230717213848-3f92550aa753
 	google.golang.org/grpc v1.57.0
