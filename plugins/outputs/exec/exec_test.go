@@ -3,7 +3,6 @@ package exec
 import (
 	"bytes"
 	"errors"
-	"github.com/influxdata/telegraf/metric"
 	"io"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	influxParser "github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -25,7 +25,7 @@ type MockRunner struct {
 }
 
 // Run runs the command.
-func (c *MockRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader) error {
+func (c *MockRunner) Run(_ time.Duration, _ []string, _ []string, buffer io.Reader) error {
 	parser := influxParser.NewStreamParser(buffer)
 	numMetrics := 0
 
