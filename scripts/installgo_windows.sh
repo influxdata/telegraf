@@ -2,7 +2,7 @@
 
 set -eux
 
-GO_VERSION="1.21.1"
+GO_VERSION="1.21.3"
 
 setup_go () {
     rm -rf '/c/Program Files/Go'
