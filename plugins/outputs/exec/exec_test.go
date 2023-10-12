@@ -2,6 +2,9 @@ package exec
 
 import (
 	"bytes"
+	"errors"
+	"github.com/influxdata/telegraf/metric"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -10,9 +13,89 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	influxParser "github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
+
+type MockRunner struct {
+	runs []int
+}
+
+// Run runs the command.
+func (c *MockRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader) error {
+	parser := influxParser.NewStreamParser(buffer)
+	numMetrics := 0
+
+	for {
+		_, err := parser.Next()
+		if err != nil {
+			if errors.Is(err, influxParser.EOF) {
+				break // stream ended
+			}
+			continue
+		}
+		numMetrics++
+	}
+
+	c.runs = append(c.runs, numMetrics)
+	return nil
+}
+
+func TestExternalOutputBatch(t *testing.T) {
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+
+	runner := MockRunner{}
+
+	e := &Exec{
+		UseBatchFormat: true,
+		serializer:     serializer,
+		Log:            testutil.Logger{},
+		runner:         &runner,
+	}
+
+	m := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	require.NoError(t, e.Connect())
+	require.NoError(t, e.Write([]telegraf.Metric{m, m}))
+	// Make sure it executed the command once, with 2 metrics
+	require.Equal(t, []int{2}, runner.runs)
+	require.NoError(t, e.Close())
+}
+
+func TestExternalOutputNoBatch(t *testing.T) {
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	runner := MockRunner{}
+
+	e := &Exec{
+		UseBatchFormat: false,
+		serializer:     serializer,
+		Log:            testutil.Logger{},
+		runner:         &runner,
+	}
+
+	m := metric.New(
+		"cpu",
+		map[string]string{"name": "cpu1"},
+		map[string]interface{}{"idle": 50, "sys": 30},
+		now,
+	)
+
+	require.NoError(t, e.Connect())
+	require.NoError(t, e.Write([]telegraf.Metric{m, m}))
+	// Make sure it executed the command twice, both with a single metric
+	require.Equal(t, []int{1, 1}, runner.runs)
+	require.NoError(t, e.Close())
+}
 
 func TestExec(t *testing.T) {
 	t.Skip("Skipping test due to OS/executable dependencies and race condition when ran as part of a test-all")
