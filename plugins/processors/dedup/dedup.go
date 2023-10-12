@@ -4,13 +4,13 @@ package dedup
 import (
 	_ "embed"
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 //go:embed sample.conf
