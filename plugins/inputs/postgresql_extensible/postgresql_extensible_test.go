@@ -311,14 +311,14 @@ func TestAccRow(t *testing.T) {
 			fields: fakeRow{
 				fields: []interface{}{1, "gato"},
 			},
-			dbName: "server",
+			dbName: "postgres",
 			server: "server",
 		},
 		{
 			fields: fakeRow{
 				fields: []interface{}{nil, "gato"},
 			},
-			dbName: "server",
+			dbName: "postgres",
 			server: "server",
 		},
 		{
