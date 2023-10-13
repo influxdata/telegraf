@@ -177,16 +177,8 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 // GetConnectDatabase utility function for getting the database to which the connection was made
 // If the user set the output address use that before parsing anything else.
 func (p *Service) GetConnectDatabase(connectionString string) (string, error) {
-	if p.OutputAddress != "" {
-		return p.OutputAddress, nil
-	}
-
 	connConfig, err := pgx.ParseConfig(connectionString)
-	if err != nil {
-		return "", fmt.Errorf("connection string parsing failed: %w", err)
-	}
-
-	if len(connConfig.Database) != 0 {
+	if err == nil && len(connConfig.Database) != 0 {
 		return connConfig.Database, nil
 	}
 
