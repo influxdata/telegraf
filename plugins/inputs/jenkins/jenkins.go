@@ -263,11 +263,6 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	// filter out excluded or not included jobs
-	if !j.jobFilter.Match(jr.hierarchyName()) {
-		return nil
-	}
-
 	js, err := j.client.getJobs(context.Background(), &jr)
 	if err != nil {
 		return err
@@ -292,6 +287,11 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 		}(ij, jr, acc)
 	}
 	wg.Wait()
+
+	// filter out excluded or not included jobs
+	if !j.jobFilter.Match(jr.hierarchyName()) {
+		return nil
+	}
 
 	// collect build info
 	number := js.LastBuild.Number

@@ -797,6 +797,9 @@ func TestGatherJobs(t *testing.T) {
 							{Name: "ignore-1"},
 						},
 					},
+					"/job/ignore-1/api/json": &jobResponse{
+						Jobs: []innerJob{},
+					},
 					"/job/apps/api/json": &jobResponse{
 						Jobs: []innerJob{
 							{Name: "k8s-cloud"},
@@ -808,6 +811,16 @@ func TestGatherJobs(t *testing.T) {
 						Jobs: []innerJob{
 							{Name: "1"},
 							{Name: "2"},
+						},
+					},
+					"/job/apps/job/ignore-all/job/1/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
+						},
+					},
+					"/job/apps/job/ignore-all/job/2/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
 						},
 					},
 					"/job/apps/job/chronograf/api/json": &jobResponse{
@@ -822,6 +835,16 @@ func TestGatherJobs(t *testing.T) {
 							{Name: "PR-ignore2"},
 							{Name: "PR 1"},
 							{Name: "PR ignore"},
+						},
+					},
+					"/job/apps/job/k8s-cloud/job/PR%20ignore/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
+						},
+					},
+					"/job/apps/job/k8s-cloud/job/PR-ignore2/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
 						},
 					},
 					"/job/apps/job/k8s-cloud/job/PR-100/api/json": &jobResponse{
