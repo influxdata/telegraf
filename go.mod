@@ -65,7 +65,7 @@ require (
 	github.com/digitalocean/go-libvirt v0.0.0-20220811165305-15feff002086
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.5.0
-	github.com/docker/docker v24.0.5+incompatible
+	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
 	github.com/eclipse/paho.golang v0.11.0
@@ -115,7 +115,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
-	github.com/jhump/protoreflect v1.15.1
+	github.com/jhump/protoreflect v1.15.3
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.2.2
 	github.com/karrick/godirwalk v1.16.2
@@ -130,7 +130,7 @@ require (
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/microsoft/go-mssqldb v1.5.0
-	github.com/miekg/dns v1.1.55
+	github.com/miekg/dns v1.1.56
 	github.com/moby/ipvs v1.1.0
 	github.com/multiplay/go-ts3 v1.1.0
 	github.com/nats-io/nats-server/v2 v2.9.9
@@ -155,6 +155,7 @@ require (
 	github.com/prometheus/procfs v0.11.0
 	github.com/prometheus/prometheus v0.46.0
 	github.com/rabbitmq/amqp091-go v1.8.1
+	github.com/redis/go-redis/v9 v9.2.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/robinson/gos7 v0.0.0-20230421131203-d20ac6ca08cd
@@ -171,7 +172,7 @@ require (
 	github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55
 	github.com/stretchr/testify v1.8.4
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/testcontainers/testcontainers-go v0.22.0
+	github.com/testcontainers/testcontainers-go v0.25.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.14.4
 	github.com/tinylib/msgp v1.1.8
@@ -189,16 +190,16 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
 	go.opentelemetry.io/otel/sdk/metric v0.39.0
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
-	golang.org/x/crypto v0.13.0
-	golang.org/x/mod v0.12.0
-	golang.org/x/net v0.15.0
-	golang.org/x/oauth2 v0.11.0
+	golang.org/x/crypto v0.14.0
+	golang.org/x/mod v0.13.0
+	golang.org/x/net v0.17.0
+	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.12.0
-	golang.org/x/term v0.12.0
+	golang.org/x/sys v0.13.0
+	golang.org/x/term v0.13.0
 	golang.org/x/text v0.13.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
-	gonum.org/v1/gonum v0.13.0
+	gonum.org/v1/gonum v0.14.0
 	google.golang.org/api v0.139.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5
 	google.golang.org/grpc v1.57.0
@@ -245,6 +246,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/Microsoft/hcsshim v0.11.0 // indirect
 	github.com/alecthomas/participle v0.4.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
@@ -272,14 +274,14 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/bufbuild/protocompile v0.4.0 // indirect
+	github.com/bufbuild/protocompile v0.6.0 // indirect
 	github.com/caio/go-tdigest/v4 v4.0.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.14.0
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
-	github.com/containerd/containerd v1.7.3 // indirect
+	github.com/containerd/containerd v1.7.6 // indirect
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
@@ -462,7 +464,7 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.11.0 // indirect
+	golang.org/x/tools v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -265,9 +266,17 @@ func (a *Agent) initPersister() error {
 	}
 
 	for _, processor := range a.Config.Processors {
-		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
-		if !ok {
-			continue
+		var plugin telegraf.StatefulPlugin
+		if p, ok := processor.Processor.(processors.HasUnwrap); ok {
+			plugin, ok = p.Unwrap().(telegraf.StatefulPlugin)
+			if !ok {
+				continue
+			}
+		} else {
+			plugin, ok = processor.Processor.(telegraf.StatefulPlugin)
+			if !ok {
+				continue
+			}
 		}
 
 		name := processor.LogName()
@@ -600,17 +609,17 @@ func (a *Agent) gatherOnce(
 // processors.  If an error occurs any started processors are Stopped.
 func (a *Agent) startProcessors(
 	dst chan<- telegraf.Metric,
-	processors models.RunningProcessors,
+	runningProcessors models.RunningProcessors,
 ) (chan<- telegraf.Metric, []*processorUnit, error) {
 	var src chan telegraf.Metric
-	units := make([]*processorUnit, 0, len(processors))
+	units := make([]*processorUnit, 0, len(runningProcessors))
 	// The processor chain is constructed from the output side starting from
 	// the output(s) and walking the way back to the input(s). However, the
 	// processor-list is sorted by order and/or by appearance in the config,
 	// i.e. in input-to-output direction. Therefore, reverse the processor list
 	// to reflect the order/definition order in the processing chain.
-	for i := len(processors) - 1; i >= 0; i-- {
-		processor := processors[i]
+	for i := len(runningProcessors) - 1; i >= 0; i-- {
+		processor := runningProcessors[i]
 
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)

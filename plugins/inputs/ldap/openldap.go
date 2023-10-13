@@ -31,7 +31,7 @@ func (l *LDAP) newOpenLDAPConfig() []request {
 		0,
 		0,
 		false,
-		"(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))",
+		"(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject)(objectClass=monitorContainer))",
 		[]string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted", "monitoredInfo"},
 		nil,
 	)
