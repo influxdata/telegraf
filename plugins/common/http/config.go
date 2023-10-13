@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+	"github.com/peterbourgon/unixtransport"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -47,6 +48,9 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		MaxIdleConns:        h.MaxIdleConns,
 		MaxIdleConnsPerHost: h.MaxIdleConnsPerHost,
 	}
+
+	// Register "http+unix" and "https+unix" protocol handler.
+	unixtransport.Register(transport)
 
 	timeout := h.Timeout
 	if timeout == 0 {

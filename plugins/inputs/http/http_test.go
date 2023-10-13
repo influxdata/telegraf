@@ -4,6 +4,8 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -433,6 +435,72 @@ func TestHTTPWithCSVFormat(t *testing.T) {
 				"b": 3.1415,
 			},
 			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Init())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	// Run the parser a second time to test for correct stateful handling
+	acc.ClearMetrics()
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+const (
+	httpOverUnixScheme = "http+unix"
+)
+
+func TestConnectionOverUnixSocket(t *testing.T) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/data" {
+			w.Header().Set("Content-Type", "text/csv")
+			_, _ = w.Write([]byte(simpleCSVWithHeader))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	unixListenAddr := fmt.Sprintf("%s/httptestserver.%d.sock", t.TempDir(), rand.Intn(1_000_000))
+	require.NoFileExists(t, unixListenAddr)
+
+	unixListener, err := net.Listen("unix", unixListenAddr)
+	require.NoError(t, err)
+
+	ts.Listener = unixListener
+	ts.Start()
+	defer ts.Close()
+
+	address := fmt.Sprintf("%s://%s:/data", httpOverUnixScheme, unixListenAddr)
+	plugin := &httpplugin.HTTP{
+		URLs: []string{address},
+		Log:  testutil.Logger{},
+	}
+
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &csv.Parser{
+			MetricName:  "metricName",
+			SkipRows:    3,
+			ColumnNames: []string{"a", "b", "c"},
+			TagColumns:  []string{"c"},
+		}
+		err := parser.Init()
+		return parser, err
+	})
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("metricName",
+			map[string]string{
+				"url": address,
+				"c":   "ok",
+			},
+			map[string]interface{}{
+				"a": 1.2,
+				"b": 3.1415,
+			},
+			time.Unix(22000, 0),
 		),
 	}
 
