@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -463,8 +465,8 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 		}
 	}))
 
-	unixListenAddr := fmt.Sprintf("%s/httptestserver.%d.sock", t.TempDir(), rand.Intn(1_000_000))
-	require.NoFileExists(t, unixListenAddr)
+	unixListenAddr := filepath.Join(os.TempDir(), fmt.Sprintf("httptestserver.%d.sock", rand.Intn(1_000_000)))
+	t.Cleanup(func() { os.Remove(unixListenAddr) })
 
 	unixListener, err := net.Listen("unix", unixListenAddr)
 	require.NoError(t, err)
