@@ -128,7 +128,7 @@ require (
 	github.com/lxc/lxd v0.0.0-20220920163450-e9b4b514106a
 	github.com/matttproud/golang_protobuf_extensions v1.0.4
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
-	github.com/mdlayher/vsock v1.1.1
+	github.com/mdlayher/vsock v1.2.1
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/microsoft/go-mssqldb v1.5.0
 	github.com/miekg/dns v1.1.56
@@ -359,7 +359,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/josharian/native v1.0.0 // indirect
+	github.com/josharian/native v1.1.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/webbrowser v1.0.0 // indirect
@@ -376,8 +376,8 @@ require (
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mdlayher/genetlink v1.2.0 // indirect
-	github.com/mdlayher/netlink v1.6.0 // indirect
-	github.com/mdlayher/socket v0.2.3 // indirect
+	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
