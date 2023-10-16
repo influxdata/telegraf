@@ -4,6 +4,7 @@ package bigquery
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -45,20 +46,24 @@ func (*BigQuery) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *BigQuery) Connect() error {
+func (s *BigQuery) Init() error {
 	if s.Project == "" {
-		return fmt.Errorf("Project is a required field for BigQuery output")
+		s.Project = bigquery.DetectProjectID
 	}
 
 	if s.Dataset == "" {
-		return fmt.Errorf("Dataset is a required field for BigQuery output")
-	}
-
-	if s.client == nil {
-		return s.setUpDefaultClient()
+		return errors.New(`"dataset" is required`)
 	}
 
 	s.warnedOnHyphens = make(map[string]bool)
+
+	return nil
+}
+
+func (s *BigQuery) Connect() error {
+	if s.client == nil {
+		return s.setUpDefaultClient()
+	}
 
 	return nil
 }
