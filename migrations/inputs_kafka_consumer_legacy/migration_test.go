@@ -1,8 +1,7 @@
 package inputs_kafka_consumer_legacy_test
 
 import (
-	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,50 +10,20 @@ import (
 	_ "github.com/influxdata/telegraf/migrations/inputs_kafka_consumer_legacy" // register migration
 )
 
-func TestCases(t *testing.T) {
-	// Get all directories in testdata
-	folders, err := os.ReadDir("testcases")
+func TestNoMigration(t *testing.T) {
+	input := []byte(`
+[[inputs.kafka_consumer_legacy]]
+  topics = ["telegraf"]
+  zookeeper_peers = ["localhost:2181"]
+  zookeeper_chroot = ""
+  consumer_group = "telegraf_metrics_consumers"
+  offset = "oldest"
+  data_format = "influx"
+  max_message_len = 65536
+`)
+
+	output, n, err := config.ApplyMigrations(input)
 	require.NoError(t, err)
-
-	for _, f := range folders {
-		// Only handle folders
-		if !f.IsDir() {
-			continue
-		}
-
-		t.Run(f.Name(), func(t *testing.T) {
-			testcasePath := filepath.Join("testcases", f.Name())
-			inputFile := filepath.Join(testcasePath, "telegraf.conf")
-			expectedFile := filepath.Join(testcasePath, "expected.conf")
-
-			// Read the expected output
-			expected := config.NewConfig()
-			require.NoError(t, expected.LoadConfig(expectedFile))
-			require.NotEmpty(t, expected.Inputs)
-
-			// Read the input data
-			input, remote, err := config.LoadConfigFile(inputFile)
-			require.NoError(t, err)
-			require.False(t, remote)
-			require.NotEmpty(t, input)
-
-			// Migrate
-			output, n, err := config.ApplyMigrations(input)
-			require.NoError(t, err)
-			require.NotEmpty(t, output)
-			require.GreaterOrEqual(t, n, uint64(1))
-			actual := config.NewConfig()
-			require.NoError(t, actual.LoadConfigData(output))
-
-			// Test the output
-			require.Len(t, actual.Inputs, len(expected.Inputs))
-			actualIDs := make([]string, 0, len(expected.Inputs))
-			expectedIDs := make([]string, 0, len(expected.Inputs))
-			for i := range actual.Inputs {
-				actualIDs = append(actualIDs, actual.Inputs[i].ID())
-				expectedIDs = append(expectedIDs, expected.Inputs[i].ID())
-			}
-			require.ElementsMatch(t, expectedIDs, actualIDs)
-		})
-	}
+	require.Empty(t, strings.TrimSpace(string(output)))
+	require.Equal(t, uint64(1), n)
 }
