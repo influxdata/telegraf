@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   credentials_file = "/path/to/service/account/key.json"
 
   ## Google Cloud Platform Project
-  # project = "*detect-project-id*"
+  # project = ""
 
   ## The namespace for the metric descriptor
   dataset = "telegraf"
@@ -37,6 +37,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Character to replace hyphens on Metric name
   # replace_hyphen_to = "_"
 ```
+
+Leaving `project` empty indicates the plugin will try to retrieve the project
+from the credentials file.
 
 Requires `dataset` to specify under which BigQuery dataset the corresponding
 metrics tables reside.

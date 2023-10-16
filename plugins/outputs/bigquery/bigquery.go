@@ -47,6 +47,10 @@ func (*BigQuery) SampleConfig() string {
 }
 
 func (s *BigQuery) Init() error {
+	if s.Project == "" {
+		s.Project = bigquery.DetectProjectID
+	}
+
 	if s.Dataset == "" {
 		return errors.New(`"dataset" is required`)
 	}
@@ -223,7 +227,6 @@ func (s *BigQuery) Close() error {
 func init() {
 	outputs.Add("bigquery", func() telegraf.Output {
 		return &BigQuery{
-			Project:         bigquery.DetectProjectID,
 			Timeout:         defaultTimeout,
 			ReplaceHyphenTo: "_",
 		}
