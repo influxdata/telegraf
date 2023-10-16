@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -475,7 +476,12 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 	ts.Start()
 	defer ts.Close()
 
-	address := fmt.Sprintf("%s://%s:/data", httpOverUnixScheme, unixListenAddr)
+	// NOTE: Remove ":" from windows filepath and replace all "\" with "/".
+	//       This is *required* so that the unix socket path plays well with unixtransport.
+	replacer := strings.NewReplacer(":", "", "\\", "/")
+	sockPath := replacer.Replace(unixListenAddr)
+
+	address := fmt.Sprintf("%s://%s:/data", httpOverUnixScheme, sockPath)
 	plugin := &httpplugin.HTTP{
 		URLs: []string{address},
 		Log:  testutil.Logger{},
