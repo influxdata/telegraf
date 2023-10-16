@@ -30,16 +30,9 @@ to use them.
 # Read formatted metrics from one or more HTTP endpoints
 [[inputs.http]]
   ## One or more URLs from which to read formatted metrics.
-  ##
-  ## HTTP requests over Unix domain sockets can be specified via the "http+unix" or "https+unix" schemes.
-  ## Request URLs should have the following form:
-  ##
-  ##    http+unix:///path/to/service.sock:/api/endpoint
-  ## Example:
-  #     http+unix:///run/user/420/podman/podman.sock:/d/v4.0.0/libpod/pods/json
-  ## Note: The path to the Unix domain socket and the request endpoint are separated by a colon (":").
   urls = [
-    "http://localhost/metrics"
+    "http://localhost/metrics",
+    "http+unix:///run/user/420/podman/podman.sock:/d/v4.0.0/libpod/pods/json"
   ]
 
   ## HTTP method
@@ -112,6 +105,17 @@ to use them.
   # data_format = "influx"
 
 ```
+
+HTTP requests over Unix domain sockets can be specified via the "http+unix" or
+"https+unix" schemes.
+Request URLs should have the following form:
+
+```text
+http+unix:///path/to/service.sock:/api/endpoint
+```
+
+Note: The path to the Unix domain socket and the request endpoint are separated
+by a colon (":").
 
 ## Example Output
 
