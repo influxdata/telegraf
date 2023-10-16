@@ -13,6 +13,7 @@ func makeMetrics(p *V5Format) []telegraf.Metric {
 	metrics := []telegraf.Metric{}
 	tags := map[string]string{
 		"agent_address": p.AgentAddress.String(),
+		"source":        p.AgentAddress.String(),
 	}
 	fields := map[string]interface{}{}
 	for _, sample := range p.Samples {
