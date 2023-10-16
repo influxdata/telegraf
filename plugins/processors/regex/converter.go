@@ -81,8 +81,8 @@ func (c *converter) setup(ct converterType, log telegraf.Logger) error {
 				log.Infof("%s: Using named-group mode...", ct)
 				c.groups = groups[1:]
 			} else {
-				msg := "Neither 'result_key' nor 'replacement' given with unnamed or mixed groups.\n"
-				msg += "Using explicit, empty replacement!"
+				msg := "Neither 'result_key' nor 'replacement' given with unnamed or mixed groups;"
+				msg += "using explicit, empty replacement!"
 				log.Warnf("%s: %s", ct, msg)
 			}
 		} else {
