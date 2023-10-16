@@ -50,7 +50,7 @@ type Snmp struct {
 	Agents []string `toml:"agents"`
 
 	// The tag used to name the agent host
-	AgentHostTag string `toml:"agent_host_tag"`
+	AgentHostTag string `toml:"agent_host_tag" deprecated:"1.29.0;use 'source' tag instead"`
 
 	snmp.ClientConfig
 
@@ -366,6 +366,9 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 		}
 		if _, ok := tr.Tags[s.AgentHostTag]; !ok {
 			tr.Tags[s.AgentHostTag] = gs.Host()
+		}
+		if _, ok := tr.Tags["source"]; !ok {
+			tr.Tags["source"] = gs.Host()
 		}
 		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
 	}
