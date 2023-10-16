@@ -11,7 +11,7 @@ const msg = `
 `
 
 // Migration function
-func migrate(tbl *ast.Table) ([]byte, string, error) {
+func migrate(_ *ast.Table) ([]byte, string, error) {
 	return nil, msg, nil
 }
 
