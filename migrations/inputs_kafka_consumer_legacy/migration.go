@@ -12,7 +12,7 @@ const msg = `
 
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
-	return nil, "this plugin", nil
+	return nil, msg, nil
 }
 
 // Register the migration function for the plugin type
