@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
-	"log" //nolint:depguard // Required for tracing connection issues
+	"log"
 	"net"
 	"os"
 	"regexp"

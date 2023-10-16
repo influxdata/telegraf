@@ -3,7 +3,7 @@ package shim
 import (
 	"errors"
 	"fmt"
-	"log" //nolint:depguard // Allow exceptional but valid use of log here.
+	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
