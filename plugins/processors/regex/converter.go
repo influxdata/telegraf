@@ -82,7 +82,7 @@ func (c *converter) setup(ct converterType, log telegraf.Logger) error {
 				c.groups = groups[1:]
 			} else {
 				msg := "Neither 'result_key' nor 'replacement' given with unnamed or mixed groups;"
-				msg += "using explicit, empty replacement!"
+				msg += " using explicit, empty replacement!"
 				log.Warnf("%s: %s", ct, msg)
 			}
 		} else {
