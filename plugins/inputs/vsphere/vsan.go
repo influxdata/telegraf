@@ -142,6 +142,7 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 	// Use the include & exclude configuration to filter all supported performance metrics
 	for _, entity := range resp.Returnval {
 		if res.filters.Match(perfPrefix + entity.Name) {
+			e.Parent.Log.Debugf("[vSAN] supported entity name=%q, id=%q, description=%q", entity.Name, entity.Id, entity.Description)
 			metrics[perfPrefix+entity.Name] = ""
 		}
 	}
@@ -213,8 +214,10 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	var commonError error
 	for entityRefID := range metrics {
 		if !strings.HasPrefix(entityRefID, perfPrefix) {
+			e.Parent.Log.Debugf("[vSAN] skipping entity %q", entityRefID)
 			continue
 		}
+		e.Parent.Log.Debugf("[vSAN] processing entity %q", entityRefID)
 		entityRefID = strings.TrimPrefix(entityRefID, perfPrefix)
 		var perfSpecs []vsantypes.VsanPerfQuerySpec
 
