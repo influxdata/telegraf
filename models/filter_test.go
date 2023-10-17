@@ -660,8 +660,8 @@ func BenchmarkFilter(b *testing.B) {
 			name: "metric filter complex",
 			filter: Filter{
 				MetricPass: `"source" in tags` +
-					` and fields.exists(f, type(fields[f]) in [int, uint, double] and fields[f] > 20.0)` +
-					` and time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
+					` && fields.exists(f, type(fields[f]) in [int, uint, double] && fields[f] > 20.0)` +
+					` && time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
 			},
 			metric: testutil.MustMetric("cpu",
 				map[string]string{},
