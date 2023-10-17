@@ -6,7 +6,9 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"math"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/mdlayher/vsock"
 )
 
 //go:embed sample.conf
@@ -55,13 +58,39 @@ func (sw *SocketWriter) Connect() error {
 	}
 
 	var c net.Conn
-	if tlsCfg == nil {
-		c, err = net.Dial(spl[0], spl[1])
+
+	if spl[0] == "vsock" {
+		addr_tuple := strings.SplitN(spl[1], ":", 2)
+
+		//check if address string has two tokens
+		if len(addr_tuple) < 2 {
+			return fmt.Errorf("CID and/or port number missing")
+		}
+
+		//parse CID and port number from address string
+		// CID and port numner are 32 bit
+		// source: https://man7.org/linux/man-pages/man7/vsock.7.html
+		cid, _ := strconv.ParseUint(addr_tuple[0], 10, 32)
+		if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
+			return fmt.Errorf("CID %d is out of range", cid)
+		}
+		port, _ := strconv.ParseUint(addr_tuple[1], 10, 32)
+		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
+			return fmt.Errorf("Port numner %d is out of range", port)
+		}
+		c, err = vsock.Dial(uint32(cid), uint32(port), nil)
+		if err != nil {
+			return err
+		}
 	} else {
-		c, err = tls.Dial(spl[0], spl[1], tlsCfg)
-	}
-	if err != nil {
-		return err
+		if tlsCfg == nil {
+			c, err = net.Dial(spl[0], spl[1])
+		} else {
+			c, err = tls.Dial(spl[0], spl[1], tlsCfg)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := sw.setKeepAlive(c); err != nil {
