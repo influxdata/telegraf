@@ -6,8 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGatherQueuesMetrics(t *testing.T) {
@@ -44,14 +45,14 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	records["enqueue_count"] = 0
 	records["dequeue_count"] = 0
 
+	plugin := &ActiveMQ{
+		Server: "localhost",
+		Port:   8161,
+	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
-
-	activeMQ := new(ActiveMQ)
-	activeMQ.Server = "localhost"
-	activeMQ.Port = 8161
-	require.NoError(t, activeMQ.Init())
-
-	activeMQ.GatherQueuesMetrics(&acc, queues)
+	plugin.GatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
 }
 
@@ -90,14 +91,14 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	records["enqueue_count"] = 1
 	records["dequeue_count"] = 0
 
+	plugin := &ActiveMQ{
+		Server: "localhost",
+		Port:   8161,
+	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
-
-	activeMQ := new(ActiveMQ)
-	activeMQ.Server = "localhost"
-	activeMQ.Port = 8161
-	require.NoError(t, activeMQ.Init())
-
-	activeMQ.GatherTopicsMetrics(&acc, topics)
+	plugin.GatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
 }
 
@@ -109,7 +110,6 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 </subscribers>`
 
 	subscribers := Subscribers{}
-
 	require.NoError(t, xml.Unmarshal([]byte(s), &subscribers))
 
 	records := make(map[string]interface{})
@@ -130,14 +130,14 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	records["enqueue_counter"] = 0
 	records["dequeue_counter"] = 0
 
+	plugin := &ActiveMQ{
+		Server: "localhost",
+		Port:   8161,
+	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
-
-	activeMQ := new(ActiveMQ)
-	activeMQ.Server = "localhost"
-	activeMQ.Port = 8161
-	require.NoError(t, activeMQ.Init())
-
-	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
+	plugin.GatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
 }
 
@@ -169,12 +169,9 @@ func TestURLs(t *testing.T) {
 		URL:      "http://" + ts.Listener.Addr().String(),
 		Webadmin: "admin",
 	}
-	err := plugin.Init()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	err = plugin.Gather(&acc)
-	require.NoError(t, err)
-
-	require.Len(t, acc.GetTelegrafMetrics(), 0)
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
