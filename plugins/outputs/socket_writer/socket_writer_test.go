@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/mdlayher/vsock"
 )
 
 func newSocketWriter(addr string) *SocketWriter {
@@ -75,6 +76,23 @@ func TestSocketWriter_unixgram(t *testing.T) {
 	require.NoError(t, sw.Connect())
 
 	testSocketWriterPacket(t, sw, listener)
+}
+
+func TestSocketWriter_vsock(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping since your OS, does not support vsock")
+	}
+
+	listener, err := vsock.Listen(5000, nil)
+	require.NoError(t, err)
+
+	sw := newSocketWriter("5000")
+	require.NoError(t, sw.Connect())
+
+	lconn, err := listener.Accept()
+	require.NoError(t, err)
+
+	testSocketWriterStream(t, sw, lconn)
 }
 
 func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
