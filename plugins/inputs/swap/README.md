@@ -1,6 +1,6 @@
 # Swap Input Plugin
 
-The swap plugin collects system swap metrics.
+The swap plugin collects system swap metrics. This plugin ONLY supports Linux.
 
 For more information on what swap memory is, read [All about Linux swap
 space](https://www.linux.com/news/all-about-linux-swap-space).
