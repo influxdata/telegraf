@@ -31,6 +31,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## System Id to collect data for in Redfish APIs.
   computer_system_id="System.Embedded.1"
 
+  ## Metrics to collect
+  ## The metric collects to gather. Choose from "power" and "thermal".
+  # include_metrics = ["power", "thermal"]
+
   ## Tag sets allow you to include redfish OData link parent data
   ## For Example.
   ## Thermal data is an OData link with parent Chassis which has a link of Location.
