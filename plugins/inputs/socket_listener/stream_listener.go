@@ -89,20 +89,20 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 func (l *streamListener) setupVsock(u *url.URL) error {
 	var err error
 
-	addr_tuple := strings.SplitN(u.String(), ":", 2)
+	addrTuple := strings.SplitN(u.String(), ":", 2)
 
 	//check if address string has two tokens
-	if len(addr_tuple) < 2 {
+	if len(addrTuple) < 2 {
 		return fmt.Errorf("CID and/or port number missing")
 	}
 	//parse CID and port number from address string
 	// CID and port numner are 32 bit
 	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
-	cid, _ := strconv.ParseUint(addr_tuple[0], 10, 32)
+	cid, _ := strconv.ParseUint(addrTuple[0], 10, 32)
 	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
 		return fmt.Errorf("CID %d is out of range", cid)
 	}
-	port, _ := strconv.ParseUint(addr_tuple[1], 10, 32)
+	port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
 	if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
 		return fmt.Errorf("Port numner %d is out of range", port)
 	}

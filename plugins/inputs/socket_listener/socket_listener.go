@@ -224,7 +224,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		}
 		sl.listener = psl
 	case "vsock":
-		ssl:= &streamListener{
+		ssl := &streamListener{
 			ReadBufferSize:  int(sl.ReadBufferSize),
 			ReadTimeout:     sl.ReadTimeout,
 			KeepAlivePeriod: sl.KeepAlivePeriod,
