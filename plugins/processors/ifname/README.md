@@ -25,6 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # dest = "ifName"
 
   ## Name of tag of the SNMP agent to request the interface name from
+  ##   example: agent = "source"
   # agent = "agent"
 
   ## Timeout for each request.
