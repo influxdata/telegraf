@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/fuzz"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -75,6 +76,40 @@ const validJSONArrayTags = `
     }
 ]
 `
+
+const benchmarkData = `
+[
+	{
+	"name": "impression",
+	"timestamp": 1653643420,
+	"fields": {
+		"count_sum": 5
+	},
+	"tags": {
+		"key": "12345",
+		"flagname": "F5",
+		"host": "1cbbb3796fc2",
+		"platform": "Java",
+		"sdkver": "4.9.1",
+		"value": "false"
+	}
+	},
+	{
+	"name": "expression",
+	"timestamp": 1653646789,
+	"fields": {
+		"count_sum": 42
+	},
+	"tags": {
+		"key": "67890",
+		"flagname": "E42",
+		"host": "klaus",
+		"platform": "Golang",
+		"sdkver": "1.18.3",
+		"value": "true"
+	}
+	}
+]`
 
 func TestParseValidJSON(t *testing.T) {
 	parser := &Parser{MetricName: "json_test"}
@@ -1357,6 +1392,85 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
 		})
 	}
+}
+
+func TestBenchmarkData(t *testing.T) {
+	// Setup the plugin
+	plugin := &Parser{
+		MetricName: "benchmark",
+		TagKeys:    []string{"tags_*"},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_flagname": "F5",
+				"tags_host":     "1cbbb3796fc2",
+				"tags_key":      "12345",
+				"tags_platform": "Java",
+				"tags_sdkver":   "4.9.1",
+				"tags_value":    "false",
+			},
+			map[string]interface{}{
+				"fields_count_sum": float64(5),
+				"timestamp":        float64(1653643420),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_flagname": "E42",
+				"tags_host":     "klaus",
+				"tags_key":      "67890",
+				"tags_platform": "Golang",
+				"tags_sdkver":   "1.18.3",
+				"tags_value":    "true",
+			},
+			map[string]interface{}{
+				"fields_count_sum": float64(42),
+				"timestamp":        float64(1653646789),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Do the parsing
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+}
+
+func BenchmarkParsingSequential(b *testing.B) {
+	// Configure the plugin
+	plugin := &Parser{
+		MetricName: "benchmark",
+		TagKeys:    []string{"tags_*"},
+	}
+	require.NoError(b, plugin.Init())
+
+	// Do the benchmarking
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
+}
+
+func BenchmarkParsingParallel(b *testing.B) {
+	// Configure the plugin
+	plugin := &Parser{
+		MetricName: "benchmark",
+		TagKeys:    []string{"tags_*"},
+	}
+	require.NoError(b, plugin.Init())
+
+	// Do the benchmarking
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			_, _ = plugin.Parse([]byte(benchmarkData))
+		}
+	})
 }
 
 func FuzzParserJSON(f *testing.F) {
