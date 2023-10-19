@@ -157,6 +157,5 @@ func BenchmarkParsingParallel(b *testing.B) {
 		for p.Next() {
 			_, _ = plugin.Parse(input)
 		}
-
 	})
 }
