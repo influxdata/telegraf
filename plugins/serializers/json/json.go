@@ -103,6 +103,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+	serialized = append(serialized, '\n')
+
 	return serialized, nil
 }
 
