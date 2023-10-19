@@ -846,33 +846,7 @@ func (p *PrometheusHttp) Init() error {
 	return nil
 }
 
-/*
-type PrometheusHttpInput struct {
-	TagInclude []string `toml:"taginclude,omitempty"`
-	common.InputOptions
-}
-
-func migrate(tbl *ast.Table) ([]byte, string, error) {
-
-	var old PrometheusHttpInput
-	if err := toml.UnmarshalTable(tbl, &old); err != nil {
-		return nil, "", err
-	}
-	cfg := migrations.CreateTOMLStruct("inputs", "jolokia2_agent")
-	// Marshal the new configuration
-	buf, err := toml.Marshal(cfg)
-	if err != nil {
-		return nil, "", err
-	}
-	buf = append(buf, []byte("\n")...)
-
-	// Create the new content to output
-	return buf, "", nil
-}
-*/
-
 func init() {
-	//migrations.AddPluginMigration(pluginName, migrate)
 	inputs.Add(pluginName, func() telegraf.Input {
 		return &PrometheusHttp{}
 	})
