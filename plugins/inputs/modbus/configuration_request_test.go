@@ -457,6 +457,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 	tests := []struct {
 		name        string
 		address     uint16
+		length      uint16
 		byteOrder   string
 		dataTypeIn  string
 		dataTypeOut string
@@ -989,6 +990,14 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 			write:      []byte{0xb8, 0x14},
 			read:       float64(-0.509765625),
 		},
+		{
+			name:       "register110_string",
+			address:    110,
+			dataTypeIn: "STRING",
+			length:     7,
+			write:      []byte{0x4d, 0x6f, 0x64, 0x62, 0x75, 0x73, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x00},
+			read:       "Modbus String",
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -1024,6 +1033,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 							OutputType: hrt.dataTypeOut,
 							Scale:      hrt.scale,
 							Address:    hrt.address,
+							Length:     hrt.length,
 						},
 					},
 				},

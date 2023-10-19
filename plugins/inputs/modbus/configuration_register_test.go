@@ -841,6 +841,15 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 			write:     []byte{0x14, 0xb8},
 			read:      float64(-0.509765625),
 		},
+		{
+			name:      "register250_string",
+			address:   []uint16{250, 251, 252, 253, 254, 255, 256},
+			quantity:  7,
+			byteOrder: "AB",
+			dataType:  "STRING",
+			write:     []byte{0x4d, 0x6f, 0x64, 0x62, 0x75, 0x73, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x00},
+			read:      "Modbus String",
+		},
 	}
 
 	serv := mbserver.NewServer()
