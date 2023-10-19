@@ -425,6 +425,7 @@ func TestDellApis(t *testing.T) {
 		Username:         "test",
 		Password:         "test",
 		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 	require.NoError(t, plugin.Init())
 	var acc testutil.Accumulator
@@ -603,6 +604,7 @@ func TestHPApis(t *testing.T) {
 		Username:         "test",
 		Password:         "test",
 		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
@@ -643,6 +645,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Username:         "test",
 		Password:         "test",
 		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 
 	var acc testutil.Accumulator
@@ -671,6 +674,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	r := &Redfish{
 		Address:          ts.URL,
 		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 
 	err := r.Init()
@@ -743,6 +747,7 @@ func TestInvalidDellJSON(t *testing.T) {
 				Username:         "test",
 				Password:         "test",
 				ComputerSystemID: "System.Embedded.1",
+				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
 			require.NoError(t, plugin.Init())
@@ -813,6 +818,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Username:         "test",
 				Password:         "test",
 				ComputerSystemID: "System.Embedded.2",
+				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
 			require.NoError(t, plugin.Init())
@@ -1097,6 +1103,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		Password:         "test",
 		ComputerSystemID: "1",
 		IncludeTagSets:   []string{"chassis", "chassis.location"},
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
