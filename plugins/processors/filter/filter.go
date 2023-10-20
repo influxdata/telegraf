@@ -67,18 +67,19 @@ func (f *Filter) ifCondition(item *FilterIf, metric telegraf.Metric) bool {
 	keys := f.getKeys(tags)
 
 	flag := true
-	for k, r := range item.tags {
+	for k, v := range item.Tags {
 
 		if !utils.Contains(keys, k) {
-			continue
+			return false
 		}
 
 		exists := false
 		value := tags[k]
+		r := item.tags[k]
 		if r != nil {
 			exists = r.MatchString(value)
 		} else {
-			exists = value == item.Tags[k]
+			exists = value == v
 		}
 
 		flag = flag && exists
