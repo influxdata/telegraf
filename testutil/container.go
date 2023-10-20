@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -22,15 +23,16 @@ func (g *TestLogConsumer) Accept(l testcontainers.Log) {
 }
 
 type Container struct {
-	BindMounts   map[string]string
-	Entrypoint   []string
-	Env          map[string]string
-	ExposedPorts []string
-	Cmd          []string
-	Image        string
-	Name         string
-	Networks     []string
-	WaitingFor   wait.Strategy
+	BindMounts         map[string]string
+	Entrypoint         []string
+	Env                map[string]string
+	HostConfigModifier func(*container.HostConfig)
+	ExposedPorts       []string
+	Cmd                []string
+	Image              string
+	Name               string
+	Networks           []string
+	WaitingFor         wait.Strategy
 
 	Address string
 	Ports   map[string]string
@@ -50,15 +52,16 @@ func (c *Container) Start() error {
 
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Mounts:       testcontainers.Mounts(containerMounts...),
-			Entrypoint:   c.Entrypoint,
-			Env:          c.Env,
-			ExposedPorts: c.ExposedPorts,
-			Cmd:          c.Cmd,
-			Image:        c.Image,
-			Name:         c.Name,
-			Networks:     c.Networks,
-			WaitingFor:   c.WaitingFor,
+			Mounts:             testcontainers.Mounts(containerMounts...),
+			Entrypoint:         c.Entrypoint,
+			Env:                c.Env,
+			ExposedPorts:       c.ExposedPorts,
+			HostConfigModifier: c.HostConfigModifier,
+			Cmd:                c.Cmd,
+			Image:              c.Image,
+			Name:               c.Name,
+			Networks:           c.Networks,
+			WaitingFor:         c.WaitingFor,
 		},
 		Started: true,
 	}
