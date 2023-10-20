@@ -77,8 +77,7 @@ func parseBoolBytes(b []byte) (bool, error) {
 }
 
 // unsafeBytesToString converts a []byte to a string without a heap allocation.
-//
-// It is unsafe, and is intended to prepare input to short-lived functions that require strings.
 func unsafeBytesToString(in []byte) string {
+	//nolint:gosec // G103: It is unsafe, and is intended to prepare input to short-lived functions that require strings.
 	return unsafe.String(&in[0], len(in))
 }
