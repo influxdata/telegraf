@@ -43,7 +43,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 	zookeeper := testutil.Container{
 		Image:        "wurstmeister/zookeeper",
-		ExposedPorts: []string{"2181:2181"},
+		ExposedPorts: []string{"2181"},
 		Networks:     []string{networkName},
 		WaitingFor:   wait.ForLog("binding to port"),
 		Name:         "telegraf-test-zookeeper",
@@ -54,7 +54,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "wurstmeister/kafka",
-		ExposedPorts: []string{"9092:9092"},
+		ExposedPorts: []string{"9092"},
 		Env: map[string]string{
 			"KAFKA_ADVERTISED_HOST_NAME": "localhost",
 			"KAFKA_ADVERTISED_PORT":      "9092",
