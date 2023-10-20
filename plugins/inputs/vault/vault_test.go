@@ -104,6 +104,81 @@ func TestVaultStats(t *testing.T) {
 	}
 }
 
+func TestRedirect(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"vault.raft.replication.appendEntries.logs",
+			map[string]string{
+				"peer_id": "clustnode-02",
+			},
+			map[string]interface{}{
+				"count":  int(130),
+				"rate":   float64(0.2),
+				"sum":    int(2),
+				"min":    int(0),
+				"max":    int(1),
+				"mean":   float64(0.015384615384615385),
+				"stddev": float64(0.12355304447984486),
+			},
+			time.Unix(1638287340, 0),
+			1,
+		),
+		testutil.MustMetric(
+			"vault.core.unsealed",
+			map[string]string{
+				"cluster": "vault-cluster-23b671c7",
+			},
+			map[string]interface{}{
+				"value": int(1),
+			},
+			time.Unix(1638287340, 0),
+			2,
+		),
+		testutil.MustMetric(
+			"vault.token.lookup",
+			map[string]string{},
+			map[string]interface{}{
+				"count":  int(5135),
+				"max":    float64(16.22449493408203),
+				"mean":   float64(0.1698389152269865),
+				"min":    float64(0.06690400093793869),
+				"rate":   float64(87.21228296905755),
+				"stddev": float64(0.24637634000854705),
+				"sum":    float64(872.1228296905756),
+			},
+			time.Unix(1638287340, 0),
+			1,
+		),
+	}
+
+	response, err := os.ReadFile("testdata/response_key_metrics.json")
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.RequestURI {
+		case "/v1/sys/metrics":
+			redirectURL := "http://" + r.Host + "/custom/metrics"
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+		case "/custom/metrics":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(response)
+		}
+	}))
+	defer server.Close()
+
+	// Setup the plugin
+	plugin := &Vault{
+		URL:   server.URL,
+		Token: "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
