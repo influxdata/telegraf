@@ -380,7 +380,6 @@ OS RealTime Mod  | 0x00              | ok
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
-
 	fmt.Fprint(os.Stdout, mockData)
 	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
