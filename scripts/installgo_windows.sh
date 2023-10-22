@@ -5,12 +5,12 @@ set -ux
 GO_VERSION="1.21.3"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose --debug --installargs INSTALLDIR="C:\Go"
+    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose --debug
     git config --system core.longpaths true
 }
 
-export PATH="/c/Go/bin/:$PATH"
-refreshenv
+#export PATH="/c/Go/bin:$PATH"
+#refreshenv
 
 echo "PATH before: $PATH"
 echo "go location before: $(command -v go)"
@@ -27,16 +27,16 @@ if command -v go >/dev/null 2>&1; then
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
+        command -v go
         go version
     fi
 else
-    echo "Setup go"
     setup_go
+    command -v go
+    go version
 fi
 
 echo "PATH after: $PATH"
-echo "go location after: $(command -v go)"
-go version
 
 '/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
