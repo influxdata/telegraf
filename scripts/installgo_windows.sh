@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eux
+set -ux
 
 GO_VERSION="1.21.3"
 
@@ -11,8 +11,9 @@ setup_go () {
 
 echo "PATH before: $PATH"
 echo "go location before: $(command -v go)"
-find -help
 find '/' -name "go.exe"
+/c/Users/circleci/go/bin/go version
+'/c/Program Files/Go/bin/go' version
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
@@ -31,3 +32,5 @@ echo "PATH after: $PATH"
 echo "go location after: $(command -v go)"
 go version
 find '/' -name "go.exe"
+/c/Users/circleci/go/bin/go version
+'/c/Program Files/Go/bin/go' version
