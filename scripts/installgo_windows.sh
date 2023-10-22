@@ -10,7 +10,7 @@ setup_go () {
 }
 
 echo "PATH before: $PATH"
-echo "go location before: `command -v go`"
+echo "go location before: $(command -v go)"
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
@@ -26,5 +26,5 @@ else
 fi
 
 echo "PATH after: $PATH"
-echo "go location after: `command -v go`"
+echo "go location after: $(command -v go)"
 go version
