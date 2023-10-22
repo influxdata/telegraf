@@ -5,19 +5,19 @@ set -ux
 GO_VERSION="1.21.3"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose --debug
+    choco upgrade golang --allow-downgrade --version=${GO_VERSION}
     git config --system core.longpaths true
 }
 
 #export PATH="/c/Go/bin:$PATH"
 #refreshenv
 
-echo "PATH before: $PATH"
-echo "go location before: $(command -v go)"
-
-'/c/Users/circleci/go/bin/go' version
-'/c/Program Files/Go/bin/go' version
-'/c/Go/bin/go' version
+#echo "PATH before: $PATH"
+#echo "go location before: $(command -v go)"
+#
+#'/c/Users/circleci/go/bin/go' version
+#'/c/Program Files/Go/bin/go' version
+#'/c/Go/bin/go' version
 
 
 
@@ -36,8 +36,8 @@ else
     go version
 fi
 
-echo "PATH after: $PATH"
+#echo "PATH after: $PATH"
 
-'/c/Users/circleci/go/bin/go' version
-'/c/Program Files/Go/bin/go' version
-'/c/Go/bin/go' version
+#'/c/Users/circleci/go/bin/go' version
+#'/c/Program Files/Go/bin/go' version
+#'/c/Go/bin/go' version
