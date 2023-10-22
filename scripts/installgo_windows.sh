@@ -9,14 +9,17 @@ setup_go () {
     git config --system core.longpaths true
 }
 
+export PATH="/c/Go/bin/:$PATH"
+refreshenv
+
 echo "PATH before: $PATH"
 echo "go location before: $(command -v go)"
 
 '/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
 '/c/Go/bin/go' version
-ls -l '/c/Users/circleci/go'
-ls -l '/c/Users/circleci/go/bin'
+
+
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
@@ -38,5 +41,3 @@ go version
 '/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
 '/c/Go/bin/go' version
-ls -l '/c/Users/circleci/go'
-ls -l '/c/Users/circleci/go/bin'

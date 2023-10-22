@@ -151,7 +151,7 @@ commands:
                 key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~\project\gotestsum.exe'
-                  - 'C:\Program Files\Go'
+                  - 'C:\Go'
   package-build:
     parameters:
       type:
