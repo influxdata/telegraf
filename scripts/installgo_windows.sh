@@ -5,19 +5,17 @@ set -eux
 GO_VERSION="1.21.3"
 
 setup_go () {
-    rm -rf '/c/Program Files/Go'
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION}
-    choco install make
+    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose --installargs INSTALLDIR="C:\Go"
     git config --system core.longpaths true
 }
 
-if command -v go >/dev/null 2>&1; then
+if command -v C:\Go\go >/dev/null 2>&1; then
     echo "Go is already installed"
-    v=$(go version | { read -r _ _ v _; echo "${v#go}"; })
+    v=$(C:\Go\go version | { read -r _ _ v _; echo "${v#go}"; })
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
-        go version
+        C:\Go\go version
     fi
 else
     setup_go

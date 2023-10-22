@@ -63,6 +63,7 @@ commands:
           steps:
             - run: rm -rf '/c/Program Files/Go'
             - run: choco feature enable -n allowGlobalConfirmation
+            - run: choco install make
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw --version=12.2.0.03042023
       - run: go env
@@ -151,7 +152,7 @@ commands:
                 key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~\project\gotestsum.exe'
-                  - 'C:\Program Files\Go'
+                  - 'C:\Go'
   package-build:
     parameters:
       type:
@@ -293,7 +294,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v3"
     executor:
         name: win/default
         shell: bash.exe
