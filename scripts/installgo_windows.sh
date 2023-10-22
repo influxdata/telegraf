@@ -11,7 +11,7 @@ setup_go () {
 
 echo "PATH before: $PATH"
 echo "go location before: $(command -v go)"
-find --help
+find -help
 find '/' -name "go.exe"
 
 if command -v go >/dev/null 2>&1; then
