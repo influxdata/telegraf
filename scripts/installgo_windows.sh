@@ -2,10 +2,10 @@
 
 set -ux
 
-GO_VERSION="1.21.3"
+GO_VERSION="1.21.1"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION}
+    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --trace --verbose
     git config --system core.longpaths true
 }
 
@@ -19,7 +19,8 @@ setup_go () {
 #'/c/Program Files/Go/bin/go' version
 #'/c/Go/bin/go' version
 
-
+command -v go
+go version
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
