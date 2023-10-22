@@ -300,20 +300,20 @@ jobs:
         size: xlarge
     steps:
       - checkout
-      - restore_cache:
-          name: "Restore Go caches"
-          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+#      - restore_cache:
+#          name: "Restore Go caches"
+#          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
           cache_version: "v6"
-      - save_cache:
-          name: "Save Go caches"
-          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-          paths:
-            - '~\go\pkg\mod'
-            - '~\AppData\Local\golangci-lint'
-            - '~\AppData\Local\go-build'
+#      - save_cache:
+#          name: "Save Go caches"
+#          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+#          paths:
+#            - '~\go\pkg\mod'
+#            - '~\AppData\Local\golangci-lint'
+#            - '~\AppData\Local\go-build'
 
   test-licenses:
     executor: telegraf-ci
