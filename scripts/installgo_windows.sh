@@ -5,17 +5,16 @@ set -ux
 GO_VERSION="1.21.3"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose
+    choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose --debug --trace --installargs INSTALLDIR="C:\Go"
     git config --system core.longpaths true
 }
 
 echo "PATH before: $PATH"
 echo "go location before: $(command -v go)"
 
-find '/' -name 'go.exe'
-find '/' --name 'go.exe'
-find '/' 'go.exe'
-find 'go.exe'
+cd '/c'
+dir 'go.exe' /s
+
 '/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
 ls -l '/c/Users/circleci/go'
@@ -38,10 +37,9 @@ echo "PATH after: $PATH"
 echo "go location after: $(command -v go)"
 go version
 
-find '/' -name 'go.exe'
-find '/' --name 'go.exe'
-find '/' 'go.exe'
-find 'go.exe'
+cd '/c'
+dir 'go.exe' /s
+
 '/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
 ls -l '/c/Users/circleci/go'
