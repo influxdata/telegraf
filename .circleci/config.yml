@@ -61,7 +61,6 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf '/c/Program Files/Go'
             - run: choco feature enable -n allowGlobalConfirmation
             - run: choco install make
             - run: 'sh ./scripts/installgo_windows.sh'
@@ -152,7 +151,7 @@ commands:
                 key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
                   - '~\project\gotestsum.exe'
-                  - 'C:\Go'
+                  - 'C:\Program Files\Go'
   package-build:
     parameters:
       type:
@@ -294,7 +293,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v3"
+        default: "v2"
     executor:
         name: win/default
         shell: bash.exe
