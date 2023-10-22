@@ -2,7 +2,7 @@
 
 set -eux
 
-GO_VERSION="1.21.3"
+GO_VERSION="1.21.2"
 
 setup_go () {
     choco upgrade golang --allow-downgrade --version=${GO_VERSION} --verbose --installargs INSTALLDIR="C:\Go"
