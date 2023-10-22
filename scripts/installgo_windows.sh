@@ -5,7 +5,7 @@ set -ux
 GO_VERSION="1.21.1"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --install-if-not-installed --version=${GO_VERSION} --debug --verbose
+    choco upgrade golang --allow-downgrade --force --version=${GO_VERSION} --debug --verbose
     git config --system core.longpaths true
 }
 
