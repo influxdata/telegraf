@@ -11,9 +11,15 @@ setup_go () {
 
 echo "PATH before: $PATH"
 echo "go location before: $(command -v go)"
-find '/' -name "go.exe"
-/c/Users/circleci/go/bin/go version
+
+find '/' -name 'go.exe'
+find '/' --name 'go.exe'
+find '/' 'go.exe'
+find 'go.exe'
+'/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
+ls -l '/c/Users/circleci/go'
+ls -l '/c/Users/circleci/go/bin'
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
@@ -31,6 +37,12 @@ fi
 echo "PATH after: $PATH"
 echo "go location after: $(command -v go)"
 go version
-find '/' -name "go.exe"
-/c/Users/circleci/go/bin/go version
+
+find '/' -name 'go.exe'
+find '/' --name 'go.exe'
+find '/' 'go.exe'
+find 'go.exe'
+'/c/Users/circleci/go/bin/go' version
 '/c/Program Files/Go/bin/go' version
+ls -l '/c/Users/circleci/go'
+ls -l '/c/Users/circleci/go/bin'
