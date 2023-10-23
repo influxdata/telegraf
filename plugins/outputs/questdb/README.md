@@ -1,7 +1,8 @@
 # QuestDB Output Plugin
 
-This plugin sends metrics to [QuestDB](https://questdb.io) and automatically create the target tables when they
-don't already exist. The plugin supports authentication and TLS.
+This plugin sends metrics to [QuestDB](https://questdb.io) and automatically
+create the target tables when they don't already exist. The plugin supports
+authentication and TLS.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
