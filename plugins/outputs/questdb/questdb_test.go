@@ -3,6 +3,7 @@ package questdb
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/influxdata/telegraf/config"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"io"
 	"net"
@@ -37,7 +38,7 @@ func newQuestDBAuth(addr string, user string, token string) *QuestDB {
 	return &QuestDB{
 		Address: addr,
 		User:    user,
-		Token:   token,
+		Token:   config.NewSecret([]byte(token)),
 	}
 }
 

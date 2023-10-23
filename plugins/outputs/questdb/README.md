@@ -4,6 +4,13 @@ This plugin sends metrics to [QuestDB](https://questdb.io) and automatically
 create the target tables when they don't already exist. The plugin supports
 authentication and TLS.
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `token` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support

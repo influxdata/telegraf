@@ -29,8 +29,8 @@ import (
 var sampleConfig string
 
 type QuestDB struct {
-	User            string `toml:"user"`
-	Token           string `toml:"token"`
+	User            string        `toml:"user"`
+	Token           config.Secret `toml:"token"`
 	Address         string
 	KeepAlivePeriod *config.Duration
 	tlsint.ClientConfig
@@ -61,8 +61,12 @@ func (questdb *QuestDB) Connect() error {
 
 	// Decode the key if provided
 	var key *ecdsa.PrivateKey
-	if questdb.User != "" && questdb.Token != "" {
-		keyRaw, err := base64.RawURLEncoding.DecodeString(questdb.Token)
+	token, err := questdb.Token.Get()
+	if err != nil {
+		return err
+	}
+	if questdb.User != "" && token.TemporaryString() != "" {
+		keyRaw, err := base64.RawURLEncoding.DecodeString(token.TemporaryString())
 		if err != nil {
 			return err
 		}
@@ -70,6 +74,7 @@ func (questdb *QuestDB) Connect() error {
 		key.PublicKey.Curve = elliptic.P256()
 		key.PublicKey.X, key.PublicKey.Y = key.PublicKey.Curve.ScalarBaseMult(keyRaw)
 		key.D = new(big.Int).SetBytes(keyRaw)
+		token.Destroy()
 	}
 
 	var c net.Conn
