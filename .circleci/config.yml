@@ -47,15 +47,21 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf '/c/Program Files/Go'
-            - run: rm -rf '/c/ProgramData/chocolatey/lib/mingw'
+            - run:
+                name: Remove Go and MinGW to avoid clashes after upgrade during cache restore
+                command: |
+                  rm -rf '/c/Program Files/Go'
+                  rm -rf '/c/ProgramData/chocolatey/lib/mingw'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
           steps:
-            - run: rm -rf '/usr/local/Cellar/go'
-            - run: sudo mkdir -p '/usr/local/Cellar/go'
-            - run: sudo chown -R $(id -u):$(id -g) '/usr/local/Cellar/go'
+            - run:
+                name: Ensure go directory is empty and have proper permissions before cache restore
+                command: |
+                  sudo rm -rf '/usr/local/Cellar/go'
+                  sudo mkdir -p '/usr/local/Cellar/go'
+                  sudo chown -R $(id -u):$(id -g) '/usr/local/Cellar/go'
       - restore_cache:
           name: "Restore binaries from cache"
           key: go-bins-<< parameters.cache_version >>-<< parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-{{ checksum "go.sum" }}
@@ -117,10 +123,18 @@ commands:
             equal: [ "386", << parameters.arch >> ]
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
-      - run: |
-          export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
-          echo "PATH: $PATH"
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: |
+                export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
+                GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+      - unless:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
       - when:
           condition:
             and:

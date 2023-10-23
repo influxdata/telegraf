@@ -20,5 +20,6 @@ else
     setup_go
 fi
 
+echo "$PATH"
 command -v go
 go version

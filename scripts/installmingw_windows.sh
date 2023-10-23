@@ -1,19 +1,16 @@
 #!/bin/sh
 
-set -ux
+set -eux
 
 MINGW_VERSION="12.2.0.03042023"
 GCC_VERSION="12.2.0"
 
 setup_mingw () {
-    choco upgrade mingw --allow-downgrade --force --version=${MINGW_VERSION} --verbose --debug
+    choco upgrade mingw --allow-downgrade --force --version=${MINGW_VERSION}
 }
 
 export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
-
-echo "PATH: $PATH"
-command -v gcc
-gcc -dumpversion
+echo "$PATH"
 
 if command -v gcc >/dev/null 2>&1; then
     echo "MinGW is already installed"
@@ -26,6 +23,6 @@ else
     setup_mingw
 fi
 
-echo "PATH: $PATH"
+echo "$PATH"
 command -v gcc
 gcc -dumpversion
