@@ -74,8 +74,9 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: choco feature enable -n allowGlobalConfirmation
+            - run: git config --system core.longpaths true
             - run: 'sh ./scripts/installgo_windows.sh'
-            - run: choco install mingw --version=12.2.0.03042023
+            - run: 'sh ./scripts/installmingw_windows.sh'
             - run: choco install make
       - run: go env
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
@@ -116,6 +117,7 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
+          echo "PATH: $PATH"
           GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
       - when:
           condition:
