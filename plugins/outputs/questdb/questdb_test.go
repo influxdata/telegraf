@@ -88,7 +88,7 @@ func TestQuestDBNoAuthIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	questdb := newQuestDB("tcp://" + container.Address + ":" + container.Ports["9009"])
-	testWithQuestDB(t, questdb, container)
+	testWithQuestDB(t, questdb, &container)
 }
 
 func TestQuestDBAuthIntegration(t *testing.T) {
@@ -114,10 +114,10 @@ func TestQuestDBAuthIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	questdb := newQuestDBAuth("tcp://"+container.Address+":"+container.Ports["9009"], "testUser1", "UvuVb1USHGRRT08gEnwN2zGZrvM4MsLQ5brgF6SVkAw")
-	testWithQuestDB(t, questdb, container)
+	testWithQuestDB(t, questdb, &container)
 }
 
-func testWithQuestDB(t *testing.T, questdb *QuestDB, container testutil.Container) {
+func testWithQuestDB(t *testing.T, questdb *QuestDB, container *testutil.Container) {
 	err := questdb.Connect()
 	require.NoError(t, err, "error connecting to QuestDB")
 	defer questdb.Close()
@@ -153,10 +153,10 @@ func testWithQuestDB(t *testing.T, questdb *QuestDB, container testutil.Containe
 	require.True(t, reflect.DeepEqual(receivedObj, expectedObj), "Received object does not match expected object")
 }
 
-func queryTestTable(t *testing.T, container testutil.Container) *http.Response {
+func queryTestTable(t *testing.T, container *testutil.Container) *http.Response {
 	client := http.Client{}
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 30; i++ {
 		response, err := client.Get("http://" + container.Address + ":" + container.Ports["9000"] + "/exec?query=select%20*%20from%20test")
 		if err != nil {
 			t.Logf("QuestDB HTTP API error: %s", err)
