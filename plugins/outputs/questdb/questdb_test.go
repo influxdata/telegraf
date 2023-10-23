@@ -81,7 +81,7 @@ func TestQuestDBNoAuthIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "questdb/questdb",
 		ExposedPorts: []string{"9009", "9000"},
-		WaitingFor:   wait.NewHostPortStrategy("9009"),
+		WaitingFor:   wait.ForLog("server-main enjoy").AsRegexp(),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start QuestDB container")
@@ -101,7 +101,7 @@ func TestQuestDBAuthIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "questdb/questdb",
 		ExposedPorts: []string{"9009", "9000"},
-		WaitingFor:   wait.NewHostPortStrategy("9009"),
+		WaitingFor:   wait.ForLog("server-main enjoy").AsRegexp(),
 		Env: map[string]string{
 			"QDB_LINE_TCP_AUTH_DB_PATH": "conf/authDb.txt",
 		},
