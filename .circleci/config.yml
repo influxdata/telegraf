@@ -37,7 +37,7 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
       goversion:
         type: string
         default: 1.21.3
@@ -48,6 +48,7 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: rm -rf '/c/Program Files/Go'
+            - run: rm -rf '/c/ProgramData/chocolatey/lib/mingw'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
@@ -117,6 +118,7 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
+          export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
           echo "PATH: $PATH"
           GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
       - when:
@@ -166,6 +168,7 @@ commands:
                 paths:
                   - '~\project\gotestsum.exe'
                   - 'C:\Program Files\Go'
+                  - 'C:\ProgramData\chocolatey\lib\mingw'
   package-build:
     parameters:
       type:
@@ -215,7 +218,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
@@ -247,7 +250,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
@@ -284,7 +287,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:
@@ -307,7 +310,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
     executor:
         name: win/default
         shell: bash.exe
@@ -336,7 +339,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v1"
+        default: "v2"
     steps:
       - checkout
       - restore_cache:

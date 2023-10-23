@@ -9,6 +9,8 @@ setup_mingw () {
     choco upgrade mingw --allow-downgrade --force --version=${MINGW_VERSION} --verbose --debug
 }
 
+export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
+
 echo "PATH: $PATH"
 command -v gcc
 gcc -dumpversion
