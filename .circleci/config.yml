@@ -53,6 +53,8 @@ commands:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - run: rm -rf '/usr/local/Cellar/go'
+            - run: sudo mkdir -p '/usr/local/Cellar/go'
+            - run: sudo chown -R $(id -u):$(id -g) '/usr/local/Cellar/go'
       - restore_cache:
           name: "Restore binaries from cache"
           key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
@@ -316,7 +318,7 @@ jobs:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
-          cache_version: "v6"
+          cache_version: "v7"
       - save_cache:
           name: "Save Go caches"
           key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
