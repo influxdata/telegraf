@@ -37,7 +37,7 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
       goversion:
         type: string
         default: 1.21.3
@@ -218,7 +218,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
@@ -250,7 +250,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
@@ -287,7 +287,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
@@ -310,7 +310,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     executor:
         name: win/default
         shell: bash.exe
@@ -339,7 +339,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
