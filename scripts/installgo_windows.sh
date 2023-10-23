@@ -1,8 +1,8 @@
 #!/bin/sh
 
-set -ux
+set -eux
 
-GO_VERSION="1.21.1"
+GO_VERSION="1.21.3"
 
 setup_go () {
     choco upgrade golang --allow-downgrade --force --version=${GO_VERSION} --debug --verbose
