@@ -197,7 +197,7 @@ func TestSerializeBatch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		[]byte(`{"metrics":[{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0},{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0}]}`),
+		[]byte(`{"metrics":[{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0},{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0}]}`+"\n"),
 		buf,
 	)
 }
@@ -219,7 +219,7 @@ func TestSerializeBatchSkipInf(t *testing.T) {
 	require.NoError(t, s.Init())
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
-	require.Equal(t, []byte(`{"metrics":[{"fields":{"time_idle":42},"name":"cpu","tags":{},"timestamp":0}]}`), buf)
+	require.Equal(t, []byte(`{"metrics":[{"fields":{"time_idle":42},"name":"cpu","tags":{},"timestamp":0}]}`+"\n"), buf)
 }
 
 func TestSerializeBatchSkipInfAllFields(t *testing.T) {
@@ -238,7 +238,7 @@ func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 	require.NoError(t, s.Init())
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
-	require.Equal(t, []byte(`{"metrics":[{"fields":{},"name":"cpu","tags":{},"timestamp":0}]}`), buf)
+	require.Equal(t, []byte(`{"metrics":[{"fields":{},"name":"cpu","tags":{},"timestamp":0}]}`+"\n"), buf)
 }
 
 func TestSerializeTransformationNonBatch(t *testing.T) {
