@@ -1,6 +1,43 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.28.3 [2023-10-23]
+
+### Bugfixes
+
+- [#14049](https://github.com/influxdata/telegraf/pull/14049) `inputs.infiniband` Handle devices without counters
+- [#14105](https://github.com/influxdata/telegraf/pull/14105) `inputs.jenkins` Filter after searching sub-folders
+- [#14132](https://github.com/influxdata/telegraf/pull/14132) `inputs.jolokia2_agent` Trim quotes around tags
+- [#14041](https://github.com/influxdata/telegraf/pull/14041) `inputs.mqtt` Reference correct password variable
+- [#14010](https://github.com/influxdata/telegraf/pull/14010) `inputs.postgresql_extensible` Restore default db name
+- [#14045](https://github.com/influxdata/telegraf/pull/14045) `inputs.s7comm` Allow PDU-size to be set as config option
+- [#14153](https://github.com/influxdata/telegraf/pull/14153) `inputs.vault` Use http client to handle redirects correctly
+- [#14131](https://github.com/influxdata/telegraf/pull/14131) `metricpass` Use correct logic expression in benchmark
+- [#14154](https://github.com/influxdata/telegraf/pull/14154) `outputs.kafka` Simplify send-error handling
+- [#14135](https://github.com/influxdata/telegraf/pull/14135) `outputs.nebius_cloud_monitoring` Use correct endpoint
+- [#14060](https://github.com/influxdata/telegraf/pull/14060) `outputs.redistimeseries` Handle string fields correctly
+- [#14150](https://github.com/influxdata/telegraf/pull/14150) `serializers.json` Append newline for batch-serialization
+
+### Dependency Updates
+
+- [#14036](https://github.com/influxdata/telegraf/pull/14036) `deps` Bump github.com/apache/arrow/go/v13 from 13.0.0-git to 13.0.0
+- [#14125](https://github.com/influxdata/telegraf/pull/14125) `deps` Bump github.com/google/cel-go from 0.14.1-git to 0.18.1
+- [#14127](https://github.com/influxdata/telegraf/pull/14127) `deps` Bump github.com/google/go-cmp from 0.5.9 to 0.6.0
+- [#14085](https://github.com/influxdata/telegraf/pull/14085) `deps` Bump github.com/jhump/protoreflect from 1.15.1 to 1.15.3
+- [#14039](https://github.com/influxdata/telegraf/pull/14039) `deps` Bump github.com/klauspost/compress from 1.16.7 to 1.17.0
+- [#14077](https://github.com/influxdata/telegraf/pull/14077) `deps` Bump github.com/miekg/dns from 1.1.55 to 1.1.56
+- [#14124](https://github.com/influxdata/telegraf/pull/14124) `deps` Bump github.com/nats-io/nats.go from 1.28.0 to 1.31.0
+- [#14146](https://github.com/influxdata/telegraf/pull/14146) `deps` Bump github.com/nats-io/nats-server/v2 from 2.9.9 to 2.9.23
+- [#14037](https://github.com/influxdata/telegraf/pull/14037) `deps` Bump github.com/netsampler/goflow2 from 1.3.3 to 1.3.6
+- [#14040](https://github.com/influxdata/telegraf/pull/14040) `deps` Bump github.com/signalfx/golib/v3 from 3.3.50 to 3.3.53
+- [#14076](https://github.com/influxdata/telegraf/pull/14076) `deps` Bump github.com/testcontainers/testcontainers-go from 0.22.0 to 0.25.0
+- [#14038](https://github.com/influxdata/telegraf/pull/14038) `deps` Bump github.com/yuin/goldmark from 1.5.4 to 1.5.6
+- [#14075](https://github.com/influxdata/telegraf/pull/14075) `deps` Bump golang.org/x/mod from 0.12.0 to 0.13.0
+- [#14095](https://github.com/influxdata/telegraf/pull/14095) `deps` Bump golang.org/x/net from 0.15.0 to 0.17.0
+- [#14074](https://github.com/influxdata/telegraf/pull/14074) `deps` Bump golang.org/x/oauth2 from 0.11.0 to 0.13.0
+- [#14078](https://github.com/influxdata/telegraf/pull/14078) `deps` Bump gonum.org/v1/gonum from 0.13.0 to 0.14.0
+- [#14126](https://github.com/influxdata/telegraf/pull/14126) `deps` Bump google.golang.org/api from 0.139.0 to 0.147.0
+
 ## v1.28.2 [2023-10-02]
 
 ### Bugfixes

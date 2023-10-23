@@ -425,9 +425,8 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
 				} else if errors.Is(err, gosnmp.ErrDecryption) {
 					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
-				} else {
-					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 				}
+				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(tr, f.Conversion, ent)

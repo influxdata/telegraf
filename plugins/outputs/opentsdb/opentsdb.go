@@ -97,9 +97,8 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 		return o.WriteTelnet(metrics, u)
 	} else if u.Scheme == "http" || u.Scheme == "https" {
 		return o.WriteHTTP(metrics, u)
-	} else {
-		return fmt.Errorf("unknown scheme in host parameter")
 	}
+	return fmt.Errorf("unknown scheme in host parameter")
 }
 
 func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {

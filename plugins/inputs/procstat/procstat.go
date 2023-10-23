@@ -351,15 +351,15 @@ func (p *Procstat) findPids() []PidsTags {
 	} else if p.CGroup != "" {
 		groups := p.cgroupPIDs()
 		return groups
-	} else {
-		f, err := p.getPIDFinder()
-		if err != nil {
-			pidTags = append(pidTags, PidsTags{nil, nil, err})
-			return pidTags
-		}
-		pids, tags, err := p.SimpleFindPids(f)
-		pidTags = append(pidTags, PidsTags{pids, tags, err})
 	}
+
+	f, err := p.getPIDFinder()
+	if err != nil {
+		pidTags = append(pidTags, PidsTags{nil, nil, err})
+		return pidTags
+	}
+	pids, tags, err := p.SimpleFindPids(f)
+	pidTags = append(pidTags, PidsTags{pids, tags, err})
 
 	return pidTags
 }

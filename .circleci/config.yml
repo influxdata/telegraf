@@ -80,7 +80,7 @@ commands:
             - run: 'sh ./scripts/installmingw_windows.sh'
             - run: choco install make
       - run: go env
-      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
+      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]

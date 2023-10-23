@@ -151,7 +151,7 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 		return nil, 0, fmt.Errorf("assigning text failed: %w", err)
 	}
 
-	// Do the actual migration(s)
+	// Do the actual plugin migration(s)
 	var applied uint64
 	for idx, s := range sections {
 		migrate, found := migrations.PluginMigrations[s.name]
@@ -168,10 +168,39 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 			log.Printf("I! Plugin %q in line %d: %s", s.name, s.begin, msg)
 		}
 		s.raw = bytes.NewBuffer(result)
+		tbl, err := toml.Parse(s.raw.Bytes())
+		if err != nil {
+			return nil, 0, fmt.Errorf("reparsing migrated %q (line %d) failed: %w", s.name, s.begin, err)
+		}
+		s.content = tbl
 		sections[idx] = s
 		applied++
 	}
 
+	// Do the actual plugin option migration(s)
+	for idx, s := range sections {
+		migrate, found := migrations.PluginOptionMigrations[s.name]
+		if !found {
+			continue
+		}
+
+		log.Printf("D!   migrating options of plugin %q in line %d...", s.name, s.begin)
+		result, msg, err := migrate(s.content)
+		if err != nil {
+			if errors.Is(err, migrations.ErrNotApplicable) {
+				continue
+			}
+			return nil, 0, fmt.Errorf("migrating options of %q (line %d) failed: %w", s.name, s.begin, err)
+		}
+		if msg != "" {
+			log.Printf("I! Plugin %q in line %d: %s", s.name, s.begin, msg)
+		}
+		s.raw = bytes.NewBuffer(result)
+		sections[idx] = s
+		applied++
+	}
+
+	// Reconstruct the config file from the sections
 	var buf bytes.Buffer
 	for _, s := range sections {
 		_, err = s.raw.WriteTo(&buf)
