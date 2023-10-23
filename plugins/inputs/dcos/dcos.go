@@ -349,10 +349,9 @@ func (d *DCOS) createCredentials() (Credentials, error) {
 			Path: d.TokenFile,
 		}
 		return creds, nil
-	} else {
-		creds := &NullCreds{}
-		return creds, nil
 	}
+
+	return &NullCreds{}, nil
 }
 
 func (d *DCOS) createFilters() error {

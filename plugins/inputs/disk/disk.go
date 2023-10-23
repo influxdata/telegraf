@@ -97,9 +97,8 @@ func (opts MountOptions) Mode() string {
 		return "rw"
 	} else if opts.exists("ro") {
 		return "ro"
-	} else {
-		return "unknown"
 	}
+	return "unknown"
 }
 
 func (opts MountOptions) exists(opt string) bool {

@@ -107,9 +107,8 @@ func (rs *RunningStats) Median() float64 {
 		return 0
 	} else if count%2 == 0 {
 		return (values[count/2-1] + values[count/2]) / 2
-	} else {
-		return values[count/2]
 	}
+	return values[count/2]
 }
 
 func (rs *RunningStats) Variance() float64 {
