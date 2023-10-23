@@ -5,12 +5,20 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	dockercontainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestVaultStats(t *testing.T) {
@@ -95,4 +103,143 @@ func TestVaultStats(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
+}
+
+func TestRedirect(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"vault.raft.replication.appendEntries.logs",
+			map[string]string{
+				"peer_id": "clustnode-02",
+			},
+			map[string]interface{}{
+				"count":  int(130),
+				"rate":   float64(0.2),
+				"sum":    int(2),
+				"min":    int(0),
+				"max":    int(1),
+				"mean":   float64(0.015384615384615385),
+				"stddev": float64(0.12355304447984486),
+			},
+			time.Unix(1638287340, 0),
+			1,
+		),
+		testutil.MustMetric(
+			"vault.core.unsealed",
+			map[string]string{
+				"cluster": "vault-cluster-23b671c7",
+			},
+			map[string]interface{}{
+				"value": int(1),
+			},
+			time.Unix(1638287340, 0),
+			2,
+		),
+		testutil.MustMetric(
+			"vault.token.lookup",
+			map[string]string{},
+			map[string]interface{}{
+				"count":  int(5135),
+				"max":    float64(16.22449493408203),
+				"mean":   float64(0.1698389152269865),
+				"min":    float64(0.06690400093793869),
+				"rate":   float64(87.21228296905755),
+				"stddev": float64(0.24637634000854705),
+				"sum":    float64(872.1228296905756),
+			},
+			time.Unix(1638287340, 0),
+			1,
+		),
+	}
+
+	response, err := os.ReadFile("testdata/response_key_metrics.json")
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.RequestURI {
+		case "/v1/sys/metrics":
+			redirectURL := "http://" + r.Host + "/custom/metrics"
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+		case "/custom/metrics":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(response)
+		}
+	}))
+	defer server.Close()
+
+	// Setup the plugin
+	plugin := &Vault{
+		URL:   server.URL,
+		Token: "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Start the docker container
+	container := testutil.Container{
+		Image:        "vault:1.13.3",
+		ExposedPorts: []string{"8200"},
+		Env: map[string]string{
+			"VAULT_DEV_ROOT_TOKEN_ID": "root",
+		},
+		HostConfigModifier: func(hc *dockercontainer.HostConfig) {
+			hc.CapAdd = []string{"IPC_LOCK"}
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Root Token: root"),
+			wait.ForListeningPort(nat.Port("8200")),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Setup the plugin
+	port := container.Ports["8200"]
+	plugin := &Vault{
+		URL:   "http://" + container.Address + ":" + port,
+		Token: "root",
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the expectations
+	buf, err := os.ReadFile(filepath.Join("testdata", "response_integration_1.13.3.influx"))
+	require.NoError(t, err)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	raw, err := parser.Parse(buf)
+	require.NoError(t, err)
+	expected := make([]telegraf.Metric, 0, len(raw))
+	for _, r := range raw {
+		vt := telegraf.Counter
+		switch r.Name() {
+		case "vault.core.locked_users", "vault.core.mount_table.num_entries",
+			"vault.core.mount_table.size", "vault.core.unsealed":
+			vt = telegraf.Gauge
+		}
+		m := metric.New(r.Name(), r.Tags(), r.Fields(), r.Time(), vt)
+		expected = append(expected, m)
+	}
+
+	options := []cmp.Option{
+		testutil.SortMetrics(),
+		testutil.IgnoreTags("cluster"),
+		testutil.IgnoreTime(),
+	}
+
+	// Collect the metrics and compare
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
 }
