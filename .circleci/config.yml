@@ -48,6 +48,11 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: rm -rf '/c/Program Files/Go'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run: rm -rf '/usr/local/Cellar/go'
       - restore_cache:
           name: "Restore binaries from cache"
           key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}

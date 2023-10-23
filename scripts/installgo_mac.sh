@@ -42,8 +42,10 @@ if command -v go >/dev/null 2>&1; then
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
-        go version
     fi
 else
     setup_go
 fi
+
+command -v go
+go version
