@@ -96,17 +96,17 @@ Leap status     : Not synchronized
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
-	if cmd == "chronyc" {
-		if args[0] == "tracking" {
-			fmt.Fprint(os.Stdout, lookup+mockData)
-		} else {
-			fmt.Fprint(os.Stdout, noLookup+mockData)
-		}
-	} else {
+	if cmd != "chronyc" {
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	if args[0] == "tracking" {
+		fmt.Fprint(os.Stdout, lookup+mockData)
+	} else {
+		fmt.Fprint(os.Stdout, noLookup+mockData)
+	}
+
 	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }

@@ -370,13 +370,13 @@ Vcore Voltage:
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, _ := args[3], args[4:]
 
-	if cmd == "sensors" {
-		fmt.Fprint(os.Stdout, mockData)
-	} else {
+	if cmd != "sensors" {
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+
+	fmt.Fprint(os.Stdout, mockData)
 	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }

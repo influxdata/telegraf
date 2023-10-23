@@ -177,7 +177,6 @@ func requestServer(url string, rconPw string) (string, error) {
 		return "", err
 	} else if reqID != respReqID {
 		return "", errors.New("response/request mismatch")
-	} else {
-		return resp, nil
 	}
+	return resp, nil
 }
