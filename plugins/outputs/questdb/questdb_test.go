@@ -74,6 +74,10 @@ func TestQuestDB_unixgram_unsupported(t *testing.T) {
 }
 
 func TestQuestDBNoAuthIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	container := testutil.Container{
 		Image:        "questdb/questdb",
 		ExposedPorts: []string{"9009", "9000"},
@@ -88,6 +92,10 @@ func TestQuestDBNoAuthIntegration(t *testing.T) {
 }
 
 func TestQuestDBAuthIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	auth, err := filepath.Abs("testdata/auth.txt")
 	require.NoError(t, err)
 	container := testutil.Container{
