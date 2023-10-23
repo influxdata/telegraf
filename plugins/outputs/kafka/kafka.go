@@ -133,8 +133,6 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
-	k.saramaConfig = config
-
 	// Legacy support ssl config
 	if k.Certificate != "" {
 		k.TLSCert = k.Certificate
@@ -151,6 +149,7 @@ func (k *Kafka) Init() error {
 		}
 		config.Net.Proxy.Dialer = dialer
 	}
+	k.saramaConfig = config
 
 	return nil
 }

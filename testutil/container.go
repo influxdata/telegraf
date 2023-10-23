@@ -31,6 +31,7 @@ type Container struct {
 	Cmd                []string
 	Image              string
 	Name               string
+	Hostname           string
 	Networks           []string
 	WaitingFor         wait.Strategy
 
@@ -60,6 +61,7 @@ func (c *Container) Start() error {
 			Cmd:                c.Cmd,
 			Image:              c.Image,
 			Name:               c.Name,
+			Hostname:           c.Hostname,
 			Networks:           c.Networks,
 			WaitingFor:         c.WaitingFor,
 		},
