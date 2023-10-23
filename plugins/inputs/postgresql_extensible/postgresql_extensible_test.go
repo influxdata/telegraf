@@ -149,13 +149,13 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 		"SELECT true AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.BoolField(measurement, "myvalue")
 			require.True(t, found)
-			require.Equal(t, true, v)
+			require.True(t, v)
 		},
 		"SELECT timestamp'1980-07-23' as ts, true AS myvalue": func(acc *testutil.Accumulator) {
 			expectedTime := time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC)
 			v, found := acc.BoolField(measurement, "myvalue")
 			require.True(t, found)
-			require.Equal(t, true, v)
+			require.True(t, v)
 			require.True(t, acc.HasTimestamp(measurement, expectedTime))
 		},
 	}

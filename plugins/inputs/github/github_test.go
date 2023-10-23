@@ -103,7 +103,7 @@ func TestGetTags(t *testing.T) {
 		"license":  licenseName,
 	}
 
-	require.Equal(t, true, reflect.DeepEqual(getTagsReturn, correctTagsReturn))
+	require.True(t, reflect.DeepEqual(getTagsReturn, correctTagsReturn))
 }
 
 func TestGetFields(t *testing.T) {
@@ -136,5 +136,5 @@ func TestGetFields(t *testing.T) {
 	correctFieldReturn["subscribers"] = 5
 	correctFieldReturn["watchers"] = 6
 
-	require.Equal(t, true, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
+	require.True(t, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
 }

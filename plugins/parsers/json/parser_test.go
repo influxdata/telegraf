@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/fuzz"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -671,7 +672,7 @@ func TestTimeParser(t *testing.T) {
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
-	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+	require.False(t, metrics[0].Time() == metrics[1].Time())
 }
 
 func TestTimeParserWithTimezone(t *testing.T) {
@@ -725,7 +726,7 @@ func TestUnixTimeParser(t *testing.T) {
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
-	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+	require.False(t, metrics[0].Time() == metrics[1].Time())
 }
 
 func TestUnixMsTimeParser(t *testing.T) {
@@ -760,7 +761,7 @@ func TestUnixMsTimeParser(t *testing.T) {
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
-	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+	require.False(t, metrics[0].Time() == metrics[1].Time())
 }
 
 func TestTimeErrors(t *testing.T) {
@@ -814,7 +815,7 @@ func TestShareTimestamp(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validJSONArrayMultiple))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
-	require.Equal(t, true, metrics[0].Time() == metrics[1].Time())
+	require.True(t, metrics[0].Time() == metrics[1].Time())
 }
 
 func TestNameKey(t *testing.T) {
