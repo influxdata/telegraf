@@ -23,9 +23,10 @@ func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container 
 		Image:        "opensearchproject/opensearch:" + imageVersion,
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
-			"discovery.type":              "single-node",
-			"DISABLE_INSTALL_DEMO_CONFIG": "true",
-			"DISABLE_SECURITY_PLUGIN":     "true",
+			"discovery.type":                         "single-node",
+			"DISABLE_INSTALL_DEMO_CONFIG":            "true",
+			"DISABLE_SECURITY_PLUGIN":                "true",
+			"DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI": "true",
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
