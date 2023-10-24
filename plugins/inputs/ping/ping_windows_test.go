@@ -4,7 +4,6 @@ package ping
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -143,7 +142,7 @@ func TestArguments(t *testing.T) {
 	}
 
 	actual := p.args("www.google.com")
-	require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
+	require.Equal(t, actual, arguments)
 }
 
 var lossyPingOutput = `
