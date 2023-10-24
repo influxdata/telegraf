@@ -14,7 +14,6 @@ import (
 )
 
 func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
-
 	lines, err := z.zpool()
 	if err != nil {
 		return "", err
@@ -38,11 +37,8 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 			fields := map[string]interface{}{}
 
 			if tags["health"] == "UNAVAIL" {
-
 				fields["size"] = int64(0)
-
 			} else {
-
 				size, err := strconv.ParseInt(col[2], 10, 64)
 				if err != nil {
 					return "", fmt.Errorf("Error parsing size: %s", err)
@@ -98,7 +94,6 @@ func (z *Zfs) gatherDatasetStats(acc telegraf.Accumulator) (string, error) {
 	datasets := []string{}
 	for _, line := range lines {
 		col := strings.Split(line, "\t")
-
 		datasets = append(datasets, col[0])
 	}
 
@@ -139,12 +134,17 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	tags["pools"] = poolNames
+	if poolNames != "" {
+		tags["pools"] = poolNames
+	}
+
 	datasetNames, err := z.gatherDatasetStats(acc)
 	if err != nil {
 		return err
 	}
-	tags["datasets"] = datasetNames
+	if datasetNames != "" {
+		tags["datasets"] = datasetNames
+	}
 
 	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
