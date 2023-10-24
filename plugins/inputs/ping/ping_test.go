@@ -405,7 +405,7 @@ func TestPingBinary(t *testing.T) {
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			require.True(t, binary == "ping6")
+			require.Equal(t, binary, "ping6")
 			return "", nil
 		},
 	}

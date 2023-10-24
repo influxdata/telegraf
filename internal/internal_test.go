@@ -63,7 +63,7 @@ func TestRunTimeout(t *testing.T) {
 
 	require.Equal(t, ErrTimeout, err)
 	// Verify that command gets killed in 20ms, with some breathing room
-	require.True(t, elapsed < time.Millisecond*75)
+	require.Less(t, elapsed, time.Millisecond*75)
 }
 
 // Verifies behavior of a command that doesn't get killed.
@@ -83,7 +83,7 @@ func TestRunTimeoutFastExit(t *testing.T) {
 
 	require.NoError(t, err)
 	// Verify that command gets killed in 20ms, with some breathing room
-	require.True(t, elapsed < time.Millisecond*75)
+	require.Less(t, elapsed, time.Millisecond*75)
 
 	// Verify "process already finished" log doesn't occur.
 	time.Sleep(time.Millisecond * 75)
@@ -103,7 +103,7 @@ func TestCombinedOutputTimeout(t *testing.T) {
 
 	require.Equal(t, ErrTimeout, err)
 	// Verify that command gets killed in 20ms, with some breathing room
-	require.True(t, elapsed < time.Millisecond*75)
+	require.Less(t, elapsed, time.Millisecond*75)
 }
 
 func TestCombinedOutput(t *testing.T) {
@@ -151,13 +151,13 @@ func TestRandomSleep(t *testing.T) {
 	s := time.Now()
 	RandomSleep(time.Duration(0), make(chan struct{}))
 	elapsed := time.Since(s)
-	require.True(t, elapsed < time.Millisecond)
+	require.Less(t, elapsed, time.Millisecond)
 
 	// test that max sleep is respected
 	s = time.Now()
 	RandomSleep(time.Millisecond*50, make(chan struct{}))
 	elapsed = time.Since(s)
-	require.True(t, elapsed < time.Millisecond*100)
+	require.Less(t, elapsed, time.Millisecond*100)
 
 	// test that shutdown is respected
 	s = time.Now()
@@ -168,7 +168,7 @@ func TestRandomSleep(t *testing.T) {
 	}()
 	RandomSleep(time.Second, shutdown)
 	elapsed = time.Since(s)
-	require.True(t, elapsed < time.Millisecond*150)
+	require.Less(t, elapsed, time.Millisecond*150)
 }
 
 func TestCompressWithGzip(t *testing.T) {
