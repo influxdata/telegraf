@@ -37,15 +37,34 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
       goversion:
         type: string
         default: 1.21.3
     steps:
       - check-changed-files-or-halt
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run:
+                name: Remove Go and MinGW to avoid clashes after upgrade during cache restore
+                command: |
+                  rm -rf '/c/Program Files/Go'
+                  rm -rf '/c/ProgramData/chocolatey/lib/mingw'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run:
+                name: Ensure go directory is empty and have proper permissions before cache restore
+                command: |
+                  sudo rm -rf '/usr/local/Cellar/go'
+                  sudo mkdir -p '/usr/local/Cellar/go'
+                  sudo chown -R $(id -u):$(id -g) '/usr/local/Cellar/go'
       - restore_cache:
           name: "Restore binaries from cache"
-          key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-bins-<< parameters.cache_version >>-<< parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -61,10 +80,11 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf '/c/Program Files/Go'
             - run: choco feature enable -n allowGlobalConfirmation
+            - run: git config --system core.longpaths true
             - run: 'sh ./scripts/installgo_windows.sh'
-            - run: choco install mingw --version=12.2.0.03042023
+            - run: 'sh ./scripts/installmingw_windows.sh'
+            - run: choco install make
       - run: go env
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
       - when:
@@ -103,8 +123,18 @@ commands:
             equal: [ "386", << parameters.arch >> ]
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
-      - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: |
+                export PATH="/c/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin:$PATH"
+                GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+      - unless:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
       - when:
           condition:
             and:
@@ -127,7 +157,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving binaries to cache'
-                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: go-bins-<< parameters.cache_version >>-<< parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-{{ checksum "go.sum" }}
                 paths:
                   - '/go/src/github.com/influxdata/telegraf/gotestsum'
       - when:
@@ -136,7 +166,7 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving binaries to cache'
-                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: go-bins-<< parameters.cache_version >>-<< parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-{{ checksum "go.sum" }}
                 paths:
                   - '~/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '/usr/local/Cellar/go'
@@ -148,10 +178,11 @@ commands:
           steps:
             - save_cache:
                 name: 'Saving binaries to cache'
-                key: << parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                key: go-bins-<< parameters.cache_version >>-<< parameters.os >>-<< parameters.arch >>-go<< parameters.goversion >>-{{ checksum "go.sum" }}
                 paths:
                   - '~\project\gotestsum.exe'
                   - 'C:\Program Files\Go'
+                  - 'C:\ProgramData\chocolatey\lib\mingw'
   package-build:
     parameters:
       type:
@@ -201,12 +232,12 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-linux-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
@@ -216,7 +247,7 @@ jobs:
       - test-go
       - save_cache:
           name: "Save Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-linux-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
             - '~/.cache/golangci-lint'
@@ -233,12 +264,12 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: linux-386-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-linux-386-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'GOARCH=386 make deps'
       - run: 'GOARCH=386 make tidy'
@@ -247,7 +278,7 @@ jobs:
           arch: "386"
       - save_cache:
           name: "Save Go caches"
-          key: linux-386-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-linux-386-go<< parameters.goversion >>-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
             - '~/.cache/golangci-lint'
@@ -270,18 +301,18 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-darwin-arm64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
           arch: arm64
       - save_cache:
           name: "Save Go caches"
-          key: darwin-arm64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-darwin-arm64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '~/Library/Caches/golangci-lint'
@@ -293,7 +324,7 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     executor:
         name: win/default
         shell: bash.exe
@@ -302,13 +333,13 @@ jobs:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-windows-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
       - save_cache:
           name: "Save Go caches"
-          key: windows-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-windows-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
           paths:
             - '~\go\pkg\mod'
             - '~\AppData\Local\golangci-lint'
@@ -322,18 +353,18 @@ jobs:
         default: 1.21.3
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
           name: "Restore Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-linux-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
       - save_cache:
           name: "Save Go caches"
-          key: linux-amd64-go<< parameters.goversion >>-cache-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+          key: go-caches-<< parameters.cache_version >>-linux-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
             - '~/.cache/golangci-lint'
