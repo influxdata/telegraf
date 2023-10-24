@@ -468,7 +468,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				URL: u.String(),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Len(t, r.Header["Authorization"], 0)
+				require.Empty(t, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
 		},
@@ -578,7 +578,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				URL: u.String(),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Len(t, r.Header["Authorization"], 0)
+				require.Empty(t, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
 		},

@@ -181,7 +181,7 @@ func TestDeletePods(t *testing.T) {
 
 	podID, _ := cache.MetaNamespaceKeyFunc(p)
 	unregisterPod(PodID(podID), prom)
-	require.Equal(t, 0, len(prom.kubernetesPods))
+	require.Empty(t, prom.kubernetesPods)
 }
 
 func TestKeepDefaultNamespaceLabelName(t *testing.T) {

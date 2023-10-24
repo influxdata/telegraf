@@ -116,12 +116,12 @@ func TestParseValidJSON(t *testing.T) {
 	// Test that whitespace only will parse as an empty list of metrics
 	metrics, err = parser.Parse([]byte("\n\t"))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 
 	// Test that an empty string will parse as an empty list of metrics
 	metrics, err = parser.Parse([]byte(""))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 }
 
 func TestParseLineValidJSON(t *testing.T) {
@@ -784,7 +784,7 @@ func TestTimeErrors(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(testString))
 	require.Error(t, err)
-	require.Equal(t, 0, len(metrics))
+	require.Empty(t, metrics)
 
 	testString2 := `{
 		"a": 5,
@@ -804,7 +804,7 @@ func TestTimeErrors(t *testing.T) {
 
 	metrics, err = parser.Parse([]byte(testString2))
 	require.Error(t, err)
-	require.Equal(t, 0, len(metrics))
+	require.Empty(t, metrics)
 	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
 }
 

@@ -177,7 +177,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/")
 
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("if received a non-JSON object then should return error", func(t *testing.T) {
@@ -249,7 +249,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.ElementsMatch(t, commands, expectedCommands)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("when 1 rawdev command is enabled, then 2*numberOfIds new commands should be appended", func(t *testing.T) {
@@ -265,7 +265,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.ElementsMatch(t, commands, expectedCommands)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("when 2 ethdev commands are enabled but one command is disabled, then numberOfIds new commands should be appended", func(t *testing.T) {
@@ -282,7 +282,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.ElementsMatch(t, commands, expectedCommands)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("when ethdev commands are enabled but params fetching command returns error then error should be logged in accumulator", func(t *testing.T) {
@@ -296,7 +296,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc)
 
-		require.Equal(t, 0, len(commands))
+		require.Empty(t, commands)
 		require.Equal(t, 1, len(mockAcc.Errors))
 	})
 }
@@ -311,7 +311,7 @@ func Test_Gather(t *testing.T) {
 		err := dpdk.Gather(mockAcc)
 
 		require.NoError(t, err)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(
@@ -339,7 +339,7 @@ func Test_Gather(t *testing.T) {
 
 		err := dpdk.Gather(mockAcc)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(

@@ -536,7 +536,7 @@ func TestVersions(t *testing.T) {
 	require.NoError(t, server.Init())
 	acc := &testutil.Accumulator{}
 
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 
 	type testConfig struct {
 		jsonFile           string

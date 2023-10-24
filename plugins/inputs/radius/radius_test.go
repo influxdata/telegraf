@@ -179,7 +179,7 @@ func TestRadiusIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			if !acc.HasMeasurement("radius") {
 				t.Errorf("acc.HasMeasurement: expected radius")

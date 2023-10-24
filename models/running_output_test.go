@@ -94,7 +94,7 @@ func TestRunningOutput_DropFilter(t *testing.T) {
 	for _, metric := range next5 {
 		ro.AddMetric(metric)
 	}
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestRunningOutput_PassFilter(t *testing.T) {
 	for _, metric := range next5 {
 		ro.AddMetric(metric)
 	}
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -160,12 +160,12 @@ func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
 	require.Len(t, m.Metrics(), 1)
-	require.Len(t, m.Metrics()[0].Tags(), 0)
+	require.Empty(t, m.Metrics()[0].Tags())
 }
 
 // Test that tags are properly Excluded
@@ -181,7 +181,7 @@ func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestRunningOutput_NameOverride(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -238,7 +238,7 @@ func TestRunningOutput_NamePrefix(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestRunningOutput_NameSuffix(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -279,7 +279,7 @@ func TestRunningOutputDefault(t *testing.T) {
 	for _, metric := range next5 {
 		ro.AddMetric(metric)
 	}
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	err := ro.Write()
 	require.NoError(t, err)
@@ -303,13 +303,13 @@ func TestRunningOutputWriteFail(t *testing.T) {
 		ro.AddMetric(metric)
 	}
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// manual write fails
 	err := ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	m.failWrite = false
 	err = ro.Write()
@@ -333,13 +333,13 @@ func TestRunningOutputWriteFailOrder(t *testing.T) {
 		ro.AddMetric(metric)
 	}
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// Write fails
 	err := ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	m.failWrite = false
 	// add 5 more metrics
@@ -374,7 +374,7 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	err := ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// add 5 metrics
 	for _, metric := range next5 {
@@ -384,7 +384,7 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	err = ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// add 5 metrics
 	for _, metric := range first5 {
@@ -394,7 +394,7 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	err = ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// add 5 metrics
 	for _, metric := range next5 {
@@ -404,7 +404,7 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	err = ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	m.failWrite = false
 	err = ro.Write()
@@ -435,13 +435,13 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 		ro.AddMetric(metric)
 	}
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// Write fails
 	err := ro.Write()
 	require.Error(t, err)
 	// no successful flush yet
-	require.Len(t, m.Metrics(), 0)
+	require.Empty(t, m.Metrics())
 
 	// add and attempt to write a single metric:
 	ro.AddMetric(next5[0])

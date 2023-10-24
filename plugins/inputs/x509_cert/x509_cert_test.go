@@ -330,7 +330,7 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
 	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
@@ -350,7 +350,7 @@ func TestGatherTCPCert(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 

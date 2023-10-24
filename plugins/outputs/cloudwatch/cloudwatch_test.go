@@ -72,7 +72,7 @@ func TestBuildMetricDatums(t *testing.T) {
 	}
 	for _, point := range invalidMetrics {
 		datums := BuildMetricDatum(false, false, point)
-		require.Equal(t, 0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
+		require.Empty(t, datums, fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
 
 	statisticMetric := metric.New(
