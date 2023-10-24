@@ -1,0 +1,5 @@
+zfs_dataset,dataset=zata avail=10741741326336i,used=8564135526400i,usedds=90112i,usedsnap=0i 1698161697336342048
+zfs_dataset,dataset=zata/home avail=10741741326336i,used=2498560i,usedds=2285568i,usedsnap=212992i 1698161697336345401
+zfs_dataset,dataset=zata/import avail=10741741326336i,used=196608i,usedds=114688i,usedsnap=81920i 1698161697336348474
+zfs_dataset,dataset=zata/storage avail=10741741326336i,used=8556084379648i,usedds=4954945380352i,usedsnap=3601138999296i 1698161697336352944
+zfs,datasets=zata::zata/home::zata/import::zata/storage vdev_cache_stats_delegations=6952i,vdev_cache_stats_hits=465583i,vdev_cache_stats_misses=87789i 1698161697336357134

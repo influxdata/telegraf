@@ -1,0 +1,5 @@
+zfs_pool,health=ONLINE,pool=freenas-boot allocated=2022177280i,capacity=6i,dedupratio=1,fragmentation=0i,free=28579464704i,size=30601641984i 1698097244832121819
+zfs_pool,health=ONLINE,pool=red1 allocated=1126164848640i,capacity=12i,dedupratio=1.8300000429153442,fragmentation=8i,free=7807367127040i,size=8933531975680i 1698097244832126568
+zfs_pool,health=ONLINE,pool=temp1 allocated=1626309320704i,capacity=54i,dedupratio=1.2799999713897705,fragmentation=38i,free=1362987917312i,size=2989297238016i 1698097244832130759
+zfs_pool,health=ONLINE,pool=temp2 allocated=626958278656i,capacity=20i,dedupratio=1,fragmentation=12i,free=2362338959360i,size=2989297238016i 1698097244832134111
+zfs,pools=freenas-boot::red1::temp1::temp2 vdev_cache_stats_delegations=6952i,vdev_cache_stats_hits=465583i,vdev_cache_stats_misses=87789i 1698097244832209819
