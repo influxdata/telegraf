@@ -514,7 +514,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
 	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
-	require.True(t, len(acc.Metrics) > 0, "No metrics were collected")
+	require.Greater(t, len(acc.Metrics), 0, "No metrics were collected")
 	cache := make(map[string]string)
 	client, err := v.endpoints[0].clientFactory.GetClient(context.Background())
 	require.NoError(t, err)

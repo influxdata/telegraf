@@ -75,7 +75,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
 }
 
 func TestPrometheusCustomHeader(t *testing.T) {
@@ -164,8 +164,8 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
-	require.True(t, acc.TagValue("test_metric", "address") == tsAddress)
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL)
+	require.Equal(t, acc.TagValue("test_metric", "address"), tsAddress)
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL)
 }
 
 func TestPrometheusWithTimestamp(t *testing.T) {
@@ -260,7 +260,7 @@ func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
@@ -317,7 +317,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t *testing.T) {
@@ -364,10 +364,10 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
-	require.True(t, acc.TagSetValue("prometheus", "quantile") == "0")
+	require.Equal(t, acc.TagSetValue("prometheus", "quantile"), "0")
 	require.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_sum"))
 	require.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
-	require.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("prometheus", "url"), ts.URL+"/metrics")
 }
 
 func TestSummaryMayContainNaN(t *testing.T) {
@@ -459,7 +459,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	require.NoError(t, err)
 
 	require.True(t, acc.HasFloatField("prometheus", "go_goroutines"))
-	require.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("prometheus", "url"), ts.URL+"/metrics")
 	require.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
 
