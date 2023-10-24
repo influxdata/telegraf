@@ -452,7 +452,9 @@ func TestAerospikeParseValue(t *testing.T) {
 	require.Equal(t, uint64(18446744041841121751), val)
 
 	val = parseAerospikeValue("", "true")
-	require.Equal(t, true, val)
+	v, ok := val.(bool)
+	require.Truef(t, ok, "bool type expected, got '%T' with '%v' value instead", val, val)
+	require.True(t, v)
 
 	// int values
 	val = parseAerospikeValue("", "42")

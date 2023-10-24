@@ -81,8 +81,8 @@ func TestParseCPUMetricsConfig(t *testing.T) {
 
 	power.CPUMetrics = []string{"cpu_c6_state_residency", "#@$sdkjdfsdf3@", "1pu_c1_state_residency"}
 	power.parseCPUMetricsConfig()
-	require.Equal(t, false, power.cpuC1StateResidency)
-	require.Equal(t, true, power.cpuC6StateResidency)
+	require.False(t, power.cpuC1StateResidency)
+	require.True(t, power.cpuC6StateResidency)
 	disableCoreMetrics(power)
 	verifyCoreMetrics(t, power, false)
 

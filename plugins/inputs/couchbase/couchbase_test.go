@@ -210,7 +210,10 @@ func TestGatherFailover(t *testing.T) {
 
 	require.NotNil(t, metric)
 	require.Equal(t, 1, metric.Fields["count"])
-	require.Equal(t, true, metric.Fields["enabled"])
+	v, ok := metric.Fields["enabled"].(bool)
+	require.Truef(t, ok, "bool type expected, got '%T' with '%v' value instead", metric.Fields["enabled"], metric.Fields["enabled"])
+	require.True(t, v)
+
 	require.Equal(t, 2, metric.Fields["max_count"])
 	require.Equal(t, 72, metric.Fields["timeout"])
 }
