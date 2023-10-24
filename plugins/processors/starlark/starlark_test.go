@@ -3375,7 +3375,7 @@ func parseErrorMessage(t *testing.T, lines []string, header string) string {
 	if startIdx == -1 {
 		return ""
 	}
-	require.True(t, startIdx < len(lines), fmt.Sprintf("Expected to find the error message after %q, but found none", header))
+	require.Less(t, startIdx, len(lines), fmt.Sprintf("Expected to find the error message after %q, but found none", header))
 	return strings.TrimLeft(lines[startIdx], "# ")
 }
 
