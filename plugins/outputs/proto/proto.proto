@@ -85,6 +85,22 @@ message LTE {
   double timestamp = 4;
 }
 
+message PowerMode {
+  message Fields {
+    int64 mode = 1;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message Wireless {
   message Fields {
     int64 status = 1;
@@ -989,4 +1005,5 @@ message Influx {
   repeated Recorder recorder = 33;
   repeated AbleStats ableStats = 34;
   repeated SMARTAttribute smartAttribute = 35;
+  repeated PowerMode powerMode = 36;
 }

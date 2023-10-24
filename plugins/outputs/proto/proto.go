@@ -405,6 +405,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build glog")
 			}
 			influx.Glog = append(influx.Glog, &m)
+		case "power_mode":
+			m := PowerMode{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build power_mode")
+			}
+			influx.PowerMode = append(influx.PowerMode, &m)
 		case "wireless":
 			m := Wireless{
 				Fields: &Wireless_Fields{
