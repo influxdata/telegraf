@@ -34,7 +34,7 @@ func TestProcesses(t *testing.T) {
 	require.True(t, acc.HasInt64Field("processes", "total"))
 	total, ok := acc.Get("processes")
 	require.True(t, ok)
-	require.Greater(t, total.Fields["total"].(int64), 0)
+	require.Greater(t, total.Fields["total"].(int64), int64(0))
 }
 
 func TestFromPS(t *testing.T) {
