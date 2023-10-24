@@ -37,7 +37,7 @@ your requirements. This will help with load and cardinality as well.
 
 ```toml
 [[inputs.openstack]]
-  interval = 5m
+  interval = "5m"
   ....
   authentication_endpoint = "https://my.openstack.cloud:5000"
   ...
@@ -45,7 +45,7 @@ your requirements. This will help with load and cardinality as well.
   ....
 
 [[inputs.openstack]]
-  interval = 30m
+  interval = "30m"
   ....
   authentication_endpoint = "https://my.openstack.cloud:5000"
   ...
