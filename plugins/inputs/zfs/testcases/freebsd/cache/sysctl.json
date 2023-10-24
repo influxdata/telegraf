@@ -1,0 +1,12 @@
+{
+    "vdev_cache_stats": [
+        "kstat.zfs.misc.vdev_cache_stats.misses: 87789",
+        "kstat.zfs.misc.vdev_cache_stats.hits: 465583",
+        "kstat.zfs.misc.vdev_cache_stats.delegations: 6952"
+    ],
+    "zfetchstats": [
+        "kstat.zfs.misc.zfetchstats.max_streams: 0",
+        "kstat.zfs.misc.zfetchstats.misses: 0",
+        "kstat.zfs.misc.zfetchstats.hits: 0"
+    ]
+}
