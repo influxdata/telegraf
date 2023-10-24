@@ -94,7 +94,7 @@ func testConvertValueSupportedCases(t *testing.T,
 	inputValues []interface{}, outputValues []string, outputValueTypes []types.MeasureValueType) {
 	for i, inputValue := range inputValues {
 		v, vt, ok := convertValue(inputValue)
-		require.Equal(t, true, ok, "Expected successful conversion")
+		require.True(t, ok, "Expected successful conversion")
 		require.Equal(t, outputValues[i], v, "Expected different string representation of converted value")
 		require.Equal(t, outputValueTypes[i], vt, "Expected different value type of converted value")
 	}

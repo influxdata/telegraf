@@ -2,7 +2,6 @@ package github
 
 import (
 	"net/http"
-	"reflect"
 	"testing"
 
 	gh "github.com/google/go-github/v32/github"
@@ -103,7 +102,7 @@ func TestGetTags(t *testing.T) {
 		"license":  licenseName,
 	}
 
-	require.Equal(t, true, reflect.DeepEqual(getTagsReturn, correctTagsReturn))
+	require.Equal(t, getTagsReturn, correctTagsReturn)
 }
 
 func TestGetFields(t *testing.T) {
@@ -136,5 +135,5 @@ func TestGetFields(t *testing.T) {
 	correctFieldReturn["subscribers"] = 5
 	correctFieldReturn["watchers"] = 6
 
-	require.Equal(t, true, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
+	require.Equal(t, getFieldsReturn, correctFieldReturn)
 }

@@ -5,7 +5,6 @@ package ping
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -177,8 +176,7 @@ func TestArgs(t *testing.T) {
 		expected := systemCases[i].output
 		sort.Strings(actual)
 		sort.Strings(expected)
-		require.True(t, reflect.DeepEqual(expected, actual),
-			"Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -206,8 +204,7 @@ func TestArgs6(t *testing.T) {
 		expected := systemCases[i].output
 		sort.Strings(actual)
 		sort.Strings(expected)
-		require.True(t, reflect.DeepEqual(expected, actual),
-			"Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -225,7 +222,7 @@ func TestArguments(t *testing.T) {
 
 	for _, system := range []string{"darwin", "linux", "anything else"} {
 		actual := p.args("www.google.com", system)
-		require.True(t, reflect.DeepEqual(actual, expected), "Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, actual, expected)
 	}
 }
 

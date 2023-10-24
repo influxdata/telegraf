@@ -46,7 +46,7 @@ func TestRealFS(t *testing.T) {
 	//the following file exists on disk - and not in our fake fs
 	fileInfo, err := fs.Stat(getTestdataDir() + "/qux")
 	require.NoError(t, err)
-	require.Equal(t, false, fileInfo.IsDir())
+	require.False(t, fileInfo.IsDir())
 	require.Equal(t, int64(446), fileInfo.Size())
 
 	// now swap out real, for fake filesystem

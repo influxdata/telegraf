@@ -6,18 +6,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGatherAttributes(t *testing.T) {
 	s := newSmart()
 	s.Attributes = true
 
-	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
+	require.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
@@ -38,7 +38,7 @@ func TestGatherAttributes(t *testing.T) {
 		s.PathSmartctl = "this_path_to_smartctl_does_not_exist"
 		err := s.Init()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("Smartctl presence", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			assert.Equal(t, 68, acc.NFields(), "Wrong number of fields gathered")
+			require.Equal(t, 68, acc.NFields(), "Wrong number of fields gathered")
 
 			for _, test := range testsAda0Attributes {
 				acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
@@ -69,7 +69,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			assert.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
+			require.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
 
 			testutil.RequireMetricsEqual(t, testSmartctlNVMeAttributes, acc.GetTelegrafMetrics(),
 				testutil.SortMetrics(), testutil.IgnoreTime())
@@ -147,7 +147,7 @@ func TestGatherNoAttributes(t *testing.T) {
 	s := newSmart()
 	s.Attributes = false
 
-	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
+	require.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
@@ -171,7 +171,7 @@ func TestGatherNoAttributes(t *testing.T) {
 		err := s.Gather(&acc)
 
 		require.NoError(t, err)
-		assert.Equal(t, 11, acc.NFields(), "Wrong number of fields gathered")
+		require.Equal(t, 11, acc.NFields(), "Wrong number of fields gathered")
 		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
 
 		for _, test := range testsAda0Device {
@@ -184,9 +184,9 @@ func TestGatherNoAttributes(t *testing.T) {
 }
 
 func TestExcludedDev(t *testing.T) {
-	assert.Equal(t, true, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
-	assert.Equal(t, false, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
-	assert.Equal(t, false, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
+	require.True(t, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
+	require.False(t, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
+	require.False(t, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
 }
 
 var (
@@ -212,8 +212,8 @@ func TestGatherSATAInfo(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
@@ -228,8 +228,8 @@ func TestGatherSATAInfo65(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 96, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 96, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHgstSAS(t *testing.T) {
@@ -244,8 +244,8 @@ func TestGatherHgstSAS(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHtSAS(t *testing.T) {
@@ -277,8 +277,8 @@ func TestGatherLongFormEnduranceAttrib(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSD(t *testing.T) {
@@ -293,8 +293,8 @@ func TestGatherSSD(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 110, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 110, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSDRaid(t *testing.T) {
@@ -309,8 +309,8 @@ func TestGatherSSDRaid(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 77, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 77, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherNVMe(t *testing.T) {
@@ -397,25 +397,25 @@ func TestGatherIntelNVMeDeprecatedFormatMetrics(t *testing.T) {
 func Test_findVIDFromNVMeOutput(t *testing.T) {
 	device, err := findNVMeDeviceInfo(nvmeIdentifyController)
 
-	assert.Nil(t, err)
-	assert.Equal(t, "0x8086", device.vendorID)
-	assert.Equal(t, "CVFT5123456789ABCD", device.serialNumber)
-	assert.Equal(t, "INTEL SSDPEDABCDEFG", device.model)
+	require.Nil(t, err)
+	require.Equal(t, "0x8086", device.vendorID)
+	require.Equal(t, "CVFT5123456789ABCD", device.serialNumber)
+	require.Equal(t, "INTEL SSDPEDABCDEFG", device.model)
 }
 
 func Test_checkForNVMeDevices(t *testing.T) {
 	devices := []string{"sda1", "nvme0", "sda2", "nvme2"}
 	expectedNVMeDevices := []string{"nvme0", "nvme2"}
 	resultNVMeDevices := distinguishNVMeDevices(devices, expectedNVMeDevices)
-	assert.Equal(t, expectedNVMeDevices, resultNVMeDevices)
+	require.Equal(t, expectedNVMeDevices, resultNVMeDevices)
 }
 
 func Test_contains(t *testing.T) {
 	devices := []string{"/dev/sda", "/dev/nvme1"}
 	device := "/dev/nvme1"
 	deviceNotIncluded := "/dev/nvme5"
-	assert.True(t, contains(devices, device))
-	assert.False(t, contains(devices, deviceNotIncluded))
+	require.True(t, contains(devices, device))
+	require.False(t, contains(devices, deviceNotIncluded))
 }
 
 func Test_difference(t *testing.T) {
@@ -423,7 +423,7 @@ func Test_difference(t *testing.T) {
 	secondDevices := []string{"/dev/sda", "/dev/nvme1"}
 	expected := []string{"/dev/nvme2"}
 	result := difference(devices, secondDevices)
-	assert.Equal(t, expected, result)
+	require.Equal(t, expected, result)
 }
 
 func Test_integerOverflow(t *testing.T) {

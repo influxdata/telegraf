@@ -10,13 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/metric"
-
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -495,7 +494,7 @@ func TestUnsupportedFieldSelector(t *testing.T) {
 
 	fieldSelector, _ := fields.ParseSelector(prom.KubernetesFieldSelector)
 	isValid, invalidSelector := fieldSelectorIsSupported(fieldSelector)
-	require.Equal(t, false, isValid)
+	require.False(t, isValid)
 	require.Equal(t, "spec.containerName", invalidSelector)
 }
 

@@ -134,8 +134,8 @@ func TestRegularReceives_DPT(t *testing.T) {
 		case float64:
 			require.InDelta(t, v, m.Fields["value"], epsilon)
 		}
-		require.True(t, !tstop.Before(m.Time))
-		require.True(t, !tstart.After(m.Time))
+		require.False(t, tstop.Before(m.Time))
+		require.False(t, tstart.After(m.Time))
 	}
 }
 
@@ -179,10 +179,14 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 	require.Equal(t, "temperature", acc.Metrics[0].Measurement)
 	require.Equal(t, "1/1/1", acc.Metrics[0].Tags["groupaddress"])
 	require.Len(t, acc.Metrics[0].Fields, 1)
-	require.Equal(t, true, acc.Metrics[0].Fields["value"])
+	v, ok := acc.Metrics[0].Fields["value"].(bool)
+	require.Truef(t, ok, "bool type expected, got '%T' with '%v' value instead", acc.Metrics[0].Fields["value"], acc.Metrics[0].Fields["value"])
+	require.True(t, v)
 
 	require.Equal(t, "temperature", acc.Metrics[1].Measurement)
 	require.Equal(t, "1/1/1", acc.Metrics[1].Tags["groupaddress"])
 	require.Len(t, acc.Metrics[1].Fields, 1)
-	require.Equal(t, false, acc.Metrics[1].Fields["value"])
+	v, ok = acc.Metrics[1].Fields["value"].(bool)
+	require.Truef(t, ok, "bool type expected, got '%T' with '%v' value instead", acc.Metrics[1].Fields["value"], acc.Metrics[1].Fields["value"])
+	require.False(t, v)
 }

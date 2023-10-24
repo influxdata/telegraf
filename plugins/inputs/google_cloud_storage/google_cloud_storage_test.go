@@ -170,7 +170,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	require.NoError(t, gcs.Gather(acc))
 
 	require.Equal(t, 4, len(acc.Metrics))
-	require.Equal(t, true, gcs.offSet.isPresent())
+	require.True(t, gcs.offSet.isPresent())
 	require.Equal(t, "prefix/1604148850994", gcs.offSet.OffSet)
 
 	emptyAcc := &testutil.Accumulator{}
