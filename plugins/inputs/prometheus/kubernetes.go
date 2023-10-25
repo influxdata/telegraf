@@ -93,16 +93,20 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 				return
 			case <-time.After(time.Second):
 				if p.isNodeScrapeScope {
-					var bearerToken []byte
-					bearerToken, err = os.ReadFile(config.BearerTokenFile)
-					if err != nil {
-						p.Log.Errorf("Error reading bearer token file: %s", err.Error())
-					} else {
-						err = p.cAdvisor(ctx, string(bearerToken))
+					bearerToken := config.BearerToken
+					if config.BearerTokenFile != "" {
+						bearerTokenBytes, err := os.ReadFile(config.BearerTokenFile)
 						if err != nil {
-							p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
+							p.Log.Errorf("Error reading bearer token file hence falling back to BearerToken: %s", err.Error())
+						} else {
+							bearerToken = string(bearerTokenBytes)
 						}
 					}
+					err = p.cAdvisor(ctx, bearerToken)
+					if err != nil {
+						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
+					}
+
 				} else {
 					<-ctx.Done()
 				}
