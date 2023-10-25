@@ -285,7 +285,7 @@ jobs:
             - '~/.cache/go-build'
   test-integration:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2023.07.2
     resource_class: large
     steps:
       - checkout

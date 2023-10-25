@@ -52,6 +52,9 @@ func (c *Container) Start() error {
 	}
 
 	// Up timeouts on Ryuk container
+	if c.Env == nil {
+		c.Env = make(map[string]string, 2)
+	}
 	c.Env["RYUK_CONNECTION_TIMEOUT"] = "2m"
 	c.Env["RYUK_RECONNECTION_TIMEOUT"] = "2m"
 
