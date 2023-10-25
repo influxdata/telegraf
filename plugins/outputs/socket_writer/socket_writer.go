@@ -62,13 +62,12 @@ func (sw *SocketWriter) Connect() error {
 	if spl[0] == "vsock" {
 		addrTuple := strings.SplitN(spl[1], ":", 2)
 
-		//check if address string has two tokens
+		// Check address string for containing two
 		if len(addrTuple) < 2 {
 			return fmt.Errorf("CID and/or port number missing")
 		}
 
-		//parse CID and port number from address string
-		// CID and port numner are 32 bit
+		// Parse CID and port number from address string both being 32-bit
 		// source: https://man7.org/linux/man-pages/man7/vsock.7.html
 		cid, _ := strconv.ParseUint(addrTuple[0], 10, 32)
 		if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
