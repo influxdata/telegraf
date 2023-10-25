@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAddFields(t *testing.T) {
@@ -61,12 +61,12 @@ func TestAccAddError(t *testing.T) {
 
 	errs := bytes.Split(errBuf.Bytes(), []byte{'\n'})
 	require.Len(t, errs, 4) // 4 because of trailing newline
-	assert.Contains(t, string(errs[0]), "TestPlugin")
-	assert.Contains(t, string(errs[0]), "foo")
-	assert.Contains(t, string(errs[1]), "TestPlugin")
-	assert.Contains(t, string(errs[1]), "bar")
-	assert.Contains(t, string(errs[2]), "TestPlugin")
-	assert.Contains(t, string(errs[2]), "baz")
+	require.Contains(t, string(errs[0]), "TestPlugin")
+	require.Contains(t, string(errs[0]), "foo")
+	require.Contains(t, string(errs[1]), "TestPlugin")
+	require.Contains(t, string(errs[1]), "bar")
+	require.Contains(t, string(errs[2]), "TestPlugin")
+	require.Contains(t, string(errs[2]), "baz")
 }
 
 func TestSetPrecision(t *testing.T) {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/internal"
@@ -152,7 +151,7 @@ func TestRunGzipDecode(t *testing.T) {
 	}
 	sub.messages <- msg
 	acc.Wait(1)
-	assert.Equal(t, acc.NFields(), 1)
+	require.Equal(t, acc.NFields(), 1)
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
