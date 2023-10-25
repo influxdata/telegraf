@@ -516,7 +516,7 @@ func TestWrongJSONMarshalling(t *testing.T) {
 	defer ts.Close()
 	require.NoError(t, ch.Gather(acc))
 
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 	allMeasurements := []string{
 		"clickhouse_events",
 		"clickhouse_metrics",
@@ -549,7 +549,7 @@ func TestOfflineServer(t *testing.T) {
 	)
 	require.NoError(t, ch.Gather(acc))
 
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 	allMeasurements := []string{
 		"clickhouse_events",
 		"clickhouse_metrics",

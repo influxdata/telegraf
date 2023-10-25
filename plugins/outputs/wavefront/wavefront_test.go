@@ -439,7 +439,7 @@ func TestMakeAuthOptions(t *testing.T) {
 	noAuthOptionsWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
 	options, err = noAuthOptionsWavefront.makeAuthOptions()
 	require.NoError(t, err)
-	require.Equal(t, 0, len(options))
+	require.Empty(t, options)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Sanitize

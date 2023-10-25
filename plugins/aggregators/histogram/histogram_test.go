@@ -128,7 +128,7 @@ func TestHistogramPushOnUpdate(t *testing.T) {
 
 	acc.ClearMetrics()
 	histogram.Push(acc)
-	require.Len(t, acc.Metrics, 0, "Incorrect number of metrics")
+	require.Empty(t, acc.Metrics, "Incorrect number of metrics")
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 

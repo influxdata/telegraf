@@ -53,7 +53,7 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	require.NoError(t, p.Init())
 	consumer.SetParser(p)
 	var acc testutil.Accumulator
-	require.Len(t, acc.Metrics, 0, "There should not be any points")
+	require.Empty(t, acc.Metrics, "There should not be any points")
 	require.NoError(t, consumer.Start(&acc))
 
 	waitForPoint(&acc, t)

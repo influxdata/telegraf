@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBasicStartup(t *testing.T) {
@@ -16,8 +17,8 @@ func TestBasicStartup(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, p.Init())
 
-	require.Len(t, acc.GetTelegrafMetrics(), 0)
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.Empty(t, acc.Errors)
 }
 
 func TestBasicStartupWithEC2Tags(t *testing.T) {
@@ -28,8 +29,8 @@ func TestBasicStartupWithEC2Tags(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, p.Init())
 
-	require.Len(t, acc.GetTelegrafMetrics(), 0)
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.Empty(t, acc.Errors)
 }
 
 func TestBasicStartupWithCacheTTL(t *testing.T) {
@@ -40,8 +41,8 @@ func TestBasicStartupWithCacheTTL(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, p.Init())
 
-	require.Len(t, acc.GetTelegrafMetrics(), 0)
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.Empty(t, acc.Errors)
 }
 
 func TestBasicStartupWithTagCacheSize(t *testing.T) {
@@ -52,8 +53,8 @@ func TestBasicStartupWithTagCacheSize(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, p.Init())
 
-	require.Len(t, acc.GetTelegrafMetrics(), 0)
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.Empty(t, acc.Errors)
 }
 
 func TestBasicInitNoTagsReturnAnError(t *testing.T) {

@@ -331,7 +331,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				Log:  testutil.Logger{},
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Len(t, r.Header["Authorization"], 0)
+				require.Empty(t, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
 		},

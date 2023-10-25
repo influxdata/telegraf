@@ -220,7 +220,7 @@ func TestTacacsLocal(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			if tt.errContains == "" {
-				require.Len(t, acc.Errors, 0)
+				require.Empty(t, acc.Errors)
 				require.True(t, acc.HasMeasurement("tacacs"))
 				require.True(t, acc.HasTag("tacacs", "source"))
 				require.Equal(t, srvLocal, acc.TagValue("tacacs", "source"))

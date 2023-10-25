@@ -116,7 +116,7 @@ func TestMariaDBIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			// Stopping the plugin
 			plugin.Stop()
@@ -215,7 +215,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			// Stopping the plugin
 			plugin.Stop()
@@ -310,7 +310,7 @@ func TestClickHouseIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			// Stopping the plugin
 			plugin.Stop()
