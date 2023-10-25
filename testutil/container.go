@@ -51,6 +51,10 @@ func (c *Container) Start() error {
 		containerMounts = append(containerMounts, testcontainers.BindMount(v, testcontainers.ContainerMountTarget(k)))
 	}
 
+	// Up timeouts on Ryuk container
+	c.Env["RYUK_CONNECTION_TIMEOUT"] = "2m"
+	c.Env["RYUK_RECONNECTION_TIMEOUT"] = "2m"
+
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Mounts:             testcontainers.Mounts(containerMounts...),
