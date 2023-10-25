@@ -38,6 +38,7 @@ type HTTPResponse struct {
 	URLs            []string `toml:"urls"`
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string
+	BodyForm        map[string][]string `toml:"body_form"`
 	Method          string
 	ResponseTimeout config.Duration
 	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
@@ -193,7 +194,16 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	var body io.Reader
 	if h.Body != "" {
 		body = strings.NewReader(h.Body)
+	} else if len(h.BodyForm) != 0 {
+		values := url.Values{}
+		for k, vs := range h.BodyForm {
+			for _, v := range vs {
+				values.Add(k, v)
+			}
+		}
+		body = strings.NewReader(values.Encode())
 	}
+
 	request, err := http.NewRequest(h.Method, u, body)
 	if err != nil {
 		return nil, nil, err
