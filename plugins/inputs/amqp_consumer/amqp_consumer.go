@@ -45,6 +45,11 @@ type AMQPConsumer struct {
 	QueuePassive          bool              `toml:"queue_passive"`
 	QueueConsumeArguments map[string]string `toml:"queue_consume_arguments"`
 
+	// QueueConsumeCheck check if queue does not exist or consumer not exist will fail.
+	QueueConsumeCheck             bool          `toml:"queue_consume_check"`
+	QueueConsumeCheckInterval     time.Duration `toml:"queue_consume_check_interval"`
+	queueConsumeCheckFailCallback func(string)
+
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
 
@@ -385,12 +390,89 @@ func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) 
 	return &queue, nil
 }
 
+// queueConsumerCheckLoop check if queue does not exist or consumer not exist will fail.
+func (a *AMQPConsumer) queueConsumerCheckLoop(ctx context.Context) {
+	if a.QueueConsumeCheckInterval <= 0 {
+		a.QueueConsumeCheckInterval = time.Minute * 30
+	}
+	if a.queueConsumeCheckFailCallback == nil {
+		a.queueConsumeCheckFailCallback = func(queue string) {
+			panic(fmt.Sprintf("Queue %s has no consumers", queue))
+		}
+	}
+
+	tk := time.NewTicker(a.QueueConsumeCheckInterval)
+	defer tk.Stop()
+
+	inspectFunc := func(result chan amqp.Queue) {
+		ch, err := a.conn.Channel()
+		if err != nil {
+			a.Log.Errorf("Creating channel: %s", err)
+			close(result)
+			return
+		}
+		defer ch.Close()
+
+		inspect, err := ch.QueueInspect(a.Queue)
+		if err != nil {
+			a.Log.Errorf("Inspecting queue: %s", err)
+			close(result)
+			return
+		}
+
+		result <- inspect
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-a.conn.NotifyClose(make(chan *amqp.Error)):
+			return
+		case <-tk.C:
+		}
+
+		var (
+			timeout, cancelFunc = context.WithTimeout(ctx, time.Second*10)
+			result              = make(chan amqp.Queue)
+		)
+
+		// Because the amqp client sends heartbeat packets using the same function "send" as other packet.
+		// c.send(&heartbeatFrame{})
+		go inspectFunc(result)
+
+		select {
+		case <-timeout.Done():
+			cancelFunc()
+			a.Log.Errorf("Inspect queue %s: %s", a.Queue, timeout.Err())
+			a.queueConsumeCheckFailCallback(a.Queue)
+			return
+		case inspect, ok := <-result:
+			cancelFunc()
+			if !ok || inspect.Consumers < 1 {
+				a.Log.Errorf("Inspect queue %s: no consumers", a.Queue)
+				a.queueConsumeCheckFailCallback(a.Queue)
+				return
+			}
+			a.Log.Debugf("Inspect queue %s %+v", a.Queue, inspect)
+
+		}
+
+	}
+}
+
 // Read messages from queue and add them to the Accumulator
 func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, ac telegraf.Accumulator) {
 	a.deliveries = make(map[telegraf.TrackingID]amqp.Delivery)
 
 	acc := ac.WithTracking(a.MaxUndeliveredMessages)
 	sem := make(semaphore, a.MaxUndeliveredMessages)
+
+	// check if queue does not exist or consumer not exist will fail.
+	if a.QueueConsumeCheck {
+		a.Log.Debug("Start queue consumer check loop")
+		go a.queueConsumerCheckLoop(ctx)
+	}
 
 	for {
 		select {
