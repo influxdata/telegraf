@@ -96,7 +96,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
                     var bearerToken []byte
 					bearerToken, err = os.ReadFile(config.BearerTokenFile)
 					if err != nil {
-						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
+						p.Log.Errorf("Error reading bearer token file: %s", err.Error())
 					} else {
 						err = p.cAdvisor(ctx, string(bearerToken))
 						if err != nil {
