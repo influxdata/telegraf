@@ -337,8 +337,8 @@ func TestResponseBodyFormField(t *testing.T) {
 		Log:  testutil.Logger{},
 		URLs: []string{ts.URL + "/form"},
 		BodyForm: map[string][]string{
-			"test": []string{"42"},
-			"list": []string{"foobar", "fizbuzz"},
+			"test": {"42"},
+			"list": {"foobar", "fizbuzz"},
 		},
 		Method: "POST",
 		Headers: map[string]string{
