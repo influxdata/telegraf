@@ -43,7 +43,7 @@ func TestAgent_LoadPlugin(t *testing.T) {
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 0, len(a.Config.Inputs))
+	require.Empty(t, a.Config.Inputs)
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "foo"}
@@ -94,7 +94,7 @@ func TestAgent_LoadOutput(t *testing.T) {
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 0, len(a.Config.Outputs))
+	require.Empty(t, a.Config.Outputs)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "foo"}

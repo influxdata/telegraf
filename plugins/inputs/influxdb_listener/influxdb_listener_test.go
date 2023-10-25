@@ -729,7 +729,7 @@ func TestPing(t *testing.T) {
 			resp, err := http.Post(createURL(listener, "http", "/ping", ""), "", nil)
 			require.NoError(t, err)
 			require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
-			require.Len(t, resp.Header["Content-Type"], 0)
+			require.Empty(t, resp.Header["Content-Type"])
 			require.NoError(t, resp.Body.Close())
 			require.EqualValues(t, 204, resp.StatusCode)
 		})

@@ -27,7 +27,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	left, err := m2.UnmarshalMsg(buf)
 	require.NoError(t, err)
 
-	require.Equal(t, len(left), 0)
+	require.Empty(t, left)
 
 	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
@@ -44,7 +44,7 @@ func TestSerializeMetricString(t *testing.T) {
 	left, err := m2.UnmarshalMsg(buf)
 	require.NoError(t, err)
 
-	require.Equal(t, len(left), 0)
+	require.Empty(t, left)
 
 	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
@@ -62,7 +62,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	left, err := m2.UnmarshalMsg(buf)
 	require.NoError(t, err)
 
-	require.Equal(t, len(left), 0)
+	require.Empty(t, left)
 
 	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
@@ -81,7 +81,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	left, err := m2.UnmarshalMsg(buf)
 	require.NoError(t, err)
 
-	require.Equal(t, len(left), 0)
+	require.Empty(t, left)
 
 	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }

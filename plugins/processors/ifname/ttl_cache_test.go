@@ -23,7 +23,7 @@ func TestTTLCacheExpire(t *testing.T) {
 
 	_, ok, _ := c.Get("ones")
 	require.False(t, ok)
-	require.Len(t, c.lru.m, 0)
+	require.Empty(t, c.lru.m)
 	require.Equal(t, c.lru.l.Len(), 0)
 }
 

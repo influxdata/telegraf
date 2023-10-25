@@ -89,7 +89,7 @@ func TestFilter_ApplyDeleteAllFields(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, selected)
 	f.Modify(m)
-	require.Len(t, m.FieldList(), 0)
+	require.Empty(t, m.FieldList())
 }
 
 func TestFilter_Empty(t *testing.T) {

@@ -176,7 +176,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	emptyAcc := &testutil.Accumulator{}
 	require.NoError(t, gcs.Gather(emptyAcc))
 
-	require.Equal(t, 0, len(emptyAcc.Metrics))
+	require.Empty(t, emptyAcc.Metrics)
 }
 
 func createParser() telegraf.Parser {
