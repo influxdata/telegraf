@@ -44,6 +44,7 @@ func TestCases(t *testing.T) {
 			inputSysctlFilename := filepath.Join(testcasePath, "sysctl.json")
 			inputZPoolFilename := filepath.Join(testcasePath, "zpool.txt")
 			inputZDatasetFilename := filepath.Join(testcasePath, "zdataset.txt")
+			inputUnameFilename := filepath.Join(testcasePath, "uname.txt")
 			expectedFilename := filepath.Join(testcasePath, "expected.out")
 
 			// Load the input data
@@ -51,10 +52,19 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 			var sysctl map[string][]string
 			require.NoError(t, json.Unmarshal(buf, &sysctl))
+
 			zpool, err := testutil.ParseLinesFromFile(inputZPoolFilename)
 			require.NoError(t, err)
+
 			zdataset, err := testutil.ParseLinesFromFile(inputZDatasetFilename)
 			require.NoError(t, err)
+
+			// Try to read release from file and default to FreeBSD 13 if
+			// an error occurs.
+			uname := "13.2-STABLE"
+			if buf, err := os.ReadFile(inputUnameFilename); err == nil {
+				uname = string(buf)
+			}
 
 			// Prepare the influx parser for expectations
 			parser := &influx.Parser{}
@@ -79,7 +89,9 @@ func TestCases(t *testing.T) {
 			}
 			plugin.zpool = func() ([]string, error) { return zpool, nil }
 			plugin.zdataset = func(_ []string) ([]string, error) { return zdataset, nil }
+			plugin.uname = func() (string, error) { return uname, nil }
 			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
 
 			// Gather and test
 			var acc testutil.Accumulator
