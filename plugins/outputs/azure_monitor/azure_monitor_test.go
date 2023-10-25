@@ -361,6 +361,34 @@ func TestWrite(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 		},
+		{
+			name: "write old metric",
+			plugin: &AzureMonitor{
+				Region:     "test",
+				ResourceID: "/test",
+				Log:        testutil.Logger{},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu-value",
+					map[string]string{},
+					map[string]interface{}{
+						"min":   float64(42),
+						"max":   float64(42),
+						"sum":   float64(42),
+						"count": int64(1),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				azmetrics, err := readBody(r)
+				require.NoError(t, err)
+				require.Len(t, azmetrics, 1)
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("'time' should not be older than 30 minutes and not more than 4 minutes in the future"))
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

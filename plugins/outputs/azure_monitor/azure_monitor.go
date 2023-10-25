@@ -336,9 +336,19 @@ func (a *AzureMonitor) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 
-	respbody, err := io.ReadAll(resp.Body)
+	respbodyByte, err := io.ReadAll(resp.Body)
+	respBody := string(respbodyByte)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("failed to write batch: [%v] %s: %s", resp.StatusCode, resp.Status, string(respbody))
+		// Checks for error returned that implies that metrics are too old or
+		// too new. Rather than keeping the metrics in the buffer, these metrics
+		// will not get accepted by Azure, so we return nil to drop the metrics.
+		// Error message: 'time' should not be older than 30 minutes and not
+		// more than 4 minutes in the future
+		if strings.Contains(respBody, "'time' should not be older than") {
+			a.Log.Warnf("Dropping metrics, failed to write batch: %s", respBody)
+			return nil
+		}
+		return fmt.Errorf("failed to write batch: [%v] %s: %s", resp.StatusCode, resp.Status, respBody)
 	}
 
 	return nil
