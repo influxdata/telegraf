@@ -44,7 +44,7 @@ func Test_BeatStats(t *testing.T) {
 	fakeServer.Start()
 	defer fakeServer.Close()
 
-	require.NoError(t, err, beatTest.Gather(&beat6StatsAccumulator))
+	require.NoError(t, beatTest.Gather(&beat6StatsAccumulator))
 
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
