@@ -38,10 +38,10 @@ func TestClientConfig(t *testing.T) {
 		{
 			name: "success with tls key password set",
 			client: tls.ClientConfig{
-				TLSCA:          pki.CACertPath(),
-				TLSCert:        pki.ClientCertPath(),
-				TLSKey:         pki.ClientKeyPath(),
-				TLSKeyPassword: "",
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientKeyPath(),
+				TLSKeyPwd: "",
 			},
 		},
 		{
@@ -88,7 +88,7 @@ func TestClientConfig(t *testing.T) {
 				TLSCA:     pki.CACertPath(),
 				TLSCert:   pki.ClientCertPath(),
 				TLSKey:    pki.ClientEncKeyPath(),
-				TLSKeyPwd: "changeme",
+				TLSKeyPwd: "badpassword",
 			},
 			expNil: true,
 			expErr: true,
@@ -154,6 +154,30 @@ func TestClientConfig(t *testing.T) {
 			expNil: false,
 			expErr: false,
 		},
+		{
+			name: "success with encrypted pkcs#1 key and password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncKeyPath(),
+				TLSKeyPwd: "changeme",
+			},
+		},
+		{
+			name: "success with cert and key",
+			client: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCertAndKey: pki.ClientCertAndKeyPath(),
+			},
+		},
+		{
+			name: "success with cert and enc key",
+			client: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCertAndKey: pki.ClientCertAndEncKeyPath(),
+				TLSKeyPwd:     "changeme",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -202,7 +226,7 @@ func TestServerConfig(t *testing.T) {
 			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
-				TLSKeyPassword:    "",
+				TLSKeyPwd:         "",
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),
@@ -353,6 +377,39 @@ func TestServerConfig(t *testing.T) {
 			},
 			expNil: true,
 			expErr: true,
+		},
+		{
+			name: "success with enc tls key",
+			server: tls.ServerConfig{
+				TLSCert:           pki.ServerCertPath(),
+				TLSKey:            pki.ServerEncKeyPath(),
+				TLSKeyPwd:         "changeme",
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with cert and key",
+			server: tls.ServerConfig{
+				TLSCertAndKey:     pki.ServerCertAndKeyPath(),
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with cert and enc key",
+			server: tls.ServerConfig{
+				TLSCertAndKey:     pki.ServerCertAndEncKeyPath(),
+				TLSKeyPwd:         "changeme",
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
 		},
 	}
 	for _, tt := range tests {

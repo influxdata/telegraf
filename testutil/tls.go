@@ -133,6 +133,22 @@ func (p *pki) ServerCertAndKeyPath() string {
 	return path.Join(p.keyPath, "server.pem")
 }
 
+func (p *pki) ReadServerEncKey() string {
+	return tls.ReadKey(p.ServerEncKeyPath(), "changeme")
+}
+
+func (p *pki) ServerEncKeyPath() string {
+	return path.Join(p.keyPath, "serverenckey.pem")
+}
+
+func (p *pki) ReadServerCertAndEncKey() string {
+	return tls.ReadKey(p.ServerCertAndEncKeyPath(), "changeme")
+}
+
+func (p *pki) ServerCertAndEncKeyPath() string {
+	return path.Join(p.keyPath, "serverenc.pem")
+}
+
 func (p *pki) AbsolutePaths() (*PKIPaths, error) {
 	tlsPem, err := filepath.Abs(p.ServerCertAndKeyPath())
 	if err != nil {
