@@ -42,6 +42,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # service_address = "udp6://:8094"
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
+  # service_address = "vsock://cid:port"
 
   ## Change the file mode bits on unix sockets.  These permissions may not be
   ## respected by some platforms, to safely restrict write permissions it is best

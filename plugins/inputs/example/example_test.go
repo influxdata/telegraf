@@ -218,7 +218,7 @@ func TestFixedValue(t *testing.T) {
 			// Call gather and check no error occurs. In case you use acc.AddError() somewhere
 			// in your code, it is not sufficient to only check the return value of Gather().
 			require.NoError(t, tt.plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0, "found errors accumulated by acc.AddError()")
+			require.Empty(t, acc.Errors, "found errors accumulated by acc.AddError()")
 
 			// Wait for the expected number of metrics to avoid flaky tests due to
 			// race conditions.
@@ -311,7 +311,7 @@ func TestRandomValue(t *testing.T) {
 			// Call gather and check no error occurs. In case you use acc.AddError() somewhere
 			// in your code, it is not sufficient to only check the return value of Gather().
 			require.NoError(t, tt.plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0, "found errors accumulated by acc.AddError()")
+			require.Empty(t, acc.Errors, "found errors accumulated by acc.AddError()")
 
 			// Wait for the expected number of metrics to avoid flaky tests due to
 			// race conditions.

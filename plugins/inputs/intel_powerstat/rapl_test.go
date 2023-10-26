@@ -37,7 +37,7 @@ func TestPrepareData(t *testing.T) {
 		Return(nil, errors.New("missing RAPL")).Once()
 	rapl.prepareData()
 	fsMock.AssertCalled(t, "getStringsMatchingPatternOnPath", mock.Anything)
-	require.Equal(t, 0, len(rapl.getRaplData()))
+	require.Empty(t, rapl.getRaplData())
 }
 
 func TestFindDramFolders(t *testing.T) {

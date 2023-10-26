@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // validEmptyJSON is a valid dropwizard json document, but without any metrics
@@ -32,7 +31,7 @@ func TestParseValidEmptyJSON(t *testing.T) {
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validEmptyJSON))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 }
 
 // validCounterJSON is a valid dropwizard json document containing one counter

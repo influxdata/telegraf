@@ -44,7 +44,7 @@ func TestWriteWithDefaults(t *testing.T) {
 		require.Equal(t, transit.MonitorStatus("SERVICE_OK"), obj.Resources[0].Services[0].Status)
 		require.Equal(t, "IntMetric", obj.Resources[0].Services[0].Name)
 		require.Equal(t, int64(42), *obj.Resources[0].Services[0].Metrics[0].Value.IntegerValue)
-		require.Equal(t, 0, len(obj.Groups))
+		require.Empty(t, obj.Groups)
 
 		_, err = fmt.Fprintln(w, "OK")
 		require.NoError(t, err)

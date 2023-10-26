@@ -509,7 +509,7 @@ func TestParseStream(t *testing.T) {
 
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 	m, err := p.ParseLine(csvBody)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -539,7 +539,7 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 	m, err := p.ParseLine(csvOneRow)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -870,7 +870,7 @@ func TestParseMetadataSeparators(t *testing.T) {
 	err = p.Init()
 	require.NoError(t, err)
 	require.Len(t, p.metadataSeparatorList, 4)
-	require.Len(t, p.MetadataTrimSet, 0)
+	require.Empty(t, p.MetadataTrimSet)
 	require.Equal(t, p.metadataSeparatorList, metadataPattern{":=", ",", "=", ":"})
 	p = &Parser{
 		ColumnNames:        []string{"a", "b"},

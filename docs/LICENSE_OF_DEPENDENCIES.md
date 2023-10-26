@@ -242,6 +242,7 @@ following works:
 - github.com/mdlayher/genetlink [MIT License](https://github.com/mdlayher/genetlink/blob/master/LICENSE.md)
 - github.com/mdlayher/netlink [MIT License](https://github.com/mdlayher/netlink/blob/master/LICENSE.md)
 - github.com/mdlayher/socket [MIT License](https://github.com/mdlayher/socket/blob/master/LICENSE.md)
+- github.com/mdlayher/vsock [MIT License](https://github.com/mdlayher/vsock/blob/master/LICENSE.md)
 - github.com/microsoft/ApplicationInsights-Go [MIT License](https://github.com/microsoft/ApplicationInsights-Go/blob/master/LICENSE)
 - github.com/microsoft/go-mssqldb [BSD 3-Clause "New" or "Revised" License](https://github.com/microsoft/go-mssqldb/blob/master/LICENSE.txt)
 - github.com/miekg/dns [BSD 3-Clause Clear License](https://github.com/miekg/dns/blob/master/LICENSE)

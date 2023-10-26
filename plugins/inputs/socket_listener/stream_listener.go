@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/mdlayher/vsock"
 )
 
 type hasSetReadBuffer interface {
@@ -81,6 +84,30 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 		}
 	}
 	return nil
+}
+
+func (l *streamListener) setupVsock(u *url.URL) error {
+	var err error
+
+	addrTuple := strings.SplitN(u.String(), ":", 2)
+
+	// Check address string for containing two tokens
+	if len(addrTuple) < 2 {
+		return fmt.Errorf("CID and/or port number missing")
+	}
+	// Parse CID and port number from address string both being 32-bit
+	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
+	cid, _ := strconv.ParseUint(addrTuple[0], 10, 32)
+	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
+		return fmt.Errorf("CID %d is out of range", cid)
+	}
+	port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
+	if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
+		return fmt.Errorf("Port numner %d is out of range", port)
+	}
+
+	l.listener, err = vsock.Listen(uint32(port), nil)
+	return err
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {

@@ -105,7 +105,7 @@ func TestCleanupHappens(t *testing.T) {
 
 	time.Sleep(ttl) // wait for cache entry to expire.
 	d.cleanup()
-	require.Len(t, d.expireList, 0)
+	require.Empty(t, d.expireList)
 
 	stats := d.Stats()
 
