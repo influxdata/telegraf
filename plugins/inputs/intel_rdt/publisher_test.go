@@ -41,7 +41,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, expectedCores, result.cores)
 		require.Equal(t, expectedTimestamp, result.time)
 		require.Equal(t, result.values[0], metricsValues["IPC"])
@@ -56,7 +56,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Equal(t, "", result.cores)
 		require.Nil(t, result.values)
 		require.Equal(t, time.Time{}, result.time)
@@ -74,7 +74,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Equal(t, "", result.cores)
 		require.Nil(t, result.values)
 		require.Equal(t, time.Time{}, result.time)
@@ -93,7 +93,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Equal(t, "", result.cores)
 		require.Nil(t, result.values)
 		require.Equal(t, time.Time{}, result.time)
@@ -127,7 +127,7 @@ func TestParseProcessesMeasurement(t *testing.T) {
 		}
 		result, err := parseProcessesMeasurement(newMeasurement)
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, processName, result.process)
 		require.Equal(t, expectedCores, result.cores)
 		require.Equal(t, expectedTimestamp, result.time)
@@ -186,7 +186,7 @@ func TestParseProcessesMeasurement(t *testing.T) {
 			}
 			result, err := parseProcessesMeasurement(newMeasurement)
 
-			require.NotNil(t, err)
+			require.Error(t, err)
 			require.Equal(t, "", result.process)
 			require.Equal(t, "", result.cores)
 			require.Nil(t, result.values)
