@@ -1,9 +1,16 @@
 package tls
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+
+	"github.com/youmark/pkcs8"
 )
 
 // ParseCiphers returns a `[]uint16` by received `[]string` key that represents ciphers from crypto/tls.
@@ -35,4 +42,59 @@ func ParseTLSVersion(version string) (uint16, error) {
 	}
 	sort.Strings(available)
 	return 0, fmt.Errorf("unsupported version %q (available: %s)", version, strings.Join(available, ","))
+}
+
+func readFile(filename string) []byte {
+	octets, err := os.ReadFile(filename)
+	if err != nil {
+		panic(fmt.Sprintf("reading %q: %v", filename, err))
+	}
+	return octets
+}
+
+func ReadCertificate(filename string) string {
+	octets := readFile(filename)
+	return string(octets)
+}
+
+func ReadKey(filename string, password string) string {
+	keyBytes := readFile(filename)
+	currentBlock, remainingBlocks := pem.Decode(keyBytes)
+	if currentBlock == nil {
+		panic(errors.New("failed to decode private key: no PEM data found"))
+	}
+	var allBlocks string
+	for {
+		if currentBlock.Type == "ENCRYPTED PRIVATE KEY" {
+			if password == "" {
+				panic(errors.New("missing password for PKCS#8 encrypted private key"))
+			}
+			var decryptedKey *rsa.PrivateKey
+			decryptedKey, err := pkcs8.ParsePKCS8PrivateKeyRSA(currentBlock.Bytes, []byte(password))
+			if err != nil {
+				panic(fmt.Errorf("failed to parse encrypted PKCS#8 private key: %w", err))
+			}
+			pemBlock := string(pem.EncodeToMemory(&pem.Block{Type: currentBlock.Type, Bytes: x509.MarshalPKCS1PrivateKey(decryptedKey)}))
+			allBlocks += pemBlock
+		} else if currentBlock.Headers["Proc-Type"] == "4,ENCRYPTED" {
+			decryptedKeyDER, err := x509.DecryptPEMBlock(currentBlock, []byte(password))
+			if err != nil {
+				panic(fmt.Errorf("failed to parse encrypted private key %w", err))
+			}
+			decryptedKey, err := x509.ParsePKCS1PrivateKey(decryptedKeyDER)
+			if err != nil {
+				panic(fmt.Errorf("unable to convert from DER to PEM format: %w", err))
+			}
+			pemBlock := string(pem.EncodeToMemory(&pem.Block{Type: currentBlock.Type, Bytes: x509.MarshalPKCS1PrivateKey(decryptedKey)}))
+			allBlocks += pemBlock
+		} else {
+			pemBlock := string(pem.EncodeToMemory(&pem.Block{Type: currentBlock.Type, Bytes: currentBlock.Bytes}))
+			allBlocks += pemBlock
+		}
+		currentBlock, remainingBlocks = pem.Decode(remainingBlocks)
+		if currentBlock == nil {
+			break
+		}
+	}
+	return allBlocks
 }

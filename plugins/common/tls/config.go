@@ -1,17 +1,13 @@
 package tls
 
 import (
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/youmark/pkcs8"
 )
 
 const TLSMinVersionDefault = tls.VersionTLS12
@@ -21,7 +17,9 @@ type ClientConfig struct {
 	TLSCA               string `toml:"tls_ca"`
 	TLSCert             string `toml:"tls_cert"`
 	TLSKey              string `toml:"tls_key"`
-	TLSKeyPwd           string `toml:"tls_key_pwd"`
+	TLSCertAndKey       string `toml:"tls_cert_key"`
+	TLSKeyPwd           string `toml:"tls_key_pwd" deprecated:"1.22.0;use 'tls_key_password' instead"`
+	TLSKeyPassword      string `toml:"tls_key_password"`
 	TLSMinVersion       string `toml:"tls_min_version"`
 	InsecureSkipVerify  bool   `toml:"insecure_skip_verify"`
 	ServerName          string `toml:"tls_server_name"`
@@ -37,7 +35,9 @@ type ClientConfig struct {
 type ServerConfig struct {
 	TLSCert            string   `toml:"tls_cert"`
 	TLSKey             string   `toml:"tls_key"`
-	TLSKeyPwd          string   `toml:"tls_key_pwd"`
+	TLSCertAndKey      string   `toml:"tls_cert_key"`
+	TLSKeyPwd          string   `toml:"tls_key_pwd" deprecated:"1.22.0;use 'tls_key_password' instead"`
+	TLSKeyPassword     string   `toml:"tls_key_password"`
 	TLSAllowedCACerts  []string `toml:"tls_allowed_cacerts"`
 	TLSCipherSuites    []string `toml:"tls_cipher_suites"`
 	TLSMinVersion      string   `toml:"tls_min_version"`
@@ -72,7 +72,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	//     * disabled security,
 	//     * an SNI server name, or
 	//     * empty/never renegotiation method
-	empty := c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == ""
+	empty := c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && c.TLSCertAndKey == ""
 	empty = empty && !c.InsecureSkipVerify && c.ServerName == ""
 	empty = empty && (c.RenegotiationMethod == "" || c.RenegotiationMethod == "never")
 
@@ -111,6 +111,11 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		tlsConfig.RootCAs = pool
 	}
 
+	if c.TLSCertAndKey != "" {
+		c.TLSCert = c.TLSCertAndKey
+		c.TLSKey = c.TLSCertAndKey
+	}
+
 	if c.TLSCert != "" && c.TLSKey != "" {
 		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey, c.TLSKeyPwd)
 		if err != nil {
@@ -141,7 +146,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 // TLSConfig returns a tls.Config, may be nil without error if TLS is not
 // configured.
 func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
-	if c.TLSCert == "" && c.TLSKey == "" && len(c.TLSAllowedCACerts) == 0 {
+	if c.TLSCert == "" && c.TLSKey == "" && c.TLSCertAndKey == "" && len(c.TLSAllowedCACerts) == 0 {
 		return nil, nil
 	}
 
@@ -154,6 +159,11 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		}
 		tlsConfig.ClientCAs = pool
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	if c.TLSCertAndKey != "" {
+		c.TLSCert = c.TLSCertAndKey
+		c.TLSKey = c.TLSCertAndKey
 	}
 
 	if c.TLSCert != "" && c.TLSKey != "" {
@@ -222,44 +232,16 @@ func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 }
 
 func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase string) error {
-	certBytes, err := os.ReadFile(certFile)
-	if err != nil {
-		return fmt.Errorf("could not load certificate %q: %w", certFile, err)
-	}
-
-	keyBytes, err := os.ReadFile(keyFile)
-	if err != nil {
-		return fmt.Errorf("could not load private key %q: %w", keyFile, err)
-	}
-
-	keyPEMBlock, _ := pem.Decode(keyBytes)
-	if keyPEMBlock == nil {
-		return errors.New("failed to decode private key: no PEM data found")
-	}
-
 	var cert tls.Certificate
-	if keyPEMBlock.Type == "ENCRYPTED PRIVATE KEY" {
-		if privateKeyPassphrase == "" {
-			return errors.New("missing password for PKCS#8 encrypted private key")
-		}
-		var decryptedKey *rsa.PrivateKey
-		decryptedKey, err = pkcs8.ParsePKCS8PrivateKeyRSA(keyPEMBlock.Bytes, []byte(privateKeyPassphrase))
-		if err != nil {
-			return fmt.Errorf("failed to parse encrypted PKCS#8 private key: %w", err)
-		}
-		cert, err = tls.X509KeyPair(certBytes, pem.EncodeToMemory(&pem.Block{Type: keyPEMBlock.Type, Bytes: x509.MarshalPKCS1PrivateKey(decryptedKey)}))
-		if err != nil {
-			return fmt.Errorf("failed to load cert/key pair: %w", err)
-		}
-	} else if keyPEMBlock.Headers["Proc-Type"] == "4,ENCRYPTED" {
-		// The key is an encrypted private key with the DEK-Info header.
-		// This is currently unsupported because of the deprecation of x509.IsEncryptedPEMBlock and x509.DecryptPEMBlock.
-		return fmt.Errorf("password-protected keys in pkcs#1 format are not supported")
+	var err error
+	if privateKeyPassphrase != "" {
+		cert, err = tls.X509KeyPair([]byte(ReadCertificate(certFile)), []byte(ReadKey(keyFile, privateKeyPassphrase)))
 	} else {
-		cert, err = tls.X509KeyPair(certBytes, keyBytes)
-		if err != nil {
-			return fmt.Errorf("failed to load cert/key pair: %w", err)
-		}
+		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"could not load keypair %s:%s: %v", certFile, keyFile, err)
 	}
 	config.Certificates = []tls.Certificate{cert}
 	return nil

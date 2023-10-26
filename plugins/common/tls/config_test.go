@@ -38,10 +38,10 @@ func TestClientConfig(t *testing.T) {
 		{
 			name: "success with tls key password set",
 			client: tls.ClientConfig{
-				TLSCA:     pki.CACertPath(),
-				TLSCert:   pki.ClientCertPath(),
-				TLSKey:    pki.ClientKeyPath(),
-				TLSKeyPwd: "",
+				TLSCA:          pki.CACertPath(),
+				TLSCert:        pki.ClientCertPath(),
+				TLSKey:         pki.ClientKeyPath(),
+				TLSKeyPassword: "",
 			},
 		},
 		{
@@ -93,7 +93,6 @@ func TestClientConfig(t *testing.T) {
 			expNil: true,
 			expErr: true,
 		},
-
 		{
 			name: "invalid ca",
 			client: tls.ClientConfig{
@@ -203,7 +202,17 @@ func TestServerConfig(t *testing.T) {
 			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
-				TLSKeyPwd:         "",
+				TLSKeyPassword:    "",
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with cert and key",
+			server: tls.ServerConfig{
+				TLSCertAndKey:     pki.ServerCertAndKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),

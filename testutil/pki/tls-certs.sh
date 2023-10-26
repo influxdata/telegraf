@@ -71,7 +71,9 @@ openssl req -x509 -config ./openssl.conf -days 3650 -newkey rsa:2048 -out ./cert
 openssl genrsa -out ./private/serverkey.pem 2048 &&
 openssl req -new -key ./private/serverkey.pem -out ./certs/servercsr.pem -outform PEM -subj "/CN=$(cat /proc/sys/kernel/hostname)/O=server/" &&
 openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercert.pem -notext -batch -extensions server_ca_extensions &&
-openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercertexp.pem -startdate "$(date +%y%m%d%H%M00 --date='-5 minutes')Z" -enddate "$(date +%y%m%d%H%M00 --date='5 minutes')Z" -notext -batch -extensions server_ca_extensions &&
+openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercertexp.pem -startdate $(date +%y%m%d%H%M00 --date='-5 minutes')'Z' -enddate $(date +%y%m%d%H%M00 --date='5 minutes')'Z' -notext -batch -extensions server_ca_extensions &&
+cp ./private/serverkey.pem ./private/serverkeyenc.pem &&
+ssh-keygen -p -f ./private/serverkeyenc.pem -m PEM -N 'changeme' &&
 
 # Create client and client encrypted keypair
 openssl genrsa -out ./private/clientkey.pem 2048 &&
@@ -79,12 +81,14 @@ openssl req -new -key ./private/clientkey.pem -out ./certs/clientcsr.pem -outfor
 openssl ca -config ./openssl.conf -in ./certs/clientcsr.pem -out ./certs/clientcert.pem -notext -batch -extensions client_ca_extensions &&
 cp ./private/clientkey.pem ./private/clientenckey.pem &&
 ssh-keygen -p -f ./private/clientenckey.pem -m PEM -N 'changeme' &&
+
 # Generate a pkcs#8 encrypted private key using pkcs#5 v2.0 algorithm
 openssl pkcs8 -topk8 -v2 des3 -in ./private/clientkey.pem -out ./private/clientenckey.pkcs8.pem -passout pass:changeme &&
 openssl pkcs8 -topk8 -in clientenckey.pem -passin pass:changeme -nocrypt -out clientkey.pkcs8.pem &&
+ssh-keygen -p -f ./private/clientenckey.pem -m PEM -N 'changeme' && 
 
 # Combine crt and key to create pem formatted keyfile
 cat ./certs/clientcert.pem ./private/clientkey.pem > ./private/client.pem &&
-cat ./certs/clientcert.pem ./private/clientkeyenc.pem > ./private/clientenc.pem &&
+cat ./certs/clientcert.pem ./private/clientenckey.pem > ./private/clientenc.pem &&
 cat ./certs/servercert.pem ./private/serverkey.pem > ./private/server.pem &&
 cat ./certs/servercertexp.pem ./private/serverkey.pem > ./private/serverexp.pem

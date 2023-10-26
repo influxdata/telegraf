@@ -46,7 +46,7 @@ to use them.
   # authentication = "X509"
   # tls_ca = "ca.pem"
   # tls_key = "client.pem"
-  # # tls_key_pwd = "changeme" # required for encrypted tls_key
+  # # tls_key_password = "changeme" # required for encrypted tls_key
   # insecure_skip_verify = false
 
   # database to store measurements and time series collections

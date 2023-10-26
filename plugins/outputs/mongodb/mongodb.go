@@ -136,6 +136,9 @@ func (s *MongoDB) Init() error {
 		if s.TLSKeyPwd != "" {
 			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPwd)
 		}
+		if s.TLSKeyPassword != "" {
+			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPassword)
+		}
 		newConnectionString.RawQuery = q.Encode()
 		s.Dsn = newConnectionString.String()
 		// always auth source $external
