@@ -1,0 +1,101 @@
+{
+    "c69461b2c836cc3f0e3e5deb07b1f16e25f6009da2a48bb0adc7dd580befaf55": {
+      "read": "2023-10-26T15:58:32.690109934Z",
+      "preread": "2023-10-26T15:58:31.642796089Z",
+      "pids_stats": {
+        "current": 1,
+        "limit": 4618
+      },
+      "blkio_stats": {
+        "io_service_bytes_recursive": null,
+        "io_serviced_recursive": null,
+        "io_queue_recursive": null,
+        "io_service_time_recursive": null,
+        "io_wait_time_recursive": null,
+        "io_merged_recursive": null,
+        "io_time_recursive": null,
+        "sectors_recursive": null
+      },
+      "num_procs": 0,
+      "storage_stats": {},
+      "cpu_stats": {
+        "cpu_usage": {
+          "total_usage": 34818000,
+          "usage_in_kernelmode": 5397000,
+          "usage_in_usermode": 29420000
+        },
+        "system_cpu_usage": 16970500000000,
+        "online_cpus": 2,
+        "throttling_data": {
+          "periods": 0,
+          "throttled_periods": 0,
+          "throttled_time": 0
+        }
+      },
+      "precpu_stats": {
+        "cpu_usage": {
+          "total_usage": 34818000,
+          "usage_in_kernelmode": 5397000,
+          "usage_in_usermode": 29420000
+        },
+        "system_cpu_usage": 16968420000000,
+        "online_cpus": 2,
+        "throttling_data": {
+          "periods": 0,
+          "throttled_periods": 0,
+          "throttled_time": 0
+        }
+      },
+      "memory_stats": {
+        "usage": 303104,
+        "stats": {
+          "active_anon": 4096,
+          "active_file": 0,
+          "anon": 45056,
+          "anon_thp": 0,
+          "file": 0,
+          "file_dirty": 0,
+          "file_mapped": 0,
+          "file_writeback": 0,
+          "inactive_anon": 40960,
+          "inactive_file": 0,
+          "kernel_stack": 16384,
+          "pgactivate": 1,
+          "pgdeactivate": 0,
+          "pgfault": 1113,
+          "pglazyfree": 0,
+          "pglazyfreed": 0,
+          "pgmajfault": 0,
+          "pgrefill": 0,
+          "pgscan": 0,
+          "pgsteal": 0,
+          "shmem": 0,
+          "slab": 190768,
+          "slab_reclaimable": 66320,
+          "slab_unreclaimable": 124448,
+          "sock": 0,
+          "thp_collapse_alloc": 0,
+          "thp_fault_alloc": 0,
+          "unevictable": 0,
+          "workingset_activate": 0,
+          "workingset_nodereclaim": 0,
+          "workingset_refault": 0
+        },
+        "limit": 4051226624
+      },
+      "name": "/ecs-nginx-telegraf-3-internalecspause-f0cc8fe3bfc9a8efd601",
+      "id": "c69461b2c836cc3f0e3e5deb07b1f16e25f6009da2a48bb0adc7dd580befaf55",
+      "networks": {
+        "eth0": {
+          "rx_bytes": 14,
+          "rx_packets": 0,
+          "rx_errors": 0,
+          "rx_dropped": 0,
+          "tx_bytes": 21,
+          "tx_packets": 0,
+          "tx_errors": 0,
+          "tx_dropped": 0
+        }
+      }
+    }
+  }
