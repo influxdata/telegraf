@@ -133,7 +133,7 @@ func TestParseInvalidFormDataError(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(notEscapedProperlyFormData))
 	require.Error(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 }
 
 func TestParseInvalidFormDataEmptyKey(t *testing.T) {
@@ -168,5 +168,5 @@ func TestParseInvalidFormDataEmptyString(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(emptyFormData))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 }

@@ -8,13 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMultipleConfigs(t *testing.T) {
@@ -22,7 +24,7 @@ func TestMultipleConfigs(t *testing.T) {
 	folders, err := os.ReadDir("testdata")
 	require.NoError(t, err)
 	// Make sure testdata contains data
-	require.Greater(t, len(folders), 0)
+	require.NotEmpty(t, folders)
 
 	// Setup influx parser for parsing the expected metrics
 	parser := &influx.Parser{}
@@ -33,6 +35,10 @@ func TestMultipleConfigs(t *testing.T) {
 	})
 
 	for _, f := range folders {
+		// Only use directories as those contain test-cases
+		if !f.IsDir() {
+			continue
+		}
 		testdataPath := filepath.Join("testdata", f.Name())
 		configFilename := filepath.Join(testdataPath, "telegraf.conf")
 		expectedFilename := filepath.Join(testdataPath, "expected.out")
@@ -92,4 +98,64 @@ func TestMultipleConfigs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkParsingSequential(b *testing.B) {
+	inputFilename := filepath.Join("testdata", "benchmark", "input.json")
+
+	// Configure the plugin
+	plugin := &json_v2.Parser{
+		Configs: []json_v2.Config{
+			{
+				MeasurementName: "benchmark",
+				JSONObjects: []json_v2.Object{
+					{
+						Path:               "metrics",
+						DisablePrependKeys: true,
+					},
+				},
+			},
+		},
+	}
+	require.NoError(b, plugin.Init())
+
+	// Read the input data
+	input, err := os.ReadFile(inputFilename)
+	require.NoError(b, err)
+
+	// Do the benchmarking
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(input)
+	}
+}
+
+func BenchmarkParsingParallel(b *testing.B) {
+	inputFilename := filepath.Join("testdata", "benchmark", "input.json")
+
+	// Configure the plugin
+	plugin := &json_v2.Parser{
+		Configs: []json_v2.Config{
+			{
+				MeasurementName: "benchmark",
+				JSONObjects: []json_v2.Object{
+					{
+						Path:               "metrics",
+						DisablePrependKeys: true,
+					},
+				},
+			},
+		},
+	}
+	require.NoError(b, plugin.Init())
+
+	// Read the input data
+	input, err := os.ReadFile(inputFilename)
+	require.NoError(b, err)
+
+	// Do the benchmarking
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			_, _ = plugin.Parse(input)
+		}
+	})
 }

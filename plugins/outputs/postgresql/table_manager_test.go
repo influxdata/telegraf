@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -35,11 +34,11 @@ func TestTableManagerIntegration_EnsureStructure(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.Empty(t, missingCols)
+	require.Empty(t, missingCols)
 
 	tblCols := p.tableManager.table(t.Name()).columns
-	assert.EqualValues(t, cols[0], tblCols["foo"])
-	assert.EqualValues(t, cols[1], tblCols["baz"])
+	require.EqualValues(t, cols[0], tblCols["foo"])
+	require.EqualValues(t, cols[1], tblCols["baz"])
 }
 
 func TestTableManagerIntegration_EnsureStructure_alter(t *testing.T) {
@@ -78,12 +77,12 @@ func TestTableManagerIntegration_EnsureStructure_alter(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.Empty(t, missingCols)
+	require.Empty(t, missingCols)
 
 	tblCols := p.tableManager.table(t.Name()).columns
-	assert.EqualValues(t, cols[0], tblCols["foo"])
-	assert.EqualValues(t, cols[1], tblCols["bar"])
-	assert.EqualValues(t, cols[2], tblCols["baz"])
+	require.EqualValues(t, cols[0], tblCols["foo"])
+	require.EqualValues(t, cols[1], tblCols["bar"])
+	require.EqualValues(t, cols[2], tblCols["baz"])
 }
 
 func TestTableManagerIntegration_EnsureStructure_overflowTableName(t *testing.T) {
@@ -109,8 +108,8 @@ func TestTableManagerIntegration_EnsureStructure_overflowTableName(t *testing.T)
 		nil,
 	)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "table name too long")
-	assert.False(t, isTempError(err))
+	require.Contains(t, err.Error(), "table name too long")
+	require.False(t, isTempError(err))
 }
 
 func TestTableManagerIntegration_EnsureStructure_overflowTagName(t *testing.T) {
@@ -137,7 +136,7 @@ func TestTableManagerIntegration_EnsureStructure_overflowTagName(t *testing.T) {
 		nil,
 	)
 	require.Error(t, err)
-	assert.False(t, isTempError(err))
+	require.False(t, isTempError(err))
 }
 
 func TestTableManagerIntegration_EnsureStructure_overflowFieldName(t *testing.T) {
@@ -164,8 +163,8 @@ func TestTableManagerIntegration_EnsureStructure_overflowFieldName(t *testing.T)
 		nil,
 	)
 	require.NoError(t, err)
-	assert.Len(t, missingCols, 1)
-	assert.Equal(t, cols[1], missingCols[0])
+	require.Len(t, missingCols, 1)
+	require.Equal(t, cols[1], missingCols[0])
 }
 
 func TestTableManagerIntegration_getColumns(t *testing.T) {
@@ -198,8 +197,8 @@ func TestTableManagerIntegration_getColumns(t *testing.T) {
 	curCols, err := p.tableManager.getColumns(ctx, p.db, t.Name())
 	require.NoError(t, err)
 
-	assert.EqualValues(t, cols[0], curCols["foo"])
-	assert.EqualValues(t, cols[1], curCols["baz"])
+	require.EqualValues(t, cols[0], curCols["foo"])
+	require.EqualValues(t, cols[1], curCols["baz"])
 }
 
 func TestTableManagerIntegration_MatchSource(t *testing.T) {
@@ -217,8 +216,8 @@ func TestTableManagerIntegration_MatchSource(t *testing.T) {
 	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
 
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.Contains(t, p.tableManager.table(t.Name()+p.TagTableSuffix).columns, "tag")
-	assert.Contains(t, p.tableManager.table(t.Name()).columns, "a")
+	require.Contains(t, p.tableManager.table(t.Name()+p.TagTableSuffix).columns, "tag")
+	require.Contains(t, p.tableManager.table(t.Name()).columns, "a")
 }
 
 func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
@@ -243,7 +242,7 @@ func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
 	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
 
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.Equal(t, PgUint8, p.tableManager.table(t.Name()).columns["a"].Type)
+	require.Equal(t, PgUint8, p.tableManager.table(t.Name()).columns["a"].Type)
 }
 
 func TestTableManagerIntegration_noCreateTable(t *testing.T) {
@@ -321,7 +320,7 @@ func TestTableManagerIntegration_noAlterMissingTag(t *testing.T) {
 	}
 	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.NotContains(t, tsrc.ColumnNames(), "bar")
+	require.NotContains(t, tsrc.ColumnNames(), "bar")
 }
 
 // Verify that when using foreign tags and alter statements are disabled and a metric comes in with a new tag key, that
@@ -349,7 +348,7 @@ func TestTableManagerIntegration_noAlterMissingTagTableTag(t *testing.T) {
 	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
 	ttsrc := NewTagTableSource(tsrc)
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.NotContains(t, ttsrc.ColumnNames(), "bar")
+	require.NotContains(t, ttsrc.ColumnNames(), "bar")
 }
 
 // Verify that when using foreign tags and alter statements generate a permanent error and a metric comes in with a new
@@ -379,7 +378,7 @@ func TestTableManagerIntegration_badAlterTagTable(t *testing.T) {
 	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
 	ttsrc := NewTagTableSource(tsrc)
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.NotContains(t, ttsrc.ColumnNames(), "bar")
+	require.NotContains(t, ttsrc.ColumnNames(), "bar")
 }
 
 // verify that when alter statements are disabled and a metric comes in with a new field key, that the field is omitted.
@@ -404,7 +403,7 @@ func TestTableManagerIntegration_noAlterMissingField(t *testing.T) {
 	}
 	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.NotContains(t, tsrc.ColumnNames(), "b")
+	require.NotContains(t, tsrc.ColumnNames(), "b")
 }
 
 // verify that when alter statements generate a permanent error and a metric comes in with a new field key, that the field is omitted.
@@ -431,7 +430,7 @@ func TestTableManagerIntegration_badAlterField(t *testing.T) {
 	}
 	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	assert.NotContains(t, tsrc.ColumnNames(), "b")
+	require.NotContains(t, tsrc.ColumnNames(), "b")
 }
 
 func TestTableManager_addColumnTemplates(t *testing.T) {
@@ -468,7 +467,7 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 1, stmtCount)
+	require.Equal(t, 1, stmtCount)
 }
 
 func TestTableManager_TimeWithTimezone(t *testing.T) {

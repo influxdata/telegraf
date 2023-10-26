@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"testing"
 	"time"
 
-	"testing"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
@@ -221,7 +220,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 	require.NoError(t, plugin.Gather(acc))
 
 	acc.Wait(len(expected))
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.Errors)
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }

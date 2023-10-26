@@ -1320,7 +1320,7 @@ func TestTestCases(t *testing.T) {
 			require.Len(t, input, 1)
 
 			filefields := strings.Fields(input[0])
-			require.GreaterOrEqual(t, len(filefields), 1)
+			require.NotEmpty(t, filefields)
 			datafile := filepath.FromSlash(filefields[0])
 			fileformat := ""
 			if len(filefields) > 1 {

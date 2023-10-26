@@ -166,7 +166,7 @@ func TestGatherNodeOnly(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, cb.gatherServer(&acc, faker.URL))
 
-	require.Equal(t, 0, len(acc.Errors))
+	require.Empty(t, acc.Errors)
 	require.Equal(t, 7, len(acc.Metrics))
 	acc.AssertDoesNotContainMeasurement(t, "couchbase_bucket")
 }
@@ -197,7 +197,7 @@ func TestGatherFailover(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, cb.gatherServer(&acc, faker.URL))
-	require.Equal(t, 0, len(acc.Errors))
+	require.Empty(t, acc.Errors)
 	require.Equal(t, 8, len(acc.Metrics))
 
 	var metric *testutil.Metric

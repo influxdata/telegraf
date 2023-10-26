@@ -31,6 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # address = "udp6://127.0.0.1:8094"
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
+  # address = "vsock://cid:port"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

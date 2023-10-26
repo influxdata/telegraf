@@ -39,7 +39,7 @@ func setup(t *testing.T, irqString string, cpuAsTags bool) (*testutil.Accumulato
 	f := bytes.NewBufferString(irqString)
 	irqs, err := parseInterrupts(f)
 	require.Equal(t, nil, err)
-	require.NotEqual(t, 0, len(irqs))
+	require.NotEmpty(t, irqs)
 
 	acc := new(testutil.Accumulator)
 	reportMetrics("soft_interrupts", irqs, acc, cpuAsTags)

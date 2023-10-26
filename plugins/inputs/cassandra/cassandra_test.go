@@ -190,7 +190,7 @@ func TestHttp404(t *testing.T) {
 	err := acc.GatherError(jolokia.Gather)
 
 	require.Error(t, err)
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 	require.Contains(t, err.Error(), "has status code 404")
 }
 
