@@ -106,7 +106,6 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 					if err != nil {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
-
 				} else {
 					<-ctx.Done()
 				}
