@@ -101,7 +101,7 @@ func TestGostats(t *testing.T) {
 
 	require.NotNil(t, metric)
 	require.Equal(t, metric.Measurement, "internal_gostats")
-	require.Equal(t, len(metric.Tags), 1)
+	require.Len(t, metric.Tags, 1)
 	require.Contains(t, metric.Tags, "go_version")
 
 	for name, value := range metric.Fields {

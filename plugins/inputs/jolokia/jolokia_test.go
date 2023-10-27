@@ -146,7 +146,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	err := acc.GatherError(jolokia.Gather)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":      67108864.0,
@@ -170,7 +170,7 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 	err := jolokia.Gather(&acc)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":          67108864.0,
@@ -198,7 +198,7 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	err := acc.GatherError(jolokia.Gather)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_java.lang:type=Memory_ObjectPendingFinalizationCount": 0.0,

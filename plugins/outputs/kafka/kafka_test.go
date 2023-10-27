@@ -166,7 +166,7 @@ func TestRoutingKey(t *testing.T) {
 				return m
 			}(),
 			check: func(t *testing.T, routingKey string) {
-				require.Equal(t, 36, len(routingKey))
+				require.Len(t, routingKey, 36)
 			},
 		},
 	}

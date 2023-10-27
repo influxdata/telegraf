@@ -48,7 +48,7 @@ func TestParseFullOutput(t *testing.T) {
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	require.Len(t, acc.Metrics, 6)
-	require.Equal(t, 293, len(flat))
+	require.Len(t, flat, 293)
 }
 
 func TestFilterSomeStats(t *testing.T) {
@@ -62,7 +62,7 @@ func TestFilterSomeStats(t *testing.T) {
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	require.Len(t, acc.Metrics, 2)
-	require.Equal(t, 16, len(flat))
+	require.Len(t, flat, 16)
 }
 
 func TestFieldConfig(t *testing.T) {
@@ -83,7 +83,7 @@ func TestFieldConfig(t *testing.T) {
 
 		acc.HasMeasurement("varnish")
 		flat := flatten(acc.Metrics)
-		require.Equal(t, expected, len(flat))
+		require.Len(t, flat, expected)
 	}
 }
 
@@ -555,7 +555,7 @@ func TestVersions(t *testing.T) {
 		require.NoError(t, err)
 		err = server.processMetricsV2(c.activeReloadPrefix, acc, bytes.NewBuffer(output))
 		require.NoError(t, err)
-		require.Equal(t, c.size, len(acc.Metrics))
+		require.Len(t, acc.Metrics, c.size)
 		for _, m := range acc.Metrics {
 			require.NotEmpty(t, m.Fields)
 			require.Equal(t, m.Measurement, "varnish")

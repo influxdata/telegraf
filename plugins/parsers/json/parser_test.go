@@ -580,7 +580,7 @@ func TestJSONParseNestedArray(t *testing.T) {
 	actual, err := parser.Parse([]byte(testString))
 	require.Len(t, actual, 1)
 	require.NoError(t, err)
-	require.Equal(t, 3, len(actual[0].Tags()))
+	require.Len(t, actual[0].Tags(), 3)
 }
 
 func TestJSONQueryErrorOnArray(t *testing.T) {
@@ -643,7 +643,7 @@ func TestArrayOfObjects(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
-	require.Equal(t, 3, len(actual))
+	require.Len(t, actual, 3)
 }
 
 func TestUseCaseJSONQuery(t *testing.T) {
@@ -671,7 +671,7 @@ func TestUseCaseJSONQuery(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
-	require.Equal(t, 3, len(actual))
+	require.Len(t, actual, 3)
 	require.Equal(t, actual[0].Fields()["last"], "Murphy")
 }
 
@@ -706,7 +706,7 @@ func TestTimeParser(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
-	require.Equal(t, 2, len(actual))
+	require.Len(t, actual, 2)
 	require.NotEqual(t, actual[0].Time(), actual[1].Time())
 }
 
@@ -725,7 +725,7 @@ func TestTimeParserWithTimezone(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
-	require.Equal(t, 1, len(actual))
+	require.Len(t, actual, 1)
 	require.EqualValues(t, int64(1136405040000000000), actual[0].Time().UnixNano())
 }
 
@@ -760,7 +760,7 @@ func TestUnixTimeParser(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
-	require.Equal(t, 2, len(actual))
+	require.Len(t, actual, 2)
 	require.NotEqual(t, actual[0].Time(), actual[1].Time())
 }
 
@@ -795,7 +795,7 @@ func TestUnixMsTimeParser(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
-	require.Equal(t, 2, len(actual))
+	require.Len(t, actual, 2)
 	require.NotEqual(t, actual[0].Time(), actual[1].Time())
 }
 
@@ -849,7 +849,7 @@ func TestShareTimestamp(t *testing.T) {
 
 	actual, err := parser.Parse([]byte(validJSONArrayMultiple))
 	require.NoError(t, err)
-	require.Equal(t, 2, len(actual))
+	require.Len(t, actual, 2)
 	require.Equal(t, actual[0].Time(), actual[1].Time())
 }
 

@@ -34,7 +34,7 @@ func TestRefreshFilePaths(t *testing.T) {
 
 	err = r.refreshFilePaths()
 	require.NoError(t, err)
-	require.Equal(t, 2, len(r.filenames))
+	require.Len(t, r.filenames, 2)
 }
 
 func TestFileTag(t *testing.T) {
@@ -79,7 +79,7 @@ func TestJSONParserCompile(t *testing.T) {
 
 	require.NoError(t, r.Gather(&acc))
 	require.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
-	require.Equal(t, 5, len(acc.Metrics[0].Fields))
+	require.Len(t, acc.Metrics[0].Fields, 5)
 }
 
 func TestGrokParser(t *testing.T) {
