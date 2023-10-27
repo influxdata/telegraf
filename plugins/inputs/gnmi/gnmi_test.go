@@ -44,7 +44,7 @@ func TestParsePath(t *testing.T) {
 
 	parsed, err = parsePath("", "/foo[[", "")
 	require.Nil(t, parsed)
-	require.NotNil(t, err)
+	require.Error(t, err)
 }
 
 type MockServer struct {

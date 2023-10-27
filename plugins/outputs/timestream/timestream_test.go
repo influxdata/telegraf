@@ -95,7 +95,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		MeasureNameForMultiMeasureRecords: "multi-measure-name",
 		Log:                               testutil.Logger{},
 	}
-	require.Nil(t, validConfigMultiMeasureMultiTableMode.Connect())
+	require.NoError(t, validConfigMultiMeasureMultiTableMode.Connect())
 
 	invalidConfigMultiMeasureMultiTableMode := Timestream{
 		DatabaseName:           tsDbName,
@@ -115,7 +115,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		// measurement name (from telegraf metric) is used as multi-measure name in TS
 		Log: testutil.Logger{},
 	}
-	require.Nil(t, validConfigMultiMeasureSingleTableMode.Connect())
+	require.NoError(t, validConfigMultiMeasureSingleTableMode.Connect())
 
 	invalidConfigMultiMeasureSingleTableMode := Timestream{
 		DatabaseName:                      tsDbName,
@@ -136,7 +136,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		MappingMode:  MappingModeMultiTable,
 		Log:          testutil.Logger{},
 	}
-	require.Nil(t, validMappingModeMultiTable.Connect())
+	require.NoError(t, validMappingModeMultiTable.Connect())
 
 	singleTableNameWithMultiTable := Timestream{
 		DatabaseName:    tsDbName,
@@ -179,7 +179,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		SingleTableDimensionNameForTelegrafMeasurementName: testSingleTableDim,
 		Log: testutil.Logger{},
 	}
-	require.Nil(t, validConfigurationMappingModeSingleTable.Connect())
+	require.NoError(t, validConfigurationMappingModeSingleTable.Connect())
 
 	// create table arguments
 	createTableNoMagneticRetention := Timestream{
@@ -209,7 +209,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		CreateTableMemoryStoreRetentionPeriodInHours:  3,
 		Log: testutil.Logger{},
 	}
-	require.Nil(t, createTableValid.Connect())
+	require.NoError(t, createTableValid.Connect())
 
 	// describe table on start arguments
 	describeTableInvoked := Timestream{
@@ -274,7 +274,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	require.Equal(t, recordCount+1, len(transformedRecords), "Expected 101 records after transforming")
 	// validate write to TS
 	err := plugin.Write(inputs)
-	require.Nil(t, err, "Write to Timestream failed")
+	require.NoError(t, err, "Write to Timestream failed")
 	require.Equal(t, mockClient.WriteRecordsRequestCount, 2, "Expected 2 WriteRecords calls")
 }
 
@@ -315,7 +315,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 
 	// validate config correctness
 	err := plugin.Connect()
-	require.Nil(t, err, "Invalid configuration")
+	require.NoError(t, err, "Invalid configuration")
 
 	// validate multi-record generation
 	result := plugin.TransformMetrics(inputs)
@@ -340,7 +340,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 
 	// validate successful write to TS
 	err = plugin.Write(inputs)
-	require.Nil(t, err, "Write to Timestream failed")
+	require.NoError(t, err, "Write to Timestream failed")
 	require.Equal(t, mockClient.WriteRecordsRequestCount, 1, "Expected 1 WriteRecords call")
 }
 
@@ -393,7 +393,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 
 	// validate config correctness
 	err := plugin.Connect()
-	require.Nil(t, err, "Invalid configuration")
+	require.NoError(t, err, "Invalid configuration")
 
 	// validate multi-record generation with MappingModeMultiTable
 	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
@@ -416,7 +416,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 
 	// validate config correctness
 	err = plugin.Connect()
-	require.Nil(t, err, "Invalid configuration")
+	require.NoError(t, err, "Invalid configuration")
 
 	expectedResultSingleTable := buildExpectedMultiRecords(metricName1, "singleTableName")
 
@@ -532,7 +532,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 
 	err := plugin.Write([]telegraf.Metric{input})
 
-	require.NotNil(t, err, "Expected an error to be returned to Telegraf, "+
+	require.Error(t, err, "Expected an error to be returned to Telegraf, "+
 		"so that the write will be retried by Telegraf later.")
 }
 
@@ -558,7 +558,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 
 	err := plugin.Write([]telegraf.Metric{input})
 
-	require.Nil(t, err, "Expected to silently swallow the RejectedRecordsException, "+
+	require.NoError(t, err, "Expected to silently swallow the RejectedRecordsException, "+
 		"as retrying this error doesn't make sense.")
 }
 func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
@@ -596,7 +596,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 	}
 
 	err := plugin.Write(inputs)
-	require.Nil(t, err, "Expected to write without any errors ")
+	require.NoError(t, err, "Expected to write without any errors ")
 	require.Equal(t, mockClient.WriteRecordsRequestCount, maxWriteRecordsCalls, "Expected 5 calls to WriteRecords")
 }
 
@@ -635,7 +635,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	}
 
 	err := plugin.Write(inputs)
-	require.Nil(t, err, "Expected to write without any errors ")
+	require.NoError(t, err, "Expected to write without any errors ")
 	require.Equal(t, mockClient.WriteRecordsRequestCount, maxWriteRecordsCalls, "Expected 5 calls to WriteRecords")
 }
 
@@ -1180,7 +1180,7 @@ func TestCustomEndpoint(t *testing.T) {
 
 	// validate config correctness
 	err := plugin.Connect()
-	require.Nil(t, err, "Invalid configuration")
+	require.NoError(t, err, "Invalid configuration")
 	// Check customURL is used
 	require.Equal(t, plugin.EndpointURL, customEndpoint)
 }
