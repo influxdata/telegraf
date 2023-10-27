@@ -239,7 +239,7 @@ func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase
 	}
 	if err != nil {
 		return fmt.Errorf(
-			"could not load keypair %s:%s: %v", certFile, keyFile, err)
+			"could not load keypair %s:%s: %w", certFile, keyFile, err)
 	}
 	config.Certificates = []tls.Certificate{cert}
 	return nil
