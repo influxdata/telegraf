@@ -20,6 +20,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/IBM/nzgo/v12 v12.0.8
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/Mellanox/rdmamap v1.1.0
@@ -216,6 +217,8 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.24.0
 )
+
+require github.com/IBM/nzgo v11.1.0+incompatible // indirect
 
 require (
 	cloud.google.com/go v0.110.8 // indirect
