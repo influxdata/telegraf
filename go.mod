@@ -218,7 +218,6 @@ require (
 	modernc.org/sqlite v1.24.0
 )
 
-
 require (
 	cloud.google.com/go v0.110.8 // indirect
 	cloud.google.com/go/compute v1.23.1 // indirect
