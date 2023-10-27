@@ -420,7 +420,7 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			s.SignalFxRealm = "test"
 			s.Log = testutil.Logger{}
 
-			require.Nil(t, s.Connect())
+			require.NoError(t, s.Connect())
 
 			s.client = &sink{
 				dps: []*datapoint.Datapoint{},
@@ -586,7 +586,7 @@ func TestSignalFx_Errors(t *testing.T) {
 			s.SignalFxRealm = "test"
 			s.Log = testutil.Logger{}
 
-			require.Nil(t, s.Connect())
+			require.NoError(t, s.Connect())
 
 			s.client = &errorsink{
 				dps: []*datapoint.Datapoint{},

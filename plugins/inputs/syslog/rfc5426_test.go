@@ -355,7 +355,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 
 	// Write
 	_, e := conn.Write([]byte("<1>1 - - - - - -"))
-	require.Nil(t, e)
+	require.NoError(t, e)
 
 	// Wait
 	acc.Wait(1)
@@ -386,7 +386,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 
 	// Write
 	_, e = conn.Write([]byte("<1>1 - - - - - -"))
-	require.Nil(t, e)
+	require.NoError(t, e)
 
 	// Wait
 	acc.Wait(1)
@@ -416,7 +416,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 
 	// Write
 	_, e = conn.Write([]byte("<1>1 - - - - - -"))
-	require.Nil(t, e)
+	require.NoError(t, e)
 
 	// Wait
 	acc.Wait(1)

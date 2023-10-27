@@ -191,7 +191,7 @@ func TestPluginInitialize(t *testing.T) {
 			if tt.expectedErrorString != "" {
 				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
 			} else {
-				require.Equal(t, nil, plugin.Init())
+				require.NoError(t, plugin.Init())
 			}
 			if len(tt.regions) == 0 { //Check if set to default
 				require.Equal(t, plugin.Regions, aliyunRegionList)
@@ -295,7 +295,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			if tt.expectedErrorString != "" {
 				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
 			} else {
-				require.Equal(t, nil, plugin.Init())
+				require.NoError(t, plugin.Init())
 			}
 		})
 	}

@@ -1015,7 +1015,7 @@ timestamp,type,name,status
 		require.Nil(t, m)
 	}
 	m, err := p.ParseLine(testCSVRows[rowIndex])
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, m)
 	rowIndex++
 	m, err = p.ParseLine(testCSVRows[rowIndex])

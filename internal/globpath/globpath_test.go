@@ -51,7 +51,7 @@ func TestCompileAndMatch(t *testing.T) {
 
 	for _, tc := range tests {
 		g, err := Compile(tc.path)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		matches := g.Match()
 		require.Len(t, matches, tc.matches)
 	}

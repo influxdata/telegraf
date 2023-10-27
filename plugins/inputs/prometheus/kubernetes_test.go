@@ -238,7 +238,7 @@ func TestPodHasMatchingLabelSelector(t *testing.T) {
 	pod.Labels["label5"] = "label5"
 
 	labelSelector, err := labels.Parse(prom.KubernetesLabelSelector)
-	require.Equal(t, err, nil)
+	require.NoError(t, err)
 	require.True(t, podHasMatchingLabelSelector(pod, labelSelector))
 }
 
@@ -250,7 +250,7 @@ func TestPodHasMatchingFieldSelector(t *testing.T) {
 	pod.Spec.NodeName = "node1000"
 
 	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
-	require.Equal(t, err, nil)
+	require.NoError(t, err)
 	require.True(t, podHasMatchingFieldSelector(pod, fieldSelector))
 }
 
@@ -262,7 +262,7 @@ func TestInvalidFieldSelector(t *testing.T) {
 	pod.Spec.NodeName = "node1000"
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
-	require.NotEqual(t, err, nil)
+	require.Error(t, err)
 }
 
 func TestAnnotationFilters(t *testing.T) {
