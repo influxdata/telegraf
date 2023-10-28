@@ -202,6 +202,7 @@ func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
 		return nil, err
 	}
 	tr := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
 		ResponseHeaderTimeout: time.Duration(e.Timeout),
 		TLSClientConfig:       tlsCfg,
 	}

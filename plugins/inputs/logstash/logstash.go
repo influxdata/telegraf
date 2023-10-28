@@ -138,6 +138,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 
 	client := &http.Client{
 		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsConfig,
 		},
 		Timeout: time.Duration(logstash.Timeout),

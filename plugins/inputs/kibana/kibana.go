@@ -154,6 +154,7 @@ func (k *Kibana) createHTTPClient() (*http.Client, error) {
 
 	client := &http.Client{
 		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsCfg,
 		},
 		Timeout: time.Duration(k.Timeout),
