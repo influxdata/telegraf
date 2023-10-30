@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -162,7 +163,7 @@ func (b *Baseband) gatherVFMetric(acc telegraf.Accumulator, metricName string) e
 			tags := map[string]string{
 				"operation": metric.operationName,
 				"metric":    metricNameToTagName(metricName),
-				"vf":        fmt.Sprintf("%v", i),
+				"vf":        strconv.Itoa(i),
 			}
 			acc.AddGauge(pluginName, fields, tags)
 		}
@@ -189,7 +190,7 @@ func (b *Baseband) gatherEngineMetric(acc telegraf.Accumulator, metricName strin
 			tags := map[string]string{
 				"operation": metric.operationName,
 				"metric":    metricNameToTagName(metricName),
-				"engine":    fmt.Sprintf("%v", i),
+				"engine":    strconv.Itoa(i),
 			}
 			acc.AddGauge(pluginName, fields, tags)
 		}

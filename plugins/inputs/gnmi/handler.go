@@ -8,14 +8,10 @@ import (
 	"io"
 	"net"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/metric"
-	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
-	"github.com/influxdata/telegraf/selfstat"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc"
@@ -23,6 +19,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/metric"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const eidJuniperTelemetryHeader = 1
@@ -140,11 +142,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
 					break
 				}
-				// Add only relevant Tags from the Juniper Header extention.
-				// These are requiered for aggregation
-				prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
-				prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
-				prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
+				// Add only relevant Tags from the Juniper Header extension.
+				// These are required for aggregation
+				prefixTags["component_id"] = strconv.FormatUint(uint64(juniperHeader.GetComponentId()), 10)
+				prefixTags["component"] = juniperHeader.GetComponent()
+				prefixTags["sub_component_id"] = strconv.FormatUint(uint64(juniperHeader.GetSubComponentId()), 10)
 			}
 
 		default:
