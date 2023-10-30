@@ -257,7 +257,7 @@ func TestFieldMappings(t *testing.T) {
 					items: []gos7.S7DataItem{
 						{
 							Area:     0x84,
-							WordLen:  0x01,
+							WordLen:  0x02,
 							DBNumber: 5,
 							Start:    3,
 							Amount:   1,
