@@ -211,7 +211,7 @@ func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[s
 	for _, availableProcess := range availableProcesses {
 		if choice.Contains(availableProcess.Name, providedProcesses) {
 			pid := availableProcess.PID
-			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + fmt.Sprintf("%d", pid) + ","
+			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + strconv.Itoa(pid) + ","
 		}
 	}
 	for key := range mapProcessPIDs {

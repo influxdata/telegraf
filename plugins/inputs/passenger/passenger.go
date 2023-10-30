@@ -198,7 +198,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 					"group_name":       group.Name,
 					"app_root":         group.AppRoot,
 					"supergroup_name":  sg.Name,
-					"pid":              fmt.Sprintf("%d", process.Pid),
+					"pid":              strconv.Itoa(process.Pid),
 					"code_revision":    process.CodeRevision,
 					"life_status":      process.LifeStatus,
 					"process_group_id": process.ProcessGroupID,

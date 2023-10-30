@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -323,7 +324,7 @@ func tooLarge(res http.ResponseWriter, maxLength int64) error {
 	b, _ := json.Marshal(map[string]string{
 		"code":      fmt.Sprint(Invalid),
 		"message":   "http: request body too large",
-		"maxLength": fmt.Sprint(maxLength)})
+		"maxLength": strconv.FormatInt(maxLength, 10)})
 	_, err := res.Write(b)
 	return err
 }

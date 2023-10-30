@@ -110,7 +110,7 @@ func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 			collectString = append(collectString, messageLine)
 		}
 	}
-	return fmt.Sprint(strings.Join(collectString, ""))
+	return strings.Join(collectString, "")
 }
 
 // Write metrics to Warp10

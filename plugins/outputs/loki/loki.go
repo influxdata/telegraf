@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,7 +132,7 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 			line += fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value)
 		}
 
-		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
+		s.insertLog(tags, Log{strconv.FormatInt(m.Time().UnixNano(), 10), line})
 	}
 
 	return l.writeMetrics(s)

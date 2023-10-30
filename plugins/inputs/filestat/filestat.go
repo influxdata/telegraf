@@ -4,7 +4,7 @@ package filestat
 import (
 	"crypto/md5" //nolint:gosec // G501: Blocklisted import crypto/md5: weak cryptographic primitive - md5 hash is what is desired in this case
 	_ "embed"
-	"fmt"
+	"encoding/hex"
 	"io"
 	"os"
 
@@ -131,7 +131,7 @@ func getMd5(file string) (string, error) {
 		// fatal error
 		return "", err
 	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func init() {
