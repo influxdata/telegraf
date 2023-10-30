@@ -122,6 +122,15 @@ func resolveEndpoint(ecs *Ecs) {
 
 	// Auto-detect metadata endpoint version.
 
+	// Use metadata v4 if available.
+	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
+	v4Endpoint := os.Getenv("ECS_CONTAINER_METADATA_URI_V4")
+	if v4Endpoint != "" {
+		ecs.EndpointURL = v4Endpoint
+		ecs.metadataVersion = 4
+		return
+	}
+
 	// Use metadata v3 if available.
 	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
 	v3Endpoint := os.Getenv("ECS_CONTAINER_METADATA_URI")
