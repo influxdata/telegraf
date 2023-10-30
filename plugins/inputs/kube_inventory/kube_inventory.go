@@ -195,10 +195,10 @@ const (
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
-	podContainerMeasurement          = "kubernetes_pod_container" //nolint:gosec // G101: Potential hardcoded credentials - false positive
+	podContainerMeasurement          = "kubernetes_pod_container"
 	serviceMeasurement               = "kubernetes_service"
 	statefulSetMeasurement           = "kubernetes_statefulset"
-	resourcequotaMeasurement         = "kubernetes_resourcequota" //nolint:gosec // G101: Potential hardcoded credentials - false positive
+	resourcequotaMeasurement         = "kubernetes_resourcequota"
 	certificateMeasurement           = "kubernetes_certificate"
 )
 

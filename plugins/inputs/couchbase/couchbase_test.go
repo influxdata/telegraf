@@ -166,7 +166,7 @@ func TestGatherNodeOnly(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, cb.gatherServer(&acc, faker.URL))
 
-	require.Equal(t, 0, len(acc.Errors))
+	require.Empty(t, acc.Errors)
 	require.Equal(t, 7, len(acc.Metrics))
 	acc.AssertDoesNotContainMeasurement(t, "couchbase_bucket")
 }
@@ -197,7 +197,7 @@ func TestGatherFailover(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, cb.gatherServer(&acc, faker.URL))
-	require.Equal(t, 0, len(acc.Errors))
+	require.Empty(t, acc.Errors)
 	require.Equal(t, 8, len(acc.Metrics))
 
 	var metric *testutil.Metric
@@ -210,7 +210,10 @@ func TestGatherFailover(t *testing.T) {
 
 	require.NotNil(t, metric)
 	require.Equal(t, 1, metric.Fields["count"])
-	require.Equal(t, true, metric.Fields["enabled"])
+	v, ok := metric.Fields["enabled"].(bool)
+	require.Truef(t, ok, "bool type expected, got '%T' with '%v' value instead", metric.Fields["enabled"], metric.Fields["enabled"])
+	require.True(t, v)
+
 	require.Equal(t, 2, metric.Fields["max_count"])
 	require.Equal(t, 72, metric.Fields["timeout"])
 }

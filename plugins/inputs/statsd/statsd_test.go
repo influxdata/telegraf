@@ -1564,7 +1564,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 
 	require.NoError(t, s.Gather(fakeacc))
 
-	require.Lenf(t, s.timings, 0, "All timings should have been deleted, found %d", len(s.timings))
+	require.Emptyf(t, s.timings, "All timings should have been deleted, found %d", len(s.timings))
 }
 
 // Tests the delete_gauges option
@@ -1840,7 +1840,7 @@ func TestUdpFillQueue(t *testing.T) {
 	defer plugin.Stop()
 
 	errs := logger.Errors()
-	require.Lenf(t, errs, 0, "got errors: %v", errs)
+	require.Emptyf(t, errs, "got errors: %v", errs)
 }
 
 func TestParse_Ints(t *testing.T) {

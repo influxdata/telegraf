@@ -35,7 +35,7 @@ func TestSocketListener_tcp(t *testing.T) {
 		Service: "hello",
 	})
 	require.NoError(t, err)
-	require.Equal(t, result.GetOk(), true)
+	require.True(t, result.GetOk())
 
 	// Check for stats no service specified
 	c = riemanngo.NewTCPClient("127.0.0.1:5555", 5*time.Second)
@@ -43,7 +43,7 @@ func TestSocketListener_tcp(t *testing.T) {
 	defer c.Close()
 
 	result, err = riemanngo.SendEvent(c, &riemanngo.Event{})
-	require.Equal(t, false, result.GetOk())
+	require.False(t, result.GetOk())
 	require.Equal(t, "No Service Name", result.GetError())
 	require.NoError(t, err)
 }

@@ -69,7 +69,7 @@ const (
 	*/
 	//nolint:gosec // G101: Potential hardcoded credentials - false positive
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
-	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
+	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/instance/vendor/folder-id"
 )
 
 func (*NebiusCloudMonitoring) SampleConfig() string {

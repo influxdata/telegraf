@@ -2,12 +2,10 @@
 
 set -eux
 
-GO_VERSION="1.21.1"
+GO_VERSION="1.21.3"
 
 setup_go () {
-    rm -rf '/c/Program Files/Go'
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION}
-    choco install make
+    choco upgrade golang --allow-downgrade --force --version=${GO_VERSION}
     git config --system core.longpaths true
 }
 
@@ -17,8 +15,11 @@ if command -v go >/dev/null 2>&1; then
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
-        go version
     fi
 else
     setup_go
 fi
+
+echo "$PATH"
+command -v go
+go version

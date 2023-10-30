@@ -4,13 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/selfstat"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMakeMetricFilterAfterApplyingGlobalTags(t *testing.T) {
@@ -127,7 +126,7 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 		Filter: Filter{NamePass: []string{"foobar"}},
 	})
 
-	assert.NoError(t, ri.Config.Filter.Compile())
+	require.NoError(t, ri.Config.Filter.Compile())
 
 	m := metric.New("RITest",
 		map[string]string{},

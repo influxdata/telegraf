@@ -2,6 +2,7 @@
 package vault
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpcommon "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -22,27 +23,16 @@ var sampleConfig string
 
 // Vault configuration object
 type Vault struct {
-	URL string `toml:"url"`
+	URL       string          `toml:"url"`
+	TokenFile string          `toml:"token_file"`
+	Token     string          `toml:"token"`
+	Log       telegraf.Logger `toml:"-"`
+	httpcommon.HTTPClientConfig
 
-	TokenFile string `toml:"token_file"`
-	Token     string `toml:"token"`
-
-	ResponseTimeout config.Duration `toml:"response_timeout"`
-
-	tls.ClientConfig
-
-	roundTripper http.RoundTripper
+	client *http.Client
 }
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
-
-func init() {
-	inputs.Add("vault", func() telegraf.Input {
-		return &Vault{
-			ResponseTimeout: config.Duration(5 * time.Second),
-		}
-	})
-}
 
 func (*Vault) SampleConfig() string {
 	return sampleConfig
@@ -69,16 +59,12 @@ func (n *Vault) Init() error {
 		n.Token = strings.TrimSpace(string(token))
 	}
 
-	tlsCfg, err := n.ClientConfig.TLSConfig()
+	ctx := context.Background()
+	client, err := n.HTTPClientConfig.CreateClient(ctx, n.Log)
 	if err != nil {
-		return fmt.Errorf("setting up TLS configuration failed: %w", err)
+		return fmt.Errorf("creating client failed: %w", err)
 	}
-
-	n.roundTripper = &http.Transport{
-		TLSHandshakeTimeout:   5 * time.Second,
-		TLSClientConfig:       tlsCfg,
-		ResponseHeaderTimeout: time.Duration(n.ResponseTimeout),
-	}
+	n.client = client
 
 	return nil
 }
@@ -102,7 +88,7 @@ func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 	req.Header.Set("X-Vault-Token", n.Token)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := n.roundTripper.RoundTrip(req)
+	resp, err := n.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making HTTP request to %q: %w", url, err)
 	}
@@ -190,4 +176,14 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 	}
 
 	return nil
+}
+
+func init() {
+	inputs.Add("vault", func() telegraf.Input {
+		return &Vault{
+			HTTPClientConfig: httpcommon.HTTPClientConfig{
+				ResponseHeaderTimeout: config.Duration(5 * time.Second),
+			},
+		}
+	})
 }

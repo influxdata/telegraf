@@ -1,6 +1,8 @@
 # Dedup Processor Plugin
 
 Filter metrics whose field values are exact repetitions of the previous values.
+This plugin will store its state between runs if the `statefile` option in the
+agent config section is set.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

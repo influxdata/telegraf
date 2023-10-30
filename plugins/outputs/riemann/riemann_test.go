@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/amir/raidman"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestAttributes(t *testing.T) {
@@ -146,7 +146,7 @@ func TestStateEvents(t *testing.T) {
 
 	events := r.buildRiemannEvents(m)
 	// no event should be present
-	require.Len(t, events, 0)
+	require.Empty(t, events)
 
 	// enable string metrics as event states
 	r.StringAsState = true

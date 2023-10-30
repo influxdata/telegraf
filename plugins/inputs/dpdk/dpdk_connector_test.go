@@ -127,7 +127,7 @@ func Test_getCommandResponse(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get connection to execute \"/\" command")
-		require.Equal(t, 0, len(buf))
+		require.Empty(t, buf)
 	})
 
 	t.Run("should return error if failed to set timeout duration", func(t *testing.T) {
@@ -139,7 +139,7 @@ func Test_getCommandResponse(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "deadline error")
-		require.Equal(t, 0, len(buf))
+		require.Empty(t, buf)
 	})
 
 	t.Run("should return error if timeout occurred during Write operation", func(t *testing.T) {
@@ -153,7 +153,7 @@ func Test_getCommandResponse(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "write timeout")
-		require.Equal(t, 0, len(buf))
+		require.Empty(t, buf)
 	})
 
 	t.Run("should return error if timeout occurred during Read operation", func(t *testing.T) {
@@ -165,7 +165,7 @@ func Test_getCommandResponse(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "read timeout")
-		require.Equal(t, 0, len(buf))
+		require.Empty(t, buf)
 	})
 
 	t.Run("should return error if got empty response", func(t *testing.T) {
@@ -176,7 +176,7 @@ func Test_getCommandResponse(t *testing.T) {
 		buf, err := dpdk.connector.getCommandResponse(command)
 
 		require.Error(t, err)
-		require.Equal(t, 0, len(buf))
+		require.Empty(t, buf)
 		require.Contains(t, err.Error(), "got empty response during execution of")
 	})
 }

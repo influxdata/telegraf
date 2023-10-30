@@ -220,19 +220,19 @@ func TestTacacsLocal(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			if tt.errContains == "" {
-				require.Len(t, acc.Errors, 0)
-				require.Equal(t, true, acc.HasMeasurement("tacacs"))
-				require.Equal(t, true, acc.HasTag("tacacs", "source"))
+				require.Empty(t, acc.Errors)
+				require.True(t, acc.HasMeasurement("tacacs"))
+				require.True(t, acc.HasTag("tacacs", "source"))
 				require.Equal(t, srvLocal, acc.TagValue("tacacs", "source"))
-				require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
-				require.Equal(t, true, acc.HasStringField("tacacs", "response_status"))
+				require.True(t, acc.HasInt64Field("tacacs", "responsetime_ms"))
+				require.True(t, acc.HasStringField("tacacs", "response_status"))
 				require.Equal(t, tt.reqRespStatus, acc.Metrics[0].Fields["response_status"])
 			} else {
 				require.Len(t, acc.Errors, 1)
 				require.ErrorContains(t, acc.FirstError(), tt.errContains)
-				require.Equal(t, false, acc.HasTag("tacacs", "source"))
-				require.Equal(t, false, acc.HasInt64Field("tacacs", "responsetime_ms"))
-				require.Equal(t, false, acc.HasStringField("tacacs", "response_status"))
+				require.False(t, acc.HasTag("tacacs", "source"))
+				require.False(t, acc.HasInt64Field("tacacs", "responsetime_ms"))
+				require.False(t, acc.HasStringField("tacacs", "response_status"))
 			}
 		})
 	}
@@ -303,10 +303,10 @@ func TestTacacsIntegration(t *testing.T) {
 
 			require.NoError(t, acc.FirstError())
 
-			require.Equal(t, true, acc.HasMeasurement("tacacs"))
-			require.Equal(t, true, acc.HasStringField("tacacs", "response_status"))
-			require.Equal(t, true, acc.HasInt64Field("tacacs", "responsetime_ms"))
-			require.Equal(t, true, acc.HasTag("tacacs", "source"))
+			require.True(t, acc.HasMeasurement("tacacs"))
+			require.True(t, acc.HasStringField("tacacs", "response_status"))
+			require.True(t, acc.HasInt64Field("tacacs", "responsetime_ms"))
+			require.True(t, acc.HasTag("tacacs", "source"))
 
 			require.Equal(t, tt.reqRespStatus, acc.Metrics[0].Fields["response_status"])
 			require.Equal(t, container.Address+":"+port, acc.TagValue("tacacs", "source"))

@@ -130,9 +130,12 @@ sudo usermod -aG docker telegraf
 If telegraf is run within a container, the unix socket will need to be exposed
 within the telegraf container. This can be done in the docker CLI by add the
 option `-v /var/run/docker.sock:/var/run/docker.sock` or adding the following
-lines to the telegraf container definition in a docker compose file:
+lines to the telegraf container definition in a docker compose file.
+Additionally docker `telegraf` user must be assigned to `docker` group id
+from host:
 
 ```yaml
+user: telegraf:<host_docker_gid>
 volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```

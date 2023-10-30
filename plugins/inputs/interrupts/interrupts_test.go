@@ -38,8 +38,8 @@ func expectCPUAsFields(m *testutil.Accumulator, t *testing.T, measurement string
 func setup(t *testing.T, irqString string, cpuAsTags bool) (*testutil.Accumulator, []IRQ) {
 	f := bytes.NewBufferString(irqString)
 	irqs, err := parseInterrupts(f)
-	require.Equal(t, nil, err)
-	require.NotEqual(t, 0, len(irqs))
+	require.NoError(t, err)
+	require.NotEmpty(t, irqs)
 
 	acc := new(testutil.Accumulator)
 	reportMetrics("soft_interrupts", irqs, acc, cpuAsTags)

@@ -551,7 +551,8 @@ func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *Ope
 		Image:        image,
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
-			"discovery.type": "single-node",
+			"discovery.type":                         "single-node",
+			"DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI": "true",
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog(".opendistro_security is used as internal security index."),

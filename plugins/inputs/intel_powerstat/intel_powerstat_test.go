@@ -60,7 +60,7 @@ func TestInitPlugin(t *testing.T) {
 	// In case of an error when fetching cpu cores plugin should proceed with execution.
 	require.NoError(t, power.Init())
 	mockServices.fs.AssertCalled(t, "getStringsMatchingPatternOnPath", mock.Anything)
-	require.Equal(t, 0, len(power.msr.getCPUCoresData()))
+	require.Empty(t, power.msr.getCPUCoresData())
 }
 
 func TestParseCPUMetricsConfig(t *testing.T) {
@@ -81,8 +81,8 @@ func TestParseCPUMetricsConfig(t *testing.T) {
 
 	power.CPUMetrics = []string{"cpu_c6_state_residency", "#@$sdkjdfsdf3@", "1pu_c1_state_residency"}
 	power.parseCPUMetricsConfig()
-	require.Equal(t, false, power.cpuC1StateResidency)
-	require.Equal(t, true, power.cpuC6StateResidency)
+	require.False(t, power.cpuC1StateResidency)
+	require.True(t, power.cpuC6StateResidency)
 	disableCoreMetrics(power)
 	verifyCoreMetrics(t, power, false)
 
@@ -142,14 +142,14 @@ func TestAddGlobalMetricsNegative(t *testing.T) {
 		On("retrieveAndCalculateData", mock.Anything).Return(errors.New("error while calculating data")).Times(len(raplDataMap))
 
 	power.addGlobalMetrics(&acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 	mockServices.rapl.AssertNumberOfCalls(t, "retrieveAndCalculateData", len(raplDataMap))
 
 	mockServices.rapl.On("initializeRaplData", mock.Anything).Once().
 		On("getRaplData").Return(make(map[string]*raplData)).Once()
 
 	power.addGlobalMetrics(&acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 	mockServices.rapl.AssertNotCalled(t, "retrieveAndCalculateData")
 
 	mockServices.rapl.On("initializeRaplData", mock.Anything).Once().
@@ -201,7 +201,7 @@ func TestAddMetricsForSingleCoreNegative(t *testing.T) {
 	power.addMetricsForSingleCore(core, &acc, &wg)
 	wg.Wait()
 
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestAddCPUFrequencyMetric(t *testing.T) {
@@ -217,7 +217,7 @@ func TestAddCPUFrequencyMetric(t *testing.T) {
 		Return(float64(0), errors.New("error on reading file")).Once()
 
 	power.addCPUFrequencyMetric(cpuID, &acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 
 	mockServices.msr.On("retrieveCPUFrequencyForCore", mock.Anything).Return(frequency, nil).Once()
 
@@ -306,7 +306,7 @@ func TestAddC6StateResidencyMetric(t *testing.T) {
 	preparedData[cpuID].timeStampCounterDelta = 0
 
 	power.addCPUC6StateResidencyMetric(cpuID, &acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestAddC0StateResidencyMetric(t *testing.T) {
@@ -335,7 +335,7 @@ func TestAddC0StateResidencyMetric(t *testing.T) {
 	acc.ClearMetrics()
 	preparedData[cpuID].timeStampCounterDelta = 0
 	power.addCPUC0StateResidencyMetric(cpuID, &acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestAddProcessorBusyFrequencyMetric(t *testing.T) {
@@ -355,7 +355,7 @@ func TestAddProcessorBusyFrequencyMetric(t *testing.T) {
 	acc.ClearMetrics()
 	preparedData[cpuID].mperfDelta = 0
 	power.addCPUBusyFrequencyMetric(cpuID, &acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestAddC1StateResidencyMetric(t *testing.T) {
@@ -381,7 +381,7 @@ func TestAddC1StateResidencyMetric(t *testing.T) {
 	acc.ClearMetrics()
 	preparedData[cpuID].timeStampCounterDelta = 0
 	power.addCPUC1StateResidencyMetric(cpuID, &acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestAddThermalDesignPowerMetric(t *testing.T) {
@@ -395,7 +395,7 @@ func TestAddThermalDesignPowerMetric(t *testing.T) {
 		On("getConstraintMaxPowerWatts", mock.Anything).Return(maxPower, nil).Once()
 
 	power.addThermalDesignPowerMetric(sockets[0], &acc)
-	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
+	require.Empty(t, acc.GetTelegrafMetrics())
 
 	power.addThermalDesignPowerMetric(sockets[0], &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
@@ -827,7 +827,7 @@ func TestAddCPUBaseFreq(t *testing.T) {
 			p.addCPUBaseFreq(tt.socketID, &acc)
 			actual := acc.GetTelegrafMetrics()
 			if !tt.metricExpected {
-				require.Len(t, actual, 0)
+				require.Empty(t, actual)
 				return
 			}
 

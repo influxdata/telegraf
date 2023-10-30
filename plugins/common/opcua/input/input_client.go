@@ -12,21 +12,51 @@ import (
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
 
+type Trigger string
+
+const (
+	Status               Trigger = "Status"
+	StatusValue          Trigger = "StatusValue"
+	StatusValueTimestamp Trigger = "StatusValueTimestamp"
+)
+
+type DeadbandType string
+
+const (
+	Absolute DeadbandType = "Absolute"
+	Percent  DeadbandType = "Percent"
+)
+
+type DataChangeFilter struct {
+	Trigger       Trigger      `toml:"trigger"`
+	DeadbandType  DeadbandType `toml:"deadband_type"`
+	DeadbandValue *float64     `toml:"deadband_value"`
+}
+
+type MonitoringParameters struct {
+	SamplingInterval config.Duration   `toml:"sampling_interval"`
+	QueueSize        *uint32           `toml:"queue_size"`
+	DiscardOldest    *bool             `toml:"discard_oldest"`
+	DataChangeFilter *DataChangeFilter `toml:"data_change_filter"`
+}
+
 // NodeSettings describes how to map from a OPC UA node to a Metric
 type NodeSettings struct {
-	FieldName      string            `toml:"name"`
-	Namespace      string            `toml:"namespace"`
-	IdentifierType string            `toml:"identifier_type"`
-	Identifier     string            `toml:"identifier"`
-	DataType       string            `toml:"data_type" deprecated:"1.17.0;option is ignored"`
-	Description    string            `toml:"description" deprecated:"1.17.0;option is ignored"`
-	TagsSlice      [][]string        `toml:"tags" deprecated:"1.25.0;use 'default_tags' instead"`
-	DefaultTags    map[string]string `toml:"default_tags"`
+	FieldName        string               `toml:"name"`
+	Namespace        string               `toml:"namespace"`
+	IdentifierType   string               `toml:"identifier_type"`
+	Identifier       string               `toml:"identifier"`
+	DataType         string               `toml:"data_type" deprecated:"1.17.0;option is ignored"`
+	Description      string               `toml:"description" deprecated:"1.17.0;option is ignored"`
+	TagsSlice        [][]string           `toml:"tags" deprecated:"1.25.0;use 'default_tags' instead"`
+	DefaultTags      map[string]string    `toml:"default_tags"`
+	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
 
 // NodeID returns the OPC UA node id
@@ -36,12 +66,13 @@ func (tag *NodeSettings) NodeID() string {
 
 // NodeGroupSettings describes a mapping of group of nodes to Metrics
 type NodeGroupSettings struct {
-	MetricName     string            `toml:"name"`            // Overrides plugin's setting
-	Namespace      string            `toml:"namespace"`       // Can be overridden by node setting
-	IdentifierType string            `toml:"identifier_type"` // Can be overridden by node setting
-	Nodes          []NodeSettings    `toml:"nodes"`
-	TagsSlice      [][]string        `toml:"tags" deprecated:"1.26.0;use default_tags"`
-	DefaultTags    map[string]string `toml:"default_tags"`
+	MetricName       string            `toml:"name"`            // Overrides plugin's setting
+	Namespace        string            `toml:"namespace"`       // Can be overridden by node setting
+	IdentifierType   string            `toml:"identifier_type"` // Can be overridden by node setting
+	Nodes            []NodeSettings    `toml:"nodes"`
+	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;use default_tags"`
+	DefaultTags      map[string]string `toml:"default_tags"`
+	SamplingInterval config.Duration   `toml:"sampling_interval"` // Can be overridden by monitoring parameters
 }
 
 type TimestampSource string
@@ -317,6 +348,9 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 			}
 			if node.IdentifierType == "" {
 				node.IdentifierType = group.IdentifierType
+			}
+			if node.MonitoringParams.SamplingInterval == 0 {
+				node.MonitoringParams.SamplingInterval = group.SamplingInterval
 			}
 
 			nmm, err := NewNodeMetricMapping(group.MetricName, node, groupTags)
