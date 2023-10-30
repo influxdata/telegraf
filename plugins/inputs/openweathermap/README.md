@@ -49,6 +49,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "metric", "imperial", or "standard".
   # units = "metric"
 
+  ## Style to query the current weather; available options
+  ##   batch      -- query multiple cities at once using the "group" endpoint
+  ##   individual -- query each city individually using the "weather" endpoint
+  ## You should use "individual" here as it is documented and provides more
+  ## frequent updates. The default is "batch" for backward compatibility.
+  # query_style = "batch"
+
   ## Query interval to fetch data.
   ## By default the gloabl 'interval' setting is used. You should override the
   ## interval here if the global setting is shorter than 10 minutes as
