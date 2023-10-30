@@ -220,24 +220,40 @@ func (a *Agent) initPlugins() error {
 		}
 	}
 	for _, processor := range a.Config.Processors {
+		// Share the snmp translator setting with plugins that need it.
+		if tp, ok := processor.Processor.(snmp.TranslatorPlugin); ok {
+			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
+		}
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
+		// Share the snmp translator setting with plugins that need it.
+		if tp, ok := aggregator.Aggregator.(snmp.TranslatorPlugin); ok {
+			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
+		}
 		err := aggregator.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize aggregator %s: %w", aggregator.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.AggProcessors {
+		// Share the snmp translator setting with plugins that need it.
+		if tp, ok := processor.Processor.(snmp.TranslatorPlugin); ok {
+			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
+		}
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
+		// Share the snmp translator setting with plugins that need it.
+		if tp, ok := output.Output.(snmp.TranslatorPlugin); ok {
+			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
+		}
 		err := output.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize output %s: %w", output.LogName(), err)
