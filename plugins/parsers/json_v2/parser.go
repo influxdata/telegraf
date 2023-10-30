@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimchansky/utfbom"
@@ -35,6 +36,8 @@ type Parser struct {
 	iterateObjects bool
 	// objectConfig contains the config for an object, some info is needed while iterating over the gjson results
 	objectConfig Object
+	// parseMutex is here because Parse() is not threadsafe.  If it is made threadsafe at some point, then we won't need it anymore.
+	parseMutex sync.Mutex
 }
 
 type Config struct {
@@ -114,6 +117,19 @@ func (p *Parser) Init() error {
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	// What we've done here is to put the entire former contents of Parse()
+	// into parseCriticalPath().
+	//
+	// As we determine what bits of parseCriticalPath() are and are not
+	// threadsafe, we can lift the safe pieces back up into Parse(), and
+	// shrink the scope (or scopes, if the critical sections are disjoint)
+	// of those pieces that need to be protected with a mutex.
+	return p.parseCriticalPath(input)
+}
+
+func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
+	p.parseMutex.Lock()
+	defer p.parseMutex.Unlock()
 	reader := strings.NewReader(string(input))
 	body, _ := utfbom.Skip(reader)
 	input, err := io.ReadAll(body)
