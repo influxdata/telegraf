@@ -107,7 +107,7 @@ func TestCases(t *testing.T) {
 				key := strings.TrimPrefix(r.URL.Path, "/data/2.5/")
 				if resp, found := input[key]; found {
 					w.Header()["Content-Type"] = []string{"application/json"}
-					w.Write(resp)
+					_, _ = w.Write(resp)
 					return
 				}
 
@@ -121,7 +121,7 @@ func TestCases(t *testing.T) {
 					key += "_" + ids[0]
 					if resp, found := input[key]; found {
 						w.Header()["Content-Type"] = []string{"application/json"}
-						w.Write(resp)
+						_, _ = w.Write(resp)
 						return
 					}
 				}
