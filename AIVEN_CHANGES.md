@@ -2,6 +2,10 @@
 
 ## Input Plugins
 
+### ClickHouse
+
+* Add extra metrics to monitor the replication queue
+
 ### Elasticsearch
 
 * add cross cluster replication metrics ( they dont work for elasticsearch but its a first step until we have an opensearch plugin )
@@ -33,4 +37,3 @@
 ### Prometheus and Prometheus Remote Write
 
 * changes to make `Plugins.Prometheus Client` work for the same reasons as stated there
-

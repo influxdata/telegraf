@@ -267,8 +267,15 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 
 	if len(replicationQueueExists) > 0 && replicationQueueExists[0].ReplicationQueueExists > 0 {
 		var replicationTooManyTries []struct {
-			NumTriesReplicas     chUInt64 `json:"replication_num_tries_replicas"`
-			TooManyTriesReplicas chUInt64 `json:"replication_too_many_tries_replicas"`
+			NumTotal                   chUInt64 `json:"replication_num_total"`
+			NumGetPart                 chUInt64 `json:"replication_num_get_part"`
+			NumAttachPart              chUInt64 `json:"replication_num_attach_part"`
+			NumMergeParts              chUInt64 `json:"replication_num_merge_parts"`
+			NumMergePartsTtlDelete     chUInt64 `json:"replication_num_merge_parts_ttl_delete"`
+			NumMergePartsTtlRecompress chUInt64 `json:"replication_num_merge_parts_ttl_recompress"`
+			NumMutatePart              chUInt64 `json:"replication_num_mutate_part"`
+			NumTriesReplicas           chUInt64 `json:"replication_num_tries_replicas"`
+			TooManyTriesReplicas       chUInt64 `json:"replication_too_many_tries_replicas"`
 		}
 		if err := ch.execQuery(conn.url, systemReplicationNumTriesSQL, &replicationTooManyTries); err != nil {
 			return err
@@ -276,8 +283,15 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 
 		acc.AddFields("clickhouse_replication_queue",
 			map[string]interface{}{
-				"too_many_tries_replicas": uint64(replicationTooManyTries[0].TooManyTriesReplicas),
-				"num_tries_replicas":      uint64(replicationTooManyTries[0].NumTriesReplicas),
+				"num_total":                      uint64(replicationTooManyTries[0].NumTotal),
+				"num_get_part":                   uint64(replicationTooManyTries[0].NumGetPart),
+				"num_attach_part":                uint64(replicationTooManyTries[0].NumAttachPart),
+				"num_merge_parts":                uint64(replicationTooManyTries[0].NumMergeParts),
+				"num_merge_parts_ttl_delete":     uint64(replicationTooManyTries[0].NumMergePartsTtlDelete),
+				"num_merge_parts_ttl_recompress": uint64(replicationTooManyTries[0].NumMergePartsTtlRecompress),
+				"num_mutate_part":                uint64(replicationTooManyTries[0].NumMutatePart),
+				"too_many_tries_replicas":        uint64(replicationTooManyTries[0].TooManyTriesReplicas),
+				"num_tries_replicas":             uint64(replicationTooManyTries[0].NumTriesReplicas),
 			},
 			tags,
 		)
@@ -580,8 +594,18 @@ const (
 	systemZookeeperRootNodesSQL = "SELECT count() AS zk_root_nodes FROM system.zookeeper WHERE path='/'"
 
 	systemReplicationExistsSQL   = "SELECT count() AS replication_queue_exists FROM system.tables WHERE database='system' AND name='replication_queue'"
-	systemReplicationNumTriesSQL = "SELECT countIf(num_tries>1) AS replication_num_tries_replicas, countIf(num_tries>100) " +
-		"AS replication_too_many_tries_replicas FROM system.replication_queue SETTINGS empty_result_for_aggregation_by_empty_set=0"
+	systemReplicationNumTriesSQL = `
+		SELECT
+			count() as replication_num_total,
+			countIf(type='GET_PART') AS replication_num_get_part,
+			countIf(type='ATTACH_PART') AS replication_num_attach_part,
+			countIf(type='MERGE_PARTS' AND merge_type='Regular') AS replication_num_merge_parts,
+			countIf(type='MERGE_PARTS' AND merge_type='TTLDelete') AS replication_num_merge_parts_ttl_delete,
+			countIf(type='MERGE_PARTS' AND merge_type='TTLRecompress') AS replication_num_merge_parts_ttl_recompress,
+			countIf(type='MUTATE_PART') AS replication_num_mutate_part,
+			countIf(num_tries>1) AS replication_num_tries_replicas,
+			countIf(num_tries>100) AS replication_too_many_tries_replicas
+		FROM system.replication_queue SETTINGS empty_result_for_aggregation_by_empty_set=0`
 
 	systemDetachedPartsSQL = "SELECT count() AS detached_parts FROM system.detached_parts SETTINGS empty_result_for_aggregation_by_empty_set=0"
 
