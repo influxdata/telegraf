@@ -1,0 +1,114 @@
+{
+	"cnt": 3,
+	"list": [{
+		"coord": {
+			"lon": 37.62,
+			"lat": 55.75
+		},
+		"sys": {
+			"type": 1,
+			"id": 9029,
+			"message": 0.0061,
+			"country": "RU",
+			"sunrise": 1556416455,
+			"sunset": 1556470779
+		},
+		"weather": [{
+			"id": 802,
+			"main": "Clouds",
+			"description": "scattered clouds",
+			"icon": "03d"
+		}],
+		"main": {
+			"temp": 9.57,
+			"feels_like": 8.57,
+			"pressure": 1014,
+			"humidity": 46
+		},
+		"visibility": 10000,
+		"wind": {
+			"speed": 5,
+			"deg": 60
+		},
+		"clouds": {
+			"all": 40
+		},
+		"dt": 1556444155,
+		"id": 524901,
+		"name": "Moscow"
+	}, {
+		"coord": {
+			"lon": 30.52,
+			"lat": 50.43
+		},
+		"sys": {
+			"type": 1,
+			"id": 8903,
+			"message": 0.0076,
+			"country": "UA",
+			"sunrise": 1556419155,
+			"sunset": 1556471486
+		},
+		"weather": [{
+			"id": 520,
+			"main": "Rain",
+			"description": "light intensity shower rain",
+			"icon": "09d"
+		}],
+		"main": {
+			"temp": 19.29,
+			"feels_like": 18.29,
+			"pressure": 1009,
+			"humidity": 63
+		},
+		"visibility": 10000,
+		"wind": {
+			"speed": 1
+		},
+		"clouds": {
+			"all": 0
+		},
+		"dt": 1556444155,
+		"id": 703448,
+		"name": "Kiev"
+	}, {
+		"coord": {
+			"lon": -0.13,
+			"lat": 51.51
+		},
+		"sys": {
+			"type": 1,
+			"id": 1414,
+			"message": 0.0088,
+			"country": "GB",
+			"sunrise": 1556426319,
+			"sunset": 1556479032
+		},
+		"weather": [{
+			"id": 803,
+			"main": "Clouds",
+			"description": "broken clouds",
+			"icon": "04d"
+		}],
+		"main": {
+			"temp": 10.62,
+			"feels_like": 9.62,
+			"pressure": 1019,
+			"humidity": 66
+		},
+		"visibility": 10000,
+		"wind": {
+			"speed": 6.2,
+			"deg": 290
+		},
+		"rain": {
+			"3h": 0.072
+		},
+		"clouds": {
+			"all": 75
+		},
+		"dt": 1556444155,
+		"id": 2643743,
+		"name": "London"
+	}]
+}
