@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -72,12 +71,6 @@ func TestCases(t *testing.T) {
 		configFilename := filepath.Join(testcasePath, "telegraf.conf")
 		expectedFilename := filepath.Join(testcasePath, "expected.out")
 		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
-
-		// Compare options
-		options := []cmp.Option{
-			testutil.IgnoreTime(),
-			testutil.SortMetrics(),
-		}
 
 		t.Run(f.Name(), func(t *testing.T) {
 			// Read the input data
@@ -152,7 +145,7 @@ func TestCases(t *testing.T) {
 
 			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expected, actual, options...)
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
 }
