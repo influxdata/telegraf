@@ -190,12 +190,26 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "replication_too_many_tries_replicas"):
 				err := enc.Encode(result{
 					Data: []struct {
-						TooManyTriesReplicas chUInt64 `json:"replication_too_many_tries_replicas"`
-						NumTriesReplicas     chUInt64 `json:"replication_num_tries_replicas"`
+						NumTotal                   chUInt64 `json:"replication_num_total"`
+						NumGetPart                 chUInt64 `json:"replication_num_get_part"`
+						NumAttachPart              chUInt64 `json:"replication_num_attach_part"`
+						NumMergeParts              chUInt64 `json:"replication_num_merge_parts"`
+						NumMergePartsTtlDelete     chUInt64 `json:"replication_num_merge_parts_ttl_delete"`
+						NumMergePartsTtlRecompress chUInt64 `json:"replication_num_merge_parts_ttl_recompress"`
+						NumMutatePart              chUInt64 `json:"replication_num_mutate_part"`
+						TooManyTriesReplicas       chUInt64 `json:"replication_too_many_tries_replicas"`
+						NumTriesReplicas           chUInt64 `json:"replication_num_tries_replicas"`
 					}{
 						{
-							TooManyTriesReplicas: 10,
-							NumTriesReplicas:     100,
+							NumTotal:                   1000,
+							NumGetPart:                 20,
+							NumAttachPart:              30,
+							NumMergeParts:              40,
+							NumMergePartsTtlDelete:     50,
+							NumMergePartsTtlRecompress: 60,
+							NumMutatePart:              70,
+							TooManyTriesReplicas:       10,
+							NumTriesReplicas:           100,
 						},
 					},
 				})
@@ -408,8 +422,15 @@ func TestGather(t *testing.T) {
 	)
 	acc.AssertContainsFields(t, "clickhouse_replication_queue",
 		map[string]interface{}{
-			"too_many_tries_replicas": uint64(10),
-			"num_tries_replicas":      uint64(100),
+			"num_total":                      uint64(1000),
+			"num_get_part":                   uint64(20),
+			"num_attach_part":                uint64(30),
+			"num_merge_parts":                uint64(40),
+			"num_merge_parts_ttl_delete":     uint64(50),
+			"num_merge_parts_ttl_recompress": uint64(60),
+			"num_mutate_part":                uint64(70),
+			"too_many_tries_replicas":        uint64(10),
+			"num_tries_replicas":             uint64(100),
 		},
 	)
 	acc.AssertContainsFields(t, "clickhouse_detached_parts",

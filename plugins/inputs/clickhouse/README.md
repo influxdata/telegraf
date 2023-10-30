@@ -146,7 +146,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - too_many_tries_replicas (count of replicas which have `num_tries > 1`)
+    - num_total (Number of replication queue items)
+    - num_get_part (Number of GET_PART replication queue items)
+    - num_attach_part (Number of ATTACH_PART replication queue items)
+    - num_merge_parts (Number of regular MERGE_PARTS replication queue items)
+    - num_merge_parts_ttl_delete (Number of TTLDelete MERGE_PARTS replication queue items)
+    - num_merge_parts_ttl_recompress (Number of TTLRecompress MERGE_PARTS replication queue items)
+    - num_mutate_part (Number of MUTATE_PART replication queue items)
+    - too_many_tries_replicas (Number of replication queue items with num_tries > 100)
+    - num_tries_replicas (Number of replication queue items with num_tries > 1)
 
 - clickhouse_detached_parts (see [system.detached_parts][] for details)
   - tags:
