@@ -29,6 +29,7 @@ type FilterIf struct {
 type Filter struct {
 	Condition string            `toml:"condition"`
 	Ifs       []*FilterIf       `toml:"if"`
+	Fields    []string          `toml:"fields,omitempty"`
 	Tags      map[string]string `toml:"tags,omitempty"`
 	Log       telegraf.Logger   `toml:"-"`
 }
@@ -123,11 +124,29 @@ func (f *Filter) skipMinMax(item *FilterIf, metric telegraf.Metric) bool {
 	return false
 }
 
+func (f *Filter) existFields(metric telegraf.Metric) bool {
+
+	exists := len(f.Fields) > 0
+	if !exists {
+		return true
+	}
+	for k := range metric.Fields() {
+		if utils.Contains(f.Fields, k) {
+			return true
+		}
+	}
+	return false
+}
+
 func (f *Filter) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 	orAnd := f.Condition != "AND"
 
 	for _, metric := range in {
+
+		if !f.existFields(metric) {
+			continue
+		}
 
 		measurement := metric.Name()
 
@@ -157,6 +176,9 @@ func (f *Filter) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			exists := f.ifCondition(item, metric)
 			if orAnd {
 				flag = flag || exists
+				if flag {
+					break
+				}
 			} else {
 				flag = flag && exists
 				if !flag {
