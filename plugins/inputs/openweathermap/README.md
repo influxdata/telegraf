@@ -37,7 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # lang = "en"
 
   ## APIs to fetch; can contain "weather" or "forecast".
-  fetch = ["weather", "forecast"]
+  # fetch = ["weather", "forecast"]
 
   ## OpenWeatherMap base URL
   # base_url = "https://api.openweathermap.org/"
@@ -49,9 +49,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## "metric", "imperial", or "standard".
   # units = "metric"
 
-  ## Query interval; OpenWeatherMap weather data is updated every 10
-  ## minutes.
-  interval = "10m"
+  ## Query interval to fetch data.
+  ## By default the gloabl 'interval' setting is used. You should override the
+  ## interval here if the global setting is shorter than 10 minutes as
+  ## OpenWeatherMap weather data is only updated every 10 minutes.
+  # interval = "10m"
 ```
 
 ## Metrics
