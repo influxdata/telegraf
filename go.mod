@@ -100,6 +100,7 @@ require (
 	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
 	github.com/hashicorp/consul/api v1.25.1
 	github.com/hashicorp/go-uuid v1.0.3
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.5.6
 	github.com/influxdata/influxdb-observability/influx2otel v0.5.6
