@@ -3,6 +3,7 @@ package timestream
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -381,6 +382,24 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
+	input5 := testutil.MustMetric(
+		metricName1,
+		map[string]string{"tag5": "value5"},
+		map[string]interface{}{
+			"measureMaxUint64": uint64(math.MaxUint64),
+		},
+		time1,
+	)
+
+	input6 := testutil.MustMetric(
+		metricName1,
+		map[string]string{"tag6": "value6"},
+		map[string]interface{}{
+			"measureSmallUint64": uint64(123456),
+		},
+		time1,
+	)
+
 	expectedResultMultiTable := buildExpectedMultiRecords("config-multi-measure-name", metricName1)
 
 	plugin := Timestream{
@@ -396,7 +415,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	require.NoError(t, err, "Invalid configuration")
 
 	// validate multi-record generation with MappingModeMultiTable
-	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
+	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	require.EqualValues(t, result[0], expectedResultMultiTable)
@@ -421,7 +440,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	expectedResultSingleTable := buildExpectedMultiRecords(metricName1, "singleTableName")
 
 	// validate multi-record generation with MappingModeSingleTable
-	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
+	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	require.EqualValues(t, result[0], expectedResultSingleTable)
@@ -472,6 +491,28 @@ func buildExpectedMultiRecords(multiMeasureName string, tableName string) *times
 	}, multiMeasureName, types.MeasureValueTypeBoolean)
 
 	recordsMultiTableMode = append(recordsMultiTableMode, recordBool...)
+
+	recordMaxUint64 := buildMultiRecords([]SimpleInput{
+		{
+			t:             time1Epoch,
+			tableName:     metricName1,
+			dimensions:    map[string]string{"tag5": "value5"},
+			measureValues: map[string]string{"measureMaxUint64": "9223372036854775807"},
+		},
+	}, multiMeasureName, types.MeasureValueTypeBigint)
+
+	recordsMultiTableMode = append(recordsMultiTableMode, recordMaxUint64...)
+
+	recordUint64 := buildMultiRecords([]SimpleInput{
+		{
+			t:             time1Epoch,
+			tableName:     metricName1,
+			dimensions:    map[string]string{"tag6": "value6"},
+			measureValues: map[string]string{"measureSmallUint64": "123456"},
+		},
+	}, multiMeasureName, types.MeasureValueTypeBigint)
+
+	recordsMultiTableMode = append(recordsMultiTableMode, recordUint64...)
 
 	expectedResultMultiTable := &timestreamwrite.WriteRecordsInput{
 		DatabaseName:     aws.String(tsDbName),
