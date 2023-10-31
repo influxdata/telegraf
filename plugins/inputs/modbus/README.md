@@ -106,7 +106,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
   ##               FIXED, UFIXED (fixed-point representation on input)
   ##               FLOAT32 is a deprecated alias for UFIXED for historic reasons, should be avoided
-  ##                  STRING (byte-sequence converted to string)
+  ##               STRING (byte-sequence converted to string)
   ## scale       - the final numeric variable representation
   ## address     - variable address
 
@@ -117,7 +117,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
     { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
     { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
-    { name = "firmware", data_type = "STRING", address = [5, 6, 7, 8, 9, 10, 11, 12]},
+    { name = "firmware",     byte_order = "AB",   data_type = "STRING", address = [5, 6, 7, 8, 9, 10, 11, 12]},
   ]
   input_registers = [
     { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
@@ -198,11 +198,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## Coil / discrete input example
     fields = [
-      { address=0, name="motor1_run"},
-      { address=1, name="jog", measurement="motor"},
-      { address=2, name="motor1_stop", omit=true},
-      { address=3, name="motor1_overheating", output="BOOL"},
-      { address=4, name="firmware",     type="STRING",  length=8    },
+      { address=0, name="motor1_run" },
+      { address=1, name="jog", measurement="motor" },
+      { address=2, name="motor1_stop", omit=true },
+      { address=3, name="motor1_overheating", output="BOOL" },
+      { address=4, name="firmware", type="STRING", length=8 },
     ]
 
     [inputs.modbus.request.tags]
@@ -449,9 +449,7 @@ conversion from unsigned values).
 This type is used to query the number of registers specified in the `address`
 setting and convert the byte-sequence to a string. Please note, if the
 byte-sequence contains a `null` byte, the string is truncated at this position.
-
-The byte-order setting is ignored when converting the bytes to a string.
-Furthermore, you cannot use the `scale` setting for string fields.
+You cannot use the `scale` setting for string fields.
 
 ---
 

@@ -1,7 +1,6 @@
 package modbus
 
 import (
-	"bytes"
 	"fmt"
 )
 
@@ -19,18 +18,8 @@ func determineUntypedConverter(outType string) (fieldConverterFunc, error) {
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
-func convertString(b []byte) interface{} {
-	// Remove everything after null-termination
-	s, _ := bytes.CutSuffix(b, []byte{0x00})
-	return string(s)
-}
-
 func determineConverter(inType, byteOrder, outType string, scale float64) (fieldConverterFunc, error) {
-	if inType == "STRING" {
-		return convertString, nil
-	}
-
-	if scale != 0.0 {
+	if scale != 0.0 && inType != "STRING" {
 		return determineConverterScale(inType, byteOrder, outType, scale)
 	}
 	return determineConverterNoScale(inType, byteOrder, outType)
@@ -96,6 +85,9 @@ func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverte
 		return determineConverterF32(outType, byteOrder)
 	case "FLOAT64":
 		return determineConverterF64(outType, byteOrder)
+	case "STRING":
+		return determineConverterString(byteOrder)
+
 	}
 	return nil, fmt.Errorf("invalid input data-type: %s", inType)
 }
