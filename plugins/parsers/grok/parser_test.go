@@ -1089,7 +1089,7 @@ func TestDynamicMeasurementModifier(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "hello")
+	require.Equal(t, "hello", m.Name())
 }
 
 func TestStaticMeasurementModifier(t *testing.T) {
@@ -1114,7 +1114,7 @@ func TestTwoMeasurementModifier(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "4 5 hello")
+	require.Equal(t, "4 5 hello", m.Name())
 }
 
 func TestMeasurementModifierNoName(t *testing.T) {
@@ -1126,7 +1126,7 @@ func TestMeasurementModifierNoName(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "hello")
+	require.Equal(t, "hello", m.Name())
 }
 
 func TestEmptyYearInTimestamp(t *testing.T) {

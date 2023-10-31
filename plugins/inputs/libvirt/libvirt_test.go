@@ -299,7 +299,7 @@ func TestLibvirt_calculateMetricNumber(t *testing.T) {
 		}
 		err := l.calculateMetricNumber()
 		require.NoError(t, err)
-		require.Equal(t, l.metricNumber, domainStatsAll)
+		require.Equal(t, domainStatsAll, l.metricNumber)
 	})
 }
 

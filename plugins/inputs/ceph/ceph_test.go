@@ -25,7 +25,7 @@ type expectedResult struct {
 
 func TestParseSockId(t *testing.T) {
 	s := parseSockID(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
-	require.Equal(t, s, "1")
+	require.Equal(t, "1", s)
 }
 
 func TestParseMonDump(t *testing.T) {

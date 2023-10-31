@@ -56,7 +56,7 @@ func TestRunParse(t *testing.T) {
 	sub.messages <- msg
 
 	acc.Wait(1)
-	require.Equal(t, acc.NFields(), 1)
+	require.Equal(t, 1, acc.NFields())
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -102,7 +102,7 @@ func TestRunBase64(t *testing.T) {
 	sub.messages <- msg
 
 	acc.Wait(1)
-	require.Equal(t, acc.NFields(), 1)
+	require.Equal(t, 1, acc.NFields())
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -151,7 +151,7 @@ func TestRunGzipDecode(t *testing.T) {
 	}
 	sub.messages <- msg
 	acc.Wait(1)
-	require.Equal(t, acc.NFields(), 1)
+	require.Equal(t, 1, acc.NFields())
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -200,7 +200,7 @@ func TestRunInvalidMessages(t *testing.T) {
 	// Make sure we acknowledged message so we don't receive it again.
 	testTracker.WaitForAck(1)
 
-	require.Equal(t, acc.NFields(), 0)
+	require.Equal(t, 0, acc.NFields())
 }
 
 func TestRunOverlongMessages(t *testing.T) {
@@ -249,7 +249,7 @@ func TestRunOverlongMessages(t *testing.T) {
 	// Make sure we acknowledged message so we don't receive it again.
 	testTracker.WaitForAck(1)
 
-	require.Equal(t, acc.NFields(), 0)
+	require.Equal(t, 0, acc.NFields())
 }
 
 func TestRunErrorInSubscriber(t *testing.T) {

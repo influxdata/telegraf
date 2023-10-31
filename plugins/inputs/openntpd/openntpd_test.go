@@ -25,9 +25,9 @@ func TestParseSimpleOutput(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 7)
+	require.Equal(t, 7, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
 		"wt":     int64(1),
@@ -56,9 +56,9 @@ func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 7)
+	require.Equal(t, 7, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
 		"wt":     int64(1),
@@ -88,9 +88,9 @@ func TestParseSimpleOutputInvalidPeer(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 4)
+	require.Equal(t, 4, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
 		"wt":   int64(1),
@@ -116,9 +116,9 @@ func TestParseSimpleOutputServersDNSError(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 4)
+	require.Equal(t, 4, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
 		"next": int64(2),
@@ -158,9 +158,9 @@ func TestParseSimpleOutputServerDNSError(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 4)
+	require.Equal(t, 4, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
 		"next": int64(12),
@@ -186,9 +186,9 @@ func TestParseFullOutput(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, acc.NMetrics(), uint64(20))
+	require.Equal(t, uint64(20), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 113)
+	require.Equal(t, 113, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
 		"wt":     int64(1),

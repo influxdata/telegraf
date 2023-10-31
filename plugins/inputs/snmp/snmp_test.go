@@ -332,7 +332,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(snmp.GosnmpWrapper)
-	require.Equal(t, gs.Version, gosnmp.Version3)
+	require.Equal(t, gosnmp.Version3, gs.Version)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 	require.Equal(t, "1.2.3.4", gsc.Host())
 	require.EqualValues(t, 20, gs.MaxRepetitions)
@@ -453,7 +453,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			gsc, err := s.getConnection(0)
 			require.NoError(t, err)
 			gs := gsc.(snmp.GosnmpWrapper)
-			require.Equal(t, gs.Version, gosnmp.Version3)
+			require.Equal(t, gosnmp.Version3, gs.Version)
 			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 			require.Equal(t, "1.2.3.4", gsc.Host())
 			require.EqualValues(t, 20, gs.MaxRepetitions)
@@ -644,7 +644,7 @@ func TestTableBuild_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "foo",
@@ -988,7 +988,7 @@ func TestTableJoin_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -1065,7 +1065,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -1151,7 +1151,7 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",

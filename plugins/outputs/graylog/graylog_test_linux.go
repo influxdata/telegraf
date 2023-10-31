@@ -16,10 +16,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWriteUDP(t *testing.T) {
@@ -170,14 +171,14 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 		if err != nil {
 			return err
 		}
-		require.Equal(t, obj["short_message"], "telegraf")
+		require.Equal(t, "telegraf", obj["short_message"])
 		if namefieldnoprefix {
-			require.Equal(t, obj["name"], "test1")
+			require.Equal(t, "test1", obj["name"])
 		} else {
-			require.Equal(t, obj["_name"], "test1")
+			require.Equal(t, "test1", obj["_name"])
 		}
-		require.Equal(t, obj["_tag1"], "value1")
-		require.Equal(t, obj["_value"], float64(1))
+		require.Equal(t, "value1", obj["_tag1"])
+		require.Equal(t, float64(1), obj["_value"])
 
 		return nil
 	}
@@ -247,10 +248,10 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		var obj GelfObject
 		err = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
-		require.Equal(t, obj["short_message"], "telegraf")
-		require.Equal(t, obj["_name"], "test1")
-		require.Equal(t, obj["_tag1"], "value1")
-		require.Equal(t, obj["_value"], float64(1))
+		require.Equal(t, "telegraf", obj["short_message"])
+		require.Equal(t, "test1", obj["_name"])
+		require.Equal(t, "value1", obj["_tag1"])
+		require.Equal(t, float64(1), obj["_value"])
 		return nil
 	}
 
