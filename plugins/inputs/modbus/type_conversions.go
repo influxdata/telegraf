@@ -87,7 +87,6 @@ func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverte
 		return determineConverterF64(outType, byteOrder)
 	case "STRING":
 		return determineConverterString(byteOrder)
-
 	}
 	return nil, fmt.Errorf("invalid input data-type: %s", inType)
 }
