@@ -25,7 +25,7 @@ func TestNewMetric(t *testing.T) {
 	require.Equal(t, "cpu", m.Name())
 	require.Equal(t, tags, m.Tags())
 	require.Equal(t, fields, m.Fields())
-	require.Equal(t, 2, len(m.FieldList()))
+	require.Len(t, m.FieldList(), 2)
 	require.Equal(t, now, m.Time())
 }
 
@@ -60,7 +60,7 @@ func TestAddTagOverwrites(t *testing.T) {
 	value, ok := m.GetTag("host")
 	require.True(t, ok)
 	require.Equal(t, "example.org", value)
-	require.Equal(t, 1, len(m.TagList()))
+	require.Len(t, m.TagList(), 1)
 }
 
 func TestRemoveTagNoEffectOnMissingTags(t *testing.T) {
@@ -108,7 +108,7 @@ func TestAddFieldOverwrites(t *testing.T) {
 	m.AddField("value", 1.0)
 	m.AddField("value", 42.0)
 
-	require.Equal(t, 1, len(m.FieldList()))
+	require.Len(t, m.FieldList(), 1)
 
 	value, ok := m.GetField("value")
 	require.True(t, ok)
@@ -121,7 +121,7 @@ func TestAddFieldChangesType(t *testing.T) {
 	m.AddField("value", 1.0)
 	m.AddField("value", "xyzzy")
 
-	require.Equal(t, 1, len(m.FieldList()))
+	require.Len(t, m.FieldList(), 1)
 
 	value, ok := m.GetField("value")
 	require.True(t, ok)

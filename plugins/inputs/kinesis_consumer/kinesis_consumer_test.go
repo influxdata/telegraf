@@ -218,7 +218,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				t.Errorf("onMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			require.Equal(t, tt.expected.numberOfMetrics, len(acc.Metrics))
+			require.Len(t, acc.Metrics, tt.expected.numberOfMetrics)
 
 			for _, metric := range acc.Metrics {
 				if logEventMessage, ok := metric.Fields["message"]; ok {

@@ -262,7 +262,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	// validate multi-record generation
 	result := plugin.TransformMetrics(inputs)
 	// 'inputs' has a total of 101 metrics transformed to 2 writeRecord calls to TS
-	require.Equal(t, 2, len(result), "Expected 2 WriteRecordsInput requests")
+	require.Len(t, result, 2, "Expected 2 WriteRecordsInput requests")
 
 	var transformedRecords []types.Record
 	for _, r := range result {
@@ -271,7 +271,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 		require.Equal(t, *r.Records[0].MeasureName, "multi_measure_name")
 	}
 	// Expected 101 records
-	require.Equal(t, recordCount+1, len(transformedRecords), "Expected 101 records after transforming")
+	require.Len(t, transformedRecords, recordCount+1, "Expected 101 records after transforming")
 	// validate write to TS
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
@@ -320,7 +320,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	// validate multi-record generation
 	result := plugin.TransformMetrics(inputs)
 	// 'inputs' has a total of 101 metrics transformed to 2 writeRecord calls to TS
-	require.Equal(t, 1, len(result), "Expected 1 WriteRecordsInput requests")
+	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	// Assert that we use measure name from config
 	require.Equal(t, *result[0].Records[0].MeasureName, "config-multi-measure-name")
@@ -330,7 +330,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 		transformedRecords = append(transformedRecords, r.Records...)
 	}
 	// Expected 100 records
-	require.Equal(t, recordCount, len(transformedRecords), "Expected 100 records after transforming")
+	require.Len(t, transformedRecords, recordCount, "Expected 100 records after transforming")
 
 	for _, input := range inputs {
 		fmt.Println("Input", input)
@@ -397,7 +397,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 
 	// validate multi-record generation with MappingModeMultiTable
 	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
-	require.Equal(t, 1, len(result), "Expected 1 WriteRecordsInput requests")
+	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	require.EqualValues(t, result[0], expectedResultMultiTable)
 
@@ -422,7 +422,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 
 	// validate multi-record generation with MappingModeSingleTable
 	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
-	require.Equal(t, 1, len(result), "Expected 1 WriteRecordsInput requests")
+	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	require.EqualValues(t, result[0], expectedResultSingleTable)
 

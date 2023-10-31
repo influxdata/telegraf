@@ -394,7 +394,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 			},
 		}
 		require.Error(t, acc.GatherError(p.Gather))
-		require.Equal(t, 1, len(acc.Errors))
+		require.Len(t, acc.Errors, 1)
 		require.Contains(t, acc.Errors[0].Error(), param.error.Error())
 	}
 }

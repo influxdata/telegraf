@@ -20,7 +20,7 @@ func TestFileWriter_NoRotation(t *testing.T) {
 	_, err = writer.Write([]byte("Hello World 2"))
 	require.NoError(t, err)
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 1, len(files))
+	require.Len(t, files, 1)
 }
 
 func TestFileWriter_TimeRotation(t *testing.T) {
@@ -36,7 +36,7 @@ func TestFileWriter_TimeRotation(t *testing.T) {
 	_, err = writer.Write([]byte("Hello World 2"))
 	require.NoError(t, err)
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 2, len(files))
+	require.Len(t, files, 2)
 }
 
 func TestFileWriter_ReopenTimeRotation(t *testing.T) {
@@ -51,7 +51,7 @@ func TestFileWriter_ReopenTimeRotation(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 2, len(files))
+	require.Len(t, files, 2)
 }
 
 func TestFileWriter_SizeRotation(t *testing.T) {
@@ -66,7 +66,7 @@ func TestFileWriter_SizeRotation(t *testing.T) {
 	_, err = writer.Write([]byte("World 2"))
 	require.NoError(t, err)
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 2, len(files))
+	require.Len(t, files, 2)
 }
 
 func TestFileWriter_ReopenSizeRotation(t *testing.T) {
@@ -82,7 +82,7 @@ func TestFileWriter_ReopenSizeRotation(t *testing.T) {
 	_, err = writer.Write([]byte("Hello World Again"))
 	require.NoError(t, err)
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 2, len(files))
+	require.Len(t, files, 2)
 }
 
 func TestFileWriter_DeleteArchives(t *testing.T) {
@@ -109,7 +109,7 @@ func TestFileWriter_DeleteArchives(t *testing.T) {
 	require.NoError(t, err)
 
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 3, len(files))
+	require.Len(t, files, 3)
 
 	for _, tempFile := range files {
 		var bytes []byte
@@ -136,6 +136,6 @@ func TestFileWriter_CloseDoesNotRotate(t *testing.T) {
 	require.NoError(t, writer.Close())
 
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 1, len(files))
+	require.Len(t, files, 1)
 	require.Regexp(t, "^test.log$", files[0].Name())
 }

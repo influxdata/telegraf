@@ -214,7 +214,7 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because dimension order isn't guaranteed
-		require.Equal(t, len(bodyString), 94)
+		require.Len(t, bodyString, 94)
 		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`a=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`b=test`), bodyString)
@@ -302,7 +302,7 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 		bodyString := string(bodyBytes)
 
 		// use regex because dimension order isn't guaranteed
-		require.Equal(t, len(bodyString), 100)
+		require.Len(t, bodyString, 100)
 		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`aaa=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`b_b=test`), bodyString)
@@ -348,7 +348,7 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Equal(t, len(bodyString), 132)
+		require.Len(t, bodyString, 132)
 		require.Contains(t, bodyString, "mymeasurement.yes,dt.metrics.source=telegraf gauge,1 1289430000000")
 		require.Contains(t, bodyString, "mymeasurement.no,dt.metrics.source=telegraf gauge,0 1289430000000")
 		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
@@ -389,7 +389,7 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Equal(t, len(bodyString), 78)
+		require.Len(t, bodyString, 78)
 		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dim=value"), bodyString)
@@ -432,7 +432,7 @@ func TestMetricDimensionsOverrideDefault(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Equal(t, len(bodyString), 80)
+		require.Len(t, bodyString, 80)
 		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dim=metric"), bodyString)
@@ -475,7 +475,7 @@ func TestStaticDimensionsOverrideMetric(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Equal(t, len(bodyString), 53)
+		require.Len(t, bodyString, 53)
 		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dim=static"), bodyString)
 		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)

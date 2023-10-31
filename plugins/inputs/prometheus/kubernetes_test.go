@@ -134,7 +134,7 @@ func TestAddPod(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	require.Equal(t, 1, len(prom.kubernetesPods))
+	require.Len(t, prom.kubernetesPods, 1)
 }
 
 func TestAddPodScrapeConfig(t *testing.T) {
@@ -144,7 +144,7 @@ func TestAddPodScrapeConfig(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{}
 	registerPod(p, prom)
-	require.Equal(t, 1, len(prom.kubernetesPods))
+	require.Len(t, prom.kubernetesPods, 1)
 }
 
 func TestAddMultipleDuplicatePods(t *testing.T) {
@@ -157,7 +157,7 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 	registerPod(p, prom)
 
 	urls, _ := prom.GetAllURLs()
-	require.Equal(t, 1, len(urls))
+	require.Len(t, urls, 1)
 }
 
 func TestAddMultiplePods(t *testing.T) {
@@ -169,7 +169,7 @@ func TestAddMultiplePods(t *testing.T) {
 	p.Name = "Pod2"
 	p.Status.PodIP = "127.0.0.2"
 	registerPod(p, prom)
-	require.Equal(t, 2, len(prom.kubernetesPods))
+	require.Len(t, prom.kubernetesPods, 2)
 }
 
 func TestDeletePods(t *testing.T) {

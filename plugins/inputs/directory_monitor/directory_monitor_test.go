@@ -89,7 +89,7 @@ func TestCSVGZImport(t *testing.T) {
 	r.Stop()
 
 	// Verify that we read both files once.
-	require.Equal(t, len(acc.Metrics), 6)
+	require.Len(t, acc.Metrics, 6)
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
@@ -160,7 +160,7 @@ func TestCSVGZImportWithHeader(t *testing.T) {
 	r.Stop()
 
 	// Verify that we read both files once.
-	require.Equal(t, len(acc.Metrics), 6)
+	require.Len(t, acc.Metrics, 6)
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
@@ -217,7 +217,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	r.Stop()
 
 	// Verify that we read each JSON line once to a single metric.
-	require.Equal(t, len(acc.Metrics), 5)
+	require.Len(t, acc.Metrics, 5)
 }
 
 func TestFileTag(t *testing.T) {
@@ -264,7 +264,7 @@ func TestFileTag(t *testing.T) {
 	r.Stop()
 
 	// Verify that we read each JSON line once to a single metric.
-	require.Equal(t, len(acc.Metrics), 1)
+	require.Len(t, acc.Metrics, 1)
 	for _, m := range acc.Metrics {
 		for key, value := range m.Tags {
 			require.Equal(t, r.FileTag, key)
@@ -328,7 +328,7 @@ hello,80,test_name2`
 	r.Stop()
 
 	// Verify that we read both files once.
-	require.Equal(t, len(acc.Metrics), 1)
+	require.Len(t, acc.Metrics, 1)
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
@@ -399,7 +399,7 @@ hello,80,test_name2`
 	r.Stop()
 
 	// Verify that we read both files once.
-	require.Equal(t, len(acc.Metrics), 1)
+	require.Len(t, acc.Metrics, 1)
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
@@ -468,7 +468,7 @@ hello,80,test_name2`
 	r.Stop()
 
 	// Verify that we read both files once.
-	require.Equal(t, len(acc.Metrics), 1)
+	require.Len(t, acc.Metrics, 1)
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
