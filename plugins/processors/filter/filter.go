@@ -91,25 +91,30 @@ func (f *Filter) ifCondition(item *FilterIf, metric telegraf.Metric) bool {
 	return flag
 }
 
-func (f *Filter) skipFields(item *FilterIf, metric telegraf.Metric) bool {
+func (f *Filter) findFields(item *FilterIf, metric telegraf.Metric) []string {
 
+	r := []string{}
 	if item.field == nil {
-		return false
+		return r
 	}
 	for k := range metric.Fields() {
-		if !item.field.MatchString(k) {
-			return true
+		if item.field.MatchString(k) {
+			r = append(r, k)
 		}
 	}
-	return false
+	return r
 }
 
-func (f *Filter) skipMinMax(item *FilterIf, metric telegraf.Metric) bool {
+func (f *Filter) skipMinMax(item *FilterIf, metric telegraf.Metric, fields []string) bool {
 
 	if item.Min == nil && item.Max == nil {
 		return false
 	}
-	for _, field := range metric.Fields() {
+	for n, field := range metric.Fields() {
+
+		if !utils.Contains(fields, n) {
+			continue
+		}
 		v, err := strconv.ParseFloat(fmt.Sprintf("%v", field), 64)
 		if err != nil {
 			return true
@@ -165,11 +170,12 @@ func (f *Filter) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				continue
 			}
 
-			if f.skipFields(item, metric) {
+			fields := f.findFields(item, metric)
+			if len(fields) == 0 {
 				continue
 			}
 
-			if f.skipMinMax(item, metric) {
+			if f.skipMinMax(item, metric, fields) {
 				continue
 			}
 
