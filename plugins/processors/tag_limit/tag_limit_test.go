@@ -81,7 +81,7 @@ func TestTrim(t *testing.T) {
 	limitApply := tagLimitConfig.Apply(m1, m2)
 	require.Equal(t, threeTags, limitApply[0].Tags(), "three tags")
 	trimmedTags := limitApply[1].Tags()
-	require.Equal(t, 3, len(trimmedTags), "ten tags")
+	require.Len(t, trimmedTags, 3, "ten tags")
 	require.Equal(t, "foo", trimmedTags["a"], "preserved: a")
 	require.Equal(t, "bar", trimmedTags["b"], "preserved: b")
 }

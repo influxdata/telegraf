@@ -116,7 +116,7 @@ func TestRunGatherOneIteration(t *testing.T) {
 
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 3, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 3)
 }
 
 func TestRunGatherIteratiosnWithLimit(t *testing.T) {
@@ -140,13 +140,13 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 2, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 2)
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 3, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 3)
 }
 
 func TestRunGatherIterationWithPages(t *testing.T) {
@@ -169,7 +169,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 4, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 4)
 	require.True(t, gcs.offSet.isPresent())
 	require.Equal(t, "prefix/1604148850994", gcs.offSet.OffSet)
 

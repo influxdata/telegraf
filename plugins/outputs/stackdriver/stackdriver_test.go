@@ -662,7 +662,7 @@ func TestGetStackdriverLabels(t *testing.T) {
 	}
 
 	labels := s.getStackdriverLabels(tags)
-	require.Equal(t, QuotaLabelsPerMetricDescriptor, len(labels))
+	require.Len(t, labels, QuotaLabelsPerMetricDescriptor)
 }
 
 func TestGetStackdriverIntervalEndpoints(t *testing.T) {

@@ -4,9 +4,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAzureSQLIntegration_Managed_ResourceStats_Query(t *testing.T) {
@@ -39,7 +40,7 @@ func TestAzureSQLIntegration_Managed_ResourceStats_Query(t *testing.T) {
 	require.True(t, acc.HasTag("sqlserver_azure_db_resource_stats", "replica_updateability"))
 
 	// This query should only return one row
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	server.Stop()
 }
 
@@ -172,7 +173,7 @@ func TestAzureSQLIntegration_Managed_ServerProperties_Query(t *testing.T) {
 	require.True(t, acc.HasTag("sqlserver_server_properties", "replica_updateability"))
 
 	// This query should only return one row
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	server.Stop()
 }
 

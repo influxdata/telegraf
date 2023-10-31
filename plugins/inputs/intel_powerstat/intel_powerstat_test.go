@@ -127,7 +127,7 @@ func TestGather(t *testing.T) {
 	require.NoError(t, power.Gather(&acc))
 	// Number of global metrics   : 3
 	// Number of per core metrics : 7
-	require.Equal(t, 3*len(packageIDs)+7*len(coreIDs), len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 3*len(packageIDs)+7*len(coreIDs))
 }
 
 func TestAddGlobalMetricsNegative(t *testing.T) {
@@ -159,7 +159,7 @@ func TestAddGlobalMetricsNegative(t *testing.T) {
 		On("getConstraintMaxPowerWatts", mock.Anything).Return(12313851.5, nil).Twice()
 
 	power.addGlobalMetrics(&acc)
-	require.Equal(t, 3, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 3)
 }
 
 func TestAddGlobalMetricsPositive(t *testing.T) {
@@ -178,7 +178,7 @@ func TestAddGlobalMetricsPositive(t *testing.T) {
 		On("getCurrentDramPowerConsumption", mock.Anything).Return(dramCurrentEnergy)
 
 	power.addGlobalMetrics(&acc)
-	require.Equal(t, 6, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 6)
 
 	expectedResults := getGlobalMetrics(maxPower, socketCurrentEnergy, dramCurrentEnergy)
 	for _, test := range expectedResults {
@@ -222,7 +222,7 @@ func TestAddCPUFrequencyMetric(t *testing.T) {
 	mockServices.msr.On("retrieveCPUFrequencyForCore", mock.Anything).Return(frequency, nil).Once()
 
 	power.addCPUFrequencyMetric(cpuID, &acc)
-	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	expectedFrequency := roundFloatToNearestTwoDecimalPlaces(frequency)
 	expectedMetric := getPowerCoreMetric("cpu_frequency_mhz", expectedFrequency, coreID, packageID, cpuID)
@@ -257,7 +257,7 @@ func TestReadUncoreFreq(t *testing.T) {
 	power.readUncoreFreq("current", packageID, die, &acc)
 	power.readUncoreFreq("initial", packageID, die, &acc)
 
-	require.Equal(t, 2, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 2)
 
 	expectedMetric := getPowerUncoreFreqMetric("initial", float64(500), float64(1200), nil, packageID, die)
 	acc.AssertContainsTaggedFields(t, "powerstat_package", expectedMetric.fields, expectedMetric.tags)
@@ -278,7 +278,7 @@ func TestAddCoreCPUTemperatureMetric(t *testing.T) {
 
 	mockServices.msr.On("getCPUCoresData").Return(preparedData).Once()
 	power.addCPUTemperatureMetric(cpuID, &acc)
-	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	expectedMetric := getPowerCoreMetric("cpu_temperature_celsius", expectedTemp, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
@@ -297,7 +297,7 @@ func TestAddC6StateResidencyMetric(t *testing.T) {
 
 	mockServices.msr.On("getCPUCoresData").Return(preparedData).Twice()
 	power.addCPUC6StateResidencyMetric(cpuID, &acc)
-	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	expectedMetric := getPowerCoreMetric("cpu_c6_state_residency_percent", expectedC6, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
@@ -323,7 +323,7 @@ func TestAddC0StateResidencyMetric(t *testing.T) {
 	mockServices.msr.On("getCPUCoresData").Return(preparedData).Twice()
 	power.cpuBusyCycles, power.cpuC0StateResidency = true, true
 	power.addCPUC0StateResidencyMetric(cpuID, &acc)
-	require.Equal(t, 2, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 2)
 
 	expectedMetric := getPowerCoreMetric("cpu_c0_state_residency_percent", expectedBusyCycles, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
@@ -350,7 +350,7 @@ func TestAddProcessorBusyFrequencyMetric(t *testing.T) {
 
 	mockServices.msr.On("getCPUCoresData").Return(preparedData).Twice()
 	power.addCPUBusyFrequencyMetric(cpuID, &acc)
-	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	acc.ClearMetrics()
 	preparedData[cpuID].mperfDelta = 0
@@ -373,7 +373,7 @@ func TestAddC1StateResidencyMetric(t *testing.T) {
 	mockServices.msr.On("getCPUCoresData").Return(preparedData).Twice()
 
 	power.addCPUC1StateResidencyMetric(cpuID, &acc)
-	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	expectedMetric := getPowerCoreMetric("cpu_c1_state_residency_percent", expectedC1, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
@@ -398,7 +398,7 @@ func TestAddThermalDesignPowerMetric(t *testing.T) {
 	require.Empty(t, acc.GetTelegrafMetrics())
 
 	power.addThermalDesignPowerMetric(sockets[0], &acc)
-	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
 
 	expectedTDP := roundFloatToNearestTwoDecimalPlaces(maxPower)
 	expectedMetric := getPowerGlobalMetric("thermal_design_power_watts", expectedTDP, sockets[0])
@@ -411,7 +411,7 @@ func TestCalculateTurboRatioGroup(t *testing.T) {
 	turboRatioLimitGroups := make(map[int]uint64)
 
 	calculateTurboRatioGroup(coreCounts, msr, turboRatioLimitGroups)
-	require.Equal(t, 8, len(turboRatioLimitGroups))
+	require.Len(t, turboRatioLimitGroups, 8)
 	require.Equal(t, uint64(100), turboRatioLimitGroups[1])
 	require.Equal(t, uint64(200), turboRatioLimitGroups[2])
 	require.Equal(t, uint64(300), turboRatioLimitGroups[3])
@@ -423,7 +423,7 @@ func TestCalculateTurboRatioGroup(t *testing.T) {
 
 	coreCounts = uint64(0x100e0c0a08060402)
 	calculateTurboRatioGroup(coreCounts, msr, turboRatioLimitGroups)
-	require.Equal(t, 16, len(turboRatioLimitGroups))
+	require.Len(t, turboRatioLimitGroups, 16)
 	require.Equal(t, uint64(100), turboRatioLimitGroups[1])
 	require.Equal(t, uint64(100), turboRatioLimitGroups[2])
 	require.Equal(t, uint64(200), turboRatioLimitGroups[3])
@@ -443,14 +443,14 @@ func TestCalculateTurboRatioGroup(t *testing.T) {
 	coreCounts = uint64(0x1211)
 	msr = uint64(0xfffe)
 	calculateTurboRatioGroup(coreCounts, msr, turboRatioLimitGroups)
-	require.Equal(t, 18, len(turboRatioLimitGroups))
+	require.Len(t, turboRatioLimitGroups, 18)
 	require.Equal(t, uint64(25400), turboRatioLimitGroups[17])
 	require.Equal(t, uint64(25500), turboRatioLimitGroups[18])
 
 	coreCounts = uint64(0x1201)
 	msr = uint64(0x0202)
 	calculateTurboRatioGroup(coreCounts, msr, turboRatioLimitGroups)
-	require.Equal(t, 18, len(turboRatioLimitGroups))
+	require.Len(t, turboRatioLimitGroups, 18)
 	require.Equal(t, uint64(200), turboRatioLimitGroups[1])
 	require.Equal(t, uint64(200), turboRatioLimitGroups[2])
 	require.Equal(t, uint64(200), turboRatioLimitGroups[3])
@@ -474,7 +474,7 @@ func TestCalculateTurboRatioGroup(t *testing.T) {
 	msr = uint64(0xfffe)
 	turboRatioLimitGroups = make(map[int]uint64)
 	calculateTurboRatioGroup(coreCounts, msr, turboRatioLimitGroups)
-	require.Equal(t, 2, len(turboRatioLimitGroups))
+	require.Len(t, turboRatioLimitGroups, 2)
 	require.Equal(t, uint64(25400), turboRatioLimitGroups[17])
 	require.Equal(t, uint64(25500), turboRatioLimitGroups[18])
 }
