@@ -123,6 +123,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
 ```
 
+### Unsigned Integers
+
+Timestream does **DOES NOT** support unsigned int64 values. Values using uint64,
+which are less than the maximum signed int64 are returned as expected. Any
+larger value is caped at the maximum int64 value.
+
 ### Batching
 
 Timestream WriteInputRequest.CommonAttributes are used to efficiently write data
