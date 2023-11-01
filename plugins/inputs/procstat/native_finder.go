@@ -82,31 +82,31 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 
 // ChildPattern matches children pids on the command line when the process was executed
 func (pg *NativeFinder) ChildPattern(pattern string) ([]PID, error) {
-	var parentpids []PID
-	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
-		return pids, err
+		return nil, err
 	}
+
 	procs, err := process.Processes()
 	if err != nil {
-		return pids, err
+		return nil, err
 	}
+
+	var pids []PID
 	for _, p := range procs {
 		cmd, err := p.Cmdline()
-		if err != nil {
+		if err != nil || !regxPattern.MatchString(cmd) {
 			continue
 		}
-		if regxPattern.MatchString(cmd) {
-			parentpids = append(parentpids, PID(p.Pid))
-		}
-	}
-	for _, p := range parentpids {
-		parent, err := process.NewProcess(int32(p))
+
+		parent, err := process.NewProcess(p.Pid)
 		if err != nil {
-			return pids, err
+			return nil, fmt.Errorf("unable to get process %d: %w", p.Pid, err)
 		}
-		children, _ := parent.Children()
+		children, err := parent.Children()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get children of process %d: %w", p.Pid, err)
+		}
 
 		for _, child := range children {
 			pids = append(pids, PID(child.Pid))
