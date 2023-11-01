@@ -84,12 +84,12 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 func (pg *NativeFinder) ChildPattern(pattern string) ([]PID, error) {
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compiling regexp failed: %w", err)
 	}
 
 	procs, err := process.Processes()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting processes failed: %w", err)
 	}
 
 	var pids []PID
