@@ -1,7 +1,8 @@
 package procstat
 
 import (
-	"fmt"
+	"context"
+	"os"
 	"os/exec"
 	"runtime"
 	"testing"
@@ -10,58 +11,52 @@ import (
 )
 
 func BenchmarkPattern(b *testing.B) {
-	f, err := NewNativeFinder()
+	finder, err := NewNativeFinder()
 	require.NoError(b, err)
 	for n := 0; n < b.N; n++ {
-		_, err := f.Pattern(".*")
-		if err != nil {
-			panic(err)
-		}
+		_, err = finder.Pattern(".*")
+		require.NoError(b, err)
 	}
 }
 
 func BenchmarkFullPattern(b *testing.B) {
-	f, err := NewNativeFinder()
+	finder, err := NewNativeFinder()
 	require.NoError(b, err)
 	for n := 0; n < b.N; n++ {
-		_, err := f.FullPattern(".*")
-		if err != nil {
-			panic(err)
-		}
+		_, err := finder.FullPattern(".*")
+		require.NoError(b, err)
 	}
 }
 
 func TestChildPattern(t *testing.T) {
-	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
-		cmd := exec.Command("/bin/bash", "-c", "sleep 10")
-		if err := cmd.Start(); err != nil {
-			fmt.Printf("Error starting command: %s\n", err)
-			return
-		}
-
-		f, err := NewNativeFinder()
-		require.NoError(t, err)
-
-		childpids, err := f.ChildPattern("TestChildPattern")
-		for _, p := range childpids {
-			t.Log(string(p))
-		}
-
-		require.Equal(t, []PID{PID(cmd.Process.Pid)}, childpids)
-		cmd.Process.Kill()
-		if err != nil {
-			panic(err)
-		}
-
-		var nilpids []PID
-		childpids, err = f.ChildPattern("TestChildPattern")
-		for _, p := range childpids {
-			t.Log(string(p))
-		}
-
-		require.Equal(t, nilpids, childpids)
-		if err != nil {
-			panic(err)
-		}
+	if runtime.GOOS == "Windows" {
+		t.Skip("Skipping test on unsupported platform")
 	}
+
+	// Get our own process name
+	parentName, err := os.Executable()
+	require.NoError(t, err)
+
+	// Spawn two child processes and get their PIDs
+	expected := make([]PID, 0, 2)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// First process
+	cmd1 := exec.CommandContext(ctx, "/bin/sh")
+	require.NoError(t, cmd1.Start(), "starting first command failed")
+	expected = append(expected, PID(cmd1.Process.Pid))
+
+	// Second process
+	cmd2 := exec.CommandContext(ctx, "/bin/sh")
+	require.NoError(t, cmd2.Start(), "starting first command failed")
+	expected = append(expected, PID(cmd2.Process.Pid))
+
+	// Use the plugin to find the children
+	finder, err := NewNativeFinder()
+	require.NoError(t, err)
+
+	childs, err := finder.ChildPattern(parentName)
+	require.NoError(t, err)
+	require.ElementsMatch(t, expected, childs)
 }
