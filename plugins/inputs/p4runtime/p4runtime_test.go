@@ -641,9 +641,8 @@ func TestFilterCounterNamesInclude(t *testing.T) {
 	filteredCounters := filterCounters(counters, counterNamesInclude)
 	require.Equal(
 		t,
-		filteredCounters,
 		[]*p4ConfigV1.Counter{
 			createCounter("bar", 2, p4ConfigV1.CounterSpec_BOTH),
-		},
+		}, filteredCounters,
 	)
 }

@@ -269,14 +269,14 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	for _, r := range result {
 		transformedRecords = append(transformedRecords, r.Records...)
 		// Assert that we use measure name from input
-		require.Equal(t, *r.Records[0].MeasureName, "multi_measure_name")
+		require.Equal(t, "multi_measure_name", *r.Records[0].MeasureName)
 	}
 	// Expected 101 records
 	require.Len(t, transformedRecords, recordCount+1, "Expected 101 records after transforming")
 	// validate write to TS
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, 2, "Expected 2 WriteRecords calls")
+	require.Equal(t, 2, mockClient.WriteRecordsRequestCount, "Expected 2 WriteRecords calls")
 }
 
 func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
@@ -324,7 +324,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	// Assert that we use measure name from config
-	require.Equal(t, *result[0].Records[0].MeasureName, "config-multi-measure-name")
+	require.Equal(t, "config-multi-measure-name", *result[0].Records[0].MeasureName)
 
 	var transformedRecords []types.Record
 	for _, r := range result {
@@ -342,7 +342,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	// validate successful write to TS
 	err = plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, 1, "Expected 1 WriteRecords call")
+	require.Equal(t, 1, mockClient.WriteRecordsRequestCount, "Expected 1 WriteRecords call")
 }
 
 func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
@@ -638,7 +638,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Expected to write without any errors ")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, maxWriteRecordsCalls, "Expected 5 calls to WriteRecords")
+	require.Equal(t, maxWriteRecordsCalls, mockClient.WriteRecordsRequestCount, "Expected 5 calls to WriteRecords")
 }
 
 func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
@@ -677,7 +677,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Expected to write without any errors ")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, maxWriteRecordsCalls, "Expected 5 calls to WriteRecords")
+	require.Equal(t, maxWriteRecordsCalls, mockClient.WriteRecordsRequestCount, "Expected 5 calls to WriteRecords")
 }
 
 func TestTransformMetricsSkipEmptyMetric(t *testing.T) {

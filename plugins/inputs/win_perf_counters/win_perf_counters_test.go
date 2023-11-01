@@ -316,7 +316,7 @@ func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
 		h, o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
-		require.Equalf(t, vals, []string{h, o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+		require.Equalf(t, []string{h, o, i, c}, vals, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
 	}
 	for _, path := range invalidCounterPaths {
 		_, _, _, _, err := extractCounterInfoFromCounterPath(path)

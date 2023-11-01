@@ -1284,7 +1284,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 
 	cachedtiming, ok := sSingle.timings["metric_type=timingvalid_multiple"]
 	require.Truef(t, ok, "Expected cached measurement with hash 'metric_type=timingvalid_multiple' not found")
-	require.Equalf(t, cachedtiming.name, "valid_multiple", "Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
+	require.Equalf(t, "valid_multiple", cachedtiming.name, "Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
 
 	// A 0 at samplerate 0.1 will add 10 values of 0,
 	// A 0 with invalid samplerate will add a single 0,
@@ -1617,12 +1617,12 @@ func TestParse_Counters_Delete(t *testing.T) {
 
 func TestParseKeyValue(t *testing.T) {
 	k, v := parseKeyValue("foo=bar")
-	require.Equalf(t, k, "foo", "Expected %s, got %s", "foo", k)
-	require.Equalf(t, v, "bar", "Expected %s, got %s", "bar", v)
+	require.Equalf(t, "foo", k, "Expected %s, got %s", "foo", k)
+	require.Equalf(t, "bar", v, "Expected %s, got %s", "bar", v)
 
 	k2, v2 := parseKeyValue("baz")
-	require.Equalf(t, k2, "", "Expected %s, got %s", "", k2)
-	require.Equalf(t, v2, "baz", "Expected %s, got %s", "baz", v2)
+	require.Equalf(t, "", k2, "Expected %s, got %s", "", k2)
+	require.Equalf(t, "baz", v2, "Expected %s, got %s", "baz", v2)
 }
 
 // Test utility functions
@@ -1849,7 +1849,7 @@ func TestParse_Ints(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, s.Gather(acc))
-	require.Equal(t, s.Percentiles, []Number{90.0})
+	require.Equal(t, []Number{90.0}, s.Percentiles)
 }
 
 func TestParse_KeyValue(t *testing.T) {

@@ -112,7 +112,7 @@ func TestNewCollectdParser(t *testing.T) {
 		ParseMultiValue: "join",
 	}
 	require.NoError(t, parser.Init())
-	require.Equal(t, parser.popts.SecurityLevel, network.None)
+	require.Equal(t, network.None, parser.popts.SecurityLevel)
 	require.NotNil(t, parser.popts.PasswordLookup)
 	require.Nil(t, parser.popts.TypesDB)
 }

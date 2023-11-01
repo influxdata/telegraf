@@ -17,7 +17,7 @@ func TestGather_RealPatternIntegration(t *testing.T) {
 	pids, err := pg.Pattern(`procstat`)
 	require.NoError(t, err)
 	fmt.Println(pids)
-	require.Equal(t, len(pids) > 0, true)
+	require.Equal(t, true, len(pids) > 0)
 }
 
 func TestGather_RealFullPatternIntegration(t *testing.T) {
@@ -29,7 +29,7 @@ func TestGather_RealFullPatternIntegration(t *testing.T) {
 	pids, err := pg.FullPattern(`%procstat%`)
 	require.NoError(t, err)
 	fmt.Println(pids)
-	require.Equal(t, len(pids) > 0, true)
+	require.Equal(t, true, len(pids) > 0)
 }
 
 func TestGather_RealUserIntegration(t *testing.T) {
@@ -43,5 +43,5 @@ func TestGather_RealUserIntegration(t *testing.T) {
 	pids, err := pg.UID(currentUser.Username)
 	require.NoError(t, err)
 	fmt.Println(pids)
-	require.Equal(t, len(pids) > 0, true)
+	require.Equal(t, true, len(pids) > 0)
 }
