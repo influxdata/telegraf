@@ -32,6 +32,7 @@ type Filter struct {
 	Fields    []string          `toml:"fields,omitempty"`
 	Tags      map[string]string `toml:"tags,omitempty"`
 	Log       telegraf.Logger   `toml:"-"`
+	rAll      *regexp.Regexp
 }
 
 var description = "Advanced filtering for metrics based on tags"
@@ -94,11 +95,12 @@ func (f *Filter) ifCondition(item *FilterIf, metric telegraf.Metric) bool {
 func (f *Filter) findFields(item *FilterIf, metric telegraf.Metric) []string {
 
 	r := []string{}
-	if item.field == nil {
-		return r
-	}
 	for k := range metric.Fields() {
-		if item.field.MatchString(k) {
+		if item.field != nil {
+			if item.field.MatchString(k) {
+				r = append(r, k)
+			}
+		} else {
 			r = append(r, k)
 		}
 	}
@@ -256,6 +258,8 @@ func (f *Filter) Init() error {
 		f.Log.Error(err)
 		return err
 	}
+
+	f.rAll = regexp.MustCompile(".*")
 	f.setTags()
 
 	return nil
