@@ -3,7 +3,9 @@ package nats
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -19,6 +21,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	servicePort := "4222"
 	container := testutil.Container{
 		Image:        "nats",
+		Cmd:          []string{"--js"},
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForLog("Server is ready"),
 	}
@@ -30,12 +33,19 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
 	n := &NATS{
-		Servers:    server,
-		Name:       "telegraf",
-		Subject:    "telegraf",
+		Servers: server,
+		Name:    "telegraf",
+		Subject: "telegraf",
+		Jetstream: &JetstreamConfig{
+			AutoCreateStream: true,
+			StreamConfig: jetstream.StreamConfig{
+				Name:     "my-telegraf-stream",
+				Subjects: []string{"telegraf"},
+			},
+		},
 		serializer: serializer,
 	}
-
+	time.Sleep(3 * time.Second)
 	// Verify that we can connect to the NATS daemon
 	err = n.Connect()
 	require.NoError(t, err)
