@@ -57,12 +57,14 @@ ExecMainPID=11408
 	if cmdline == "supervisorctl status TestGather_supervisorUnitPIDs" {
 		fmt.Printf(`TestGather_supervisorUnitPIDs                             RUNNING   pid 7311, uptime 0:00:19
 `)
+		//nolint:revive // error code is important for this "test"
 		os.Exit(0)
 	}
 
 	if cmdline == "supervisorctl status TestGather_STARTINGsupervisorUnitPIDs TestGather_FATALsupervisorUnitPIDs" {
 		fmt.Printf(`TestGather_FATALsupervisorUnitPIDs                       FATAL     Exited too quickly (process log may have details)
 TestGather_STARTINGsupervisorUnitPIDs                          STARTING`)
+		//nolint:revive // error code is important for this "test"
 		os.Exit(0)
 	}
 

@@ -346,7 +346,7 @@ func (p *Procstat) findPids() []PidsTags {
 	var pidTags []PidsTags
 
 	if len(p.SupervisorUnit) > 0 {
-		groups, groups_tags, err := p.supervisorPIDs()
+		groups, groupsTags, err := p.supervisorPIDs()
 		if err != nil {
 			pidTags = append(pidTags, PidsTags{nil, nil, err})
 			return pidTags
@@ -359,9 +359,9 @@ func (p *Procstat) findPids() []PidsTags {
 				return pidTags
 			}
 
-			p.Pattern = groups_tags[group]["pid"]
+			p.Pattern = groupsTags[group]["pid"]
 			if p.Pattern == "" {
-				pidTags = append(pidTags, PidsTags{nil, groups_tags[group], err})
+				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
 				return pidTags
 			}
 
@@ -372,10 +372,10 @@ func (p *Procstat) findPids() []PidsTags {
 			}
 			// Handle situations where the PID does not exist
 			if len(pids) == 0 {
-				pidTags = append(pidTags, PidsTags{nil, groups_tags[group], err})
+				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
 				continue
 			}
-			stats := groups_tags[group]
+			stats := groupsTags[group]
 			// Merge tags map
 			for k, v := range stats {
 				_, ok := tags[k]
@@ -443,7 +443,6 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 var execCommand = exec.Command
 
 func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, error) {
-
 	out, err := execCommand("supervisorctl", "status", strings.Join(p.SupervisorUnit, " ")).Output()
 	if err != nil {
 		if !strings.Contains(err.Error(), "exit status 3") {
@@ -467,22 +466,21 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 		}
 		name := kv[0]
 
-		status_map := map[string]string{
+		statusMap := map[string]string{
 			"supervisor_unit": name,
 			"status":          kv[1],
 		}
 
 		switch kv[1] {
 		case "FATAL", "EXITED", "BACKOFF", "STOPPING":
-			status_map["error"] = strings.Join(kv[2:], " ")
+			statusMap["error"] = strings.Join(kv[2:], " ")
 		case "RUNNING":
-			status_map["pid"] = strings.ReplaceAll(kv[3], ",", "")
-			status_map["uptimes"] = kv[5]
+			statusMap["pid"] = strings.ReplaceAll(kv[3], ",", "")
+			statusMap["uptimes"] = kv[5]
 		case "STOPPED", "UNKNOWN", "STARTING":
 			// No additional info
 		}
-		mainPids[name] = status_map
-
+		mainPids[name] = statusMap
 	}
 
 	return p.SupervisorUnit, mainPids, nil
@@ -495,7 +493,6 @@ func (p *Procstat) systemdUnitPIDs() []PidsTags {
 	}
 
 	var pidTags []PidsTags
-
 	pids, err := p.simpleSystemdUnitPIDs()
 	tags := map[string]string{"systemd_unit": p.SystemdUnits}
 	pidTags = append(pidTags, PidsTags{pids, tags, err})
