@@ -42,8 +42,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # include_systemd_children = false
   ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
-  ## Supervisor service name of hypervisorctl management
-  # supervisor_unit = ["webserver", "proxy"]
+  ## Supervisor service names of hypervisorctl management
+  # supervisor_units = ["webserver", "proxy"]
 
   ## Windows service name
   # win_service = ""

@@ -38,7 +38,7 @@ type Procstat struct {
 	CmdLineTag             bool `toml:"cmdline_tag"`
 	ProcessName            string
 	User                   string
-	SystemdUnit            string   `toml:"systemd_unit"`
+	SystemdUnits           string   `toml:"systemd_units"`
 	SupervisorUnit         []string `toml:"supervisor_unit"`
 	IncludeSystemdChildren bool     `toml:"include_systemd_children"`
 	CGroup                 string   `toml:"cgroup"`
@@ -389,7 +389,7 @@ func (p *Procstat) findPids() []PidsTags {
 		}
 
 		return pidTags
-	} else if p.SystemdUnit != "" {
+	} else if p.SystemdUnits != "" {
 		groups := p.systemdUnitPIDs()
 		return groups
 	} else if p.CGroup != "" {
@@ -490,20 +490,20 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 
 func (p *Procstat) systemdUnitPIDs() []PidsTags {
 	if p.IncludeSystemdChildren {
-		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
+		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnits)
 		return p.cgroupPIDs()
 	}
 
 	var pidTags []PidsTags
 
 	pids, err := p.simpleSystemdUnitPIDs()
-	tags := map[string]string{"systemd_unit": p.SystemdUnit}
+	tags := map[string]string{"systemd_unit": p.SystemdUnits}
 	pidTags = append(pidTags, PidsTags{pids, tags, err})
 	return pidTags
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
-	out, err := execCommand("systemctl", "show", p.SystemdUnit).Output()
+	out, err := execCommand("systemctl", "show", p.SystemdUnits).Output()
 	if err != nil {
 		return nil, err
 	}

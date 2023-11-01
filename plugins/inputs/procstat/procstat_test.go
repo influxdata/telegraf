@@ -391,7 +391,7 @@ func TestGather_PercentSecondPass(t *testing.T) {
 func TestGather_systemdUnitPIDs(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{}),
-		SystemdUnit:     "TestGather_systemdUnitPIDs",
+		SystemdUnits:    "TestGather_systemdUnitPIDs",
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
