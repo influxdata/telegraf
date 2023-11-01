@@ -459,24 +459,30 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 		if line == "" {
 			continue
 		}
-		status_map := make(map[string]string)
 
 		kv := strings.Fields(line)
+		if len(kv) < 2 {
+			// Not a key-value pair
+			continue
+		}
 		name := kv[0]
-		status_map["supervisor_unit"] = name
+
+		status_map := map[string]string{
+			"supervisor_unit": name,
+			"status":          kv[1],
+		}
 
 		switch kv[1] {
 		case "FATAL", "EXITED", "BACKOFF", "STOPPING":
-			status_map["status"] = kv[1]
 			status_map["error"] = strings.Join(kv[2:], " ")
 		case "RUNNING":
-			status_map["status"] = kv[1]
 			status_map["pid"] = strings.ReplaceAll(kv[3], ",", "")
 			status_map["uptimes"] = kv[5]
 		case "STOPPED", "UNKNOWN", "STARTING":
-			status_map["status"] = kv[1]
+			// No additional info
 		}
 		mainPids[name] = status_map
+
 	}
 
 	return p.SupervisorUnit, mainPids, nil
