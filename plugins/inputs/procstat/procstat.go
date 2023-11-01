@@ -454,7 +454,7 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 	// Get the PID, running status, running time and boot time of the main process:
 	// pid 11779, uptime 17:41:16
 	// Exited too quickly (process log may have details)
-	Mainpids := make(map[string]map[string]string)
+	mainPids := make(map[string]map[string]string)
 	for _, line := range lines {
 		if line == "" {
 			continue
@@ -476,10 +476,10 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 		case "STOPPED", "UNKNOWN", "STARTING":
 			status_map["status"] = kv[1]
 		}
-		Mainpids[name] = status_map
+		mainPids[name] = status_map
 	}
 
-	return p.SupervisorUnit, Mainpids, nil
+	return p.SupervisorUnit, mainPids, nil
 }
 
 func (p *Procstat) systemdUnitPIDs() []PidsTags {
