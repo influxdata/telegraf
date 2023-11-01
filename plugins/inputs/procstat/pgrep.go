@@ -59,11 +59,24 @@ func (pg *Pgrep) ChildPattern(pattern string) ([]PID, error) {
 	if err != nil {
 		return nil, err
 	}
-	pids, err := appendOutput(pattern, out)
+
+	pids := []PID{}
+	pid, err := strconv.ParseInt(pattern, 10, 32)
 	if err != nil {
 		return nil, err
 	}
-	return pids, err
+	pids = append(pids, PID(pid))
+
+	fields := strings.Fields(out)
+	for _, field := range fields {
+		pid, err := strconv.ParseInt(field, 10, 32)
+		if err != nil {
+			return pids, err
+		}
+		pids = append(pids, PID(pid))
+	}
+
+	return pids, nil
 }
 
 func find(path string, args []string) ([]PID, error) {
@@ -96,25 +109,6 @@ func parseOutput(out string) ([]PID, error) {
 		pid, err := strconv.ParseInt(field, 10, 32)
 		if err != nil {
 			return nil, err
-		}
-		pids = append(pids, PID(pid))
-	}
-	return pids, nil
-}
-
-func appendOutput(parentpid, out string) ([]PID, error) {
-	pids := []PID{}
-	pid, err := strconv.ParseInt(parentpid, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	pids = append(pids, PID(pid))
-
-	fields := strings.Fields(out)
-	for _, field := range fields {
-		pid, err := strconv.ParseInt(field, 10, 32)
-		if err != nil {
-			return pids, err
 		}
 		pids = append(pids, PID(pid))
 	}
