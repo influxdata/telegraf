@@ -81,6 +81,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
+### Darwin specifics
+
+If you use this plugin with `supervisor_units` *and* `pattern` on Darwin, you
+**have to** use the `pgrep` finder as the underlying library relies on `pgrep`.
+
 ### Permissions
 
 Some files or directories may require elevated permissions. As such a user may

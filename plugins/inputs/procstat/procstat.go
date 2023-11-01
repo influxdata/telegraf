@@ -4,6 +4,7 @@ package procstat
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,11 +22,6 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
-
-var (
-	defaultPIDFinder = NewPgrep
-	defaultProcess   = NewProc
-)
 
 type PID int32
 
@@ -65,22 +61,34 @@ func (*Procstat) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Procstat) Gather(acc telegraf.Accumulator) error {
-	if p.createPIDFinder == nil {
-		switch p.PidFinder {
-		case "native":
-			p.createPIDFinder = NewNativeFinder
-		case "pgrep":
-			p.createPIDFinder = NewPgrep
-		default:
-			p.PidFinder = "pgrep"
-			p.createPIDFinder = defaultPIDFinder
-		}
-	}
-	if p.createProcess == nil {
-		p.createProcess = defaultProcess
+func (p *Procstat) Init() error {
+	if strings.ToLower(p.Mode) == "solaris" {
+		p.solarisMode = true
 	}
 
+	switch p.PidFinder {
+	case "":
+		p.PidFinder = "pgrep"
+		p.createPIDFinder = NewPgrep
+	case "native":
+		p.createPIDFinder = NewNativeFinder
+	case "pgrep":
+		p.createPIDFinder = NewPgrep
+	default:
+		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
+	}
+
+	// gopsutil relies on pgrep when looking up children on darwin
+	// see https://github.com/shirou/gopsutil/blob/v3.23.10/process/process_darwin.go#L235
+	requiresChildren := len(p.SupervisorUnit) > 0 && p.Pattern != ""
+	if requiresChildren && p.PidFinder == "native" && runtime.GOOS == "darwin" {
+		return errors.New("configuration requires the 'pgrep' finder on you OS")
+	}
+
+	return nil
+}
+
+func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	pidCount := 0
 	now := time.Now()
 	newProcs := make(map[PID]Process, len(p.procs))
@@ -600,16 +608,8 @@ func (p *Procstat) winServicePIDs() ([]PID, error) {
 	return pids, nil
 }
 
-func (p *Procstat) Init() error {
-	if strings.ToLower(p.Mode) == "solaris" {
-		p.solarisMode = true
-	}
-
-	return nil
-}
-
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
-		return &Procstat{}
+		return &Procstat{createProcess: NewProc}
 	})
 }

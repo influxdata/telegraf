@@ -199,6 +199,19 @@ func (p *testProc) Status() ([]string, error) {
 var pid = PID(42)
 var exe = "foo"
 
+func TestInitRequiresChildDarwin(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping test on non-darwin platform")
+	}
+
+	p := Procstat{
+		Pattern:        "somepattern",
+		SupervisorUnit: []string{"a_unit"},
+		PidFinder:      "native",
+	}
+	require.ErrorContains(t, p.Init(), "requires the 'pgrep' finder")
+}
+
 func TestGather_CreateProcessErrorOk(t *testing.T) {
 	var acc testutil.Accumulator
 
@@ -433,11 +446,11 @@ func TestGather_cgroupPIDs(t *testing.T) {
 func TestProcstatLookupMetric(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{543}),
+		createProcess:   NewProc,
 		Exe:             "-Gsys",
 	}
 	var acc testutil.Accumulator
-	err := acc.GatherError(p.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(p.Gather))
 	require.Len(t, acc.Metrics, len(p.procs)+1)
 }
 

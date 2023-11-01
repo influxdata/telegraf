@@ -29,7 +29,7 @@ func BenchmarkFullPattern(b *testing.B) {
 }
 
 func TestChildPattern(t *testing.T) {
-	if runtime.GOOS == "Windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		t.Skip("Skipping test on unsupported platform")
 	}
 
