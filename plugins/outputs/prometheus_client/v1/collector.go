@@ -96,6 +96,12 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	// Expire metrics, doing this on Collect ensure metrics are removed even if no
+	// new metrics are added to the output.
+	if c.ExpirationInterval != 0 {
+		c.Expire(time.Now())
+	}
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -212,8 +218,6 @@ func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 
 func (c *Collector) Add(metrics []telegraf.Metric) error {
 	c.Lock()
-	defer c.Unlock()
-
 	now := time.Now()
 
 	for _, point := range sorted(metrics) {
@@ -388,6 +392,15 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 			}
 		}
 	}
+
+	c.Unlock()
+
+	// Expire metrics, doing this on Add ensure metrics are removed even if no
+	// new metrics are added to the output.
+	if c.ExpirationInterval != 0 {
+		c.Expire(time.Now())
+	}
+
 	return nil
 }
 
