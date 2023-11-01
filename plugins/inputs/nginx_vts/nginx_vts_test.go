@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const sampleStatusResponse = `
@@ -203,7 +204,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 
-		require.Equal(t, r.URL.Path, "/status", "Cannot handle request")
+		require.Equal(t, "/status", r.URL.Path, "Cannot handle request")
 
 		rsp = sampleStatusResponse
 		w.Header()["Content-Type"] = []string{"application/json"}

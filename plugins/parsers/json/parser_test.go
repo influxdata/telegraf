@@ -672,7 +672,7 @@ func TestUseCaseJSONQuery(t *testing.T) {
 	actual, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Len(t, actual, 3)
-	require.Equal(t, actual[0].Fields()["last"], "Murphy")
+	require.Equal(t, "Murphy", actual[0].Fields()["last"])
 }
 
 func TestTimeParser(t *testing.T) {

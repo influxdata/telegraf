@@ -260,7 +260,7 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	require.NoError(t, sc.Gather(&acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 }
 
 func TestGatherChain(t *testing.T) {

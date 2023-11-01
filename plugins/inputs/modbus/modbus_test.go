@@ -293,7 +293,7 @@ func TestRetryFailIllegal(t *testing.T) {
 	require.NoError(t, modbus.Gather(&acc))
 	require.Len(t, acc.Errors, 1)
 	require.EqualError(t, acc.FirstError(), "slave 1: modbus: exception '1' (illegal function), function '129'")
-	require.Equal(t, counter, 1)
+	require.Equal(t, 1, counter)
 }
 
 func TestCases(t *testing.T) {

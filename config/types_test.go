@@ -29,7 +29,7 @@ func TestConfigDuration(t *testing.T) {
 	p := c.Processors[0].Processor.(*reverse_dns.ReverseDNS)
 	require.EqualValues(t, p.CacheTTL, 3*time.Hour)
 	require.EqualValues(t, p.LookupTimeout, 17*time.Second)
-	require.Equal(t, p.MaxParallelLookups, 13)
+	require.Equal(t, 13, p.MaxParallelLookups)
 	require.True(t, p.Ordered)
 }
 

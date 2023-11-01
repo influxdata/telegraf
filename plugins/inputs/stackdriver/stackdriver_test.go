@@ -748,7 +748,7 @@ func TestGather(t *testing.T) {
 
 			err := s.Gather(&acc)
 			require.NoError(t, err)
-			require.Equalf(t, len(acc.Errors) > 0, tt.wantAccErr,
+			require.Equalf(t, tt.wantAccErr, len(acc.Errors) > 0,
 				"Accumulator errors. got=%v, want=%t", acc.Errors, tt.wantAccErr)
 
 			actual := []telegraf.Metric{}

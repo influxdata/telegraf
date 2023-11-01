@@ -53,12 +53,12 @@ func TestLatencyStats(t *testing.T) {
 		60,
 	)
 
-	require.Equal(t, sl.CommandLatency, int64(0))
-	require.Equal(t, sl.ReadLatency, int64(0))
-	require.Equal(t, sl.WriteLatency, int64(0))
-	require.Equal(t, sl.CommandOpsCnt, int64(0))
-	require.Equal(t, sl.ReadOpsCnt, int64(0))
-	require.Equal(t, sl.WriteOpsCnt, int64(0))
+	require.Equal(t, int64(0), sl.CommandLatency)
+	require.Equal(t, int64(0), sl.ReadLatency)
+	require.Equal(t, int64(0), sl.WriteLatency)
+	require.Equal(t, int64(0), sl.CommandOpsCnt)
+	require.Equal(t, int64(0), sl.ReadOpsCnt)
+	require.Equal(t, int64(0), sl.WriteOpsCnt)
 }
 
 func TestLatencyStatsDiffZero(t *testing.T) {
@@ -122,12 +122,12 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 		60,
 	)
 
-	require.Equal(t, sl.CommandLatency, int64(0))
-	require.Equal(t, sl.ReadLatency, int64(0))
-	require.Equal(t, sl.WriteLatency, int64(0))
-	require.Equal(t, sl.CommandOpsCnt, int64(0))
-	require.Equal(t, sl.ReadOpsCnt, int64(0))
-	require.Equal(t, sl.WriteOpsCnt, int64(0))
+	require.Equal(t, int64(0), sl.CommandLatency)
+	require.Equal(t, int64(0), sl.ReadLatency)
+	require.Equal(t, int64(0), sl.WriteLatency)
+	require.Equal(t, int64(0), sl.CommandOpsCnt)
+	require.Equal(t, int64(0), sl.ReadOpsCnt)
+	require.Equal(t, int64(0), sl.WriteOpsCnt)
 }
 
 func TestLatencyStatsDiff(t *testing.T) {
@@ -191,12 +191,12 @@ func TestLatencyStatsDiff(t *testing.T) {
 		60,
 	)
 
-	require.Equal(t, sl.CommandLatency, int64(59177981552))
-	require.Equal(t, sl.ReadLatency, int64(2255946760057))
-	require.Equal(t, sl.WriteLatency, int64(494479456987))
-	require.Equal(t, sl.CommandOpsCnt, int64(1019152861))
-	require.Equal(t, sl.ReadOpsCnt, int64(4189049884))
-	require.Equal(t, sl.WriteOpsCnt, int64(1691021287))
+	require.Equal(t, int64(59177981552), sl.CommandLatency)
+	require.Equal(t, int64(2255946760057), sl.ReadLatency)
+	require.Equal(t, int64(494479456987), sl.WriteLatency)
+	require.Equal(t, int64(1019152861), sl.CommandOpsCnt)
+	require.Equal(t, int64(4189049884), sl.ReadOpsCnt)
+	require.Equal(t, int64(1691021287), sl.WriteOpsCnt)
 }
 
 func TestLocksStatsNilWhenLocksMissingInOldStat(t *testing.T) {

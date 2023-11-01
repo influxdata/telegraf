@@ -71,7 +71,7 @@ func TestWrite(t *testing.T) {
 			case "/api/v2/write":
 				err := r.ParseForm()
 				require.NoError(t, err)
-				require.Equal(t, r.Form["bucket"], []string{"foobar"})
+				require.Equal(t, []string{"foobar"}, r.Form["bucket"])
 
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 			case "/api/v2/write":
 				err := r.ParseForm()
 				require.NoError(t, err)
-				require.Equal(t, r.Form["bucket"], []string{"foo"})
+				require.Equal(t, []string{"foo"}, r.Form["bucket"])
 
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)

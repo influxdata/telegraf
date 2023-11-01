@@ -25,9 +25,9 @@ func TestFilterSomeStats(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("opensmtpd"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 
-	require.Equal(t, acc.NFields(), 36)
+	require.Equal(t, 36, acc.NFields())
 	acc.AssertContainsFields(t, "opensmtpd", parsedFullOutput)
 }
 
