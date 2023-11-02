@@ -62,28 +62,28 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 
 	fcounter, err := query.GetFormattedCounterValueDouble(hCounter)
 	require.NoError(t, err)
-	require.True(t, fcounter > 0)
+	require.Greater(t, fcounter, 0)
 
 	rcounter, err := query.GetRawCounterValue(hCounter)
 	require.NoError(t, err)
-	require.True(t, rcounter > 10000000)
+	require.Greater(t, rcounter, 10000000)
 
 	now := time.Now()
 	mtime, err := query.CollectDataWithTime()
 	require.NoError(t, err)
-	require.True(t, mtime.Sub(now) < time.Second)
+	require.Less(t, mtime.Sub(now), time.Second)
 
 	counterPath = "\\Process(*)\\% Processor Time"
 	paths, err := query.ExpandWildCardPath(counterPath)
 	require.NoError(t, err)
 	require.NotNil(t, paths)
-	require.True(t, len(paths) > 1)
+	require.Greater(t, len(paths), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
 
 	counterPath = "\\Process(_Total)\\*"
 	paths, err = query.ExpandWildCardPath(counterPath)
 	require.NoError(t, err)
 	require.NotNil(t, paths)
-	require.True(t, len(paths) > 1)
+	require.Greater(t, len(paths), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
 
 	require.NoError(t, query.Open())
 
@@ -104,11 +104,11 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 		farr, err = query.GetFormattedCounterArrayDouble(hCounter)
 	}
 	require.NoError(t, err)
-	require.True(t, len(farr) > 0)
+	require.NotEmpty(t, farr)
 
 	rarr, err := query.GetRawCounterArray(hCounter)
 	require.NoError(t, err)
-	require.True(t, len(rarr) > 0, "Too")
+	require.NotEmpty(t, rarr, "Too")
 
 	require.NoError(t, query.Close())
 }
@@ -559,7 +559,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 
 	time.Sleep(2000 * time.Millisecond)
 	require.NoError(t, m.Gather(&acc))
-	require.True(t, len(acc.Metrics) > 1)
+	require.Greater(t, len(acc.Metrics), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
 
 	expectedCounter := "Percent_Idle_Time_Raw"
 	for _, metric := range acc.Metrics {
@@ -567,7 +567,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 		require.True(t, ok, "Expected presence of %s field", expectedCounter)
 		valInt64, ok := val.(int64)
 		require.True(t, ok, fmt.Sprintf("Expected int64, got %T", val))
-		require.True(t, valInt64 > 0, fmt.Sprintf("Expected > 0, got %d, for %#v", valInt64, metric))
+		require.Greater(t, valInt64, 0, fmt.Sprintf("Expected > 0, got %d, for %#v", valInt64, metric))
 	}
 
 	// Test *Array way
@@ -583,13 +583,13 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 
 	time.Sleep(2000 * time.Millisecond)
 	require.NoError(t, m.Gather(&acc2))
-	require.True(t, len(acc2.Metrics) > 1)
+	require.Greater(t, len(acc2.Metrics), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
 
 	for _, metric := range acc2.Metrics {
 		val, ok := metric.Fields[expectedCounter]
 		require.True(t, ok, "Expected presence of %s field", expectedCounter)
 		valInt64, ok := val.(int64)
 		require.True(t, ok, fmt.Sprintf("Expected int64, got %T", val))
-		require.True(t, valInt64 > 0, fmt.Sprintf("Expected > 0, got %d, for %#v", valInt64, metric))
+		require.Greater(t, valInt64, 0, fmt.Sprintf("Expected > 0, got %d, for %#v", valInt64, metric))
 	}
 }
