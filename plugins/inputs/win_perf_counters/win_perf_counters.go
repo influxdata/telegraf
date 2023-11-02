@@ -21,7 +21,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var defaultMaxBufferSize = config.Size(100 * 1024 * 1024)
+var defaultMaxBufferSize = config.Size(4 * 1024 * 1024)
 
 type WinPerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
