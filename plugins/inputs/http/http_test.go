@@ -61,7 +61,7 @@ func TestHTTPWithJSONFormat(t *testing.T) {
 	var metric = acc.Metrics[0]
 	require.Equal(t, metric.Measurement, metricName)
 	require.Len(t, acc.Metrics[0].Fields, 1)
-	require.Equal(t, acc.Metrics[0].Fields["a"], 1.2)
+	require.Equal(t, 1.2, acc.Metrics[0].Fields["a"])
 	require.Equal(t, acc.Metrics[0].Tags["url"], address)
 }
 
@@ -282,7 +282,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 				Log:             testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("Content-Encoding"), "gzip")
+				require.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 
 				gr, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)

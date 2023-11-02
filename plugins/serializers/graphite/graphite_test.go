@@ -209,7 +209,7 @@ func TestSerializeMetricHostWithMultipleTemplatesWithDefault(t *testing.T) {
 		},
 	}
 	require.NoError(t, s.Init())
-	require.Equal(t, s.Template, "tags.host.measurement.field")
+	require.Equal(t, "tags.host.measurement.field", s.Template)
 
 	buf, err := s.Serialize(m1)
 	require.NoError(t, err)

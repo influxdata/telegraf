@@ -416,3 +416,29 @@ func TestCgroupStatistics_8(t *testing.T) {
 	require.NoError(t, acc.GatherError(cg.Gather))
 	require.Len(t, cg.logged, 1)
 }
+
+func TestCgroupEscapeDir(t *testing.T) {
+	var acc testutil.Accumulator
+	var cg = &CGroup{
+		Paths:  []string{"testdata/backslash/machine-qemu\x2d1\x2d*"},
+		Files:  []string{"cpu.stat"},
+		logged: make(map[string]bool),
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"cgroup",
+			map[string]string{"path": `testdata/backslash/machine-qemu-1-ubuntu`},
+			map[string]interface{}{
+				"cpu.stat.core_sched.force_idle_usec": int64(0),
+				"cpu.stat.system_usec":                int64(103537582650),
+				"cpu.stat.usage_usec":                 int64(614953149468),
+				"cpu.stat.user_usec":                  int64(511415566817),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	require.NoError(t, acc.GatherError(cg.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}

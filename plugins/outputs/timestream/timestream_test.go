@@ -3,6 +3,7 @@ package timestream
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -268,14 +269,14 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	for _, r := range result {
 		transformedRecords = append(transformedRecords, r.Records...)
 		// Assert that we use measure name from input
-		require.Equal(t, *r.Records[0].MeasureName, "multi_measure_name")
+		require.Equal(t, "multi_measure_name", *r.Records[0].MeasureName)
 	}
 	// Expected 101 records
 	require.Len(t, transformedRecords, recordCount+1, "Expected 101 records after transforming")
 	// validate write to TS
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, 2, "Expected 2 WriteRecords calls")
+	require.Equal(t, 2, mockClient.WriteRecordsRequestCount, "Expected 2 WriteRecords calls")
 }
 
 func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
@@ -323,7 +324,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	// Assert that we use measure name from config
-	require.Equal(t, *result[0].Records[0].MeasureName, "config-multi-measure-name")
+	require.Equal(t, "config-multi-measure-name", *result[0].Records[0].MeasureName)
 
 	var transformedRecords []types.Record
 	for _, r := range result {
@@ -341,7 +342,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	// validate successful write to TS
 	err = plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, 1, "Expected 1 WriteRecords call")
+	require.Equal(t, 1, mockClient.WriteRecordsRequestCount, "Expected 1 WriteRecords call")
 }
 
 func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
@@ -381,6 +382,24 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
+	input5 := testutil.MustMetric(
+		metricName1,
+		map[string]string{"tag5": "value5"},
+		map[string]interface{}{
+			"measureMaxUint64": uint64(math.MaxUint64),
+		},
+		time1,
+	)
+
+	input6 := testutil.MustMetric(
+		metricName1,
+		map[string]string{"tag6": "value6"},
+		map[string]interface{}{
+			"measureSmallUint64": uint64(123456),
+		},
+		time1,
+	)
+
 	expectedResultMultiTable := buildExpectedMultiRecords("config-multi-measure-name", metricName1)
 
 	plugin := Timestream{
@@ -396,7 +415,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	require.NoError(t, err, "Invalid configuration")
 
 	// validate multi-record generation with MappingModeMultiTable
-	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
+	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	require.EqualValues(t, result[0], expectedResultMultiTable)
@@ -421,7 +440,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	expectedResultSingleTable := buildExpectedMultiRecords(metricName1, "singleTableName")
 
 	// validate multi-record generation with MappingModeSingleTable
-	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4})
+	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
 	require.EqualValues(t, result[0], expectedResultSingleTable)
@@ -472,6 +491,28 @@ func buildExpectedMultiRecords(multiMeasureName string, tableName string) *times
 	}, multiMeasureName, types.MeasureValueTypeBoolean)
 
 	recordsMultiTableMode = append(recordsMultiTableMode, recordBool...)
+
+	recordMaxUint64 := buildMultiRecords([]SimpleInput{
+		{
+			t:             time1Epoch,
+			tableName:     metricName1,
+			dimensions:    map[string]string{"tag5": "value5"},
+			measureValues: map[string]string{"measureMaxUint64": "9223372036854775807"},
+		},
+	}, multiMeasureName, types.MeasureValueTypeBigint)
+
+	recordsMultiTableMode = append(recordsMultiTableMode, recordMaxUint64...)
+
+	recordUint64 := buildMultiRecords([]SimpleInput{
+		{
+			t:             time1Epoch,
+			tableName:     metricName1,
+			dimensions:    map[string]string{"tag6": "value6"},
+			measureValues: map[string]string{"measureSmallUint64": "123456"},
+		},
+	}, multiMeasureName, types.MeasureValueTypeBigint)
+
+	recordsMultiTableMode = append(recordsMultiTableMode, recordUint64...)
 
 	expectedResultMultiTable := &timestreamwrite.WriteRecordsInput{
 		DatabaseName:     aws.String(tsDbName),
@@ -597,7 +638,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Expected to write without any errors ")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, maxWriteRecordsCalls, "Expected 5 calls to WriteRecords")
+	require.Equal(t, maxWriteRecordsCalls, mockClient.WriteRecordsRequestCount, "Expected 5 calls to WriteRecords")
 }
 
 func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
@@ -636,7 +677,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 
 	err := plugin.Write(inputs)
 	require.NoError(t, err, "Expected to write without any errors ")
-	require.Equal(t, mockClient.WriteRecordsRequestCount, maxWriteRecordsCalls, "Expected 5 calls to WriteRecords")
+	require.Equal(t, maxWriteRecordsCalls, mockClient.WriteRecordsRequestCount, "Expected 5 calls to WriteRecords")
 }
 
 func TestTransformMetricsSkipEmptyMetric(t *testing.T) {

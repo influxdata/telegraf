@@ -98,7 +98,7 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
-	require.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
+	require.Equal(t, 8, acc.NFields(), "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
@@ -125,7 +125,7 @@ func TestExecMalformed(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
 }
 
 func TestCommandError(t *testing.T) {
@@ -140,7 +140,7 @@ func TestCommandError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
 }
 
 func TestExecCommandWithGlob(t *testing.T) {

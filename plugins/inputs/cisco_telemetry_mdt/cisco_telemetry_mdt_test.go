@@ -1005,7 +1005,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	require.NoError(t, conn.Close())
 
 	// We use the invalid dialout flags to let the server close the connection
-	require.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
+	require.Equal(t, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")}, acc.Errors)
 
 	tags := map[string]string{
 		"path":         "type:model/some/path",
@@ -1060,7 +1060,7 @@ func TestGRPCDialoutError(t *testing.T) {
 	require.True(t, err == nil || errors.Is(err, io.EOF))
 	c.Stop()
 
-	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
+	require.Equal(t, []error{errors.New("GRPC dialout error: foobar")}, acc.Errors)
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
@@ -1119,7 +1119,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	c.Stop()
 	require.NoError(t, conn.Close())
 
-	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
+	require.Equal(t, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")}, acc.Errors)
 
 	tags := map[string]string{
 		"path":         "type:model/some/path",

@@ -558,7 +558,7 @@ func TestVersions(t *testing.T) {
 		require.Len(t, acc.Metrics, c.size)
 		for _, m := range acc.Metrics {
 			require.NotEmpty(t, m.Fields)
-			require.Equal(t, m.Measurement, "varnish")
+			require.Equal(t, "varnish", m.Measurement)
 			for field := range m.Fields {
 				require.NotContains(t, field, "reload_")
 			}
@@ -627,11 +627,11 @@ func TestVarnishAdmJson(t *testing.T) {
 	require.NoError(t, err)
 	activeVcl, err := getActiveVCLJson(bytes.NewBuffer(admJSON))
 	require.NoError(t, err)
-	require.Equal(t, activeVcl, "boot-123")
+	require.Equal(t, "boot-123", activeVcl)
 
 	admJSON, err = os.ReadFile("test_data/" + "varnishadm-reload.json")
 	require.NoError(t, err)
 	activeVcl, err = getActiveVCLJson(bytes.NewBuffer(admJSON))
 	require.NoError(t, err)
-	require.Equal(t, activeVcl, "reload_20210723_091821_2056185")
+	require.Equal(t, "reload_20210723_091821_2056185", activeVcl)
 }

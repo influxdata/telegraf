@@ -321,7 +321,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				payload, err := io.ReadAll(body)
 				require.NoError(t, err)
 
-				require.Equal(t, string(payload), "metric=cpu field=value  42 0\n")
+				require.Equal(t, "metric=cpu field=value  42 0\n", string(payload))
 
 				w.WriteHeader(http.StatusNoContent)
 			})

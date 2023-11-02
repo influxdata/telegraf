@@ -329,7 +329,7 @@ func TestAddShardHostStats(t *testing.T) {
 	}
 	sort.Strings(hostsFound)
 	sort.Strings(expectedHosts)
-	require.Equal(t, hostsFound, expectedHosts)
+	require.Equal(t, expectedHosts, hostsFound)
 }
 
 func TestStateTag(t *testing.T) {

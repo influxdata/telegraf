@@ -2,12 +2,10 @@ package gnmi
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/influxdata/telegraf/internal"
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 )
 
 type tagStore struct {
@@ -40,14 +38,19 @@ func newTagStore(subs []TagSubscription) *tagStore {
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, values map[string]interface{}, tags map[string]string) error {
+func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
 	switch subscription.Match {
 	case "unconditional":
-		for k, v := range values {
-			tagName := subscription.Name + "/" + filepath.Base(k)
-			sv, err := internal.ToString(v)
+		for _, f := range values {
+			tagName := subscription.Name
+			if len(f.path.segments) > 0 {
+				key := f.path.segments[len(f.path.segments)-1]
+				key = strings.ReplaceAll(key, "-", "_")
+				tagName += "/" + key
+			}
+			sv, err := internal.ToString(f.value)
 			if err != nil {
-				return fmt.Errorf("conversion error for %v: %w", v, err)
+				return fmt.Errorf("conversion error for %v: %w", f.value, err)
 			}
 			if sv == "" {
 				delete(s.unconditional, tagName)
@@ -68,11 +71,16 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 		}
 
 		// Add the values
-		for k, v := range values {
-			tagName := subscription.Name + "/" + filepath.Base(k)
-			sv, err := internal.ToString(v)
+		for _, f := range values {
+			tagName := subscription.Name
+			if len(f.path.segments) > 0 {
+				key := f.path.segments[len(f.path.segments)-1]
+				key = strings.ReplaceAll(key, "-", "_")
+				tagName += "/" + key
+			}
+			sv, err := internal.ToString(f.value)
 			if err != nil {
-				return fmt.Errorf("conversion error for %v: %w", v, err)
+				return fmt.Errorf("conversion error for %v: %w", f.value, err)
 			}
 			if sv == "" {
 				delete(s.names[key], tagName)
@@ -92,11 +100,16 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 		}
 
 		// Add the values
-		for k, v := range values {
-			tagName := subscription.Name + "/" + filepath.Base(k)
-			sv, err := internal.ToString(v)
+		for _, f := range values {
+			tagName := subscription.Name
+			if len(f.path.segments) > 0 {
+				key := f.path.segments[len(f.path.segments)-1]
+				key = strings.ReplaceAll(key, "-", "_")
+				tagName += "/" + key
+			}
+			sv, err := internal.ToString(f.value)
 			if err != nil {
-				return fmt.Errorf("conversion error for %v: %w", v, err)
+				return fmt.Errorf("conversion error for %v: %w", f.value, err)
 			}
 			if sv == "" {
 				delete(s.elements.tags[key], tagName)
@@ -111,7 +124,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *gnmiLib.Path, valu
 	return nil
 }
 
-func (s *tagStore) lookup(path *gnmiLib.Path, metricTags map[string]string) map[string]string {
+func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[string]string {
 	// Add all unconditional tags
 	tags := make(map[string]string, len(s.unconditional))
 	for k, v := range s.unconditional {
@@ -140,9 +153,7 @@ func (s *tagStore) lookup(path *gnmiLib.Path, metricTags map[string]string) map[
 	return tags
 }
 
-func (s *tagStore) getElementsKeys(path *gnmiLib.Path, elements []string) (string, bool) {
-	keyElements := pathKeys(path)
-
+func (s *tagStore) getElementsKeys(path *pathInfo, elements []string) (string, bool) {
 	// Search for the required path elements and collect a ordered
 	// list of their values to in the form
 	//    elementName1={keyA=valueA,keyB=valueB,...},...,elementNameN={keyY=valueY,keyZ=valueZ}
@@ -151,9 +162,9 @@ func (s *tagStore) getElementsKeys(path *gnmiLib.Path, elements []string) (strin
 	for _, requiredElement := range elements {
 		var found bool
 		var elementKVs []string
-		for _, el := range keyElements {
-			if el.Name == requiredElement {
-				for k, v := range el.Key {
+		for _, segment := range path.keyValues {
+			if segment.name == requiredElement {
+				for k, v := range segment.kv {
 					elementKVs = append(elementKVs, k+"="+v)
 				}
 				found = true
