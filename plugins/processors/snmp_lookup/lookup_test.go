@@ -46,23 +46,6 @@ func TestInit(t *testing.T) {
 			expected: "parsing SNMP client config: invalid version",
 		},
 		{
-			name: "netsnmp translator",
-			plugin: Lookup{
-				ClientConfig: snmp.ClientConfig{
-					Translator: "netsnmp",
-				},
-			},
-		},
-		{
-			name: "unknown translator",
-			plugin: Lookup{
-				ClientConfig: snmp.ClientConfig{
-					Translator: "unknown",
-				},
-			},
-			expected: `invalid agent.snmp_translator value "unknown"`,
-		},
-		{
 			name: "table init",
 			plugin: Lookup{
 				Tags: []si.Field{
@@ -83,6 +66,35 @@ func TestInit(t *testing.T) {
 				require.NoError(t, tt.plugin.Init())
 			} else {
 				require.ErrorContains(t, tt.plugin.Init(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestSetTranslator(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{name: "gosmi"},
+		{name: "netsnmp"},
+		{
+			name:     "unknown",
+			expected: `invalid agent.snmp_translator value "unknown"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := Lookup{Log: testutil.Logger{}}
+
+			p.SetTranslator(tt.name)
+			require.Equal(t, tt.name, p.Translator)
+
+			if tt.expected == "" {
+				require.NoError(t, p.Init())
+			} else {
+				require.ErrorContains(t, p.Init(), tt.expected)
 			}
 		})
 	}

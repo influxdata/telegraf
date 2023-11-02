@@ -57,6 +57,10 @@ func (*Lookup) SampleConfig() string {
 }
 
 func (l *Lookup) SetTranslator(name string) {
+	if name != "gosmi" {
+		l.Log.Warnf("unsupported agent.snmp_translator value %q, some features might not work", name)
+	}
+
 	l.Translator = name
 }
 
@@ -74,7 +78,6 @@ func (l *Lookup) Init() (err error) {
 		}
 	case "netsnmp":
 		l.translator = si.NewNetsnmpTranslator()
-		l.Log.Warnf("unsupported agent.snmp_translator value %q, some features might not work", l.Translator)
 	default:
 		return fmt.Errorf("invalid agent.snmp_translator value %q", l.Translator)
 	}
