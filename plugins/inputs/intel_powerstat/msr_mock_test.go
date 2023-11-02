@@ -41,6 +41,21 @@ func (_m *mockMsrService) getCPUCoresData() map[string]*msrData {
 	return r0
 }
 
+func (_m *mockMsrService) getReadableCPUCores() []string {
+	ret := _m.Called()
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
 // openAndReadMsr provides a mock function with given fields: core
 func (_m *mockMsrService) openAndReadMsr(core string) error {
 	ret := _m.Called(core)

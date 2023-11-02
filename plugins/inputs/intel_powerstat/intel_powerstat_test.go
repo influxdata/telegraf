@@ -120,6 +120,7 @@ func TestGather(t *testing.T) {
 		On("retrieveAndCalculateData", mock.Anything).Return(nil).Times(len(raplDataMap)).
 		On("getConstraintMaxPowerWatts", mock.Anything).Return(546783852.3, nil)
 	mockServices.msr.On("getCPUCoresData").Return(preparedCPUData).
+		On("getReadableCPUCores").Return(coreIDs).
 		On("isMsrLoaded", mock.Anything).Return(true).
 		On("openAndReadMsr", mock.Anything).Return(nil).
 		On("retrieveCPUFrequencyForCore", mock.Anything).Return(1200000.2, nil)
@@ -640,6 +641,7 @@ func getPowerWithMockedServices() (*PowerStat, *MockServices) {
 	p.packageCurrentPowerConsumption = true
 	p.packageCurrentDramPowerConsumption = true
 	p.packageThermalDesignPower = true
+	p.Cores = []string{"0-3"}
 
 	return p, &mockServices
 }
@@ -730,7 +732,7 @@ func TestGetBusClock(t *testing.T) {
 			p.cpuInfo = map[string]*cpuInfo{
 				tt.socketID: {cpuID: tt.socketID, physicalID: tt.socketID, model: strconv.FormatUint(tt.modelCPU, 10)},
 			}
-			if contains(busClockCalculate, tt.modelCPU) {
+			if Contains(busClockCalculate, tt.modelCPU) {
 				mockServices.msr.On("readSingleMsr", mock.Anything, msrFSBFreqString).Return(tt.msrFSBFreqValue, tt.readSingleMsrErrFSB)
 			}
 			defer mockServices.msr.AssertExpectations(t)

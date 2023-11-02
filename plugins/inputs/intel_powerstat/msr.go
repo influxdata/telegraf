@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -47,9 +48,13 @@ const (
 	msrFSBFreqString             = "MSR_FSB_FREQ"
 )
 
+// Maximum size of core IDs or socket IDs (8192). Based on maximum value of CPUs that linux kernel supports.
+const maxIDsSize = 1 << 13
+
 // msrService is responsible for interactions with MSR.
 type msrService interface {
 	getCPUCoresData() map[string]*msrData
+	getReadableCPUCores() []string
 	retrieveCPUFrequencyForCore(core string) (float64, error)
 	retrieveUncoreFrequency(socketID string, typeFreq string, kind string, die string) (float64, error)
 	openAndReadMsr(core string) error
@@ -59,6 +64,7 @@ type msrService interface {
 
 type msrServiceImpl struct {
 	cpuCoresData map[string]*msrData
+	cpuCores     []string
 	msrOffsets   []int64
 	fs           fileService
 	log          telegraf.Logger
@@ -66,6 +72,10 @@ type msrServiceImpl struct {
 
 func (m *msrServiceImpl) getCPUCoresData() map[string]*msrData {
 	return m.cpuCoresData
+}
+
+func (m *msrServiceImpl) getReadableCPUCores() []string {
+	return m.cpuCores
 }
 
 func (m *msrServiceImpl) isMsrLoaded() bool {
@@ -288,6 +298,11 @@ func (m *msrServiceImpl) setCPUCores() error {
 
 	for _, cpuPath := range cpuPaths {
 		core := strings.TrimPrefix(filepath.Base(cpuPath), cpuPrefix)
+		if m.cpuCores != nil {
+			if !Contains(m.cpuCores, core) {
+				continue
+			}
+		}
 		m.cpuCoresData[core] = &msrData{
 			mperf:                 0,
 			aperf:                 0,
@@ -309,10 +324,12 @@ func (m *msrServiceImpl) setCPUCores() error {
 	return nil
 }
 
-func newMsrServiceWithFs(logger telegraf.Logger, fs fileService) *msrServiceImpl {
+func newMsrServiceWithFs(logger telegraf.Logger, fs fileService, cores []string) *msrServiceImpl {
+	parsedCores := parseCores(logger, cores)
 	msrService := &msrServiceImpl{
-		fs:  fs,
-		log: logger,
+		fs:       fs,
+		log:      logger,
+		cpuCores: parsedCores,
 	}
 	err := msrService.setCPUCores()
 	if err != nil {
@@ -324,4 +341,94 @@ func newMsrServiceWithFs(logger telegraf.Logger, fs fileService) *msrServiceImpl
 		maximumFrequencyClockCountLocation, actualFrequencyClockCountLocation, timestampCounterLocation,
 		throttleTemperatureLocation, temperatureLocation}
 	return msrService
+}
+
+func parseCores(logger telegraf.Logger, cores []string) []string {
+	var ids []string
+	var duplicatedIDs []string
+	var err error
+
+	if len(cores) == 0 || cores == nil {
+		logger.Warn("an empty list of cores was provided. All possible cores will be configured")
+		return nil
+	}
+	ids, err = parseIDs(cores)
+	if err != nil {
+		return nil
+	}
+	ids, duplicatedIDs = removeDuplicateValues(ids)
+	ids = removeNotFoundIDs(ids, logger)
+
+	for _, duplication := range duplicatedIDs {
+		logger.Warnf("duplicated id number %s will be removed", duplication)
+	}
+
+	if err != nil {
+		logger.Warnf("Error while parsing list of cores: %v. All possible cores will be configured", err)
+		return nil
+	}
+
+	return ids
+}
+
+func parseIDs(allIDsStrings []string) ([]string, error) {
+	var result []string
+	for _, idsString := range allIDsStrings {
+		ids := strings.Split(idsString, ",")
+
+		for _, id := range ids {
+			id := strings.TrimSpace(id)
+			// a-b support
+			var start, end int
+			n, err := fmt.Sscanf(id, "%d-%d", &start, &end)
+			if err == nil && n == 2 {
+				if start >= end {
+					return nil, fmt.Errorf("`%d` is equal or greater than `%d`", start, end)
+				}
+				for ; start <= end; start++ {
+					if len(result)+1 > maxIDsSize {
+						return nil, fmt.Errorf("requested number of IDs exceeds max size `%d`", maxIDsSize)
+					}
+					result = append(result, strconv.Itoa(start))
+				}
+				continue
+			}
+			// Single value
+			if len(result)+1 > maxIDsSize {
+				return nil, fmt.Errorf("requested number of IDs exceeds max size `%d`", maxIDsSize)
+			}
+			result = append(result, id)
+		}
+	}
+	return result, nil
+}
+
+func removeDuplicateValues(stringSlice []string) (result []string, duplicates []string) {
+	keys := make(map[string]bool)
+
+	for _, entry := range stringSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			result = append(result, entry)
+		} else {
+			duplicates = append(duplicates, entry)
+		}
+	}
+	return result, duplicates
+}
+
+func removeNotFoundIDs(cores []string, logger telegraf.Logger) []string {
+	corePath := "/sys/devices/system/cpu/cpu%s/"
+	foundCores := []string{}
+
+	for _, coresID := range cores {
+		path := fmt.Sprintf(corePath, coresID)
+		err := checkFile(path)
+		if err != nil {
+			logger.Warnf("Removing core id %s Error: %s", coresID, err)
+			continue
+		}
+		foundCores = append(foundCores, coresID)
+	}
+	return foundCores
 }

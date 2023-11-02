@@ -41,6 +41,7 @@ const (
 type PowerStat struct {
 	CPUMetrics     []string        `toml:"cpu_metrics"`
 	PackageMetrics []string        `toml:"package_metrics"`
+	Cores          []string        `toml:"cores"`
 	Log            telegraf.Logger `toml:"-"`
 
 	fs   fileService
@@ -96,7 +97,7 @@ func (p *PowerStat) initMSR() {
 	// Initialize MSR service only when there is at least one metric enabled
 	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC0StateResidency || p.cpuC1StateResidency ||
 		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit || p.packageUncoreFrequency || p.packageCPUBaseFrequency {
-		p.msr = newMsrServiceWithFs(p.Log, p.fs)
+		p.msr = newMsrServiceWithFs(p.Log, p.fs, p.Cores)
 	}
 }
 
@@ -313,13 +314,24 @@ func (p *PowerStat) addCurrentDramPowerConsumption(socketID string, acc telegraf
 
 func (p *PowerStat) addPerCoreMetrics(acc telegraf.Accumulator) {
 	var wg sync.WaitGroup
-	wg.Add(len(p.msr.getCPUCoresData()))
 
-	for cpuID := range p.msr.getCPUCoresData() {
-		go p.addMetricsForSingleCore(cpuID, acc, &wg)
+	if len(p.msr.getReadableCPUCores()) > 0 {
+		wg.Add(len(p.msr.getReadableCPUCores()))
+
+		for _, cpuID := range p.msr.getReadableCPUCores() {
+			go p.addMetricsForSingleCore(cpuID, acc, &wg)
+		}
+
+		wg.Wait()
+	} else {
+		wg.Add(len(p.msr.getCPUCoresData()))
+
+		for cpuID := range p.msr.getCPUCoresData() {
+			go p.addMetricsForSingleCore(cpuID, acc, &wg)
+		}
+
+		wg.Wait()
 	}
-
-	wg.Wait()
 }
 
 func (p *PowerStat) addMetricsForSingleCore(cpuID string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
@@ -726,11 +738,11 @@ func (p *PowerStat) getBusClock(cpuID string) float64 {
 	busClock133 := []int64{0x1E, 0x1F, 0x1A, 0x2E, 0x25, 0x2C, 0x2F, 0x4C}
 	busClockCalculate := []int64{0x37, 0x4D}
 
-	if contains(convertIntegerArrayToStringArray(busClock100), model) {
+	if Contains(convertIntegerArrayToStringArray(busClock100), model) {
 		return 100.0
-	} else if contains(convertIntegerArrayToStringArray(busClock133), model) {
+	} else if Contains(convertIntegerArrayToStringArray(busClock133), model) {
 		return 133.0
-	} else if contains(convertIntegerArrayToStringArray(busClockCalculate), model) {
+	} else if Contains(convertIntegerArrayToStringArray(busClockCalculate), model) {
 		return p.getSilvermontBusClock(cpuID)
 	}
 
@@ -765,23 +777,23 @@ func (p *PowerStat) parsePackageMetricsConfig() {
 		return
 	}
 
-	if contains(p.PackageMetrics, packageTurboLimit) {
+	if Contains(p.PackageMetrics, packageTurboLimit) {
 		p.packageTurboLimit = true
 	}
-	if contains(p.PackageMetrics, packageCurrentPowerConsumption) {
+	if Contains(p.PackageMetrics, packageCurrentPowerConsumption) {
 		p.packageCurrentPowerConsumption = true
 	}
 
-	if contains(p.PackageMetrics, packageCurrentDramPowerConsumption) {
+	if Contains(p.PackageMetrics, packageCurrentDramPowerConsumption) {
 		p.packageCurrentDramPowerConsumption = true
 	}
-	if contains(p.PackageMetrics, packageThermalDesignPower) {
+	if Contains(p.PackageMetrics, packageThermalDesignPower) {
 		p.packageThermalDesignPower = true
 	}
-	if contains(p.PackageMetrics, packageUncoreFrequency) {
+	if Contains(p.PackageMetrics, packageUncoreFrequency) {
 		p.packageUncoreFrequency = true
 	}
-	if contains(p.PackageMetrics, packageCPUBaseFrequency) {
+	if Contains(p.PackageMetrics, packageCPUBaseFrequency) {
 		p.packageCPUBaseFrequency = true
 	}
 }
@@ -791,31 +803,31 @@ func (p *PowerStat) parseCPUMetricsConfig() {
 		return
 	}
 
-	if contains(p.CPUMetrics, cpuFrequency) {
+	if Contains(p.CPUMetrics, cpuFrequency) {
 		p.cpuFrequency = true
 	}
 
-	if contains(p.CPUMetrics, cpuC0StateResidency) {
+	if Contains(p.CPUMetrics, cpuC0StateResidency) {
 		p.cpuC0StateResidency = true
 	}
 
-	if contains(p.CPUMetrics, cpuC1StateResidency) {
+	if Contains(p.CPUMetrics, cpuC1StateResidency) {
 		p.cpuC1StateResidency = true
 	}
 
-	if contains(p.CPUMetrics, cpuC6StateResidency) {
+	if Contains(p.CPUMetrics, cpuC6StateResidency) {
 		p.cpuC6StateResidency = true
 	}
 
-	if contains(p.CPUMetrics, cpuBusyCycles) {
+	if Contains(p.CPUMetrics, cpuBusyCycles) {
 		p.cpuBusyCycles = true
 	}
 
-	if contains(p.CPUMetrics, cpuBusyFrequency) {
+	if Contains(p.CPUMetrics, cpuBusyFrequency) {
 		p.cpuBusyFrequency = true
 	}
 
-	if contains(p.CPUMetrics, cpuTemperature) {
+	if Contains(p.CPUMetrics, cpuTemperature) {
 		p.cpuTemperature = true
 	}
 }
@@ -842,7 +854,7 @@ func (p *PowerStat) verifyProcessor() error {
 		return fmt.Errorf("Intel processor not found, vendorId: %s", firstCPU.vendorID)
 	}
 
-	if !contains(convertIntegerArrayToStringArray(allowedProcessorModelsForC1C6), firstCPU.model) {
+	if !Contains(convertIntegerArrayToStringArray(allowedProcessorModelsForC1C6), firstCPU.model) {
 		p.cpuC1StateResidency = false
 		p.cpuC6StateResidency = false
 	}
@@ -871,7 +883,7 @@ func (p *PowerStat) verifyProcessor() error {
 	return nil
 }
 
-func contains[T comparable](s []T, e T) bool {
+func Contains[T comparable](s []T, e T) bool {
 	for _, v := range s {
 		if v == e {
 			return true

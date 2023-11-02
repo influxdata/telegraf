@@ -48,6 +48,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   "cpu_busy_frequency"
   ## ATTENTION: cpu_busy_cycles is DEPRECATED - use cpu_c0_state_residency
   # cpu_metrics = []
+
+  ## The user can select from which cores he wants to collect metrics.
+  ## The user can set the cores as the example below.
+  ## cores = ["0,3", "10", "20-30"]
+  ## The cores can be passed singular or from a range.
+  ## The default is empty, which reports every core in the system.
+  # cores = []
 ```
 
 ## Example: Configuration with no per-CPU telemetry

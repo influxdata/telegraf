@@ -178,11 +178,12 @@ func verifyCPUCoresData(cores []string, t *testing.T, msr *msrServiceImpl, expec
 
 func getMsrServiceWithMockedFs() (*msrServiceImpl, *mockFileService) {
 	cores := []string{"cpu0", "cpu1", "cpu2", "cpu3"}
+	mockedCores := []string{"0-3"}
 	logger := testutil.Logger{Name: "PowerPluginTest"}
 	fsMock := &mockFileService{}
 	fsMock.On("getStringsMatchingPatternOnPath", mock.Anything).
 		Return(cores, nil).Once()
-	msr := newMsrServiceWithFs(logger, fsMock)
+	msr := newMsrServiceWithFs(logger, fsMock, mockedCores)
 
 	return msr, fsMock
 }
