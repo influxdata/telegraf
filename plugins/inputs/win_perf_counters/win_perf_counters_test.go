@@ -214,7 +214,7 @@ type FakePerformanceQueryCreator struct {
 	fakeQueries map[string]*FakePerformanceQuery
 }
 
-func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string) PerformanceQuery {
+func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string, _ uint32) PerformanceQuery {
 	var ret PerformanceQuery
 	var ok bool
 	if ret, ok = m.fakeQueries[computer]; !ok {
@@ -2043,6 +2043,7 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 			[]string{"_Total"}, []string{counter}, true, false, false),
 		LocalizeWildcardsExpansion: false,
 		UseWildcardsExpansion:      true,
+		MaxBufferSize:              defaultMaxBufferSize,
 		Log:                        testutil.Logger{},
 	}
 
