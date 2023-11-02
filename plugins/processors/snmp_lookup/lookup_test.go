@@ -6,6 +6,7 @@ import (
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -96,4 +97,9 @@ func TestStart(t *testing.T) {
 	require.NoError(t, p.Start(acc))
 	require.IsType(t, &parallel.Unordered{}, p.parallel)
 	p.Stop()
+}
+
+func TestRegistry(t *testing.T) {
+	require.Contains(t, processors.Processors, "snmp_lookup")
+	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
 }
