@@ -11,69 +11,213 @@ import (
 	"github.com/compose-spec/compose-go/utils"
 )
 
-func removeComments(contents []byte) ([]byte, error) {
-	tomlReader := bytes.NewReader(contents)
+type trimmer struct {
+	input  *bytes.Reader
+	output bytes.Buffer
+}
 
-	// Initialize variables for tracking state
-	var inQuote, inComment, escaped bool
-	var quoteChar byte
+func removeComments(buf []byte) ([]byte, error) {
+	t := &trimmer{
+		input:  bytes.NewReader(buf),
+		output: bytes.Buffer{},
+	}
+	err := t.process()
+	return t.output.Bytes(), err
+}
 
-	// Initialize buffer for modified TOML data
-	var output bytes.Buffer
-
-	buf := make([]byte, 1)
-	// Iterate over each character in the file
+func (t *trimmer) process() error {
 	for {
-		_, err := tomlReader.Read(buf)
+		// Read the next byte until EOF
+		c, err := t.input.ReadByte()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return nil, err
-		}
-		char := buf[0]
-
-		// Toggle the escaped state at backslash to we have true every odd occurrence.
-		if char == '\\' {
-			escaped = !escaped
+			return err
 		}
 
-		if inComment {
-			// If we're currently in a comment, check if this character ends the comment
-			if char == '\n' {
-				// End of line, comment is finished
-				inComment = false
-				_, _ = output.WriteRune('\n')
-			}
-		} else if inQuote {
-			// If we're currently in a quote, check if this character ends the quote
-			if char == quoteChar && !escaped {
-				// End of quote, we're no longer in a quote
-				inQuote = false
-			}
-			output.WriteByte(char)
-		} else {
-			// Not in a comment or a quote
-			if (char == '"' || char == '\'') && !escaped {
-				// Start of quote
-				inQuote = true
-				quoteChar = char
-				output.WriteByte(char)
-			} else if char == '#' && !escaped {
-				// Start of comment
-				inComment = true
+		// Switch states if we need to
+		switch c {
+		case '\\':
+			_ = t.input.UnreadByte()
+			err = t.escape()
+		case '\'':
+			_ = t.input.UnreadByte()
+			if t.hasNQuotes(c, 3) {
+				err = t.tripleSingleQuote()
 			} else {
-				// Not a comment or a quote, just output the character
-				output.WriteByte(char)
+				err = t.singleQuote()
 			}
+		case '"':
+			_ = t.input.UnreadByte()
+			if t.hasNQuotes(c, 3) {
+				err = t.tripleDoubleQuote()
+			} else {
+				err = t.doubleQuote()
+			}
+		case '#':
+			err = t.comment()
+		default:
+			if err := t.output.WriteByte(c); err != nil {
+				return err
+			}
+			continue
 		}
-
-		// Reset escaping if any other character occurred
-		if char != '\\' {
-			escaped = false
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
 		}
 	}
-	return output.Bytes(), nil
+	return nil
+}
+
+func (t *trimmer) hasNQuotes(ref byte, limit int64) bool {
+	var count int64
+	// Look ahead check if the next characters are what we expect
+	for count = 0; count < limit; count++ {
+		c, err := t.input.ReadByte()
+		if err != nil || c != ref {
+			break
+		}
+	}
+	// We also need to unread the non-matching character
+	offset := -count
+	if count < limit {
+		offset--
+	}
+	// Unread the matched characters
+	_, _ = t.input.Seek(offset, io.SeekCurrent)
+	return count >= limit
+}
+
+func (t *trimmer) readWriteByte() (byte, error) {
+	c, err := t.input.ReadByte()
+	if err != nil {
+		return 0, err
+	}
+	return c, t.output.WriteByte(c)
+}
+
+func (t *trimmer) escape() error {
+	// Consumer the known starting backslash and quote
+	_, _ = t.readWriteByte()
+
+	// Read the next character which is the escaped one and exit
+	_, err := t.readWriteByte()
+	return err
+}
+
+func (t *trimmer) singleQuote() error {
+	// Consumer the known starting quote
+	_, _ = t.readWriteByte()
+
+	// Read bytes until EOF, line end or another single quote
+	for {
+		if c, err := t.readWriteByte(); err != nil || c == '\'' || c == '\n' {
+			return err
+		}
+	}
+}
+
+func (t *trimmer) tripleSingleQuote() error {
+	for i := 0; i < 3; i++ {
+		// Consumer the known starting quotes
+		_, _ = t.readWriteByte()
+	}
+
+	// Read bytes until EOF or another set of triple single quotes
+	for {
+		c, err := t.readWriteByte()
+		if err != nil {
+			return err
+		}
+
+		if c == '\'' && t.hasNQuotes('\'', 2) {
+			// Consumer the two additional ending quotes
+			_, _ = t.readWriteByte()
+			_, _ = t.readWriteByte()
+			return nil
+		}
+	}
+}
+
+func (t *trimmer) doubleQuote() error {
+	// Consumer the known starting quote
+	_, _ = t.readWriteByte()
+
+	// Read bytes until EOF, line end or another double quote
+	for {
+		c, err := t.input.ReadByte()
+		if err != nil {
+			return err
+		}
+		switch c {
+		case '\\':
+			// Found escaped character
+			_ = t.input.UnreadByte()
+			if err := t.escape(); err != nil {
+				return err
+			}
+			continue
+		case '"', '\n':
+			// Found terminator
+			return t.output.WriteByte(c)
+		}
+		if err := t.output.WriteByte(c); err != nil {
+			return err
+		}
+	}
+}
+
+func (t *trimmer) tripleDoubleQuote() error {
+	for i := 0; i < 3; i++ {
+		// Consumer the known starting quotes
+		_, _ = t.readWriteByte()
+	}
+
+	// Read bytes until EOF or another set of triple double quotes
+	for {
+		c, err := t.input.ReadByte()
+		if err != nil {
+			return err
+		}
+		switch c {
+		case '\\':
+			// Found escaped character
+			_ = t.input.UnreadByte()
+			if err := t.escape(); err != nil {
+				return err
+			}
+			continue
+		case '"':
+			_ = t.output.WriteByte(c)
+			if t.hasNQuotes('"', 2) {
+				// Consumer the two additional ending quotes
+				_, _ = t.readWriteByte()
+				_, _ = t.readWriteByte()
+				return nil
+			}
+			continue
+		}
+		if err := t.output.WriteByte(c); err != nil {
+			return err
+		}
+	}
+}
+
+func (t *trimmer) comment() error {
+	// Read bytes until EOF or a line break
+	for {
+		c, err := t.input.ReadByte()
+		if err != nil {
+			return err
+		}
+		if c == '\n' {
+			return t.output.WriteByte(c)
+		}
+	}
 }
 
 func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
