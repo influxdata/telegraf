@@ -68,7 +68,7 @@ func (l *Lookup) Init() (err error) {
 	}
 
 	switch l.Translator {
-	case "gosmi":
+	case "", "gosmi":
 		if l.translator, err = si.NewGosmiTranslator(l.Path, l.Log); err != nil {
 			return fmt.Errorf("loading translator: %w", err)
 		}
