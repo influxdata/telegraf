@@ -11,12 +11,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRegistry(t *testing.T) {
+	require.Contains(t, processors.Processors, "snmp_lookup")
+	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
+}
+
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name     string
 		plugin   Lookup
 		expected string
 	}{
+		{
+			name: "empty",
+		},
 		{
 			name: "defaults",
 			plugin: Lookup{
@@ -27,9 +35,6 @@ func TestInit(t *testing.T) {
 				ClientConfig:    *snmp.DefaultClientConfig(),
 				CacheTTL:        defaultCacheTTL,
 			},
-		},
-		{
-			name: "empty",
 		},
 		{
 			name: "wrong SNMP client config",
@@ -97,9 +102,4 @@ func TestStart(t *testing.T) {
 	require.NoError(t, p.Start(acc))
 	require.IsType(t, &parallel.Unordered{}, p.parallel)
 	p.Stop()
-}
-
-func TestRegistry(t *testing.T) {
-	require.Contains(t, processors.Processors, "snmp_lookup")
-	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
 }
