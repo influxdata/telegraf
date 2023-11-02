@@ -41,8 +41,8 @@ type NATS struct {
 }
 
 type JetstreamConfig struct {
-	AutoCreateStream bool                   `toml:"autoCreateStream"`
-	StreamConfig     jetstream.StreamConfig `toml:"streamConfig"`
+	AutoCreateStream bool                   `toml:"auto_create_stream"`
+	StreamConfig     jetstream.StreamConfig `toml:"stream_config"`
 	// Other jetsream options
 }
 
