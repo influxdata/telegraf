@@ -2,7 +2,9 @@ package snmp_lookup
 
 import (
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -106,6 +108,7 @@ func TestStart(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	p.Ordered = true
+	defer p.Stop()
 	require.NoError(t, p.Start(acc))
 	require.IsType(t, &parallel.Ordered{}, p.parallel)
 	p.Stop()
@@ -113,5 +116,109 @@ func TestStart(t *testing.T) {
 	p.Ordered = false
 	require.NoError(t, p.Start(acc))
 	require.IsType(t, &parallel.Unordered{}, p.parallel)
-	p.Stop()
+}
+
+func TestAddAsync(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name:     "simple",
+			input:    testutil.MockMetrics()[0],
+			expected: testutil.MockMetrics(),
+		},
+		{
+			name: "no index tag",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source": "127.0.0.1",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"source": "127.0.0.1",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "cached",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source": "127.0.0.1",
+					"index":  "123",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"source": "127.0.0.1",
+						"index":  "123",
+						"ifName": "eth123",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "non-existing index",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source": "127.0.0.1",
+					"index":  "999",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"source": "127.0.0.1",
+						"index":  "999",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	acc := &testutil.NopAccumulator{}
+	p := Lookup{
+		AgentTag:        "source",
+		IndexTag:        "index",
+		CacheSize:       defaultCacheSize,
+		ParallelLookups: defaultParallelLookups,
+		ClientConfig:    *snmp.DefaultClientConfig(),
+		CacheTTL:        defaultCacheTTL,
+		Log:             testutil.Logger{},
+	}
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(acc))
+	defer p.Stop()
+
+	p.cache.Add("127.0.0.1", tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testutil.RequireMetricsEqual(t, tt.expected, p.addAsync(tt.input))
+		})
+	}
 }

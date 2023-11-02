@@ -20,7 +20,10 @@ import (
 var sampleConfig string
 
 type signalMap map[string]chan struct{}
-type tagMap map[string]map[string]string
+type tagMap struct {
+	created time.Time
+	rows    map[string]map[string]string
+}
 
 type Lookup struct {
 	AgentTag string     `toml:"agent_tag"`
@@ -112,7 +115,28 @@ func (l *Lookup) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 }
 
 func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
-	// TODO: lookup
+	agent, ok := metric.GetTag(l.AgentTag)
+	if !ok {
+		l.Log.Warn("Agent tag missing.")
+		return []telegraf.Metric{metric}
+	}
+
+	index, ok := metric.GetTag(l.IndexTag)
+	if !ok {
+		l.Log.Warn("Index tag missing.")
+		return []telegraf.Metric{metric}
+	}
+
+	tagMap, inCache := l.cache.Get(agent)
+	tags, indexExists := tagMap.rows[index]
+	if inCache && indexExists {
+		for key, value := range tags {
+			metric.AddTag(key, value)
+		}
+	}
+
+	// TODO: load from external agent when not in cache
+
 	return []telegraf.Metric{metric}
 }
 
