@@ -19,8 +19,8 @@ import (
 var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 const (
-	LogTargetFile   = "file"
-	LogTargetStderr = "stderr"
+	LogTargetFile       = "file"
+	LogTargetStderr     = "stderr"
 	LogTargetLumberjack = "lumberjack"
 )
 
@@ -114,7 +114,7 @@ func newTelegrafWriter(w io.Writer, c LogConfig) (io.Writer, error) {
 
 // SetupLogging configures the logging output.
 func SetupLogging(cfg LogConfig) {
-	newLogWriter(cfg)
+	NewLogWriter(cfg)
 }
 
 type telegrafLogCreator struct {
@@ -149,7 +149,7 @@ func (t *telegrafLogCreator) CreateLogger(cfg LogConfig) (io.Writer, error) {
 // It allows closing previous writer if re-set and have possibility to test what is actually set
 var actualLogger io.Writer
 
-func newLogWriter(cfg LogConfig) io.Writer {
+func NewLogWriter(cfg LogConfig) io.Writer {
 	log.SetFlags(0)
 	if cfg.Debug {
 		wlog.SetLevel(wlog.DEBUG)
@@ -200,7 +200,7 @@ func (t *lumberjackLogCreator) CreateLogger(config LogConfig) (io.Writer, error)
 	}
 	// Writer will be created with timezone from config.log LogWithTimezone.
 	// Empty string will result in writer created with UTC.
-	w, err := newTelegrafWriter(writer,config)
+	w, err := newTelegrafWriter(writer, config)
 	if err != nil {
 		log.Fatalf("Error creating telegraf writer: %v", err)
 	}
