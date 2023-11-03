@@ -325,8 +325,8 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 			}
 		}
 	}
-	id := m.acc.AddTrackingMetricGroup(metrics)
 	m.messagesMutex.Lock()
+	id := m.acc.AddTrackingMetricGroup(metrics)
 	m.messages[id] = msg
 	m.messagesMutex.Unlock()
 }
