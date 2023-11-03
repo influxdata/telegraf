@@ -30,6 +30,8 @@ type Redfish struct {
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
 	Timeout          config.Duration `toml:"timeout"`
 
+	Log telegraf.Logger
+
 	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
@@ -203,10 +205,15 @@ func (r *Redfish) Init() error {
 }
 
 func (r *Redfish) getData(address string, payload interface{}) error {
+	r.Log.Infof("Calling GET on %s\n", address)
 	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
+		r.Log.Infof("error creating the request")
 		return err
 	}
+
+	r.Log.Infof("username: %s\n", r.Username)
+	r.Log.Infof("password: %s\n", r.Password)
 
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Set("Accept", "application/json")
@@ -214,6 +221,7 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 	req.Header.Set("OData-Version", "4.0")
 	resp, err := r.client.Do(req)
 	if err != nil {
+		r.Log.Infof("error during the request")
 		return err
 	}
 	defer resp.Body.Close()
