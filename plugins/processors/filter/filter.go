@@ -27,12 +27,11 @@ type FilterIf struct {
 }
 
 type Filter struct {
-	Condition string            `toml:"condition"`
-	Ifs       []*FilterIf       `toml:"if"`
-	Fields    []string          `toml:"fields,omitempty"`
-	Tags      map[string]string `toml:"tags,omitempty"`
-	Log       telegraf.Logger   `toml:"-"`
-	rAll      *regexp.Regexp
+	Ifs    []*FilterIf       `toml:"if"`
+	Fields []string          `toml:"fields,omitempty"`
+	Tags   map[string]string `toml:"tags,omitempty"`
+	Log    telegraf.Logger   `toml:"-"`
+	rAll   *regexp.Regexp
 }
 
 var description = "Advanced filtering for metrics based on tags"
@@ -52,17 +51,30 @@ func (*Filter) SampleConfig() string {
 	return sampleConfig
 }
 
-func (f *Filter) getKeys(arr map[string]string) []string {
-	var keys []string
-	for k := range arr {
-		keys = append(keys, k)
+func (f *Filter) ifMinMax(item *FilterIf, fields map[string]interface{}, name string) bool {
+
+	if item.Min == nil && item.Max == nil {
+		return true
 	}
-	return keys
+	value := fields[name]
+	if value == nil {
+		return true
+	}
+	v, err := strconv.ParseFloat(fmt.Sprintf("%v", value), 64)
+	if err != nil {
+		return false
+	}
+	if item.Min != nil && v < item.min {
+		return false
+	}
+	if item.Max != nil && v > item.max {
+		return false
+	}
+	return true
 }
 
-func (f *Filter) ifCondition(item *FilterIf, metric telegraf.Metric) bool {
+func (f *Filter) ifTags(item *FilterIf, tags map[string]string) bool {
 
-	tags := metric.Tags()
 	if len(tags) == 0 {
 		return false
 	}
@@ -87,117 +99,111 @@ func (f *Filter) ifCondition(item *FilterIf, metric telegraf.Metric) bool {
 	return flag
 }
 
-func (f *Filter) findFields(item *FilterIf, metric telegraf.Metric) []string {
+func (f *Filter) findIfs(measurement, field string) []*FilterIf {
 
-	r := []string{}
-	for k := range metric.Fields() {
-		if item.field != nil {
-			if item.field.MatchString(k) {
-				r = append(r, k)
-			}
-		} else {
-			r = append(r, k)
+	var r []*FilterIf
+	for _, item := range f.Ifs {
+
+		if item.Disabled {
+			continue
 		}
+
+		if item.measurement != nil && !item.measurement.MatchString(measurement) {
+			continue
+		}
+
+		if item.field != nil {
+			if !item.field.MatchString(field) {
+				continue
+			}
+		}
+		r = append(r, item)
 	}
 	return r
 }
 
-func (f *Filter) skipMinMax(item *FilterIf, metric telegraf.Metric, fields []string) bool {
+func (f *Filter) validate(fif *FilterIf, fields map[string]interface{}, tags map[string]string, name string) bool {
 
-	if item.Min == nil && item.Max == nil {
-		return false
+	valid := f.ifMinMax(fif, fields, name)
+	if valid {
+		valid = f.ifTags(fif, tags)
 	}
-	for n, field := range metric.Fields() {
-
-		if !utils.Contains(fields, n) {
-			continue
-		}
-		v, err := strconv.ParseFloat(fmt.Sprintf("%v", field), 64)
-		if err != nil {
-			return true
-		}
-		if item.Min != nil && v < item.min {
-			return true
-		}
-		if item.Max != nil && v > item.max {
-			return true
-		}
-	}
-	return false
+	return valid
 }
 
-func (f *Filter) existFields(metric telegraf.Metric) bool {
+func (f *Filter) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
-	exists := len(f.Fields) > 0
-	if !exists {
-		return true
-	}
-	for k := range metric.Fields() {
-		if utils.Contains(f.Fields, k) {
-			return true
-		}
-	}
-	return false
-}
+	var only []telegraf.Metric
 
-func (f *Filter) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	for _, metric := range metrics {
 
-	orAnd := f.Condition != "AND"
+		fields := metric.Fields()
+		tags := metric.Tags()
+		valids := []string{}
 
-	for _, metric := range in {
+		for k := range fields {
 
-		if !f.existFields(metric) {
-			continue
-		}
-
-		measurement := metric.Name()
-
-		flag := len(f.Ifs) > 0
-		if orAnd {
-			flag = false
-		}
-
-		for _, item := range f.Ifs {
-
-			if item.Disabled {
+			if !utils.Contains(f.Fields, k) {
 				continue
 			}
 
-			if item.measurement != nil && !item.measurement.MatchString(measurement) {
-				continue
-			}
-
-			fields := f.findFields(item, metric)
-			if len(fields) == 0 {
-				continue
-			}
-
-			if f.skipMinMax(item, metric, fields) {
-				continue
-			}
-
-			exists := f.ifCondition(item, metric)
-			if orAnd {
-				flag = flag || exists
-				if flag {
-					break
+			ifs := f.findIfs(metric.Name(), k)
+			if len(ifs) > 0 {
+				for _, item := range ifs {
+					if f.validate(item, fields, tags, k) {
+						valids = append(valids, k)
+						break
+					}
 				}
+			}
+		}
+
+		if len(valids) == 0 {
+
+			only = append(only, metric)
+
+		} else if len(valids) == len(fields) {
+
+			for key, value := range f.Tags {
+				metric.AddTag(key, value)
+			}
+			only = append(only, metric)
+
+		} else {
+
+			m := metric.Copy()
+
+			for k := range fields {
+				for _, k1 := range valids {
+					if k == k1 {
+						metric.RemoveField(k)
+					}
+				}
+			}
+			if len(metric.FieldList()) > 0 {
+				only = append(only, metric)
 			} else {
-				flag = flag && exists
-				if !flag {
-					break
+				metric.Drop()
+			}
+
+			for k := range fields {
+				for _, k1 := range valids {
+					if k != k1 {
+						m.RemoveField(k)
+					}
 				}
 			}
-		}
-
-		if !flag {
-			continue
-		}
-		for key, value := range f.Tags {
-			metric.AddTag(key, value)
+			if len(m.FieldList()) > 0 {
+				for key, value := range f.Tags {
+					m.AddTag(key, value)
+				}
+				only = append(only, m)
+			} else {
+				m.Drop()
+			}
 		}
 	}
-	return in
+	return only
 }
 
 func (f *Filter) setTags() {
@@ -243,10 +249,6 @@ func (f *Filter) setTags() {
 }
 
 func (f *Filter) Init() error {
-
-	if strings.TrimSpace(f.Condition) == "" {
-		f.Condition = "AND"
-	}
 
 	if len(f.Ifs) == 0 {
 		err := fmt.Errorf("no ifs found")
