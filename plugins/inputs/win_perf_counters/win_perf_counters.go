@@ -21,7 +21,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var defaultMaxBufferSize = config.Size(4 * 1024 * 1024)
+var defaultMaxBufferSize = config.Size(100 * 1024 * 1024)
 
 type WinPerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
@@ -588,7 +588,7 @@ func (m *WinPerfCounters) Init() error {
 		return fmt.Errorf("maximum buffer size should at least be %d", 2*initialBufferSize)
 	}
 	if m.MaxBufferSize > math.MaxUint32 {
-		return fmt.Errorf("maximum buffer size should be smaller than %d", math.MaxUint32)
+		return fmt.Errorf("maximum buffer size should be smaller than %d", uint32(math.MaxUint32))
 	}
 
 	if m.UseWildcardsExpansion && !m.LocalizeWildcardsExpansion {
