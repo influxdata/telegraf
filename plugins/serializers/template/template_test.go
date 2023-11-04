@@ -170,13 +170,12 @@ func TestSerializeBatch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		string(buf),
 		`0: cpu 42
 1: cpu 42
-`,
+`, string(buf),
 	)
 	// A batch template should still work when serializing a single metric
 	singleBuf, err := s.Serialize(m)
 	require.NoError(t, err)
-	require.Equal(t, string(singleBuf), "0: cpu 42\n")
+	require.Equal(t, "0: cpu 42\n", string(singleBuf))
 }

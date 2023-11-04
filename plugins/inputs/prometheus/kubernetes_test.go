@@ -134,7 +134,7 @@ func TestAddPod(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	require.Equal(t, 1, len(prom.kubernetesPods))
+	require.Len(t, prom.kubernetesPods, 1)
 }
 
 func TestAddPodScrapeConfig(t *testing.T) {
@@ -144,7 +144,7 @@ func TestAddPodScrapeConfig(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{}
 	registerPod(p, prom)
-	require.Equal(t, 1, len(prom.kubernetesPods))
+	require.Len(t, prom.kubernetesPods, 1)
 }
 
 func TestAddMultipleDuplicatePods(t *testing.T) {
@@ -157,7 +157,7 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 	registerPod(p, prom)
 
 	urls, _ := prom.GetAllURLs()
-	require.Equal(t, 1, len(urls))
+	require.Len(t, urls, 1)
 }
 
 func TestAddMultiplePods(t *testing.T) {
@@ -169,7 +169,7 @@ func TestAddMultiplePods(t *testing.T) {
 	p.Name = "Pod2"
 	p.Status.PodIP = "127.0.0.2"
 	registerPod(p, prom)
-	require.Equal(t, 2, len(prom.kubernetesPods))
+	require.Len(t, prom.kubernetesPods, 2)
 }
 
 func TestDeletePods(t *testing.T) {
@@ -238,7 +238,7 @@ func TestPodHasMatchingLabelSelector(t *testing.T) {
 	pod.Labels["label5"] = "label5"
 
 	labelSelector, err := labels.Parse(prom.KubernetesLabelSelector)
-	require.Equal(t, err, nil)
+	require.NoError(t, err)
 	require.True(t, podHasMatchingLabelSelector(pod, labelSelector))
 }
 
@@ -250,7 +250,7 @@ func TestPodHasMatchingFieldSelector(t *testing.T) {
 	pod.Spec.NodeName = "node1000"
 
 	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
-	require.Equal(t, err, nil)
+	require.NoError(t, err)
 	require.True(t, podHasMatchingFieldSelector(pod, fieldSelector))
 }
 
@@ -262,7 +262,7 @@ func TestInvalidFieldSelector(t *testing.T) {
 	pod.Spec.NodeName = "node1000"
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
-	require.NotEqual(t, err, nil)
+	require.Error(t, err)
 }
 
 func TestAnnotationFilters(t *testing.T) {

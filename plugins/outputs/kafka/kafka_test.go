@@ -1,12 +1,14 @@
 package kafka
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
@@ -25,10 +27,26 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	ctx := context.Background()
+	t.Log("creating test network")
+	networkName := "telegraf-test-output-kafka-network"
+	network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
+		NetworkRequest: testcontainers.NetworkRequest{
+			Name:           networkName,
+			Attachable:     true,
+			CheckDuplicate: true,
+		},
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, network.Remove(ctx), "terminating network failed")
+	}()
+
 	// Start the container as broker AND controller
 	container := testutil.Container{
 		Image:        "bitnami/kafka",
 		Hostname:     "localhost", // required to be able to resolve the name
+		Networks:     []string{networkName},
 		ExposedPorts: []string{"9092:9092", "9093:9093"},
 		Env: map[string]string{
 			"KAFKA_CFG_NODE_ID":                        "0",
@@ -166,7 +184,7 @@ func TestRoutingKey(t *testing.T) {
 				return m
 			}(),
 			check: func(t *testing.T, routingKey string) {
-				require.Equal(t, 36, len(routingKey))
+				require.Len(t, routingKey, 36)
 			},
 		},
 	}

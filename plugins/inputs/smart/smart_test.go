@@ -397,7 +397,7 @@ func TestGatherIntelNVMeDeprecatedFormatMetrics(t *testing.T) {
 func Test_findVIDFromNVMeOutput(t *testing.T) {
 	device, err := findNVMeDeviceInfo(nvmeIdentifyController)
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "0x8086", device.vendorID)
 	require.Equal(t, "CVFT5123456789ABCD", device.serialNumber)
 	require.Equal(t, "INTEL SSDPEDABCDEFG", device.model)

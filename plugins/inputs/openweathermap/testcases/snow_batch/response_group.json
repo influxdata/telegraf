@@ -1,0 +1,141 @@
+{
+    "cnt": 2,
+    "list": [{
+        "dt": 1544194800,
+        "id": 111,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25,
+            "feels_like": 8.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "snow": {
+            "1h": 1.000
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 222,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25,
+            "feels_like": 8.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "snow": {
+            "3h": 3.000
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 333,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25,
+            "feels_like": 8.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "snow": {
+            "1h": 1.300,
+            "3h": 999
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 444,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25,
+            "feels_like": 8.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    }]
+}

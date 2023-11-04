@@ -171,7 +171,7 @@ func TestTruncate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := c.truncate(*tt.buf)
-			require.Equal(t, tt.len, len(s))
+			require.Len(t, s, tt.len)
 		})
 	}
 }

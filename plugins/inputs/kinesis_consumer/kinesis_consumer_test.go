@@ -201,7 +201,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		ContentEncoding: "notsupported",
 	}
 	err := k.Init()
-	require.NotNil(t, err)
+	require.Error(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -211,14 +211,14 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         tt.fields.records,
 			}
 			err := k.Init()
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			acc := testutil.Accumulator{}
 			if err := k.onMessage(acc.WithTracking(tt.expected.numberOfMetrics), tt.args.r); (err != nil) != tt.wantErr {
 				t.Errorf("onMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			require.Equal(t, tt.expected.numberOfMetrics, len(acc.Metrics))
+			require.Len(t, acc.Metrics, tt.expected.numberOfMetrics)
 
 			for _, metric := range acc.Metrics {
 				if logEventMessage, ok := metric.Fields["message"]; ok {

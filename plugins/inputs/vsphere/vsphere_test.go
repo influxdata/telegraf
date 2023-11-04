@@ -175,8 +175,8 @@ func testAlignUniform(t *testing.T, n int) {
 	}
 	e := Endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
-	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
-	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
+	require.Len(t, newInfo, n/3, "Aligned infos have wrong size")
+	require.Len(t, newValues, n/3, "Aligned values have wrong size")
 	for _, v := range newValues {
 		require.Equal(t, 1.0, v, "Aligned value should be 1")
 	}
@@ -201,8 +201,8 @@ func TestAlignMetrics(t *testing.T) {
 	}
 	e := Endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
-	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
-	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
+	require.Len(t, newInfo, n/3, "Aligned infos have wrong size")
+	require.Len(t, newValues, n/3, "Aligned values have wrong size")
 	for _, v := range newValues {
 		require.Equal(t, 2.0, v, "Aligned value should be 2")
 	}
@@ -251,7 +251,7 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 	var vm []mo.VirtualMachine
 	err := f.Find(ctx, "VirtualMachine", path, &vm)
 	require.NoError(t, err)
-	require.Equal(t, expected, len(vm))
+	require.Len(t, vm, expected)
 	if expectedName != "" {
 		require.Equal(t, expectedName, vm[0].Name)
 	}
@@ -281,31 +281,31 @@ func TestFinder(t *testing.T) {
 	var dc []mo.Datacenter
 	err = f.Find(ctx, "Datacenter", "/DC0", &dc)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
+	require.Len(t, dc, 1)
 	require.Equal(t, "DC0", dc[0].Name)
 
 	var host []mo.HostSystem
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(host))
+	require.Len(t, host, 1)
 	require.Equal(t, "DC0_H0", host[0].Name)
 
 	host = []mo.HostSystem{}
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(host))
+	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	var resourcepool = []mo.ResourcePool{}
 	err = f.Find(ctx, "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(host))
+	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	host = []mo.HostSystem{}
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/*", &host)
 	require.NoError(t, err)
-	require.Equal(t, 3, len(host))
+	require.Len(t, host, 3)
 
 	var vm []mo.VirtualMachine
 	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
@@ -324,7 +324,7 @@ func TestFinder(t *testing.T) {
 	vm = []mo.VirtualMachine{}
 	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, []string{}, &vm)
 	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	require.Len(t, vm, 4)
 
 	rf := ResourceFilter{
 		finder:       &f,
@@ -334,7 +334,7 @@ func TestFinder(t *testing.T) {
 	}
 	vm = []mo.VirtualMachine{}
 	require.NoError(t, rf.FindAll(ctx, &vm))
-	require.Equal(t, 3, len(vm))
+	require.Len(t, vm, 3)
 
 	rf = ResourceFilter{
 		finder:       &f,
@@ -364,7 +364,7 @@ func TestFinder(t *testing.T) {
 	}
 	vm = []mo.VirtualMachine{}
 	require.NoError(t, rf.FindAll(ctx, &vm))
-	require.Equal(t, 8, len(vm))
+	require.Len(t, vm, 8)
 
 	rf = ResourceFilter{
 		finder:       &f,
@@ -374,7 +374,7 @@ func TestFinder(t *testing.T) {
 	}
 	vm = []mo.VirtualMachine{}
 	require.NoError(t, rf.FindAll(ctx, &vm))
-	require.Equal(t, 4, len(vm))
+	require.Len(t, vm, 4)
 }
 
 func TestFolders(t *testing.T) {
@@ -399,13 +399,13 @@ func TestFolders(t *testing.T) {
 	var folder []mo.Folder
 	err = f.Find(ctx, "Folder", "/F0", &folder)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(folder))
+	require.Len(t, folder, 1)
 	require.Equal(t, "F0", folder[0].Name)
 
 	var dc []mo.Datacenter
 	err = f.Find(ctx, "Datacenter", "/F0/DC1", &dc)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
+	require.Len(t, dc, 1)
 	require.Equal(t, "DC1", dc[0].Name)
 
 	testLookupVM(ctx, t, &f, "/F0/DC0/vm/**/F*", 0, "")
@@ -448,11 +448,11 @@ func TestVsanTags(t *testing.T) {
 		host:    {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
 	}
 	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
-	require.Equal(t, 2, len(tags))
+	require.Len(t, tags, 2)
 	tags = populateCMMDSTags(make(map[string]string), "cache-disk", ssdDisk, cmmds)
-	require.Equal(t, 3, len(tags))
+	require.Len(t, tags, 3)
 	tags = populateCMMDSTags(make(map[string]string), "host-domclient", host, cmmds)
-	require.Equal(t, 1, len(tags))
+	require.Len(t, tags, 1)
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {
@@ -476,7 +476,7 @@ func TestDisconnectedServerBehavior(t *testing.T) {
 	v.DisconnectedServersBehavior = "something else"
 	_, err = NewEndpoint(context.Background(), v, u, v.Log)
 	require.Error(t, err)
-	require.Equal(t, err.Error(), `"something else" is not a valid value for disconnected_servers_behavior`)
+	require.Equal(t, `"something else" is not a valid value for disconnected_servers_behavior`, err.Error())
 }
 
 func testCollection(t *testing.T, excludeClusters bool) {

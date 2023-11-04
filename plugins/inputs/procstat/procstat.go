@@ -197,23 +197,16 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
-	createdAt, err := proc.CreateTime() //Returns epoch in ms
+	createdAt, err := proc.CreateTime() // returns epoch in ms
 	if err == nil {
-		fields[prefix+"created_at"] = createdAt * 1000000 //Convert ms to ns
+		fields[prefix+"created_at"] = createdAt * 1000000 // ms to ns
 	}
 
 	cpuTime, err := proc.Times()
 	if err == nil {
 		fields[prefix+"cpu_time_user"] = cpuTime.User
 		fields[prefix+"cpu_time_system"] = cpuTime.System
-		fields[prefix+"cpu_time_idle"] = cpuTime.Idle
-		fields[prefix+"cpu_time_nice"] = cpuTime.Nice
-		fields[prefix+"cpu_time_iowait"] = cpuTime.Iowait
-		fields[prefix+"cpu_time_irq"] = cpuTime.Irq
-		fields[prefix+"cpu_time_soft_irq"] = cpuTime.Softirq
-		fields[prefix+"cpu_time_steal"] = cpuTime.Steal
-		fields[prefix+"cpu_time_guest"] = cpuTime.Guest
-		fields[prefix+"cpu_time_guest_nice"] = cpuTime.GuestNice
+		fields[prefix+"cpu_time_iowait"] = cpuTime.Iowait // only reported on Linux
 	}
 
 	cpuPerc, err := proc.Percent(time.Duration(0))

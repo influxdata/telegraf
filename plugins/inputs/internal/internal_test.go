@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestSelfPlugin(t *testing.T) {
@@ -100,8 +100,8 @@ func TestGostats(t *testing.T) {
 	}
 
 	require.NotNil(t, metric)
-	require.Equal(t, metric.Measurement, "internal_gostats")
-	require.Equal(t, len(metric.Tags), 1)
+	require.Equal(t, "internal_gostats", metric.Measurement)
+	require.Len(t, metric.Tags, 1)
 	require.Contains(t, metric.Tags, "go_version")
 
 	for name, value := range metric.Fields {

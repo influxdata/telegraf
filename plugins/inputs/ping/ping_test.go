@@ -222,7 +222,7 @@ func TestArguments(t *testing.T) {
 
 	for _, system := range []string{"darwin", "linux", "anything else"} {
 		actual := p.args("www.google.com", system)
-		require.Equal(t, actual, expected)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -394,7 +394,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 			},
 		}
 		require.Error(t, acc.GatherError(p.Gather))
-		require.Equal(t, 1, len(acc.Errors))
+		require.Len(t, acc.Errors, 1)
 		require.Contains(t, acc.Errors[0].Error(), param.error.Error())
 	}
 }
@@ -405,7 +405,7 @@ func TestPingBinary(t *testing.T) {
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			require.Equal(t, binary, "ping6")
+			require.Equal(t, "ping6", binary)
 			return "", nil
 		},
 	}

@@ -42,7 +42,7 @@ func TestAddTags(t *testing.T) {
 	value, present := tags["added_tag"]
 	require.True(t, present, "Additional Tag of metric was not present")
 	require.Equal(t, "from_config", value, "Value of Tag was changed")
-	require.Equal(t, 3, len(tags), "Should have one previous and two added tags.")
+	require.Len(t, tags, 3, "Should have one previous and two added tags.")
 }
 
 func TestOverwritesPresentTagValues(t *testing.T) {
@@ -52,7 +52,7 @@ func TestOverwritesPresentTagValues(t *testing.T) {
 
 	value, present := tags["metric_tag"]
 	require.True(t, present, "Tag of metric was not present")
-	require.Equal(t, 1, len(tags), "Should only have one tag.")
+	require.Len(t, tags, 1, "Should only have one tag.")
 	require.Equal(t, "from_config", value, "Value of Tag was not changed")
 }
 

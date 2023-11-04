@@ -145,11 +145,11 @@ func Test_validateCommands(t *testing.T) {
 				"/test", "/test",
 			},
 		}
-		require.Equal(t, 2, len(dpdk.AdditionalCommands))
+		require.Len(t, dpdk.AdditionalCommands, 2)
 
 		err := dpdk.validateCommands()
 
-		require.Equal(t, 1, len(dpdk.AdditionalCommands))
+		require.Len(t, dpdk.AdditionalCommands, 1)
 		require.NoError(t, err)
 	})
 }
@@ -188,7 +188,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/")
 
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 		require.Contains(t, mockAcc.Errors[0].Error(), "invalid character")
 	})
 
@@ -201,7 +201,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/")
 
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 		require.Contains(t, mockAcc.Errors[0].Error(), "deadline exceeded")
 	})
 
@@ -213,7 +213,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/test,param")
 
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 		require.Contains(t, mockAcc.Errors[0].Error(), "got empty json on")
 	})
 }
@@ -229,7 +229,7 @@ func Test_appendCommandsWithParams(t *testing.T) {
 		result, err := dpdk.appendCommandsWithParamsFromList("/testendpoint", []string{"/action1", "/action2"})
 
 		require.NoError(t, err)
-		require.Equal(t, 4, len(result))
+		require.Len(t, result, 4)
 		require.ElementsMatch(t, result, expectedCommands)
 	})
 }
@@ -297,7 +297,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.Empty(t, commands)
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 	})
 }
 

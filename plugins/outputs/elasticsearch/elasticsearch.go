@@ -316,8 +316,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if res.Errors {
 		for id, err := range res.Failed() {
 			a.Log.Errorf(
-				"Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s",
+				"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
 				id,
+				err.Status,
 				err.Error.Reason,
 				err.Error.CausedBy["reason"],
 				err.Error.CausedBy["type"],

@@ -61,6 +61,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Remove leading slashes and dots in field-name
   # trim_field_names = false
 
+  ## Guess the path-tag if an update does not contain a prefix-path
+  ## If enabled, the common-path of all elements in the update is used.
+  # guess_path_tag = false
+
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"

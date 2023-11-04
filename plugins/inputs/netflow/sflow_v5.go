@@ -34,6 +34,7 @@ func (d *sflowv5Decoder) Init() error {
 }
 
 func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric, error) {
+	t := time.Now()
 	src := srcIP.String()
 
 	// Decode the message
@@ -49,7 +50,6 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 		return nil, fmt.Errorf("unexpected message type %T", packet)
 	}
 
-	t := time.Unix(0, int64(msg.Uptime)*int64(time.Millisecond))
 	metrics := make([]telegraf.Metric, 0, len(msg.Samples))
 	for _, s := range msg.Samples {
 		tags := map[string]string{

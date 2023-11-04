@@ -4,9 +4,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAzureSQLIntegration_ArcManaged_DatabaseIO_Query(t *testing.T) {
@@ -94,7 +95,7 @@ func TestAzureSQLIntegration_ArcManaged_ServerProperties_Query(t *testing.T) {
 	require.True(t, acc.HasTag("sqlserver_server_properties", "replica_updateability"))
 
 	// This query should only return one row
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	server.Stop()
 }
 

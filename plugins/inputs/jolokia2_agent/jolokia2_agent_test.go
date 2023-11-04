@@ -826,7 +826,7 @@ func TestIntegrationArtemis(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime())
+	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func setupServer(resp string) *httptest.Server {

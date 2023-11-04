@@ -119,8 +119,8 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 			},
 			database: `a " b`,
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("A"), "B")
-				require.Equal(t, r.Header.Get("C"), "D")
+				require.Equal(t, "B", r.Header.Get("A"))
+				require.Equal(t, "D", r.Header.Get("C"))
 				w.WriteHeader(http.StatusOK)
 				_, err = w.Write(successResponse)
 				require.NoError(t, err)
@@ -137,8 +137,8 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 				Database: "telegraf",
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("A"), "B")
-				require.Equal(t, r.Header.Get("C"), "D")
+				require.Equal(t, "B", r.Header.Get("A"))
+				require.Equal(t, "D", r.Header.Get("C"))
 				w.WriteHeader(http.StatusOK)
 				_, err = w.Write(successResponse)
 				require.NoError(t, err)
@@ -291,7 +291,7 @@ func TestHTTP_Write(t *testing.T) {
 				Log:      testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, "telegraf", r.FormValue("db"))
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
@@ -324,7 +324,7 @@ func TestHTTP_Write(t *testing.T) {
 				Log:       testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("User-Agent"), "telegraf")
+				require.Equal(t, "telegraf", r.Header.Get("User-Agent"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -362,8 +362,8 @@ func TestHTTP_Write(t *testing.T) {
 				Log: testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("A"), "B")
-				require.Equal(t, r.Header.Get("C"), "D")
+				require.Equal(t, "B", r.Header.Get("A"))
+				require.Equal(t, "D", r.Header.Get("C"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -581,7 +581,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/write":
-				require.Equal(t, r.Header.Get("Content-Encoding"), "gzip")
+				require.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 
 				gr, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
@@ -709,7 +709,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 			case "/write":
 				err := r.ParseForm()
 				require.NoError(t, err)
-				require.Equal(t, r.Form["db"], []string{"foo"})
+				require.Equal(t, []string{"foo"}, r.Form["db"])
 
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
@@ -794,8 +794,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "", r.FormValue("rp"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -817,8 +817,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "foo")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "foo", r.FormValue("rp"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -844,8 +844,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "foo")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "foo", r.FormValue("rp"))
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu,rp=foo value=42")
@@ -873,8 +873,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "foo")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "foo", r.FormValue("rp"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -898,8 +898,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "", r.FormValue("rp"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -926,8 +926,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "foo")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "foo", r.FormValue("rp"))
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
@@ -957,8 +957,8 @@ func TestDBRPTags(t *testing.T) {
 				),
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.FormValue("db"), "telegraf")
-				require.Equal(t, r.FormValue("rp"), "foo")
+				require.Equal(t, "telegraf", r.FormValue("db"))
+				require.Equal(t, "foo", r.FormValue("rp"))
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu,rp=foo value=42")
