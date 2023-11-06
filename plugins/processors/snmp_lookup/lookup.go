@@ -20,9 +20,10 @@ import (
 var sampleConfig string
 
 type signalMap map[string]chan struct{}
+type tagMapRows map[string]map[string]string
 type tagMap struct {
 	created time.Time
-	rows    map[string]map[string]string
+	rows    tagMapRows
 }
 
 type Lookup struct {
@@ -117,13 +118,13 @@ func (l *Lookup) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	agent, ok := metric.GetTag(l.AgentTag)
 	if !ok {
-		l.Log.Warn("Agent tag missing.")
+		l.Log.Warn("Agent tag missing")
 		return []telegraf.Metric{metric}
 	}
 
 	index, ok := metric.GetTag(l.IndexTag)
 	if !ok {
-		l.Log.Warn("Index tag missing.")
+		l.Log.Warn("Index tag missing")
 		return []telegraf.Metric{metric}
 	}
 

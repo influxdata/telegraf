@@ -106,9 +106,9 @@ func TestStart(t *testing.T) {
 	acc := &testutil.NopAccumulator{}
 	p := Lookup{}
 	require.NoError(t, p.Init())
+	defer p.Stop()
 
 	p.Ordered = true
-	defer p.Stop()
 	require.NoError(t, p.Start(acc))
 	require.IsType(t, &parallel.Ordered{}, p.parallel)
 	p.Stop()
@@ -125,7 +125,7 @@ func TestAddAsync(t *testing.T) {
 		expected []telegraf.Metric
 	}{
 		{
-			name:     "simple",
+			name:     "no source tag",
 			input:    testutil.MockMetrics()[0],
 			expected: testutil.MockMetrics(),
 		},
@@ -214,7 +214,9 @@ func TestAddAsync(t *testing.T) {
 	require.NoError(t, p.Start(acc))
 	defer p.Stop()
 
+	// Add sample data
 	p.cache.Add("127.0.0.1", tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
+	p.cache.Add("127.0.0.2", tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}, created: time.Now()})
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
