@@ -13,6 +13,7 @@ import (
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 )
 
@@ -141,7 +142,16 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{metric}
 }
 
-func (l *Lookup) getConnection(metric telegraf.Metric) (snmp.GosnmpWrapper, error) {
+// snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
+// We interact through an interface so we can mock it out in tests.
+type snmpConnection interface {
+	Host() string
+	Walk(string, gosnmp.WalkFunc) error
+	Get(oids []string) (*gosnmp.SnmpPacket, error)
+	Reconnect() error
+}
+
+func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 	clientConfig := l.ClientConfig
 
 	// TODO: load extra config from metric tags
@@ -157,7 +167,7 @@ func (l *Lookup) getConnection(metric telegraf.Metric) (snmp.GosnmpWrapper, erro
 		}
 	}
 
-	if err = gs.Connect(); err != nil {
+	if err := gs.Connect(); err != nil {
 		return gs, err
 	}
 

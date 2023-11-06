@@ -139,13 +139,9 @@ func TestGetConnection(t *testing.T) {
 	}
 
 	p := Lookup{
-		AgentTag:        "source",
-		IndexTag:        "index",
-		CacheSize:       defaultCacheSize,
-		ParallelLookups: defaultParallelLookups,
-		ClientConfig:    *snmp.DefaultClientConfig(),
-		CacheTTL:        defaultCacheTTL,
-		Log:             testutil.Logger{},
+		AgentTag:     "source",
+		ClientConfig: *snmp.DefaultClientConfig(),
+		Log:          testutil.Logger{},
 	}
 
 	require.NoError(t, p.Init())
@@ -261,7 +257,6 @@ func TestAddAsync(t *testing.T) {
 
 	// Add sample data
 	p.cache.Add("127.0.0.1", tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
-	p.cache.Add("127.0.0.2", tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}, created: time.Now()})
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
