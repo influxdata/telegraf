@@ -141,6 +141,29 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{metric}
 }
 
+func (l *Lookup) getConnection(metric telegraf.Metric) (snmp.GosnmpWrapper, error) {
+	clientConfig := l.ClientConfig
+
+	// TODO: load extra config from metric tags
+
+	gs, err := snmp.NewWrapper(clientConfig)
+	if err != nil {
+		return gs, fmt.Errorf("parsing SNMP client config: %w", err)
+	}
+
+	if agent, ok := metric.GetTag(l.AgentTag); ok {
+		if err = gs.SetAgent(agent); err != nil {
+			return gs, fmt.Errorf("parsing agent tag: %w", err)
+		}
+	}
+
+	if err = gs.Connect(); err != nil {
+		return gs, err
+	}
+
+	return gs, nil
+}
+
 func (l *Lookup) Stop() {
 	l.parallel.Stop()
 }

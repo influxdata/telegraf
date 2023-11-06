@@ -118,6 +118,51 @@ func TestStart(t *testing.T) {
 	require.IsType(t, &parallel.Unordered{}, p.parallel)
 }
 
+func TestGetConnection(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    telegraf.Metric
+		expected string
+	}{
+		{
+			name: "agent error",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source": "test://127.0.0.1",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: "parsing agent tag: unsupported scheme: test",
+		},
+	}
+
+	p := Lookup{
+		AgentTag:        "source",
+		IndexTag:        "index",
+		CacheSize:       defaultCacheSize,
+		ParallelLookups: defaultParallelLookups,
+		ClientConfig:    *snmp.DefaultClientConfig(),
+		CacheTTL:        defaultCacheTTL,
+		Log:             testutil.Logger{},
+	}
+
+	require.NoError(t, p.Init())
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := p.getConnection(tt.input)
+
+			if tt.expected == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.expected)
+			}
+		})
+	}
+}
+
 func TestAddAsync(t *testing.T) {
 	tests := []struct {
 		name     string
