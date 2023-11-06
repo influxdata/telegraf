@@ -1,9 +1,12 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -349,6 +352,26 @@ func TestParseConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRemoveComments(t *testing.T) {
+	// Read expectation
+	expected, err := os.ReadFile(filepath.Join("testdata", "envvar_comments_expected.toml"))
+	require.NoError(t, err)
+
+	// Read the file and remove the comments
+	buf, err := os.ReadFile(filepath.Join("testdata", "envvar_comments.toml"))
+	require.NoError(t, err)
+	removed, err := removeComments(buf)
+	require.NoError(t, err)
+	lines := bytes.Split(removed, []byte{'\n'})
+	for i, line := range lines {
+		lines[i] = bytes.TrimRight(line, " \t")
+	}
+	actual := bytes.Join(lines, []byte{'\n'})
+
+	// Do the comparison
+	require.Equal(t, string(expected), string(actual))
 }
 
 func TestURLRetries3Fails(t *testing.T) {

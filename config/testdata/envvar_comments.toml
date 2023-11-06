@@ -1,0 +1,99 @@
+# Telegraf Configuration
+#
+# Telegraf is entirely plugin driven. All metrics are gathered from the
+# declared inputs, and sent to the declared outputs.
+#
+# Plugins must be declared in here to be active.
+# To deactivate a plugin, comment out the name and any variables.
+#
+# Use 'telegraf -config telegraf.conf -test' to see what metrics a config
+# file would generate.
+#
+# Environment variables can be used anywhere in this config file, simply surround
+# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
+# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
+
+[global_tags]
+
+[agent]
+interval = "10s"
+round_interval = true
+metric_batch_size = 1000
+metric_buffer_limit = 10000
+collection_jitter = "0s"
+flush_interval = '10s'
+flush_jitter = "0s"
+precision = ""
+hostname = ''
+omit_hostname = false
+
+[[outputs.influxdb]]
+  setting1 = '#'#test
+  setting2 = '''#'''#test
+  setting3 = "#"#test
+  setting4 = """#"""#test
+  wicked1 = "\""#test
+  wicked2 = """\""""#test
+
+[[inputs.cpu]]
+  percpu = true
+  #totalcpu = true
+  # collect_cpu_time = false
+  ## report_active = false
+
+[[a.plugin]]
+  mylist = [
+	"value 1", # a good value
+        "value 2", # a better value
+	"value 3", "value 4",
+  'value5', """tagwith#value""",
+  ] # Should work
+
+[[some.stuff]]
+  a = 'not a #comment'
+  b = '''not a #comment'''
+  c = "not a #comment"
+  d = """not a #comment"""
+  e = '''not a #comment containing "quotes"'''
+  f = '''not a #comment containing 'quotes'?'''
+  g = """not a #comment containing "quotes"?"""
+
+# Issue #14237
+[[inputs.myplugin]]
+value = '''This isn't a #comment.'''
+
+[[processors.starlark]]
+  script = """
+# Drop fields if they contain a string.
+#
+# Example Input:
+# measurement,host=hostname a=1,b="somestring" 1597255410000000000
+#
+# Example Output:
+# measurement,host=hostname a=1 1597255410000000000
+
+def apply(metric):
+    for k, v in metric.fields.items():
+        if type(v) == "string":
+            metric.fields.pop(k)
+
+    return metric
+"""
+
+[[processors.starlark]]
+  script = '''
+# Drop fields if they contain a string.
+#
+# Example Input:
+# measurement,host=hostname a=1,b="somestring" 1597255410000000000
+#
+# Example Output:
+# measurement,host=hostname a=1 1597255410000000000
+
+def apply(metric):
+    for k, v in metric.fields.items():
+        if type(v) == "string":
+            metric.fields.pop(k)
+
+    return metric
+'''
