@@ -92,6 +92,7 @@ func (l *Lookup) Init() (err error) {
 
 func (l *Lookup) initTable() error {
 	l.table.Name = "lookup"
+	l.table.IndexAsTag = true
 	l.table.Fields = make([]si.Field, len(l.Tags))
 	for i, tag := range l.Tags {
 		tag.IsTag = true
@@ -172,6 +173,29 @@ func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 	}
 
 	return gs, nil
+}
+
+func (l *Lookup) loadTagMap(gs snmpConnection, agent string) error {
+
+	table, err := l.table.Build(gs, true, l.translator)
+	if err != nil {
+		return err
+	}
+
+	tagMap := tagMap{
+		created: table.Time,
+		rows:    make(tagMapRows, len(table.Rows)),
+	}
+
+	for _, row := range table.Rows {
+		index := row.Tags["index"]
+		delete(row.Tags, "index")
+		tagMap.rows[index] = row.Tags
+	}
+
+	l.cache.Add(agent, tagMap)
+
+	return nil
 }
 
 func (l *Lookup) Stop() {

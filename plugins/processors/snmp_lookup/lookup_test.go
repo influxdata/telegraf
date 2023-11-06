@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
@@ -12,6 +13,51 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+type testSNMPConnection struct {
+	values map[string]string
+}
+
+func (tsc *testSNMPConnection) Host() string {
+	return "test"
+}
+
+func (tsc *testSNMPConnection) Get(oids []string) (*gosnmp.SnmpPacket, error) {
+	sp := &gosnmp.SnmpPacket{}
+	for _, oid := range oids {
+		v, ok := tsc.values[oid]
+		if !ok {
+			sp.Variables = append(sp.Variables, gosnmp.SnmpPDU{
+				Name: oid,
+				Type: gosnmp.NoSuchObject,
+			})
+			continue
+		}
+		sp.Variables = append(sp.Variables, gosnmp.SnmpPDU{
+			Name:  oid,
+			Value: v,
+		})
+	}
+	return sp, nil
+}
+
+func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
+	for void, v := range tsc.values {
+		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
+			if err := wf(gosnmp.SnmpPDU{
+				Name:  void,
+				Value: v,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (tsc *testSNMPConnection) Reconnect() error {
+	return nil
+}
 
 func TestRegistry(t *testing.T) {
 	require.Contains(t, processors.Processors, "snmp_lookup")
@@ -157,6 +203,42 @@ func TestGetConnection(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLoadTagMap(t *testing.T) {
+	acc := &testutil.NopAccumulator{}
+	p := Lookup{
+		CacheSize:    defaultCacheSize,
+		ClientConfig: *snmp.DefaultClientConfig(),
+		CacheTTL:     defaultCacheTTL,
+		Log:          testutil.Logger{},
+		Tags: []si.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+	}
+
+	tsc := &testSNMPConnection{
+		values: map[string]string{
+			".1.3.6.1.2.1.31.1.1.1.1.0": "eth0",
+			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
+		},
+	}
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(acc))
+	defer p.Stop()
+
+	require.NoError(t, p.loadTagMap(tsc, "test"))
+
+	tagMap, ok := p.cache.Get("test")
+	require.True(t, ok)
+	require.Equal(t, tagMapRows{
+		"0": {"ifName": "eth0"},
+		"1": {"ifName": "eth1"},
+	}, tagMap.rows)
 }
 
 func TestAddAsync(t *testing.T) {
