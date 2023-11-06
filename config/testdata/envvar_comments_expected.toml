@@ -1,0 +1,99 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[global_tags]
+
+[agent]
+interval = "10s"
+round_interval = true
+metric_batch_size = 1000
+metric_buffer_limit = 10000
+collection_jitter = "0s"
+flush_interval = '10s'
+flush_jitter = "0s"
+precision = ""
+hostname = ''
+omit_hostname = false
+
+[[outputs.influxdb]]
+  setting1 = '#'
+  setting2 = '''#'''
+  setting3 = "#"
+  setting4 = """#"""
+  wicked1 = "\""
+  wicked2 = """\""""
+
+[[inputs.cpu]]
+  percpu = true
+
+
+
+
+[[a.plugin]]
+  mylist = [
+	"value 1",
+        "value 2",
+	"value 3", "value 4",
+  'value5', """tagwith#value""",
+  ]
+
+[[some.stuff]]
+  a = 'not a #comment'
+  b = '''not a #comment'''
+  c = "not a #comment"
+  d = """not a #comment"""
+  e = '''not a #comment containing "quotes"'''
+  f = '''not a #comment containing 'quotes'?'''
+  g = """not a #comment containing "quotes"?"""
+
+
+[[inputs.myplugin]]
+value = '''This isn't a #comment.'''
+
+[[processors.starlark]]
+  script = """
+# Drop fields if they contain a string.
+#
+# Example Input:
+# measurement,host=hostname a=1,b="somestring" 1597255410000000000
+#
+# Example Output:
+# measurement,host=hostname a=1 1597255410000000000
+
+def apply(metric):
+    for k, v in metric.fields.items():
+        if type(v) == "string":
+            metric.fields.pop(k)
+
+    return metric
+"""
+
+[[processors.starlark]]
+  script = '''
+# Drop fields if they contain a string.
+#
+# Example Input:
+# measurement,host=hostname a=1,b="somestring" 1597255410000000000
+#
+# Example Output:
+# measurement,host=hostname a=1 1597255410000000000
+
+def apply(metric):
+    for k, v in metric.fields.items():
+        if type(v) == "string":
+            metric.fields.pop(k)
+
+    return metric
+'''
