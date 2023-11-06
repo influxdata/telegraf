@@ -130,15 +130,34 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 		return []telegraf.Metric{metric}
 	}
 
-	tagMap, inCache := l.cache.Get(agent)
+	// Check cache
+	tagMap, inCache := l.cache.Peek(agent)
+	_, indexExists := tagMap.rows[index]
+
+	// Cache miss
+	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
+		gs, err := l.getConnection(metric)
+		if err != nil {
+			l.Log.Errorf("Could not connect to %q: %w", agent, err)
+			return []telegraf.Metric{metric}
+		}
+
+		if err = l.loadTagMap(gs, agent); err != nil {
+			l.Log.Errorf("Could not load table from %q: %w", agent, err)
+			return []telegraf.Metric{metric}
+		}
+	}
+
+	// Load from cache
+	tagMap, inCache = l.cache.Get(agent)
 	tags, indexExists := tagMap.rows[index]
 	if inCache && indexExists {
 		for key, value := range tags {
 			metric.AddTag(key, value)
 		}
+	} else {
+		l.Log.Warn("Could not find index %q on agent %q", index, agent)
 	}
-
-	// TODO: load from external agent when not in cache
 
 	return []telegraf.Metric{metric}
 }
