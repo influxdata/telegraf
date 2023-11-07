@@ -64,6 +64,10 @@ func TestRegistry(t *testing.T) {
 	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
 }
 
+func TestSampleConfig(t *testing.T) {
+	testutil.RequireValidSampleConfig(t, (&Lookup{}).SampleConfig())
+}
+
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -78,10 +82,19 @@ func TestInit(t *testing.T) {
 			plugin: Lookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
-				CacheSize:       defaultCacheSize,
-				ParallelLookups: defaultParallelLookups,
 				ClientConfig:    *snmp.DefaultClientConfig(),
+				VersionTag:      "version",
+				CommunityTag:    "community",
+				SecNameTag:      "sec_name",
+				SecLevelTag:     "sec_level",
+				AuthProtocolTag: "auth_protocol",
+				AuthPasswordTag: "auth_password",
+				PrivProtocolTag: "priv_protocol",
+				PrivPasswordTag: "priv_password",
+				ContextNameTag:  "context_name",
+				CacheSize:       defaultCacheSize,
 				CacheTTL:        defaultCacheTTL,
+				ParallelLookups: defaultParallelLookups,
 			},
 		},
 		{
@@ -256,9 +269,18 @@ func TestGetConnection(t *testing.T) {
 	}
 
 	p := Lookup{
-		AgentTag:     "source",
-		ClientConfig: *snmp.DefaultClientConfig(),
-		Log:          testutil.Logger{},
+		AgentTag:        "source",
+		ClientConfig:    *snmp.DefaultClientConfig(),
+		VersionTag:      "version",
+		CommunityTag:    "community",
+		SecNameTag:      "sec_name",
+		SecLevelTag:     "sec_level",
+		AuthProtocolTag: "auth_protocol",
+		AuthPasswordTag: "auth_password",
+		PrivProtocolTag: "priv_protocol",
+		PrivPasswordTag: "priv_password",
+		ContextNameTag:  "context_name",
+		Log:             testutil.Logger{},
 	}
 
 	require.NoError(t, p.Init())
@@ -279,8 +301,8 @@ func TestGetConnection(t *testing.T) {
 func TestLoadTagMap(t *testing.T) {
 	acc := &testutil.NopAccumulator{}
 	p := Lookup{
-		CacheSize:    defaultCacheSize,
 		ClientConfig: *snmp.DefaultClientConfig(),
+		CacheSize:    defaultCacheSize,
 		CacheTTL:     defaultCacheTTL,
 		Log:          testutil.Logger{},
 		Tags: []si.Field{
@@ -397,10 +419,10 @@ func TestAddAsync(t *testing.T) {
 	p := Lookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
-		CacheSize:       defaultCacheSize,
-		ParallelLookups: defaultParallelLookups,
 		ClientConfig:    *snmp.DefaultClientConfig(),
+		CacheSize:       defaultCacheSize,
 		CacheTTL:        defaultCacheTTL,
+		ParallelLookups: defaultParallelLookups,
 		Log:             testutil.Logger{},
 	}
 

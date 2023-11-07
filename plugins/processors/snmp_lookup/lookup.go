@@ -35,6 +35,16 @@ type Lookup struct {
 
 	snmp.ClientConfig
 
+	VersionTag      string `toml:"version_tag"`
+	CommunityTag    string `toml:"community_tag"`
+	SecNameTag      string `toml:"sec_name_tag"`
+	SecLevelTag     string `toml:"sec_level_tag"`
+	AuthProtocolTag string `toml:"auth_protocol_tag"`
+	AuthPasswordTag string `toml:"auth_password_tag"`
+	PrivProtocolTag string `toml:"priv_protocol_tag"`
+	PrivPasswordTag string `toml:"priv_password_tag"`
+	ContextNameTag  string `toml:"context_name_tag"`
+
 	CacheSize       int             `toml:"max_cache_entries"`
 	ParallelLookups int             `toml:"max_parallel_lookups"`
 	Ordered         bool            `toml:"ordered"`
@@ -175,7 +185,7 @@ type snmpConnection interface {
 func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 	clientConfig := l.ClientConfig
 
-	if version, ok := metric.GetTag("version"); ok {
+	if version, ok := metric.GetTag(l.VersionTag); ok {
 		// inputs.snmp_trap reports like this
 		if version == "2c" {
 			version = "2"
@@ -188,35 +198,35 @@ func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 		clientConfig.Version = uint8(v)
 	}
 
-	if community, ok := metric.GetTag("community"); ok {
+	if community, ok := metric.GetTag(l.CommunityTag); ok {
 		clientConfig.Community = community
 	}
 
-	if secName, ok := metric.GetTag("sec_name"); ok {
+	if secName, ok := metric.GetTag(l.SecNameTag); ok {
 		clientConfig.SecName = secName
 	}
 
-	if secLevel, ok := metric.GetTag("sec_level"); ok {
+	if secLevel, ok := metric.GetTag(l.SecLevelTag); ok {
 		clientConfig.SecLevel = secLevel
 	}
 
-	if authProtocol, ok := metric.GetTag("auth_protocol"); ok {
+	if authProtocol, ok := metric.GetTag(l.AuthProtocolTag); ok {
 		clientConfig.AuthProtocol = authProtocol
 	}
 
-	if authPassword, ok := metric.GetTag("auth_password"); ok {
+	if authPassword, ok := metric.GetTag(l.AuthPasswordTag); ok {
 		clientConfig.AuthPassword = authPassword
 	}
 
-	if privProtocol, ok := metric.GetTag("priv_protocol"); ok {
+	if privProtocol, ok := metric.GetTag(l.PrivProtocolTag); ok {
 		clientConfig.PrivProtocol = privProtocol
 	}
 
-	if privPassword, ok := metric.GetTag("priv_password"); ok {
+	if privPassword, ok := metric.GetTag(l.PrivPasswordTag); ok {
 		clientConfig.PrivPassword = privPassword
 	}
 
-	if contextName, ok := metric.GetTag("context_name"); ok {
+	if contextName, ok := metric.GetTag(l.ContextNameTag); ok {
 		clientConfig.ContextName = contextName
 	}
 
@@ -269,10 +279,19 @@ func init() {
 		return &Lookup{
 			AgentTag:        "source",
 			IndexTag:        "index",
-			CacheSize:       defaultCacheSize,
-			ParallelLookups: defaultParallelLookups,
 			ClientConfig:    *snmp.DefaultClientConfig(),
+			VersionTag:      "version",
+			CommunityTag:    "community",
+			SecNameTag:      "sec_name",
+			SecLevelTag:     "sec_level",
+			AuthProtocolTag: "auth_protocol",
+			AuthPasswordTag: "auth_password",
+			PrivProtocolTag: "priv_protocol",
+			PrivPasswordTag: "priv_password",
+			ContextNameTag:  "context_name",
+			CacheSize:       defaultCacheSize,
 			CacheTTL:        defaultCacheTTL,
+			ParallelLookups: defaultParallelLookups,
 		}
 	})
 }
