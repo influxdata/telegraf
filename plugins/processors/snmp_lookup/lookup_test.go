@@ -6,6 +6,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -65,7 +66,7 @@ func TestRegistry(t *testing.T) {
 }
 
 func TestSampleConfig(t *testing.T) {
-	testutil.RequireValidSampleConfig(t, (&Lookup{}).SampleConfig())
+	config.RequireValidSampleConfig(t, (&Lookup{}).SampleConfig())
 }
 
 func TestInit(t *testing.T) {

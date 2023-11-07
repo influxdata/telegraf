@@ -5,13 +5,10 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"regexp"
-	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -97,16 +94,4 @@ func PrintMetrics(m []telegraf.Metric) {
 		panic(err)
 	}
 	fmt.Println(string(buf))
-}
-
-func RequireValidSampleConfig(t testing.TB, sampleConfig string) {
-	if x, ok := t.(helper); ok {
-		x.Helper()
-	}
-
-	re := regexp.MustCompile(`(?m)(^\s+)#\s*`)
-	cfg := config.NewConfig()
-	if err := cfg.LoadConfigData(re.ReplaceAll([]byte(sampleConfig), []byte("$1"))); err != nil {
-		t.Fatalf("Invalid sample config: %+v", err)
-	}
 }
