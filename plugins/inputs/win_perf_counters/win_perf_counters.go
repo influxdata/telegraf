@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -20,6 +21,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var defaultMaxBufferSize = config.Size(100 * 1024 * 1024)
+
 type WinPerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
 	PreVistaSupport            bool `toml:"PreVistaSupport" deprecated:"1.7.0;determined dynamically"`
@@ -29,6 +32,7 @@ type WinPerfCounters struct {
 	UseWildcardsExpansion      bool
 	LocalizeWildcardsExpansion bool
 	IgnoredErrors              []string `toml:"IgnoredErrors"`
+	MaxBufferSize              config.Size
 	Sources                    []string
 
 	Log telegraf.Logger
@@ -207,7 +211,7 @@ func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, c
 	if !ok {
 		hostCounter = &hostCountersInfo{computer: computer, tag: sourceTag}
 		m.hostCounters[computer] = hostCounter
-		hostCounter.query = m.queryCreator.NewPerformanceQuery(computer)
+		hostCounter.query = m.queryCreator.NewPerformanceQuery(computer, uint32(m.MaxBufferSize))
 		if err := hostCounter.query.Open(); err != nil {
 			return err
 		}
@@ -579,9 +583,16 @@ func isKnownCounterDataError(err error) bool {
 }
 
 func (m *WinPerfCounters) Init() error {
+	// Check the buffer size
+	if m.MaxBufferSize < config.Size(initialBufferSize) {
+		return fmt.Errorf("maximum buffer size should at least be %d", 2*initialBufferSize)
+	}
+	if m.MaxBufferSize > math.MaxUint32 {
+		return fmt.Errorf("maximum buffer size should be smaller than %d", uint32(math.MaxUint32))
+	}
+
 	if m.UseWildcardsExpansion && !m.LocalizeWildcardsExpansion {
 		// Counters must not have wildcards with this option
-
 		found := false
 		wildcards := []string{"*", "?"}
 
@@ -614,6 +625,7 @@ func init() {
 		return &WinPerfCounters{
 			CountersRefreshInterval:    config.Duration(time.Second * 60),
 			LocalizeWildcardsExpansion: true,
+			MaxBufferSize:              defaultMaxBufferSize,
 			queryCreator:               &PerformanceQueryCreatorImpl{},
 		}
 	})
