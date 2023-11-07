@@ -138,12 +138,12 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
 		gs, err := l.getConnection(metric)
 		if err != nil {
-			l.Log.Errorf("Could not connect to %q: %w", agent, err)
+			l.Log.Errorf("Could not connect to %q: %v", agent, err)
 			return []telegraf.Metric{metric}
 		}
 
 		if err = l.loadTagMap(gs, agent); err != nil {
-			l.Log.Errorf("Could not load table from %q: %w", agent, err)
+			l.Log.Errorf("Could not load table from %q: %v", agent, err)
 			return []telegraf.Metric{metric}
 		}
 	}
@@ -156,7 +156,7 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 			metric.AddTag(key, value)
 		}
 	} else {
-		l.Log.Warn("Could not find index %q on agent %q", index, agent)
+		l.Log.Warnf("Could not find index %q on agent %q", index, agent)
 	}
 
 	return []telegraf.Metric{metric}
@@ -195,7 +195,6 @@ func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 }
 
 func (l *Lookup) loadTagMap(gs snmpConnection, agent string) error {
-
 	table, err := l.table.Build(gs, true, l.translator)
 	if err != nil {
 		return err
