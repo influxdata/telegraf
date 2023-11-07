@@ -67,8 +67,8 @@ details.
   ## SNMP community string.
   # community = "public"
 
-  ## Agent host tag
-  ## deprecated in 1.29; use the source tag
+  ## Agent host tag; should be set to "source"
+  ##   example: agent_host_tag = "source"
   # agent_host_tag = "agent_host"
 
   ## Number of retries to attempt.
@@ -95,9 +95,6 @@ details.
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
-
-  ## Uncomment to remove deprecated tags.
-  # tagexclude = ["agent_host"]
 
   ## Add fields and tables defining the variables you wish to collect.  This
   ## example collects the system uptime and interface variables.  Reference the
@@ -295,7 +292,7 @@ name = "EntPhyIndex"
 oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
 ```
 
-Partial result (removed source and host tags from all following outputs
+Partial result (removed agent and host tags from all following outputs
 in this section):
 
 ```text
@@ -393,16 +390,15 @@ The field and tags will depend on the table and fields configured.
 
 * snmp
   * tags:
-    * agent_host (deprecated in 1.29: use `source` tag)
-    * source
+    * agent_host (deprecated in 1.29: use `source` instead)
 
 ## Example Output
 
 ```text
-snmp,agent_host=127.0.0.1,source=127.0.0.1,sysName=example.org uptime=113319.74 1575509815000000000
-interface,agent_host=127.0.0.1,ifDescr=wlan0,ifIndex=3,source=127.0.0.1,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=3436617431i,ifInUcastPkts=2717778i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=581368041i,ifOutQLen=0i,ifOutUcastPkts=1354338i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=0i,ifType=6i 1575509815000000000
-interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,source=127.0.0.1,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=21i,ifInOctets=3852386380i,ifInUcastPkts=3634004i,ifInUnknownProtos=0i,ifLastChange=9088763i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=434865441i,ifOutQLen=0i,ifOutUcastPkts=2110394i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=1000000000i,ifType=6i 1575509815000000000
-interface,agent_host=127.0.0.1,ifDescr=lo,ifIndex=1,source=127.0.0.1,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=51555569i,ifInUcastPkts=339097i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=65536i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=51555569i,ifOutQLen=0i,ifOutUcastPkts=339097i,ifSpecific=".0.0",ifSpeed=10000000i,ifType=24i 1575509815000000000
+snmp,agent_host=127.0.0.1,sysName=example.org uptime=113319.74 1575509815000000000
+interface,agent_host=127.0.0.1,ifDescr=wlan0,ifIndex=3,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=3436617431i,ifInUcastPkts=2717778i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=581368041i,ifOutQLen=0i,ifOutUcastPkts=1354338i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=0i,ifType=6i 1575509815000000000
+interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=21i,ifInOctets=3852386380i,ifInUcastPkts=3634004i,ifInUnknownProtos=0i,ifLastChange=9088763i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=434865441i,ifOutQLen=0i,ifOutUcastPkts=2110394i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=1000000000i,ifType=6i 1575509815000000000
+interface,agent_host=127.0.0.1,ifDescr=lo,ifIndex=1,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=51555569i,ifInUcastPkts=339097i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=65536i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=51555569i,ifOutQLen=0i,ifOutUcastPkts=339097i,ifSpecific=".0.0",ifSpeed=10000000i,ifType=24i 1575509815000000000
 ```
 
 [metric filtering]: /docs/CONFIGURATION.md#metric-filtering

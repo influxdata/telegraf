@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -50,7 +51,7 @@ type Snmp struct {
 	Agents []string `toml:"agents"`
 
 	// The tag used to name the agent host
-	AgentHostTag string `toml:"agent_host_tag" deprecated:"1.29.0;use 'source' tag instead"`
+	AgentHostTag string `toml:"agent_host_tag"`
 
 	snmp.ClientConfig
 
@@ -107,6 +108,12 @@ func (s *Snmp) Init() error {
 
 	if len(s.AgentHostTag) == 0 {
 		s.AgentHostTag = "agent_host"
+	}
+	if s.AgentHostTag != "source" {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
+			Since:  "1.29.0",
+			Notice: `should be set to "source"`,
+		})
 	}
 
 	return nil
@@ -366,9 +373,6 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 		}
 		if _, ok := tr.Tags[s.AgentHostTag]; !ok {
 			tr.Tags[s.AgentHostTag] = gs.Host()
-		}
-		if _, ok := tr.Tags["source"]; !ok {
-			tr.Tags["source"] = gs.Host()
 		}
 		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
 	}
