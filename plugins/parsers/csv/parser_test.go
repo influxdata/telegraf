@@ -1515,3 +1515,65 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
 	)
 }
+
+const benchmarkData = `tags_host,tags_platform,tags_sdkver,value,timestamp
+myhost,python,3.11.5,5,1653643420
+myhost,python,3.11.4,4,1653643420
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		MetricName:      "benchmark",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		MetricName:      "benchmark",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
+}
