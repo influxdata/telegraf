@@ -181,11 +181,11 @@ func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 			version = "2"
 		}
 
-		if v, err := strconv.ParseUint(version, 10, 8); err == nil {
-			clientConfig.Version = uint8(v)
-		} else {
+		v, err := strconv.ParseUint(version, 10, 8)
+		if err != nil {
 			return nil, fmt.Errorf("parsing version: %w", err)
 		}
+		clientConfig.Version = uint8(v)
 	}
 
 	if community, ok := metric.GetTag("community"); ok {
