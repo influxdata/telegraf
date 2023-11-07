@@ -4,9 +4,9 @@ go 1.21
 
 require (
 	cloud.google.com/go/bigquery v1.56.0
-	cloud.google.com/go/monitoring v1.16.0
+	cloud.google.com/go/monitoring v1.16.1
 	cloud.google.com/go/pubsub v1.33.0
-	cloud.google.com/go/storage v1.30.1
+	cloud.google.com/go/storage v1.34.1
 	collectd.org v0.5.0
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.1
@@ -38,18 +38,18 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/awnumar/memguard v0.22.3
-	github.com/aws/aws-sdk-go-v2 v1.21.2
+	github.com/aws/aws-sdk-go-v2 v1.22.1
 	github.com/aws/aws-sdk-go-v2/config v1.19.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.43
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.13
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.26.2
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.23.5
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.26.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.20.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.120.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.18.5
 	github.com/aws/aws-sdk-go-v2/service/sts v1.23.2
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.17.2
-	github.com/aws/smithy-go v1.15.0
+	github.com/aws/smithy-go v1.16.0
 	github.com/benbjohnson/clock v1.3.5
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bmatcuk/doublestar/v3 v3.0.0
@@ -89,7 +89,7 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/gopacket v1.1.19
 	github.com/google/licensecheck v0.3.1
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/gopcua/opcua v0.4.0
 	github.com/gophercloud/gophercloud v1.5.0
 	github.com/gorilla/mux v1.8.0
@@ -98,7 +98,7 @@ require (
 	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
 	github.com/gwos/tcg/sdk v0.0.0-20220621192633-df0eac0a1a4c
 	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
-	github.com/hashicorp/consul/api v1.25.1
+	github.com/hashicorp/consul/api v1.26.1
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/influxdata/go-syslog/v3 v3.0.0
@@ -129,7 +129,7 @@ require (
 	github.com/lxc/lxd v0.0.0-20220920163450-e9b4b514106a
 	github.com/matttproud/golang_protobuf_extensions v1.0.4
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
-	github.com/mdlayher/vsock v1.1.1
+	github.com/mdlayher/vsock v1.2.1
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/microsoft/go-mssqldb v1.5.0
 	github.com/miekg/dns v1.1.56
@@ -157,7 +157,7 @@ require (
 	github.com/prometheus/common v0.44.0
 	github.com/prometheus/procfs v0.11.1
 	github.com/prometheus/prometheus v0.46.0
-	github.com/rabbitmq/amqp091-go v1.8.1
+	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/redis/go-redis/v9 v9.2.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
@@ -203,9 +203,9 @@ require (
 	golang.org/x/text v0.13.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.14.0
-	google.golang.org/api v0.147.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97
-	google.golang.org/grpc v1.58.3
+	google.golang.org/api v0.149.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b
+	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
@@ -220,9 +220,9 @@ require (
 
 require (
 	cloud.google.com/go v0.110.8 // indirect
-	cloud.google.com/go/compute v1.23.0 // indirect
+	cloud.google.com/go/compute v1.23.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v1.1.2 // indirect
+	cloud.google.com/go/iam v1.1.3 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -260,8 +260,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.13 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.70 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.43 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.37 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.45 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.26 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
@@ -331,7 +331,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
@@ -360,7 +360,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/josharian/native v1.0.0 // indirect
+	github.com/josharian/native v1.1.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/webbrowser v1.0.0 // indirect
@@ -377,8 +377,8 @@ require (
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mdlayher/genetlink v1.2.0 // indirect
-	github.com/mdlayher/netlink v1.6.0 // indirect
-	github.com/mdlayher/socket v0.2.3 // indirect
+	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
@@ -466,14 +466,14 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
+	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	gopkg.in/errgo.v1 v1.0.1 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect

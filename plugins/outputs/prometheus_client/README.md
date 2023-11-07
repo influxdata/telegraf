@@ -26,6 +26,9 @@ to use them.
 # Configuration for the Prometheus client to spawn
 [[outputs.prometheus_client]]
   ## Address to listen on.
+  ##   ex:
+  ##     listen = ":9273"
+  ##     listen = "vsock://:9273"
   listen = ":9273"
 
   ## Maximum duration before timing out read of the request

@@ -15,6 +15,7 @@ var sampleConfigPartPerMetric string
 type metricFieldDefinition struct {
 	RegisterType string  `toml:"register"`
 	Address      uint16  `toml:"address"`
+	Length       uint16  `toml:"length"`
 	Name         string  `toml:"name"`
 	InputType    string  `toml:"type"`
 	Scale        float64 `toml:"scale"`
@@ -101,16 +102,32 @@ func (c *ConfigurationPerMetric) Check() error {
 				// Check the input type
 				switch f.InputType {
 				case "":
-				case "INT8L", "INT8H", "INT16", "INT32", "INT64":
-				case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
-				case "FLOAT16", "FLOAT32", "FLOAT64":
+				case "INT8L", "INT8H", "INT16", "INT32", "INT64",
+					"UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64",
+					"FLOAT16", "FLOAT32", "FLOAT64":
+					if f.Length != 0 {
+						return fmt.Errorf("length option cannot be used for type %q of field %q", f.InputType, f.Name)
+					}
+					if f.OutputType == "STRING" {
+						return fmt.Errorf("cannot output field %q as string", f.Name)
+					}
+				case "STRING":
+					if f.Length < 1 {
+						return fmt.Errorf("missing length for string field %q", f.Name)
+					}
+					if f.Scale != 0.0 {
+						return fmt.Errorf("scale option cannot be used for string field %q", f.Name)
+					}
+					if f.OutputType != "" && f.OutputType != "STRING" {
+						return fmt.Errorf("invalid output type %q for string field %q", f.OutputType, f.Name)
+					}
 				default:
 					return fmt.Errorf("unknown register data-type %q for field %q", f.InputType, f.Name)
 				}
 
 				// Check output type
 				switch f.OutputType {
-				case "", "INT64", "UINT64", "FLOAT64":
+				case "", "INT64", "UINT64", "FLOAT64", "STRING":
 				default:
 					return fmt.Errorf("unknown output data-type %q for field %q", f.OutputType, f.Name)
 				}
@@ -223,7 +240,7 @@ func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metric
 	fieldLength := uint16(1)
 	if typed {
 		var err error
-		if fieldLength, err = c.determineFieldLength(def.InputType); err != nil {
+		if fieldLength, err = c.determineFieldLength(def.InputType, def.Length); err != nil {
 			return field{}, err
 		}
 	}
@@ -258,8 +275,13 @@ func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metric
 				return field{}, err
 			}
 		} else {
-			// For scaling cases we always want FLOAT64 by default
-			def.OutputType = "FLOAT64"
+			// For scaling cases we always want FLOAT64 by default except for
+			// string fields
+			if def.InputType != "STRING" {
+				def.OutputType = "FLOAT64"
+			} else {
+				def.OutputType = "STRING"
+			}
 		}
 	}
 
@@ -351,11 +373,13 @@ func (c *ConfigurationPerMetric) determineOutputDatatype(input string) (string, 
 		return "UINT64", nil
 	case "FLOAT16", "FLOAT32", "FLOAT64":
 		return "FLOAT64", nil
+	case "STRING":
+		return "STRING", nil
 	}
 	return "unknown", fmt.Errorf("invalid input datatype %q for determining output", input)
 }
 
-func (c *ConfigurationPerMetric) determineFieldLength(input string) (uint16, error) {
+func (c *ConfigurationPerMetric) determineFieldLength(input string, length uint16) (uint16, error) {
 	// Handle our special types
 	switch input {
 	case "INT8L", "INT8H", "UINT8L", "UINT8H":
@@ -366,6 +390,8 @@ func (c *ConfigurationPerMetric) determineFieldLength(input string) (uint16, err
 		return 2, nil
 	case "INT64", "UINT64", "FLOAT64":
 		return 4, nil
+	case "STRING":
+		return length, nil
 	}
 	return 0, fmt.Errorf("invalid input datatype %q for determining field length", input)
 }
