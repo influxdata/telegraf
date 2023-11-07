@@ -4,6 +4,7 @@ package snmp_lookup
 import (
 	_ "embed"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -174,7 +175,50 @@ type snmpConnection interface {
 func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 	clientConfig := l.ClientConfig
 
-	// TODO: load extra config from metric tags
+	if version, ok := metric.GetTag("version"); ok {
+		// inputs.snmp_trap reports like this
+		if version == "2c" {
+			version = "2"
+		}
+
+		if v, err := strconv.ParseUint(version, 10, 8); err == nil {
+			clientConfig.Version = uint8(v)
+		} else {
+			return nil, fmt.Errorf("parsing version: %w", err)
+		}
+	}
+
+	if community, ok := metric.GetTag("community"); ok {
+		clientConfig.Community = community
+	}
+
+	if secName, ok := metric.GetTag("sec_name"); ok {
+		clientConfig.SecName = secName
+	}
+
+	if secLevel, ok := metric.GetTag("sec_level"); ok {
+		clientConfig.SecLevel = secLevel
+	}
+
+	if authProtocol, ok := metric.GetTag("auth_protocol"); ok {
+		clientConfig.AuthProtocol = authProtocol
+	}
+
+	if authPassword, ok := metric.GetTag("auth_password"); ok {
+		clientConfig.AuthPassword = authPassword
+	}
+
+	if privProtocol, ok := metric.GetTag("priv_protocol"); ok {
+		clientConfig.PrivProtocol = privProtocol
+	}
+
+	if privPassword, ok := metric.GetTag("priv_password"); ok {
+		clientConfig.PrivPassword = privPassword
+	}
+
+	if contextName, ok := metric.GetTag("context_name"); ok {
+		clientConfig.ContextName = contextName
+	}
 
 	gs, err := snmp.NewWrapper(clientConfig)
 	if err != nil {
@@ -188,7 +232,7 @@ func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 	}
 
 	if err := gs.Connect(); err != nil {
-		return gs, err
+		return gs, fmt.Errorf("connecting failed: %w", err)
 	}
 
 	return gs, nil

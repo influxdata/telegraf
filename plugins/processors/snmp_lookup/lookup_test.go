@@ -182,6 +182,77 @@ func TestGetConnection(t *testing.T) {
 			),
 			expected: "parsing agent tag: unsupported scheme: test",
 		},
+		{
+			name: "client error",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source":  "127.0.0.1",
+					"version": "99",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: "parsing SNMP client config: invalid version",
+		},
+		{
+			name: "parsing version",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source":  "127.0.0.1",
+					"version": "-1",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: `parsing version: strconv.ParseUint: parsing "-1": invalid syntax`,
+		},
+		{
+			name: "v2 trap",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source":    "127.0.0.1",
+					"version":   "2c",
+					"community": "community",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "snmp v3",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source":        "127.0.0.1",
+					"version":       "3",
+					"auth_password": "auth_password",
+					"priv_password": "priv_password",
+					"context_name":  "context_name",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "v3 fail",
+			input: testutil.MustMetric(
+				"test",
+				map[string]string{
+					"source":        "127.0.0.1",
+					"version":       "3",
+					"sec_name":      "sec_name",
+					"sec_level":     "authpriv",
+					"auth_protocol": "",
+					"priv_protocol": "",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+			expected: "connecting failed: securityParameters.PrivacyProtocol is required",
+		},
 	}
 
 	p := Lookup{
