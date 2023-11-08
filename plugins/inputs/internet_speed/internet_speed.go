@@ -122,7 +122,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 func (is *InternetSpeed) findClosestServer() error {
 	proto := speedtest.HTTP
-	if os.Getegid() == 0 || os.Getegid() == -1 {
+	if os.Getegid() <= 0 {
 		proto = speedtest.ICMP
 	}
 
