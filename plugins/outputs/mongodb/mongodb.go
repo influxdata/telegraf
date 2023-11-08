@@ -154,28 +154,6 @@ func (s *MongoDB) Init() error {
 	return nil
 }
 
-func (s *MongoDB) createTimeSeriesCollection(databaseCollection string) error {
-	_, collectionExists := s.collections[databaseCollection]
-	if !collectionExists {
-		ctx := context.Background()
-		tso := options.TimeSeries()
-		tso.SetTimeField("timestamp")
-		tso.SetMetaField("tags")
-		tso.SetGranularity(s.MetricGranularity)
-		cco := options.CreateCollection()
-		if s.TTL != 0 {
-			cco.SetExpireAfterSeconds(int64(time.Duration(s.TTL).Seconds()))
-		}
-		cco.SetTimeSeriesOptions(tso)
-		err := s.client.Database(s.MetricDatabase).CreateCollection(ctx, databaseCollection, cco)
-		if err != nil {
-			return fmt.Errorf("unable to create time series collection: %w", err)
-		}
-		s.collections[databaseCollection] = bson.M{}
-	}
-	return nil
-}
-
 func (s *MongoDB) Connect() error {
 	ctx := context.Background()
 	client, err := mongo.Connect(ctx, s.clientOptions)
