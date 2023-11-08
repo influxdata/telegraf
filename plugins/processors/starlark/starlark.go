@@ -95,7 +95,7 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 		// If the script didn't return the original metrics, mark it as
 		// successfully handled.
 		if !origFound {
-			origMetric.Accept()
+			origMetric.Drop()
 		}
 
 		// clear results
