@@ -2,6 +2,7 @@
 package logstash
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -9,12 +10,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -31,10 +30,11 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  config.Duration   `toml:"timeout"`
-	tls.ClientConfig
+
+	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
+	httpconfig.HTTPClientConfig
 }
 
 // NewLogstash create an instance of the plugin with default settings
@@ -44,7 +44,6 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        config.Duration(time.Second * 5),
 	}
 }
 
@@ -131,17 +130,10 @@ func (logstash *Logstash) Init() error {
 
 // createHTTPClient create a clients to access API
 func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
-	tlsConfig, err := logstash.ClientConfig.TLSConfig()
+	ctx := context.Background()
+	client, err := logstash.HTTPClientConfig.CreateClient(ctx, logstash.Log)
 	if err != nil {
 		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: tlsConfig,
-		},
-		Timeout: time.Duration(logstash.Timeout),
 	}
 
 	return client, nil
