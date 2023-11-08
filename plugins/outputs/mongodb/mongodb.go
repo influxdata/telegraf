@@ -214,9 +214,9 @@ func marshalMetric(metric telegraf.Metric) bson.D {
 func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 	for _, metric := range metrics {
-		if err := s.createTimeSeriesCollection(metric.Name()); err != nil {
+		/*if err := s.createTimeSeriesCollection(metric.Name()); err != nil {
 			return err
-		}
+		}*/
 		bdoc := marshalMetric(metric)
 		if err := s.insertDocument(ctx, metric.Name(), bdoc); err != nil {
 			return err
