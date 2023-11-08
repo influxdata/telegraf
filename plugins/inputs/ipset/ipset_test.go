@@ -79,7 +79,7 @@ func TestIpset(t *testing.T) {
 			value: `create counter-test hash:ip family inet hashsize 1024 maxelem 65536 timeout 1800 counters
 				add counter-test 192.168.1.1 timeout 1792 packets 8 bytes 672
 				create counter-test2 hash:ip family inet hashsize 1024 maxelem 65536 counters
-				add counter-test2 192.168.1.1 packets 8 bytes 672
+				add counter-test2 192.168.1.1 packets 18 bytes 673
 				`,
 			tags: []map[string]string{
 				{"set": "counter-test", "rule": "192.168.1.1"},
@@ -87,7 +87,7 @@ func TestIpset(t *testing.T) {
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"packets_total": uint64(8), "bytes_total": uint64(672), "timeout": uint64(1792)}},
-				{map[string]interface{}{"packets_total": uint64(8), "bytes_total": uint64(672)}},
+				{map[string]interface{}{"packets_total": uint64(18), "bytes_total": uint64(673)}},
 			},
 		},
 	}

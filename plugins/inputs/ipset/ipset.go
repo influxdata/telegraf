@@ -73,36 +73,30 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 				"set":  data[1],
 				"rule": data[2],
 			}
+
 			fields := make(map[string]interface{}, 3)
-
-			packetsIndex := 4
-			bytesIndex := 6
-			if data[3] == "timeout" {
-				if len(data) < 9 {
-					acc.AddError(fmt.Errorf("error parsing line with timeout (expected at least 9 fields): %s", line))
-					continue
+			for i, field := range data {
+				switch field {
+				case "timeout":
+					val, err := strconv.ParseUint(data[i+1], 10, 64)
+					if err != nil {
+						acc.AddError(err)
+					}
+					fields["timeout"] = val
+				case "packets":
+					val, err := strconv.ParseUint(data[i+1], 10, 64)
+					if err != nil {
+						acc.AddError(err)
+					}
+					fields["packets_total"] = val
+				case "bytes":
+					val, err := strconv.ParseUint(data[i+1], 10, 64)
+					if err != nil {
+						acc.AddError(err)
+					}
+					fields["bytes_total"] = val
 				}
-				packetsIndex = 6
-				bytesIndex = 8
-
-				timeout, err := strconv.ParseUint(data[4], 10, 64)
-				if err != nil {
-					acc.AddError(err)
-				}
-				fields["timeout"] = timeout
 			}
-
-			packetsTotal, err := strconv.ParseUint(data[packetsIndex], 10, 64)
-			if err != nil {
-				acc.AddError(err)
-			}
-			fields["packets_total"] = packetsTotal
-
-			bytesTotal, err := strconv.ParseUint(data[bytesIndex], 10, 64)
-			if err != nil {
-				acc.AddError(err)
-			}
-			fields["bytes_total"] = bytesTotal
 
 			acc.AddCounter(measurement, fields, tags)
 		}
