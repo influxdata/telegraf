@@ -294,7 +294,7 @@ func Test_Process_Name(t *testing.T) {
 		t.Errorf("getting name error %v", err)
 	}
 	if !strings.Contains(n, "process.test") {
-		t.Errorf("invalid Exe %s", n)
+		t.Errorf("invalid Name %s", n)
 	}
 }
 
