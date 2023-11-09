@@ -1,6 +1,7 @@
 package snmp_lookup
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -17,32 +18,19 @@ import (
 
 type testSNMPConnection struct {
 	values map[string]string
+	calls  int
 }
 
 func (tsc *testSNMPConnection) Host() string {
 	return "test"
 }
 
-func (tsc *testSNMPConnection) Get(oids []string) (*gosnmp.SnmpPacket, error) {
-	sp := &gosnmp.SnmpPacket{}
-	for _, oid := range oids {
-		v, ok := tsc.values[oid]
-		if !ok {
-			sp.Variables = append(sp.Variables, gosnmp.SnmpPDU{
-				Name: oid,
-				Type: gosnmp.NoSuchObject,
-			})
-			continue
-		}
-		sp.Variables = append(sp.Variables, gosnmp.SnmpPDU{
-			Name:  oid,
-			Value: v,
-		})
-	}
-	return sp, nil
+func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
+	return &gosnmp.SnmpPacket{}, errors.New("Not implemented")
 }
 
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
+	tsc.calls++
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
 			if err := wf(gosnmp.SnmpPDU{
@@ -333,6 +321,7 @@ func TestLoadTagMap(t *testing.T) {
 		"0": {"ifName": "eth0"},
 		"1": {"ifName": "eth1"},
 	}, tagMap.rows)
+	require.Equal(t, 1, tsc.calls)
 }
 
 func TestAddAsync(t *testing.T) {
