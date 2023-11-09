@@ -74,6 +74,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## metric type set to the cooresponding type.
   # metric_counter = []
   # metric_gauge = []
+  # metric_histogram = []
 
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
@@ -101,8 +102,9 @@ Points collected with greater than 1 minute precision may need to be aggregated
 before then can be written.  Consider using the [basicstats][] aggregator to do
 this.
 
-Histogram / distribution and delta metrics are not yet supported. These will be
-dropped silently unless debugging is on.
+Histograms are supported only via metrics generated via the Prometheus metric
+version 1 parser. The version 2 parser generates sparse metrics that would need
+to be heavily transformed before sending to Stackdriver.
 
 Note that the plugin keeps an in-memory cache of the start times and last
 observed values of all COUNTER metrics in order to comply with the requirements

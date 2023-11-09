@@ -239,6 +239,7 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 		MetricNameFormat: "official",
 		MetricCounter:    []string{"mem_c"},
 		MetricGauge:      []string{"mem_g"},
+		MetricHistogram:  []string{"mem_h"},
 		Log:              testutil.Logger{},
 		client:           c,
 	}
@@ -259,6 +260,19 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 			},
 			time.Unix(3, 0),
 		),
+		testutil.MustMetric("mem_h",
+			map[string]string{},
+			map[string]interface{}{
+				"sum":   1,
+				"count": 1,
+				"5.0":   0.0,
+				"10.0":  0.0,
+				"15.0":  1.0,
+				"+Inf":  1.0,
+			},
+			time.Unix(3, 0),
+			telegraf.Histogram,
+		),
 	}
 
 	require.NoError(t, s.Connect())
@@ -266,13 +280,15 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 	require.Len(t, mockMetric.reqs, 1)
 
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Len(t, request.TimeSeries, 2)
+	require.Len(t, request.TimeSeries, 3)
 	for _, ts := range request.TimeSeries {
 		switch ts.Metric.Type {
 		case "custom.googleapis.com/test_mem_c_value/counter":
 			require.Equal(t, metricpb.MetricDescriptor_CUMULATIVE, ts.MetricKind)
 		case "custom.googleapis.com/test_mem_g_value/gauge":
 			require.Equal(t, metricpb.MetricDescriptor_GAUGE, ts.MetricKind)
+		case "custom.googleapis.com/test_mem_h/histogram":
+			require.Equal(t, metricpb.MetricDescriptor_CUMULATIVE, ts.MetricKind)
 		default:
 			require.False(t, true, "Unknown metric type", ts.Metric.Type)
 		}
@@ -642,6 +658,24 @@ func TestGetStackdriverLabels(t *testing.T) {
 		{Key: "host", Value: "this"},
 		{Key: "name", Value: "bat"},
 		{Key: "device", Value: "local"},
+		{Key: "foo", Value: "bar"},
+		{Key: "hostname", Value: "local"},
+		{Key: "a", Value: "1"},
+		{Key: "b", Value: "2"},
+		{Key: "c", Value: "3"},
+		{Key: "d", Value: "4"},
+		{Key: "e", Value: "5"},
+		{Key: "f", Value: "6"},
+		{Key: "g", Value: "7"},
+		{Key: "h", Value: "8"},
+		{Key: "i", Value: "9"},
+		{Key: "j", Value: "10"},
+		{Key: "k", Value: "11"},
+		{Key: "l", Value: "12"},
+		{Key: "m", Value: "13"},
+		{Key: "n", Value: "14"},
+		{Key: "o", Value: "15"},
+		{Key: "p", Value: "16"},
 		{Key: "reserve", Value: "publication"},
 		{Key: "xpfqacltlmpguimhtjlou2qlmf9uqqwk3teajwlwqkoxtsppbnjksaxvzc1aa973pho9m96gfnl5op8ku7sv93rexyx42qe3zty12ityv", Value: "keyquota"},
 		{
@@ -961,6 +995,143 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 			require.Equal(t, tt.expected, s.generateMetricName(tt.metric, tt.metric.Type(), tt.key))
 		})
 	}
+}
+
+func TestGenerateHistogramName(t *testing.T) {
+	tests := []struct {
+		name      string
+		prefix    string
+		namespace string
+		format    string
+		expected  string
+
+		metric telegraf.Metric
+	}{
+		{
+			name:      "path",
+			prefix:    "",
+			namespace: "",
+			format:    "path",
+			expected:  "uptime",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:      "path with namespace",
+			prefix:    "",
+			namespace: "name",
+			format:    "path",
+			expected:  "name/uptime",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:      "path with namespace+prefix",
+			prefix:    "prefix",
+			namespace: "name",
+			format:    "path",
+			expected:  "prefix/name/uptime",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:      "official",
+			prefix:    "",
+			namespace: "",
+			format:    "official",
+			expected:  "uptime/histogram",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:      "official with namespace",
+			prefix:    "",
+			namespace: "name",
+			format:    "official",
+			expected:  "name_uptime/histogram",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+		{
+			name:      "official with prefix+namespace",
+			prefix:    "prefix",
+			namespace: "name",
+			format:    "official",
+			expected:  "prefix/name_uptime/histogram",
+			metric: metric.New(
+				"uptime",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Now(),
+				telegraf.Histogram,
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Stackdriver{
+				Namespace:        tt.namespace,
+				MetricTypePrefix: tt.prefix,
+				MetricNameFormat: tt.format,
+			}
+
+			require.Equal(t, tt.expected, s.generateHistogramName(tt.metric))
+		})
+	}
+}
+
+func TestBuildHistogram(t *testing.T) {
+	s := &Stackdriver{
+		MetricNameFormat: "official",
+		Log:              testutil.Logger{},
+	}
+	m := testutil.MustMetric(
+		"http_server_duration",
+		map[string]string{},
+		map[string]interface{}{
+			"sum":   1,
+			"count": 1,
+			"5.0":   0.0,
+			"10.0":  0.0,
+			"15.0":  1.0,
+			"+Inf":  1.0,
+		},
+		time.Unix(0, 0),
+	)
+	value, err := s.buildHistogram(m)
+	require.NoError(t, err)
+
+	dist := value.GetDistributionValue()
+	require.NotNil(t, dist)
+	require.Equal(t, int64(1), dist.Count)
+	require.Equal(t, 1.0, dist.Mean)
+	require.Len(t, dist.BucketCounts, 3)
+	require.Len(t, dist.BucketOptions.GetExplicitBuckets().Bounds, 3)
 }
 
 func TestStackdriverValueInvalid(t *testing.T) {
