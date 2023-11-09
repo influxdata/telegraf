@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -21,6 +22,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+type getConnectionFunc func(metric telegraf.Metric) (snmpConnection, error)
 type signalMap map[string]chan struct{}
 type tagMapRows map[string]map[string]string
 type tagMap struct {
@@ -55,7 +57,10 @@ type Lookup struct {
 	cache    *expirable.LRU[string, tagMap]
 	parallel parallel.Parallel
 	sigs     signalMap
+	lock     sync.Mutex
 	table    si.Table
+
+	getConnection getConnectionFunc
 
 	translator si.Translator
 }
@@ -82,6 +87,7 @@ func (l *Lookup) SetTranslator(name string) {
 
 func (l *Lookup) Init() (err error) {
 	l.sigs = make(signalMap)
+	l.getConnection = l.getConnectionNoMock
 
 	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
@@ -147,15 +153,28 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 
 	// Cache miss
 	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
-		gs, err := l.getConnection(metric)
-		if err != nil {
-			l.Log.Errorf("Could not connect to %q: %v", agent, err)
-			return []telegraf.Metric{metric}
-		}
+		l.lock.Lock()
+		if done, busy := l.sigs[agent]; busy {
+			l.lock.Unlock()
+			<-done
+		} else {
+			l.sigs[agent] = make(chan struct{})
+			l.lock.Unlock()
 
-		if err = l.loadTagMap(gs, agent); err != nil {
-			l.Log.Errorf("Could not load table from %q: %v", agent, err)
-			return []telegraf.Metric{metric}
+			gs, err := l.getConnection(metric)
+			if err != nil {
+				l.Log.Errorf("Could not connect to %q: %v", agent, err)
+				l.signalAgentReady(agent)
+				return []telegraf.Metric{metric}
+			}
+
+			if err = l.loadTagMap(gs, agent); err != nil {
+				l.Log.Errorf("Could not load table from %q: %v", agent, err)
+				l.signalAgentReady(agent)
+				return []telegraf.Metric{metric}
+			}
+
+			l.signalAgentReady(agent)
 		}
 	}
 
@@ -173,6 +192,13 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{metric}
 }
 
+func (l *Lookup) signalAgentReady(agent string) {
+	l.lock.Lock()
+	close(l.sigs[agent])
+	delete(l.sigs, agent)
+	l.lock.Unlock()
+}
+
 // snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
 // We interact through an interface so we can mock it out in tests.
 type snmpConnection interface {
@@ -182,7 +208,7 @@ type snmpConnection interface {
 	Reconnect() error
 }
 
-func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
+func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, error) {
 	clientConfig := l.ClientConfig
 
 	if version, ok := metric.GetTag(l.VersionTag); ok {
