@@ -164,17 +164,17 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 			gs, err := l.getConnection(metric)
 			if err != nil {
 				l.Log.Errorf("Could not connect to %q: %v", agent, err)
-				l.signalAgentReady(agent)
+				close(l.sigs[agent])
 				return []telegraf.Metric{metric}
 			}
 
 			if err = l.loadTagMap(gs, agent); err != nil {
 				l.Log.Errorf("Could not load table from %q: %v", agent, err)
-				l.signalAgentReady(agent)
+				close(l.sigs[agent])
 				return []telegraf.Metric{metric}
 			}
 
-			l.signalAgentReady(agent)
+			close(l.sigs[agent])
 		}
 	}
 
@@ -190,13 +190,6 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	}
 
 	return []telegraf.Metric{metric}
-}
-
-func (l *Lookup) signalAgentReady(agent string) {
-	l.lock.Lock()
-	close(l.sigs[agent])
-	delete(l.sigs, agent)
-	l.lock.Unlock()
 }
 
 // snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
@@ -275,6 +268,7 @@ func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, er
 }
 
 func (l *Lookup) loadTagMap(gs snmpConnection, agent string) error {
+	l.Log.Debugf("Building lookup table for %q", agent)
 	table, err := l.table.Build(gs, true, l.translator)
 	if err != nil {
 		return err
