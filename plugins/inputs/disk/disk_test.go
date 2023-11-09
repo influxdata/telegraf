@@ -93,7 +93,7 @@ func TestDiskUsage(t *testing.T) {
 	require.NoError(t, err)
 
 	numDiskMetrics := acc.NFields()
-	expectedAllDiskMetrics := 21
+	expectedAllDiskMetrics := 24
 	require.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
 
 	tags1 := map[string]string{
@@ -116,31 +116,34 @@ func TestDiskUsage(t *testing.T) {
 	}
 
 	fields1 := map[string]interface{}{
-		"total":        uint64(128),
-		"used":         uint64(100),
-		"free":         uint64(23),
-		"inodes_total": uint64(1234),
-		"inodes_free":  uint64(234),
-		"inodes_used":  uint64(1000),
-		"used_percent": float64(81.30081300813008),
+		"total":               uint64(128),
+		"used":                uint64(100),
+		"free":                uint64(23),
+		"inodes_total":        uint64(1234),
+		"inodes_free":         uint64(234),
+		"inodes_used":         uint64(1000),
+		"used_percent":        float64(81.30081300813008),
+		"inodes_used_percent": float64(81.03727714748784),
 	}
 	fields2 := map[string]interface{}{
-		"total":        uint64(256),
-		"used":         uint64(200),
-		"free":         uint64(46),
-		"inodes_total": uint64(2468),
-		"inodes_free":  uint64(468),
-		"inodes_used":  uint64(2000),
-		"used_percent": float64(81.30081300813008),
+		"total":               uint64(256),
+		"used":                uint64(200),
+		"free":                uint64(46),
+		"inodes_total":        uint64(2468),
+		"inodes_free":         uint64(468),
+		"inodes_used":         uint64(2000),
+		"used_percent":        float64(81.30081300813008),
+		"inodes_used_percent": float64(81.03727714748784),
 	}
 	fields3 := map[string]interface{}{
-		"total":        uint64(128),
-		"used":         uint64(100),
-		"free":         uint64(23),
-		"inodes_total": uint64(1234),
-		"inodes_free":  uint64(234),
-		"inodes_used":  uint64(1000),
-		"used_percent": float64(81.30081300813008),
+		"total":               uint64(128),
+		"used":                uint64(100),
+		"free":                uint64(23),
+		"inodes_total":        uint64(1234),
+		"inodes_free":         uint64(234),
+		"inodes_used":         uint64(1000),
+		"used_percent":        float64(81.30081300813008),
+		"inodes_used_percent": float64(81.03727714748784),
 	}
 	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
@@ -150,18 +153,18 @@ func TestDiskUsage(t *testing.T) {
 	// and /home not matching the /dev in MountPoints
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
+	require.Equal(t, expectedAllDiskMetrics+8, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// /, /home, and /var/rootbind
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home", "/var/rootbind"}}).Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, expectedAllDiskMetrics+7*4, acc.NFields())
+	require.Equal(t, expectedAllDiskMetrics+8*4, acc.NFields())
 
 	// We should see all the mounts as MountPoints except the bind mound
 	err = (&DiskStats{ps: &mps, IgnoreMountOpts: []string{"bind"}}).Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, expectedAllDiskMetrics+7*6, acc.NFields())
+	require.Equal(t, expectedAllDiskMetrics+8*6, acc.NFields())
 }
 
 func TestDiskUsageHostMountPrefix(t *testing.T) {
@@ -196,13 +199,14 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"mode":   "ro",
 			},
 			expectedFields: map[string]interface{}{
-				"total":        uint64(42),
-				"used":         uint64(0),
-				"free":         uint64(0),
-				"inodes_total": uint64(0),
-				"inodes_free":  uint64(0),
-				"inodes_used":  uint64(0),
-				"used_percent": float64(0),
+				"total":               uint64(42),
+				"used":                uint64(0),
+				"free":                uint64(0),
+				"inodes_total":        uint64(0),
+				"inodes_free":         uint64(0),
+				"inodes_used":         uint64(0),
+				"used_percent":        float64(0),
+				"inodes_used_percent": float64(0),
 			},
 		},
 		{
@@ -229,13 +233,14 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"mode":   "ro",
 			},
 			expectedFields: map[string]interface{}{
-				"total":        uint64(42),
-				"used":         uint64(0),
-				"free":         uint64(0),
-				"inodes_total": uint64(0),
-				"inodes_free":  uint64(0),
-				"inodes_used":  uint64(0),
-				"used_percent": float64(0),
+				"total":               uint64(42),
+				"used":                uint64(0),
+				"free":                uint64(0),
+				"inodes_total":        uint64(0),
+				"inodes_free":         uint64(0),
+				"inodes_used":         uint64(0),
+				"used_percent":        float64(0),
+				"inodes_used_percent": float64(0),
 			},
 		},
 		{
@@ -262,13 +267,14 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"mode":   "ro",
 			},
 			expectedFields: map[string]interface{}{
-				"total":        uint64(42),
-				"used":         uint64(0),
-				"free":         uint64(0),
-				"inodes_total": uint64(0),
-				"inodes_free":  uint64(0),
-				"inodes_used":  uint64(0),
-				"used_percent": float64(0),
+				"total":               uint64(42),
+				"used":                uint64(0),
+				"free":                uint64(0),
+				"inodes_total":        uint64(0),
+				"inodes_free":         uint64(0),
+				"inodes_used":         uint64(0),
+				"used_percent":        float64(0),
+				"inodes_used_percent": float64(0),
 			},
 		},
 	}
@@ -424,7 +430,7 @@ func TestDiskStats(t *testing.T) {
 	require.NoError(t, err)
 
 	numDiskMetrics := acc.NFields()
-	expectedAllDiskMetrics := 21
+	expectedAllDiskMetrics := 24
 	require.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
 
 	tags1 := map[string]string{
@@ -441,22 +447,24 @@ func TestDiskStats(t *testing.T) {
 	}
 
 	fields1 := map[string]interface{}{
-		"total":        uint64(128),
-		"used":         uint64(100),
-		"free":         uint64(23),
-		"inodes_total": uint64(1234),
-		"inodes_free":  uint64(234),
-		"inodes_used":  uint64(1000),
-		"used_percent": float64(81.30081300813008),
+		"total":               uint64(128),
+		"used":                uint64(100),
+		"free":                uint64(23),
+		"inodes_total":        uint64(1234),
+		"inodes_free":         uint64(234),
+		"inodes_used":         uint64(1000),
+		"used_percent":        float64(81.30081300813008),
+		"inodes_used_percent": float64(81.03727714748784),
 	}
 	fields2 := map[string]interface{}{
-		"total":        uint64(256),
-		"used":         uint64(200),
-		"free":         uint64(46),
-		"inodes_total": uint64(2468),
-		"inodes_free":  uint64(468),
-		"inodes_used":  uint64(2000),
-		"used_percent": float64(81.30081300813008),
+		"total":               uint64(256),
+		"used":                uint64(200),
+		"free":                uint64(46),
+		"inodes_total":        uint64(2468),
+		"inodes_free":         uint64(468),
+		"inodes_used":         uint64(2000),
+		"used_percent":        float64(81.30081300813008),
+		"inodes_used_percent": float64(81.03727714748784),
 	}
 	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
@@ -465,18 +473,18 @@ func TestDiskStats(t *testing.T) {
 	// and /home and /var/rootbind not matching the /dev in MountPoints
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
+	require.Equal(t, expectedAllDiskMetrics+8, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// /, /home, and /var/rootbind
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home", "/var/rootbind"}}).Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, expectedAllDiskMetrics+7*4, acc.NFields())
+	require.Equal(t, expectedAllDiskMetrics+8*4, acc.NFields())
 
 	// We should see all the mounts as MountPoints except the bind mound
 	err = (&DiskStats{ps: &mps, IgnoreMountOpts: []string{"bind"}}).Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, expectedAllDiskMetrics+7*6, acc.NFields())
+	require.Equal(t, expectedAllDiskMetrics+8*6, acc.NFields())
 }
 
 func TestDiskUsageIssues(t *testing.T) {
@@ -511,13 +519,14 @@ func TestDiskUsageIssues(t *testing.T) {
 						"path":   "/tmp",
 					},
 					map[string]interface{}{
-						"total":        uint64(256),
-						"used":         uint64(200),
-						"free":         uint64(46),
-						"inodes_total": uint64(2468),
-						"inodes_free":  uint64(468),
-						"inodes_used":  uint64(2000),
-						"used_percent": float64(81.30081300813008),
+						"total":               uint64(256),
+						"used":                uint64(200),
+						"free":                uint64(46),
+						"inodes_total":        uint64(2468),
+						"inodes_free":         uint64(468),
+						"inodes_used":         uint64(2000),
+						"used_percent":        float64(81.30081300813008),
+						"inodes_used_percent": float64(81.03727714748784),
 					},
 					time.Unix(0, 0),
 					telegraf.Gauge,
@@ -531,13 +540,14 @@ func TestDiskUsageIssues(t *testing.T) {
 						"path":   "/",
 					},
 					map[string]interface{}{
-						"total":        uint64(256),
-						"used":         uint64(200),
-						"free":         uint64(46),
-						"inodes_total": uint64(2468),
-						"inodes_free":  uint64(468),
-						"inodes_used":  uint64(2000),
-						"used_percent": float64(81.30081300813008),
+						"total":               uint64(256),
+						"used":                uint64(200),
+						"free":                uint64(46),
+						"inodes_total":        uint64(2468),
+						"inodes_free":         uint64(468),
+						"inodes_used":         uint64(2000),
+						"used_percent":        float64(81.30081300813008),
+						"inodes_used_percent": float64(81.03727714748784),
 					},
 					time.Unix(0, 0),
 					telegraf.Gauge,
@@ -565,13 +575,14 @@ func TestDiskUsageIssues(t *testing.T) {
 						"path":   "/",
 					},
 					map[string]interface{}{
-						"total":        uint64(256),
-						"used":         uint64(200),
-						"free":         uint64(46),
-						"inodes_total": uint64(2468),
-						"inodes_free":  uint64(468),
-						"inodes_used":  uint64(2000),
-						"used_percent": float64(81.30081300813008),
+						"total":               uint64(256),
+						"used":                uint64(200),
+						"free":                uint64(46),
+						"inodes_total":        uint64(2468),
+						"inodes_free":         uint64(468),
+						"inodes_used":         uint64(2000),
+						"used_percent":        float64(81.30081300813008),
+						"inodes_used_percent": float64(81.03727714748784),
 					},
 					time.Unix(0, 0),
 					telegraf.Gauge,
@@ -585,13 +596,14 @@ func TestDiskUsageIssues(t *testing.T) {
 						"path":   "/mnt/storage",
 					},
 					map[string]interface{}{
-						"total":        uint64(256),
-						"used":         uint64(200),
-						"free":         uint64(46),
-						"inodes_total": uint64(2468),
-						"inodes_free":  uint64(468),
-						"inodes_used":  uint64(2000),
-						"used_percent": float64(81.30081300813008),
+						"total":               uint64(256),
+						"used":                uint64(200),
+						"free":                uint64(46),
+						"inodes_total":        uint64(2468),
+						"inodes_free":         uint64(468),
+						"inodes_used":         uint64(2000),
+						"used_percent":        float64(81.30081300813008),
+						"inodes_used_percent": float64(81.03727714748784),
 					},
 					time.Unix(0, 0),
 					telegraf.Gauge,
