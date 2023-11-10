@@ -3,6 +3,9 @@
 This input plugin monitors power statistics on Intel-based platforms and
 assumes presence of Linux based OS.
 
+Not all CPUs are supported, please see the software and hardware dependencies
+sections below to ensure platform support.
+
 Main use cases are power saving and workload migration. Telemetry frameworks
 allow users to monitor critical platform level metrics. Key source of platform
 telemetry is power domain that is beneficial for MANO Monitoring&Analytics
@@ -22,7 +25,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Intel PowerStat plugin enables monitoring of platform metrics (power, TDP)
-# and per-CPU metrics like temperature, power and utilization.
+# and per-CPU metrics like temperature, power and utilization. Please see the
+# plugin readme for details on software and hardware compatability.
 # This plugin ONLY supports Linux
 [[inputs.intel_powerstat]]
   ## The user can choose which package metrics are monitored by the plugin with
@@ -245,6 +249,21 @@ are required by the plugin:
 | 0xBF         | Intel RaptorLake-S              |
 | 0xAC         | Intel MeteorLake                |
 | 0xAA         | Intel MeteorLake-L              |
+
+### uncore frequency
+
+Note that only certain processors support the uncore frequency module as well:
+
+| Model number | Processor name                  |
+|--------------|---------------------------------|
+| 0x55         | Intel Skylake-X                 |
+| 0x6A         | Intel IceLake-X                 |
+| 0x6C         | Intel IceLake-D                 |
+| 0x47         | Intel Broadwell-G               |
+| 0x4F         | Intel Broadwell-X               |
+| 0x56         | Intel Broadwell-D               |
+| 0x8F         | Intel Sapphire Rapids X         |
+| 0xCF         | Intel Emerald Rapids X          |
 
 ## Metrics
 
