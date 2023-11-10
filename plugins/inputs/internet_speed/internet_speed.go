@@ -121,9 +121,14 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 }
 
 func (is *InternetSpeed) findClosestServer() error {
+	proto := speedtest.HTTP
+	if os.Getegid() <= 0 {
+		proto = speedtest.ICMP
+	}
+
 	client := speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
 		UserAgent:  internal.ProductToken(),
-		ICMP:       os.Geteuid() == 0 || os.Geteuid() == -1,
+		PingMode:   proto,
 		SavingMode: is.MemorySavingMode,
 	}))
 	if is.Connections > 0 {
