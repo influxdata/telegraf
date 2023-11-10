@@ -1542,7 +1542,7 @@ func TestBenchmarkData(t *testing.T) {
 			map[string]interface{}{
 				"value": 5,
 			},
-			time.Unix(0, 0),
+			time.Unix(1653643420, 0),
 		),
 		metric.New(
 			"benchmark",
@@ -1554,13 +1554,13 @@ func TestBenchmarkData(t *testing.T) {
 			map[string]interface{}{
 				"value": 4,
 			},
-			time.Unix(0, 0),
+			time.Unix(1653643420, 0),
 		),
 	}
 
 	actual, err := plugin.Parse([]byte(benchmarkData))
 	require.NoError(t, err)
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
 func BenchmarkParsing(b *testing.B) {
