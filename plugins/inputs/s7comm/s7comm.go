@@ -327,9 +327,9 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 		bit, err = strconv.Atoi(x)
 		if err != nil {
 			return nil, nil, fmt.Errorf("invalid extra parameter: %w", err)
-		} else if extra < 0 || extra > 7 {
+		} else if bit < 0 || bit > 7 {
 			// Ensure bit address is valid
-			return nil, nil, fmt.Errorf("invalid extra parameter %d, bit address out of range", extra)
+			return nil, nil, fmt.Errorf("invalid extra parameter %d, bit address out of range", bit)
 		}
 	default:
 		if groups["extra"] != "" {
