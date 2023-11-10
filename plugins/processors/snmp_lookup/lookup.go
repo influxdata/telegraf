@@ -148,12 +148,12 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	}
 
 	// Check cache
+	l.lock.Lock()
 	tagMap, inCache := l.cache.Peek(agent)
 	_, indexExists := tagMap.rows[index]
 
 	// Cache miss
 	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
-		l.lock.Lock()
 		if done, busy := l.sigs[agent]; busy {
 			l.lock.Unlock()
 			<-done
@@ -164,18 +164,20 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 			gs, err := l.getConnection(metric)
 			if err != nil {
 				l.Log.Errorf("Could not connect to %q: %v", agent, err)
-				close(l.sigs[agent])
+				l.signalAgentReady(agent)
 				return []telegraf.Metric{metric}
 			}
 
 			if err = l.loadTagMap(gs, agent); err != nil {
 				l.Log.Errorf("Could not load table from %q: %v", agent, err)
-				close(l.sigs[agent])
+				l.signalAgentReady(agent)
 				return []telegraf.Metric{metric}
 			}
 
-			close(l.sigs[agent])
+			l.signalAgentReady(agent)
 		}
+	} else {
+		l.lock.Unlock()
 	}
 
 	// Load from cache
@@ -190,6 +192,13 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	}
 
 	return []telegraf.Metric{metric}
+}
+
+func (l *Lookup) signalAgentReady(agent string) {
+	l.lock.Lock()
+	close(l.sigs[agent])
+	delete(l.sigs, agent)
+	l.lock.Unlock()
 }
 
 // snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.

@@ -492,6 +492,22 @@ func TestAdd(t *testing.T) {
 				"index":  "123",
 			}, "value", 1.0)
 	}, time.Second, time.Millisecond)
-
 	require.Equal(t, 1, tsc.calls)
+
+	// clear cache to simulate expiry
+	p.cache.Purge()
+	acc.ClearMetrics()
+
+	// Add new metric
+	m.AddTag("index", "0")
+	require.NoError(t, p.Add(m, acc))
+
+	require.Eventually(t, func() bool {
+		return acc.HasPoint(m.Name(), map[string]string{
+			"source": "127.0.0.1",
+			"index":  "0",
+			"ifName": "eth0",
+		}, "value", 1.0)
+	}, time.Second, time.Millisecond)
+	require.Equal(t, 2, tsc.calls)
 }
