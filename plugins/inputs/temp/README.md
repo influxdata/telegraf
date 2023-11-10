@@ -39,6 +39,11 @@ following command:
 wmic /namespace:\\root\wmi PATH MSAcpi_ThermalZoneTemperature
 ```
 
+If the result is "Not Supported" you may be running in a virtualized environment
+and not a physical machine. Additionally, if you still get this result your
+motherboard or system may not support querying these values. Finally, you may
+be required to run as admin to get the values.
+
 ## Example Output
 
 ```text

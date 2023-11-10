@@ -364,7 +364,7 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
-	require.Equal(t, acc.TagSetValue("prometheus", "quantile"), "0")
+	require.Equal(t, "0", acc.TagSetValue("prometheus", "quantile"))
 	require.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_sum"))
 	require.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
 	require.Equal(t, acc.TagValue("prometheus", "url"), ts.URL+"/metrics")

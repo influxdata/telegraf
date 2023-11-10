@@ -345,6 +345,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## e.g. IgnoredErrors = ["PDH_NO_DATA"]
   # IgnoredErrors = []
 
+  ## Maximum size of the buffer for values returned by the API
+  ## Increase this value if you experience "buffer limit reached" errors.
+  # MaxBufferSize = "4MiB"
+
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
   ## the table

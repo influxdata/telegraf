@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -150,7 +151,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		reqBodyBuffer = buf
 
 		// sha256 is hex encoded
-		hash := fmt.Sprintf("%x", sum)
+		hash := hex.EncodeToString(sum[:])
 		payloadHash = &hash
 	}
 

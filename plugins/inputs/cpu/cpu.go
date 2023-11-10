@@ -32,14 +32,6 @@ type CPUStats struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func NewCPUStats(ps system.PS) *CPUStats {
-	return &CPUStats{
-		ps:             ps,
-		CollectCPUTime: true,
-		ReportActive:   true,
-	}
-}
-
 func (*CPUStats) SampleConfig() string {
 	return sampleConfig
 }

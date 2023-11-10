@@ -49,7 +49,7 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 
-		require.Equal(t, r.URL.Path, "/_raindrops", "Cannot handle request")
+		require.Equal(t, "/_raindrops", r.URL.Path, "Cannot handle request")
 		rsp = sampleResponse
 
 		_, err := fmt.Fprintln(w, rsp)

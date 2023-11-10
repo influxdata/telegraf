@@ -457,6 +457,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 	tests := []struct {
 		name        string
 		address     uint16
+		length      uint16
 		byteOrder   string
 		dataTypeIn  string
 		dataTypeOut string
@@ -988,6 +989,14 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 			scale:      1.0,
 			write:      []byte{0xb8, 0x14},
 			read:       float64(-0.509765625),
+		},
+		{
+			name:       "register110_string",
+			address:    110,
+			dataTypeIn: "STRING",
+			length:     7,
+			write:      []byte{0x4d, 0x6f, 0x64, 0x62, 0x75, 0x73, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x00},
+			read:       "Modbus String",
 		},
 	}
 
@@ -1024,6 +1033,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 							OutputType: hrt.dataTypeOut,
 							Scale:      hrt.scale,
 							Address:    hrt.address,
+							Length:     hrt.length,
 						},
 					},
 				},
@@ -1058,6 +1068,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 	tests := []struct {
 		name        string
 		address     uint16
+		length      uint16
 		byteOrder   string
 		dataTypeIn  string
 		dataTypeOut string
@@ -1590,6 +1601,14 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			write:      []byte{0xb8, 0x14},
 			read:       float64(-0.509765625),
 		},
+		{
+			name:       "register110_string",
+			address:    110,
+			dataTypeIn: "STRING",
+			length:     7,
+			write:      []byte{0x6f, 0x4d, 0x62, 0x64, 0x73, 0x75, 0x53, 0x20, 0x72, 0x74, 0x6e, 0x69, 0x00, 0x67},
+			read:       "Modbus String",
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -1605,8 +1624,13 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 		t.Run(hrt.name, func(t *testing.T) {
 			quantity := uint16(len(hrt.write) / 2)
 			invert := make([]byte, 0, len(hrt.write))
-			for i := len(hrt.write) - 1; i >= 0; i-- {
-				invert = append(invert, hrt.write[i])
+			if hrt.dataTypeIn != "STRING" {
+				for i := len(hrt.write) - 1; i >= 0; i-- {
+					invert = append(invert, hrt.write[i])
+				}
+			} else {
+				// Put in raw data for strings
+				invert = append(invert, hrt.write...)
 			}
 			_, err := client.WriteMultipleRegisters(hrt.address, quantity, invert)
 			require.NoError(t, err)
@@ -1629,6 +1653,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 							OutputType: hrt.dataTypeOut,
 							Scale:      hrt.scale,
 							Address:    hrt.address,
+							Length:     hrt.length,
 						},
 					},
 				},

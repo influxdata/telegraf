@@ -358,7 +358,7 @@ func TestSelectMetrics(t *testing.T) {
 	filtered, err := getFilteredMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
-	require.Equal(t, 12, len(filtered[0].metrics))
+	require.Len(t, filtered[0].metrics, 12)
 	require.NoError(t, err)
 }
 

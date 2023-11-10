@@ -162,6 +162,7 @@ func TestMetricResult(t *testing.T) {
 		0x00, 0x00, 0x08, 0x99, // 2201
 		0x00, 0x00, 0x08, 0x9A, // 2202
 		0x40, 0x49, 0x0f, 0xdb, // float32 of 3.1415927410125732421875
+		0x4d, 0x6f, 0x64, 0x62, 0x75, 0x73, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x00, // String "Modbus String"
 	}
 
 	// Write the data to a fake server
@@ -201,6 +202,13 @@ func TestMetricResult(t *testing.T) {
 					Name:         "temperature",
 					Address:      uint16(2),
 					InputType:    "INT16",
+					RegisterType: "holding",
+				},
+				{
+					Name:         "comment",
+					Address:      uint16(11),
+					Length:       7,
+					InputType:    "STRING",
 					RegisterType: "holding",
 				},
 			},
@@ -275,6 +283,7 @@ func TestMetricResult(t *testing.T) {
 			map[string]interface{}{
 				"hours":       uint64(10),
 				"temperature": int64(42),
+				"comment":     "Modbus String",
 			},
 			time.Unix(0, 0),
 		),

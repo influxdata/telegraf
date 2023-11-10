@@ -267,7 +267,7 @@ func TestTableBuild_walk_noTranslate(t *testing.T) {
 
 	tb, err := tbl.Build(gosmiTsc, true, tr)
 	require.NoError(t, err)
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "foo",
@@ -350,7 +350,7 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 	tb, err := tbl.Build(gosmiTsc, true, tr)
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "atTable")
+	require.Equal(t, "atTable", tb.Name)
 
 	rtr1 := RTableRow{
 		Tags: map[string]string{
@@ -698,7 +698,7 @@ func TestTableJoin_walkGosmi(t *testing.T) {
 	tb, err := tbl.Build(gosmiTsc, true, tr)
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -781,7 +781,7 @@ func TestTableOuterJoin_walkGosmi(t *testing.T) {
 	tb, err := tbl.Build(gosmiTsc, true, tr)
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -873,7 +873,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	tb, err := tbl.Build(gosmiTsc, true, tr)
 	require.NoError(t, err)
 
-	require.Equal(t, tb.Name, "mytable")
+	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",

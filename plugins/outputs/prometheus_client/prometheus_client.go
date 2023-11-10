@@ -5,13 +5,17 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/mdlayher/vsock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -187,11 +191,38 @@ func (p *PrometheusClient) Init() error {
 	return nil
 }
 
-func (p *PrometheusClient) listen() (net.Listener, error) {
+func (p *PrometheusClient) listenTCP(host string) (net.Listener, error) {
 	if p.server.TLSConfig != nil {
-		return tls.Listen("tcp", p.Listen, p.server.TLSConfig)
+		return tls.Listen("tcp", host, p.server.TLSConfig)
 	}
-	return net.Listen("tcp", p.Listen)
+	return net.Listen("tcp", host)
+}
+
+func (p *PrometheusClient) listenVsock(host string) (net.Listener, error) {
+	_, portStr, err := net.SplitHostPort(host)
+	if err != nil {
+		return nil, err
+	}
+	port, err := strconv.ParseUint(portStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	return vsock.Listen(uint32(port), nil)
+}
+
+func (p *PrometheusClient) listen() (net.Listener, error) {
+	u, err := url.ParseRequestURI(p.Listen)
+	// fallback to legacy way
+	if err != nil {
+		return p.listenTCP(p.Listen)
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "tcp", "http":
+		return p.listenTCP(u.Host)
+	case "vsock":
+		return p.listenVsock(u.Host)
+	}
+	return nil, errors.New("Unknown scheme")
 }
 
 func (p *PrometheusClient) Connect() error {

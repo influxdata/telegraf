@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -295,7 +296,7 @@ func (e *EventHub) createMetrics(event *eventhubClient.Event) ([]telegraf.Metric
 		}
 
 		if event.SystemProperties.PartitionID != nil && e.PartitionIDTag != "" {
-			metrics[i].AddTag(e.PartitionIDTag, fmt.Sprintf("%d", *event.SystemProperties.PartitionID))
+			metrics[i].AddTag(e.PartitionIDTag, strconv.Itoa(int(*event.SystemProperties.PartitionID)))
 		}
 		if event.SystemProperties.PartitionKey != nil && e.PartitionKeyTag != "" {
 			metrics[i].AddTag(e.PartitionKeyTag, *event.SystemProperties.PartitionKey)

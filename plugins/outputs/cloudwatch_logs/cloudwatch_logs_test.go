@@ -573,7 +573,7 @@ func TestWrite(t *testing.T) {
 			mockCwl.Init(tt.logStreamName)
 			plugin.svc = mockCwl
 			require.NoError(t, plugin.Write(tt.metrics))
-			require.Equal(t, tt.expectedMetricsCount, len(mockCwl.pushedLogEvents))
+			require.Len(t, mockCwl.pushedLogEvents, tt.expectedMetricsCount)
 
 			for index, elem := range mockCwl.pushedLogEvents {
 				require.Equal(t, *elem.Message, tt.metrics[tt.expectedMetricsOrder[index]].Fields()["message"])

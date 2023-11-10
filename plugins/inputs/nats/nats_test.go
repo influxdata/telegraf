@@ -8,8 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var sampleVarz = `
@@ -70,7 +71,7 @@ func TestMetricsCorrect(t *testing.T) {
 	var acc testutil.Accumulator
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, r.URL.Path, "/varz", "Cannot handle request")
+		require.Equal(t, "/varz", r.URL.Path, "Cannot handle request")
 
 		rsp := sampleVarz
 		_, err := fmt.Fprintln(w, rsp)

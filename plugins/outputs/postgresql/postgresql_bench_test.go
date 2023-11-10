@@ -65,7 +65,7 @@ func batchGenerator(args batchGeneratorArgs) <-chan []telegraf.Metric {
 	for i := 0; i < args.tagCardinality; i++ {
 		tags := MSS{}
 		for j := 0; j < args.numTags; j++ {
-			tags[fmt.Sprintf("tag_%d", j)] = fmt.Sprintf("%d", rand.Int())
+			tags[fmt.Sprintf("tag_%d", j)] = strconv.Itoa(rand.Int())
 		}
 		tagSets = append(tagSets, tags)
 	}

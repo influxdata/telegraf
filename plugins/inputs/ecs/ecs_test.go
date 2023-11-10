@@ -808,6 +808,19 @@ func TestResolveEndpoint(t *testing.T) {
 				metadataVersion: 3,
 			},
 		},
+		{
+			name: "Endpoint is not set, ECS_CONTAINER_METADATA_URI_V4 is set => use v4 metadata",
+			setEnv: func(t *testing.T) {
+				t.Setenv("ECS_CONTAINER_METADATA_URI_V4", "v4-endpoint.local")
+			},
+			given: Ecs{
+				EndpointURL: "",
+			},
+			exp: Ecs{
+				EndpointURL:     "v4-endpoint.local",
+				metadataVersion: 4,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

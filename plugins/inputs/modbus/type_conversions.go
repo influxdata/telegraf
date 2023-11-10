@@ -1,6 +1,8 @@
 package modbus
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func determineUntypedConverter(outType string) (fieldConverterFunc, error) {
 	switch outType {
@@ -17,7 +19,7 @@ func determineUntypedConverter(outType string) (fieldConverterFunc, error) {
 }
 
 func determineConverter(inType, byteOrder, outType string, scale float64) (fieldConverterFunc, error) {
-	if scale != 0.0 {
+	if scale != 0.0 && inType != "STRING" {
 		return determineConverterScale(inType, byteOrder, outType, scale)
 	}
 	return determineConverterNoScale(inType, byteOrder, outType)
@@ -83,6 +85,8 @@ func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverte
 		return determineConverterF32(outType, byteOrder)
 	case "FLOAT64":
 		return determineConverterF64(outType, byteOrder)
+	case "STRING":
+		return determineConverterString(byteOrder)
 	}
 	return nil, fmt.Errorf("invalid input data-type: %s", inType)
 }

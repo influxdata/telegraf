@@ -331,7 +331,7 @@ func TestAccRow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		require.NoError(t, p.accRow("pgTEST", tt.fields, &acc, columns))
-		require.Equal(t, 1, len(acc.Metrics))
+		require.Len(t, acc.Metrics, 1)
 		metric := acc.Metrics[0]
 		require.Equal(t, tt.dbName, metric.Tags["db"])
 		require.Equal(t, tt.server, metric.Tags["server"])

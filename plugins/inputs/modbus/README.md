@@ -106,6 +106,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
   ##               FIXED, UFIXED (fixed-point representation on input)
   ##               FLOAT32 is a deprecated alias for UFIXED for historic reasons, should be avoided
+  ##               STRING (byte-sequence converted to string)
   ## scale       - the final numeric variable representation
   ## address     - variable address
 
@@ -116,6 +117,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
     { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
     { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
+    { name = "firmware",     byte_order = "AB",   data_type = "STRING", address = [5, 6, 7, 8, 9, 10, 11, 12]},
   ]
   input_registers = [
     { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
@@ -177,9 +179,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
     ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
-    ## scale *1,2     - (optional) factor to scale the variable with
-    ## output *1,3    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
-    ##                  "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
+    ##                  STRING (byte-sequence converted to string)
+    ## length *1,2    - (optional) number of registers, ONLY valid for STRING type
+    ## scale *1,2,4   - (optional) factor to scale the variable with
+    ## output *1,3,4  - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64.
+    ##                  Defaults to FLOAT64 for numeric fields if "scale" is provided.
+    ##                  Otherwise the input "type" class is used (e.g. INT* -> INT64).
     ## measurement *1 - (optional) measurement name, defaults to the setting of the request
     ## omit           - (optional) omit this field. Useful to leave out single values when querying many registers
     ##                  with a single request. Defaults to "false".
@@ -189,13 +194,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## *3: This field can only be "UINT16" or "BOOL" if specified for both "coil"
     ##     and "discrete"-input type of registers. By default the fields are
     ##     output as zero or one in UINT16 format unless "BOOL" is used.
+    ## *4: These fields cannot be used with "STRING"-type fields.
 
     ## Coil / discrete input example
     fields = [
-      { address=0, name="motor1_run"},
-      { address=1, name="jog", measurement="motor"},
-      { address=2, name="motor1_stop", omit=true},
-      { address=3, name="motor1_overheating", output="BOOL"},
+      { address=0, name="motor1_run" },
+      { address=1, name="jog", measurement="motor" },
+      { address=2, name="motor1_stop", omit=true },
+      { address=3, name="motor1_overheating", output="BOOL" },
+      { address=4, name="firmware", type="STRING", length=8 },
     ]
 
     [inputs.modbus.request.tags]
@@ -274,22 +281,25 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     # measurement = "modbus"
 
     ## Field definitions
-    ## register   - type of the modbus register, can be "coil", "discrete",
-    ##              "holding" or "input". Defaults to "holding".
-    ## address    - address of the register to query. For coil and discrete inputs this is the bit address.
-    ## name       - field name
-    ## type *1    - type of the modbus field, can be
-    ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
-    ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
-    ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
-    ## scale *1   - (optional) factor to scale the variable with
-    ## output *2  - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
-    ##              "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
+    ## register    - type of the modbus register, can be "coil", "discrete",
+    ##               "holding" or "input". Defaults to "holding".
+    ## address     - address of the register to query. For coil and discrete inputs this is the bit address.
+    ## name        - field name
+    ## type *1     - type of the modbus field, can be
+    ##                 INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+    ##                 INT16, UINT16, INT32, UINT32, INT64, UINT64 and
+    ##                 FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
+    ##                 STRING (byte-sequence converted to string)
+    ## length *1   - (optional) number of registers, ONLY valid for STRING type
+    ## scale *1,3  - (optional) factor to scale the variable with
+    ## output *2,3 - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
+    ##               "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
     ##
     ## *1: These fields are ignored for both "coil" and "discrete"-input type of registers.
     ## *2: This field can only be "UINT16" or "BOOL" if specified for both "coil"
     ##     and "discrete"-input type of registers. By default the fields are
     ##     output as zero or one in UINT16 format unless "BOOL" is used.
+    ## *3: These fields cannot be used with "STRING"-type fields.
     fields = [
       { register="coil",    address=0, name="door_open"},
       { register="coil",    address=1, name="status_ok"},
@@ -298,6 +308,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
       { address=5, name="energy",       type="FLOAT32", scale=0.001,},
       { address=7, name="frequency",    type="UINT32",  scale=0.1   },
       { address=8, name="power_factor", type="INT64",   scale=0.01  },
+      { address=9, name="firmware",     type="STRING",  length=8    },
     ]
 
     ## Tags assigned to the metric
@@ -388,10 +399,10 @@ configuration for a single slave-device.
 The field `data_type` defines the representation of the data value on input from
 the modbus registers.  The input values are then converted from the given
 `data_type` to a type that is appropriate when sending the value to the output
-plugin. These output types are usually one of string, integer or
-floating-point-number. The size of the output type is assumed to be large enough
-for all supported input types. The mapping from the input type to the output
-type is fixed and cannot be configured.
+plugin. These output types are usually an integer or floating-point-number. The
+size of the output type is assumed to be large enough for all supported input
+types. The mapping from the input type to the output type is fixed and cannot
+be configured.
 
 ##### Booleans: `BOOL`
 
@@ -432,6 +443,13 @@ like 'int32 containing fixed-point representation with N decimal places'.
 
 (`FLOAT32` is deprecated and should not be used. `UFIXED` provides the same
 conversion from unsigned values).
+
+##### String: `STRING`
+
+This type is used to query the number of registers specified in the `address`
+setting and convert the byte-sequence to a string. Please note, if the
+byte-sequence contains a `null` byte, the string is truncated at this position.
+You cannot use the `scale` setting for string fields.
 
 ---
 
@@ -562,6 +580,12 @@ representations of floating point values exist. `FLOAT16` denotes a
 half-precision float with a 16-bit representation.
 Usually the datatype of the register is listed in the datasheet of your modbus
 device in relation to the `address` described above.
+
+The `STRING` datatype is special in that it requires the `length` setting to
+be specified containing the length (in terms of number of registers) containing
+the string. The returned byte-sequence is interpreted as string and truncated
+to the first `null` byte found if any. The `scale` and `output` setting cannot
+be used for this `type`.
 
 This setting is ignored if the field's `omit` is set to `true` or if the
 `register` type is a bit-type (`coil` or `discrete`) and can be omitted in
@@ -721,6 +745,12 @@ representations of floating point values exist. `FLOAT16` denotes a
 half-precision float with a 16-bit representation.
 Usually the datatype of the register is listed in the datasheet of your modbus
 device in relation to the `address` described above.
+
+The `STRING` datatype is special in that it requires the `length` setting to
+be specified containing the length (in terms of number of registers) containing
+the string. The returned byte-sequence is interpreted as string and truncated
+to the first `null` byte found if any. The `scale` and `output` setting cannot
+be used for this `type`.
 
 This setting is ignored if the `register` is a bit-type (`coil` or `discrete`)
 and can be omitted in these cases.

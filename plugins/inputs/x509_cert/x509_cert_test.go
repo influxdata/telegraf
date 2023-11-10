@@ -260,7 +260,7 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	require.NoError(t, sc.Gather(&acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 }
 
 func TestGatherChain(t *testing.T) {
@@ -431,8 +431,8 @@ func TestSourcesToURLs(t *testing.T) {
 	for _, p := range m.locations {
 		actual = append(actual, p.String())
 	}
-	require.Equal(t, len(m.globpaths), 5)
-	require.Equal(t, len(m.locations), 3)
+	require.Len(t, m.globpaths, 5)
+	require.Len(t, m.locations, 3)
 	require.ElementsMatch(t, expected, actual)
 }
 

@@ -118,8 +118,8 @@ func TestWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Equal(t, request.TimeSeries[0].Resource.Type, "global")
-	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
+	require.Equal(t, "global", request.TimeSeries[0].Resource.Type)
+	require.Equal(t, "projects/[PROJECT]", request.TimeSeries[0].Resource.Labels["project_id"])
 }
 
 func TestWriteResourceTypeAndLabels(t *testing.T) {
@@ -150,9 +150,9 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	require.NoError(t, err)
 
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Equal(t, request.TimeSeries[0].Resource.Type, "foo")
-	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
-	require.Equal(t, request.TimeSeries[0].Resource.Labels["mylabel"], "myvalue")
+	require.Equal(t, "foo", request.TimeSeries[0].Resource.Type)
+	require.Equal(t, "projects/[PROJECT]", request.TimeSeries[0].Resource.Labels["project_id"])
+	require.Equal(t, "myvalue", request.TimeSeries[0].Resource.Labels["mylabel"])
 }
 
 func TestWriteTagsAsResourceLabels(t *testing.T) {
@@ -662,7 +662,7 @@ func TestGetStackdriverLabels(t *testing.T) {
 	}
 
 	labels := s.getStackdriverLabels(tags)
-	require.Equal(t, QuotaLabelsPerMetricDescriptor, len(labels))
+	require.Len(t, labels, QuotaLabelsPerMetricDescriptor)
 }
 
 func TestGetStackdriverIntervalEndpoints(t *testing.T) {

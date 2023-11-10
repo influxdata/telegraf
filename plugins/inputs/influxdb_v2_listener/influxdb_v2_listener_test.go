@@ -593,7 +593,7 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	// When timestamp is omitted, the precision parameter actually
 	// specifies the precision.  The timestamp is set to the greatest
 	// integer unit less than the provided timestamp (floor).
