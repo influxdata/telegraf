@@ -309,8 +309,8 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 
 			pids, err := findPIDsInMeasurement(out)
 			if err != nil {
-				r.errorChan <- err
-				break
+				r.Log.Warn("skipping text: %w", err)
+				continue
 			}
 			for processName, PIDsProcess := range processesPIDsAssociation {
 				if pids == PIDsProcess {
