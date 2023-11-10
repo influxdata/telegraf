@@ -111,13 +111,12 @@ func TestInit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := tt.plugin
-			p.Log = testutil.Logger{}
+			tt.plugin.Log = testutil.Logger{}
 
 			if tt.expected == "" {
-				require.NoError(t, p.Init())
+				require.NoError(t, tt.plugin.Init())
 			} else {
-				require.ErrorContains(t, p.Init(), tt.expected)
+				require.ErrorContains(t, tt.plugin.Init(), tt.expected)
 			}
 		})
 	}
