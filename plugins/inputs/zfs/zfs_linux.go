@@ -83,9 +83,9 @@ func getTags(pools []poolInfo) map[string]string {
 	return map[string]string{"pools": poolNames}
 }
 
-func gather(lines []string, fileLines int) ([]string, []string, error) {
-	if len(lines) != fileLines {
-		return nil, nil, errors.New("expected lines in kstat does not match")
+func gather(lines []string, minimalFileLines int) ([]string, []string, error) {
+	if len(lines) < minimalFileLines {
+		return nil, nil, errors.New("lines in kstat is not enough")
 	}
 
 	keys := strings.Fields(lines[1])
@@ -130,8 +130,8 @@ func gatherV1(lines []string) (map[string]interface{}, error) {
 //
 // For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
 func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
-	fileLines := 9
-	_, _, err := gather(lines, fileLines)
+	minimalFileLines := 9
+	_, _, err := gather(lines, minimalFileLines)
 	if err != nil {
 		return nil, err
 	}
