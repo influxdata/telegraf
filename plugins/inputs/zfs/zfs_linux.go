@@ -172,7 +172,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	}
 
 	if gatherErr != nil {
-		return err
+		return gatherErr
 	}
 
 	acc.AddFields("zfs_pool", fields, tags)
