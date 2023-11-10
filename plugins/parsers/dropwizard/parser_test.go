@@ -589,3 +589,63 @@ func TestDropWizard(t *testing.T) {
 		})
 	}
 }
+
+const benchmarkData = `{
+    "version": "3.0.0",
+	"gauges" : {
+		"benchmark,tags_host=myhost,tags_sdkver=3.11.5,tags_platform=python": {
+			"value": 5.0
+		},
+		"benchmark,tags_host=myhost,tags_sdkver=3.11.4,tags_platform=python": {
+			"value": 4.0
+		}
+	}
+}
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"metric_type":   "gauge",
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"metric_type":   "gauge",
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
+}
