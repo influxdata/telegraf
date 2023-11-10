@@ -135,6 +135,7 @@ func NewElasticsearch() *Elasticsearch {
 		ClusterHealthLevel:         "indices",
 		HTTPClientConfig: httpconfig.HTTPClientConfig{
 			ResponseHeaderTimeout: config.Duration(5 * time.Second),
+			Timeout:               config.Duration(5 * time.Second),
 		},
 	}
 }

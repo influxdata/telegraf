@@ -238,6 +238,7 @@ func init() {
 			HealthCheckInterval: config.Duration(time.Second * 10),
 			HTTPClientConfig: httpconfig.HTTPClientConfig{
 				ResponseHeaderTimeout: config.Duration(5 * time.Second),
+				Timeout:               config.Duration(5 * time.Second),
 			},
 		}
 	})
