@@ -362,6 +362,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	item := &gos7.S7DataItem{
 		Area:     area,
 		WordLen:  wordlen,
+		Bit:      extra,
 		DBNumber: areaidx,
 		Start:    start,
 		Amount:   amount,
