@@ -26,7 +26,7 @@ type QBittorrent struct {
 	Port     int           `toml:"port"`
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
-	Tls      bool          `toml:"tls"`
+	TLS      bool          `toml:"tls"`
 	Cookie   []*http.Cookie
 }
 
@@ -75,7 +75,7 @@ func (q *QBittorrent) getSyncData() error {
 	return nil
 }
 
-// getUrl returns a URL object constructed from the given path and the QBittorrent
+// getURL returns a URL object constructed from the given path and the QBittorrent
 // configuration. The returned URL is constructed using the scheme (http or https)
 // specified in the configuration. The path is appended to the base URL constructed
 // using the host and port from the configuration. If the URL is invalid, an error is
@@ -83,19 +83,19 @@ func (q *QBittorrent) getSyncData() error {
 //
 // path: a string representing the path to be appended to the base URL.
 // Returns a URL object and an error.
-func (q *QBittorrent) getUrl(path string) (*url.URL, error) {
+func (q *QBittorrent) getURL(path string) (*url.URL, error) {
 	var scheme string
-	if q.Tls {
+	if q.TLS {
 		scheme = "https"
 	} else {
 		scheme = "http"
 	}
-	strUrl := fmt.Sprintf("%s://%s:%d/%s", scheme, q.Host, q.Port, strings.TrimLeft(path, "/"))
-	parseUrl, err := url.Parse(strUrl)
+	strURL := fmt.Sprintf("%s://%s:%d/%s", scheme, q.Host, q.Port, strings.TrimLeft(path, "/"))
+	parseURL, err := url.Parse(strURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid server URL %q", strUrl)
+		return nil, fmt.Errorf("invalid server URL %q", strURL)
 	}
-	return parseUrl, nil
+	return parseURL, nil
 }
 
 func (q *QBittorrent) getMeasure(method string, path string, headers map[string]string, param url.Values, reqBody io.Reader) (string, int, error) {
@@ -107,19 +107,19 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 		q.Cookie = cookie
 	}
 
-	getUrl, err := q.getUrl(path)
+	getURL, err := q.getURL(path)
 	if err != nil {
 		return "", -1, err
 	}
 
 	paramStr := param.Encode()
-	reqUrl := getUrl.String()
+	reqURL := getURL.String()
 	if paramStr != "" {
-		reqUrl = fmt.Sprintf("%s?%s", reqUrl, paramStr)
+		reqURL = fmt.Sprintf("%s?%s", reqURL, paramStr)
 	}
 
 	// Create + send request
-	req, err := http.NewRequest(method, reqUrl, reqBody)
+	req, err := http.NewRequest(method, reqURL, reqBody)
 	if err != nil {
 		return "", -1, err
 	}
@@ -154,7 +154,7 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 	// Process response
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
-			reqUrl,
+			reqURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
@@ -166,7 +166,7 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 }
 
 func (q *QBittorrent) login() ([]*http.Cookie, error) {
-	getUrl, err := q.getUrl("/api/v2/auth/login")
+	getURL, err := q.getURL("/api/v2/auth/login")
 	if err != nil {
 		return nil, err
 	}
@@ -196,11 +196,11 @@ func (q *QBittorrent) login() ([]*http.Cookie, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", getUrl.String(), payload)
+	req, err := http.NewRequest("POST", getURL.String(), payload)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Referer", fmt.Sprintf("%s://%s", getUrl.Scheme, getUrl.Host))
+	req.Header.Set("Referer", fmt.Sprintf("%s://%s", getURL.Scheme, getURL.Host))
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	var client = new(http.Client)
@@ -208,12 +208,13 @@ func (q *QBittorrent) login() ([]*http.Cookie, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("can not auth,may be server url is not corret")
 	}
 	cookie := resp.Cookies()
-	if cookie == nil || len(cookie) == 0 {
+	if len(cookie) == 0 {
 		return nil, fmt.Errorf("can not auth,may be username or password is not corret")
 	}
 

@@ -440,7 +440,8 @@ func (m *MainData) partialUpdate(update *MainData) {
 	for k, v := range update.Categories {
 		category, exists := m.Categories[k]
 		if exists {
-			(&category).partialUpdate(&v)
+			localV := v
+			(&category).partialUpdate(&localV)
 		} else {
 			m.Categories[k] = v
 		}
@@ -473,7 +474,8 @@ func (m *MainData) partialUpdate(update *MainData) {
 	for k, v := range update.Torrents {
 		torrent, exists := m.Torrents[k]
 		if exists {
-			torrent.partialUpdate(&v)
+			localV := v
+			torrent.partialUpdate(&localV)
 		} else {
 			m.Torrents[k] = v
 		}
@@ -491,18 +493,18 @@ func (m *MainData) toFields() map[string][]telegraf.Metric {
 	tags := make(map[string]string)
 
 	//todo
-	var server_state_metrics []telegraf.Metric
-	server_state_metrics = append(server_state_metrics, metric.New("categories", tags, m.ServerState.toFieldMap(), ts, telegraf.Gauge))
+	var serverStateMetrics []telegraf.Metric
+	serverStateMetrics = append(serverStateMetrics, metric.New("categories", tags, m.ServerState.toFieldMap(), ts, telegraf.Gauge))
 
-	var torrents_metrics []telegraf.Metric
+	var torrentsMetrics = make([]telegraf.Metric, 0, len(m.Torrents))
 	for k, v := range m.Torrents {
-		torrent_tag := m.Torrents[k].toTagsMap()
-		torrent_tag["hash"] = k
-		torrents_metrics = append(torrents_metrics, metric.New("torrents", torrent_tag, v.toFieldMap(), ts, telegraf.Gauge))
+		torrentTag := m.Torrents[k].toTagsMap()
+		torrentTag["hash"] = k
+		torrentsMetrics = append(torrentsMetrics, metric.New("torrents", torrentTag, v.toFieldMap(), ts, telegraf.Gauge))
 	}
 	field := map[string][]telegraf.Metric{
-		"server_state": server_state_metrics,
-		"torrents":     torrents_metrics,
+		"server_state": serverStateMetrics,
+		"torrents":     torrentsMetrics,
 	}
 	return field
 }
