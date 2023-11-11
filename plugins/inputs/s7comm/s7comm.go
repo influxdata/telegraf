@@ -371,7 +371,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Determine the type converter function
-	f := determineConversion(dtype, extra)
+	f := determineConversion(dtype)
 	return item, f, nil
 }
 

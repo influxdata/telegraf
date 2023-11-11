@@ -9,7 +9,7 @@ import (
 
 var helper = &gos7.Helper{}
 
-func determineConversion(dtype string, _ int) converterFunc {
+func determineConversion(dtype string) converterFunc {
 	switch dtype {
 	case "X":
 		return func(buf []byte) interface{} {
