@@ -258,6 +258,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							Area:     0x84,
 							WordLen:  0x01,
+							Bit:      2,
 							DBNumber: 5,
 							Start:    3,
 							Amount:   1,
