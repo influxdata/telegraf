@@ -199,8 +199,6 @@ func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
 	ctx := context.Background()
 	return e.HTTPClientConfig.CreateClient(ctx, e.Log)
-
-	return httpclient, nil
 }
 
 func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggregation esAggregation, i int) error {

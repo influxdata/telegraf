@@ -289,8 +289,6 @@ func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
 		e.HTTPClientConfig.ResponseHeaderTimeout = e.HTTPTimeout
 	}
 	return e.HTTPClientConfig.CreateClient(ctx, e.Log)
-
-	return client, nil
 }
 
 func (e *Elasticsearch) nodeStatsURL(baseURL string) string {

@@ -137,7 +137,6 @@ func (logstash *Logstash) Init() error {
 func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 	ctx := context.Background()
 	return logstash.HTTPClientConfig.CreateClient(ctx, logstash.Log)
-	return client, nil
 }
 
 // gatherJSONData query the data source and parse the response JSON
