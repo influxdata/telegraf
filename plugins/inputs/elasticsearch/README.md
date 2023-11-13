@@ -47,6 +47,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   servers = ["http://localhost:9200"]
 
   ## Timeout for HTTP requests to the elastic search server(s)
+  ## deprecated in 1.29.0; use 'timeout' instead
   http_timeout = "5s"
 
   ## When local is true (the default), the node will read only its own stats.
