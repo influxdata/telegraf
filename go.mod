@@ -158,7 +158,7 @@ require (
 	github.com/redis/go-redis/v9 v9.2.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
-	github.com/robinson/gos7 v0.0.0-20231012111941-bdaa10e92e16
+	github.com/robinson/gos7 v0.0.0-20231031082500-fb5a72fd499e
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
