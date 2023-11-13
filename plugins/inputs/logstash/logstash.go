@@ -136,11 +136,7 @@ func (logstash *Logstash) Init() error {
 // createHTTPClient create a clients to access API
 func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 	ctx := context.Background()
-	client, err := logstash.HTTPClientConfig.CreateClient(ctx, logstash.Log)
-	if err != nil {
-		return nil, err
-	}
-
+	return logstash.HTTPClientConfig.CreateClient(ctx, logstash.Log)
 	return client, nil
 }
 

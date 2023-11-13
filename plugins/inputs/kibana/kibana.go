@@ -152,10 +152,7 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 
 func (k *Kibana) createHTTPClient() (*http.Client, error) {
 	ctx := context.Background()
-	client, err := k.HTTPClientConfig.CreateClient(ctx, k.Log)
-	if err != nil {
-		return nil, err
-	}
+	return k.HTTPClientConfig.CreateClient(ctx, k.Log)
 
 	return client, nil
 }
