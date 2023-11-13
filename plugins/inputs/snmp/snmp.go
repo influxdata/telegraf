@@ -112,7 +112,7 @@ func (s *Snmp) Init() error {
 	if s.AgentHostTag != "source" {
 		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
 			Since:  "1.29.0",
-			Notice: `should be set to "source"`,
+			Notice: `should be set to "source" for consistent usage across plugins`,
 		})
 	}
 
