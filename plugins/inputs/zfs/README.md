@@ -223,15 +223,9 @@ For ZFS >= 2.1.x the format has changed significantly:
   - nunlinks (integer, count)
   - nunlinked (integer, count)
 
-For ZFS >= 2.2.x the format has changed significantly:
+For ZFS >= 2.2.x the following additional fields are available:
 
-- zfs_pool
-  - writes (integer, count)
-  - nwritten (integer, bytes)
-  - reads (integer, count)
-  - nread (integer, bytes)
-  - nunlinks (integer, count)
-  - nunlinked (integer, count)
+- additional fields for ZFS > 2.2.x
   - zil_commit_count (integer, count)
   - zil_commit_writer_count (integer, count)
   - zil_itx_count (integer, count)
