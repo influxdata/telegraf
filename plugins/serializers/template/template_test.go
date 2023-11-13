@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 func TestSerializer(t *testing.T) {
@@ -178,4 +179,27 @@ func TestSerializeBatch(t *testing.T) {
 	singleBuf, err := s.Serialize(m)
 	require.NoError(t, err)
 	require.Equal(t, "0: cpu 42\n", string(singleBuf))
+}
+
+func BenchmarkSerialize(b *testing.B) {
+	s := &Serializer{}
+	require.NoError(b, s.Init())
+	metrics := serializers.BenchmarkMetrics(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.Serialize(metrics[i%len(metrics)])
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkSerializeBatch(b *testing.B) {
+	s := &Serializer{}
+	require.NoError(b, s.Init())
+	m := serializers.BenchmarkMetrics(b)
+	metrics := m[:]
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.SerializeBatch(metrics)
+		require.NoError(b, err)
+	}
 }
