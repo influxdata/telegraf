@@ -80,6 +80,41 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	return pids, err
 }
 
+// ChildPattern matches children pids on the command line when the process was executed
+func (pg *NativeFinder) ChildPattern(pattern string) ([]PID, error) {
+	regxPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("compiling regexp failed: %w", err)
+	}
+
+	procs, err := process.Processes()
+	if err != nil {
+		return nil, fmt.Errorf("getting processes failed: %w", err)
+	}
+
+	var pids []PID
+	for _, p := range procs {
+		cmd, err := p.Cmdline()
+		if err != nil || !regxPattern.MatchString(cmd) {
+			continue
+		}
+
+		parent, err := process.NewProcess(p.Pid)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get process %d: %w", p.Pid, err)
+		}
+		children, err := parent.Children()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get children of process %d: %w", p.Pid, err)
+		}
+
+		for _, child := range children {
+			pids = append(pids, PID(child.Pid))
+		}
+	}
+	return pids, err
+}
+
 func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
 	pids, err := process.Pids()
 	if err != nil {
