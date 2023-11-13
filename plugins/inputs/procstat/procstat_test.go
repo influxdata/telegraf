@@ -498,7 +498,7 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 		pids := pidsTag.PIDS
 		tags := pidsTag.Tags
 		err := pidsTag.Err
-		require.Len(t, pids, 0)
+		require.Empty(t, pids)
 		require.Contains(t, []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"}, tags["supervisor_unit"])
 		if tags["supervisor_unit"] == "TestGather_STARTINGsupervisorUnitPIDs" {
 			require.Equal(t, "STARTING", tags["status"])
