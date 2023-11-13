@@ -695,7 +695,7 @@ func TestBenchmarkData(t *testing.T) {
 
 	actual, err := plugin.Parse([]byte(benchmarkData))
 	require.NoError(t, err)
-	testutil.RequireMetricsEqual(t, expected, actual)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 }
 
 func BenchmarkParsing(b *testing.B) {
