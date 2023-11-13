@@ -413,6 +413,6 @@ memory is too low)
 ### ZIL (Linux Only)
 
 note: `zil` measurements in `kstatMetrics` are system-wide, in `poolMetrics`
-are pool-wide
+they are pool-wide
 
 `zil_commit_count` counts when ZFS transactions are committed to a ZIL
