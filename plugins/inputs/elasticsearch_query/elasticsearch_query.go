@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,15 +28,15 @@ type ElasticsearchQuery struct {
 	Username            string          `toml:"username"`
 	Password            string          `toml:"password"`
 	EnableSniffer       bool            `toml:"enable_sniffer"`
-	Timeout             config.Duration `toml:"timeout"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
 	Aggregations        []esAggregation `toml:"aggregation"`
 
 	Log telegraf.Logger `toml:"-"`
 
-	tls.ClientConfig
 	httpclient *http.Client
-	esClient   *elastic5.Client
+	httpconfig.HTTPClientConfig
+
+	esClient *elastic5.Client
 }
 
 // esAggregation struct
@@ -197,20 +197,8 @@ func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := e.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(e.Timeout),
-		TLSClientConfig:       tlsCfg,
-	}
-	httpclient := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(e.Timeout),
-	}
-
-	return httpclient, nil
+	ctx := context.Background()
+	return e.HTTPClientConfig.CreateClient(ctx, e.Log)
 }
 
 func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggregation esAggregation, i int) error {
@@ -242,8 +230,11 @@ func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggreg
 func init() {
 	inputs.Add("elasticsearch_query", func() telegraf.Input {
 		return &ElasticsearchQuery{
-			Timeout:             config.Duration(time.Second * 5),
 			HealthCheckInterval: config.Duration(time.Second * 10),
+			HTTPClientConfig: httpconfig.HTTPClientConfig{
+				ResponseHeaderTimeout: config.Duration(5 * time.Second),
+				Timeout:               config.Duration(5 * time.Second),
+			},
 		}
 	})
 }
