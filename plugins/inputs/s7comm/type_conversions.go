@@ -29,7 +29,7 @@ func determineConversion(dtype string) converterFunc {
 				return ""
 			}
 			// Get the length of the encoded string
-			length := int(buf[0])
+			length := int(buf[1])
 			// Clip the string if we do not fill the whole buffer
 			if length < len(buf)-2 {
 				return string(buf[2 : 2+length])
