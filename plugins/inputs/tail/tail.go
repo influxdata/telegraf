@@ -217,72 +217,76 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 		if err != nil {
 			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
 		}
-		for _, file := range g.Match() {
-			if _, ok := t.tailers[file]; ok {
-				// we're already tailing this file
-				continue
-			}
 
-			var seek *tail.SeekInfo
-			if !t.Pipe && !fromBeginning {
-				if offset, ok := t.offsets[file]; ok {
-					t.Log.Debugf("Using offset %d for %q", offset, file)
-					seek = &tail.SeekInfo{
-						Whence: 0,
-						Offset: offset,
-					}
-				} else {
-					seek = &tail.SeekInfo{
-						Whence: 2,
-						Offset: 0,
+		// create a goroutine for each "tailer"
+                 t.wg.Add(1)
+
+                 go func() {
+			defer t.wg.Done()
+		        for _, file := range g.Match() {
+	                        if _, ok := t.tailers[file]; ok {
+			                // we're already tailing this file
+				        continue
+				}
+
+				var seek *tail.SeekInfo
+				if !t.Pipe && !fromBeginning {
+					if offset, ok := t.offsets[file]; ok {
+						t.Log.Debugf("Using offset %d for %q", offset, file)
+						seek = &tail.SeekInfo{
+							Whence: 0,
+							Offset: offset,
+						}
+					} else {
+						seek = &tail.SeekInfo{
+							Whence: 2,
+							Offset: 0,
+						}
 					}
 				}
-			}
 
-			tailer, err := tail.TailFile(file,
-				tail.Config{
-					ReOpen:    true,
-					Follow:    true,
-					Location:  seek,
-					MustExist: true,
-					Poll:      poll,
-					Pipe:      t.Pipe,
-					Logger:    tail.DiscardingLogger,
-					OpenReaderFunc: func(rd io.Reader) io.Reader {
-						r, _ := utfbom.Skip(t.decoder.Reader(rd))
-						return r
-					},
-				})
+				t.Log.Errorf("Chayan before adding Tail  %q", file)
 
-			if err != nil {
-				t.Log.Debugf("Failed to open file (%s): %v", file, err)
-				continue
-			}
+				tailer, err := tail.TailFile(file,
+					tail.Config{
+						ReOpen:    true,
+						Follow:    true,
+						Location:  seek,
+						MustExist: true,
+						Poll:      poll,
+						Pipe:      t.Pipe,
+						Logger:    tail.DiscardingLogger,
+						OpenReaderFunc: func(rd io.Reader) io.Reader {
+							r, _ := utfbom.Skip(t.decoder.Reader(rd))
+							return r
+						},
+					})
 
-			t.Log.Debugf("Tail added for %q", file)
+				if err != nil {
+					t.Log.Debugf("Failed to open file (%s): %v", file, err)
+					continue
+					return
+				}
+				t.tailers[tailer.Filename] = tailer
+				t.Log.Errorf("Chayan Tail added for %q", file)
 
-			parser, err := t.parserFunc()
-			if err != nil {
-				t.Log.Errorf("Creating parser: %s", err.Error())
-				continue
-			}
+				parser, err := t.parserFunc()
+				if err != nil {
+					t.Log.Errorf("Creating parser: %s", err.Error())
+					continue
+					return
+				}
 
-			// create a goroutine for each "tailer"
-			t.wg.Add(1)
-
-			go func() {
-				defer t.wg.Done()
+				t.Log.Debugf("Tail added for %q", file)
 				t.receiver(parser, tailer)
-
 				t.Log.Debugf("Tail removed for %q", tailer.Filename)
 
 				if err := tailer.Err(); err != nil {
 					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
 				}
-			}()
+			}
+		}()
 
-			t.tailers[tailer.Filename] = tailer
-		}
 	}
 	return nil
 }
