@@ -309,7 +309,7 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 
 			pids, err := findPIDsInMeasurement(out)
 			if err != nil {
-				r.Log.Warnf("Skipping measurement: %w", err)
+				r.Log.Warnf("Skipping measurement: %v", err)
 				continue
 			}
 			for processName, PIDsProcess := range processesPIDsAssociation {
