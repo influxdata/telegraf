@@ -54,7 +54,9 @@ func TestRegistry(t *testing.T) {
 }
 
 func TestSampleConfig(t *testing.T) {
-	config.RequireValidSampleConfig(t, (&Lookup{}).SampleConfig())
+	cfg := config.NewConfig()
+
+	require.NoError(t, cfg.LoadConfigData(testutil.UncommentSampleConfig((&Lookup{}).SampleConfig())))
 }
 
 func TestInit(t *testing.T) {

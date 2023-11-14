@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -94,4 +95,9 @@ func PrintMetrics(m []telegraf.Metric) {
 		panic(err)
 	}
 	fmt.Println(string(buf))
+}
+
+func UncommentSampleConfig(sampleConfig string) []byte {
+	re := regexp.MustCompile(`(?m)(^\s+)#\s*`)
+	return re.ReplaceAll([]byte(sampleConfig), []byte("$1"))
 }

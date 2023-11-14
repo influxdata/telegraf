@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -1654,20 +1653,4 @@ func (c *Config) firstErr() error {
 
 func (c *Config) addError(tbl *ast.Table, err error) {
 	c.errs = append(c.errs, fmt.Errorf("line %d:%d: %w", tbl.Line, tbl.Position, err))
-}
-
-type testingHelper interface {
-	Helper()
-}
-
-func RequireValidSampleConfig(t testing.TB, sampleConfig string) {
-	if x, ok := t.(testingHelper); ok {
-		x.Helper()
-	}
-
-	re := regexp.MustCompile(`(?m)(^\s+)#\s*`)
-	cfg := NewConfig()
-	if err := cfg.LoadConfigData(re.ReplaceAll([]byte(sampleConfig), []byte("$1"))); err != nil {
-		t.Fatalf("Invalid sample config: %+v", err)
-	}
 }
