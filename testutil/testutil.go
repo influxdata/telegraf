@@ -97,6 +97,8 @@ func PrintMetrics(m []telegraf.Metric) {
 	fmt.Println(string(buf))
 }
 
+// UncommentSampleConfig returns the sample config with the default parameters
+// uncommented so it is ready to be tested with config.LoadConfigData
 func UncommentSampleConfig(sampleConfig string) []byte {
 	re := regexp.MustCompile(`(?m)(^\s+)#\s*`)
 	return re.ReplaceAll([]byte(sampleConfig), []byte("$1"))
