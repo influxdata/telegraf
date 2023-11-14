@@ -12,6 +12,7 @@
   were always zero. [#14224](https://github.com/influxdata/telegraf/pull/14224)
   removes those useless fields. In case you reference them, please adapt your
   queries!
+
 ## v1.28.4 [2023-11-13]
 
 ### Bugfixes
