@@ -1,6 +1,18 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- Remove useless, all-zero fields in `inputs.procstat`. Up to now, Telegraf
+  reports the fields `cpu_time_guest`, `cpu_time_guest_nice`, `cpu_time_idle`,
+  `cpu_time_irq`, `cpu_time_nice`, `cpu_time_soft_irq` and `cpu_time_steal`
+  which are never set by the underlying library. As a consequence those fields
+  were always zero. [#14224](https://github.com/influxdata/telegraf/pull/14224)
+  removes those useless fields. In case you reference them, please adapt your
+  queries!
+
 ## v1.28.4 [2023-11-13]
 
 ### Bugfixes
