@@ -13,6 +13,23 @@
   removes those useless fields. In case you reference them, please adapt your
   queries!
 
+## v1.28.5 [2023-11-15]
+
+### Bugfixes
+
+- [#14294](https://github.com/influxdata/telegraf/pull/14294) `inputs.ecs` Correct v4 metadata URLs
+- [#14274](https://github.com/influxdata/telegraf/pull/14274) `inputs.intel_rdt` Do not fail on missing PIDs
+- [#14283](https://github.com/influxdata/telegraf/pull/14283) `inputs.s7comm` Truncate strings to reported length
+- [#14296](https://github.com/influxdata/telegraf/pull/14296) `parsers.json_v2` Log inner errors
+
+### Dependency Updates
+
+- [#14287](https://github.com/influxdata/telegraf/pull/14287) `deps` Bump github.com/gosnmp/gosnmp from 1.35.1-0.20230602062452-f30602b8dad6 to 1.36.1
+- [#14286](https://github.com/influxdata/telegraf/pull/14286) `deps` Bump github.com/Masterminds/semver/v3 from 3.2.0 to 3.2.1
+- [#14285](https://github.com/influxdata/telegraf/pull/14285) `deps` Bump golang.org/x/sync from 0.4.0 to 0.5.0
+- [#14289](https://github.com/influxdata/telegraf/pull/14289) `deps` Bump golang.org/x/mod from 0.13.0 to 0.14.0
+- [#14288](https://github.com/influxdata/telegraf/pull/14288) `deps` Bump google.golang.org/api from 0.149.0 to 0.150.0
+
 ## v1.28.4 [2023-11-13]
 
 ### Bugfixes
