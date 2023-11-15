@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	kTest "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -28,45 +27,23 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	t.Log("creating test network")
-	networkName := "telegraf-test-output-kafka-network"
-	network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-		NetworkRequest: testcontainers.NetworkRequest{
-			Name:           networkName,
-			Attachable:     true,
-			CheckDuplicate: true,
-		},
-	})
+	kafkaContainer, err := kTest.RunContainer(ctx,
+		kTest.WithClusterID("test-cluster"),
+		testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
+	)
 	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, network.Remove(ctx), "terminating network failed")
+		if err := kafkaContainer.Terminate(ctx); err != nil {
+			require.NoError(t, err)
+		}
 	}()
 
-	// Start the container as broker AND controller
-	container := testutil.Container{
-		Image:        "bitnami/kafka",
-		Hostname:     "localhost", // required to be able to resolve the name
-		Networks:     []string{networkName},
-		ExposedPorts: []string{"9092:9092", "9093:9093"},
-		Env: map[string]string{
-			"KAFKA_CFG_NODE_ID":                        "0",
-			"KAFKA_CFG_PROCESS_ROLES":                  "controller,broker",
-			"KAFKA_CFG_LISTENERS":                      "PLAINTEXT://:9092,CONTROLLER://:9093",
-			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP": "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
-			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS":       "0@localhost:9093",
-			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES":      "CONTROLLER",
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port("9092")),
-			wait.ForLog("Kafka Server started"),
-		),
-	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	b, err := kafkaContainer.Brokers(ctx)
+	require.NoError(t, err)
 
 	// Setup the plugin
 	plugin := &Kafka{
-		Brokers:      []string{container.Address + ":" + container.Ports["9092"]},
+		Brokers:      b,
 		Topic:        "Test",
 		Log:          testutil.Logger{},
 		producerFunc: sarama.NewSyncProducer,
