@@ -56,5 +56,5 @@ longer need that tag for additional processing:
 
 [[processors.noop]]
   order = 2
-  tagdrop = ["useless_tag"]
+  tagexclude = ["useless_tag"]
 ```
