@@ -244,8 +244,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					}
 				}
 
-				t.Log.Errorf("Chayan before adding Tail  %q", file)
-
 				tailer, err := tail.TailFile(file,
 					tail.Config{
 						ReOpen:    true,
@@ -266,7 +264,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					return
 				}
 				t.tailers[tailer.Filename] = tailer
-				t.Log.Errorf("Chayan Tail added for %q", file)
 
 				parser, err := t.parserFunc()
 				if err != nil {
@@ -274,7 +271,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					return
 				}
 
-				t.Log.Debugf("Tail added for %q", file)
 				t.receiver(parser, tailer)
 				t.Log.Debugf("Tail removed for %q", tailer.Filename)
 
