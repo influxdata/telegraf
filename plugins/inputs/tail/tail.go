@@ -218,17 +218,16 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
 		}
 
-		// create a goroutine for each "tailer"
-                 t.wg.Add(1)
+		for _, file := range g.Match() {
+			if _, ok := t.tailers[file]; ok {
+				// we're already tailing this file
+				continue
+			}
+			// create a goroutine for each "tailer"
+			t.wg.Add(1)
 
-                 go func() {
-			defer t.wg.Done()
-		        for _, file := range g.Match() {
-	                        if _, ok := t.tailers[file]; ok {
-			                // we're already tailing this file
-				        continue
-				}
-
+			go func() {
+				defer t.wg.Done()
 				var seek *tail.SeekInfo
 				if !t.Pipe && !fromBeginning {
 					if offset, ok := t.offsets[file]; ok {
@@ -264,7 +263,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 				if err != nil {
 					t.Log.Debugf("Failed to open file (%s): %v", file, err)
-					continue
 					return
 				}
 				t.tailers[tailer.Filename] = tailer
@@ -273,7 +271,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				parser, err := t.parserFunc()
 				if err != nil {
 					t.Log.Errorf("Creating parser: %s", err.Error())
-					continue
 					return
 				}
 
@@ -284,8 +281,8 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				if err := tailer.Err(); err != nil {
 					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
 				}
-			}
-		}()
+			}()
+		}
 
 	}
 	return nil
