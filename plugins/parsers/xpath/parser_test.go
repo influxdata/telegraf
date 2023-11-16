@@ -1573,7 +1573,7 @@ func BenchmarkParsingXML(b *testing.B) {
 		DefaultMetricName: "benchmark",
 		Format:            "xml",
 		Configs:           []Config{benchmarkConfigXML},
-		Log:               testutil.Logger{Name: "parsers.xpath"},
+		Log:               testutil.Logger{Name: "parsers.xpath", Quiet: true},
 	}
 	require.NoError(b, plugin.Init())
 
@@ -1635,7 +1635,7 @@ func BenchmarkParsingJSON(b *testing.B) {
 		DefaultMetricName: "benchmark",
 		Format:            "xpath_json",
 		Configs:           []Config{benchmarkConfigJSON},
-		Log:               testutil.Logger{Name: "parsers.xpath"},
+		Log:               testutil.Logger{Name: "parsers.xpath", Quiet: true},
 	}
 	require.NoError(b, plugin.Init())
 
@@ -1676,5 +1676,108 @@ func BenchmarkParsingProtobuf(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		_, _ = plugin.Parse(benchmarkData)
+	}
+}
+
+var benchmarkDataMsgPack = [][]byte{
+	{
+		0xdf, 0x00, 0x00, 0x00, 0x05, 0xa9, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0xce,
+		0x62, 0x90, 0x98, 0x9d, 0xa5, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x05, 0xa6, 0x73, 0x6f, 0x75, 0x72,
+		0x63, 0x65, 0xa6, 0x6d, 0x79, 0x68, 0x6f, 0x73, 0x74, 0xad, 0x74, 0x61, 0x67, 0x73, 0x5f, 0x70,
+		0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0xa6, 0x70, 0x79, 0x74, 0x68, 0x6f, 0x6e, 0xab, 0x74,
+		0x61, 0x67, 0x73, 0x5f, 0x73, 0x64, 0x6b, 0x76, 0x65, 0x72, 0xa6, 0x33, 0x2e, 0x31, 0x31, 0x2e,
+		0x35,
+	},
+	{
+		0x85, 0xA6, 0x73, 0x6F, 0x75, 0x72, 0x63, 0x65, 0xA6, 0x6D, 0x79, 0x68, 0x6F, 0x73, 0x74, 0xAB,
+		0x74, 0x61, 0x67, 0x73, 0x5F, 0x73, 0x64, 0x6B, 0x76, 0x65, 0x72, 0xA6, 0x33, 0x2E, 0x31, 0x31,
+		0x2E, 0x34, 0xAD, 0x74, 0x61, 0x67, 0x73, 0x5F, 0x70, 0x6C, 0x61, 0x74, 0x66, 0x6F, 0x72, 0x6D,
+		0xA6, 0x70, 0x79, 0x74, 0x68, 0x6F, 0x6E, 0xA5, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x04, 0xA9, 0x74,
+		0x69, 0x6D, 0x65, 0x73, 0x74, 0x61, 0x6D, 0x70, 0xCE, 0x62, 0x90, 0x98, 0x9D,
+	},
+}
+
+func TestBenchmarkDataMsgPack(t *testing.T) {
+	plugin := &Parser{
+		DefaultMetricName: "benchmark",
+		Format:            "xpath_msgpack",
+		Configs: []Config{
+			{
+				Tags: map[string]string{
+					"source":        "source",
+					"tags_sdkver":   "tags_sdkver",
+					"tags_platform": "tags_platform",
+				},
+				Fields: map[string]string{
+					"value": "number(value)",
+				},
+				Timestamp:    "timestamp",
+				TimestampFmt: "unix",
+			},
+		},
+		Log: testutil.Logger{Name: "parsers.xpath", Quiet: true},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5.0,
+			},
+			time.Unix(1653643421, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4.0,
+			},
+			time.Unix(1653643421, 0),
+		),
+	}
+
+	actual := make([]telegraf.Metric, 0, 2)
+	for _, msg := range benchmarkDataMsgPack {
+		m, err := plugin.Parse(msg)
+		require.NoError(t, err)
+		actual = append(actual, m...)
+	}
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsingMsgPack(b *testing.B) {
+	plugin := &Parser{
+		DefaultMetricName: "benchmark",
+		Format:            "xpath_msgpack",
+		Configs: []Config{
+			{
+				Tags: map[string]string{
+					"source":        "source",
+					"tags_sdkver":   "tags_sdkver",
+					"tags_platform": "tags_platform",
+				},
+				Fields: map[string]string{
+					"value": "number(value)",
+				},
+				Timestamp:    "timestamp",
+				TimestampFmt: "unix",
+			},
+		},
+		Log: testutil.Logger{Name: "parsers.xpath", Quiet: true},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(benchmarkDataMsgPack[n%2])
 	}
 }
