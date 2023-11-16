@@ -60,10 +60,10 @@ func (*Procstat) SampleConfig() string {
 }
 
 func (p *Procstat) Init() error {
-	if strings.ToLower(p.Mode) == "solaris" {
-		p.solarisMode = true
-	}
+	// Check solaris mode
+	p.solarisMode = strings.ToLower(p.Mode) == "solaris"
 
+	// Instantiate the finder
 	switch p.PidFinder {
 	case "", "pgrep":
 		p.PidFinder = "pgrep"
@@ -73,16 +73,16 @@ func (p *Procstat) Init() error {
 		}
 		p.finder = finder
 	case "native":
+		// gopsutil relies on pgrep when looking up children on darwin
+		// see https://github.com/shirou/gopsutil/blob/v3.23.10/process/process_darwin.go#L235
+		requiresChildren := len(p.SupervisorUnit) > 0 && p.Pattern != ""
+		if requiresChildren && runtime.GOOS == "darwin" {
+			return errors.New("configuration requires the 'pgrep' finder on you OS")
+		}
+
 		p.finder = &NativeFinder{}
 	default:
 		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
-	}
-
-	// gopsutil relies on pgrep when looking up children on darwin
-	// see https://github.com/shirou/gopsutil/blob/v3.23.10/process/process_darwin.go#L235
-	requiresChildren := len(p.SupervisorUnit) > 0 && p.Pattern != ""
-	if requiresChildren && p.PidFinder == "native" && runtime.GOOS == "darwin" {
-		return errors.New("configuration requires the 'pgrep' finder on you OS")
 	}
 
 	return nil
