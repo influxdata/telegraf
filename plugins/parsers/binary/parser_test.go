@@ -1499,3 +1499,131 @@ func TestHexEncoding(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, metrics)
 }
+
+var benchmarkData = [][]byte{
+	{
+		0x6d, 0x79, 0x68, 0x6f, 0x73, 0x74, 0x00, 0x33,
+		0x2e, 0x31, 0x31, 0x2e, 0x35, 0x00, 0x70, 0x79,
+		0x74, 0x68, 0x6f, 0x6e, 0x00, 0x40, 0x14, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00,
+	},
+	{
+		0x6d, 0x79, 0x68, 0x6f, 0x73, 0x74, 0x00, 0x33,
+		0x2e, 0x31, 0x31, 0x2e, 0x34, 0x00, 0x70, 0x79,
+		0x74, 0x68, 0x6f, 0x6e, 0x00, 0x40, 0x10, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00,
+	},
+}
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		Endianness: "be",
+		Configs: []Config{
+			{
+				MetricName: "benchmark",
+				Entries: []Entry{
+					{
+						Name:       "source",
+						Type:       "string",
+						Assignment: "tag",
+						Terminator: "null",
+					},
+					{
+						Name:       "tags_sdkver",
+						Type:       "string",
+						Assignment: "tag",
+						Terminator: "null",
+					},
+					{
+						Name:       "tags_platform",
+						Type:       "string",
+						Assignment: "tag",
+						Terminator: "null",
+					},
+					{
+						Name:       "value",
+						Type:       "float64",
+						Assignment: "field",
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual := make([]telegraf.Metric, 0, 2)
+	for _, buf := range benchmarkData {
+		m, err := plugin.Parse(buf)
+		require.NoError(t, err)
+		actual = append(actual, m...)
+	}
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		Endianness: "be",
+		Configs: []Config{
+			{
+				MetricName: "benchmark",
+				Entries: []Entry{
+					{
+						Name:       "source",
+						Type:       "string",
+						Assignment: "tag",
+						Terminator: "null",
+					},
+					{
+						Name:       "tags_sdkver",
+						Type:       "string",
+						Assignment: "tag",
+						Terminator: "null",
+					},
+					{
+						Name:       "tags_platform",
+						Type:       "string",
+						Assignment: "tag",
+						Terminator: "null",
+					},
+					{
+						Name:       "value",
+						Type:       "float64",
+						Assignment: "field",
+					},
+				},
+			},
+		},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(benchmarkData[n%2])
+	}
+}
