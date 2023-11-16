@@ -114,6 +114,6 @@ func BenchmarkParsing(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		_, _ = plugin.Parse(benchmarkData)
 	}
 }

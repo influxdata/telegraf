@@ -213,23 +213,23 @@ func TestBenchmarkData(t *testing.T) {
 		),
 	}
 
-	inoutBytes, err := benchmarkData.Marshal()
+	benchmarkData, err := benchmarkData.Marshal()
 	require.NoError(t, err)
 
 	plugin := &Parser{}
-	actual, err := plugin.Parse([]byte(inoutBytes))
+	actual, err := plugin.Parse(benchmarkData)
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 }
 
 func BenchmarkParsing(b *testing.B) {
-	inoutBytes, err := benchmarkData.Marshal()
+	benchmarkData, err := benchmarkData.Marshal()
 	require.NoError(b, err)
 
 	plugin := &Parser{}
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(inoutBytes))
+		_, _ = plugin.Parse(benchmarkData)
 	}
 }

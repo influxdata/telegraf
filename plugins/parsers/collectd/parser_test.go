@@ -293,10 +293,10 @@ func TestParseLine(t *testing.T) {
 		ParseMultiValue: "split",
 	}
 	require.NoError(t, parser.Init())
-	metric, err := parser.ParseLine(string(bytes))
+	m, err := parser.ParseLine(string(bytes))
 	require.NoError(t, err)
 
-	assertEqualMetrics(t, singleMetric.expected, []telegraf.Metric{metric})
+	assertEqualMetrics(t, singleMetric.expected, []telegraf.Metric{m})
 }
 
 func writeValueList(valueLists []api.ValueList) (*network.Buffer, error) {
