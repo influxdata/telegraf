@@ -11,13 +11,7 @@ import (
 )
 
 // NativeFinder uses gopsutil to find processes
-type NativeFinder struct {
-}
-
-// NewNativeFinder ...
-func NewNativeFinder() (PIDFinder, error) {
-	return &NativeFinder{}, nil
-}
+type NativeFinder struct{}
 
 // Uid will return all pids for the given user
 func (pg *NativeFinder) UID(user string) ([]PID, error) {

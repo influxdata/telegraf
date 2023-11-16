@@ -78,12 +78,10 @@ type testPgrep struct {
 	err  error
 }
 
-func pidFinder(pids []PID) func() (PIDFinder, error) {
-	return func() (PIDFinder, error) {
-		return &testPgrep{
-			pids: pids,
-			err:  nil,
-		}, nil
+func newTestFinder(pids []PID) PIDFinder {
+	return &testPgrep{
+		pids: pids,
+		err:  nil,
 	}
 }
 
@@ -199,6 +197,14 @@ func (p *testProc) Status() ([]string, error) {
 var pid = PID(42)
 var exe = "foo"
 
+func TestInitInvalidFinder(t *testing.T) {
+	plugin := Procstat{
+		PidFinder:     "foo",
+		createProcess: newTestProc,
+	}
+	require.Error(t, plugin.Init())
+}
+
 func TestInitRequiresChildDarwin(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		t.Skip("Skipping test on non-darwin platform")
@@ -216,8 +222,8 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		Exe:             exe,
-		createPIDFinder: pidFinder([]PID{pid}),
+		Exe:    exe,
+		finder: newTestFinder([]PID{pid}),
 		createProcess: func(PID) (Process, error) {
 			return nil, fmt.Errorf("createProcess error")
 		},
@@ -225,26 +231,14 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 	require.NoError(t, acc.GatherError(p.Gather))
 }
 
-func TestGather_CreatePIDFinderError(t *testing.T) {
-	var acc testutil.Accumulator
-
-	p := Procstat{
-		createPIDFinder: func() (PIDFinder, error) {
-			return nil, fmt.Errorf("createPIDFinder error")
-		},
-		createProcess: newTestProc,
-	}
-	require.Error(t, acc.GatherError(p.Gather))
-}
-
 func TestGather_ProcessName(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		Exe:             exe,
-		ProcessName:     "custom_name",
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Exe:           exe,
+		ProcessName:   "custom_name",
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -256,9 +250,9 @@ func TestGather_NoProcessNameUsesReal(t *testing.T) {
 	pid := PID(os.Getpid())
 
 	p := Procstat{
-		Exe:             exe,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Exe:           exe,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -269,9 +263,9 @@ func TestGather_NoPidTag(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		Exe:             exe,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Exe:           exe,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 	require.True(t, acc.HasInt32Field("procstat", "pid"))
@@ -282,10 +276,10 @@ func TestGather_PidTag(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		Exe:             exe,
-		PidTag:          true,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Exe:           exe,
+		PidTag:        true,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 	require.Equal(t, "42", acc.TagValue("procstat", "pid"))
@@ -296,10 +290,10 @@ func TestGather_Prefix(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		Exe:             exe,
-		Prefix:          "custom_prefix",
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Exe:           exe,
+		Prefix:        "custom_prefix",
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 	require.True(t, acc.HasInt32Field("procstat", "custom_prefix_num_fds"))
@@ -309,9 +303,9 @@ func TestGather_Exe(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		Exe:             exe,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Exe:           exe,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -323,9 +317,9 @@ func TestGather_User(t *testing.T) {
 	user := "ada"
 
 	p := Procstat{
-		User:            user,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		User:          user,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -337,9 +331,9 @@ func TestGather_Pattern(t *testing.T) {
 	pattern := "foo"
 
 	p := Procstat{
-		Pattern:         pattern,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		Pattern:       pattern,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -350,8 +344,8 @@ func TestGather_MissingPidMethod(t *testing.T) {
 	var acc testutil.Accumulator
 
 	p := Procstat{
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.Error(t, acc.GatherError(p.Gather))
 }
@@ -361,9 +355,9 @@ func TestGather_PidFile(t *testing.T) {
 	pidfile := "/path/to/pidfile"
 
 	p := Procstat{
-		PidFile:         pidfile,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		PidFile:       pidfile,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -375,10 +369,10 @@ func TestGather_PercentFirstPass(t *testing.T) {
 	pid := PID(os.Getpid())
 
 	p := Procstat{
-		Pattern:         "foo",
-		PidTag:          true,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   NewProc,
+		Pattern:       "foo",
+		PidTag:        true,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -391,10 +385,10 @@ func TestGather_PercentSecondPass(t *testing.T) {
 	pid := PID(os.Getpid())
 
 	p := Procstat{
-		Pattern:         "foo",
-		PidTag:          true,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   NewProc,
+		Pattern:       "foo",
+		PidTag:        true,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: NewProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -405,8 +399,8 @@ func TestGather_PercentSecondPass(t *testing.T) {
 
 func TestGather_systemdUnitPIDs(t *testing.T) {
 	p := Procstat{
-		createPIDFinder: pidFinder([]PID{}),
-		SystemdUnits:    "TestGather_systemdUnitPIDs",
+		finder:       newTestFinder([]PID{pid}),
+		SystemdUnits: "TestGather_systemdUnitPIDs",
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
@@ -429,8 +423,8 @@ func TestGather_cgroupPIDs(t *testing.T) {
 	require.NoError(t, err)
 
 	p := Procstat{
-		createPIDFinder: pidFinder([]PID{}),
-		CGroup:          td,
+		finder: newTestFinder([]PID{pid}),
+		CGroup: td,
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
@@ -445,9 +439,9 @@ func TestGather_cgroupPIDs(t *testing.T) {
 
 func TestProcstatLookupMetric(t *testing.T) {
 	p := Procstat{
-		createPIDFinder: pidFinder([]PID{543}),
-		createProcess:   NewProc,
-		Exe:             "-Gsys",
+		finder:        newTestFinder([]PID{543}),
+		createProcess: NewProc,
+		Exe:           "-Gsys",
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
@@ -459,9 +453,9 @@ func TestGather_SameTimestamps(t *testing.T) {
 	pidfile := "/path/to/pidfile"
 
 	p := Procstat{
-		PidFile:         pidfile,
-		createPIDFinder: pidFinder([]PID{pid}),
-		createProcess:   newTestProc,
+		PidFile:       pidfile,
+		finder:        newTestFinder([]PID{pid}),
+		createProcess: newTestProc,
 	}
 	require.NoError(t, acc.GatherError(p.Gather))
 
@@ -473,8 +467,8 @@ func TestGather_SameTimestamps(t *testing.T) {
 
 func TestGather_supervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
-		createPIDFinder: pidFinder([]PID{}),
-		SupervisorUnit:  []string{"TestGather_supervisorUnitPIDs"},
+		finder:         newTestFinder([]PID{pid}),
+		SupervisorUnit: []string{"TestGather_supervisorUnitPIDs"},
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
@@ -489,9 +483,9 @@ func TestGather_supervisorUnitPIDs(t *testing.T) {
 
 func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
-		createPIDFinder: pidFinder([]PID{}),
-		Pattern:         "7311",
-		SupervisorUnit:  []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
+		finder:         newTestFinder([]PID{pid}),
+		Pattern:        "7311",
+		SupervisorUnit: []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {

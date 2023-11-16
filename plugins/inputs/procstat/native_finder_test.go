@@ -11,17 +11,15 @@ import (
 )
 
 func BenchmarkPattern(b *testing.B) {
-	finder, err := NewNativeFinder()
-	require.NoError(b, err)
+	finder := &NativeFinder{}
 	for n := 0; n < b.N; n++ {
-		_, err = finder.Pattern(".*")
+		_, err := finder.Pattern(".*")
 		require.NoError(b, err)
 	}
 }
 
 func BenchmarkFullPattern(b *testing.B) {
-	finder, err := NewNativeFinder()
-	require.NoError(b, err)
+	finder := &NativeFinder{}
 	for n := 0; n < b.N; n++ {
 		_, err := finder.FullPattern(".*")
 		require.NoError(b, err)
@@ -53,9 +51,7 @@ func TestChildPattern(t *testing.T) {
 	expected = append(expected, PID(cmd2.Process.Pid))
 
 	// Use the plugin to find the children
-	finder, err := NewNativeFinder()
-	require.NoError(t, err)
-
+	finder := &NativeFinder{}
 	childs, err := finder.ChildPattern(parentName)
 	require.NoError(t, err)
 	require.ElementsMatch(t, expected, childs)

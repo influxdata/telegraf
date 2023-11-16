@@ -26,29 +26,27 @@ var sampleConfig string
 type PID int32
 
 type Procstat struct {
-	PidFinder              string `toml:"pid_finder"`
-	PidFile                string `toml:"pid_file"`
-	Exe                    string
-	Pattern                string
-	Prefix                 string
-	CmdLineTag             bool `toml:"cmdline_tag"`
-	ProcessName            string
-	User                   string
+	PidFinder              string   `toml:"pid_finder"`
+	PidFile                string   `toml:"pid_file"`
+	Exe                    string   `toml:"exe"`
+	Pattern                string   `toml:"pattern"`
+	Prefix                 string   `toml:"prefix"`
+	CmdLineTag             bool     `toml:"cmdline_tag"`
+	ProcessName            string   `toml:"process_name"`
+	User                   string   `toml:"user"`
 	SystemdUnits           string   `toml:"systemd_units"`
 	SupervisorUnit         []string `toml:"supervisor_unit"`
 	IncludeSystemdChildren bool     `toml:"include_systemd_children"`
 	CGroup                 string   `toml:"cgroup"`
-	PidTag                 bool
-	WinService             string `toml:"win_service"`
+	PidTag                 bool     `toml:"pid_tag"`
+	WinService             string   `toml:"win_service"`
 	Mode                   string
 
 	solarisMode bool
+	finder      PIDFinder
+	procs       map[PID]Process
 
-	finder PIDFinder
-
-	createPIDFinder func() (PIDFinder, error)
-	procs           map[PID]Process
-	createProcess   func(PID) (Process, error)
+	createProcess func(PID) (Process, error)
 }
 
 type PidsTags struct {
@@ -67,13 +65,15 @@ func (p *Procstat) Init() error {
 	}
 
 	switch p.PidFinder {
-	case "":
+	case "", "pgrep":
 		p.PidFinder = "pgrep"
-		p.createPIDFinder = NewPgrep
+		finder, err := newPgrepFinder()
+		if err != nil {
+			return fmt.Errorf("creating pgrep finder failed: %w", err)
+		}
+		p.finder = finder
 	case "native":
-		p.createPIDFinder = NewNativeFinder
-	case "pgrep":
-		p.createPIDFinder = NewPgrep
+		p.finder = &NativeFinder{}
 	default:
 		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
 	}
@@ -337,18 +337,6 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 	}
 }
 
-// Create and return PIDGatherer lazily
-func (p *Procstat) getPIDFinder() (PIDFinder, error) {
-	if p.finder == nil {
-		f, err := p.createPIDFinder()
-		if err != nil {
-			return nil, err
-		}
-		p.finder = f
-	}
-	return p.finder, nil
-}
-
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() []PidsTags {
 	var pidTags []PidsTags
@@ -361,19 +349,13 @@ func (p *Procstat) findPids() []PidsTags {
 		}
 		// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
 		for _, group := range groups {
-			f, err := p.getPIDFinder()
-			if err != nil {
-				pidTags = append(pidTags, PidsTags{nil, nil, err})
-				return pidTags
-			}
-
 			p.Pattern = groupsTags[group]["pid"]
 			if p.Pattern == "" {
 				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
 				return pidTags
 			}
 
-			pids, tags, err := p.SimpleFindPids(f)
+			pids, tags, err := p.SimpleFindPids(p.finder)
 			if err != nil {
 				pidTags = append(pidTags, PidsTags{nil, nil, err})
 				return pidTags
@@ -405,12 +387,7 @@ func (p *Procstat) findPids() []PidsTags {
 		return groups
 	}
 
-	f, err := p.getPIDFinder()
-	if err != nil {
-		pidTags = append(pidTags, PidsTags{nil, nil, err})
-		return pidTags
-	}
-	pids, tags, err := p.SimpleFindPids(f)
+	pids, tags, err := p.SimpleFindPids(p.finder)
 	pidTags = append(pidTags, PidsTags{pids, tags, err})
 
 	return pidTags

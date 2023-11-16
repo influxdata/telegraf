@@ -15,7 +15,7 @@ type Pgrep struct {
 	path string
 }
 
-func NewPgrep() (PIDFinder, error) {
+func newPgrepFinder() (PIDFinder, error) {
 	path, err := exec.LookPath("pgrep")
 	if err != nil {
 		return nil, fmt.Errorf("could not find pgrep binary: %w", err)
