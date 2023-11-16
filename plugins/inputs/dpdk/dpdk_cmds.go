@@ -25,16 +25,11 @@ var (
 		"down": DOWN,
 		"up":   UP,
 	}
-
-	processCmdMap = map[string]func(map[string]interface{}) error{
-		ethdevLinkStatusCommand: processLinkStatusCmd,
-	}
 )
 
 func processCommandResponse(command string, data map[string]interface{}) error {
-	handler, ok := processCmdMap[command]
-	if ok {
-		return handler(data)
+	if command == ethdevLinkStatusCommand {
+		return processLinkStatusCmd(data)
 	}
 	return nil
 }
@@ -42,23 +37,19 @@ func processCommandResponse(command string, data map[string]interface{}) error {
 func processLinkStatusCmd(data map[string]interface{}) error {
 	status, ok := data[linkStatusStringFieldName].(string)
 	if !ok {
-		return fmt.Errorf("can't find or parse '%s' field", linkStatusStringFieldName)
+		return fmt.Errorf("can't find or parse %q field", linkStatusStringFieldName)
 	}
 
 	parsedLinkStatus, ok := parseLinkStatus(status)
 	if !ok {
-		return fmt.Errorf("can't parse linkStatus: unknown value: %s", status)
+		return fmt.Errorf("can't parse linkStatus: unknown value: %q", status)
 	}
 
-	data[linkStatusIntegerFieldName] = parsedLinkStatus.asInt64()
+	data[linkStatusIntegerFieldName] = int64(parsedLinkStatus)
 	return nil
 }
 
 func parseLinkStatus(s string) (linkStatus, bool) {
 	value, ok := linkStatusMap[strings.ToLower(s)]
 	return value, ok
-}
-
-func (ls linkStatus) asInt64() int64 {
-	return int64(ls)
 }

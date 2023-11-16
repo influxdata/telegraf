@@ -47,15 +47,15 @@ func (conn *dpdkConnector) connect() (*initMessage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the socket: %w", err)
 	}
-
 	conn.connection = connection
-	if err = conn.readInitMessage(); err != nil {
+
+	conn.initMessage, err = conn.readInitMessage()
+	if err != nil {
 		if closeErr := conn.tryClose(); closeErr != nil {
 			return nil, fmt.Errorf("%w and failed to close connection: %w", err, closeErr)
 		}
 		return nil, err
 	}
-
 	return conn.initMessage, nil
 }
 
@@ -154,28 +154,27 @@ func (conn *dpdkConnector) getConnection() (net.Conn, error) {
 }
 
 // Reads InitMessage for connection. Should be read for each connection, otherwise InitMessage is returned as response for first command.
-func (conn *dpdkConnector) readInitMessage() error {
+func (conn *dpdkConnector) readInitMessage() (*initMessage, error) {
 	buf := make([]byte, maxInitMessageLength)
 	err := conn.setTimeout()
 	if err != nil {
-		return fmt.Errorf("failed to set timeout: %w", err)
+		return nil, fmt.Errorf("failed to set timeout: %w", err)
 	}
 
 	messageLength, err := conn.connection.Read(buf)
 	if err != nil {
-		return fmt.Errorf("failed to read InitMessage: %w", err)
+		return nil, fmt.Errorf("failed to read InitMessage: %w", err)
 	}
 
 	var connectionInitMessage initMessage
 	err = json.Unmarshal(buf[:messageLength], &connectionInitMessage)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	if connectionInitMessage.MaxOutputLen == 0 {
-		return fmt.Errorf("failed to read maxOutputLen information")
+		return nil, fmt.Errorf("failed to read maxOutputLen information")
 	}
 
-	conn.initMessage = &connectionInitMessage
-	return nil
+	return &connectionInitMessage, nil
 }

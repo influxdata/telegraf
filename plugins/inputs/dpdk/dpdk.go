@@ -84,7 +84,7 @@ func (dpdk *dpdk) Init() error {
 
 	dpdk.ethdevExcludedCommandsFilter, err = filter.Compile(dpdk.EthdevConfig.EthdevExcludeCommands)
 	if err != nil {
-		return fmt.Errorf("error occurred during filter preparation for ethdev excluded commands - %w", err)
+		return fmt.Errorf("error occurred during filter preparation for ethdev excluded commands: %w", err)
 	}
 
 	if err = choice.Check(dpdk.UnreachableSocketBehavior, []string{unreachableSocketBehaviorError, unreachableSocketBehaviorIgnore}); err != nil {
@@ -112,6 +112,16 @@ func (dpdk *dpdk) Start(telegraf.Accumulator) error {
 	return nil
 }
 
+func (dpdk *dpdk) Stop() {
+	var err error
+	for _, connector := range dpdk.connectors {
+		if err = connector.tryClose(); err != nil {
+			dpdk.Log.Warnf("Couldn't close connection for %q: %v", connector.pathToSocket, err)
+		}
+	}
+	dpdk.connectors = nil
+}
+
 // Gather function gathers all unique commands and processes each command sequentially
 // Parallel processing could be achieved by running several instances of this plugin with different settings
 func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
@@ -130,16 +140,6 @@ func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	return nil
-}
-
-func (dpdk *dpdk) Stop() {
-	var err error
-	for _, connector := range dpdk.connectors {
-		if err = connector.tryClose(); err != nil {
-			dpdk.Log.Warnf("Couldn't close connection for: %s. Err: %v", connector.pathToSocket, err)
-		}
-	}
-	dpdk.connectors = nil
 }
 
 // Setup default values for dpdk
@@ -177,21 +177,21 @@ func (dpdk *dpdk) setupDefaultValues() {
 func (dpdk *dpdk) validateAdditionalCommands() error {
 	dpdk.AdditionalCommands = uniqueValues(dpdk.AdditionalCommands)
 
-	for _, fullCommandWithParams := range dpdk.AdditionalCommands {
-		if len(fullCommandWithParams) == 0 {
+	for _, cmd := range dpdk.AdditionalCommands {
+		if len(cmd) == 0 {
 			return fmt.Errorf("got empty command")
 		}
 
-		if fullCommandWithParams[0] != '/' {
-			return fmt.Errorf("%q command should start with '/'", fullCommandWithParams)
+		if cmd[0] != '/' {
+			return fmt.Errorf("%q command should start with '/'", cmd)
 		}
 
-		if commandWithoutParams := stripParams(fullCommandWithParams); len(commandWithoutParams) >= maxCommandLength {
+		if commandWithoutParams := stripParams(cmd); len(commandWithoutParams) >= maxCommandLength {
 			return fmt.Errorf("%q command is too long. It shall be less than %v characters", commandWithoutParams, maxCommandLength)
 		}
 
-		if len(fullCommandWithParams) >= maxCommandLengthWithParams {
-			return fmt.Errorf("command with parameters %q shall be less than %v characters", fullCommandWithParams, maxCommandLengthWithParams)
+		if len(cmd) >= maxCommandLengthWithParams {
+			return fmt.Errorf("command with parameters %q shall be less than %v characters", cmd, maxCommandLengthWithParams)
 		}
 	}
 
@@ -326,16 +326,17 @@ func (dpdk *dpdk) processCommand(dpdkConn *dpdkConnector, acc telegraf.Accumulat
 }
 
 func (dpdk *dpdk) addMetadataFields(dpdkConn *dpdkConnector, data map[string]interface{}) {
-	if len(dpdk.MetadataFields) == 0 || dpdkConn.initMessage == nil {
+	if dpdkConn.initMessage == nil {
 		return
 	}
 
-	if choice.Contains(dpdkMetadataFieldPidName, dpdk.MetadataFields) {
-		data[dpdkMetadataFieldPidName] = dpdkConn.initMessage.Pid
-	}
-
-	if choice.Contains(dpdkMetadataFieldVersionName, dpdk.MetadataFields) {
-		data[dpdkMetadataFieldVersionName] = dpdkConn.initMessage.Version
+	for _, field := range dpdk.MetadataFields {
+		switch field {
+		case dpdkMetadataFieldPidName:
+			data[dpdkMetadataFieldPidName] = dpdkConn.initMessage.Pid
+		case dpdkMetadataFieldVersionName:
+			data[dpdkMetadataFieldVersionName] = dpdkConn.initMessage.Version
+		}
 	}
 }
 

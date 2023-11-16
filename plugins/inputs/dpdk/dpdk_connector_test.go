@@ -20,10 +20,11 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		err := connector.readInitMessage()
+		initMessage, err := connector.readInitMessage()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "timeout")
+		require.Empty(t, initMessage)
 	})
 
 	t.Run("should pass and set maxOutputLen if provided with valid InitMessage", func(t *testing.T) {
@@ -43,10 +44,10 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		err = connector.readInitMessage()
+		initMsg, err := connector.readInitMessage()
 
 		require.NoError(t, err)
-		require.Equal(t, maxOutputLen, connector.initMessage.MaxOutputLen)
+		require.Equal(t, maxOutputLen, initMsg.MaxOutputLen)
 	})
 
 	t.Run("should fail if received invalid json", func(t *testing.T) {
@@ -59,7 +60,7 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		err := connector.readInitMessage()
+		_, err := connector.readInitMessage()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "looking for beginning of object key string")
@@ -80,7 +81,7 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		err = connector.readInitMessage()
+		_, err = connector.readInitMessage()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to read maxOutputLen information")
