@@ -11,7 +11,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	kTest "github.com/testcontainers/testcontainers-go/modules/kafka"
+	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -489,8 +489,8 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			kafkaContainer, err := kTest.RunContainer(ctx,
-				kTest.WithClusterID("test-cluster"),
+			kafkaContainer, err := kafkacontainer.RunContainer(ctx,
+				kafkacontainer.WithClusterID("test-cluster"),
 				testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
 			)
 			require.NoError(t, err)
@@ -500,7 +500,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 				}
 			}()
 
-			b, err := kafkaContainer.Brokers(ctx)
+			brokers, err := kafkaContainer.Brokers(ctx)
 			require.NoError(t, err)
 
 			// Make kafka output
@@ -512,7 +512,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			s := &influxSerializer.Serializer{}
 			require.NoError(t, s.Init())
 			output.SetSerializer(s)
-			output.Brokers = b
+			output.Brokers = brokers
 			output.Topic = "Test"
 			output.Log = testutil.Logger{}
 
@@ -522,7 +522,7 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			// Make kafka input
 			t.Logf("rt: starting input plugin")
 			input := KafkaConsumer{
-				Brokers:                b,
+				Brokers:                brokers,
 				Log:                    testutil.Logger{},
 				Topics:                 tt.topics,
 				TopicRegexps:           tt.topicRegexps,

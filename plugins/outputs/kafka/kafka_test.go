@@ -8,7 +8,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	kTest "github.com/testcontainers/testcontainers-go/modules/kafka"
+	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -27,8 +27,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	kafkaContainer, err := kTest.RunContainer(ctx,
-		kTest.WithClusterID("test-cluster"),
+	kafkaContainer, err := kafkacontainer.RunContainer(ctx,
+		kafkacontainer.WithClusterID("test-cluster"),
 		testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
 	)
 	require.NoError(t, err)
@@ -38,12 +38,12 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		}
 	}()
 
-	b, err := kafkaContainer.Brokers(ctx)
+	brokers, err := kafkaContainer.Brokers(ctx)
 	require.NoError(t, err)
 
 	// Setup the plugin
 	plugin := &Kafka{
-		Brokers:      b,
+		Brokers:      brokers,
 		Topic:        "Test",
 		Log:          testutil.Logger{},
 		producerFunc: sarama.NewSyncProducer,
