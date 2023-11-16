@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -155,4 +156,80 @@ func TestMetricsWithTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
+}
+
+var benchmarkData = prompb.WriteRequest{
+	Timeseries: []prompb.TimeSeries{
+		{
+			Labels: []prompb.Label{
+				{Name: "__name__", Value: "benchmark_a"},
+				{Name: "source", Value: "myhost"},
+				{Name: "tags_platform", Value: "python"},
+				{Name: "tags_sdkver", Value: "3.11.5"},
+			},
+			Samples: []prompb.Sample{
+				{Value: 5.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
+			},
+		},
+		{
+			Labels: []prompb.Label{
+				{Name: "__name__", Value: "benchmark_b"},
+				{Name: "source", Value: "myhost"},
+				{Name: "tags_platform", Value: "python"},
+				{Name: "tags_sdkver", Value: "3.11.4"},
+			},
+			Samples: []prompb.Sample{
+				{Value: 4.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
+			},
+		},
+	},
+}
+
+func TestBenchmarkData(t *testing.T) {
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus_remote_write",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"benchmark_a": 5.0,
+			},
+			time.Unix(1585699200, 0),
+		),
+		metric.New(
+			"prometheus_remote_write",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"benchmark_b": 4.0,
+			},
+			time.Unix(1585699200, 0),
+		),
+	}
+
+	benchmarkData, err := benchmarkData.Marshal()
+	require.NoError(t, err)
+
+	plugin := &Parser{}
+	actual, err := plugin.Parse(benchmarkData)
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	benchmarkData, err := benchmarkData.Marshal()
+	require.NoError(b, err)
+
+	plugin := &Parser{}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(benchmarkData)
+	}
 }
