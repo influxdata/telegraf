@@ -11,13 +11,13 @@ func TestMainDataPartialUpdate(t *testing.T) {
 	data := MainData{
 		RID: 0,
 		Categories: map[string]Category{
-			"test": Category{
+			"test": {
 				Name:     "test",
 				SavePath: "download/test",
 			},
 		},
 		Torrents: map[string]Torrent{
-			"test_torrent": Torrent{
+			"test_torrent": {
 				Name:              "test_torrent",
 				InfohashV2:        "infohash_v2",
 				InfohashV1:        "infohash_v1",
@@ -37,13 +37,13 @@ func TestMainDataPartialUpdate(t *testing.T) {
 	update_value := MainData{
 		RID: 0,
 		Categories: map[string]Category{
-			"update-test": Category{
+			"update-test": {
 				Name:     "update-test",
 				SavePath: "download/test",
 			},
 		},
 		Torrents: map[string]Torrent{
-			"test_torrent": Torrent{
+			"test_torrent": {
 				DownloadedSession: 1100,
 				ETA:               900,
 			},

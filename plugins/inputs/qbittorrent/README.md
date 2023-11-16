@@ -2,9 +2,11 @@
 
 The qbittorrent plugin will get torrents status.
 
-Compatible versions must be higher than 2.9.2. Versions lower than 
-2.9.2 and higher than 2.1.1 are also compatible in principle but 
-have not been tested.
+Compatible qbittorrent API versions must be higher than 2.9.2. 
+Versions lower than 2.9.2 and higher than 2.1.1 are also compatible 
+in principle but have not been tested.
+
+## Global configuration options
 
 ## Configuration
 
@@ -21,7 +23,7 @@ have not been tested.
   # password = "admin"
 ```
 
-## Main Metrics 
+## Metrics 
 - torrents
   - added_on
   - amount_left
@@ -62,3 +64,5 @@ have not been tested.
   - uploaded
   - uploaded_session
   - upspeed
+
+## Example Output
