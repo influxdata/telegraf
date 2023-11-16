@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -28,61 +29,48 @@ const (
 	pluginName                 = "dpdk"
 	ethdevListCommand          = "/ethdev/list"
 	rawdevListCommand          = "/rawdev/list"
+
+	dpdkMetadataFieldPidName     = "dpdk_pid"
+	dpdkMetadataFieldVersionName = "dpdk_version"
+
+	dpdkPluginOptionInMemory = "dpdk_in_memory"
+
+	unreachableSocketBehaviorIgnore = "ignore"
+	unreachableSocketBehaviorError  = "error"
 )
 
 type dpdk struct {
-	SocketPath         string          `toml:"socket_path"`
-	AccessTimeout      config.Duration `toml:"socket_access_timeout"`
-	DeviceTypes        []string        `toml:"device_types"`
-	EthdevConfig       ethdevConfig    `toml:"ethdev"`
-	AdditionalCommands []string        `toml:"additional_commands"`
-	Log                telegraf.Logger `toml:"-"`
+	SocketPath                string          `toml:"socket_path"`
+	AccessTimeout             config.Duration `toml:"socket_access_timeout"`
+	DeviceTypes               []string        `toml:"device_types"`
+	EthdevConfig              ethdevConfig    `toml:"ethdev"`
+	AdditionalCommands        []string        `toml:"additional_commands"`
+	MetadataFields            []string        `toml:"metadata_fields"`
+	PluginOptions             []string        `toml:"plugin_options"`
+	UnreachableSocketBehavior string          `toml:"unreachable_socket_behavior"`
+	Log                       telegraf.Logger `toml:"-"`
 
-	connector                    *dpdkConnector
+	connectors                   []*dpdkConnector
 	rawdevCommands               []string
 	ethdevCommands               []string
 	ethdevExcludedCommandsFilter filter.Filter
+	socketGlobPath               *globpath.GlobPath
 }
 
 type ethdevConfig struct {
 	EthdevExcludeCommands []string `toml:"exclude_commands"`
 }
 
-func init() {
-	inputs.Add(pluginName, func() telegraf.Input {
-		dpdk := &dpdk{
-			// Setting it here (rather than in `Init()`) to distinguish between "zero" value,
-			// default value and don't having value in config at all.
-			AccessTimeout: defaultAccessTimeout,
-		}
-		return dpdk
-	})
-}
-
 func (*dpdk) SampleConfig() string {
 	return sampleConfig
 }
 
-// Performs validation of all parameters from configuration
+// Init performs validation of all parameters from configuration
 func (dpdk *dpdk) Init() error {
-	if dpdk.SocketPath == "" {
-		dpdk.SocketPath = defaultPathToSocket
-		dpdk.Log.Debugf("using default '%v' path for socket_path", defaultPathToSocket)
-	}
+	dpdk.setupDefaultValues()
 
-	if dpdk.DeviceTypes == nil {
-		dpdk.DeviceTypes = []string{"ethdev"}
-	}
-
-	var err error
-	if err := isSocket(dpdk.SocketPath); err != nil {
-		return err
-	}
-
-	dpdk.rawdevCommands = []string{"/rawdev/xstats"}
-	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/link_status"}
-
-	if err := dpdk.validateCommands(); err != nil {
+	err := dpdk.validateAdditionalCommands()
+	if err != nil {
 		return err
 	}
 
@@ -96,76 +84,196 @@ func (dpdk *dpdk) Init() error {
 
 	dpdk.ethdevExcludedCommandsFilter, err = filter.Compile(dpdk.EthdevConfig.EthdevExcludeCommands)
 	if err != nil {
-		return fmt.Errorf("error occurred during filter prepation for ethdev excluded commands: %w", err)
+		return fmt.Errorf("error occurred during filter preparation for ethdev excluded commands - %w", err)
 	}
 
-	dpdk.connector = newDpdkConnector(dpdk.SocketPath, dpdk.AccessTimeout)
-	initMessage, err := dpdk.connector.connect()
-	if initMessage != nil {
-		dpdk.Log.Debugf("Successfully connected to %v running as process with PID %v with len %v",
-			initMessage.Version, initMessage.Pid, initMessage.MaxOutputLen)
+	if err = choice.Check(dpdk.UnreachableSocketBehavior, []string{unreachableSocketBehaviorError, unreachableSocketBehaviorIgnore}); err != nil {
+		return fmt.Errorf("unreachable_socket_behavior: %w", err)
 	}
-	return err
+
+	glob, err := prepareGlob(dpdk.SocketPath)
+	if err != nil {
+		return err
+	}
+	dpdk.socketGlobPath = glob
+
+	if err = dpdk.maintainConnections(); err != nil {
+		if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
+			return err
+		}
+		dpdk.Log.Warnf("Unreachable socket issue occurred: %v", err)
+	}
+
+	return nil
+}
+
+// Start is empty to implement ServiceInput interface
+func (dpdk *dpdk) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+// Gather function gathers all unique commands and processes each command sequentially
+// Parallel processing could be achieved by running several instances of this plugin with different settings
+func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
+	if err := dpdk.maintainConnections(); err != nil {
+		if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
+			return err
+		}
+		dpdk.Log.Warnf("Unreachable socket issue occurred: %v", err)
+		return nil
+	}
+
+	for _, dpdkConn := range dpdk.connectors {
+		commands := dpdk.gatherCommands(dpdkConn, acc)
+		for _, command := range commands {
+			dpdk.processCommand(dpdkConn, acc, command)
+		}
+	}
+	return nil
+}
+
+func (dpdk *dpdk) Stop() {
+	var err error
+	for _, connector := range dpdk.connectors {
+		if err = connector.tryClose(); err != nil {
+			dpdk.Log.Warnf("Couldn't close connection for: %s. Err: %v", connector.pathToSocket, err)
+		}
+	}
+	dpdk.connectors = nil
+}
+
+// Setup default values for dpdk
+func (dpdk *dpdk) setupDefaultValues() {
+	if dpdk.SocketPath == "" {
+		dpdk.SocketPath = defaultPathToSocket
+		dpdk.Log.Debugf("Using default %q value for socket_path", defaultPathToSocket)
+	}
+
+	if dpdk.DeviceTypes == nil {
+		dpdk.DeviceTypes = []string{"ethdev"}
+		dpdk.Log.Debugf("Using default %q value for device_types", dpdk.DeviceTypes)
+	}
+
+	if dpdk.MetadataFields == nil {
+		dpdk.MetadataFields = []string{dpdkMetadataFieldPidName}
+		dpdk.Log.Debugf("Using default %q value for metadata_fields", dpdk.MetadataFields)
+	}
+
+	if dpdk.PluginOptions == nil {
+		dpdk.PluginOptions = []string{dpdkPluginOptionInMemory}
+		dpdk.Log.Debugf("Using default %q value for plugin_options", dpdk.PluginOptions)
+	}
+
+	if len(dpdk.UnreachableSocketBehavior) == 0 {
+		dpdk.UnreachableSocketBehavior = unreachableSocketBehaviorError
+		dpdk.Log.Debugf("Using default %q value for unreachable_socket_behavior", unreachableSocketBehaviorError)
+	}
+
+	dpdk.rawdevCommands = []string{"/rawdev/xstats"}
+	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/info", ethdevLinkStatusCommand}
 }
 
 // Checks that user-supplied commands are unique and match DPDK commands format
-func (dpdk *dpdk) validateCommands() error {
+func (dpdk *dpdk) validateAdditionalCommands() error {
 	dpdk.AdditionalCommands = uniqueValues(dpdk.AdditionalCommands)
 
-	for _, commandWithParams := range dpdk.AdditionalCommands {
-		if len(commandWithParams) == 0 {
+	for _, fullCommandWithParams := range dpdk.AdditionalCommands {
+		if len(fullCommandWithParams) == 0 {
 			return fmt.Errorf("got empty command")
 		}
 
-		if commandWithParams[0] != '/' {
-			return fmt.Errorf("%q command should start with '/'", commandWithParams)
+		if fullCommandWithParams[0] != '/' {
+			return fmt.Errorf("%q command should start with '/'", fullCommandWithParams)
 		}
 
-		if commandWithoutParams := stripParams(commandWithParams); len(commandWithoutParams) >= maxCommandLength {
+		if commandWithoutParams := stripParams(fullCommandWithParams); len(commandWithoutParams) >= maxCommandLength {
 			return fmt.Errorf("%q command is too long. It shall be less than %v characters", commandWithoutParams, maxCommandLength)
 		}
 
-		if len(commandWithParams) >= maxCommandLengthWithParams {
-			return fmt.Errorf("command with parameters %q shall be less than %v characters", commandWithParams, maxCommandLengthWithParams)
+		if len(fullCommandWithParams) >= maxCommandLengthWithParams {
+			return fmt.Errorf("command with parameters %q shall be less than %v characters", fullCommandWithParams, maxCommandLengthWithParams)
 		}
 	}
 
 	return nil
 }
 
-// Gathers all unique commands and processes each command sequentially
-// Parallel processing could be achieved by running several instances of this plugin with different settings
-func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
-	// This needs to be done during every `Gather(...)`, because DPDK can be restarted between consecutive
-	// `Gather(...)` cycles which can cause that it will be exposing different set of metrics.
-	commands := dpdk.gatherCommands(acc)
+// Establishes connections do DPDK telemetry sockets
+func (dpdk *dpdk) maintainConnections() error {
+	socketsToConnect, socketsToDisconnect := dpdk.identifySockets()
 
-	for _, command := range commands {
-		dpdk.processCommand(acc, command)
+	// Try to close connection with unused sockets
+	// And delete unused elements from the dpdk.connectors list with the safe approach
+	for _, socketToDisconnect := range socketsToDisconnect {
+		for i := 0; i < len(dpdk.connectors); i++ {
+			connector := dpdk.connectors[i]
+			if socketToDisconnect == connector.pathToSocket {
+				dpdk.Log.Debugf("Close unused connection: %s", socketToDisconnect)
+				if closeErr := connector.tryClose(); closeErr != nil {
+					dpdk.Log.Warnf("Failed to close unused connection - %v", closeErr)
+				}
+				dpdk.connectors = append(dpdk.connectors[:i], dpdk.connectors[i+1:]...)
+				i--
+				break
+			}
+		}
+	}
+
+	// Create connections
+	for _, socketToConnect := range socketsToConnect {
+		connector := newDpdkConnector(socketToConnect, dpdk.AccessTimeout)
+		connectionInitMessage, err := connector.connect()
+		if err != nil {
+			if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
+				return fmt.Errorf("couldn't connect to socket %s: %w", socketToConnect, err)
+			}
+			dpdk.Log.Warnf("Couldn't connect to socket %s: %v", socketToConnect, err)
+			continue
+		}
+
+		dpdk.Log.Debugf("Successfully connected to the socket: %s. Version: %v running as process with PID %v with len %v",
+			socketToConnect, connectionInitMessage.Version, connectionInitMessage.Pid, connectionInitMessage.MaxOutputLen)
+		dpdk.connectors = append(dpdk.connectors, connector)
+	}
+
+	if len(dpdk.connectors) == 0 {
+		return fmt.Errorf("no active sockets connections present")
 	}
 
 	return nil
+}
+
+func (dpdk *dpdk) identifySockets() (socketsToConnect []string, socketsToDisconnect []string) {
+	pathsToExistingSockets := []string{dpdk.SocketPath}
+	if choice.Contains(dpdkPluginOptionInMemory, dpdk.PluginOptions) {
+		pathsToExistingSockets = dpdk.getDpdkInMemorySocketPaths()
+	}
+
+	pathsToConnectedSockets := make([]string, 0, len(dpdk.connectors))
+	for _, connector := range dpdk.connectors {
+		pathsToConnectedSockets = append(pathsToConnectedSockets, connector.pathToSocket)
+	}
+
+	return getDiffArrays(pathsToConnectedSockets, pathsToExistingSockets)
 }
 
 // Gathers all unique commands
-func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator) []string {
+func (dpdk *dpdk) gatherCommands(dpdkConnector *dpdkConnector, acc telegraf.Accumulator) []string {
 	var commands []string
 	if choice.Contains("ethdev", dpdk.DeviceTypes) {
 		ethdevCommands := removeSubset(dpdk.ethdevCommands, dpdk.ethdevExcludedCommandsFilter)
-		ethdevCommands, err := dpdk.appendCommandsWithParamsFromList(ethdevListCommand, ethdevCommands)
+		ethdevCommands, err := dpdkConnector.appendCommandsWithParamsFromList(ethdevListCommand, ethdevCommands)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error occurred during fetching of %q params: %w", ethdevListCommand, err))
 		}
-
 		commands = append(commands, ethdevCommands...)
 	}
 
 	if choice.Contains("rawdev", dpdk.DeviceTypes) {
-		rawdevCommands, err := dpdk.appendCommandsWithParamsFromList(rawdevListCommand, dpdk.rawdevCommands)
+		rawdevCommands, err := dpdkConnector.appendCommandsWithParamsFromList(rawdevListCommand, dpdk.rawdevCommands)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error occurred during fetching of %q params: %w", rawdevListCommand, err))
 		}
-
 		commands = append(commands, rawdevCommands...)
 	}
 
@@ -173,31 +281,9 @@ func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator) []string {
 	return uniqueValues(commands)
 }
 
-// Fetches all identifiers of devices and then creates all possible combinations of commands for each device
-func (dpdk *dpdk) appendCommandsWithParamsFromList(listCommand string, commands []string) ([]string, error) {
-	response, err := dpdk.connector.getCommandResponse(listCommand)
-	if err != nil {
-		return nil, err
-	}
-
-	params, err := jsonToArray(response, listCommand)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]string, 0, len(commands)*len(params))
-	for _, command := range commands {
-		for _, param := range params {
-			result = append(result, commandWithParams(command, param))
-		}
-	}
-
-	return result, nil
-}
-
 // Executes command, parses response and creates/writes metric from response
-func (dpdk *dpdk) processCommand(acc telegraf.Accumulator, commandWithParams string) {
-	buf, err := dpdk.connector.getCommandResponse(commandWithParams)
+func (dpdk *dpdk) processCommand(dpdkConn *dpdkConnector, acc telegraf.Accumulator, commandWithParams string) {
+	buf, err := dpdkConn.getCommandResponse(commandWithParams)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -206,14 +292,14 @@ func (dpdk *dpdk) processCommand(acc telegraf.Accumulator, commandWithParams str
 	var parsedResponse map[string]interface{}
 	err = json.Unmarshal(buf, &parsedResponse)
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to unmarshall json response from %q command: %w", commandWithParams, err))
+		acc.AddError(fmt.Errorf("failed to unmarshal json response from %q command: %w", commandWithParams, err))
 		return
 	}
 
 	command := stripParams(commandWithParams)
 	value := parsedResponse[command]
 	if isEmpty(value) {
-		acc.AddError(fmt.Errorf("got empty json on %q command", commandWithParams))
+		dpdk.Log.Warnf("got empty json on %q command", commandWithParams)
 		return
 	}
 
@@ -224,8 +310,42 @@ func (dpdk *dpdk) processCommand(acc telegraf.Accumulator, commandWithParams str
 		return
 	}
 
+	err = processCommandResponse(command, jf.Fields)
+	if err != nil {
+		dpdk.Log.Warnf("Failed to process a response of the command: %s. Error: %v. Continue to handle data", command, err)
+	}
+
+	// Add metadata fields if required
+	dpdk.addMetadataFields(dpdkConn, jf.Fields)
+
+	// Add common fields
 	acc.AddFields(pluginName, jf.Fields, map[string]string{
 		"command": command,
 		"params":  getParams(commandWithParams),
+	})
+}
+
+func (dpdk *dpdk) addMetadataFields(dpdkConn *dpdkConnector, data map[string]interface{}) {
+	if len(dpdk.MetadataFields) == 0 || dpdkConn.initMessage == nil {
+		return
+	}
+
+	if choice.Contains(dpdkMetadataFieldPidName, dpdk.MetadataFields) {
+		data[dpdkMetadataFieldPidName] = dpdkConn.initMessage.Pid
+	}
+
+	if choice.Contains(dpdkMetadataFieldVersionName, dpdk.MetadataFields) {
+		data[dpdkMetadataFieldVersionName] = dpdkConn.initMessage.Version
+	}
+}
+
+func init() {
+	inputs.Add(pluginName, func() telegraf.Input {
+		dpdk := &dpdk{
+			// Setting it here (rather than in `Init()`) to distinguish between "zero" value,
+			// default value and don't having value in config at all.
+			AccessTimeout: defaultAccessTimeout,
+		}
+		return dpdk
 	})
 }

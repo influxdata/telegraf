@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal/globpath"
 )
 
 func commandWithParams(command string, params string) string {
@@ -37,6 +38,79 @@ func getParams(command string) string {
 		return ""
 	}
 	return command[index+1:]
+}
+
+// getDiffArrays checks two arrays and return the diff between them
+// toAdd: return a list of the difference (set operation): newArray \ oldArray
+// toDelete: return a list of the difference (set operation): oldArray \ newArray
+func getDiffArrays(oldArray, newArray []string) (toAdd, toDelete []string) {
+	if len(oldArray) == 0 {
+		return newArray, nil
+	}
+
+	if len(newArray) == 0 {
+		return nil, oldArray
+	}
+
+	// Form maps
+	oldArrayMap := make(map[string]struct{})
+	for _, val := range oldArray {
+		oldArrayMap[val] = struct{}{}
+	}
+
+	// Form the list toAdd
+	newArrayMap := make(map[string]struct{})
+	for _, val := range newArray {
+		newArrayMap[val] = struct{}{}
+		if _, ok := oldArrayMap[val]; !ok {
+			toAdd = append(toAdd, val)
+		}
+	}
+
+	// Form the list toDelete
+	for key := range oldArrayMap {
+		if _, ok := newArrayMap[key]; !ok {
+			toDelete = append(toDelete, key)
+		}
+	}
+	return toAdd, toDelete
+}
+
+func (dpdk *dpdk) getDpdkInMemorySocketPaths() []string {
+	filePaths := dpdk.socketGlobPath.Match()
+
+	var results []string
+	for _, filePath := range filePaths {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil || fileInfo.IsDir() || !strings.Contains(filePath, dpdkSocketTemplateName) {
+			continue
+		}
+
+		if isInMemorySocketPath(filePath, dpdk.SocketPath) {
+			results = append(results, filePath)
+		}
+	}
+
+	return results
+}
+
+// Checks if the provided filePath contains in-memory socket
+func isInMemorySocketPath(filePath, socketPath string) bool {
+	if filePath == socketPath {
+		return true
+	}
+
+	socketPathPrefix := fmt.Sprintf("%s:", socketPath)
+	if strings.HasPrefix(filePath, socketPathPrefix) {
+		suffix := filePath[len(socketPathPrefix):]
+		if number, err := strconv.Atoi(suffix); err == nil {
+			if number > 0 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // Checks if provided path points to socket
@@ -72,7 +146,7 @@ func jsonToArray(input []byte, command string) ([]string, error) {
 	var intArray []int64
 	err = json.Unmarshal(rawMessage[command], &intArray)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall json response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal json response: %w", err)
 	}
 
 	stringArray := make([]string, 0, len(intArray))
@@ -113,4 +187,14 @@ func uniqueValues(values []string) []string {
 
 func isEmpty(value interface{}) bool {
 	return value == nil || (reflect.ValueOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil())
+}
+
+func prepareGlob(path string) (*globpath.GlobPath, error) {
+	pathWithAsterisk := fmt.Sprintf("%s*", path)
+	glob, err := globpath.Compile(pathWithAsterisk)
+	if err != nil {
+		return nil, fmt.Errorf("could not compile glob %q: %w", pathWithAsterisk, err)
+	}
+
+	return glob, nil
 }

@@ -20,7 +20,7 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		_, err := connector.readMaxOutputLen()
+		err := connector.readInitMessage()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "timeout")
@@ -43,10 +43,10 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		_, err = connector.readMaxOutputLen()
+		err = connector.readInitMessage()
 
 		require.NoError(t, err)
-		require.Equal(t, maxOutputLen, connector.maxOutputLen)
+		require.Equal(t, maxOutputLen, connector.initMessage.MaxOutputLen)
 	})
 
 	t.Run("should fail if received invalid json", func(t *testing.T) {
@@ -59,7 +59,7 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		_, err := connector.readMaxOutputLen()
+		err := connector.readInitMessage()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "looking for beginning of object key string")
@@ -80,7 +80,7 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
-		_, err = connector.readMaxOutputLen()
+		err = connector.readInitMessage()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to read maxOutputLen information")
@@ -89,15 +89,15 @@ func Test_readMaxOutputLen(t *testing.T) {
 
 func Test_connect(t *testing.T) {
 	t.Run("should pass if PathToSocket points to socket", func(t *testing.T) {
-		pathToSocket, socket := createSocketForTest(t)
+		pathToSocket, socket := createSocketForTest(t, "")
 		defer socket.Close()
 		dpdk := dpdk{
 			SocketPath: pathToSocket,
-			connector:  newDpdkConnector(pathToSocket, 0),
+			connectors: []*dpdkConnector{newDpdkConnector(pathToSocket, 0)},
 		}
 		go simulateSocketResponse(socket, t)
 
-		_, err := dpdk.connector.connect()
+		_, err := dpdk.connectors[0].connect()
 
 		require.NoError(t, err)
 	})
@@ -112,18 +112,20 @@ func Test_getCommandResponse(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		simulateResponse(mockConn, response, nil)
 
-		buf, err := dpdk.connector.getCommandResponse(command)
+		for _, connector := range dpdk.connectors {
+			buf, err := connector.getCommandResponse(command)
 
-		require.NoError(t, err)
-		require.Equal(t, len(response), len(buf))
-		require.Equal(t, response, string(buf))
+			require.NoError(t, err)
+			require.Equal(t, len(response), len(buf))
+			require.Equal(t, response, string(buf))
+		}
 	})
 
 	t.Run("should return error if failed to get connection handler", func(t *testing.T) {
 		_, dpdk, _ := prepareEnvironment()
-		dpdk.connector.connection = nil
+		dpdk.connectors[0].connection = nil
 
-		buf, err := dpdk.connector.getCommandResponse(command)
+		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get connection to execute \"/\" command")
@@ -135,7 +137,7 @@ func Test_getCommandResponse(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		mockConn.On("SetDeadline", mock.Anything).Return(fmt.Errorf("deadline error"))
 
-		buf, err := dpdk.connector.getCommandResponse(command)
+		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "deadline error")
@@ -149,7 +151,7 @@ func Test_getCommandResponse(t *testing.T) {
 		mockConn.On("SetDeadline", mock.Anything).Return(nil)
 		mockConn.On("Close").Return(nil)
 
-		buf, err := dpdk.connector.getCommandResponse(command)
+		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "write timeout")
@@ -161,7 +163,7 @@ func Test_getCommandResponse(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		simulateResponse(mockConn, "", fmt.Errorf("read timeout"))
 
-		buf, err := dpdk.connector.getCommandResponse(command)
+		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "read timeout")
@@ -173,7 +175,7 @@ func Test_getCommandResponse(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		simulateResponse(mockConn, "", nil)
 
-		buf, err := dpdk.connector.getCommandResponse(command)
+		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
 		require.Error(t, err)
 		require.Empty(t, buf)

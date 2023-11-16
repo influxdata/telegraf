@@ -11,7 +11,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-const maxInitMessageLength = 1024
+const (
+	maxInitMessageLength   = 1024 // based on https://github.com/DPDK/dpdk/blob/v22.07/lib/telemetry/telemetry.c#L352
+	dpdkSocketTemplateName = "dpdk_telemetry"
+)
 
 type initMessage struct {
 	Version      string `json:"version"`
@@ -21,16 +24,14 @@ type initMessage struct {
 
 type dpdkConnector struct {
 	pathToSocket  string
-	maxOutputLen  uint32
-	messageShowed bool
 	accessTimeout time.Duration
 	connection    net.Conn
+	initMessage   *initMessage
 }
 
 func newDpdkConnector(pathToSocket string, accessTimeout config.Duration) *dpdkConnector {
 	return &dpdkConnector{
 		pathToSocket:  pathToSocket,
-		messageShowed: false,
 		accessTimeout: time.Duration(accessTimeout),
 	}
 }
@@ -38,18 +39,43 @@ func newDpdkConnector(pathToSocket string, accessTimeout config.Duration) *dpdkC
 // Connects to the socket
 // Since DPDK is a local unix socket, it is instantly returns error or connection, so there's no need to set timeout for it
 func (conn *dpdkConnector) connect() (*initMessage, error) {
+	if err := isSocket(conn.pathToSocket); err != nil {
+		return nil, err
+	}
+
 	connection, err := net.Dial("unixpacket", conn.pathToSocket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the socket: %w", err)
 	}
 
 	conn.connection = connection
-	result, err := conn.readMaxOutputLen()
-	if err != nil {
+	if err = conn.readInitMessage(); err != nil {
 		if closeErr := conn.tryClose(); closeErr != nil {
 			return nil, fmt.Errorf("%w and failed to close connection: %w", err, closeErr)
 		}
 		return nil, err
+	}
+
+	return conn.initMessage, nil
+}
+
+// Fetches all identifiers of devices and then creates all possible combinations of commands for each device
+func (conn *dpdkConnector) appendCommandsWithParamsFromList(listCommand string, commands []string) ([]string, error) {
+	response, err := conn.getCommandResponse(listCommand)
+	if err != nil {
+		return nil, err
+	}
+
+	params, err := jsonToArray(response, listCommand)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, 0, len(commands)*len(params))
+	for _, command := range commands {
+		for _, param := range params {
+			result = append(result, commandWithParams(command, param))
+		}
 	}
 
 	return result, nil
@@ -57,7 +83,7 @@ func (conn *dpdkConnector) connect() (*initMessage, error) {
 
 // Executes command using provided connection and returns response
 // If error (such as timeout) occurred, then connection is discarded and recreated
-// because otherwise behaviour of connection is undefined (e.g. it could return result of timed out command instead of latest)
+// because otherwise behavior of connection is undefined (e.g. it could return result of timed out command instead of latest)
 func (conn *dpdkConnector) getCommandResponse(fullCommand string) ([]byte, error) {
 	connection, err := conn.getConnection()
 	if err != nil {
@@ -77,7 +103,7 @@ func (conn *dpdkConnector) getCommandResponse(fullCommand string) ([]byte, error
 		return nil, fmt.Errorf("failed to send %q command: %w", fullCommand, err)
 	}
 
-	buf := make([]byte, conn.maxOutputLen)
+	buf := make([]byte, conn.initMessage.MaxOutputLen)
 	messageLength, err := connection.Read(buf)
 	if err != nil {
 		if closeErr := conn.tryClose(); closeErr != nil {
@@ -128,33 +154,28 @@ func (conn *dpdkConnector) getConnection() (net.Conn, error) {
 }
 
 // Reads InitMessage for connection. Should be read for each connection, otherwise InitMessage is returned as response for first command.
-func (conn *dpdkConnector) readMaxOutputLen() (*initMessage, error) {
+func (conn *dpdkConnector) readInitMessage() error {
 	buf := make([]byte, maxInitMessageLength)
 	err := conn.setTimeout()
 	if err != nil {
-		return nil, fmt.Errorf("failed to set timeout: %w", err)
+		return fmt.Errorf("failed to set timeout: %w", err)
 	}
 
 	messageLength, err := conn.connection.Read(buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read InitMessage: %w", err)
+		return fmt.Errorf("failed to read InitMessage: %w", err)
 	}
 
-	var initMessage initMessage
-	err = json.Unmarshal(buf[:messageLength], &initMessage)
+	var connectionInitMessage initMessage
+	err = json.Unmarshal(buf[:messageLength], &connectionInitMessage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	if initMessage.MaxOutputLen == 0 {
-		return nil, fmt.Errorf("failed to read maxOutputLen information")
+	if connectionInitMessage.MaxOutputLen == 0 {
+		return fmt.Errorf("failed to read maxOutputLen information")
 	}
 
-	if !conn.messageShowed {
-		conn.maxOutputLen = initMessage.MaxOutputLen
-		conn.messageShowed = true
-		return &initMessage, nil
-	}
-
-	return nil, nil
+	conn.initMessage = &connectionInitMessage
+	return nil
 }
