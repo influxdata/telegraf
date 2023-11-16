@@ -985,3 +985,53 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	_, err = parser.Next()
 	require.NoError(t, err)
 }
+
+const benchmarkData = `benchmark,tags_host=myhost,tags_platform=python,tags_sdkver=3.11.5 value=5 1653643421
+benchmark,tags_host=myhost,tags_platform=python,tags_sdkver=3.11.4 value=4 1653643422
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": float64(5),
+			},
+			time.Unix(1653643422, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": float64(4),
+			},
+			time.Unix(1653643422, 0),
+		),
+	}
+
+	// Do the parsing
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
+}
