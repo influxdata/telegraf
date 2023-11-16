@@ -298,7 +298,7 @@ When running plugin configuration below...
 ...expected output for `dpdk` plugin instance running on host named
 `host=dpdk-host`:
 
-```shell
+```text
 dpdk,command=/ethdev/info,dpdk_instance=l3fwd-power,host=dpdk-host,params=0 all_multicast=0,dev_configured=1,dev_flags=74,dev_started=1,ethdev_rss_hf=0,lro=0,mac_addr="E4:3D:1A:DD:13:31",mtu=1500,name="0000:ca:00.1",nb_rx_queues=1,nb_tx_queues=1,numa_node=1,port_id=0,promiscuous=1,rx_mbuf_alloc_fail=0,rx_mbuf_size_min=2176,rx_offloads=0,rxq_state_0=1,scattered_rx=0,state=1,tx_offloads=65536,txq_state_0=1 1659017414000000000
 ```text
 dpdk,command=/ethdev/stats,dpdk_instance=l3fwd-power,host=dpdk-host,params=0 q_opackets_0=0,q_ipackets_5=0,q_errors_11=0,ierrors=0,q_obytes_5=0,q_obytes_10=0,q_opackets_10=0,q_ipackets_4=0,q_ipackets_7=0,q_ipackets_15=0,q_ibytes_5=0,q_ibytes_6=0,q_ibytes_9=0,obytes=0,q_opackets_1=0,q_opackets_11=0,q_obytes_7=0,q_errors_5=0,q_errors_10=0,q_ibytes_4=0,q_obytes_6=0,q_errors_1=0,q_opackets_5=0,q_errors_3=0,q_errors_12=0,q_ipackets_11=0,q_ipackets_12=0,q_obytes_14=0,q_opackets_15=0,q_obytes_2=0,q_errors_8=0,q_opackets_12=0,q_errors_0=0,q_errors_9=0,q_opackets_14=0,q_ibytes_3=0,q_ibytes_15=0,q_ipackets_13=0,q_ipackets_14=0,q_obytes_3=0,q_errors_13=0,q_opackets_3=0,q_ibytes_0=7092,q_ibytes_2=0,q_ibytes_8=0,q_ipackets_8=0,q_ipackets_10=0,q_obytes_4=0,q_ibytes_10=0,q_ibytes_13=0,q_ibytes_1=0,q_ibytes_12=0,opackets=0,q_obytes_1=0,q_errors_15=0,q_opackets_2=0,oerrors=0,rx_nombuf=0,q_opackets_8=0,q_ibytes_11=0,q_ipackets_3=0,q_obytes_0=0,q_obytes_12=0,q_obytes_11=0,q_obytes_13=0,q_errors_6=0,q_ipackets_1=0,q_ipackets_6=0,q_ipackets_9=0,q_obytes_15=0,q_opackets_7=0,q_ibytes_14=0,ipackets=98,q_ipackets_2=0,q_opackets_6=0,q_ibytes_7=0,imissed=0,q_opackets_4=0,q_opackets_9=0,q_obytes_8=0,q_obytes_9=0,q_errors_4=0,q_errors_14=0,q_opackets_13=0,ibytes=7092,q_ipackets_0=98,q_errors_2=0,q_errors_7=0 1606310780000000000
@@ -325,7 +325,7 @@ When running plugin configuration below...
 ```
 
 Expected output for `dpdk` plugin instance running with `link_status` command
-and all metadata fields enabled:
+and all metadata fields enabled, additionally `status_i` field will be exposed to represent string value of `status` field (`DOWN`=0,`UP`=1):
 
 ```text
 dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 dpdk_pid=100988i,dpdk_version="DPDK 21.11.2",status="DOWN",status_i=0i 1660295749000000000
