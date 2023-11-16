@@ -80,3 +80,40 @@ func TestCases(t *testing.T) {
 		})
 	}
 }
+
+const benchmarkSchema = `
+{
+	"namespace": "com.benchmark",
+	"name": "benchmark",
+	"type": "record",
+	"version": "1",
+	"fields": [
+			{"name": "value", "type": "float", "doc": ""},
+			{"name": "timestamp", "type": "long", "doc": ""},
+			{"name": "tags_platform", "type": "string", "doc": ""},
+			{"name": "tags_sdkver", "type": "string", "default": "", "doc": ""},
+			{"name": "source", "type": "string", "default": "", "doc": ""}
+	]
+}
+`
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		Format:          "json",
+		Measurement:     "benchmark",
+		Tags:            []string{"tags_platform", "tags_sdkver", "source"},
+		Fields:          []string{"value"},
+		Timestamp:       "timestamp",
+		TimestampFormat: "unix",
+		Schema:          benchmarkSchema,
+	}
+	require.NoError(b, plugin.Init())
+
+	benchmarkData, err := os.ReadFile(filepath.Join("testdata", "benchmark", "message.json"))
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
+}
