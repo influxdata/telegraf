@@ -22,12 +22,11 @@ var sampleConfig string
 var globalMainData *MainData
 
 type QBittorrent struct {
-	Host     string        `toml:"host"`
-	Port     int           `toml:"port"`
+	Url      string        `toml:"url"`
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
-	TLS      bool          `toml:"tls"`
-	Cookie   []*http.Cookie
+
+	cookie []*http.Cookie
 }
 
 func (*QBittorrent) SampleConfig() string {
@@ -40,7 +39,7 @@ func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	for k, v := range globalMainData.toFields() {
+	for k, v := range globalMainData.toMetrics() {
 		for i := range v {
 			acc.AddFields(k, v[i].Fields(), v[i].Tags())
 		}
@@ -54,7 +53,7 @@ func (q *QBittorrent) getSyncData() error {
 	param := url.Values{}
 
 	if globalMainData != nil {
-		param.Set("rid", strconv.Itoa(globalMainData.RID))
+		param.Set("rid", strconv.Itoa(int(globalMainData.RID)))
 	}
 	measure, _, err := q.getMeasure("GET", "/api/v2/sync/maindata", nil, param, nil)
 	if err != nil {
@@ -76,21 +75,13 @@ func (q *QBittorrent) getSyncData() error {
 }
 
 // getURL returns a URL object constructed from the given path and the QBittorrent
-// configuration. The returned URL is constructed using the scheme (http or https)
-// specified in the configuration. The path is appended to the base URL constructed
-// using the host and port from the configuration. If the URL is invalid, an error is
-// returned.
+// configuration. The path is appended to the base URL constructed using the url
+// from the configuration. If the URL is invalid, an error is returned.
 //
 // path: a string representing the path to be appended to the base URL.
 // Returns a URL object and an error.
 func (q *QBittorrent) getURL(path string) (*url.URL, error) {
-	var scheme string
-	if q.TLS {
-		scheme = "https"
-	} else {
-		scheme = "http"
-	}
-	strURL := fmt.Sprintf("%s://%s:%d/%s", scheme, q.Host, q.Port, strings.TrimLeft(path, "/"))
+	strURL := fmt.Sprintf("%s/%s", q.Url, strings.TrimLeft(path, "/"))
 	parseURL, err := url.Parse(strURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server URL %q", strURL)
@@ -99,12 +90,12 @@ func (q *QBittorrent) getURL(path string) (*url.URL, error) {
 }
 
 func (q *QBittorrent) getMeasure(method string, path string, headers map[string]string, param url.Values, reqBody io.Reader) (string, int, error) {
-	if q.Cookie == nil || len(q.Cookie) == 0 {
+	if q.cookie == nil || len(q.cookie) == 0 {
 		cookie, err := q.login()
 		if err != nil {
 			return "", -1, err
 		}
-		q.Cookie = cookie
+		q.cookie = cookie
 	}
 
 	getURL, err := q.getURL(path)
@@ -123,8 +114,8 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 	if err != nil {
 		return "", -1, err
 	}
-	for c := range q.Cookie {
-		req.AddCookie(q.Cookie[c])
+	for c := range q.cookie {
+		req.AddCookie(q.cookie[c])
 	}
 
 	// Add header parameters
@@ -222,7 +213,7 @@ func (q *QBittorrent) login() ([]*http.Cookie, error) {
 }
 func init() {
 	inputs.Add("qbittorrent", func() telegraf.Input {
-		var qb = QBittorrent{Host: "127.0.0.1", Port: 8080, Username: config.NewSecret([]byte("admin")), Password: config.NewSecret([]byte("admin"))}
+		var qb = QBittorrent{Url: "http://127.0.0.1:8080", Username: config.NewSecret([]byte("admin")), Password: config.NewSecret([]byte("admin"))}
 		return &qb
 	})
 }

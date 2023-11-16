@@ -21,28 +21,28 @@ func (c *Category) partialUpdate(update *Category) {
 }
 
 type ServerState struct {
-	AllTimeDownload      int    `json:"alltime_dl"`
-	AllTimeUpload        int    `json:"alltime_ul"`
-	AverageTimeQueue     int    `json:"average_time_queue"`
+	AllTimeDownload      int64  `json:"alltime_dl"`
+	AllTimeUpload        int64  `json:"alltime_ul"`
+	AverageTimeQueue     int64  `json:"average_time_queue"`
 	ConnectionStatus     string `json:"connection_status"`
-	DHTNodes             int    `json:"dht_nodes"`
-	DLInfoData           int    `json:"dl_info_data"`
-	DLInfoSpeed          int    `json:"dl_info_speed"`
-	DLRateLimit          int    `json:"dl_rate_limit"`
-	FreeSpaceOnDisk      int    `json:"free_space_on_disk"`
+	DHTNodes             int64  `json:"dht_nodes"`
+	DLInfoData           int64  `json:"dl_info_data"`
+	DLInfoSpeed          int64  `json:"dl_info_speed"`
+	DLRateLimit          int64  `json:"dl_rate_limit"`
+	FreeSpaceOnDisk      int64  `json:"free_space_on_disk"`
 	GlobalRatio          string `json:"global_ratio"`
-	QueuedIOJobs         int    `json:"queued_io_jobs"`
+	QueuedIOJobs         int64  `json:"queued_io_jobs"`
 	Queueing             *bool  `json:"queueing"`
 	ReadCacheHits        string `json:"read_cache_hits"`
 	ReadCacheOverload    string `json:"read_cache_overload"`
-	RefreshInterval      int    `json:"refresh_interval"`
-	TotalBuffersSize     int    `json:"total_buffers_size"`
-	TotalPeerConnections int    `json:"total_peer_connections"`
-	TotalQueuedSize      int    `json:"total_queued_size"`
-	TotalWastedSession   int    `json:"total_wasted_session"`
-	UpInfoData           int    `json:"up_info_data"`
-	UpInfoSpeed          int    `json:"up_info_speed"`
-	UpRateLimit          int    `json:"up_rate_limit"`
+	RefreshInterval      int64  `json:"refresh_interval"`
+	TotalBuffersSize     int64  `json:"total_buffers_size"`
+	TotalPeerConnections int64  `json:"total_peer_connections"`
+	TotalQueuedSize      int64  `json:"total_queued_size"`
+	TotalWastedSession   int64  `json:"total_wasted_session"`
+	UpInfoData           int64  `json:"up_info_data"`
+	UpInfoSpeed          int64  `json:"up_info_speed"`
+	UpRateLimit          int64  `json:"up_rate_limit"`
 	UseAltSpeedLimits    *bool  `json:"use_alt_speed_limits"`
 	UseSubcategories     *bool  `json:"use_subcategories"`
 	WriteCacheOverload   string `json:"write_cache_overload"`
@@ -157,56 +157,56 @@ func (s *ServerState) toFieldMap() map[string]interface{} {
 }
 
 type Torrent struct {
-	AddedOn                  int     `json:"added_on"`
-	AmountLeft               int     `json:"amount_left"`
+	AddedOn                  int64   `json:"added_on"`
+	AmountLeft               int64   `json:"amount_left"`
 	AutoTMM                  *bool   `json:"auto_tmm"`
-	Availability             int     `json:"availability"`
+	Availability             int64   `json:"availability"`
 	Category                 string  `json:"category"`
-	Completed                int     `json:"completed"`
-	CompletionOn             int     `json:"completion_on"`
+	Completed                int64   `json:"completed"`
+	CompletionOn             int64   `json:"completion_on"`
 	ContentPath              string  `json:"content_path"`
-	DownloadLimit            int     `json:"dl_limit"`
-	DownloadSpeed            int     `json:"dlspeed"`
+	DownloadLimit            int64   `json:"dl_limit"`
+	DownloadSpeed            int64   `json:"dlspeed"`
 	DownloadPath             string  `json:"download_path"`
-	Downloaded               int     `json:"downloaded"`
-	DownloadedSession        int     `json:"downloaded_session"`
-	ETA                      int     `json:"eta"`
+	Downloaded               int64   `json:"downloaded"`
+	DownloadedSession        int64   `json:"downloaded_session"`
+	ETA                      int64   `json:"eta"`
 	FLPiecePrio              *bool   `json:"f_l_piece_prio"`
 	ForceStart               *bool   `json:"force_start"`
-	InactiveSeedingTimeLimit int     `json:"inactive_seeding_time_limit"`
+	InactiveSeedingTimeLimit int64   `json:"inactive_seeding_time_limit"`
 	InfohashV1               string  `json:"infohash_v1"`
 	InfohashV2               string  `json:"infohash_v2"`
-	LastActivity             int     `json:"last_activity"`
+	LastActivity             int64   `json:"last_activity"`
 	MagnetURI                string  `json:"magnet_uri"`
-	MaxInactiveSeedingTime   int     `json:"max_inactive_seeding_time"`
-	MaxRatio                 int     `json:"max_ratio"`
-	MaxSeedingTime           int     `json:"max_seeding_time"`
+	MaxInactiveSeedingTime   int64   `json:"max_inactive_seeding_time"`
+	MaxRatio                 int64   `json:"max_ratio"`
+	MaxSeedingTime           int64   `json:"max_seeding_time"`
 	Name                     string  `json:"name"`
-	NumComplete              int     `json:"num_complete"`
-	NumIncomplete            int     `json:"num_incomplete"`
-	NumLeechs                int     `json:"num_leechs"`
-	NumSeeds                 int     `json:"num_seeds"`
-	Priority                 int     `json:"priority"`
+	NumComplete              int64   `json:"num_complete"`
+	NumIncomplete            int64   `json:"num_incomplete"`
+	NumLeechs                int64   `json:"num_leechs"`
+	NumSeeds                 int64   `json:"num_seeds"`
+	Priority                 int64   `json:"priority"`
 	Progress                 float64 `json:"progress"`
 	Ratio                    float64 `json:"ratio"`
-	RatioLimit               int     `json:"ratio_limit"`
+	RatioLimit               int64   `json:"ratio_limit"`
 	SavePath                 string  `json:"save_path"`
-	SeedingTime              int     `json:"seeding_time"`
-	SeedingTimeLimit         int     `json:"seeding_time_limit"`
-	SeenComplete             int     `json:"seen_complete"`
+	SeedingTime              int64   `json:"seeding_time"`
+	SeedingTimeLimit         int64   `json:"seeding_time_limit"`
+	SeenComplete             int64   `json:"seen_complete"`
 	SeqDownload              *bool   `json:"seq_dl"`
-	Size                     int     `json:"size"`
+	Size                     int64   `json:"size"`
 	State                    string  `json:"state"`
 	SuperSeeding             *bool   `json:"super_seeding"`
 	Tags                     string  `json:"tags"`
-	TimeActive               int     `json:"time_active"`
-	TotalSize                int     `json:"total_size"`
+	TimeActive               int64   `json:"time_active"`
+	TotalSize                int64   `json:"total_size"`
 	Tracker                  string  `json:"tracker"`
-	TrackersCount            int     `json:"trackers_count"`
-	UPLimit                  int     `json:"up_limit"`
-	Uploaded                 int     `json:"uploaded"`
-	UploadedSession          int     `json:"uploaded_session"`
-	UPSpeed                  int     `json:"upspeed"`
+	TrackersCount            int64   `json:"trackers_count"`
+	UPLimit                  int64   `json:"up_limit"`
+	Uploaded                 int64   `json:"uploaded"`
+	UploadedSession          int64   `json:"uploaded_session"`
+	UPSpeed                  int64   `json:"upspeed"`
 }
 
 func (t *Torrent) partialUpdate(update *Torrent) {
@@ -426,7 +426,7 @@ type MainData struct {
 	Categories        map[string]Category `json:"categories"`
 	CategoriesRemoved []string            `json:"categories_removed"`
 	FullUpdate        *bool               `json:"full_update"`
-	RID               int                 `json:"rid"`
+	RID               int16               `json:"rid"`
 	ServerState       ServerState         `json:"server_state"`
 	Tags              []string            `json:"tags"`
 	TagsRemoved       []string            `json:"tags_removed"`
@@ -442,6 +442,7 @@ func (m *MainData) partialUpdate(update *MainData) {
 		if exists {
 			localV := v
 			(&category).partialUpdate(&localV)
+			m.Categories[k] = category
 		} else {
 			m.Categories[k] = v
 		}
@@ -476,6 +477,7 @@ func (m *MainData) partialUpdate(update *MainData) {
 		if exists {
 			localV := v
 			torrent.partialUpdate(&localV)
+			m.Torrents[k] = torrent
 		} else {
 			m.Torrents[k] = v
 		}
@@ -488,13 +490,13 @@ func (m *MainData) partialUpdate(update *MainData) {
 	}
 }
 
-func (m *MainData) toFields() map[string][]telegraf.Metric {
+func (m *MainData) toMetrics() map[string][]telegraf.Metric {
 	ts := time.Now().UTC()
 	tags := make(map[string]string)
 
 	//todo
 	var serverStateMetrics []telegraf.Metric
-	serverStateMetrics = append(serverStateMetrics, metric.New("categories", tags, m.ServerState.toFieldMap(), ts, telegraf.Gauge))
+	serverStateMetrics = append(serverStateMetrics, metric.New("server_state", tags, m.ServerState.toFieldMap(), ts, telegraf.Gauge))
 
 	var torrentsMetrics = make([]telegraf.Metric, 0, len(m.Torrents))
 	for k, v := range m.Torrents {
@@ -502,11 +504,19 @@ func (m *MainData) toFields() map[string][]telegraf.Metric {
 		torrentTag["hash"] = k
 		torrentsMetrics = append(torrentsMetrics, metric.New("torrents", torrentTag, v.toFieldMap(), ts, telegraf.Gauge))
 	}
-	field := map[string][]telegraf.Metric{
+
+	var tagsMetrics []telegraf.Metric
+	tagsMetrics = append(tagsMetrics, metric.New("tags", tags, map[string]interface{}{"count": len(m.Tags)}, ts, telegraf.Counter))
+
+	var categoryMetrics []telegraf.Metric
+	categoryMetrics = append(categoryMetrics, metric.New("category", tags, map[string]interface{}{"count": len(m.Categories)}, ts, telegraf.Counter))
+
+	return map[string][]telegraf.Metric{
 		"server_state": serverStateMetrics,
 		"torrents":     torrentsMetrics,
+		"tags":         tagsMetrics,
+		"category":     categoryMetrics,
 	}
-	return field
 }
 
 type PartialUpdate[T any] interface {
