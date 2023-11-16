@@ -325,7 +325,8 @@ When running plugin configuration below...
 ```
 
 Expected output for `dpdk` plugin instance running with `link_status` command
-and all metadata fields enabled, additionally `status_i` field will be exposed to represent string value of `status` field (`DOWN`=0,`UP`=1):
+and all metadata fields enabled, additionally `status_i` field will be exposed
+to represent string value of `status` field (`DOWN`=0,`UP`=1):
 
 ```text
 dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 dpdk_pid=100988i,dpdk_version="DPDK 21.11.2",status="DOWN",status_i=0i 1660295749000000000
