@@ -334,7 +334,7 @@ dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 dpdk_pid=2401624i,dpdk_
 
 ## Changelog
 
-| Version | Description |
+| Telegraf Version | Description |
 | --- | --- |
 | v1.19.0 | Initial version |
 | v1.29.0 | New 'unreachable_socket_behavior' and 'plugin_options' config options were added. Dynamic socket connection supported. Added support for [dpdk_in_memory](https://doc.dpdk.org/guides/howto/telemetry.html#connecting-to-different-dpdk-processes). New tags supported: 'dpdk_pid','dpdk_version. Add new '/ethdev/info' metrics. Add numerical and string values for '/ethdev/link_status' metric.  |
