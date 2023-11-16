@@ -22,7 +22,7 @@ var sampleConfig string
 var globalMainData *MainData
 
 type QBittorrent struct {
-	Url      string        `toml:"url"`
+	URL      string        `toml:"url"`
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
@@ -81,7 +81,7 @@ func (q *QBittorrent) getSyncData() error {
 // path: a string representing the path to be appended to the base URL.
 // Returns a URL object and an error.
 func (q *QBittorrent) getURL(path string) (*url.URL, error) {
-	strURL := fmt.Sprintf("%s/%s", q.Url, strings.TrimLeft(path, "/"))
+	strURL := fmt.Sprintf("%s/%s", q.URL, strings.TrimLeft(path, "/"))
 	parseURL, err := url.Parse(strURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server URL %q", strURL)
@@ -213,7 +213,7 @@ func (q *QBittorrent) login() ([]*http.Cookie, error) {
 }
 func init() {
 	inputs.Add("qbittorrent", func() telegraf.Input {
-		var qb = QBittorrent{Url: "http://127.0.0.1:8080", Username: config.NewSecret([]byte("admin")), Password: config.NewSecret([]byte("admin"))}
+		var qb = QBittorrent{URL: "http://127.0.0.1:8080", Username: config.NewSecret([]byte("admin")), Password: config.NewSecret([]byte("admin"))}
 		return &qb
 	})
 }
