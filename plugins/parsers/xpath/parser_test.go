@@ -1643,3 +1643,38 @@ func BenchmarkParsingJSON(b *testing.B) {
 		_, _ = plugin.Parse([]byte(benchmarkDataJSON))
 	}
 }
+
+func BenchmarkParsingProtobuf(b *testing.B) {
+	plugin := &Parser{
+		DefaultMetricName:   "benchmark",
+		Format:              "xpath_protobuf",
+		ProtobufMessageDef:  "benchmark.proto",
+		ProtobufMessageType: "benchmark.BenchmarkData",
+		ProtobufImportPaths: []string{".", "./testcases/protobuf_benchmark"},
+		NativeTypes:         true,
+		Configs: []Config{
+			{
+				Selection:    "//data",
+				Timestamp:    "timestamp",
+				TimestampFmt: "unix_ns",
+				Tags: map[string]string{
+					"source":        "source",
+					"tags_sdkver":   "tags_sdkver",
+					"tags_platform": "tags_platform",
+				},
+				Fields: map[string]string{
+					"value": "value",
+				},
+			},
+		},
+		Log: testutil.Logger{Name: "parsers.xpath", Quiet: true},
+	}
+	require.NoError(b, plugin.Init())
+
+	benchmarkData, err := os.ReadFile(filepath.Join("testcases", "protobuf_benchmark", "message.bin"))
+	require.NoError(b, err)
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(benchmarkData)
+	}
+}
