@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -1493,4 +1494,152 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 	cfg := Config{}
 	err = toml.Unmarshal(buf, &cfg)
 	return &cfg, header, err
+}
+
+var benchmarkExpectedMetrics = []telegraf.Metric{
+	metric.New(
+		"benchmark",
+		map[string]string{
+			"tags_host":     "myhost",
+			"tags_platform": "python",
+			"tags_sdkver":   "3.11.5",
+		},
+		map[string]interface{}{
+			"value": 5.0,
+		},
+		time.Unix(1577923199, 0),
+	),
+	metric.New(
+		"benchmark",
+		map[string]string{
+			"tags_host":     "myhost",
+			"tags_platform": "python",
+			"tags_sdkver":   "3.11.4",
+		},
+		map[string]interface{}{
+			"value": 4.0,
+		},
+		time.Unix(1577923199, 0),
+	),
+}
+
+const benchmarkDataXML = `
+<?xml version="1.0"?>
+	<Timestamp value="1577923199"/>
+	<Benchmark>
+		<tags_host>myhost</tags_host>
+		<tags_sdkver>3.11.5</tags_sdkver>
+		<tags_platform>python</tags_platform>
+		<value>5</value>
+	</Benchmark>
+	<Benchmark>
+		<tags_host>myhost</tags_host>
+		<tags_sdkver>3.11.4</tags_sdkver>
+		<tags_platform>python</tags_platform>
+		<value>4</value>
+	</Benchmark>
+`
+
+var benchmarkConfigXML = Config{
+	Selection: "/Benchmark",
+	Tags: map[string]string{
+		"tags_host":     "tags_host",
+		"tags_sdkver":   "tags_sdkver",
+		"tags_platform": "tags_platform",
+	},
+	Fields: map[string]string{
+		"value": "number(value)",
+	},
+	Timestamp:    "/Timestamp/@value",
+	TimestampFmt: "unix",
+}
+
+func TestBenchmarkDataXML(t *testing.T) {
+	plugin := &Parser{
+		DefaultMetricName: "benchmark",
+		Format:            "xml",
+		Configs:           []Config{benchmarkConfigXML},
+		Log:               testutil.Logger{Name: "parsers.xpath"},
+	}
+	require.NoError(t, plugin.Init())
+
+	actual, err := plugin.Parse([]byte(benchmarkDataXML))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, benchmarkExpectedMetrics, actual)
+}
+
+func BenchmarkParsingXML(b *testing.B) {
+	plugin := &Parser{
+		DefaultMetricName: "benchmark",
+		Format:            "xml",
+		Configs:           []Config{benchmarkConfigXML},
+		Log:               testutil.Logger{Name: "parsers.xpath"},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkDataXML))
+	}
+}
+
+const benchmarkDataJSON = `
+{
+	"timestamp": 1577923199,
+	"data": [
+		{
+			"tags_host": "myhost",
+			"tags_sdkver": "3.11.5",
+			"tags_platform": "python",
+			"value": 5.0
+		},
+		{
+			"tags_host": "myhost",
+			"tags_sdkver": "3.11.4",
+			"tags_platform": "python",
+			"value": 4.0
+		}
+	]
+}
+`
+
+var benchmarkConfigJSON = Config{
+	Selection: "data/*",
+	Tags: map[string]string{
+		"tags_host":     "tags_host",
+		"tags_sdkver":   "tags_sdkver",
+		"tags_platform": "tags_platform",
+	},
+	Fields: map[string]string{
+		"value": "number(value)",
+	},
+	Timestamp:    "//timestamp",
+	TimestampFmt: "unix",
+}
+
+func TestBenchmarkDataJSON(t *testing.T) {
+	plugin := &Parser{
+		DefaultMetricName: "benchmark",
+		Format:            "xpath_json",
+		Configs:           []Config{benchmarkConfigJSON},
+		Log:               testutil.Logger{Name: "parsers.xpath"},
+	}
+	require.NoError(t, plugin.Init())
+
+	actual, err := plugin.Parse([]byte(benchmarkDataJSON))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, benchmarkExpectedMetrics, actual)
+}
+
+func BenchmarkParsingJSON(b *testing.B) {
+	plugin := &Parser{
+		DefaultMetricName: "benchmark",
+		Format:            "xpath_json",
+		Configs:           []Config{benchmarkConfigJSON},
+		Log:               testutil.Logger{Name: "parsers.xpath"},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkDataJSON))
+	}
 }
