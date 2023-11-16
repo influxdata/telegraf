@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/linkedin/goavro/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -113,6 +114,67 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, err)
 
 	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(benchmarkData)
+	}
+}
+
+func TestBenchmarkDataBinary(t *testing.T) {
+	plugin := &Parser{
+		Measurement:     "benchmark",
+		Tags:            []string{"tags_platform", "tags_sdkver", "source"},
+		Fields:          []string{"value"},
+		Timestamp:       "timestamp",
+		TimestampFormat: "unix",
+		Schema:          benchmarkSchema,
+	}
+	require.NoError(t, plugin.Init())
+
+	benchmarkDir := filepath.Join("testdata", "benchmark")
+
+	// Read the expected valued from file
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	expected, err := testutil.ParseMetricsFromFile(filepath.Join(benchmarkDir, "expected.out"), parser)
+	require.NoError(t, err)
+
+	// Re-encode the benchmark data from JSON to binary format
+	jsonData, err := os.ReadFile(filepath.Join(benchmarkDir, "message.json"))
+	require.NoError(t, err)
+	codec, err := goavro.NewCodec(benchmarkSchema)
+	require.NoError(t, err)
+	native, _, err := codec.NativeFromTextual(jsonData)
+	require.NoError(t, err)
+	benchmarkData, err := codec.BinaryFromNative(nil, native)
+	require.NoError(t, err)
+
+	// Do the actual testing
+	actual, err := plugin.Parse(benchmarkData)
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsingBinary(b *testing.B) {
+	plugin := &Parser{
+		Measurement:     "benchmark",
+		Tags:            []string{"tags_platform", "tags_sdkver", "source"},
+		Fields:          []string{"value"},
+		Timestamp:       "timestamp",
+		TimestampFormat: "unix",
+		Schema:          benchmarkSchema,
+	}
+	require.NoError(b, plugin.Init())
+
+	// Re-encode the benchmark data from JSON to binary format
+	jsonData, err := os.ReadFile(filepath.Join("testdata", "benchmark", "message.json"))
+	require.NoError(b, err)
+	codec, err := goavro.NewCodec(benchmarkSchema)
+	require.NoError(b, err)
+	native, _, err := codec.NativeFromTextual(jsonData)
+	require.NoError(b, err)
+	benchmarkData, err := codec.BinaryFromNative(nil, native)
+	require.NoError(b, err)
+
 	for n := 0; n < b.N; n++ {
 		_, _ = plugin.Parse(benchmarkData)
 	}
