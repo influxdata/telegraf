@@ -32,11 +32,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
 	)
 	require.NoError(t, err)
-	defer func() {
-		if err := kafkaContainer.Terminate(ctx); err != nil {
-			require.NoError(t, err)
-		}
-	}()
+	defer kafkaContainer.Terminate(ctx)
 
 	brokers, err := kafkaContainer.Brokers(ctx)
 	require.NoError(t, err)
