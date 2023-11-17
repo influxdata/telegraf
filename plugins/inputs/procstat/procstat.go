@@ -340,46 +340,7 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() []PidsTags {
 	if len(p.SupervisorUnit) > 0 {
-		var pidTags []PidsTags
-		groups, groupsTags, err := p.supervisorPIDs()
-		if err != nil {
-			pidTags = append(pidTags, PidsTags{nil, nil, err})
-			return pidTags
-		}
-		// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
-		for _, group := range groups {
-			p.Pattern = groupsTags[group]["pid"]
-			if p.Pattern == "" {
-				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
-				return pidTags
-			}
-
-			// Get all children of the supervisor unit
-			pids, err := p.finder.ChildPattern(p.Pattern)
-			if err != nil {
-				pidTags = append(pidTags, PidsTags{nil, nil, err})
-				return pidTags
-			}
-			tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
-
-			// Handle situations where the PID does not exist
-			if len(pids) == 0 {
-				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
-				continue
-			}
-
-			// Merge tags map
-			for k, v := range groupsTags[group] {
-				_, ok := tags[k]
-				if !ok {
-					tags[k] = v
-				}
-			}
-			// Remove duplicate pid tags
-			delete(tags, "pid")
-			pidTags = append(pidTags, PidsTags{pids, tags, err})
-		}
-		return pidTags
+		return p.findSupervisorUnits()
 	} else if p.SystemdUnits != "" {
 		groups := p.systemdUnitPIDs()
 		return groups
@@ -390,6 +351,49 @@ func (p *Procstat) findPids() []PidsTags {
 
 	pids, tags, err := p.SimpleFindPids(p.finder)
 	return []PidsTags{{pids, tags, err}}
+}
+
+func (p *Procstat) findSupervisorUnits() []PidsTags {
+	var pidTags []PidsTags
+	groups, groupsTags, err := p.supervisorPIDs()
+	if err != nil {
+		pidTags = append(pidTags, PidsTags{nil, nil, err})
+		return pidTags
+	}
+	// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
+	for _, group := range groups {
+		p.Pattern = groupsTags[group]["pid"]
+		if p.Pattern == "" {
+			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
+			return pidTags
+		}
+
+		// Get all children of the supervisor unit
+		pids, err := p.finder.ChildPattern(p.Pattern)
+		if err != nil {
+			pidTags = append(pidTags, PidsTags{nil, nil, err})
+			return pidTags
+		}
+		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
+
+		// Handle situations where the PID does not exist
+		if len(pids) == 0 {
+			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
+			continue
+		}
+
+		// Merge tags map
+		for k, v := range groupsTags[group] {
+			_, ok := tags[k]
+			if !ok {
+				tags[k] = v
+			}
+		}
+		// Remove duplicate pid tags
+		delete(tags, "pid")
+		pidTags = append(pidTags, PidsTags{pids, tags, err})
+	}
+	return pidTags
 }
 
 // Get matching PIDs and their initial tags
