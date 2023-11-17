@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## metrics. For specific details and examples see the metric filtering docs:
 ## https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
 
-## Metric Selectors - These will drop entire metrics
+## Metric Selectors - These will exclude entire metrics from this processor
 ## Filter on metric name or tag key + value
 # namepass = []
 # namedrop = []
