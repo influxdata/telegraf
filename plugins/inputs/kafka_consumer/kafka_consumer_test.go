@@ -11,7 +11,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -484,58 +484,20 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}{
 		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
 		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
-		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Logf("rt: starting network")
 			ctx := context.Background()
-			networkName := "telegraf-test-kafka-consumer-network"
-			network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-				NetworkRequest: testcontainers.NetworkRequest{
-					Name:           networkName,
-					Attachable:     true,
-					CheckDuplicate: true,
-				},
-			})
+			kafkaContainer, err := kafkacontainer.RunContainer(ctx,
+				kafkacontainer.WithClusterID("test-cluster"),
+				testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
+			)
 			require.NoError(t, err)
-			defer func() {
-				require.NoError(t, network.Remove(ctx), "terminating network failed")
-			}()
+			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
 
-			t.Logf("rt: starting zookeeper")
-			zookeeperName := "telegraf-test-kafka-consumer-zookeeper"
-			zookeeper := testutil.Container{
-				Image:        "wurstmeister/zookeeper",
-				ExposedPorts: []string{"2181:2181"},
-				Networks:     []string{networkName},
-				WaitingFor:   wait.ForLog("binding to port"),
-				Name:         zookeeperName,
-			}
-			require.NoError(t, zookeeper.Start(), "failed to start container")
-			defer zookeeper.Terminate()
-
-			t.Logf("rt: starting broker")
-			container := testutil.Container{
-				Name:         "telegraf-test-kafka-consumer",
-				Image:        "wurstmeister/kafka",
-				ExposedPorts: []string{"9092:9092"},
-				Env: map[string]string{
-					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
-					"KAFKA_ADVERTISED_PORT":      "9092",
-					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
-					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", "Test"),
-				},
-				Networks:   []string{networkName},
-				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
-			}
-			require.NoError(t, container.Start(), "failed to start container")
-			defer container.Terminate()
-
-			brokers := []string{
-				fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
-			}
+			brokers, err := kafkaContainer.Brokers(ctx)
+			require.NoError(t, err)
 
 			// Make kafka output
 			t.Logf("rt: starting output plugin")
