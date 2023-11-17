@@ -27,7 +27,7 @@ introduced reading via `v2` interface additional ethernet device information
 (`/ethdev/info`).
 This version also adds support for exposing telemetry from multiple
 `--in-memory` instances of DPDK via dedicated sockets.
-The plugin supports reading from those sockets when `dpdk_in_memory`
+The plugin supports reading from those sockets when `in_memory`
 option is set.
 
 The example usage of `v2` telemetry interface can be found in [Telemetry User
@@ -52,7 +52,7 @@ and to explore the exposed metrics.
 >
 > **NOTE:** There are known issues with exposing telemetry from multiple
 > `--in-memory` instances while using `DPDK 21.11.1`. The recommended version
-> to use in conjunction with `dpdk_in_memory` plugin option is `DPDK 21.11.2`
+> to use in conjunction with `in_memory` plugin option is `DPDK 21.11.2`
 > or higher.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -97,10 +97,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## List of plugin options.
   ## Supported options:
-  ##  - "dpdk_in_memory" option enables reading for multiple sockets when a dpdk application is running with --in-memory option.
+  ##  - "in_memory" option enables reading for multiple sockets when a dpdk application is running with --in-memory option.
   ##    When option is enabled plugin will try to find additional socket paths related to provided socket_path.
   ##    Details: https://doc.dpdk.org/guides/howto/telemetry.html#connecting-to-different-dpdk-processes
-  # plugin_options = ["dpdk_in_memory"]
+  # plugin_options = ["in_memory"]
 
   ## Specifies plugin behavior regarding unreachable socket (which might not have been initialized yet).
   ## Available choices:
@@ -110,9 +110,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## List of metadata fields which will be added to every metric produced by the plugin.
   ## Supported options:
-  ##  - "dpdk_pid" - exposes PID of DPDK process. Example: dpdk_pid=2179660i
-  ##  - "dpdk_version" - exposes version of DPDK. Example: dpdk_version="DPDK 21.11.2"
-  # metadata_fields = ["dpdk_pid"]
+  ##  - "pid" - exposes PID of DPDK process. Example: pid=2179660i
+  ##  - "version" - exposes version of DPDK. Example: version="DPDK 21.11.2"
+  # metadata_fields = ["pid"]
 
   ## Allows turning off collecting data for individual "ethdev" commands.
   ## Remove "/ethdev/link_status" from list to gather link status metrics.
@@ -316,8 +316,8 @@ When running plugin configuration below...
   interval = "30s"
   socket_access_timeout = "10s"
   device_types = ["ethdev"]
-  metadata_fields = ["dpdk_version", "dpdk_pid"]
-  plugin_options = ["dpdk_in_memory"]
+  metadata_fields = ["version", "pid"]
+  plugin_options = ["in_memory"]
 
   [inputs.dpdk.ethdev]
     exclude_commands = ["/ethdev/info", "/ethdev/stats", "/ethdev/xstats"]
@@ -328,6 +328,6 @@ and all metadata fields enabled, additionally `status_i` field will be exposed
 to represent string value of `status` field (`DOWN`=0,`UP`=1):
 
 ```text
-dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 dpdk_pid=100988i,dpdk_version="DPDK 21.11.2",status="DOWN",status_i=0i 1660295749000000000
-dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 dpdk_pid=2401624i,dpdk_version="DPDK 21.11.2",status="UP",status_i=1i 1660295749000000000
+dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 pid=100988i,version="DPDK 21.11.2",status="DOWN",status_i=0i 1660295749000000000
+dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 pid=2401624i,version="DPDK 21.11.2",status="UP",status_i=1i 1660295749000000000
 ```

@@ -190,11 +190,5 @@ func isEmpty(value interface{}) bool {
 }
 
 func prepareGlob(path string) (*globpath.GlobPath, error) {
-	pathWithAsterisk := fmt.Sprintf("%s*", path)
-	glob, err := globpath.Compile(pathWithAsterisk)
-	if err != nil {
-		return nil, fmt.Errorf("could not compile glob %q: %w", pathWithAsterisk, err)
-	}
-
-	return glob, nil
+	return globpath.Compile(path + "*")
 }

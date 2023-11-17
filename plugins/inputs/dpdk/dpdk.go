@@ -30,10 +30,10 @@ const (
 	ethdevListCommand          = "/ethdev/list"
 	rawdevListCommand          = "/rawdev/list"
 
-	dpdkMetadataFieldPidName     = "dpdk_pid"
-	dpdkMetadataFieldVersionName = "dpdk_version"
+	dpdkMetadataFieldPidName     = "pid"
+	dpdkMetadataFieldVersionName = "version"
 
-	dpdkPluginOptionInMemory = "dpdk_in_memory"
+	dpdkPluginOptionInMemory = "in_memory"
 
 	unreachableSocketBehaviorIgnore = "ignore"
 	unreachableSocketBehaviorError  = "error"

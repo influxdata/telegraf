@@ -45,7 +45,7 @@ func Test_Init(t *testing.T) {
 		require.Equal(t, []string{dpdkMetadataFieldPidName}, dpdk.MetadataFields)
 	})
 
-	t.Run("when PluginOptions field isn't set then it should be set to default value (dpdk_in_memory)", func(t *testing.T) {
+	t.Run("when PluginOptions field isn't set then it should be set to default value (in_memory)", func(t *testing.T) {
 		dpdk := dpdk{
 			Log: testutil.Logger{},
 		}
@@ -679,7 +679,7 @@ func Test_Gather(t *testing.T) {
 		testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 	})
 
-	t.Run("Test Gather with Metadata Fields dpdk_pid and dpdk_version", func(t *testing.T) {
+	t.Run("Test Gather with Metadata Fields dpdk pid and version", func(t *testing.T) {
 		testInitMessage := &initMessage{
 			Pid:          100,
 			Version:      "DPDK 21.11.11",
