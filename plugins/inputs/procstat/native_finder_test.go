@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"os/user"
 	"runtime"
 	"testing"
 
@@ -55,4 +56,40 @@ func TestChildPattern(t *testing.T) {
 	childs, err := finder.ChildPattern(parentName)
 	require.NoError(t, err)
 	require.ElementsMatch(t, expected, childs)
+}
+
+func TestGather_RealPatternIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	pg := &NativeFinder{}
+	pids, err := pg.Pattern(`procstat`)
+	require.NoError(t, err)
+	require.NotEmpty(t, pids)
+}
+
+func TestGather_RealFullPatternIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping integration test on Non-Windows OS")
+	}
+	pg := &NativeFinder{}
+	pids, err := pg.FullPattern(`%procstat%`)
+	require.NoError(t, err)
+	require.NotEmpty(t, pids)
+}
+
+func TestGather_RealUserIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	currentUser, err := user.Current()
+	require.NoError(t, err)
+
+	pg := &NativeFinder{}
+	pids, err := pg.UID(currentUser.Username)
+	require.NoError(t, err)
+	require.NotEmpty(t, pids)
 }
