@@ -339,9 +339,8 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() []PidsTags {
-	var pidTags []PidsTags
-
 	if len(p.SupervisorUnit) > 0 {
+		var pidTags []PidsTags
 		groups, groupsTags, err := p.supervisorPIDs()
 		if err != nil {
 			pidTags = append(pidTags, PidsTags{nil, nil, err})
@@ -355,19 +354,22 @@ func (p *Procstat) findPids() []PidsTags {
 				return pidTags
 			}
 
-			pids, tags, err := p.SimpleFindPids(p.finder)
+			// Get all children of the supervisor unit
+			pids, err := p.finder.ChildPattern(p.Pattern)
 			if err != nil {
 				pidTags = append(pidTags, PidsTags{nil, nil, err})
 				return pidTags
 			}
+			tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
+
 			// Handle situations where the PID does not exist
 			if len(pids) == 0 {
 				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
 				continue
 			}
-			stats := groupsTags[group]
+
 			// Merge tags map
-			for k, v := range stats {
+			for k, v := range groupsTags[group] {
 				_, ok := tags[k]
 				if !ok {
 					tags[k] = v
@@ -377,7 +379,6 @@ func (p *Procstat) findPids() []PidsTags {
 			delete(tags, "pid")
 			pidTags = append(pidTags, PidsTags{pids, tags, err})
 		}
-
 		return pidTags
 	} else if p.SystemdUnits != "" {
 		groups := p.systemdUnitPIDs()
@@ -388,9 +389,7 @@ func (p *Procstat) findPids() []PidsTags {
 	}
 
 	pids, tags, err := p.SimpleFindPids(p.finder)
-	pidTags = append(pidTags, PidsTags{pids, tags, err})
-
-	return pidTags
+	return []PidsTags{{pids, tags, err}}
 }
 
 // Get matching PIDs and their initial tags
@@ -405,9 +404,6 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 	} else if p.Exe != "" {
 		pids, err = f.Pattern(p.Exe)
 		tags = map[string]string{"exe": p.Exe}
-	} else if len(p.SupervisorUnit) > 0 && p.Pattern != "" {
-		pids, err = f.ChildPattern(p.Pattern)
-		tags = map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
 	} else if p.Pattern != "" {
 		pids, err = f.FullPattern(p.Pattern)
 		tags = map[string]string{"pattern": p.Pattern}
