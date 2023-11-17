@@ -79,7 +79,6 @@ func (p *Procstat) Init() error {
 		if requiresChildren && runtime.GOOS == "darwin" {
 			return errors.New("configuration requires the 'pgrep' finder on you OS")
 		}
-
 		p.finder = &NativeFinder{}
 	default:
 		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
@@ -339,18 +338,36 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() []PidsTags {
-	if len(p.SupervisorUnit) > 0 {
+	switch {
+	case len(p.SupervisorUnit) > 0:
 		return p.findSupervisorUnits()
-	} else if p.SystemdUnits != "" {
-		groups := p.systemdUnitPIDs()
-		return groups
-	} else if p.CGroup != "" {
-		groups := p.cgroupPIDs()
-		return groups
+	case p.SystemdUnits != "":
+		return p.systemdUnitPIDs()
+	case p.WinService != "":
+		pids, err := p.winServicePIDs()
+		tags := map[string]string{"win_service": p.WinService}
+		return []PidsTags{{pids, tags, err}}
+	case p.CGroup != "":
+		return p.cgroupPIDs()
+	case p.PidFile != "":
+		pids, err := p.finder.PidFile(p.PidFile)
+		tags := map[string]string{"pidfile": p.PidFile}
+		return []PidsTags{{pids, tags, err}}
+	case p.Exe != "":
+		pids, err := p.finder.Pattern(p.Exe)
+		tags := map[string]string{"exe": p.Exe}
+		return []PidsTags{{pids, tags, err}}
+	case p.Pattern != "":
+		pids, err := p.finder.FullPattern(p.Pattern)
+		tags := map[string]string{"pattern": p.Pattern}
+		return []PidsTags{{pids, tags, err}}
+	case p.User != "":
+		pids, err := p.finder.UID(p.User)
+		tags := map[string]string{"user": p.User}
+		return []PidsTags{{pids, tags, err}}
 	}
-
-	pids, tags, err := p.SimpleFindPids(p.finder)
-	return []PidsTags{{pids, tags, err}}
+	err := fmt.Errorf("either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
+	return []PidsTags{{nil, nil, err}}
 }
 
 func (p *Procstat) findSupervisorUnits() []PidsTags {
@@ -394,34 +411,6 @@ func (p *Procstat) findSupervisorUnits() []PidsTags {
 		pidTags = append(pidTags, PidsTags{pids, tags, err})
 	}
 	return pidTags
-}
-
-// Get matching PIDs and their initial tags
-func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error) {
-	var pids []PID
-	tags := make(map[string]string)
-	var err error
-
-	if p.PidFile != "" {
-		pids, err = f.PidFile(p.PidFile)
-		tags = map[string]string{"pidfile": p.PidFile}
-	} else if p.Exe != "" {
-		pids, err = f.Pattern(p.Exe)
-		tags = map[string]string{"exe": p.Exe}
-	} else if p.Pattern != "" {
-		pids, err = f.FullPattern(p.Pattern)
-		tags = map[string]string{"pattern": p.Pattern}
-	} else if p.User != "" {
-		pids, err = f.UID(p.User)
-		tags = map[string]string{"user": p.User}
-	} else if p.WinService != "" {
-		pids, err = p.winServicePIDs()
-		tags = map[string]string{"win_service": p.WinService}
-	} else {
-		err = fmt.Errorf("either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
-	}
-
-	return pids, tags, err
 }
 
 // execCommand is so tests can mock out exec.Command usage.
