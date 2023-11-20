@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 )
@@ -369,7 +369,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %q with tags %v", measurement, tags)
-	assert.Fail(t, msg)
+	require.Fail(t, msg)
 }
 
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(
@@ -389,7 +389,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			msg := fmt.Sprintf(
 				"found measurement %s with tagged fields (tags %v) which should not be there",
 				measurement, tags)
-			assert.Fail(t, msg)
+			require.Fail(t, msg)
 		}
 	}
 }
@@ -402,12 +402,12 @@ func (a *Accumulator) AssertContainsFields(
 	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
+			require.Equal(t, fields, p.Fields)
 			return
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %q", measurement)
-	assert.Fail(t, msg)
+	require.Fail(t, msg)
 }
 
 func (a *Accumulator) HasPoint(
@@ -441,7 +441,7 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
-			assert.Fail(t, msg)
+			require.Fail(t, msg)
 		}
 	}
 }

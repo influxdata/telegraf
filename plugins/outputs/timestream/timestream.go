@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"sync"
@@ -609,7 +610,11 @@ func convertValue(v interface{}) (value string, valueType types.MeasureValueType
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint64:
 		valueType = types.MeasureValueTypeBigint
-		value = strconv.FormatUint(t, 10)
+		if t <= uint64(math.MaxInt64) {
+			value = strconv.FormatUint(t, 10)
+		} else {
+			value = strconv.FormatUint(math.MaxInt64, 10)
+		}
 	case float32:
 		valueType = types.MeasureValueTypeDouble
 		value = strconv.FormatFloat(float64(t), 'f', -1, 32)

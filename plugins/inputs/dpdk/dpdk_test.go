@@ -145,11 +145,11 @@ func Test_validateCommands(t *testing.T) {
 				"/test", "/test",
 			},
 		}
-		require.Equal(t, 2, len(dpdk.AdditionalCommands))
+		require.Len(t, dpdk.AdditionalCommands, 2)
 
 		err := dpdk.validateCommands()
 
-		require.Equal(t, 1, len(dpdk.AdditionalCommands))
+		require.Len(t, dpdk.AdditionalCommands, 1)
 		require.NoError(t, err)
 	})
 }
@@ -177,7 +177,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/")
 
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("if received a non-JSON object then should return error", func(t *testing.T) {
@@ -188,7 +188,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/")
 
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 		require.Contains(t, mockAcc.Errors[0].Error(), "invalid character")
 	})
 
@@ -201,7 +201,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/")
 
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 		require.Contains(t, mockAcc.Errors[0].Error(), "deadline exceeded")
 	})
 
@@ -213,7 +213,7 @@ func Test_processCommand(t *testing.T) {
 
 		dpdk.processCommand(mockAcc, "/test,param")
 
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Len(t, mockAcc.Errors, 1)
 		require.Contains(t, mockAcc.Errors[0].Error(), "got empty json on")
 	})
 }
@@ -229,7 +229,7 @@ func Test_appendCommandsWithParams(t *testing.T) {
 		result, err := dpdk.appendCommandsWithParamsFromList("/testendpoint", []string{"/action1", "/action2"})
 
 		require.NoError(t, err)
-		require.Equal(t, 4, len(result))
+		require.Len(t, result, 4)
 		require.ElementsMatch(t, result, expectedCommands)
 	})
 }
@@ -249,7 +249,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.ElementsMatch(t, commands, expectedCommands)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("when 1 rawdev command is enabled, then 2*numberOfIds new commands should be appended", func(t *testing.T) {
@@ -265,7 +265,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.ElementsMatch(t, commands, expectedCommands)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("when 2 ethdev commands are enabled but one command is disabled, then numberOfIds new commands should be appended", func(t *testing.T) {
@@ -282,7 +282,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		commands := dpdk.gatherCommands(mockAcc)
 
 		require.ElementsMatch(t, commands, expectedCommands)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 	})
 
 	t.Run("when ethdev commands are enabled but params fetching command returns error then error should be logged in accumulator", func(t *testing.T) {
@@ -296,8 +296,8 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc)
 
-		require.Equal(t, 0, len(commands))
-		require.Equal(t, 1, len(mockAcc.Errors))
+		require.Empty(t, commands)
+		require.Len(t, mockAcc.Errors, 1)
 	})
 }
 
@@ -311,7 +311,7 @@ func Test_Gather(t *testing.T) {
 		err := dpdk.Gather(mockAcc)
 
 		require.NoError(t, err)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(
@@ -339,7 +339,7 @@ func Test_Gather(t *testing.T) {
 
 		err := dpdk.Gather(mockAcc)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(mockAcc.Errors))
+		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(

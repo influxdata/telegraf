@@ -97,13 +97,44 @@ to use them.
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## default_tags      - extra tags to be added to the output metric (optional)
+  ## monitoring_params - additional settings for the monitored node (optional)
+  ##
+  ## Monitoring parameters
+  ## sampling_interval  - interval at which the server should check for data
+  ##                      changes (default: 0s)
+  ## queue_size         - size of the notification queue (default: 10)
+  ## discard_oldest     - how notifications should be handled in case of full
+  ##                      notification queues, possible values:
+  ##                      true: oldest value added to queue gets replaced with new
+  ##                            (default)
+  ##                      false: last value added to queue gets replaced with new
+  ## data_change_filter - defines the condition under which a notification should
+  ##                      be reported
+  ##
+  ## Data change filter
+  ## trigger        - specify the conditions under which a data change notification
+  ##                  should be reported, possible values:
+  ##                  "Status": only report notifications if the status changes
+  ##                            (default if parameter is omitted)
+  ##                  "StatusValue": report notifications if either status or value
+  ##                                 changes
+  ##                  "StatusValueTimestamp": report notifications if either status,
+  ##                                          value or timestamp changes
+  ## deadband_type  - type of the deadband filter to be applied, possible values:
+  ##                  "Absolute": absolute change in a data value to report a notification
+  ##                  "Percent": works only with nodes that have an EURange property set
+  ##                             and is defined as: send notification if
+  ##                             (last value - current value) >
+  ##                             (deadband_value/100.0) * ((high–low) of EURange)
+  ## deadband_value - value to deadband_type, must be a float value, no filter is set
+  ##                  for negative values
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #   {name="", namespace="", identifier_type="", identifier=""},
-  #   {name="", namespace="", identifier_type="", identifier=""},
+  #   {name="node1", namespace="", identifier_type="", identifier="",}
+  #   {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
   # ]
   #
   ## Bracketed notation
@@ -120,6 +151,16 @@ to use them.
   #   identifier_type = ""
   #   identifier = ""
   #
+  #   [inputs.opcua_listener.nodes.monitoring_params]
+  #     sampling_interval = "0s"
+  #     queue_size = 10
+  #     discard_oldest = true
+  #
+  #     [inputs.opcua_listener.nodes.monitoring_params.data_change_filter]
+  #       trigger = "Status"
+  #       deadband_type = "Absolute"
+  #       deadband_value = 0.0
+  #
   ## Node Group
   ## Sets defaults so they aren't required in every node.
   ## Default values can be set for:
@@ -127,6 +168,7 @@ to use them.
   ## * OPC UA namespace
   ## * Identifier
   ## * Default tags
+  ## * Sampling interval
   ##
   ## Multiple node groups are allowed
   #[[inputs.opcua_listener.group]]
@@ -147,13 +189,17 @@ to use them.
   ##   example: default_tags = { tag1 = "value1" }
   # default_tags = {}
   #
+  ## Group default sampling interval. If a node in the group doesn't set its
+  ## sampling interval, this is used.
+  # sampling_interval = "0s"
+  #
   ## Node ID Configuration.  Array of nodes with the same settings as above.
   ## Use either the inline notation or the bracketed notation, not both.
   #
   ## Inline notation (default_tags not supported yet)
   # nodes = [
-  #  {name="node1", namespace="", identifier_type="", identifier=""},
-  #  {name="node2", namespace="", identifier_type="", identifier=""},
+  #  {name="node1", namespace="", identifier_type="", identifier="",}
+  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
   #]
   #
   ## Bracketed notation
@@ -169,7 +215,17 @@ to use them.
   #   namespace = ""
   #   identifier_type = ""
   #   identifier = ""
-
+  #
+  #   [inputs.opcua_listener.group.nodes.monitoring_params]
+  #     sampling_interval = "0s"
+  #     queue_size = 10
+  #     discard_oldest = true
+  #
+  #     [inputs.opcua_listener.group.nodes.monitoring_params.data_change_filter]
+  #       trigger = "Status"
+  #       deadband_type = "Absolute"
+  #       deadband_value = 0.0
+  #
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
@@ -201,11 +257,11 @@ opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 
 ## Group Configuration
 
-Groups can set default values for the namespace, identifier type, and
-tags settings.  The default values apply to all the nodes in the
-group.  If a default is set, a node may omit the setting altogether.
-This simplifies node configuration, especially when many nodes share
-the same namespace or identifier type.
+Groups can set default values for the namespace, identifier type, tags
+settings and sampling interval.  The default values apply to all the
+nodes in the group.  If a default is set, a node may omit the setting
+altogether. This simplifies node configuration, especially when many
+nodes share the same namespace or identifier type.
 
 The output metric will include tags set in the group and the node.  If
 a tag with the same name is set in both places, the tag value from the

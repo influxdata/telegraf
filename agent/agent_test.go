@@ -36,35 +36,35 @@ func TestAgent_LoadPlugin(t *testing.T) {
 	err := c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a := NewAgent(c)
-	require.Equal(t, 1, len(a.Config.Inputs))
+	require.Len(t, a.Config.Inputs, 1)
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"foo"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 0, len(a.Config.Inputs))
+	require.Empty(t, a.Config.Inputs)
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "foo"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 1, len(a.Config.Inputs))
+	require.Len(t, a.Config.Inputs, 1)
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "redis"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 2, len(a.Config.Inputs))
+	require.Len(t, a.Config.Inputs, 2)
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "foo", "redis", "bar"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 2, len(a.Config.Inputs))
+	require.Len(t, a.Config.Inputs, 2)
 }
 
 func TestAgent_LoadOutput(t *testing.T) {
@@ -73,50 +73,50 @@ func TestAgent_LoadOutput(t *testing.T) {
 	err := c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a := NewAgent(c)
-	require.Equal(t, 2, len(a.Config.Outputs))
+	require.Len(t, a.Config.Outputs, 2)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"kafka"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 1, len(a.Config.Outputs))
+	require.Len(t, a.Config.Outputs, 1)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 3, len(a.Config.Outputs))
+	require.Len(t, a.Config.Outputs, 3)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"foo"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 0, len(a.Config.Outputs))
+	require.Empty(t, a.Config.Outputs)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "foo"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 2, len(a.Config.Outputs))
+	require.Len(t, a.Config.Outputs, 2)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "kafka"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
-	require.Equal(t, 3, len(c.Outputs))
+	require.Len(t, c.Outputs, 3)
 	a = NewAgent(c)
-	require.Equal(t, 3, len(a.Config.Outputs))
+	require.Len(t, a.Config.Outputs, 3)
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "foo", "kafka", "bar"}
 	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
 	require.NoError(t, err)
 	a = NewAgent(c)
-	require.Equal(t, 3, len(a.Config.Outputs))
+	require.Len(t, a.Config.Outputs, 3)
 }
 
 func TestWindow(t *testing.T) {

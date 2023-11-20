@@ -168,14 +168,14 @@ func TestEscapeValue(t *testing.T) {
 	for _, test := range tests {
 		got, err := escapeValue(test.Value, "_")
 		require.NoError(t, err, "value: %#v", test.Value)
-		require.Equal(t, got, test.Want)
+		require.Equal(t, test.Want, got)
 	}
 }
 
 func TestCircumventingStringEscape(t *testing.T) {
 	value, err := escapeObject(map[string]interface{}{"a.b": "c"}, `_"`)
 	require.NoError(t, err)
-	require.Equal(t, value, `{"a_""b" = 'c'}`)
+	require.Equal(t, `{"a_""b" = 'c'}`, value)
 }
 
 func Test_hashID(t *testing.T) {

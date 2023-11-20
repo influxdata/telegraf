@@ -88,7 +88,7 @@ func TestBurrowTopic(t *testing.T) {
 	}
 
 	require.Empty(t, acc.Errors)
-	require.Equal(t, true, acc.HasMeasurement("burrow_topic"))
+	require.True(t, acc.HasMeasurement("burrow_topic"))
 	for i := 0; i < len(fields); i++ {
 		acc.AssertContainsTaggedFields(t, "burrow_topic", fields[i], tags[i])
 	}
@@ -135,7 +135,7 @@ func TestBurrowPartition(t *testing.T) {
 	}
 
 	require.Empty(t, acc.Errors)
-	require.Equal(t, true, acc.HasMeasurement("burrow_partition"))
+	require.True(t, acc.HasMeasurement("burrow_partition"))
 
 	for i := 0; i < len(fields); i++ {
 		acc.AssertContainsTaggedFields(t, "burrow_partition", fields[i], tags[i])
@@ -170,7 +170,7 @@ func TestBurrowGroup(t *testing.T) {
 	}
 
 	require.Empty(t, acc.Errors)
-	require.Equal(t, true, acc.HasMeasurement("burrow_group"))
+	require.True(t, acc.HasMeasurement("burrow_group"))
 
 	for i := 0; i < len(fields); i++ {
 		acc.AssertContainsTaggedFields(t, "burrow_group", fields[i], tags[i])

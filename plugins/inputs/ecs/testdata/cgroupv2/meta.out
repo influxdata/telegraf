@@ -1,0 +1,1 @@
+ecs_container_meta,test_tag=test container_id="c69461b2c836cc3f0e3e5deb07b1f16e25f6009da2a48bb0adc7dd580befaf55",desired_status="RESOURCES_PROVISIONED",docker_name="ecs-nginx-telegraf-3-internalecspause-f0cc8fe3bfc9a8efd601",image="amazon/amazon-ecs-pause:0.1.0",image_id="",known_status="RESOURCES_PROVISIONED",limit_cpu=2,limit_mem=0,type="CNI_PAUSE" 1698343335413572143

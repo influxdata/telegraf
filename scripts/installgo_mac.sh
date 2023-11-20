@@ -3,9 +3,9 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.21.1"
-GO_VERSION_SHA_arm64="ffd40391a1e995855488b008ad9326ff8c2e81803a6e80894401003bae47fcf1" # from https://golang.org/dl
-GO_VERSION_SHA_amd64="809f5b0ef4f7dcdd5f51e9630a5b2e5a1006f22a047126d61560cdc365678a19" # from https://golang.org/dl
+GO_VERSION="1.21.4"
+GO_VERSION_SHA_arm64="8b7caf2ac60bdff457dba7d4ff2a01def889592b834453431ae3caecf884f6a5" # from https://golang.org/dl
+GO_VERSION_SHA_amd64="cd3bdcc802b759b70e8418bc7afbc4a65ca73a3fe576060af9fc8a2a5e71c3b8" # from https://golang.org/dl
 
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"
@@ -42,8 +42,11 @@ if command -v go >/dev/null 2>&1; then
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
-        go version
     fi
 else
     setup_go
 fi
+
+echo "$PATH"
+command -v go
+go version

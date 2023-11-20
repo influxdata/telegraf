@@ -97,7 +97,7 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 		options:    opts,
 		timeout:    time.Duration(cfg.Timeout),
 		username:   cfg.Username,
-		password:   config.Password,
+		password:   cfg.Password,
 		qos:        cfg.QoS,
 		retain:     cfg.Retain,
 		properties: properties,

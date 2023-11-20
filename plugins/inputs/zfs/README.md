@@ -223,6 +223,27 @@ For ZFS >= 2.1.x the format has changed significantly:
   - nunlinks (integer, count)
   - nunlinked (integer, count)
 
+For ZFS >= 2.2.x the following additional fields are available:
+
+- additional fields for ZFS > 2.2.x
+  - zil_commit_count (integer, count)
+  - zil_commit_writer_count (integer, count)
+  - zil_itx_count (integer, count)
+  - zil_itx_indirect_count (integer, count)
+  - zil_itx_indirect_bytes (integer, bytes)
+  - zil_itx_copied_count (integer, count)
+  - zil_itx_copied_bytes (integer, bytes)
+  - zil_itx_needcopy_count (integer, count)
+  - zil_itx_needcopy_bytes (integer, bytes)
+  - zil_itx_metaslab_normal_count (integer, count)
+  - zil_itx_metaslab_normal_bytes (integer, bytes)
+  - zil_itx_metaslab_normal_write (integer, bytes)
+  - zil_itx_metaslab_normal_alloc (integer, bytes)
+  - zil_itx_metaslab_slog_count (integer, count)
+  - zil_itx_metaslab_slog_bytes (integer, bytes)
+  - zil_itx_metaslab_slog_write (integer, bytes)
+  - zil_itx_metaslab_slog_alloc (integer, bytes)
+
 On FreeBSD:
 
 - zfs_pool
@@ -391,6 +412,7 @@ memory is too low)
 
 ### ZIL (Linux Only)
 
-note: ZIL measurements are system-wide, neither per-pool nor per-dataset
+note: `zil` measurements in `kstatMetrics` are system-wide, in `poolMetrics`
+they are pool-wide
 
 `zil_commit_count` counts when ZFS transactions are committed to a ZIL

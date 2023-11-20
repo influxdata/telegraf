@@ -1,7 +1,6 @@
 package procstat
 
 import (
-	"fmt"
 	"os/user"
 	"testing"
 
@@ -16,8 +15,7 @@ func TestGather_RealPatternIntegration(t *testing.T) {
 	require.NoError(t, err)
 	pids, err := pg.Pattern(`procstat`)
 	require.NoError(t, err)
-	fmt.Println(pids)
-	require.Equal(t, len(pids) > 0, true)
+	require.NotEmpty(t, pids)
 }
 
 func TestGather_RealFullPatternIntegration(t *testing.T) {
@@ -26,10 +24,10 @@ func TestGather_RealFullPatternIntegration(t *testing.T) {
 	}
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
+
 	pids, err := pg.FullPattern(`%procstat%`)
 	require.NoError(t, err)
-	fmt.Println(pids)
-	require.Equal(t, len(pids) > 0, true)
+	require.NotEmpty(t, pids)
 }
 
 func TestGather_RealUserIntegration(t *testing.T) {
@@ -42,6 +40,5 @@ func TestGather_RealUserIntegration(t *testing.T) {
 	require.NoError(t, err)
 	pids, err := pg.UID(currentUser.Username)
 	require.NoError(t, err)
-	fmt.Println(pids)
-	require.Equal(t, len(pids) > 0, true)
+	require.NotEmpty(t, pids)
 }

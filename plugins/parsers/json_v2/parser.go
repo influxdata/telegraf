@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimchansky/utfbom"
@@ -35,6 +36,8 @@ type Parser struct {
 	iterateObjects bool
 	// objectConfig contains the config for an object, some info is needed while iterating over the gjson results
 	objectConfig Object
+	// parseMutex is here because Parse() is not threadsafe.  If it is made threadsafe at some point, then we won't need it anymore.
+	parseMutex sync.Mutex
 }
 
 type Config struct {
@@ -114,6 +117,19 @@ func (p *Parser) Init() error {
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	// What we've done here is to put the entire former contents of Parse()
+	// into parseCriticalPath().
+	//
+	// As we determine what bits of parseCriticalPath() are and are not
+	// threadsafe, we can lift the safe pieces back up into Parse(), and
+	// shrink the scope (or scopes, if the critical sections are disjoint)
+	// of those pieces that need to be protected with a mutex.
+	return p.parseCriticalPath(input)
+}
+
+func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
+	p.parseMutex.Lock()
+	defer p.parseMutex.Unlock()
 	reader := strings.NewReader(string(input))
 	body, _ := utfbom.Skip(reader)
 	input, err := io.ReadAll(body)
@@ -210,8 +226,8 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 			return nil, fmt.Errorf("GJSON path is required")
 		}
 		result := gjson.GetBytes(input, c.Path)
-		if skip, err := p.checkResult(result, c.Path, c.Optional); err != nil {
-			if skip {
+		if err := p.checkResult(result, c.Path); err != nil {
+			if c.Optional {
 				continue
 			}
 			return nil, err
@@ -330,6 +346,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 				n.ParentIndex = n.Index + result.ParentIndex
 				r, err := p.combineObject(n, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 
@@ -350,6 +367,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 			n.ParentIndex = n.Index + result.ParentIndex
 			r, err := p.expandArray(n, timestamp)
 			if err != nil {
+				p.Log.Error(err)
 				return false
 			}
 			results = append(results, r...)
@@ -456,8 +474,8 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 		}
 
 		result := gjson.GetBytes(input, c.Path)
-		if skip, err := p.checkResult(result, c.Path, c.Optional); err != nil {
-			if skip {
+		if err := p.checkResult(result, c.Path); err != nil {
+			if c.Optional {
 				continue
 			}
 			return nil, err
@@ -467,8 +485,8 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 		for _, f := range c.FieldPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if skip, err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
-				if skip {
+			if err := p.checkResult(r.result, f.Path); err != nil {
+				if f.Optional {
 					continue
 				}
 				return nil, err
@@ -480,8 +498,8 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 		for _, f := range c.TagPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if skip, err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
-				if skip {
+			if err := p.checkResult(r.result, f.Path); err != nil {
+				if f.Optional {
 					continue
 				}
 				return nil, err
@@ -570,6 +588,7 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 			if val.IsObject() {
 				results, err = p.combineObject(arrayNode, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 			} else {
@@ -577,6 +596,7 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 				arrayNode.ParentIndex -= result.Index
 				r, err := p.expandArray(arrayNode, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 				results = cartesianProduct(r, results)
@@ -700,18 +720,14 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 	return input.Value(), nil
 }
 
-func (p *Parser) checkResult(result gjson.Result, path string, optional bool) (bool, error) {
+// Check if gjson result exists and return error if it does not
+func (p *Parser) checkResult(result gjson.Result, path string) error {
 	if !result.Exists() {
-		if optional {
-			// If path is marked as optional don't error if path doesn't return a result
-			p.Log.Debugf("the path %q doesn't exist", path)
-			return true, nil
-		}
-
-		return false, fmt.Errorf("the path %q doesn't exist", path)
+		p.Log.Debugf("the path %q doesn't exist", path)
+		return fmt.Errorf("the path %q doesn't exist", path)
 	}
 
-	return false, nil
+	return nil
 }
 
 func init() {

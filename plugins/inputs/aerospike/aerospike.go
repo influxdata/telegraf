@@ -438,10 +438,9 @@ func parseAerospikeValue(key string, v string) interface{} {
 		return parsed
 	} else if parsed, err := strconv.ParseFloat(v, 32); err == nil {
 		return parsed
-	} else {
-		// leave as string
-		return v
 	}
+	// leave as string
+	return v
 }
 
 func createTags(hostPort string, nodeName string, namespace string, set string) map[string]string {

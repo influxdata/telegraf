@@ -131,7 +131,7 @@ func TestMetricMissingTagsIsNotLost(t *testing.T) {
 
 	// assert
 	// make sure no metrics are lost when a template process fails
-	require.Equal(t, 2, len(actual), "Number of metrics input should equal number of metrics output")
+	require.Len(t, actual, 2, "Number of metrics input should equal number of metrics output")
 }
 
 func TestTagAndFieldConcatenate(t *testing.T) {

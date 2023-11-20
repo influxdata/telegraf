@@ -174,7 +174,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -249,8 +249,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.21.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.21.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.21.4 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.21.4
 
 .PHONY: install
 install: $(buildbin)
@@ -274,7 +274,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"

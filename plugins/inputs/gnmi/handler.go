@@ -8,14 +8,11 @@ import (
 	"io"
 	"net"
 	"path"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/metric"
-	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
-	"github.com/influxdata/telegraf/selfstat"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc"
@@ -23,13 +20,19 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/metric"
+	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const eidJuniperTelemetryHeader = 1
 
 type handler struct {
 	address             string
-	aliases             map[string]string
+	aliases             map[*pathInfo]string
 	tagsubs             []TagSubscription
 	maxMsgSize          int
 	emptyNameWarnShown  bool
@@ -38,6 +41,7 @@ type handler struct {
 	trace               bool
 	canonicalFieldNames bool
 	trimSlash           bool
+	guessPathTag        bool
 	log                 telegraf.Logger
 }
 
@@ -115,74 +119,70 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
 func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update, extension []*gnmiExt.Extension) {
-	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
-	prefixTags := make(map[string]string)
 
-	// iter on each extension
+	// Extract tags from potential extension in the update notification
+	headerTags := make(map[string]string)
 	for _, ext := range extension {
 		currentExt := ext.GetRegisteredExt().Msg
 		if currentExt == nil {
 			break
 		}
-		// extension ID
+
 		switch ext.GetRegisteredExt().Id {
-		// Juniper Header extention
-		//EID_JUNIPER_TELEMETRY_HEADER = 1;
 		case eidJuniperTelemetryHeader:
+			// Juniper Header extention
 			// Decode it only if user requested it
 			if choice.Contains("juniper_header", h.vendorExt) {
 				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
-				// unmarshal extention
-				err := proto.Unmarshal(currentExt, juniperHeader)
-				if err != nil {
+				if err := proto.Unmarshal(currentExt, juniperHeader); err != nil {
 					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
-					break
+				} else {
+					// Add only relevant Tags from the Juniper Header extension.
+					// These are required for aggregation
+					headerTags["component_id"] = strconv.FormatUint(uint64(juniperHeader.GetComponentId()), 10)
+					headerTags["component"] = juniperHeader.GetComponent()
+					headerTags["sub_component_id"] = strconv.FormatUint(uint64(juniperHeader.GetSubComponentId()), 10)
 				}
-				// Add only relevant Tags from the Juniper Header extention.
-				// These are requiered for aggregation
-				prefixTags["component_id"] = fmt.Sprint(juniperHeader.GetComponentId())
-				prefixTags["component"] = fmt.Sprint(juniperHeader.GetComponent())
-				prefixTags["sub_component_id"] = fmt.Sprint(juniperHeader.GetSubComponentId())
 			}
-
 		default:
 			continue
 		}
 	}
 
-	if response.Update.Prefix != nil {
-		var origin string
-		var err error
-		if origin, prefix, prefixAliasPath, err = handlePath(response.Update.Prefix, prefixTags, h.aliases, ""); err != nil {
-			h.log.Errorf("Handling path %q failed: %v", response.Update.Prefix, err)
-		}
-		prefix = origin + prefix
+	// Extract the path part valid for the whole set of updates if any
+	prefix := newInfoFromPath(response.Update.Prefix)
+
+	// Add info to the tags
+	headerTags["source"], _, _ = net.SplitHostPort(h.address)
+	if !prefix.empty() {
+		headerTags["path"] = prefix.String()
 	}
 
-	prefixTags["source"], _, _ = net.SplitHostPort(h.address)
-	if prefix != "" {
-		prefixTags["path"] = prefix
-	}
-
-	// Process and remove tag-updates from the response first so we will
+	// Process and remove tag-updates from the response first so we can
 	// add all available tags to the metrics later.
-	var valueUpdates []*gnmiLib.Update
+	var valueFields []updateField
 	for _, update := range response.Update.Update {
-		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
+		fullPath := prefix.append(update.Path)
+		fields, err := newFieldsFromUpdate(fullPath, update)
+		if err != nil {
+			h.log.Errorf("Processing update %v failed: %v", update, err)
+		}
 
 		// Prepare tags from prefix
-		tags := make(map[string]string, len(prefixTags))
-		for key, val := range prefixTags {
+		tags := make(map[string]string, len(headerTags))
+		for key, val := range headerTags {
+			tags[key] = val
+		}
+		for key, val := range fullPath.Tags() {
 			tags[key] = val
 		}
 
-		_, fields := h.handleTelemetryField(update, tags, prefix)
-
+		// TODO: Handle each field individually to allow in-JSON tags
 		var tagUpdate bool
 		for _, tagSub := range h.tagsubs {
-			if !equalPathNoKeys(fullPath, tagSub.fullPath) {
+			if !fullPath.equalsPathNoKeys(tagSub.fullPath) {
 				continue
 			}
 			h.log.Debugf("Tag-subscription update for %q: %+v", tagSub.Name, update)
@@ -193,77 +193,71 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			break
 		}
 		if !tagUpdate {
-			valueUpdates = append(valueUpdates, update)
+			valueFields = append(valueFields, fields...)
 		}
 	}
 
-	// Parse individual Update message and create measurements
-	var name, lastAliasPath string
-	for _, update := range valueUpdates {
-		fullPath := pathWithPrefix(response.Update.Prefix, update.Path)
+	// Some devices do not provide a prefix, so do some guesswork based
+	// on the paths of the fields
+	if headerTags["path"] == "" && h.guessPathTag {
+		if prefixPath := guessPrefixFromUpdate(valueFields); prefixPath != "" {
+			headerTags["path"] = prefixPath
+		}
+	}
 
+	// Parse individual update message and create measurements
+	for _, field := range valueFields {
 		// Prepare tags from prefix
-		tags := make(map[string]string, len(prefixTags))
-		for key, val := range prefixTags {
+		fieldTags := field.path.Tags()
+		tags := make(map[string]string, len(headerTags)+len(fieldTags))
+		for key, val := range headerTags {
+			tags[key] = val
+		}
+		for key, val := range fieldTags {
 			tags[key] = val
 		}
 
-		aliasPath, fields := h.handleTelemetryField(update, tags, prefix)
-
 		// Add the tags derived via tag-subscriptions
-		for k, v := range h.tagStore.lookup(fullPath, tags) {
+		for k, v := range h.tagStore.lookup(field.path, tags) {
 			tags[k] = v
 		}
 
-		// Inherent valid alias from prefix parsing
-		if len(prefixAliasPath) > 0 && len(aliasPath) == 0 {
-			aliasPath = prefixAliasPath
-		}
-
-		// Lookup alias if alias-path has changed
-		if aliasPath != lastAliasPath {
-			name = prefix
-			if alias, ok := h.aliases[aliasPath]; ok {
-				name = alias
-			} else {
-				h.log.Debugf("No measurement alias for gNMI path: %s", name)
+		// Lookup alias for the metric
+		aliasPath, name := h.lookupAlias(field.path)
+		if name == "" {
+			h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
+			if !h.emptyNameWarnShown {
+				h.log.Warnf(emptyNameWarning, response.Update)
+				h.emptyNameWarnShown = true
 			}
-			lastAliasPath = aliasPath
-		}
-
-		// Check for empty names
-		if name == "" && !h.emptyNameWarnShown {
-			h.log.Warnf(emptyNameWarning, response.Update)
-			h.emptyNameWarnShown = true
 		}
 
 		// Group metrics
-		for k, v := range fields {
-			key := k
-			if h.canonicalFieldNames {
-				// Strip the origin is any for the field names
-				if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
-					key = parts[1]
-				}
-			} else {
-				if len(aliasPath) < len(key) && len(aliasPath) != 0 {
-					// This may not be an exact prefix, due to naming style
-					// conversion on the key.
-					key = key[len(aliasPath)+1:]
-				} else if len(aliasPath) >= len(key) {
-					// Otherwise use the last path element as the field key.
-					key = path.Base(key)
-				}
+		fieldPath := field.path.String()
+		key := strings.ReplaceAll(fieldPath, "-", "_")
+		if h.canonicalFieldNames {
+			// Strip the origin is any for the field names
+			if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
+				key = parts[1]
 			}
-			if h.trimSlash {
-				key = strings.TrimLeft(key, "/.")
+		} else {
+			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
+				// This may not be an exact prefix, due to naming style
+				// conversion on the key.
+				key = key[len(aliasPath)+1:]
+			} else if len(aliasPath) >= len(key) {
+				// Otherwise use the last path element as the field key.
+				key = path.Base(key)
 			}
-			if key == "" {
-				h.log.Errorf("Invalid empty path: %q", k)
-				continue
-			}
-			grouper.Add(name, tags, timestamp, key, v)
 		}
+		if h.trimSlash {
+			key = strings.TrimLeft(key, "/.")
+		}
+		if key == "" {
+			h.log.Errorf("Invalid empty path %q with alias %q", fieldPath, aliasPath)
+			continue
+		}
+		grouper.Add(name, tags, timestamp, key, field.value)
 	}
 
 	// Add grouped measurements
@@ -272,15 +266,48 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	}
 }
 
-// HandleTelemetryField and add it to a measurement
-func (h *handler) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	_, gpath, aliasPath, err := handlePath(update.Path, tags, h.aliases, prefix)
-	if err != nil {
-		h.log.Errorf("Handling path %q failed: %v", update.Path, err)
+// Try to find the alias for the given path
+type aliasCandidate struct {
+	path, alias string
+}
+
+func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
+	candidates := make([]aliasCandidate, 0)
+	for i, a := range h.aliases {
+		if !i.isSubPathOf(info) {
+			continue
+		}
+		candidates = append(candidates, aliasCandidate{i.String(), a})
 	}
-	fields, err := gnmiToFields(strings.Replace(gpath, "-", "_", -1), update.Val)
-	if err != nil {
-		h.log.Errorf("Error parsing update value %q: %v", update.Val, err)
+	if len(candidates) == 0 {
+		return "", ""
 	}
-	return aliasPath, fields
+
+	// Reverse sort the candidates by path length so we can use the longest match
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return len(candidates[i].path) > len(candidates[j].path)
+	})
+
+	return candidates[0].path, candidates[0].alias
+}
+
+func guessPrefixFromUpdate(fields []updateField) string {
+	if len(fields) == 0 {
+		return ""
+	}
+	if len(fields) == 1 {
+		dir, _ := fields[0].path.split()
+		return dir
+	}
+	commonPath := &pathInfo{
+		origin:   fields[0].path.origin,
+		segments: append([]string{}, fields[0].path.segments...),
+	}
+	for _, f := range fields[1:] {
+		commonPath.keepCommonPart(f.path)
+	}
+	if commonPath.empty() {
+		return ""
+	}
+	return commonPath.String()
 }

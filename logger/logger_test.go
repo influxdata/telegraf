@@ -119,7 +119,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
 	files, _ := os.ReadDir(tempDir)
-	require.Equal(t, 2, len(files))
+	require.Len(t, files, 2)
 }
 
 func TestLogTargetSettings(t *testing.T) {

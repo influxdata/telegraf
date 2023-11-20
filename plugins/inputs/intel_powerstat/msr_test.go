@@ -88,49 +88,49 @@ func TestReadValueFromFileAtOffset(t *testing.T) {
 
 	fsMock.On("readFileAtOffsetToUint64", mock.Anything, mock.Anything).
 		Return(zero, nil).Once()
-	require.Equal(t, nil, msr.readValueFromFileAtOffset(ctx, testChannel, nil, 0))
+	require.NoError(t, msr.readValueFromFileAtOffset(ctx, testChannel, nil, 0))
 	require.Equal(t, zero, <-testChannel)
 }
 
 func TestCreateUncoreFreqPath(t *testing.T) {
 	path, err := createUncoreFreqPath("0", "initial", "min", "0")
 	expectedPath := "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_min_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("0", "initial", "max", "0")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_max_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("0", "current", "min", "0")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("0", "current", "max", "0")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("9", "current", "max", "0")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_09_die_00/max_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("99", "current", "max", "0")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_99_die_00/max_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("0", "current", "max", "9")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_09/max_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("0", "current", "max", "99")
 	expectedPath = "/sys/devices/system/cpu/intel_uncore_frequency/package_00_die_99/max_freq_khz"
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPath, path)
 
 	path, err = createUncoreFreqPath("0", "foo", "max", "0")

@@ -24,12 +24,14 @@ linters:
     - nakedret
     - nilerr
     - nolintlint
+    - perfsprint
     - prealloc
     - predeclared
     - revive
     - sqlclosecheck
     - staticcheck
     - tenv
+    - testifylint
     - tparallel
     - typecheck
     - unconvert
@@ -79,6 +81,7 @@ linters-settings:
       - badCall
       - badCond
       - badLock
+      - badRegexp
       - badSorting
       - builtinShadowDecl
       - caseOrder
@@ -245,6 +248,22 @@ linters-settings:
     # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
     # Default: false
     all: true
+  testifylint:
+    # Enable specific checkers.
+    # https://github.com/Antonboom/testifylint#checkers
+    # Default: ["bool-compare", "compares", "empty", "error-is-as", "error-nil", "expected-actual", "float-compare", "len", "require-error", "suite-dont-use-pkg", "suite-extra-assert-call"]
+    enable:
+      - bool-compare
+      - compares
+      - empty
+      - error-is-as
+      - error-nil
+      - expected-actual
+      - len
+      - require-error
+      - suite-dont-use-pkg
+      - suite-extra-assert-call
+      - suite-thelper
 
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m

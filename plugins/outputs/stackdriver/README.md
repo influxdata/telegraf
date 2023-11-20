@@ -69,6 +69,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Custom resource type
   # resource_type = "generic_node"
 
+  ## Override metric type by metric name
+  ## Metric names matching the values here, globbing supported, will have the
+  ## metric type set to the cooresponding type.
+  # metric_counter = []
+  # metric_gauge = []
+
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
   ## the table

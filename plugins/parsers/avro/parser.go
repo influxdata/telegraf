@@ -36,10 +36,10 @@ type Parser struct {
 	Timestamp        string            `toml:"avro_timestamp"`
 	TimestampFormat  string            `toml:"avro_timestamp_format"`
 	FieldSeparator   string            `toml:"avro_field_separator"`
+	UnionMode        string            `toml:"avro_union_mode"`
 	DefaultTags      map[string]string `toml:"tags"`
-
-	Log         telegraf.Logger `toml:"-"`
-	registryObj *schemaRegistry
+	Log              telegraf.Logger   `toml:"-"`
+	registryObj      *schemaRegistry
 }
 
 func (p *Parser) Init() error {
@@ -50,6 +50,14 @@ func (p *Parser) Init() error {
 		// Do nothing as those are valid settings
 	default:
 		return fmt.Errorf("unknown 'avro_format' %q", p.Format)
+	}
+	switch p.UnionMode {
+	case "":
+		p.UnionMode = "flatten"
+	case "flatten", "nullable", "any":
+		// Do nothing as those are valid settings
+	default:
+		return fmt.Errorf("unknown avro_union_mode %q", p.Format)
 	}
 
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
@@ -153,6 +161,25 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
+func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map[string]interface{} {
+	// Helper function for the "nullable" and "any" p.UnionModes
+	// fldVal is a one-item map of string-to-something
+	ret := make(map[string]interface{})
+	if p.UnionMode == "nullable" {
+		_, ok := fldVal["null"]
+		if ok {
+			return ret // Return the empty map
+		}
+	}
+	// Otherwise, we just return the value in the fieldname.
+	// See README.md for an important warning about "any" and "nullable".
+	for _, v := range fldVal {
+		ret[fldName] = v
+		break // Not really needed, since it's a one-item map
+	}
+	return ret
+}
+
 func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
 	// Tags differ from fields, in that tags are inherently strings.
 	// fields can be of any type.
@@ -196,7 +223,29 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	for _, fld := range fieldList {
 		candidate := make(map[string]interface{})
 		candidate[fld] = data[fld] // 1-item map
-		flat, err := flatten.Flatten(candidate, "", sep)
+		var flat map[string]interface{}
+		var err error
+		// Exactly how we flatten is decided by p.UnionMode
+		if p.UnionMode == "flatten" {
+			flat, err = flatten.Flatten(candidate, "", sep)
+			if err != nil {
+				return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+			}
+		} else {
+			// "nullable" or "any"
+			typedVal, ok := candidate[fld].(map[string]interface{})
+			if !ok {
+				// the "key" is not a string, so ...
+				// most likely an array?  Do the default thing
+				// and flatten the candidate.
+				flat, err = flatten.Flatten(candidate, "", sep)
+				if err != nil {
+					return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+				}
+			} else {
+				flat = p.flattenField(fld, typedVal)
+			}
+		}
 		if err != nil {
 			return nil, fmt.Errorf("flatten field %q failed: %w", fld, err)
 		}
@@ -204,7 +253,6 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			fields[k] = v
 		}
 	}
-
 	var schemaObj map[string]interface{}
 	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
 		return nil, fmt.Errorf("unmarshaling schema failed: %w", err)

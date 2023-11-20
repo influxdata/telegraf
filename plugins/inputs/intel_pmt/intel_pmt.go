@@ -38,6 +38,7 @@ type pmtFileInfo []fileInfo
 type fileInfo struct {
 	path     string
 	numaNode string
+	pciBdf   string // PCI Bus:Device.Function (BDF)
 }
 
 type IntelPMT struct {
@@ -91,7 +92,7 @@ func (p *IntelPMT) Gather(acc telegraf.Accumulator) error {
 					return
 				}
 
-				err = p.aggregateSamples(acc, guid, data, info.numaNode)
+				err = p.aggregateSamples(acc, guid, data, info.numaNode, info.pciBdf)
 				if err != nil {
 					hasError.Store(true)
 					acc.AddError(fmt.Errorf("gathering metrics failed: %w", err))
@@ -139,7 +140,7 @@ func (p *IntelPMT) checkPmtSpec() error {
 //
 // This method finds "telem" files, used to retrieve telemetry values
 // and saves them under their corresponding GUID.
-// It also finds which NUMA node the samples belong to.
+// It also finds which NUMA node and PCI BDF the samples belong to.
 //
 // Returns:
 //
@@ -183,6 +184,8 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 			return fmt.Errorf("error while evaluating symlink %q: %w", telemDeviceSymlink, err)
 		}
 
+		telemDevicePciBdf := filepath.Base(filepath.Join(telemDeviceSymlink, ".."))
+
 		numaNodePath := filepath.Join(telemDeviceSymlink, "..", "numa_node")
 
 		numaNode, err := os.ReadFile(numaNodePath)
@@ -197,6 +200,7 @@ func (p *IntelPMT) explorePmtInSysfs() error {
 		fi := fileInfo{
 			path:     telemPath,
 			numaNode: numaNodeString,
+			pciBdf:   telemDevicePciBdf,
 		}
 		p.pmtTelemetryFiles[tID] = append(p.pmtTelemetryFiles[tID], fi)
 	}
@@ -286,15 +290,16 @@ func getTelemSample(s sample, buf []byte, offset uint64) (uint64, error) {
 //
 // Parameters:
 //
-//	guid - GUID saying which Aggregator Interface will be read.
-//	data - contents of the "telem" file.
-//	numaNode - which NUMA node this sample belongs to.
-//	acc - Telegraf Accumulator.
+// guid - GUID saying which Aggregator Interface will be read.
+// data - contents of the "telem" file.
+// numaNode - which NUMA node this sample belongs to.
+// pciBdf - PCI Bus:Device.Function (BDF) this sample belongs to.
+// acc - Telegraf Accumulator.
 //
 // Returns:
 //
 //	error - error if getting values has failed, if sample IDref is missing or if equation evaluation has failed.
-func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data []byte, numaNode string) error {
+func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data []byte, numaNode string, pciBdf string) error {
 	results, err := p.getSampleValues(guid, data)
 	if err != nil {
 		return err
@@ -318,6 +323,7 @@ func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data 
 		tags := map[string]string{
 			"guid":           guid,
 			"numa_node":      numaNode,
+			"pci_bdf":        pciBdf,
 			"sample_name":    sample.SampleName,
 			"sample_group":   sample.SampleGroup,
 			"datatype_idref": sample.DatatypeIDRef,

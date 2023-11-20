@@ -526,10 +526,10 @@ func TestGlobablBoolFlags(t *testing.T) {
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
 	require.NoError(t, err)
 
-	require.Equal(t, true, m.debug)
-	require.Equal(t, true, m.test)
-	require.Equal(t, true, m.once)
-	require.Equal(t, true, m.quiet)
+	require.True(t, m.debug)
+	require.True(t, m.test)
+	require.True(t, m.once)
+	require.True(t, m.quiet)
 }
 
 func TestFlagsAreSet(t *testing.T) {
@@ -557,10 +557,10 @@ func TestFlagsAreSet(t *testing.T) {
 
 	require.Equal(t, []string{expectedString}, m.config)
 	require.Equal(t, []string{expectedString}, m.configDir)
-	require.Equal(t, true, m.debug)
-	require.Equal(t, true, m.test)
-	require.Equal(t, true, m.once)
-	require.Equal(t, true, m.quiet)
+	require.True(t, m.debug)
+	require.True(t, m.test)
+	require.True(t, m.once)
+	require.True(t, m.quiet)
 	require.Equal(t, expectedInt, m.testWait)
 	require.Equal(t, expectedString, m.watchConfig)
 	require.Equal(t, expectedString, m.pidFile)

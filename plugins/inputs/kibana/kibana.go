@@ -2,6 +2,7 @@
 package kibana
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -90,15 +91,18 @@ type Kibana struct {
 	Servers  []string
 	Username string
 	Password string
-	Timeout  config.Duration
-	tls.ClientConfig
+
+	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
+	httpconfig.HTTPClientConfig
 }
 
 func NewKibana() *Kibana {
 	return &Kibana{
-		Timeout: config.Duration(time.Second * 5),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{
+			Timeout: config.Duration(5 * time.Second),
+		},
 	}
 }
 
@@ -147,19 +151,8 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *Kibana) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := k.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: time.Duration(k.Timeout),
-	}
-
-	return client, nil
+	ctx := context.Background()
+	return k.HTTPClientConfig.CreateClient(ctx, k.Log)
 }
 
 func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) error {

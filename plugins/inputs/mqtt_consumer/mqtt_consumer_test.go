@@ -6,10 +6,11 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type FakeClient struct {
@@ -527,7 +528,7 @@ func TestAddRouteCalledForEachTopic(t *testing.T) {
 
 	plugin.Stop()
 
-	require.Equal(t, client.addRouteCallCount, 2)
+	require.Equal(t, 2, client.addRouteCallCount)
 }
 
 func TestSubscribeCalledIfNoSession(t *testing.T) {
@@ -558,7 +559,7 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 
 	plugin.Stop()
 
-	require.Equal(t, client.subscribeCallCount, 1)
+	require.Equal(t, 1, client.subscribeCallCount)
 }
 
 func TestSubscribeNotCalledIfSession(t *testing.T) {
@@ -589,5 +590,5 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 
 	plugin.Stop()
 
-	require.Equal(t, client.subscribeCallCount, 0)
+	require.Equal(t, 0, client.subscribeCallCount)
 }

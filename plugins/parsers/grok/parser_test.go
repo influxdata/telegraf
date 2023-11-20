@@ -1089,7 +1089,7 @@ func TestDynamicMeasurementModifier(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "hello")
+	require.Equal(t, "hello", m.Name())
 }
 
 func TestStaticMeasurementModifier(t *testing.T) {
@@ -1114,7 +1114,7 @@ func TestTwoMeasurementModifier(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "4 5 hello")
+	require.Equal(t, "4 5 hello", m.Name())
 }
 
 func TestMeasurementModifierNoName(t *testing.T) {
@@ -1126,7 +1126,7 @@ func TestMeasurementModifierNoName(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "hello")
+	require.Equal(t, "hello", m.Name())
 }
 
 func TestEmptyYearInTimestamp(t *testing.T) {
@@ -1183,4 +1183,59 @@ func TestMultilineNilMetric(t *testing.T) {
 	actual, err := p.Parse(buf)
 	require.NoError(t, err)
 	require.Empty(t, actual)
+}
+
+const benchmarkData = `benchmark 5 1653643421 source=myhost tags_platform=python tags_sdkver=3.11.5
+benchmark 4 1653643422 source=myhost tags_platform=python tags_sdkver=3.11.4
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		//nolint:lll // conditionally long lines allowed
+		Patterns: []string{"%{WORD:measurement:measurement} %{NUMBER:value:float} %{NUMBER:timestamp:ts-epoch} source=%{WORD:source:tag} tags_platform=%{WORD:tags_platform:tag} tags_sdkver=%{GREEDYDATA:tags_sdkver:tag}"},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5.0,
+			},
+			time.Unix(1653643421, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4.0,
+			},
+			time.Unix(1653643422, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		//nolint:lll // conditionally long lines allowed
+		Patterns: []string{"%{WORD:measurement:measurement} %{NUMBER:value:float} %{NUMBER:timestamp:ts-epoch} source=%{WORD:source:tag} tags_platform=%{WORD:tags_platform:tag} tags_sdkver=%{GREEDYDATA:tags_sdkver:tag}"},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
 }

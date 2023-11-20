@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestRadiusLocal(t *testing.T) {
@@ -69,13 +70,13 @@ func TestRadiusLocal(t *testing.T) {
 	if !acc.HasMeasurement("radius") {
 		t.Errorf("acc.HasMeasurement: expected radius")
 	}
-	require.Equal(t, true, acc.HasTag("radius", "source"))
-	require.Equal(t, true, acc.HasTag("radius", "source_port"))
-	require.Equal(t, true, acc.HasTag("radius", "response_code"))
+	require.True(t, acc.HasTag("radius", "source"))
+	require.True(t, acc.HasTag("radius", "source_port"))
+	require.True(t, acc.HasTag("radius", "response_code"))
 	require.Equal(t, host, acc.TagValue("radius", "source"))
 	require.Equal(t, port, acc.TagValue("radius", "source_port"))
 	require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
-	require.Equal(t, true, acc.HasInt64Field("radius", "responsetime_ms"))
+	require.True(t, acc.HasInt64Field("radius", "responsetime_ms"))
 
 	if err := server.Shutdown(context.Background()); err != nil {
 		require.NoError(t, err, "failed to properly shutdown local radius server")
@@ -178,17 +179,17 @@ func TestRadiusIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			if !acc.HasMeasurement("radius") {
 				t.Errorf("acc.HasMeasurement: expected radius")
 			}
-			require.Equal(t, true, acc.HasTag("radius", "source"))
-			require.Equal(t, true, acc.HasTag("radius", "source_port"))
-			require.Equal(t, true, acc.HasTag("radius", "response_code"))
+			require.True(t, acc.HasTag("radius", "source"))
+			require.True(t, acc.HasTag("radius", "source_port"))
+			require.True(t, acc.HasTag("radius", "response_code"))
 			require.Equal(t, tt.expectedSource, acc.TagValue("radius", "source"))
 			require.Equal(t, tt.expectedSourcePort, acc.TagValue("radius", "source_port"))
-			require.Equal(t, true, acc.HasInt64Field("radius", "responsetime_ms"), true)
+			require.True(t, acc.HasInt64Field("radius", "responsetime_ms"), true)
 			if tt.expectSuccess {
 				require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
 			} else {

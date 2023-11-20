@@ -408,7 +408,7 @@ func TestMakeAuthOptions(t *testing.T) {
 	cspAPIWavefront.AuthCSPAPIToken = config.NewSecret([]byte("fake-app-token"))
 	options, err := cspAPIWavefront.makeAuthOptions()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(options))
+	require.Len(t, options, 1)
 
 	cspClientCredsWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
 	cspClientCredsWavefront.AuthCSPClientCredentials = &authCSPClientCredentials{
@@ -417,7 +417,7 @@ func TestMakeAuthOptions(t *testing.T) {
 	}
 	options, err = cspClientCredsWavefront.makeAuthOptions()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(options))
+	require.Len(t, options, 1)
 
 	orgID := "org-id"
 	cspClientCredsWithOrgIDWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
@@ -428,18 +428,18 @@ func TestMakeAuthOptions(t *testing.T) {
 	}
 	options, err = cspClientCredsWithOrgIDWavefront.makeAuthOptions()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(options))
+	require.Len(t, options, 1)
 
 	apiTokenWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
 	apiTokenWavefront.AuthCSPAPIToken = config.NewSecret([]byte("fake-wavefront-api-token"))
 	options, err = apiTokenWavefront.makeAuthOptions()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(options))
+	require.Len(t, options, 1)
 
 	noAuthOptionsWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
 	options, err = noAuthOptionsWavefront.makeAuthOptions()
 	require.NoError(t, err)
-	require.Equal(t, 0, len(options))
+	require.Empty(t, options)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Sanitize

@@ -23,6 +23,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   rack = 0
   slot = 0
 
+  ## Max count of fields to be bundled in one batch-request. (PDU size)
+  # pdu_size = 20
+
   ## Timeout for requests
   # timeout = "10s"
 

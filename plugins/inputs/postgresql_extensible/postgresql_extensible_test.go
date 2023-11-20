@@ -119,7 +119,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.True(t, metricsCounted > 0)
+	require.Greater(t, metricsCounted, 0)
 	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
@@ -149,13 +149,13 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 		"SELECT true AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.BoolField(measurement, "myvalue")
 			require.True(t, found)
-			require.Equal(t, true, v)
+			require.True(t, v)
 		},
 		"SELECT timestamp'1980-07-23' as ts, true AS myvalue": func(acc *testutil.Accumulator) {
 			expectedTime := time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC)
 			v, found := acc.BoolField(measurement, "myvalue")
 			require.True(t, found)
-			require.Equal(t, true, v)
+			require.True(t, v)
 			require.True(t, acc.HasTimestamp(measurement, expectedTime))
 		},
 	}
@@ -294,21 +294,48 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 func TestAccRow(t *testing.T) {
 	p := Postgresql{
 		Log: testutil.Logger{},
+		Service: postgresql.Service{
+			OutputAddress: "server",
+		},
 	}
 
 	var acc testutil.Accumulator
 	columns := []string{"datname", "cat"}
 
-	testRows := []fakeRow{
-		{fields: []interface{}{1, "gato"}},
-		{fields: []interface{}{nil, "gato"}},
-		{fields: []interface{}{"name", "gato"}},
+	tests := []struct {
+		fields fakeRow
+		dbName string
+		server string
+	}{
+		{
+			fields: fakeRow{
+				fields: []interface{}{1, "gato"},
+			},
+			dbName: "postgres",
+			server: "server",
+		},
+		{
+			fields: fakeRow{
+				fields: []interface{}{nil, "gato"},
+			},
+			dbName: "postgres",
+			server: "server",
+		},
+		{
+			fields: fakeRow{
+				fields: []interface{}{"name", "gato"},
+			},
+			dbName: "name",
+			server: "server",
+		},
 	}
-	for i := range testRows {
-		err := p.accRow("pgTEST", testRows[i], &acc, columns)
-		if err != nil {
-			t.Fatalf("Scan failed: %s", err)
-		}
+	for _, tt := range tests {
+		require.NoError(t, p.accRow("pgTEST", tt.fields, &acc, columns))
+		require.Len(t, acc.Metrics, 1)
+		metric := acc.Metrics[0]
+		require.Equal(t, tt.dbName, metric.Tags["db"])
+		require.Equal(t, tt.server, metric.Tags["server"])
+		acc.ClearMetrics()
 	}
 }
 

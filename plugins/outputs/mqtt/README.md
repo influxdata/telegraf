@@ -44,7 +44,7 @@ to use them.
   servers = ["localhost:1883", ] # or ["mqtts://tls.example.com:1883"]
 
   ## Protocol can be `3.1.1` or `5`. Default is `3.1.1`
-  # procotol = "3.1.1"
+  # protocol = "3.1.1"
 
   ## MQTT Topic for Producer Messages
   ## MQTT outputs send metrics to this topic format:

@@ -31,18 +31,18 @@ func TestAssociateProcessesWithPIDs(t *testing.T) {
 	processes := []string{"process"}
 	expectedPID := "1000"
 	result, err := rdt.associateProcessesWithPIDs(processes)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPID, result[processes[0]])
 
 	processes = []string{"process2"}
 	expectedPID = "1002,1003"
 	result, err = rdt.associateProcessesWithPIDs(processes)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedPID, result[processes[0]])
 
 	processes = []string{"process1"}
 	result, err = rdt.associateProcessesWithPIDs(processes)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Empty(t, result)
 }
 
@@ -53,14 +53,14 @@ func TestSplitCSVLineIntoValues(t *testing.T) {
 	expectedCoreOrPidsValue := []string{"\"45417", "29170\"", "37", "44"}
 
 	splitCSV, err := splitCSVLineIntoValues(line)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, expectedTimeValue, splitCSV.timeValue)
 	require.Equal(t, expectedMetricsValue, splitCSV.metricsValues)
 	require.Equal(t, expectedCoreOrPidsValue, splitCSV.coreOrPIDsValues)
 
 	wrongLine := "2020-08-12 13:34:36,37,44,0.00,0,0.0"
 	splitCSV, err = splitCSVLineIntoValues(wrongLine)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Equal(t, "", splitCSV.timeValue)
 	require.Nil(t, nil, splitCSV.metricsValues)
 	require.Nil(t, nil, splitCSV.coreOrPIDsValues)
@@ -70,12 +70,12 @@ func TestFindPIDsInMeasurement(t *testing.T) {
 	line := "2020-08-12 13:34:36,\"45417,29170\""
 	expected := "45417,29170"
 	result, err := findPIDsInMeasurement(line)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, expected, result)
 
 	line = "pids not included"
 	result, err = findPIDsInMeasurement(line)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Equal(t, "", result)
 }
 
@@ -120,35 +120,35 @@ func TestParseCoresConfig(t *testing.T) {
 	t.Run("empty slice", func(t *testing.T) {
 		var configCores []string
 		result, err := parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Empty(t, result)
 	})
 
 	t.Run("empty string in slice", func(t *testing.T) {
 		configCores := []string{""}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Empty(t, result)
 	})
 
 	t.Run("not correct string", func(t *testing.T) {
 		configCores := []string{"wrong string"}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Empty(t, result)
 	})
 
 	t.Run("not correct string", func(t *testing.T) {
 		configCores := []string{"1,2", "wasd:#$!;"}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Empty(t, result)
 	})
 
 	t.Run("not correct string", func(t *testing.T) {
 		configCores := []string{"1,2,2"}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Empty(t, result)
 	})
 
@@ -156,19 +156,19 @@ func TestParseCoresConfig(t *testing.T) {
 		configCores := []string{"0,1,2,3,4,5"}
 		expected := []string{"0,1,2,3,4,5"}
 		result, err := parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 
 		configCores = []string{"0,1,2", "3,4,5"}
 		expected = []string{"0,1,2", "3,4,5"}
 		result, err = parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 
 		configCores = []string{"0,4,1", "2,3,5", "9"}
 		expected = []string{"0,4,1", "2,3,5", "9"}
 		result, err = parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 	})
 
@@ -176,17 +176,17 @@ func TestParseCoresConfig(t *testing.T) {
 		// cannot monitor same cores in different groups
 		configCores := []string{"0,1,2", "2"}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		configCores = []string{"0,1,2", "2,3,4"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		configCores = []string{"0,-1,2", "2,3,4"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 	})
 
@@ -194,19 +194,19 @@ func TestParseCoresConfig(t *testing.T) {
 		configCores := []string{"0-5"}
 		expected := []string{"0,1,2,3,4,5"}
 		result, err := parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 
 		configCores = []string{"0-5", "7-10"}
 		expected = []string{"0,1,2,3,4,5", "7,8,9,10"}
 		result, err = parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 
 		configCores = []string{"5-5"}
 		expected = []string{"5"}
 		result, err = parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 	})
 
@@ -214,24 +214,24 @@ func TestParseCoresConfig(t *testing.T) {
 		// cannot monitor same cores in different groups
 		configCores := []string{"0-5", "2-7"}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		// more than two values in range
 		configCores = []string{"0-5-10"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		// first value cannot be higher than second
 		configCores = []string{"12-5"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		configCores = []string{"0-"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 	})
 
@@ -239,19 +239,19 @@ func TestParseCoresConfig(t *testing.T) {
 		configCores := []string{"0-5,6,7"}
 		expected := []string{"0,1,2,3,4,5,6,7"}
 		result, err := parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 
 		configCores = []string{"0-5,6,7", "8,9,10"}
 		expected = []string{"0,1,2,3,4,5,6,7", "8,9,10"}
 		result, err = parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 
 		configCores = []string{"0-7", "8-10"}
 		expected = []string{"0,1,2,3,4,5,6,7", "8,9,10"}
 		result, err = parseCoresConfig(configCores)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.EqualValues(t, expected, result)
 	})
 
@@ -259,19 +259,19 @@ func TestParseCoresConfig(t *testing.T) {
 		// cannot monitor same cores in different groups
 		configCores := []string{"0-5,", "2-7"}
 		result, err := parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		// cores cannot be duplicated
 		configCores = []string{"0-5,5"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 
 		// more than two values in range
 		configCores = []string{"0-5-6,9"}
 		result, err = parseCoresConfig(configCores)
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Nil(t, result)
 	})
 }

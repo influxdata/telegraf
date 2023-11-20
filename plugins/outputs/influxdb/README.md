@@ -103,6 +103,9 @@ to use them.
   # influx_uint_support = false
 ```
 
+To send every metrics into multiple influxdb,
+define additional `[[outputs.influxdb]]` section with new `urls`.
+
 ## Metrics
 
 Reference the [influx serializer][] for details about metric production.

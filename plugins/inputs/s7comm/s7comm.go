@@ -25,7 +25,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const maxRequestsPerBatch = 20
 const addressRegexp = `^(?P<area>[A-Z]+)(?P<no>[0-9]+)\.(?P<type>[A-Z]+)(?P<start>[0-9]+)(?:\.(?P<extra>.*))?$`
 
 var (
@@ -85,6 +84,7 @@ type S7comm struct {
 	Server          string             `toml:"server"`
 	Rack            int                `toml:"rack"`
 	Slot            int                `toml:"slot"`
+	BatchMaxSize    int                `toml:"pdu_size"`
 	Timeout         config.Duration    `toml:"timeout"`
 	DebugConnection bool               `toml:"debug_connection"`
 	Configs         []metricDefinition `toml:"metric"`
@@ -223,7 +223,7 @@ func (s *S7comm) createRequests() error {
 			current.mappings = append(current.mappings, m)
 
 			// If the batch is full, start a new one
-			if len(current.items) == maxRequestsPerBatch {
+			if len(current.items) == s.BatchMaxSize {
 				s.batches = append(s.batches, current)
 				current = batch{}
 			}
@@ -301,9 +301,9 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Check the amount parameter if any
-	var extra int
+	var extra, bit int
 	switch dtype {
-	case "X", "S":
+	case "S":
 		// We require an extra parameter
 		x := groups["extra"]
 		if x == "" {
@@ -316,6 +316,21 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 		}
 		if extra < 1 {
 			return nil, nil, fmt.Errorf("invalid extra parameter %d", extra)
+		}
+	case "X":
+		// We require an extra parameter
+		x := groups["extra"]
+		if x == "" {
+			return nil, nil, errors.New("extra parameter required")
+		}
+
+		bit, err = strconv.Atoi(x)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid extra parameter: %w", err)
+		}
+		if bit < 0 || bit > 7 {
+			// Ensure bit address is valid
+			return nil, nil, fmt.Errorf("invalid extra parameter: bit address %d out of range", bit)
 		}
 	default:
 		if groups["extra"] != "" {
@@ -348,6 +363,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	item := &gos7.S7DataItem{
 		Area:     area,
 		WordLen:  wordlen,
+		Bit:      bit,
 		DBNumber: areaidx,
 		Start:    start,
 		Amount:   amount,
@@ -355,7 +371,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Determine the type converter function
-	f := determineConversion(dtype, extra)
+	f := determineConversion(dtype)
 	return item, f, nil
 }
 
@@ -402,9 +418,10 @@ func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinitio
 func init() {
 	inputs.Add("s7comm", func() telegraf.Input {
 		return &S7comm{
-			Rack:    -1,
-			Slot:    -1,
-			Timeout: config.Duration(10 * time.Second),
+			Rack:         -1,
+			Slot:         -1,
+			BatchMaxSize: 20,
+			Timeout:      config.Duration(10 * time.Second),
 		}
 	})
 }

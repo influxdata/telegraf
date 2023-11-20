@@ -12,6 +12,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- supervisor_unit
 - win_service
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -41,6 +42,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # include_systemd_children = false
   ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
+  ## Supervisor service names of hypervisorctl management
+  # supervisor_units = ["webserver", "proxy"]
 
   ## Windows service name
   # win_service = ""
@@ -78,6 +81,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
+### Darwin specifics
+
+If you use this plugin with `supervisor_units` *and* `pattern` on Darwin, you
+**have to** use the `pgrep` finder as the underlying library relies on `pgrep`.
+
 ### Permissions
 
 Some files or directories may require elevated permissions. As such a user may
@@ -109,20 +117,14 @@ Below are an example set of tags and fields:
     - systemd_unit (when defined)
     - cgroup (when defined)
     - cgroup_full (when cgroup or systemd_unit is used with glob)
+    - supervisor_unit (when defined)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)
     - child_minor_faults (int)
     - created_at (int) [epoch in nanoseconds]
     - cpu_time (int)
-    - cpu_time_guest (float)
-    - cpu_time_guest_nice (float)
-    - cpu_time_idle (float)
-    - cpu_time_iowait (float)
-    - cpu_time_irq (float)
-    - cpu_time_nice (float)
-    - cpu_time_soft_irq (float)
-    - cpu_time_steal (float)
+    - cpu_time_iowait (float) (zero for all OSes except Linux)
     - cpu_time_system (float)
     - cpu_time_user (float)
     - cpu_usage (float)
@@ -186,6 +188,7 @@ Below are an example set of tags and fields:
     - user
     - systemd_unit
     - cgroup
+    - supervisor_unit
     - win_service
     - result
   - fields:
@@ -199,5 +202,5 @@ Below are an example set of tags and fields:
 
 ```text
 procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
-procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,cpu_time_idle=0,cpu_time_irq=0,cpu_time_guest=0,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,cpu_time_steal=0,cpu_time_guest_nice=0,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_nice=0,cpu_time_iowait=0,cpu_time_soft_irq=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
+procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_iowait=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
 ```

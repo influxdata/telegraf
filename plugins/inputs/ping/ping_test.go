@@ -5,7 +5,6 @@ package ping
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -177,8 +176,7 @@ func TestArgs(t *testing.T) {
 		expected := systemCases[i].output
 		sort.Strings(actual)
 		sort.Strings(expected)
-		require.True(t, reflect.DeepEqual(expected, actual),
-			"Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -206,8 +204,7 @@ func TestArgs6(t *testing.T) {
 		expected := systemCases[i].output
 		sort.Strings(actual)
 		sort.Strings(expected)
-		require.True(t, reflect.DeepEqual(expected, actual),
-			"Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -225,7 +222,7 @@ func TestArguments(t *testing.T) {
 
 	for _, system := range []string{"darwin", "linux", "anything else"} {
 		actual := p.args("www.google.com", system)
-		require.True(t, reflect.DeepEqual(actual, expected), "Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -397,7 +394,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 			},
 		}
 		require.Error(t, acc.GatherError(p.Gather))
-		require.Equal(t, 1, len(acc.Errors))
+		require.Len(t, acc.Errors, 1)
 		require.Contains(t, acc.Errors[0].Error(), param.error.Error())
 	}
 }
@@ -408,7 +405,7 @@ func TestPingBinary(t *testing.T) {
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			require.True(t, binary == "ping6")
+			require.Equal(t, "ping6", binary)
 			return "", nil
 		},
 	}

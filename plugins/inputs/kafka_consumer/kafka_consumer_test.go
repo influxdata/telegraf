@@ -11,7 +11,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -70,11 +70,11 @@ func TestInit(t *testing.T) {
 			name:   "default config",
 			plugin: &KafkaConsumer{},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
-				require.Equal(t, plugin.ConsumerGroup, defaultConsumerGroup)
-				require.Equal(t, plugin.MaxUndeliveredMessages, defaultMaxUndeliveredMessages)
-				require.Equal(t, plugin.config.ClientID, "Telegraf")
-				require.Equal(t, plugin.config.Consumer.Offsets.Initial, sarama.OffsetOldest)
-				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, 100*time.Millisecond)
+				require.Equal(t, defaultConsumerGroup, plugin.ConsumerGroup)
+				require.Equal(t, defaultMaxUndeliveredMessages, plugin.MaxUndeliveredMessages)
+				require.Equal(t, "Telegraf", plugin.config.ClientID)
+				require.Equal(t, sarama.OffsetOldest, plugin.config.Consumer.Offsets.Initial)
+				require.Equal(t, 100*time.Millisecond, plugin.config.Consumer.MaxProcessingTime)
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestInit(t *testing.T) {
 				Log: testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
-				require.Equal(t, plugin.config.ClientID, "custom")
+				require.Equal(t, "custom", plugin.config.ClientID)
 			},
 		},
 		{
@@ -124,7 +124,7 @@ func TestInit(t *testing.T) {
 				Log:    testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
-				require.Equal(t, plugin.config.Consumer.Offsets.Initial, sarama.OffsetNewest)
+				require.Equal(t, sarama.OffsetNewest, plugin.config.Consumer.Offsets.Initial)
 			},
 		},
 		{
@@ -197,7 +197,7 @@ func TestInit(t *testing.T) {
 				Log:               testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
-				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, 1000*time.Millisecond)
+				require.Equal(t, 1000*time.Millisecond, plugin.config.Consumer.MaxProcessingTime)
 			},
 		},
 	}
@@ -294,15 +294,11 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &value.Parser{
-			MetricName: "cpu",
-			DataType:   "int",
-		}
-		err := parser.Init()
-		return parser, err
+	parser := value.Parser{
+		MetricName: "cpu",
+		DataType:   "int",
 	}
-	cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
+	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -330,15 +326,12 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 
 func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &value.Parser{
-			MetricName: "cpu",
-			DataType:   "int",
-		}
-		err := parser.Init()
-		return parser, err
+	parser := value.Parser{
+		MetricName: "cpu",
+		DataType:   "int",
 	}
-	cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
+	require.NoError(t, parser.Init())
+	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -451,15 +444,12 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := &testutil.Accumulator{}
-			parserFunc := func() (telegraf.Parser, error) {
-				parser := &value.Parser{
-					MetricName: "cpu",
-					DataType:   "int",
-				}
-				err := parser.Init()
-				return parser, err
+			parser := value.Parser{
+				MetricName: "cpu",
+				DataType:   "int",
 			}
-			cg := NewConsumerGroupHandler(acc, 1, parserFunc, testutil.Logger{})
+			require.NoError(t, parser.Init())
+			cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag
 
@@ -494,58 +484,20 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 	}{
 		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
 		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
-		{"topic regexp", "startup", nil, []string{"T*"}, config.Duration(5 * time.Second)},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Logf("rt: starting network")
 			ctx := context.Background()
-			networkName := "telegraf-test-kafka-consumer-network"
-			network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-				NetworkRequest: testcontainers.NetworkRequest{
-					Name:           networkName,
-					Attachable:     true,
-					CheckDuplicate: true,
-				},
-			})
+			kafkaContainer, err := kafkacontainer.RunContainer(ctx,
+				kafkacontainer.WithClusterID("test-cluster"),
+				testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
+			)
 			require.NoError(t, err)
-			defer func() {
-				require.NoError(t, network.Remove(ctx), "terminating network failed")
-			}()
+			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
 
-			t.Logf("rt: starting zookeeper")
-			zookeeperName := "telegraf-test-kafka-consumer-zookeeper"
-			zookeeper := testutil.Container{
-				Image:        "wurstmeister/zookeeper",
-				ExposedPorts: []string{"2181:2181"},
-				Networks:     []string{networkName},
-				WaitingFor:   wait.ForLog("binding to port"),
-				Name:         zookeeperName,
-			}
-			require.NoError(t, zookeeper.Start(), "failed to start container")
-			defer zookeeper.Terminate()
-
-			t.Logf("rt: starting broker")
-			container := testutil.Container{
-				Name:         "telegraf-test-kafka-consumer",
-				Image:        "wurstmeister/kafka",
-				ExposedPorts: []string{"9092:9092"},
-				Env: map[string]string{
-					"KAFKA_ADVERTISED_HOST_NAME": "localhost",
-					"KAFKA_ADVERTISED_PORT":      "9092",
-					"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("%s:%s", zookeeperName, zookeeper.Ports["2181"]),
-					"KAFKA_CREATE_TOPICS":        fmt.Sprintf("%s:1:1", "Test"),
-				},
-				Networks:   []string{networkName},
-				WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
-			}
-			require.NoError(t, container.Start(), "failed to start container")
-			defer container.Terminate()
-
-			brokers := []string{
-				fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
-			}
+			brokers, err := kafkaContainer.Brokers(ctx)
+			require.NoError(t, err)
 
 			// Make kafka output
 			t.Logf("rt: starting output plugin")
@@ -573,12 +525,9 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 				MaxUndeliveredMessages: 1,
 				ConnectionStrategy:     tt.connectionStrategy,
 			}
-			parserFunc := func() (telegraf.Parser, error) {
-				parser := &influx.Parser{}
-				err := parser.Init()
-				return parser, err
-			}
-			input.SetParserFunc(parserFunc)
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
 			require.NoError(t, input.Init())
 
 			acc := testutil.Accumulator{}
@@ -634,12 +583,9 @@ func TestExponentialBackoff(t *testing.T) {
 			},
 		},
 	}
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &influx.Parser{}
-		err := parser.Init()
-		return parser, err
-	}
-	input.SetParserFunc(parserFunc)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
 
 	//time how long initialization (connection) takes
 	start := time.Now()
@@ -682,13 +628,9 @@ func TestExponentialBackoffDefault(t *testing.T) {
 			},
 		},
 	}
-	parserFunc := func() (telegraf.Parser, error) {
-		parser := &influx.Parser{}
-		err := parser.Init()
-		return parser, err
-	}
-	input.SetParserFunc(parserFunc)
-
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
 	require.NoError(t, input.Init())
 
 	// We don't need to start the plugin here since we're only testing

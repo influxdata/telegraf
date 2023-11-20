@@ -260,7 +260,7 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	require.NoError(t, sc.Gather(&acc))
 
 	require.True(t, acc.HasMeasurement("x509_cert"))
-	require.Equal(t, acc.NMetrics(), uint64(1))
+	require.Equal(t, uint64(1), acc.NMetrics())
 }
 
 func TestGatherChain(t *testing.T) {
@@ -330,7 +330,7 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
 	require.True(t, acc.HasTag("x509_cert", "ocsp_stapled"))
 }
@@ -350,7 +350,7 @@ func TestGatherTCPCert(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	require.Len(t, acc.Errors, 0)
+	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
@@ -431,8 +431,8 @@ func TestSourcesToURLs(t *testing.T) {
 	for _, p := range m.locations {
 		actual = append(actual, p.String())
 	}
-	require.Equal(t, len(m.globpaths), 5)
-	require.Equal(t, len(m.locations), 3)
+	require.Len(t, m.globpaths, 5)
+	require.Len(t, m.locations, 3)
 	require.ElementsMatch(t, expected, actual)
 }
 

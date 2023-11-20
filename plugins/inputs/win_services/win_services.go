@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"syscall"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 
@@ -67,8 +69,17 @@ func (m *WinSvcMgr) Disconnect() error {
 }
 
 func (m *WinSvcMgr) OpenService(name string) (WinService, error) {
-	return m.realMgr.OpenService(name)
+	serviceName, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert service name %q: %w", name, err)
+	}
+	h, err := windows.OpenService(m.realMgr.Handle, serviceName, windows.GENERIC_READ)
+	if err != nil {
+		return nil, err
+	}
+	return &mgr.Service{Name: name, Handle: h}, nil
 }
+
 func (m *WinSvcMgr) ListServices() ([]string, error) {
 	return m.realMgr.ListServices()
 }
@@ -78,10 +89,11 @@ type MgProvider struct {
 }
 
 func (rmr *MgProvider) Connect() (WinServiceManager, error) {
-	scmgr, err := mgr.Connect()
+	h, err := windows.OpenSCManager(nil, nil, windows.GENERIC_READ)
 	if err != nil {
 		return nil, err
 	}
+	scmgr := &mgr.Mgr{Handle: h}
 	return &WinSvcMgr{scmgr}, nil
 }
 

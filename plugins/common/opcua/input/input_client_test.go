@@ -7,20 +7,21 @@ import (
 	"time"
 
 	"github.com/gopcua/opcua/ua"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTagsSliceToMap(t *testing.T) {
 	m, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"baz", "bat"}})
 	require.NoError(t, err)
 	require.Len(t, m, 2)
-	require.Equal(t, m["foo"], "bar")
-	require.Equal(t, m["baz"], "bat")
+	require.Equal(t, "bar", m["foo"])
+	require.Equal(t, "bat", m["baz"])
 }
 
 func TestTagsSliceToMap_twoStrings(t *testing.T) {
@@ -316,7 +317,7 @@ func TestNewNodeMetricMappingIdStrInstantiated(t *testing.T) {
 		TagsSlice:      [][]string{},
 	}, map[string]string{})
 	require.NoError(t, err)
-	require.Equal(t, nmm.idStr, "ns=2;s=h")
+	require.Equal(t, "ns=2;s=h", nmm.idStr)
 }
 
 func TestValidateNodeToAdd(t *testing.T) {

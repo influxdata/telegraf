@@ -135,7 +135,7 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 				yandexCloudMonitoringMetric{
 					Name:   field.Key,
 					Labels: m.Tags(),
-					TS:     fmt.Sprint(m.Time().Format(time.RFC3339)),
+					TS:     m.Time().Format(time.RFC3339),
 					Value:  value,
 				},
 			)

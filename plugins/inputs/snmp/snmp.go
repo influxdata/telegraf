@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -107,6 +108,12 @@ func (s *Snmp) Init() error {
 
 	if len(s.AgentHostTag) == 0 {
 		s.AgentHostTag = "agent_host"
+	}
+	if s.AgentHostTag != "source" {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
+			Since:  "1.29.0",
+			Notice: `should be set to "source" for consistent usage across plugins`,
+		})
 	}
 
 	return nil
@@ -425,9 +432,8 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
 				} else if errors.Is(err, gosnmp.ErrDecryption) {
 					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
-				} else {
-					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 				}
+				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(tr, f.Conversion, ent)

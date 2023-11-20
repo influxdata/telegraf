@@ -17,7 +17,7 @@ func TestUpdateCounters(t *testing.T) {
 		ras.updateCounters(&testData[i])
 	}
 
-	require.Equal(t, 1, len(ras.cpuSocketCounters), "Should contain counters only for single socket")
+	require.Len(t, ras.cpuSocketCounters, 1, "Should contain counters only for single socket")
 
 	for metric, value := range ras.cpuSocketCounters[0] {
 		if metric == processorBase {
@@ -97,7 +97,7 @@ func TestMultipleSockets(t *testing.T) {
 	for i := range testData {
 		ras.updateCounters(&testData[i])
 	}
-	require.Equal(t, 4, len(ras.cpuSocketCounters), "Should contain counters for four sockets")
+	require.Len(t, ras.cpuSocketCounters, 4, "Should contain counters for four sockets")
 
 	for _, metricData := range ras.cpuSocketCounters {
 		for metric, value := range metricData {
@@ -121,8 +121,8 @@ func TestMissingDatabase(t *testing.T) {
 func TestEmptyDatabase(t *testing.T) {
 	ras := newRas()
 
-	require.Equal(t, 1, len(ras.cpuSocketCounters), "Should contain default counters for one socket")
-	require.Equal(t, 2, len(ras.serverCounters), "Should contain default counters for server")
+	require.Len(t, ras.cpuSocketCounters, 1, "Should contain default counters for one socket")
+	require.Len(t, ras.serverCounters, 2, "Should contain default counters for server")
 
 	for metric, value := range ras.cpuSocketCounters[0] {
 		require.Equal(t, int64(0), value, fmt.Sprintf("%s should have value of 0", metric))

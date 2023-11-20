@@ -8,12 +8,13 @@ protocol](https://crate.io/docs/crate/reference/protocols/postgres.html).
 The plugin requires a table with the following schema.
 
 ```sql
-CREATE TABLE my_metrics (
+CREATE TABLE IF NOT EXISTS my_metrics (
   "hash_id" LONG INDEX OFF,
   "timestamp" TIMESTAMP,
   "name" STRING,
   "tags" OBJECT(DYNAMIC),
   "fields" OBJECT(DYNAMIC),
+  "day" TIMESTAMP GENERATED ALWAYS AS date_trunc('day', "timestamp"),
   PRIMARY KEY ("timestamp", "hash_id","day")
 ) PARTITIONED BY("day");
 ```

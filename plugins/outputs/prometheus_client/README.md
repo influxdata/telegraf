@@ -26,6 +26,9 @@ to use them.
 # Configuration for the Prometheus client to spawn
 [[outputs.prometheus_client]]
   ## Address to listen on.
+  ##   ex:
+  ##     listen = ":9273"
+  ##     listen = "vsock://:9273"
   listen = ":9273"
 
   ## Maximum duration before timing out read of the request
@@ -73,7 +76,7 @@ to use them.
 
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
-  # [outputs.prometheus_client.prometheus_metric_types]
+  # [outputs.prometheus_client.metric_types]
   #   counter = []
   #   gauge = []
 ```

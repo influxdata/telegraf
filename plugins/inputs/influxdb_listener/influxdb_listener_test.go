@@ -729,7 +729,7 @@ func TestPing(t *testing.T) {
 			resp, err := http.Post(createURL(listener, "http", "/ping", ""), "", nil)
 			require.NoError(t, err)
 			require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
-			require.Len(t, resp.Header["Content-Type"], 0)
+			require.Empty(t, resp.Header["Content-Type"])
 			require.NoError(t, resp.Body.Close())
 			require.EqualValues(t, 204, resp.StatusCode)
 		})
@@ -777,7 +777,7 @@ func TestWriteWithPrecision(t *testing.T) {
 			require.EqualValues(t, 204, resp.StatusCode)
 
 			acc.Wait(1)
-			require.Equal(t, 1, len(acc.Metrics))
+			require.Len(t, acc.Metrics, 1)
 			// When timestamp is provided, the precision parameter is
 			// overloaded to specify the timestamp's unit
 			require.Equal(t, time.Unix(0, 1422568543000000000), acc.Metrics[0].Time)
@@ -807,7 +807,7 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 			require.EqualValues(t, 204, resp.StatusCode)
 
 			acc.Wait(1)
-			require.Equal(t, 1, len(acc.Metrics))
+			require.Len(t, acc.Metrics, 1)
 			// When timestamp is omitted, the precision parameter actually
 			// specifies the precision.  The timestamp is set to the greatest
 			// integer unit less than the provided timestamp (floor).

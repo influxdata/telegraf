@@ -591,7 +591,7 @@ func TestInvalidUsernameOrPassword(t *testing.T) {
 			return
 		}
 
-		require.Equal(t, r.URL.Path, "/_status", "Cannot handle request")
+		require.Equal(t, "/_status", r.URL.Path, "Cannot handle request")
 		http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 	}))
 
@@ -618,7 +618,7 @@ func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 			return
 		}
 
-		require.Equal(t, r.URL.Path, "/_status", "Cannot handle request")
+		require.Equal(t, "/_status", r.URL.Path, "Cannot handle request")
 		http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 	}))
 

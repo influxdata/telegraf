@@ -201,7 +201,7 @@ func TestGatherContainsTag(t *testing.T) {
 
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
-	require.Len(t, acc1.Errors, 0, "There should be no errors after gather")
+	require.Empty(t, acc1.Errors, "There should be no errors after gather")
 
 	for _, s := range testSimpleData[0].services {
 		fields := make(map[string]interface{})

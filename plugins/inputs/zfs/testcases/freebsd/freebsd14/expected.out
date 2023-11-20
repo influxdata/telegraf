@@ -1,0 +1,16 @@
+zfs_pool,health=ONLINE,pool=zroot allocated=11959578624i,capacity=17i,dedupratio=1,fragmentation=4i,free=55149285376i,size=67108864000i 1698172931876196974
+zfs_dataset,dataset=zroot avail=53069045760i,used=11959443456i,usedds=0i,usedsnap=0i 1698172931876204237
+zfs_dataset,dataset=zroot/ROOT avail=53069045760i,used=4685123584i,usedds=0i,usedsnap=0i 1698172931876207310
+zfs_dataset,dataset=zroot/ROOT/default avail=53069045760i,used=4684689408i,usedds=0i,usedsnap=0i 1698172931876213735
+zfs_dataset,dataset=zroot/home avail=53069045760i,used=7263580160i,usedds=0i,usedsnap=0i 1698172931876217926
+zfs_dataset,dataset=zroot/tmp avail=53069045760i,used=684032i,usedds=0i,usedsnap=0i 1698172931876220720
+zfs_dataset,dataset=zroot/usr avail=53069045760i,used=1724416i,usedds=0i,usedsnap=0i 1698172931876224631
+zfs_dataset,dataset=zroot/usr/obj avail=53069045760i,used=430080i,usedds=0i,usedsnap=0i 1698172931876227424
+zfs_dataset,dataset=zroot/usr/ports avail=53069045760i,used=430080i,usedds=0i,usedsnap=0i 1698172931876230218
+zfs_dataset,dataset=zroot/usr/src avail=53069045760i,used=430080i,usedds=0i,usedsnap=0i 1698172931876233291
+zfs_dataset,dataset=zroot/var avail=53069045760i,used=2269184i,usedds=0i,usedsnap=0i 1698172931876237481
+zfs_dataset,dataset=zroot/var/audit avail=53069045760i,used=438272i,usedds=0i,usedsnap=0i 1698172931876240554
+zfs_dataset,dataset=zroot/var/log avail=53069045760i,used=544768i,usedds=0i,usedsnap=0i 1698172931876243348
+zfs_dataset,dataset=zroot/var/mail avail=53069045760i,used=425984i,usedds=0i,usedsnap=0i 1698172931876246980
+zfs_dataset,dataset=zroot/var/tmp avail=53069045760i,used=425984i,usedds=0i,usedsnap=0i 1698172931876249774
+zfs,datasets=zroot::zroot/ROOT::zroot/ROOT/default::zroot/home::zroot/tmp::zroot/usr::zroot/usr/obj::zroot/usr/ports::zroot/usr/src::zroot/var::zroot/var/audit::zroot/var/log::zroot/var/mail::zroot/var/tmp,pools=zroot zfetchstats_hits=6439i,zfetchstats_io_active=0i,zfetchstats_io_issued=2197i,zfetchstats_max_streams=9411i,zfetchstats_misses=14538i 1698172931876287767

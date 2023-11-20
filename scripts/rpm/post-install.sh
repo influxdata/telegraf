@@ -4,10 +4,6 @@
 if [[ -L /etc/init.d/telegraf ]]; then
     rm -f /etc/init.d/telegraf
 fi
-# Remove legacy symlink, if it exists
-if [[ -L /etc/systemd/system/telegraf.service ]]; then
-    rm -f /etc/systemd/system/telegraf.service
-fi
 
 # Add defaults file, if it doesn't exist
 if [[ ! -f /etc/default/telegraf ]]; then
@@ -26,11 +22,9 @@ fi
 
 # Set up log directories
 LOG_DIR=/var/log/telegraf
-test -d $LOG_DIR || {
-    mkdir -p $LOG_DIR
-    chown -R -L telegraf:telegraf $LOG_DIR
-    chmod 755 $LOG_DIR
-}
+mkdir -p $LOG_DIR
+chown -R -L telegraf:telegraf $LOG_DIR
+chmod 755 $LOG_DIR
 
 STATE_DIR=/var/lib/telegraf
 test -d "$STATE_DIR" || {

@@ -53,6 +53,32 @@ func (pg *Pgrep) FullPattern(pattern string) ([]PID, error) {
 	return find(pg.path, args)
 }
 
+func (pg *Pgrep) ChildPattern(pattern string) ([]PID, error) {
+	args := []string{"-P", pattern}
+	out, err := run(pg.path, args)
+	if err != nil {
+		return nil, err
+	}
+
+	pids := []PID{}
+	pid, err := strconv.ParseInt(pattern, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	pids = append(pids, PID(pid))
+
+	fields := strings.Fields(out)
+	for _, field := range fields {
+		pid, err := strconv.ParseInt(field, 10, 32)
+		if err != nil {
+			return pids, err
+		}
+		pids = append(pids, PID(pid))
+	}
+
+	return pids, nil
+}
+
 func find(path string, args []string) ([]PID, error) {
 	out, err := run(path, args)
 	if err != nil {

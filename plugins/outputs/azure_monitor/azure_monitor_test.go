@@ -47,7 +47,7 @@ func TestAggregate(t *testing.T) {
 			pushTime: time.Unix(3600, 0),
 			check: func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric) {
 				require.Equal(t, int64(1), plugin.MetricOutsideWindow.Get())
-				require.Len(t, metrics, 0)
+				require.Empty(t, metrics)
 			},
 		},
 		{
@@ -70,7 +70,7 @@ func TestAggregate(t *testing.T) {
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(0, 0),
 			check: func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric) {
-				require.Len(t, metrics, 0)
+				require.Empty(t, metrics)
 			},
 		},
 		{

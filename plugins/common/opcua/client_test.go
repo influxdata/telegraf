@@ -1,9 +1,10 @@
 package opcua
 
 import (
+	"testing"
+
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestSetupWorkarounds(t *testing.T) {
@@ -28,5 +29,5 @@ func TestSetupWorkarounds(t *testing.T) {
 func TestCheckStatusCode(t *testing.T) {
 	var o OpcUAClient
 	o.codes = []ua.StatusCode{ua.StatusCode(0), ua.StatusCode(192), ua.StatusCode(11141120)}
-	require.Equal(t, o.StatusCodeOK(ua.StatusCode(192)), true)
+	require.True(t, o.StatusCodeOK(ua.StatusCode(192)))
 }

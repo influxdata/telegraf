@@ -14,6 +14,8 @@ might change between versions. Please check the driver documentation for availab
 | SQLite               | [sqlite](https://gitlab.com/cznic/sqlite)                 |                 | `filename`                                                                             | see [driver docs](https://pkg.go.dev/modernc.org/sqlite) for more information                                         |
 | TiDB                 | [tidb](https://github.com/go-sql-driver/mysql)            | mysql           | see _mysql_ driver                                                                     | uses MySQL driver                                                                                                     |
 | ClickHouse           | [clickhouse](https://github.com/ClickHouse/clickhouse-go) |                 | `tcp://host:port[?param1=value&...&paramN=value]"`                                     | see [clickhouse-go docs](https://github.com/ClickHouse/clickhouse-go#dsn) for more information                        |
+| Oracle           | [oracle](https://github.com/sijms/go-ora) |  oracle           | `oracle://username:password@host:port/service?param1=value&param2=value`                                     | see [driver docs](https://github.com/sijms/go-ora/blob/master/README.md) for more information                        |
+| IBM Netezza          | [nzgo](https://github.com/IBM/nzgo)                       |                 |`host=your_nz_host port=5480 user=your_nz_user password=your_nz_password dbname=your_nz_db_name sslmode=disable`| see [driver docs](https://pkg.go.dev/github.com/IBM/nzgo/v12) for more information |
 
 ## Comments
 

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ type statServer struct{}
 // We create a fake server to return test data
 func (s statServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
-	w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
+	w.Header().Set("Content-Length", strconv.Itoa(len(outputSample)))
 	fmt.Fprint(w, outputSample)
 }
 
@@ -33,7 +34,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "ok", r.URL.Query().Get("test"))
 		w.Header().Set("Content-Type", "text/plain")
-		w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
+		w.Header().Set("Content-Length", strconv.Itoa(len(outputSample)))
 		_, err := fmt.Fprint(w, outputSample)
 		require.NoError(t, err)
 	}))
