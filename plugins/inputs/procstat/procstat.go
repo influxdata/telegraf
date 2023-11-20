@@ -374,19 +374,25 @@ func (p *Procstat) findSupervisorUnits() []PidsTags {
 	var pidTags []PidsTags
 	groups, groupsTags, err := p.supervisorPIDs()
 	if err != nil {
-		pidTags = append(pidTags, PidsTags{nil, nil, err})
+		pidTags = append(pidTags, PidsTags{nil, nil, fmt.Errorf("getting supervisor PIDs failed: %w", err)})
 		return pidTags
 	}
 	// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
 	for _, group := range groups {
-		p.Pattern = groupsTags[group]["pid"]
-		if p.Pattern == "" {
+		grppid := groupsTags[group]["pid"]
+		if grppid == "" {
 			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
+			continue
+		}
+
+		pid, err := strconv.ParseInt(grppid, 10, 32)
+		if err != nil {
+			pidTags = append(pidTags, PidsTags{nil, nil, fmt.Errorf("converting PID %q failed: %w", grppid, err)})
 			return pidTags
 		}
 
 		// Get all children of the supervisor unit
-		pids, err := p.finder.ChildPattern(p.Pattern)
+		pids, err := p.finder.Children(PID(pid))
 		if err != nil {
 			pidTags = append(pidTags, PidsTags{nil, nil, err})
 			return pidTags

@@ -53,7 +53,10 @@ func TestChildPattern(t *testing.T) {
 
 	// Use the plugin to find the children
 	finder := &NativeFinder{}
-	childs, err := finder.ChildPattern(parentName)
+	parent, err := finder.Pattern(parentName)
+	require.NoError(t, err)
+	require.Len(t, parent, 1)
+	childs, err := finder.Children(parent[0])
 	require.NoError(t, err)
 	require.ElementsMatch(t, expected, childs)
 }

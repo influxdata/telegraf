@@ -53,8 +53,8 @@ func (pg *Pgrep) FullPattern(pattern string) ([]PID, error) {
 	return pg.find(args)
 }
 
-func (pg *Pgrep) ChildPattern(pattern string) ([]PID, error) {
-	args := []string{"-P", pattern}
+func (pg *Pgrep) Children(pid PID) ([]PID, error) {
+	args := []string{"-P", strconv.FormatInt(int64(pid), 10)}
 	return pg.find(args)
 }
 

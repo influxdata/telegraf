@@ -74,38 +74,24 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	return pids, err
 }
 
-// ChildPattern matches children pids on the command line when the process was executed
-func (pg *NativeFinder) ChildPattern(pattern string) ([]PID, error) {
-	regxPattern, err := regexp.Compile(pattern)
+// Children matches children pids on the command line when the process was executed
+func (pg *NativeFinder) Children(pid PID) ([]PID, error) {
+	// Get all running processes
+	p, err := process.NewProcess(int32(pid))
 	if err != nil {
-		return nil, fmt.Errorf("compiling regexp failed: %w", err)
+		return nil, fmt.Errorf("getting process %d failed: %w", pid, err)
 	}
 
-	procs, err := process.Processes()
+	// Get all children of the current process
+	children, err := p.Children()
 	if err != nil {
-		return nil, fmt.Errorf("getting processes failed: %w", err)
+		return nil, fmt.Errorf("unable to get children of process %d: %w", p.Pid, err)
 	}
-
 	var pids []PID
-	for _, p := range procs {
-		cmd, err := p.Cmdline()
-		if err != nil || !regxPattern.MatchString(cmd) {
-			continue
-		}
-
-		parent, err := process.NewProcess(p.Pid)
-		if err != nil {
-			return nil, fmt.Errorf("unable to get process %d: %w", p.Pid, err)
-		}
-		children, err := parent.Children()
-		if err != nil {
-			return nil, fmt.Errorf("unable to get children of process %d: %w", p.Pid, err)
-		}
-
-		for _, child := range children {
-			pids = append(pids, PID(child.Pid))
-		}
+	for _, child := range children {
+		pids = append(pids, PID(child.Pid))
 	}
+
 	return pids, err
 }
 

@@ -105,7 +105,7 @@ func (pg *testPgrep) FullPattern(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
-func (pg *testPgrep) ChildPattern(_ string) ([]PID, error) {
+func (pg *testPgrep) Children(_ PID) ([]PID, error) {
 	pids := []PID{7311, 8111, 8112}
 	return pids, pg.err
 }
@@ -484,23 +484,22 @@ func TestGather_supervisorUnitPIDs(t *testing.T) {
 func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
 		finder:         newTestFinder([]PID{pid}),
-		Pattern:        "7311",
 		SupervisorUnit: []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
 	}
 	pidsTags := p.findPids()
 	for _, pidsTag := range pidsTags {
 		pids := pidsTag.PIDS
 		tags := pidsTag.Tags
-		err := pidsTag.Err
 		require.Empty(t, pids)
-		require.Contains(t, []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"}, tags["supervisor_unit"])
-		if tags["supervisor_unit"] == "TestGather_STARTINGsupervisorUnitPIDs" {
+		require.NoError(t, pidsTag.Err)
+		switch tags["supervisor_unit"] {
+		case "TestGather_STARTINGsupervisorUnitPIDs":
 			require.Equal(t, "STARTING", tags["status"])
-			require.NoError(t, err)
-		} else if tags["supervisor_unit"] == "TestGather_FATALsupervisorUnitPIDs" {
+		case "TestGather_FATALsupervisorUnitPIDs":
 			require.Equal(t, "FATAL", tags["status"])
-			require.NoError(t, err)
 			require.Equal(t, "Exited too quickly (process log may have details)", tags["error"])
+		default:
+			t.Fatalf("unexpected value for tag 'supervisor_unit': %q", tags["supervisor_unit"])
 		}
 	}
 }
