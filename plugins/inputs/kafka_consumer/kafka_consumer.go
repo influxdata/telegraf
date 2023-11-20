@@ -322,16 +322,17 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
+			handler.MsgHeaderToMetricName = k.MsgHeaderAsMetricName
 			//if message headers list specified, put it as map to handler
 			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
 			if len(k.MsgHeadersAsTags) > 0 {
 				for _, header := range k.MsgHeadersAsTags {
-					msgHeadersMap[header] = true
+					if k.MsgHeaderAsMetricName != header {
+						msgHeadersMap[header] = true
+					}
 				}
 			}
 			handler.MsgHeadersToTags = msgHeadersMap
-
-			handler.MsgHeaderToMetricName = k.MsgHeaderAsMetricName
 
 			// We need to copy allWantedTopics; the Consume() is
 			// long-running and we can easily deadlock if our
