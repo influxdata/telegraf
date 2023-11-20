@@ -103,11 +103,11 @@ func (f *Filter) Compile() error {
 		var err error
 		f.fieldDropFilter, err = filter.Compile(f.FieldDrop)
 		if err != nil {
-			return fmt.Errorf("error compiling 'fielddrop', %w", err)
+			return fmt.Errorf("error compiling 'fieldexclude', %w", err)
 		}
 		f.fieldPassFilter, err = filter.Compile(f.FieldPass)
 		if err != nil {
-			return fmt.Errorf("error compiling 'fieldpass', %w", err)
+			return fmt.Errorf("error compiling 'fieldinclude', %w", err)
 		}
 
 		f.tagExcludeFilter, err = filter.Compile(f.TagExclude)
@@ -159,7 +159,7 @@ func (f *Filter) Select(metric telegraf.Metric) (bool, error) {
 }
 
 // Modify removes any tags and fields from the metric according to the
-// fieldpass/fielddrop and taginclude/tagexclude filters.
+// fieldinclude/fieldexclude and taginclude/tagexclude filters.
 func (f *Filter) Modify(metric telegraf.Metric) {
 	if !f.isActive {
 		return
@@ -208,7 +208,7 @@ func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
 	return ShouldTagsPass(f.TagPassFilters, f.TagDropFilters, tags)
 }
 
-// filterFields removes fields according to fieldpass/fielddrop.
+// filterFields removes fields according to fieldinclude/fieldexclude.
 func (f *Filter) filterFields(metric telegraf.Metric) {
 	filterKeys := []string{}
 	for _, field := range metric.FieldList() {

@@ -2,7 +2,7 @@
 
 The noop processor plugin does nothing to metrics. Instead it can be used to
 apply the global configuration options after other processing. Global config
-options like tagpass, fieldpass, and others are applied before a processor,
+options like tagexclude, fieldexclude, and others are applied before a processor,
 aggregator, or output. As such a user might want to apply these after doing
 processing, but before an output or another processor.
 
@@ -40,8 +40,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Filter on tag key or field key
 # taginclude = []
 # tagexclude = []
-# fieldpass = []
-# fielddrop = []
+# fieldinclude = []
+# fieldexclude = []
 ```
 
 ## Examples
