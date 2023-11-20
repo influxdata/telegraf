@@ -312,6 +312,15 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	require.Equal(t, "/path/", strings.TrimRight(input.Paths[0], "\r\n"))
 }
 
+func TestConfig_DeprecatedFilters(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/deprecated_field_filter.toml"))
+
+	require.Len(t, c.Inputs, 1)
+	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldPass)
+	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldDrop)
+}
+
 func TestConfig_FieldNotDefined(t *testing.T) {
 	tests := []struct {
 		name     string

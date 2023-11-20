@@ -1,0 +1,8 @@
+[[inputs.file]]
+  pass = ["foo"]
+  fieldpass = ["bar"]
+  fieldinclude = ["baz"]
+
+  drop = ["foo"]
+  fielddrop = ["bar"]
+  fieldexclude = ["baz"]
