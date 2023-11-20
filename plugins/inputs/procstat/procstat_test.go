@@ -406,12 +406,8 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, pidsTag := range pidsTags {
-		pids := pidsTag.PIDS
-		tags := pidsTag.Tags
-		err := pidsTag.Err
-		require.NoError(t, err)
-		require.Equal(t, []PID{11408}, pids)
-		require.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
+		require.Equal(t, []PID{11408}, pidsTag.PIDs)
+		require.Equal(t, "TestGather_systemdUnitPIDs", pidsTag.Tags["systemd_unit"])
 	}
 }
 
@@ -431,12 +427,8 @@ func TestGather_cgroupPIDs(t *testing.T) {
 	pidsTags, err := p.findPids()
 	require.NoError(t, err)
 	for _, pidsTag := range pidsTags {
-		pids := pidsTag.PIDS
-		tags := pidsTag.Tags
-		err := pidsTag.Err
-		require.NoError(t, err)
-		require.Equal(t, []PID{1234, 5678}, pids)
-		require.Equal(t, td, tags["cgroup"])
+		require.Equal(t, []PID{1234, 5678}, pidsTag.PIDs)
+		require.Equal(t, td, pidsTag.Tags["cgroup"])
 	}
 }
 
@@ -476,12 +468,8 @@ func TestGather_supervisorUnitPIDs(t *testing.T) {
 	pidsTags, err := p.findPids()
 	require.NoError(t, err)
 	for _, pidsTag := range pidsTags {
-		pids := pidsTag.PIDS
-		tags := pidsTag.Tags
-		err := pidsTag.Err
-		require.NoError(t, err)
-		require.Equal(t, []PID{7311, 8111, 8112}, pids)
-		require.Equal(t, "TestGather_supervisorUnitPIDs", tags["supervisor_unit"])
+		require.Equal(t, []PID{7311, 8111, 8112}, pidsTag.PIDs)
+		require.Equal(t, "TestGather_supervisorUnitPIDs", pidsTag.Tags["supervisor_unit"])
 	}
 }
 
@@ -493,18 +481,15 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 	pidsTags, err := p.findPids()
 	require.NoError(t, err)
 	for _, pidsTag := range pidsTags {
-		pids := pidsTag.PIDS
-		tags := pidsTag.Tags
-		require.Empty(t, pids)
-		require.NoError(t, pidsTag.Err)
-		switch tags["supervisor_unit"] {
+		require.Empty(t, pidsTag.PIDs)
+		switch pidsTag.Tags["supervisor_unit"] {
 		case "TestGather_STARTINGsupervisorUnitPIDs":
-			require.Equal(t, "STARTING", tags["status"])
+			require.Equal(t, "STARTING", pidsTag.Tags["status"])
 		case "TestGather_FATALsupervisorUnitPIDs":
-			require.Equal(t, "FATAL", tags["status"])
-			require.Equal(t, "Exited too quickly (process log may have details)", tags["error"])
+			require.Equal(t, "FATAL", pidsTag.Tags["status"])
+			require.Equal(t, "Exited too quickly (process log may have details)", pidsTag.Tags["error"])
 		default:
-			t.Fatalf("unexpected value for tag 'supervisor_unit': %q", tags["supervisor_unit"])
+			t.Fatalf("unexpected value for tag 'supervisor_unit': %q", pidsTag.Tags["supervisor_unit"])
 		}
 	}
 }

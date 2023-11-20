@@ -50,9 +50,8 @@ type Procstat struct {
 }
 
 type PidsTags struct {
-	PIDS []PID
+	PIDs []PID
 	Tags map[string]string
-	Err  error
 }
 
 func (*Procstat) SampleConfig() string {
@@ -106,27 +105,14 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, pidTag := range pidTags {
-		if len(pidTag.PIDS) < 1 && len(p.SupervisorUnit) > 0 {
+		if len(pidTag.PIDs) < 1 && len(p.SupervisorUnit) > 0 {
 			continue
 		}
-		pids := pidTag.PIDS
-		err := pidTag.Err
+		pids := pidTag.PIDs
 		pidCount += len(pids)
 		for key, value := range pidTag.Tags {
 			tags[key] = value
 		}
-		if err != nil {
-			fields := map[string]interface{}{
-				"pid_count":   0,
-				"running":     0,
-				"result_code": 1,
-			}
-			tags["pid_finder"] = p.PidFinder
-			tags["result"] = "lookup_error"
-			acc.AddFields("procstat_lookup", fields, tags, now)
-			return err
-		}
-
 		p.updateProcesses(pids, pidTag.Tags, p.procs, newProcs)
 	}
 
@@ -354,32 +340,47 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 	case len(p.SupervisorUnit) > 0:
 		return p.findSupervisorUnits()
 	case p.SystemdUnits != "":
-		return p.systemdUnitPIDs(), nil
+		return p.systemdUnitPIDs()
 	case p.WinService != "":
 		pids, err := p.winServicePIDs()
+		if err != nil {
+			return nil, err
+		}
 		tags := map[string]string{"win_service": p.WinService}
-		return []PidsTags{{pids, tags, err}}, err
+		return []PidsTags{{pids, tags}}, nil
 	case p.CGroup != "":
-		return p.cgroupPIDs(), nil
+		return p.cgroupPIDs()
 	case p.PidFile != "":
 		pids, err := p.finder.PidFile(p.PidFile)
+		if err != nil {
+			return nil, err
+		}
 		tags := map[string]string{"pidfile": p.PidFile}
-		return []PidsTags{{pids, tags, err}}, err
+		return []PidsTags{{pids, tags}}, nil
 	case p.Exe != "":
 		pids, err := p.finder.Pattern(p.Exe)
+		if err != nil {
+			return nil, err
+		}
 		tags := map[string]string{"exe": p.Exe}
-		return []PidsTags{{pids, tags, err}}, err
+		return []PidsTags{{pids, tags}}, nil
 	case p.Pattern != "":
 		pids, err := p.finder.FullPattern(p.Pattern)
+		if err != nil {
+			return nil, err
+		}
 		tags := map[string]string{"pattern": p.Pattern}
-		return []PidsTags{{pids, tags, err}}, err
+		return []PidsTags{{pids, tags}}, nil
 	case p.User != "":
 		pids, err := p.finder.UID(p.User)
+		if err != nil {
+			return nil, err
+		}
 		tags := map[string]string{"user": p.User}
-		return []PidsTags{{pids, tags, err}}, err
+		return []PidsTags{{pids, tags}}, nil
 	}
 	err := fmt.Errorf("either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
-	return []PidsTags{{nil, nil, err}}, err
+	return nil, err
 }
 
 func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
@@ -393,7 +394,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 	for _, group := range groups {
 		grppid := groupsTags[group]["pid"]
 		if grppid == "" {
-			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], nil})
+			pidTags = append(pidTags, PidsTags{nil, groupsTags[group]})
 			continue
 		}
 
@@ -423,7 +424,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 		}
 		// Remove duplicate pid tags
 		delete(tags, "pid")
-		pidTags = append(pidTags, PidsTags{pids, tags, err})
+		pidTags = append(pidTags, PidsTags{pids, tags})
 	}
 	return pidTags, nil
 }
@@ -475,7 +476,7 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 	return p.SupervisorUnit, mainPids, nil
 }
 
-func (p *Procstat) systemdUnitPIDs() []PidsTags {
+func (p *Procstat) systemdUnitPIDs() ([]PidsTags, error) {
 	if p.IncludeSystemdChildren {
 		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnits)
 		return p.cgroupPIDs()
@@ -483,9 +484,12 @@ func (p *Procstat) systemdUnitPIDs() []PidsTags {
 
 	var pidTags []PidsTags
 	pids, err := p.simpleSystemdUnitPIDs()
+	if err != nil {
+		return nil, err
+	}
 	tags := map[string]string{"systemd_unit": p.SystemdUnits}
-	pidTags = append(pidTags, PidsTags{pids, tags, err})
-	return pidTags
+	pidTags = append(pidTags, PidsTags{pids, tags})
+	return pidTags, nil
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
@@ -517,7 +521,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 	return pids, nil
 }
 
-func (p *Procstat) cgroupPIDs() []PidsTags {
+func (p *Procstat) cgroupPIDs() ([]PidsTags, error) {
 	procsPath := p.CGroup
 	if procsPath[0] != '/' {
 		procsPath = "/sys/fs/cgroup/" + procsPath
@@ -525,17 +529,20 @@ func (p *Procstat) cgroupPIDs() []PidsTags {
 
 	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		return []PidsTags{{nil, nil, fmt.Errorf("glob failed: %w", err)}}
+		return nil, fmt.Errorf("glob failed: %w", err)
 	}
 
 	pidTags := make([]PidsTags, 0, len(items))
 	for _, item := range items {
 		pids, err := p.singleCgroupPIDs(item)
+		if err != nil {
+			return nil, err
+		}
 		tags := map[string]string{"cgroup": p.CGroup, "cgroup_full": item}
-		pidTags = append(pidTags, PidsTags{pids, tags, err})
+		pidTags = append(pidTags, PidsTags{pids, tags})
 	}
 
-	return pidTags
+	return pidTags, nil
 }
 
 func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
