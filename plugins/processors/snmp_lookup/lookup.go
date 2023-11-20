@@ -77,14 +77,6 @@ func (*Lookup) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *Lookup) SetTranslator(name string) {
-	if name != "gosmi" {
-		l.Log.Warnf("unsupported agent.snmp_translator value %q, some features might not work", name)
-	}
-
-	l.Translator = name
-}
-
 func (l *Lookup) Init() (err error) {
 	l.sigs = make(signalMap)
 	l.getConnection = l.getConnectionNoMock
@@ -98,10 +90,8 @@ func (l *Lookup) Init() (err error) {
 		if l.translator, err = si.NewGosmiTranslator(l.Path, l.Log); err != nil {
 			return fmt.Errorf("loading translator: %w", err)
 		}
-	case "netsnmp":
-		l.translator = si.NewNetsnmpTranslator()
 	default:
-		return fmt.Errorf("invalid agent.snmp_translator value %q", l.Translator)
+		return fmt.Errorf("invalid translator %q", l.Translator)
 	}
 
 	return l.initTable()

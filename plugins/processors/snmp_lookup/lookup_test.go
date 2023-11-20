@@ -124,35 +124,6 @@ func TestInit(t *testing.T) {
 	}
 }
 
-func TestSetTranslator(t *testing.T) {
-	tests := []struct {
-		name     string
-		expected string
-	}{
-		{name: "gosmi"},
-		{name: "netsnmp"},
-		{
-			name:     "unknown",
-			expected: `invalid agent.snmp_translator value "unknown"`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Lookup{Log: testutil.Logger{}}
-
-			p.SetTranslator(tt.name)
-			require.Equal(t, tt.name, p.Translator)
-
-			if tt.expected == "" {
-				require.NoError(t, p.Init())
-			} else {
-				require.ErrorContains(t, p.Init(), tt.expected)
-			}
-		})
-	}
-}
-
 func TestStart(t *testing.T) {
 	acc := &testutil.NopAccumulator{}
 	p := Lookup{}
