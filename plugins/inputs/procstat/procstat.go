@@ -23,6 +23,9 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// execCommand is so tests can mock out exec.Command usage.
+var execCommand = exec.Command
+
 type PID int32
 
 type Procstat struct {
@@ -40,11 +43,11 @@ type Procstat struct {
 	CGroup                 string   `toml:"cgroup"`
 	PidTag                 bool     `toml:"pid_tag"`
 	WinService             string   `toml:"win_service"`
-	Mode                   string
+	Mode                   string   `toml:"mode"`
 
 	solarisMode bool
 	finder      PIDFinder
-	procs       map[PID]Process
+	processes   map[PID]Process
 
 	createProcess func(PID) (Process, error)
 }
@@ -61,6 +64,16 @@ func (*Procstat) SampleConfig() string {
 func (p *Procstat) Init() error {
 	// Check solaris mode
 	p.solarisMode = strings.ToLower(p.Mode) == "solaris"
+
+	// Check filtering
+	switch {
+	case len(p.SupervisorUnit) > 0, p.SystemdUnits != "", p.WinService != "",
+		p.CGroup != "", p.PidFile != "", p.Exe != "", p.Pattern != "",
+		p.User != "":
+		// Do nothing as those are valid settings
+	default:
+		return errors.New("require filter option but none set")
+	}
 
 	// Instantiate the finder
 	switch p.PidFinder {
@@ -83,52 +96,94 @@ func (p *Procstat) Init() error {
 		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
 	}
 
+	// Initialize the running process cache
+	p.processes = make(map[PID]Process)
+
 	return nil
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
-	pidCount := 0
 	now := time.Now()
-	newProcs := make(map[PID]Process, len(p.procs))
-	tags := make(map[string]string)
-	pidTags, err := p.findPids()
+	results, err := p.findPids()
 	if err != nil {
+		// Add lookup error-metric
 		fields := map[string]interface{}{
 			"pid_count":   0,
 			"running":     0,
 			"result_code": 1,
 		}
-		tags["pid_finder"] = p.PidFinder
-		tags["result"] = "lookup_error"
+		tags := map[string]string{
+			"pid_finder": p.PidFinder,
+			"result":     "lookup_error",
+		}
 		acc.AddFields("procstat_lookup", fields, tags, now)
 		return err
 	}
 
-	for _, pidTag := range pidTags {
-		if len(pidTag.PIDs) < 1 && len(p.SupervisorUnit) > 0 {
+	var count int
+	running := make(map[PID]bool)
+	for _, r := range results {
+		if len(r.PIDs) < 1 && len(p.SupervisorUnit) > 0 {
 			continue
 		}
-		pids := pidTag.PIDs
-		pidCount += len(pids)
-		for key, value := range pidTag.Tags {
-			tags[key] = value
+		count += len(r.PIDs)
+		for _, pid := range r.PIDs {
+			// Use the cached processes as we need the existing instances
+			// to compute delta-metrics (e.g. cpu-usage).
+			if proc, found := p.processes[pid]; found {
+				running[pid] = true
+				p.addMetric(proc, acc, now)
+				continue
+			}
+
+			// We've found a process that was not recorded before so add it
+			// to the list of processes
+			proc, err := p.createProcess(pid)
+			if err != nil {
+				// No problem; process may have ended after we found it
+				continue
+			}
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := proc.Name(); name == "" {
+				continue
+			}
+
+			// Add initial tags
+			for k, v := range r.Tags {
+				proc.Tags()[k] = v
+			}
+
+			// Add pid tag if needed
+			if p.PidTag {
+				proc.Tags()["pid"] = strconv.Itoa(int(pid))
+			}
+			if p.ProcessName != "" {
+				proc.Tags()["process_name"] = p.ProcessName
+			}
+
+			p.processes[pid] = proc
+			running[pid] = true
+			p.addMetric(proc, acc, now)
 		}
-		p.updateProcesses(pids, pidTag.Tags, p.procs, newProcs)
 	}
 
-	p.procs = newProcs
-	for _, proc := range p.procs {
-		p.addMetric(proc, acc, now)
+	// Cleanup processes that are not running anymore
+	for pid := range p.processes {
+		if !running[pid] {
+			delete(p.processes, pid)
+		}
 	}
 
+	// Add lookup statistics-metric
 	fields := map[string]interface{}{
-		"pid_count":   pidCount,
-		"running":     len(p.procs),
+		"pid_count":   count,
+		"running":     len(running),
 		"result_code": 0,
 	}
-
-	tags["pid_finder"] = p.PidFinder
-	tags["result"] = "success"
+	tags := map[string]string{
+		"pid_finder": p.PidFinder,
+		"result":     "success",
+	}
 	if len(p.SupervisorUnit) > 0 {
 		tags["supervisor_unit"] = strings.Join(p.SupervisorUnit, ";")
 	}
@@ -296,44 +351,6 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 	acc.AddFields("procstat", fields, proc.Tags(), t)
 }
 
-// Update monitored Processes
-func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process, procs map[PID]Process) {
-	for _, pid := range pids {
-		info, ok := prevInfo[pid]
-		if ok {
-			// Assumption: if a process has no name, it probably does not exist
-			if name, _ := info.Name(); name == "" {
-				continue
-			}
-			procs[pid] = info
-		} else {
-			proc, err := p.createProcess(pid)
-			if err != nil {
-				// No problem; process may have ended after we found it
-				continue
-			}
-			// Assumption: if a process has no name, it probably does not exist
-			if name, _ := proc.Name(); name == "" {
-				continue
-			}
-			procs[pid] = proc
-
-			// Add initial tags
-			for k, v := range tags {
-				proc.Tags()[k] = v
-			}
-
-			// Add pid tag if needed
-			if p.PidTag {
-				proc.Tags()["pid"] = strconv.Itoa(int(pid))
-			}
-			if p.ProcessName != "" {
-				proc.Tags()["process_name"] = p.ProcessName
-			}
-		}
-	}
-}
-
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() ([]PidsTags, error) {
 	switch {
@@ -379,8 +396,7 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 		tags := map[string]string{"user": p.User}
 		return []PidsTags{{pids, tags}}, nil
 	}
-	err := fmt.Errorf("either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
-	return nil, err
+	return nil, errors.New("no filter option set")
 }
 
 func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
@@ -389,7 +405,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 		return nil, fmt.Errorf("getting supervisor PIDs failed: %w", err)
 	}
 
-	// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
+	// According to the PID, find the system process number and get the child processes
 	var pidTags []PidsTags
 	for _, group := range groups {
 		grppid := groupsTags[group]["pid"]
@@ -428,9 +444,6 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 	}
 	return pidTags, nil
 }
-
-// execCommand is so tests can mock out exec.Command usage.
-var execCommand = exec.Command
 
 func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, error) {
 	out, err := execCommand("supervisorctl", "status", strings.Join(p.SupervisorUnit, " ")).Output()
