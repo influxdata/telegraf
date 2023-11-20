@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/process"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -130,40 +128,38 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		for _, pid := range r.PIDs {
 			// Use the cached processes as we need the existing instances
 			// to compute delta-metrics (e.g. cpu-usage).
-			if proc, found := p.processes[pid]; found {
-				running[pid] = true
-				p.addMetric(proc, acc, now)
-				continue
-			}
+			proc, found := p.processes[pid]
+			if !found {
+				// We've found a process that was not recorded before so add it
+				// to the list of processes
+				proc, err = p.createProcess(pid)
+				if err != nil {
+					// No problem; process may have ended after we found it
+					continue
+				}
+				// Assumption: if a process has no name, it probably does not exist
+				if name, _ := proc.Name(); name == "" {
+					continue
+				}
 
-			// We've found a process that was not recorded before so add it
-			// to the list of processes
-			proc, err := p.createProcess(pid)
-			if err != nil {
-				// No problem; process may have ended after we found it
-				continue
-			}
-			// Assumption: if a process has no name, it probably does not exist
-			if name, _ := proc.Name(); name == "" {
-				continue
-			}
+				// Add initial tags
+				for k, v := range r.Tags {
+					proc.SetTag(k, v)
+				}
 
-			// Add initial tags
-			for k, v := range r.Tags {
-				proc.Tags()[k] = v
+				// Add pid tag if needed
+				if p.PidTag {
+					proc.SetTag("pid", strconv.Itoa(int(pid)))
+				}
+				if p.ProcessName != "" {
+					proc.SetTag("process_name", p.ProcessName)
+				}
+				p.processes[pid] = proc
 			}
-
-			// Add pid tag if needed
-			if p.PidTag {
-				proc.Tags()["pid"] = strconv.Itoa(int(pid))
-			}
-			if p.ProcessName != "" {
-				proc.Tags()["process_name"] = p.ProcessName
-			}
-
-			p.processes[pid] = proc
 			running[pid] = true
-			p.addMetric(proc, acc, now)
+			m := proc.Metric(p.Prefix, p.CmdLineTag, p.solarisMode)
+			m.SetTime(now)
+			acc.AddMetric(m)
 		}
 	}
 
@@ -190,165 +186,6 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	acc.AddFields("procstat_lookup", fields, tags, now)
 
 	return nil
-}
-
-// Add metrics a single Process
-func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time) {
-	var prefix string
-	if p.Prefix != "" {
-		prefix = p.Prefix + "_"
-	}
-
-	fields := map[string]interface{}{}
-
-	//If process_name tag is not already set, set to actual name
-	if _, nameInTags := proc.Tags()["process_name"]; !nameInTags {
-		name, err := proc.Name()
-		if err == nil {
-			proc.Tags()["process_name"] = name
-		}
-	}
-
-	//If user tag is not already set, set to actual name
-	if _, ok := proc.Tags()["user"]; !ok {
-		user, err := proc.Username()
-		if err == nil {
-			proc.Tags()["user"] = user
-		}
-	}
-
-	//If pid is not present as a tag, include it as a field.
-	if _, pidInTags := proc.Tags()["pid"]; !pidInTags {
-		fields["pid"] = int32(proc.PID())
-	}
-
-	//If cmd_line tag is true and it is not already set add cmdline as a tag
-	if p.CmdLineTag {
-		if _, ok := proc.Tags()["cmdline"]; !ok {
-			cmdline, err := proc.Cmdline()
-			if err == nil {
-				proc.Tags()["cmdline"] = cmdline
-			}
-		}
-	}
-
-	numThreads, err := proc.NumThreads()
-	if err == nil {
-		fields[prefix+"num_threads"] = numThreads
-	}
-
-	fds, err := proc.NumFDs()
-	if err == nil {
-		fields[prefix+"num_fds"] = fds
-	}
-
-	ctx, err := proc.NumCtxSwitches()
-	if err == nil {
-		fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
-		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
-	}
-
-	faults, err := proc.PageFaults()
-	if err == nil {
-		fields[prefix+"minor_faults"] = faults.MinorFaults
-		fields[prefix+"major_faults"] = faults.MajorFaults
-		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
-		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
-	}
-
-	io, err := proc.IOCounters()
-	if err == nil {
-		fields[prefix+"read_count"] = io.ReadCount
-		fields[prefix+"write_count"] = io.WriteCount
-		fields[prefix+"read_bytes"] = io.ReadBytes
-		fields[prefix+"write_bytes"] = io.WriteBytes
-	}
-
-	createdAt, err := proc.CreateTime() // returns epoch in ms
-	if err == nil {
-		fields[prefix+"created_at"] = createdAt * 1000000 // ms to ns
-	}
-
-	cpuTime, err := proc.Times()
-	if err == nil {
-		fields[prefix+"cpu_time_user"] = cpuTime.User
-		fields[prefix+"cpu_time_system"] = cpuTime.System
-		fields[prefix+"cpu_time_iowait"] = cpuTime.Iowait // only reported on Linux
-	}
-
-	cpuPerc, err := proc.Percent(time.Duration(0))
-	if err == nil {
-		if p.solarisMode {
-			fields[prefix+"cpu_usage"] = cpuPerc / float64(runtime.NumCPU())
-		} else {
-			fields[prefix+"cpu_usage"] = cpuPerc
-		}
-	}
-
-	// This only returns values for RSS and VMS
-	mem, err := proc.MemoryInfo()
-	if err == nil {
-		fields[prefix+"memory_rss"] = mem.RSS
-		fields[prefix+"memory_vms"] = mem.VMS
-	}
-
-	collectMemmap(proc, prefix, fields)
-
-	memPerc, err := proc.MemoryPercent()
-	if err == nil {
-		fields[prefix+"memory_usage"] = memPerc
-	}
-
-	rlims, err := proc.RlimitUsage(true)
-	if err == nil {
-		for _, rlim := range rlims {
-			var name string
-			switch rlim.Resource {
-			case process.RLIMIT_CPU:
-				name = "cpu_time"
-			case process.RLIMIT_DATA:
-				name = "memory_data"
-			case process.RLIMIT_STACK:
-				name = "memory_stack"
-			case process.RLIMIT_RSS:
-				name = "memory_rss"
-			case process.RLIMIT_NOFILE:
-				name = "num_fds"
-			case process.RLIMIT_MEMLOCK:
-				name = "memory_locked"
-			case process.RLIMIT_AS:
-				name = "memory_vms"
-			case process.RLIMIT_LOCKS:
-				name = "file_locks"
-			case process.RLIMIT_SIGPENDING:
-				name = "signals_pending"
-			case process.RLIMIT_NICE:
-				name = "nice_priority"
-			case process.RLIMIT_RTPRIO:
-				name = "realtime_priority"
-			default:
-				continue
-			}
-
-			fields[prefix+"rlimit_"+name+"_soft"] = rlim.Soft
-			fields[prefix+"rlimit_"+name+"_hard"] = rlim.Hard
-			if name != "file_locks" { // gopsutil doesn't currently track the used file locks count
-				fields[prefix+name] = rlim.Used
-			}
-		}
-	}
-
-	ppid, err := proc.Ppid()
-	if err == nil {
-		fields[prefix+"ppid"] = ppid
-	}
-
-	status, err := proc.Status()
-	if err == nil {
-		fields[prefix+"status"] = status[0]
-	}
-
-	acc.AddFields("procstat", fields, proc.Tags(), t)
 }
 
 // Get matching PIDs and their initial tags
@@ -611,6 +448,6 @@ func (p *Procstat) winServicePIDs() ([]PID, error) {
 
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
-		return &Procstat{createProcess: NewProc}
+		return &Procstat{createProcess: newProc}
 	})
 }
