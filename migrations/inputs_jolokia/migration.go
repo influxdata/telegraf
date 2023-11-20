@@ -263,13 +263,15 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 	if len(o.NameDrop) > 0 {
 		j.NameDrop = append(j.NameDrop, o.NameDrop...)
 	}
-	if len(o.FieldPass) > 0 || len(o.FieldDropOld) > 0 {
-		j.FieldPass = append(j.FieldPass, o.FieldPass...)
+	if len(o.FieldInclude) > 0 || len(o.FieldPass) > 0 || len(o.FieldPassOld) > 0 {
 		j.FieldPass = append(j.FieldPass, o.FieldPassOld...)
+		j.FieldPass = append(j.FieldPass, o.FieldPass...)
+		j.FieldPass = append(j.FieldPass, o.FieldInclude...)
 	}
-	if len(o.FieldDrop) > 0 || len(o.FieldDropOld) > 0 {
-		j.FieldDrop = append(j.FieldDrop, o.FieldDrop...)
+	if len(o.FieldExclude) > 0 || len(o.FieldDrop) > 0 || len(o.FieldDropOld) > 0 {
 		j.FieldDrop = append(j.FieldDrop, o.FieldDropOld...)
+		j.FieldDrop = append(j.FieldDrop, o.FieldDrop...)
+		j.FieldDrop = append(j.FieldDrop, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
 		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
