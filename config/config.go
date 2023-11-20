@@ -1361,7 +1361,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "drop", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
 			RemovalIn: "2.0.0",
-			Notice:    "use 'fieldinclude' instead",
+			Notice:    "use 'fieldexclude' instead",
 		})
 		f.FieldDrop = append(f.FieldDrop, oldDrop...)
 	}
@@ -1371,7 +1371,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fielddrop", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
 			RemovalIn: "2.0.0",
-			Notice:    "use 'fieldinclude' instead",
+			Notice:    "use 'fieldexclude' instead",
 		})
 		f.FieldDrop = append(f.FieldDrop, oldFieldDrop...)
 	}
