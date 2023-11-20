@@ -145,8 +145,8 @@ func (p *testProc) Metric(prefix string, cmdLineTag, _ bool) telegraf.Metric {
 	}
 
 	fields := map[string]interface{}{
-		prefix + "pid":                          int32(p.pid),
-		prefix + "ppid":                         int32(0),
+		"pid":                                   int32(p.pid),
+		"ppid":                                  int32(0),
 		prefix + "num_fds":                      int32(0),
 		prefix + "num_threads":                  int32(0),
 		prefix + "voluntary_context_switches":   int64(0),
