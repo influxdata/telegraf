@@ -17,7 +17,7 @@ const (
 const (
 	ethdevLinkStatusCommand    = "/ethdev/link_status"
 	linkStatusStringFieldName  = "status"
-	linkStatusIntegerFieldName = "status_i"
+	linkStatusIntegerFieldName = "link_status"
 )
 
 var (

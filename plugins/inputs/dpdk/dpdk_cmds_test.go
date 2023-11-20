@@ -12,7 +12,7 @@ import (
 )
 
 func Test_LinkStatusCommand(t *testing.T) {
-	t.Run("when link status is DOWN then return status_i with 0", func(t *testing.T) {
+	t.Run("when 'status' field is DOWN then return 'link_status'=0", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{%q: "DOWN"}}`, ethdevLinkStatusCommand, linkStatusStringFieldName)
@@ -38,7 +38,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 	})
 
-	t.Run("when link status is UP then return status_i with 1", func(t *testing.T) {
+	t.Run("when 'status' field is UP then return 'link_status'=1", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{%q: "UP"}}`, ethdevLinkStatusCommand, linkStatusStringFieldName)
@@ -64,7 +64,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 	})
 
-	t.Run("when link status output doesn't have any fields then don't return status_i", func(t *testing.T) {
+	t.Run("when link status output doesn't have any fields then don't return 'link_status' field", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{}}`, ethdevLinkStatusCommand)
@@ -75,7 +75,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		testutil.RequireMetricsEqual(t, nil, actual, testutil.IgnoreTime())
 	})
 
-	t.Run("when link status output doesn't have status field then don't return status_i", func(t *testing.T) {
+	t.Run("when link status output doesn't have status field then don't return 'link_status' field", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{"tag1": 1}}`, ethdevLinkStatusCommand)
@@ -99,7 +99,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 	})
 
-	t.Run("when link status output is invalid then don't return status_i", func(t *testing.T) {
+	t.Run("when link status output is invalid then don't return 'link_status' field", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{%q: "BOB"}}`, ethdevLinkStatusCommand, linkStatusStringFieldName)
