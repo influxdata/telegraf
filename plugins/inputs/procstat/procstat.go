@@ -243,7 +243,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 	}
 
 	// According to the PID, find the system process number and get the child processes
-	var pidTags []PidsTags
+	pidTags := make([]PidsTags, 0, len(groups))
 	for _, group := range groups {
 		grppid := groupsTags[group]["pid"]
 		if grppid == "" {

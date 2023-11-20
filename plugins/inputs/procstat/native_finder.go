@@ -87,7 +87,7 @@ func (pg *NativeFinder) Children(pid PID) ([]PID, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to get children of process %d: %w", p.Pid, err)
 	}
-	var pids []PID
+	pids := make([]PID, 0, len(children))
 	for _, child := range children {
 		pids = append(pids, PID(child.Pid))
 	}
