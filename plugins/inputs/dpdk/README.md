@@ -324,10 +324,10 @@ When running plugin configuration below...
 ```
 
 Expected output for `dpdk` plugin instance running with `link_status` command
-and all metadata fields enabled, additionally `link_status` field will be exposed
-to represent string value of `status` field (`DOWN`=0,`UP`=1):
+and all metadata fields enabled, additionally `link_status` field will be
+exposed to represent string value of `status` field (`DOWN`=0,`UP`=1):
 
 ```text
 dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 pid=100988i,version="DPDK 21.11.2",status="DOWN",link_status=0i 1660295749000000000
-dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 pid=2401624i,version="DPDK 21.11.2",status="UP",link_status=1i 1660295749000000000
+dpdk,command=/ethdev/link_status,host=dpdk-host,params=0 pid=2401624i,version="DPDK 21.11.2",status="UP",status_i=1i 1660295749000000000
 ```
