@@ -92,7 +92,19 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 	newProcs := make(map[PID]Process, len(p.procs))
 	tags := make(map[string]string)
-	pidTags := p.findPids()
+	pidTags, err := p.findPids()
+	if err != nil {
+		fields := map[string]interface{}{
+			"pid_count":   0,
+			"running":     0,
+			"result_code": 1,
+		}
+		tags["pid_finder"] = p.PidFinder
+		tags["result"] = "lookup_error"
+		acc.AddFields("procstat_lookup", fields, tags, now)
+		return err
+	}
+
 	for _, pidTag := range pidTags {
 		if len(pidTag.PIDS) < 1 && len(p.SupervisorUnit) > 0 {
 			continue
@@ -337,71 +349,68 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() []PidsTags {
+func (p *Procstat) findPids() ([]PidsTags, error) {
 	switch {
 	case len(p.SupervisorUnit) > 0:
 		return p.findSupervisorUnits()
 	case p.SystemdUnits != "":
-		return p.systemdUnitPIDs()
+		return p.systemdUnitPIDs(), nil
 	case p.WinService != "":
 		pids, err := p.winServicePIDs()
 		tags := map[string]string{"win_service": p.WinService}
-		return []PidsTags{{pids, tags, err}}
+		return []PidsTags{{pids, tags, err}}, err
 	case p.CGroup != "":
-		return p.cgroupPIDs()
+		return p.cgroupPIDs(), nil
 	case p.PidFile != "":
 		pids, err := p.finder.PidFile(p.PidFile)
 		tags := map[string]string{"pidfile": p.PidFile}
-		return []PidsTags{{pids, tags, err}}
+		return []PidsTags{{pids, tags, err}}, err
 	case p.Exe != "":
 		pids, err := p.finder.Pattern(p.Exe)
 		tags := map[string]string{"exe": p.Exe}
-		return []PidsTags{{pids, tags, err}}
+		return []PidsTags{{pids, tags, err}}, err
 	case p.Pattern != "":
 		pids, err := p.finder.FullPattern(p.Pattern)
 		tags := map[string]string{"pattern": p.Pattern}
-		return []PidsTags{{pids, tags, err}}
+		return []PidsTags{{pids, tags, err}}, err
 	case p.User != "":
 		pids, err := p.finder.UID(p.User)
 		tags := map[string]string{"user": p.User}
-		return []PidsTags{{pids, tags, err}}
+		return []PidsTags{{pids, tags, err}}, err
 	}
 	err := fmt.Errorf("either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
-	return []PidsTags{{nil, nil, err}}
+	return []PidsTags{{nil, nil, err}}, err
 }
 
-func (p *Procstat) findSupervisorUnits() []PidsTags {
-	var pidTags []PidsTags
+func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 	groups, groupsTags, err := p.supervisorPIDs()
 	if err != nil {
-		pidTags = append(pidTags, PidsTags{nil, nil, fmt.Errorf("getting supervisor PIDs failed: %w", err)})
-		return pidTags
+		return nil, fmt.Errorf("getting supervisor PIDs failed: %w", err)
 	}
+
 	// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
+	var pidTags []PidsTags
 	for _, group := range groups {
 		grppid := groupsTags[group]["pid"]
 		if grppid == "" {
-			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
+			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], nil})
 			continue
 		}
 
 		pid, err := strconv.ParseInt(grppid, 10, 32)
 		if err != nil {
-			pidTags = append(pidTags, PidsTags{nil, nil, fmt.Errorf("converting PID %q failed: %w", grppid, err)})
-			return pidTags
+			return nil, fmt.Errorf("converting PID %q failed: %w", grppid, err)
 		}
 
 		// Get all children of the supervisor unit
 		pids, err := p.finder.Children(PID(pid))
 		if err != nil {
-			pidTags = append(pidTags, PidsTags{nil, nil, err})
-			return pidTags
+			return nil, fmt.Errorf("getting children for %d failed: %w", pid, err)
 		}
 		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
 
 		// Handle situations where the PID does not exist
 		if len(pids) == 0 {
-			pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
 			continue
 		}
 
@@ -416,7 +425,7 @@ func (p *Procstat) findSupervisorUnits() []PidsTags {
 		delete(tags, "pid")
 		pidTags = append(pidTags, PidsTags{pids, tags, err})
 	}
-	return pidTags
+	return pidTags, nil
 }
 
 // execCommand is so tests can mock out exec.Command usage.

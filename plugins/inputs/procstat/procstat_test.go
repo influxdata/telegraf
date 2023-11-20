@@ -402,7 +402,9 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 		finder:       newTestFinder([]PID{pid}),
 		SystemdUnits: "TestGather_systemdUnitPIDs",
 	}
-	pidsTags := p.findPids()
+	pidsTags, err := p.findPids()
+	require.NoError(t, err)
+
 	for _, pidsTag := range pidsTags {
 		pids := pidsTag.PIDS
 		tags := pidsTag.Tags
@@ -426,7 +428,8 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		finder: newTestFinder([]PID{pid}),
 		CGroup: td,
 	}
-	pidsTags := p.findPids()
+	pidsTags, err := p.findPids()
+	require.NoError(t, err)
 	for _, pidsTag := range pidsTags {
 		pids := pidsTag.PIDS
 		tags := pidsTag.Tags
@@ -470,7 +473,8 @@ func TestGather_supervisorUnitPIDs(t *testing.T) {
 		finder:         newTestFinder([]PID{pid}),
 		SupervisorUnit: []string{"TestGather_supervisorUnitPIDs"},
 	}
-	pidsTags := p.findPids()
+	pidsTags, err := p.findPids()
+	require.NoError(t, err)
 	for _, pidsTag := range pidsTags {
 		pids := pidsTag.PIDS
 		tags := pidsTag.Tags
@@ -486,7 +490,8 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 		finder:         newTestFinder([]PID{pid}),
 		SupervisorUnit: []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
 	}
-	pidsTags := p.findPids()
+	pidsTags, err := p.findPids()
+	require.NoError(t, err)
 	for _, pidsTag := range pidsTags {
 		pids := pidsTag.PIDS
 		tags := pidsTag.Tags
