@@ -45,7 +45,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
         ## Action to apply for this rule
         ## "pass" will keep the metric and pass it on, while "drop" will remove
         ## the metric
-        # action = "pass"
+        # action = "drop"
 ```
 
 ## Examples
