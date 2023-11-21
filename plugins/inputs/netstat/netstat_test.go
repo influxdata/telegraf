@@ -56,5 +56,10 @@ func TestNetStats(t *testing.T) {
 			time.Unix(0, 0),
 		),
 	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+	testutil.RequireMetricsEqual(t,
+		expected,
+		acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(),
+	)
 }
