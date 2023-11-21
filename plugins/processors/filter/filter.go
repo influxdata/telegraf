@@ -3,7 +3,6 @@ package filter
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -14,8 +13,9 @@ import (
 var sampleConfig string
 
 type Filter struct {
-	Rules         []rule `toml:"rule"`
-	DefaultAction string `toml:"default"`
+	Rules         []rule          `toml:"rule"`
+	DefaultAction string          `toml:"default"`
+	Log           telegraf.Logger `toml:"-"`
 	defaultPass   bool
 }
 
@@ -30,14 +30,14 @@ func (f *Filter) Init() error {
 		f.defaultPass = true
 	case "drop":
 		// Do nothing, those options are valid
+		if len(f.Rules) == 0 {
+			f.Log.Warn("dropping all metrics as no rule is provided")
+		}
 	default:
 		return fmt.Errorf("invalid default action %q", f.DefaultAction)
 	}
 
 	// Check and initialize rules
-	if len(f.Rules) == 0 {
-		return errors.New("no rule(s) given")
-	}
 	for i := range f.Rules {
 		if err := f.Rules[i].init(); err != nil {
 			return fmt.Errorf("initialization of rule %d failed: %w", i+1, err)

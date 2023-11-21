@@ -68,8 +68,16 @@ var testmetrics = []telegraf.Metric{
 }
 
 func TestNoRules(t *testing.T) {
-	plugin := &Filter{}
-	require.ErrorContains(t, plugin.Init(), "no rule(s) given")
+	logger := &testutil.CaptureLogger{}
+	plugin := &Filter{
+		DefaultAction: "drop",
+		Log:           logger,
+	}
+	require.NoError(t, plugin.Init())
+
+	warnings := logger.Warnings()
+	require.Len(t, warnings, 1)
+	require.Contains(t, warnings[0], "dropping all metrics")
 }
 
 func TestInvalidDefaultAction(t *testing.T) {
