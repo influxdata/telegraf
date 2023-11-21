@@ -1,4 +1,4 @@
-package noop
+package filter
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNoopNoMetric(t *testing.T) {
+func TestNoMetric(t *testing.T) {
 	processor := Noop{}
 
 	m := []telegraf.Metric{}
@@ -18,7 +18,7 @@ func TestNoopNoMetric(t *testing.T) {
 	testutil.RequireMetricsEqual(t, m, actual)
 }
 
-func TestNoopSingleMetric(t *testing.T) {
+func TestSingleMetric(t *testing.T) {
 	processor := Noop{}
 
 	m := []telegraf.Metric{
@@ -39,7 +39,7 @@ func TestNoopSingleMetric(t *testing.T) {
 	testutil.RequireMetricsEqual(t, m, actual)
 }
 
-func TestNoopMultipleMetrics(t *testing.T) {
+func TestMultipleMetrics(t *testing.T) {
 	processor := Noop{}
 
 	m := []telegraf.Metric{
