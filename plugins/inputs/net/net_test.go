@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNetStats(t *testing.T) {
+func TestNetIOStats(t *testing.T) {
 	var mps system.MockPS
 	var err error
 	defer mps.AssertExpectations(t)
