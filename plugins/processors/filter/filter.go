@@ -3,6 +3,8 @@ package filter
 
 import (
 	_ "embed"
+	"errors"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -11,18 +13,63 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Noop struct{}
+type Filter struct {
+	Rules         []rule `toml:"rule"`
+	DefaultAction string `toml:"default"`
+	defaultPass   bool
+}
 
-func (*Noop) SampleConfig() string {
+func (*Filter) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Noop) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	return in
+func (f *Filter) Init() error {
+	// Check the default-action setting
+	switch f.DefaultAction {
+	case "", "pass":
+		f.defaultPass = true
+	case "drop":
+		// Do nothing, those options are valid
+	default:
+		return fmt.Errorf("invalid default action %q", f.DefaultAction)
+	}
+
+	// Check and initialize rules
+	if len(f.Rules) == 0 {
+		return errors.New("no rule(s) given")
+	}
+	for i := range f.Rules {
+		if err := f.Rules[i].init(); err != nil {
+			return fmt.Errorf("initialization of rule %d failed: %w", i+1, err)
+		}
+	}
+
+	return nil
+}
+
+func (f *Filter) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	out := make([]telegraf.Metric, 0, len(in))
+	for _, m := range in {
+		if f.applyRules(m) {
+			out = append(out, m)
+		} else {
+			m.Drop()
+		}
+	}
+	return out
+}
+
+func (f *Filter) applyRules(m telegraf.Metric) bool {
+	for _, r := range f.Rules {
+		if pass, applies := r.apply(m); applies {
+			return pass
+		}
+	}
+	return f.defaultPass
 }
 
 func init() {
-	processors.Add("noop", func() telegraf.Processor {
-		return &Noop{}
+	processors.Add("Filter", func() telegraf.Processor {
+		return &Filter{}
 	})
 }

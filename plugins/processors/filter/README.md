@@ -34,11 +34,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
         ## List of metric names to match including glob expressions
         # name = []
 
-        ## List of tag key/value pairs to match including glob expressions for
-        ## tag values
+        ## List of tag key/value pairs to match (no glob expressions)
+        ## ALL given tags must exist for the metric to match the rule.
         # tags = {}
 
         ## List of field keys to match including glob expressions
+        ## At least one field must exist for the metric to match the rule.
         # fields = []
 
         ## Action to apply for this rule
