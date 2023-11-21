@@ -21,9 +21,9 @@ type rule struct {
 func (r *rule) init() error {
 	// Check the action setting
 	switch r.Action {
-	case "", "pass":
+	case "pass":
 		r.pass = true
-	case "drop":
+	case "", "drop":
 		// Do nothing, those options are valid
 	default:
 		return fmt.Errorf("invalid action %q", r.Action)

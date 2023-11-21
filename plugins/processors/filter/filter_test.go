@@ -100,7 +100,7 @@ func TestNoMetric(t *testing.T) {
 
 func TestDropAll(t *testing.T) {
 	plugin := &Filter{
-		Rules: []rule{{Name: []string{"*"}, Action: "drop"}},
+		Rules: []rule{{Name: []string{"*"}}},
 	}
 	require.NoError(t, plugin.Init())
 	require.Empty(t, plugin.Apply(testmetrics...))
@@ -117,7 +117,8 @@ func TestDropDefault(t *testing.T) {
 
 func TestPassAll(t *testing.T) {
 	plugin := &Filter{
-		Rules: []rule{{Name: []string{"*"}}},
+		Rules:         []rule{{Name: []string{"*"}, Action: "pass"}},
+		DefaultAction: "drop",
 	}
 	require.NoError(t, plugin.Init())
 
