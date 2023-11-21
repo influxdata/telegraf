@@ -48,8 +48,8 @@ type jolokiaAgent struct {
 
 	NamePass       []string            `toml:"namepass,omitempty"`
 	NameDrop       []string            `toml:"namedrop,omitempty"`
-	FieldPass      []string            `toml:"fieldinclude,omitempty"`
-	FieldDrop      []string            `toml:"fieldexclude,omitempty"`
+	FieldInclude   []string            `toml:"fieldinclude,omitempty"`
+	FieldExclude   []string            `toml:"fieldexclude,omitempty"`
 	TagPassFilters map[string][]string `toml:"tagpass,omitempty"`
 	TagDropFilters map[string][]string `toml:"tagdrop,omitempty"`
 	TagExclude     []string            `toml:"tagexclude,omitempty"`
@@ -213,14 +213,14 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 		j.NameDrop = append(j.NameDrop, o.NameDrop...)
 	}
 	if len(o.FieldInclude) > 0 || len(o.FieldPass) > 0 || len(o.FieldPassOld) > 0 {
-		j.FieldPass = append(j.FieldPass, o.FieldPassOld...)
-		j.FieldPass = append(j.FieldPass, o.FieldPass...)
-		j.FieldPass = append(j.FieldPass, o.FieldInclude...)
+		j.FieldInclude = append(j.FieldInclude, o.FieldPassOld...)
+		j.FieldInclude = append(j.FieldInclude, o.FieldPass...)
+		j.FieldInclude = append(j.FieldInclude, o.FieldInclude...)
 	}
 	if len(o.FieldExclude) > 0 || len(o.FieldDrop) > 0 || len(o.FieldDropOld) > 0 {
-		j.FieldDrop = append(j.FieldDrop, o.FieldDropOld...)
-		j.FieldDrop = append(j.FieldDrop, o.FieldDrop...)
-		j.FieldDrop = append(j.FieldDrop, o.FieldExclude...)
+		j.FieldExclude = append(j.FieldExclude, o.FieldDropOld...)
+		j.FieldExclude = append(j.FieldExclude, o.FieldDrop...)
+		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
 		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
