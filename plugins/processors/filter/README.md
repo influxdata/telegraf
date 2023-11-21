@@ -82,5 +82,4 @@ Alternatively, you can "black-list" the `OK` value via
 
   [[processors.filter.rule]]
     tags = {"status" = "OK"}
-    action = "drop"
 ```
