@@ -225,24 +225,12 @@ func (f *Filter) filterFields(metric telegraf.Metric) {
 // filterTags removes tags according to taginclude/tagexclude.
 func (f *Filter) filterTags(metric telegraf.Metric) {
 	filterKeys := []string{}
-	if f.tagIncludeFilter != nil {
-		for _, tag := range metric.TagList() {
-			if !f.tagIncludeFilter.Match(tag.Key) {
-				filterKeys = append(filterKeys, tag.Key)
-			}
+	for _, tag := range metric.TagList() {
+		if !ShouldPassFilters(f.tagIncludeFilter, f.tagExcludeFilter, tag.Key) {
+			filterKeys = append(filterKeys, tag.Key)
 		}
-	}
-	for _, key := range filterKeys {
-		metric.RemoveTag(key)
 	}
 
-	if f.tagExcludeFilter != nil {
-		for _, tag := range metric.TagList() {
-			if f.tagExcludeFilter.Match(tag.Key) {
-				filterKeys = append(filterKeys, tag.Key)
-			}
-		}
-	}
 	for _, key := range filterKeys {
 		metric.RemoveTag(key)
 	}
