@@ -42,6 +42,7 @@ func (lb *unlockedBuffer) Bytes() []byte {
 }
 
 func (lb *unlockedBuffer) TemporaryString() string {
+	//nolint:gosec // G103: Valid use of unsafe call to cast underlying bytes to string
 	return unsafe.String(&lb.content[0], len(lb.content))
 }
 
