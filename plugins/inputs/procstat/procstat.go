@@ -27,21 +27,22 @@ var execCommand = exec.Command
 type PID int32
 
 type Procstat struct {
-	PidFinder              string   `toml:"pid_finder"`
-	PidFile                string   `toml:"pid_file"`
-	Exe                    string   `toml:"exe"`
-	Pattern                string   `toml:"pattern"`
-	Prefix                 string   `toml:"prefix"`
-	CmdLineTag             bool     `toml:"cmdline_tag"`
-	ProcessName            string   `toml:"process_name"`
-	User                   string   `toml:"user"`
-	SystemdUnits           string   `toml:"systemd_units"`
-	SupervisorUnit         []string `toml:"supervisor_unit"`
-	IncludeSystemdChildren bool     `toml:"include_systemd_children"`
-	CGroup                 string   `toml:"cgroup"`
-	PidTag                 bool     `toml:"pid_tag"`
-	WinService             string   `toml:"win_service"`
-	Mode                   string   `toml:"mode"`
+	PidFinder              string          `toml:"pid_finder"`
+	PidFile                string          `toml:"pid_file"`
+	Exe                    string          `toml:"exe"`
+	Pattern                string          `toml:"pattern"`
+	Prefix                 string          `toml:"prefix"`
+	CmdLineTag             bool            `toml:"cmdline_tag"`
+	ProcessName            string          `toml:"process_name"`
+	User                   string          `toml:"user"`
+	SystemdUnits           string          `toml:"systemd_units"`
+	SupervisorUnit         []string        `toml:"supervisor_unit"`
+	IncludeSystemdChildren bool            `toml:"include_systemd_children"`
+	CGroup                 string          `toml:"cgroup"`
+	PidTag                 bool            `toml:"pid_tag"`
+	WinService             string          `toml:"win_service"`
+	Mode                   string          `toml:"mode"`
+	Log                    telegraf.Logger `toml:"-"`
 
 	solarisMode bool
 	finder      PIDFinder
@@ -90,6 +91,8 @@ func (p *Procstat) Init() error {
 			return errors.New("configuration requires the 'pgrep' finder on you OS")
 		}
 		p.finder = &NativeFinder{}
+	case "test":
+		p.Log.Warn("running in test mode")
 	default:
 		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
 	}
