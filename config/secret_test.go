@@ -722,13 +722,13 @@ func TestSecretImplUnprotected(t *testing.T) {
 	require.NotNil(t, container)
 	c, ok := container.(*unprotectedSecretContainer)
 	require.True(t, ok)
-	require.Equal(t, string(c.buf.content), "foobar")
+	require.Equal(t, "foobar", string(c.buf.content))
 	buf, err := container.Buffer()
 	require.NoError(t, err)
 	require.NotNil(t, buf)
-	require.Equal(t, buf.Bytes(), []byte("foobar"))
-	require.Equal(t, buf.TemporaryString(), "foobar")
-	require.Equal(t, buf.String(), "foobar")
+	require.Equal(t, []byte("foobar"), buf.Bytes())
+	require.Equal(t, "foobar", buf.TemporaryString())
+	require.Equal(t, "foobar", buf.String())
 }
 
 func TestSecretImplTestSuiteUnprotected(t *testing.T) {
