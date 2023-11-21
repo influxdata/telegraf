@@ -1,10 +1,11 @@
 # Filter Processor Plugin
 
-The filter processor plugin does nothing to metrics. Instead it can be used to
-apply the global configuration options after other processing. Global config
-options like tagpass, fieldpass, and others are applied before a processor,
-aggregator, or output. As such a user might want to apply these after doing
-processing, but before an output or another processor.
+The filter processor plugin allows to specify a set of rules for metrics
+with the ability to _keep_ or _drop_ those metrics. It does _not_ change the
+metric. As such a user might want to apply this processor to remove metrics
+from the processing/output stream.
+__NOTE:__ The filtering is _not_ output specific, but fill apply to the metrics
+processed by this processor.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -18,43 +19,67 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Do nothing processor
-[[processors.noop]]
+# Filter metrics by the given criteria
+[[processors.filter]]
+    ## Default action if no rule applies
+    # default = "pass"
 
-## Metric Filtering
-## The following options provide mechanisms to include or exclude entire
-## metrics. For specific details and examples see the metric filtering docs:
-## https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
+    ## Rules to apply on the incoming metrics (multiple rules are possible)
+    ## The rules are evaluated in order and the first matching rule is applied.
+    ## In case no rule matches the "default" is applied.
+    ## All filter criteria in a rule must apply for the rule to match the metric
+    ## i.e. the criteria are combined by a logical AND. If a criterion is
+    ## omitted it is NOT applied at all and ignored.
+    [[processors.filter.rule]]
+        ## List of metric names to match including glob expressions
+        # name = []
 
-## Metric Selectors - These will drop entire metrics
-## Filter on metric name or tag key + value
-# namepass = []
-# namedrop = []
-# tagpass = {}
-# tagdrop = {}
+        ## List of tag key/value pairs to match including glob expressions for
+        ## tag values
+        # tags = {}
 
-## Filter on Common Expression Language (CEL) expression
-# metricpass = ""
+        ## List of field keys to match including glob expressions
+        # fields = []
 
-## Metric Modifiers - These will drop tags and fields from metrics
-## Filter on tag key or field key
-# taginclude = []
-# tagexclude = []
-# fieldpass = []
-# fielddrop = []
+        ## Action to apply for this rule
+        ## "pass" will keep the metric and pass it on, while "drop" will remove
+        ## the metric
+        # action = "pass"
 ```
 
 ## Examples
 
-Consider a use-case where you have processed a metric based on a tag, but no
-longer need that tag for additional processing:
+Consider a use-case where you collected a bunch of metrics
+
+```text
+machine,source="machine1",status="OK" operating_hours=37i,temperature=23.1
+machine,source="machine2",status="warning" operating_hours=1433i,temperature=48.9,message="too hot"
+machine,source="machine3",status="OK" operating_hours=811i,temperature=29.5
+machine,source="machine4",status="failure" operating_hours=1009i,temperature=67.3,message="temperature alert"
+```
+
+but only want to keep the ones indicating a `status` of `failure` or `warning`:
 
 ```toml
-[[processors.ifname]]
-  order = 1
-  ...
-
 [[processors.filter]]
-  order = 2
-  tagexclude = ["useless_tag"]
+  namepass = ["machine"]
+  default = "drop"
+
+  [[processors.filter.rule]]
+    tags = {"status" = "warning"}
+    action = "pass"
+  [[processors.filter.rule]]
+    tags = {"status" = "failure"}
+    action = "pass"
+```
+
+Alternatively, you can "black-list" the `OK` value via
+
+```toml
+[[processors.filter]]
+  namepass = ["machine"]
+
+  [[processors.filter.rule]]
+    tags = {"status" = "OK"}
+    action = "drop"
 ```
