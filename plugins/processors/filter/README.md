@@ -4,7 +4,7 @@ The filter processor plugin allows to specify a set of rules for metrics
 with the ability to _keep_ or _drop_ those metrics. It does _not_ change the
 metric. As such a user might want to apply this processor to remove metrics
 from the processing/output stream.
-__NOTE:__ The filtering is _not_ output specific, but fill apply to the metrics
+__NOTE:__ The filtering is _not_ output specific, but will apply to the metrics
 processed by this processor.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
