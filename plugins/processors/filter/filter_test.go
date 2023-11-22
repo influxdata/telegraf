@@ -227,11 +227,42 @@ func TestNameDrop(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
+func TestNameGlob(t *testing.T) {
+	plugin := &Filter{
+		Rules: []rule{
+			{
+				Name:   []string{"*ing"},
+				Action: "drop",
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"foundry",
+			map[string]string{
+				"source":   "machine B",
+				"location": "factory X",
+				"status":   "OK",
+			},
+			map[string]interface{}{
+				"operating_hours": 1337,
+				"temperature":     19.9,
+				"pieces":          96878,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	actual := plugin.Apply(testmetrics...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
 func TestTagPass(t *testing.T) {
 	plugin := &Filter{
 		Rules: []rule{
 			{
-				Tags:   map[string]string{"status": "OK"},
+				Tags:   map[string][]string{"status": {"OK"}},
 				Action: "pass",
 			},
 		},
@@ -289,7 +320,7 @@ func TestTagDrop(t *testing.T) {
 	plugin := &Filter{
 		Rules: []rule{
 			{
-				Tags:   map[string]string{"status": "OK"},
+				Tags:   map[string][]string{"status": {"OK"}},
 				Action: "drop",
 			},
 		},
@@ -320,9 +351,9 @@ func TestTagMultiple(t *testing.T) {
 	plugin := &Filter{
 		Rules: []rule{
 			{
-				Tags: map[string]string{
-					"location": "factory X",
-					"status":   "OK",
+				Tags: map[string][]string{
+					"location": {"factory X", "factory Y"},
+					"status":   {"OK"},
 				},
 				Action: "pass",
 			},
@@ -346,6 +377,78 @@ func TestTagMultiple(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
+		metric.New(
+			"welding",
+			map[string]string{
+				"source":   "machine D",
+				"location": "factory Y",
+				"status":   "OK",
+			},
+			map[string]interface{}{
+				"operating_hours": 825,
+				"temperature":     31.2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	actual := plugin.Apply(testmetrics...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestTagGlob(t *testing.T) {
+	plugin := &Filter{
+		Rules: []rule{
+			{
+				Tags:   map[string][]string{"location": {"factory *"}},
+				Action: "pass",
+			},
+		},
+		DefaultAction: "drop",
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"foundry",
+			map[string]string{
+				"source":   "machine B",
+				"location": "factory X",
+				"status":   "OK",
+			},
+			map[string]interface{}{
+				"operating_hours": 1337,
+				"temperature":     19.9,
+				"pieces":          96878,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"welding",
+			map[string]string{
+				"source":   "machine C",
+				"location": "factory X",
+				"status":   "failure",
+			},
+			map[string]interface{}{
+				"operating_hours": 1009,
+				"temperature":     67.3,
+				"message":         "temperature alert",
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"welding",
+			map[string]string{
+				"source":   "machine D",
+				"location": "factory Y",
+				"status":   "OK",
+			},
+			map[string]interface{}{
+				"operating_hours": 825,
+				"temperature":     31.2,
+			},
+			time.Unix(0, 0),
+		),
 	}
 	actual := plugin.Apply(testmetrics...)
 	testutil.RequireMetricsEqual(t, expected, actual)
@@ -355,9 +458,9 @@ func TestTagDoesNotExist(t *testing.T) {
 	plugin := &Filter{
 		Rules: []rule{
 			{
-				Tags: map[string]string{
-					"operator": "peter",
-					"status":   "OK",
+				Tags: map[string][]string{
+					"operator": {"peter"},
+					"status":   {"OK"},
 				},
 				Action: "pass",
 			},
@@ -450,6 +553,52 @@ func TestFieldDrop(t *testing.T) {
 			map[string]interface{}{
 				"operating_hours": 825,
 				"temperature":     31.2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	actual := plugin.Apply(testmetrics...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestFieldGlob(t *testing.T) {
+	plugin := &Filter{
+		Rules: []rule{
+			{
+				Fields: []string{"{message,piece*}"},
+				Action: "pass",
+			},
+		},
+		DefaultAction: "drop",
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"foundry",
+			map[string]string{
+				"source":   "machine B",
+				"location": "factory X",
+				"status":   "OK",
+			},
+			map[string]interface{}{
+				"operating_hours": 1337,
+				"temperature":     19.9,
+				"pieces":          96878,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"welding",
+			map[string]string{
+				"source":   "machine C",
+				"location": "factory X",
+				"status":   "failure",
+			},
+			map[string]interface{}{
+				"operating_hours": 1009,
+				"temperature":     67.3,
+				"message":         "temperature alert",
 			},
 			time.Unix(0, 0),
 		),

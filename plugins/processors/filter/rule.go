@@ -8,13 +8,14 @@ import (
 )
 
 type rule struct {
-	Name   []string          `toml:"name"`
-	Tags   map[string]string `toml:"tags"`
-	Fields []string          `toml:"fields"`
-	Action string            `toml:"action"`
+	Name   []string            `toml:"name"`
+	Tags   map[string][]string `toml:"tags"`
+	Fields []string            `toml:"fields"`
+	Action string              `toml:"action"`
 
 	nameFilter  filter.Filter
 	fieldFilter filter.Filter
+	tagFilters  map[string]filter.Filter
 	pass        bool
 }
 
@@ -41,6 +42,14 @@ func (r *rule) init() error {
 		return fmt.Errorf("creating fields filter failed: %w", err)
 	}
 
+	r.tagFilters = make(map[string]filter.Filter, len(r.Tags))
+	for k, values := range r.Tags {
+		r.tagFilters[k], err = filter.Compile(values)
+		if err != nil {
+			return fmt.Errorf("creating tag filter for tag %q failed: %w", k, err)
+		}
+	}
+
 	return nil
 }
 
@@ -54,8 +63,8 @@ func (r *rule) apply(m telegraf.Metric) (pass, applies bool) {
 
 	// Check the tags if given
 	tags := m.Tags()
-	for k, v := range r.Tags {
-		if value, found := tags[k]; !found || value != v {
+	for k, f := range r.tagFilters {
+		if value, found := tags[k]; !found || !f.Match(value) {
 			return true, false
 		}
 	}

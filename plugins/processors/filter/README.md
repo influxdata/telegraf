@@ -34,8 +34,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
         ## List of metric names to match including glob expressions
         # name = []
 
-        ## List of tag key/value pairs to match (no glob expressions)
-        ## ALL given tags must exist for the metric to match the rule.
+        ## List of tag key/values pairs to match including glob expressions
+        ## ALL given tags keys must exist and at least one value must match
+        ## for the metric to match the rule.
         # tags = {}
 
         ## List of field keys to match including glob expressions
@@ -67,10 +68,7 @@ but only want to keep the ones indicating a `status` of `failure` or `warning`:
   default = "drop"
 
   [[processors.filter.rule]]
-    tags = {"status" = "warning"}
-    action = "pass"
-  [[processors.filter.rule]]
-    tags = {"status" = "failure"}
+    tags = {"status" = ["warning", "failure"]}
     action = "pass"
 ```
 
