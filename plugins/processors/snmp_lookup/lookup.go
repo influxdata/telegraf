@@ -22,6 +22,15 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
+// We interact through an interface so we can mock it out in tests.
+type snmpConnection interface {
+	Host() string
+	Walk(string, gosnmp.WalkFunc) error
+	Get(oids []string) (*gosnmp.SnmpPacket, error)
+	Reconnect() error
+}
+
 type getConnectionFunc func(metric telegraf.Metric) (snmpConnection, error)
 type signalMap map[string]chan struct{}
 type tagMapRows map[string]map[string]string
@@ -137,41 +146,20 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 		return []telegraf.Metric{metric}
 	}
 
-	// Check cache
-	l.lock.Lock()
-	tagMap, inCache := l.cache.Peek(agent)
-	_, indexExists := tagMap.rows[index]
+	gs, err := l.getConnection(metric)
+	if err != nil {
+		l.Log.Errorf("Could not prepare connection: %v", err)
+		return []telegraf.Metric{metric}
+	}
 
-	// Cache miss
-	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
-		if done, busy := l.sigs[agent]; busy {
-			l.lock.Unlock()
-			<-done
-		} else {
-			l.sigs[agent] = make(chan struct{})
-			l.lock.Unlock()
-
-			gs, err := l.getConnection(metric)
-			if err != nil {
-				l.Log.Errorf("Could not connect to %q: %v", agent, err)
-				l.signalAgentReady(agent)
-				return []telegraf.Metric{metric}
-			}
-
-			if err = l.loadTagMap(gs, agent); err != nil {
-				l.Log.Errorf("Could not load table from %q: %v", agent, err)
-				l.signalAgentReady(agent)
-				return []telegraf.Metric{metric}
-			}
-
-			l.signalAgentReady(agent)
-		}
-	} else {
-		l.lock.Unlock()
+	// Prepare cache
+	if err := l.prepareCache(gs, index); err != nil {
+		l.Log.Warnf("Could not prepare cache for %q: %v", agent, err)
+		return []telegraf.Metric{metric}
 	}
 
 	// Load from cache
-	tagMap, inCache = l.cache.Get(agent)
+	tagMap, inCache := l.cache.Get(agent)
 	tags, indexExists := tagMap.rows[index]
 	if inCache && indexExists {
 		for key, value := range tags {
@@ -184,20 +172,49 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{metric}
 }
 
+// prepareCache prepares the cache if needed (index does not exist yet, or agent not yet cached)
+func (l *Lookup) prepareCache(gs snmpConnection, index string) error {
+	agent := gs.Host()
+
+	// Check cache
+	l.lock.Lock()
+	l.Log.Debugf("Checking cache %5q %q", agent, index)
+	tagMap, inCache := l.cache.Peek(agent)
+	_, indexExists := tagMap.rows[index]
+
+	// Cache miss
+	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
+		if done, busy := l.sigs[agent]; busy {
+			l.lock.Unlock()
+			<-done
+		} else {
+			l.sigs[agent] = make(chan struct{})
+			l.lock.Unlock()
+
+			if err := gs.Reconnect(); err != nil {
+				l.signalAgentReady(agent)
+				return fmt.Errorf("could not connect: %w", err)
+			}
+
+			if err := l.loadTagMap(gs); err != nil {
+				l.signalAgentReady(agent)
+				return fmt.Errorf("could not load table: %w", err)
+			}
+
+			l.signalAgentReady(agent)
+		}
+	} else {
+		l.lock.Unlock()
+	}
+
+	return nil
+}
+
 func (l *Lookup) signalAgentReady(agent string) {
 	l.lock.Lock()
 	close(l.sigs[agent])
 	delete(l.sigs, agent)
 	l.lock.Unlock()
-}
-
-// snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
-// We interact through an interface so we can mock it out in tests.
-type snmpConnection interface {
-	Host() string
-	Walk(string, gosnmp.WalkFunc) error
-	Get(oids []string) (*gosnmp.SnmpPacket, error)
-	Reconnect() error
 }
 
 func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, error) {
@@ -266,7 +283,8 @@ func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, er
 	return gs, nil
 }
 
-func (l *Lookup) loadTagMap(gs snmpConnection, agent string) error {
+func (l *Lookup) loadTagMap(gs snmpConnection) error {
+	agent := gs.Host()
 	l.Log.Debugf("Building lookup table for %q", agent)
 	table, err := l.table.Build(gs, true, l.translator)
 	if err != nil {

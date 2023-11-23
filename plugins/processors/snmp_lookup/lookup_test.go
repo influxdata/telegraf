@@ -22,7 +22,7 @@ type testSNMPConnection struct {
 }
 
 func (tsc *testSNMPConnection) Host() string {
-	return "test"
+	return "127.0.0.1"
 }
 
 func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
@@ -287,9 +287,9 @@ func TestLoadTagMap(t *testing.T) {
 	require.NoError(t, p.Start(acc))
 	defer p.Stop()
 
-	require.NoError(t, p.loadTagMap(tsc, "test"))
+	require.NoError(t, p.loadTagMap(tsc))
 
-	tagMap, ok := p.cache.Get("test")
+	tagMap, ok := p.cache.Get("127.0.0.1")
 	require.True(t, ok)
 	require.Equal(t, tagMapRows{
 		"0": {"ifName": "eth0"},
