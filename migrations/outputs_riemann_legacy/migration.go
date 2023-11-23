@@ -63,6 +63,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 }
 
 func (j *riemann) fillCommon(o common.OutputOptions) {
+	o.Migrate()
+
 	j.Alias = o.Alias
 
 	if len(o.NamePass) > 0 {
@@ -71,14 +73,10 @@ func (j *riemann) fillCommon(o common.OutputOptions) {
 	if len(o.NameDrop) > 0 {
 		j.NameDrop = append(j.NameDrop, o.NameDrop...)
 	}
-	if len(o.FieldInclude) > 0 || len(o.FieldPass) > 0 || len(o.FieldPassOld) > 0 {
-		j.FieldInclude = append(j.FieldInclude, o.FieldPassOld...)
-		j.FieldInclude = append(j.FieldInclude, o.FieldPass...)
+	if len(o.FieldInclude) > 0 {
 		j.FieldInclude = append(j.FieldInclude, o.FieldInclude...)
 	}
-	if len(o.FieldExclude) > 0 || len(o.FieldDrop) > 0 || len(o.FieldDropOld) > 0 {
-		j.FieldExclude = append(j.FieldExclude, o.FieldDropOld...)
-		j.FieldExclude = append(j.FieldExclude, o.FieldDrop...)
+	if len(o.FieldExclude) > 0 {
 		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {

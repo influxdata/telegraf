@@ -19,3 +19,17 @@ type OutputOptions struct {
 	TagInclude     []string            `toml:"taginclude,omitempty"`
 	MetricPass     string              `toml:"metricpass,omitempty"`
 }
+
+func (oo *OutputOptions) Migrate() {
+	oo.FieldInclude = append(oo.FieldInclude, oo.FieldPassOld...)
+	oo.FieldInclude = append(oo.FieldInclude, oo.FieldPass...)
+
+	oo.FieldPassOld = nil
+	oo.FieldPass = nil
+
+	oo.FieldExclude = append(oo.FieldExclude, oo.FieldDropOld...)
+	oo.FieldExclude = append(oo.FieldExclude, oo.FieldDrop...)
+
+	oo.FieldDropOld = nil
+	oo.FieldDrop = nil
+}

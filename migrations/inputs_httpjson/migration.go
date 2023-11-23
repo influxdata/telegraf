@@ -40,6 +40,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Fill common options
 	plugin := make(map[string]interface{})
+	old.InputOptions.Migrate()
 	general, err := toml.Marshal(old.InputOptions)
 	if err != nil {
 		return nil, "", fmt.Errorf("marshalling general options failed: %w", err)

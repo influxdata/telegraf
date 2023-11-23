@@ -27,3 +27,17 @@ type InputOptions struct {
 	TagInclude     []string            `toml:"taginclude,omitempty"`
 	MetricPass     string              `toml:"metricpass,omitempty"`
 }
+
+func (io *InputOptions) Migrate() {
+	io.FieldInclude = append(io.FieldInclude, io.FieldPassOld...)
+	io.FieldInclude = append(io.FieldInclude, io.FieldPass...)
+
+	io.FieldPassOld = nil
+	io.FieldPass = nil
+
+	io.FieldExclude = append(io.FieldExclude, io.FieldDropOld...)
+	io.FieldExclude = append(io.FieldExclude, io.FieldDrop...)
+
+	io.FieldDropOld = nil
+	io.FieldDrop = nil
+}
