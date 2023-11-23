@@ -161,7 +161,7 @@ func (f *Filter) Select(metric telegraf.Metric) (bool, error) {
 // Modify removes any tags and fields from the metric according to the
 // fieldinclude/fieldexclude and taginclude/tagexclude filters.
 func (f *Filter) Modify(metric telegraf.Metric) {
-	if !f.isActive {
+	if !f.modifyActive {
 		return
 	}
 
@@ -212,7 +212,7 @@ func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
 func (f *Filter) filterFields(metric telegraf.Metric) {
 	filterKeys := []string{}
 	for _, field := range metric.FieldList() {
-		if !f.shouldFieldPass(field.Key) {
+		if !ShouldPassFilters(f.fieldPassFilter, f.fieldDropFilter, field.Key) {
 			filterKeys = append(filterKeys, field.Key)
 		}
 	}
