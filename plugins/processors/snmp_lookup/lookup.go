@@ -178,7 +178,6 @@ func (l *Lookup) prepareCache(gs snmpConnection, index string) error {
 
 	// Check cache
 	l.lock.Lock()
-	l.Log.Debugf("Checking cache %5q %q", agent, index)
 	tagMap, inCache := l.cache.Peek(agent)
 	_, indexExists := tagMap.rows[index]
 
