@@ -134,8 +134,7 @@ func (l *Lookup) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 }
 
 func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
-	agent, ok := metric.GetTag(l.AgentTag)
-	if !ok {
+	if _, ok := metric.GetTag(l.AgentTag); !ok {
 		l.Log.Warn("Agent tag missing")
 		return []telegraf.Metric{metric}
 	}
@@ -154,19 +153,19 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 
 	// Prepare cache
 	if err := l.prepareCache(gs, index); err != nil {
-		l.Log.Warnf("Could not prepare cache for %q: %v", agent, err)
+		l.Log.Warnf("Could not prepare cache for %q: %v", gs.Host(), err)
 		return []telegraf.Metric{metric}
 	}
 
 	// Load from cache
-	tagMap, inCache := l.cache.Get(agent)
+	tagMap, inCache := l.cache.Get(gs.Host())
 	tags, indexExists := tagMap.rows[index]
 	if inCache && indexExists {
 		for key, value := range tags {
 			metric.AddTag(key, value)
 		}
 	} else {
-		l.Log.Warnf("Could not find index %q on agent %q", index, agent)
+		l.Log.Warnf("Could not find index %q on agent %q", index, gs.Host())
 	}
 
 	return []telegraf.Metric{metric}
