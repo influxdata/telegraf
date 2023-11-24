@@ -89,7 +89,7 @@ credential system. If you are planning to use the TPM2 chip of your system
 for protecting the credentials, you should first make sure that it is
 available using
 
-```shell
+```text
 $ sudo systemd-creds has-tpm2
 partial
 -firmware
@@ -104,7 +104,7 @@ See the [systemd-creds man-page][systemd-creds] for details.
 
 Now setup the credentials by creating the root key.
 
-```shell
+```text
 $ sudo systemd-creds setup
 Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
 4096 byte credentials host key set up.
@@ -117,7 +117,7 @@ disk which is not recommended. With this, we are all set to create credentials.
 
 After setting up the encryption key we can create a new credential using
 
-```shell
+```text
 $ echo -n "john-doe-jr" | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_user
 Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
 ```
@@ -134,7 +134,7 @@ credential/secret's name rule.
 We can now add more secrets. To avoid potentially leaking the plain-text
 credentials through command-history or showing it on the screen we use
 
-```shell
+```text
 $ systemd-ask-password -n | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_password
 Password: (press TAB for no echo)
 systemd-ask-password -n | systemd-creds encrypt - /etc/telegraf/credentials/http_password
@@ -147,9 +147,8 @@ to interactively enter the password.
 To actually provide credentials to the Telegraf service, you need to list them
 in the service file. You can use
 
-```shell
+```text
 $ sudo systemctl edit telegraf
-...
 ```
 
 to overwrite parts of the service file. On some systems you need to create the
@@ -237,7 +236,7 @@ is a mismatch between the name stored in the credential (given during
 In case you are having trouble referencing credentials in Telegraf, you should
 check what is available via
 
-```shell
+```text
 $ CREDENTIALS_DIRECTORY=/etc/telegraf/credentials sudo systemd-creds list
 NAME          SECURE   SIZE PATH
 -------------------------------------------------------------------
@@ -254,7 +253,7 @@ is the key you need to reference the secret.
 
 To get the actual value of a credential use
 
-```shell
+```text
 $ sudo systemd-creds decrypt /etc/telegraf/credentials/http_password -
 whooohabooo
 ```
