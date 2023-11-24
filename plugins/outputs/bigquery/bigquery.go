@@ -135,12 +135,11 @@ func (s *BigQuery) Write(metrics []telegraf.Metric) error {
 }
 
 func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
-
-	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Inserter()
-
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
+
+	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Inserter()
 
 	compactValues := make([]*bigquery.ValuesSaver, len(metrics))
 	for i, m := range metrics {
@@ -176,18 +175,17 @@ func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
 	}
 }
 
-func (b *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
-
-	b.serializer.Transformation = "tags"
-	tags, err := b.serializer.Serialize(m)
+func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
+	s.serializer.Transformation = "tags"
+	tags, err := s.serializer.Serialize(m)
 	if err != nil {
-		b.Log.Warnf("serializing tags: %v", err)
+		s.Log.Warnf("serializing tags: %v", err)
 	}
 
-	b.serializer.Transformation = "fields"
-	fields, err := b.serializer.Serialize(m)
+	s.serializer.Transformation = "fields"
+	fields, err := s.serializer.Serialize(m)
 	if err != nil {
-		b.Log.Warnf("serializing fields: %v", err)
+		s.Log.Warnf("serializing fields: %v", err)
 	}
 
 	return &bigquery.ValuesSaver{

@@ -188,6 +188,8 @@ func TestWriteCompact(t *testing.T) {
 		"tags":      "{\"tag1\":\"value1\"}\n",
 		"fields":    "{\"value\":1}\n",
 	}, row)
+
+	require.NoError(t, b.Close())
 }
 
 func (b *BigQuery) setUpTestClient(endpointURL string) error {
@@ -221,16 +223,19 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 			require.NoError(t, err)
 		case "/projects/test-project/datasets/test-dataset/tables/test-metrics":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("{}"))
+			_, err := w.Write([]byte("{}"))
+			require.NoError(t, err)
 		case "/projects/test-project/datasets/test-dataset/tables/test-metrics/insertAll":
 			decoder := json.NewDecoder(r.Body)
 			require.NoError(t, decoder.Decode(&receivedBody))
 
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(successfulResponse))
+			_, err := w.Write([]byte(successfulResponse))
+			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(r.URL.String()))
+			_, err := w.Write([]byte(r.URL.String()))
+			require.NoError(t, err)
 		}
 	})
 
