@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
 //go:embed sample.conf
@@ -32,12 +33,15 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	Timeout         config.Duration `toml:"timeout"`
-	ReplaceHyphenTo string          `toml:"replace_hyphen_to"`
+	Timeout          config.Duration `toml:"timeout"`
+	ReplaceHyphenTo  string          `toml:"replace_hyphen_to"`
+	CompactTable     bool            `toml:"compact_table"`
+	CompactTableName string          `toml:"compact_table_name"`
 
 	Log telegraf.Logger `toml:"-"`
 
-	client *bigquery.Client
+	client     *bigquery.Client
+	serializer json.Serializer
 
 	warnedOnHyphens map[string]bool
 }
@@ -55,16 +59,31 @@ func (s *BigQuery) Init() error {
 		return errors.New(`"dataset" is required`)
 	}
 
+	if s.CompactTable && s.CompactTableName == "" {
+		return errors.New(`"compact_table_name" is required`)
+	}
+
 	s.warnedOnHyphens = make(map[string]bool)
 
-	return nil
+	return s.serializer.Init()
 }
 
 func (s *BigQuery) Connect() error {
 	if s.client == nil {
-		return s.setUpDefaultClient()
+		if err := s.setUpDefaultClient(); err != nil {
+			return err
+		}
 	}
 
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
+	defer cancel()
+
+	// Check if the compact table exists
+	_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Metadata(ctx)
+	if s.CompactTable && err != nil {
+		return fmt.Errorf("compact table: %w", err)
+	}
 	return nil
 }
 
@@ -81,7 +100,7 @@ func (s *BigQuery) setUpDefaultClient() error {
 		creds, err := google.FindDefaultCredentials(ctx)
 		if err != nil {
 			return fmt.Errorf(
-				"unable to find Google Cloud Platform Application Default Credentials: %v. "+
+				"unable to find Google Cloud Platform Application Default Credentials: %w. "+
 					"Either set ADC or provide CredentialsFile config", err)
 		}
 		credentialsOption = option.WithCredentials(creds)
@@ -94,6 +113,10 @@ func (s *BigQuery) setUpDefaultClient() error {
 
 // Write the metrics to Google Cloud BigQuery.
 func (s *BigQuery) Write(metrics []telegraf.Metric) error {
+	if s.CompactTable {
+		return s.writeCompact(metrics)
+	}
+
 	groupedMetrics := s.groupByMetricName(metrics)
 
 	var wg sync.WaitGroup
@@ -109,6 +132,21 @@ func (s *BigQuery) Write(metrics []telegraf.Metric) error {
 	wg.Wait()
 
 	return nil
+}
+
+func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
+
+	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Inserter()
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
+	defer cancel()
+
+	compactValues := make([]*bigquery.ValuesSaver, len(metrics))
+	for i, m := range metrics {
+		compactValues[i] = s.newCompactValuesSaver(m)
+	}
+	return inserter.Put(ctx, compactValues)
 }
 
 func (s *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSaver {
@@ -138,10 +176,54 @@ func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
 	}
 }
 
+func (b *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
+
+	b.serializer.Transformation = "tags"
+	tags, err := b.serializer.Serialize(m)
+	if err != nil {
+		b.Log.Warnf("serializing tags: %v", err)
+	}
+
+	b.serializer.Transformation = "fields"
+	fields, err := b.serializer.Serialize(m)
+	if err != nil {
+		b.Log.Warnf("serializing fields: %v", err)
+	}
+
+	return &bigquery.ValuesSaver{
+		Schema: bigquery.Schema{
+			timeStampFieldSchema(),
+			nameFieldSchema(),
+			newJSONFieldSchema("tags"),
+			newJSONFieldSchema("fields"),
+		},
+		Row: []bigquery.Value{
+			m.Time(),
+			m.Name(),
+			string(tags),
+			string(fields),
+		},
+	}
+}
+
 func timeStampFieldSchema() *bigquery.FieldSchema {
 	return &bigquery.FieldSchema{
 		Name: timeStampFieldName,
 		Type: bigquery.TimestampFieldType,
+	}
+}
+
+func nameFieldSchema() *bigquery.FieldSchema {
+	return &bigquery.FieldSchema{
+		Name: "name",
+		Type: bigquery.StringFieldType,
+	}
+}
+
+func newJSONFieldSchema(name string) *bigquery.FieldSchema {
+	return &bigquery.FieldSchema{
+		Name: name,
+		Type: bigquery.JSONFieldType,
 	}
 }
 

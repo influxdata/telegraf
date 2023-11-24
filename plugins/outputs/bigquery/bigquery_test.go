@@ -38,6 +38,14 @@ func TestInit(t *testing.T) {
 			plugin:      &BigQuery{},
 		},
 		{
+			name: "compact table is not set",
+			plugin: &BigQuery{
+				Dataset:      "test-dataset",
+				CompactTable: true,
+			},
+			errorString: `"compact_table_name" is required`,
+		},
+		{
 			name: "valid config",
 			plugin: &BigQuery{
 				Dataset: "test-dataset",
@@ -148,6 +156,40 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, mockMetrics[0].Fields()["value"], row.Value)
 }
 
+func TestWriteCompact(t *testing.T) {
+	srv := localBigQueryServer(t)
+	defer srv.Close()
+
+	b := &BigQuery{
+		Project:          "test-project",
+		Dataset:          "test-dataset",
+		Timeout:          defaultTimeout,
+		CompactTable:     true,
+		CompactTableName: "test-metrics",
+	}
+
+	mockMetrics := testutil.MockMetrics()
+
+	require.NoError(t, b.Init())
+	require.NoError(t, b.setUpTestClient(srv.URL))
+	require.NoError(t, b.Connect())
+
+	require.NoError(t, b.Write(mockMetrics))
+
+	var rows []map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(receivedBody["rows"], &rows))
+
+	var row interface{}
+	require.NoError(t, json.Unmarshal(rows[0]["json"], &row))
+
+	require.Equal(t, map[string]interface{}{
+		"timestamp": "2009-11-10T23:00:00Z",
+		"name":      "test1",
+		"tags":      "{\"tag1\":\"value1\"}\n",
+		"fields":    "{\"value\":1}\n",
+	}, row)
+}
+
 func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	noAuth := option.WithoutAuthentication()
 	endpoint := option.WithEndpoint(endpointURL)
@@ -177,8 +219,18 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(successfulResponse))
 			require.NoError(t, err)
+		case "/projects/test-project/datasets/test-dataset/tables/test-metrics":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("{}"))
+		case "/projects/test-project/datasets/test-dataset/tables/test-metrics/insertAll":
+			decoder := json.NewDecoder(r.Body)
+			require.NoError(t, decoder.Decode(&receivedBody))
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(successfulResponse))
 		default:
 			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(r.URL.String()))
 		}
 	})
 

@@ -36,6 +36,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Character to replace hyphens on Metric name
   # replace_hyphen_to = "_"
+
+  ## Write all metrics in a single compact table
+  # compact_table = false
+  # compact_table_name = ""
 ```
 
 Leaving `project` empty indicates the plugin will try to retrieve the project
