@@ -157,7 +157,7 @@ resulting override can be found in
 `/etc/systemd/system/telegraf.service.d/override.conf`. The following is an
 example for the content of the file
 
-```text
+```ini
 [Service]
 LoadCredentialEncrypted=http_user:/etc/telegraf/credentials/http_user
 LoadCredentialEncrypted=http_password:/etc/telegraf/credentials/http_password
