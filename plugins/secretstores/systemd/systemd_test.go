@@ -9,6 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func getSystemdVersionMin() (int, error) {
+	return systemdMinimumVersion, nil
+}
+
 func TestSampleConfig(t *testing.T) {
 	plugin := &Systemd{}
 	require.NotEmpty(t, plugin.SampleConfig())
@@ -22,14 +26,14 @@ func TestMinimumVersion(t *testing.T) {
 }
 
 func TestEmptyPath(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 
 	plugin := &Systemd{Log: testutil.Logger{}}
 	require.ErrorContains(t, plugin.Init(), "'path' required without CREDENTIALS_DIRECTORY")
 }
 
 func TestEmptyCredentialsDirectoryWarning(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 
 	logger := &testutil.CaptureLogger{}
 	plugin := &Systemd{
@@ -43,7 +47,7 @@ func TestEmptyCredentialsDirectoryWarning(t *testing.T) {
 }
 
 func TestPathNonExistentExplicit(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	plugin := &Systemd{
@@ -54,7 +58,7 @@ func TestPathNonExistentExplicit(t *testing.T) {
 }
 
 func TestPathNonExistentImplicit(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "non/existent/path")
 
 	plugin := &Systemd{
@@ -64,7 +68,7 @@ func TestPathNonExistentImplicit(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	plugin := &Systemd{Log: testutil.Logger{}}
@@ -72,7 +76,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestSetNotAvailable(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	plugin := &Systemd{Log: testutil.Logger{}}
@@ -83,7 +87,7 @@ func TestSetNotAvailable(t *testing.T) {
 }
 
 func TestListGet(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	// secret files name and their content to compare under the `testdata` directory
@@ -118,7 +122,7 @@ func TestListGet(t *testing.T) {
 }
 
 func TestResolver(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	// Secret Value Name to Resolve
@@ -141,7 +145,7 @@ func TestResolver(t *testing.T) {
 }
 
 func TestResolverInvalid(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	// Initialize the plugin
@@ -157,7 +161,7 @@ func TestResolverInvalid(t *testing.T) {
 }
 
 func TestGetNonExistant(t *testing.T) {
-	getSystemdVersion = func() (int, error) { return systemdMinimumVersion, nil }
+	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 
 	// Initialize the plugin
