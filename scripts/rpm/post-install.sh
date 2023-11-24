@@ -15,11 +15,6 @@ if [[ ! -d /etc/telegraf/telegraf.d ]]; then
     mkdir -p /etc/telegraf/telegraf.d
 fi
 
-# Add credentials directory
-if [[ ! -d /etc/telegraf/credentials ]]; then
-    mkdir -p /etc/telegraf/credentials
-fi
-
 # If 'telegraf.conf' is not present use package's sample (fresh install)
 if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.sample ]]; then
    cp /etc/telegraf/telegraf.conf.sample /etc/telegraf/telegraf.conf

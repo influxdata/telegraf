@@ -27,8 +27,9 @@ var getSystemdVersion = getSystemdMajorVersion
 var sampleConfig string
 
 type Systemd struct {
-	Path string          `toml:"path"`
-	Log  telegraf.Logger `toml:"-"`
+	Path   string          `toml:"path"`
+	Prefix string          `toml:"prefix"`
+	Log    telegraf.Logger `toml:"-"`
 }
 
 func (*Systemd) SampleConfig() string {
@@ -73,7 +74,7 @@ func (s *Systemd) Init() error {
 }
 
 func (s *Systemd) Get(key string) ([]byte, error) {
-	secretFile, err := filepath.Abs(filepath.Join(s.Path, key))
+	secretFile, err := filepath.Abs(filepath.Join(s.Path, s.Prefix+key))
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +95,8 @@ func (s *Systemd) List() ([]string, error) {
 	}
 	secrets := make([]string, 0, len(secretFiles))
 	for _, entry := range secretFiles {
-		secrets = append(secrets, entry.Name())
+		key := strings.TrimPrefix(entry.Name(), s.Prefix)
+		secrets = append(secrets, key)
 	}
 	return secrets, nil
 }
@@ -131,6 +133,6 @@ func getSystemdMajorVersion() (int, error) {
 // Register the secret-store on load.
 func init() {
 	secretstores.Add("systemd", func(_ string) telegraf.SecretStore {
-		return &Systemd{}
+		return &Systemd{Prefix: "telegraf."}
 	})
 }

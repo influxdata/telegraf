@@ -1,3 +1,4 @@
+
 # Systemd Secret-Store Plugin
 
 The `systemd` plugin allows utilizing credentials and secrets provided by
@@ -17,10 +18,12 @@ setup systemd credentials and how to add credentials
 
 This plugin requires **systemd version 250+** with correctly set-up credentials
 via [systemd-creds][] (see [setup section](#credential-management)).
-Furthermore, provisioning of the created credentials must by enabled
-via `LoadCredentialEncrypted` in the service file. This is the case for the
-Telegraf service provided in this repository. It expects encrypted credentials
-to be stored in `/etc/telegraf/credentials`.
+However, to use `ImportCredential`, as done in the default service file, you
+need **systemd version 254+** otherwise you need to specify the credentials
+using `LoadCredentialEncrypted` in a service-override.
+
+In the default setup, Telegraf expects credential files to be prefixed with
+`telegraf.` and without a custom name setting (i.e. no `--name`).
 
 It is important to note that when TPM2 sealing is available on the host,
 credentials can only be created and used on the **same machine** as decrypting
@@ -56,6 +59,10 @@ store usage.
   ## This should not be required as systemd indicates this directory
   ## via the CREDENTIALS_DIRECTORY environment variable.
   # path = "${CREDENTIALS_DIRECTORY}"
+
+  ## Prefix to remove from systemd credential-filenames to derive secret names
+  # prefix = "telegraf."
+
 ```
 
 Each Secret provided by systemd will be available as file under
@@ -71,7 +78,7 @@ Most steps here are condensed from the [systemd-creds man-page][systemd-creds]
 and are using this command. Please also check that man-page as the options
 or verbs used here might be outdated for the systemd version you are using.
 
-**Please note**: We are using `/etc/telegraf/credentials` as our storage
+**Please note**: We are using `/etc/credstore.encrypted` as our storage
 location for encrypted credentials throughout the examples below and assuming
 a Telegraf install via package manager. If you are using some other means to
 install Telegraf you might need to create that directory.
@@ -89,8 +96,13 @@ credential system. If you are planning to use the TPM2 chip of your system
 for protecting the credentials, you should first make sure that it is
 available using
 
+```shell
+sudo systemd-creds has-tpm2
+```
+
+The output should look similar to
+
 ```text
-$ sudo systemd-creds has-tpm2
 partial
 -firmware
 +driver
@@ -98,79 +110,41 @@ partial
 +subsystem
 ```
 
-The output should look similar to the above. If TPM2 is available on your
-system, credentials can also be tied to the device by utilizing TPM2 sealing.
-See the [systemd-creds man-page][systemd-creds] for details.
+If TPM2 is available on your system, credentials can also be tied to the device
+by utilizing TPM2 sealing. See the [systemd-creds man-page][systemd-creds] for
+details.
 
 Now setup the credentials by creating the root key.
 
-```text
-$ sudo systemd-creds setup
-Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
-4096 byte credentials host key set up.
+```shell
+sudo systemd-creds setup
 ```
 
-The warning only appears if you are storing the generated key on an unencrypted
+A warning may appears if you are storing the generated key on an unencrypted
 disk which is not recommended. With this, we are all set to create credentials.
 
 ### Creating credentials
 
 After setting up the encryption key we can create a new credential using
 
-```text
-$ echo -n "john-doe-jr" | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_user
-Credential secret file '/var/lib/systemd/credential.secret' is not located on encrypted media, using anyway.
+```shell
+echo -n "john-doe-jr" | sudo systemd-creds encrypt - /etc/credstore.encrypted/telegraf.http_user
 ```
 
-You should now have a file named `http_user` containing the encrypted username.
-Please note that systemd credentials are named such that the name `http_user`
-is also stored in the file. The secret-store later provides the secret using
-this name as the secret's key.
-
-You can explicitly name credentials using the `--name` parameter, however,
-in the interest of simplicity, you should follow the filename equals the
-credential/secret's name rule.
+You should now have a file named `telegraf.http_user` containing the encrypted
+username. The secret-store later provides the secret using this filename as the
+secret's key.
+**Please note:**: By default Telegraf strips the `telegraf.` prefix. If you use
+a different prefix or no prefix at all you need to adapt the `prefix` setting!
 
 We can now add more secrets. To avoid potentially leaking the plain-text
 credentials through command-history or showing it on the screen we use
 
-```text
-$ systemd-ask-password -n | sudo systemd-creds encrypt - /etc/telegraf/credentials/http_password
-Password: (press TAB for no echo)
-systemd-ask-password -n | systemd-creds encrypt - /etc/telegraf/credentials/http_password
+```shell
+systemd-ask-password -n | sudo systemd-creds encrypt - /etc/credstore.encrypted/telegraf.http_password
 ```
 
 to interactively enter the password.
-
-### Enabling credentials in the service
-
-To actually provide credentials to the Telegraf service, you need to list them
-in the service file. You can use
-
-```text
-$ sudo systemctl edit telegraf
-```
-
-to overwrite parts of the service file. On some systems you need to create the
-overriding directory `/etc/systemd/system/telegraf.service.d` first. The
-resulting override can be found in
-`/etc/systemd/system/telegraf.service.d/override.conf`. The following is an
-example for the content of the file
-
-```ini
-[Service]
-LoadCredentialEncrypted=http_user:/etc/telegraf/credentials/http_user
-LoadCredentialEncrypted=http_password:/etc/telegraf/credentials/http_password
-```
-
-This will load two credentials, named `http_user` and `http_password` which are
-then accessible by Telegraf with those names. Please note that the names have
-to match the names used during encryption of the credentials.
-
-You can add an arbitrary list of credentials to the service as long as the name
-is unique. For Telegraf installs that weren't done via the package manager, it
-is recommended to set `PrivateMounts=true` in the service alongside the
-`LoadCredentialEncrypted` directives.
 
 ### Using credentials as secrets
 
@@ -226,36 +200,41 @@ to fill sensitive data such as usernames, passwords or tokens.
 ### Troubleshooting
 
 Please always make sure your systemd version matches Telegraf's requirements,
-i.e. you do have version 250 or later.
+i.e. you do have version 254 or later.
 
 When not being able to start the service please check the logs. A common issue
-is a mismatch between the name stored in the credential (given during
-`systemd-creds encrypt`) does not match the one used in the
+is using the `--name` option which does not work with systemd's
+`ImportCredential` setting.
+a mismatch between the name stored in the credential (given during
+`systemd-creds encrypt`) and the one used in the
 `LoadCredentialEncrypted` statement.
 
 In case you are having trouble referencing credentials in Telegraf, you should
 check what is available via
 
-```text
-$ CREDENTIALS_DIRECTORY=/etc/telegraf/credentials sudo systemd-creds list
-NAME          SECURE   SIZE PATH
--------------------------------------------------------------------
-http_password insecure 146B /etc/telegraf/credentials/http_password
-http_user     insecure 142B /etc/telegraf/credentials/http_user
+```shell
+CREDENTIALS_DIRECTORY=/etc/credstore.encrypted sudo systemd-creds list
 ```
 
-Please note that Telegraf's secret management functionality is not helpful here
-as credentials are *only* available to the systemd service, not via the command
-line.
+for the example above you should see
 
-As you can see, the above list also provides the *name* of the credential which
-is the key you need to reference the secret.
+```text
+NAME                   SECURE   SIZE PATH
+-------------------------------------------------------------------
+telegraf.http_password insecure 146B /etc/credstore.encrypted/telegraf.http_password
+telegraf.http_user     insecure 142B /etc/credstore.encrypted/telegraf.http_user
+```
+
+**Please note**: Telegraf's secret management functionality is not helpful here
+as credentials are *only* available to the systemd service, not via commandline.
+
+Remember to remove the `prefix` configured in your secret-store from the `NAME`
+column to get the secrets' `key`.
 
 To get the actual value of a credential use
 
-```text
-$ sudo systemd-creds decrypt /etc/telegraf/credentials/http_password -
-whooohabooo
+```shell
+sudo systemd-creds decrypt /etc/credstore.encrypted/telegraf.http_password -
 ```
 
 Please use the above command(s) with care as they do reveal the secret value
