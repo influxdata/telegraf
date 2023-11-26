@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -304,5 +305,52 @@ func TestParse_DefaultTags(t *testing.T) {
 
 			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
+	}
+}
+
+const benchmarkData = `put benchmark_a 1653643420 4 tags_host=myhost tags_platform=python tags_sdkver=3.11.4
+put benchmark_b 1653643420 5 tags_host=myhost tags_platform=python tags_sdkver=3.11.5
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark_a",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4.0,
+			},
+			time.Unix(1653643420, 0),
+		),
+		metric.New(
+			"benchmark_b",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5.0,
+			},
+			time.Unix(1653643420, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{}
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
 	}
 }

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package benchmark;
+
+message Entry {
+  string source = 1;
+  string tags_sdkver = 2;
+  string tags_platform = 3;
+  double value = 4;
+  uint64 timestamp = 5;
+}
+
+message BenchmarkData {
+  repeated Entry data = 1;
+}

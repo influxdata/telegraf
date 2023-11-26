@@ -301,9 +301,9 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Check the amount parameter if any
-	var extra int
+	var extra, bit int
 	switch dtype {
-	case "X", "S":
+	case "S":
 		// We require an extra parameter
 		x := groups["extra"]
 		if x == "" {
@@ -316,6 +316,21 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 		}
 		if extra < 1 {
 			return nil, nil, fmt.Errorf("invalid extra parameter %d", extra)
+		}
+	case "X":
+		// We require an extra parameter
+		x := groups["extra"]
+		if x == "" {
+			return nil, nil, errors.New("extra parameter required")
+		}
+
+		bit, err = strconv.Atoi(x)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid extra parameter: %w", err)
+		}
+		if bit < 0 || bit > 7 {
+			// Ensure bit address is valid
+			return nil, nil, fmt.Errorf("invalid extra parameter: bit address %d out of range", bit)
 		}
 	default:
 		if groups["extra"] != "" {
@@ -348,6 +363,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	item := &gos7.S7DataItem{
 		Area:     area,
 		WordLen:  wordlen,
+		Bit:      bit,
 		DBNumber: areaidx,
 		Start:    start,
 		Amount:   amount,
@@ -355,7 +371,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Determine the type converter function
-	f := determineConversion(dtype, extra)
+	f := determineConversion(dtype)
 	return item, f, nil
 }
 
