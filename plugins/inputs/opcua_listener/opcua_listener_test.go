@@ -148,6 +148,123 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	}
 }
 
+func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []OPCTags{
+		{"ProductName", "0", "i", "2261", "String"},
+		{"ProductUri", "0", "i", "2262", "String"},
+		{"ManufacturerName", "0", "i", "2263", "String"},
+		{"badnode", "1", "i", "1337", "None"},
+		{"goodnode", "1", "s", "the.answer", "Int32"},
+		{"DateTime", "1", "i", "51037", "DateTime"},
+	}
+	tagsRemaining := make([]string, 0, len(testopctags))
+	for i, tag := range testopctags {
+		if tag.Want != nil {
+			tagsRemaining = append(tagsRemaining, testopctags[i].Name)
+		}
+	}
+
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+				OptionalFields: opcua.OpcUAAdditionalFields{IncludeDataType: true},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	for _, tags := range testopctags {
+		subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, MapOPCTag(tags))
+	}
+	o, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	// give initial setup a couple extra attempts, as on CircleCI this can be
+	// attempted to soon
+	require.Eventually(t, func() bool {
+		return o.SetupOptions() == nil
+	}, 5*time.Second, 10*time.Millisecond)
+
+	err = o.Connect()
+	require.NoError(t, err, "Connection failed")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	res, err := o.StartStreamValues(ctx)
+	require.NoError(t, err)
+
+	for {
+		select {
+		case m := <-res:
+			resTagName := "???"
+			resDataType := "???"
+			resDataTypeExpected := "???"
+			for fieldName, fieldValue := range m.Fields() {
+				switch fieldName {
+				case "DataType":
+					resDataType = fmt.Sprintf("%v", fieldValue)
+				default:
+					for _, tag := range testopctags {
+						if fieldName == tag.Name {
+							resTagName = fieldName
+							resDataTypeExpected = fmt.Sprintf("%v", tag.Want)
+						}
+					}
+				}
+			}
+			require.Equal(t, resDataTypeExpected, resDataType)
+
+			newRemaining := make([]string, 0, len(tagsRemaining))
+			for _, remainingTag := range tagsRemaining {
+				if resTagName != remainingTag {
+					newRemaining = append(newRemaining, remainingTag)
+					break
+				}
+			}
+
+			if len(newRemaining) <= 0 {
+				return
+			}
+
+			tagsRemaining = newRemaining
+
+		case <-ctx.Done():
+			msg := ""
+			for _, tag := range tagsRemaining {
+				msg += tag + ", "
+			}
+
+			t.Errorf("Tags %s are remaining without a received value", msg)
+			return
+		}
+	}
+}
+
 func TestSubscribeClientConfig(t *testing.T) {
 	toml := `
 [[inputs.opcua_listener]]
@@ -185,6 +302,9 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 
 [inputs.opcua_listener.workarounds]
 additional_valid_status_codes = ["0xC0"]
+
+[inputs.opcua_listener.additional_fields]
+include_datatype = true
 `
 
 	c := config.NewConfig()
@@ -247,6 +367,7 @@ additional_valid_status_codes = ["0xC0"]
 		},
 	}, o.SubscribeClientConfig.Groups)
 	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.SubscribeClientConfig.Workarounds)
+	require.Equal(t, opcua.OpcUAAdditionalFields{IncludeDataType: true}, o.SubscribeClientConfig.OptionalFields)
 }
 
 func TestSubscribeClientConfigWithMonitoringParams(t *testing.T) {

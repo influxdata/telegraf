@@ -226,6 +226,12 @@ to use them.
   #       deadband_type = "Absolute"
   #       deadband_value = 0.0
   #
+
+  ## Include additional Fields in each metric
+  # [inputs.opcua.additional_fields]
+    ## OPC-UA DataType
+    # include_datatype = true
+
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
@@ -253,6 +259,12 @@ This node configuration produces a metric like this:
 
 ```text
 opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
+```
+
+With 'DataType' enabled in Additional Metrics, this node configuration produces a metric like this:
+
+```text
+opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
 ## Group Configuration

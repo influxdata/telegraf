@@ -2,6 +2,7 @@ package opcua
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -147,6 +148,76 @@ func TestReadClientIntegration(t *testing.T) {
 
 	for i, v := range client.LastReceivedData {
 		require.Equal(t, testopctags[i].Want, v.Value)
+	}
+}
+
+func TestReadClientIntegrationAdditionalFields(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []OPCTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+		{"badnode", "1", "i", "1337", nil},
+		{"goodnode", "1", "s", "the.answer", int32(42)},
+		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
+	}
+
+	readConfig := ReadClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+				OptionalFields: opcua.OpcUAAdditionalFields{IncludeDataType: true},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+	}
+
+	for _, tags := range testopctags {
+		readConfig.RootNodes = append(readConfig.RootNodes, MapOPCTag(tags))
+	}
+
+	client, err := readConfig.CreateReadClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	err = client.Connect()
+	require.NoError(t, err, "Connect")
+
+	for i, v := range client.LastReceivedData {
+		actualDataType := "???"
+		for _, k := range client.MetricForNode(i).FieldList() {
+			if k.Key == "DataType" {
+				actualDataType = fmt.Sprintf("%v", k.Value)
+			}
+		}
+		require.NotEqual(t, "???", actualDataType)
+
+		// Convert returned OPC-UA DataType to String and select just the DataType
+		expectedDataType := strings.Replace(v.DataType.String(), "TypeID", "", 1)
+
+		require.Equal(t, expectedDataType, actualDataType)
 	}
 }
 
@@ -337,6 +408,7 @@ include_datatype = true
 	}, o.ReadClientConfig.Groups)
 	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.ReadClientConfig.Workarounds)
 	require.Equal(t, ReadClientWorkarounds{UseUnregisteredReads: true}, o.ReadClientConfig.ReadClientWorkarounds)
+	require.Equal(t, opcua.OpcUAAdditionalFields{IncludeDataType: true}, o.ReadClientConfig.OptionalFields)
 	err = o.Init()
 	require.NoError(t, err)
 	require.Len(t, o.client.NodeMetricMapping, 5, "incorrect number of nodes")
