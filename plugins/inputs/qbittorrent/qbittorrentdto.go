@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 )
+
 type Category struct {
 	Name     string `json:"name"`
 	SavePath string `json:"savePath"`

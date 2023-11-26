@@ -7,7 +7,6 @@ import (
 )
 
 func TestMainDataPartialUpdate(t *testing.T) {
-
 	data := MainData{
 		RID: 0,
 		Categories: map[string]Category{
