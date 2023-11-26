@@ -22,7 +22,6 @@ var sampleConfig string
 var globalMainData *MainData
 
 type QBittorrent struct {
-	//todo support URLS
 	URL      string        `toml:"url"`
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`

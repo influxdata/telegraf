@@ -11,14 +11,14 @@ in principle but have not been tested.
 ## Configuration
 
 ```toml @sample.conf
-# Read Qbittorrent status information
+# Read QBittorrent status information
 [[inputs.qbittorrent]]
-  ## Url of qbittorrent server
+  ## Url of QBittorrent server
   # Tls can be:
   # url = "https://127.0.0.1:8080"
   url = "http://127.0.0.1:8080"
 
-  ## Credentials for qbittorrent
+  ## Credentials for QBittorrent
   # username = "admin"
   # password = "admin"
 ```
