@@ -265,6 +265,9 @@ additional_valid_status_codes = ["0xC0"]
 
 [inputs.opcua.request_workarounds]
 use_unregistered_reads = true
+
+[inputs.opcua.additional_fields]
+include_datatype = true
 `
 
 	c := config.NewConfig()
