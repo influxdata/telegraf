@@ -3,9 +3,9 @@ package qbittorrent
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"strconv"
 	"time"
 )
-
 type Category struct {
 	Name     string `json:"name"`
 	SavePath string `json:"savePath"`
@@ -366,7 +366,6 @@ func (t *Torrent) toFieldMap() map[string]interface{} {
 	return map[string]interface{}{
 		"added_on":                    t.AddedOn,
 		"amount_left":                 t.AmountLeft,
-		"auto_tmm":                    t.AutoTMM,
 		"availability":                t.Availability,
 		"completed":                   t.Completed,
 		"completion_on":               t.CompletionOn,
@@ -375,8 +374,6 @@ func (t *Torrent) toFieldMap() map[string]interface{} {
 		"downloaded":                  t.Downloaded,
 		"downloaded_session":          t.DownloadedSession,
 		"eta":                         t.ETA,
-		"fl_piece_prio":               t.FLPiecePrio,
-		"force_start":                 t.ForceStart,
 		"inactive_seeding_time_limit": t.InactiveSeedingTimeLimit,
 		"last_activity":               t.LastActivity,
 		"max_inactive_seeding_time":   t.MaxInactiveSeedingTime,
@@ -393,9 +390,7 @@ func (t *Torrent) toFieldMap() map[string]interface{} {
 		"seeding_time":                t.SeedingTime,
 		"seeding_time_limit":          t.SeedingTimeLimit,
 		"seen_complete":               t.SeenComplete,
-		"seq_download":                t.SeqDownload,
 		"size":                        t.Size,
-		"super_seeding":               t.SuperSeeding,
 		"time_active":                 t.TimeActive,
 		"total_size":                  t.TotalSize,
 		"trackers_count":              t.TrackersCount,
@@ -408,12 +403,17 @@ func (t *Torrent) toFieldMap() map[string]interface{} {
 func (t Torrent) toTagsMap() map[string]string {
 	result := map[string]string{
 		"category":      t.Category,
+		"auto_tmm":      strconv.FormatBool(*t.AutoTMM),
 		"content_path":  t.ContentPath,
 		"download_path": t.DownloadPath,
+		"fl_piece_prio": strconv.FormatBool(*t.FLPiecePrio),
+		"force_start":   strconv.FormatBool(*t.ForceStart),
 		"infohash_v1":   t.InfohashV1,
 		"infohash_v2":   t.InfohashV2,
 		"magnet_uri":    t.MagnetURI,
 		"name":          t.Name,
+		"seq_download":  strconv.FormatBool(*t.SeqDownload),
+		"super_seeding": strconv.FormatBool(*t.SuperSeeding),
 		"save_path":     t.SavePath,
 		"state":         t.State,
 		"tags":          t.Tags,
@@ -494,7 +494,6 @@ func (m *MainData) toMetrics() map[string][]telegraf.Metric {
 	ts := time.Now().UTC()
 	tags := make(map[string]string)
 
-	//todo
 	var serverStateMetrics []telegraf.Metric
 	serverStateMetrics = append(serverStateMetrics, metric.New("server_state", tags, m.ServerState.toFieldMap(), ts, telegraf.Gauge))
 

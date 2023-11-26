@@ -55,7 +55,6 @@ in principle but have not been tested.
 - torrents
   - added_on
   - amount_left
-  - auto_tmm
   - availability
   - completed
   - completion_on
@@ -64,8 +63,6 @@ in principle but have not been tested.
   - downloaded
   - downloaded_session
   - eta
-  - fl_piece_prio
-  - force_start
   - inactive_seeding_time_limit
   - last_activity
   - max_inactive_seeding_time
@@ -82,9 +79,7 @@ in principle but have not been tested.
   - seeding_time
   - seeding_time_limit
   - seen_complete
-  - seq_download
   - size
-  - super_seeding
   - time_active
   - total_size
   - trackers_count
@@ -103,7 +98,7 @@ in principle but have not been tested.
 
 ```text
 server_state,host=host all_time_download=200i,use_subcategories=false,queued_io_jobs=0i,up_info_speed=200i,queueing=true,connection_status="connected",dht_nodes=20i,free_space_on_disk=454373523i,dl_info_speed=100i,read_cache_hits="0",dl_rate_limit=0i,refresh_interval=1500i,global_ratio="0.32",total_queued_size=0i,all_time_upload=2134i,read_cache_overload="0",dl_info_data=343564i,up_info_data=29000i,write_cache_overload="0",use_alt_speed_limits=false,total_buffers_size=2020i,up_rate_limit=0i,total_wasted_session=755410338i,total_peer_connections=32i,average_time_queue=100i 1700109890000000000
-torrents,content_path=/download/file_name,hash=xxxxx,host=host,infohash_v1=xxxxxxxx,magnet_uri=magnet:?xt\=urn:btih:xxxxxxx&dn\=xxxxxxx&tr\=https%3A%2F%2Ft.xxxx.xx%2Fannounce.php%3Fpasskey%xxxx,name=file_name,save_path=/download,state=stalledUP,tags=TAG1\,\ TAG2,tracker=https://xxx.xx/announce.php?passkey\=xxxxx num_complete=31i,seq_download=false,size=34643i,max_inactive_seeding_time=-1i,inactive_seeding_time_limit=-2i,num_seeds=0i,seeding_time_limit=-2i,download_limit=0i,auto_tmm=false,downloaded_session=0i,downloaded=436534i,fl_piece_prio=false,seen_complete=1699773762i,amount_left=0i,up_limit=0i,total_size=32142365i,availability=-1i,max_ratio=-1i,upspeed=0i,time_active=683889i,super_seeding=false,ratio=0.4420612080004777,trackers_count=1i,force_start=false,added_on=1699424219i,eta=8640000i,progress=1,num_leechs=0i,ratio_limit=-2i,num_incomplete=1i,completion_on=5436i,download_speed=0i,uploaded=34534i,uploaded_session=5754i,priority=0i,last_activity=235423i,completed=436543i,max_seeding_time=-1i,seeding_time=465436i 1700109890000000000
+torrents,auto_tmm=false,content_path=/download/xxxxxxxxxxxxxxxx,fl_piece_prio=false,force_start=false,hash=xxxxxxxxxxx,host=SoberHoa-desktop,infohash_v1=xxxxxxxxxx,magnet_uri=magnet:?xt\=urn:btih:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,name=xxxxx,save_path=/download,seq_download=false,state=stalledUP,super_seeding=false,tags=tag1,tracker=https://xxxxxx.xx/announce.php?passkey\=xxxxxx uploaded=385341753i,max_seeding_time=-1i,amount_left=0i,num_leechs=1i,total_size=3694100172i,seen_complete=1700872684i,max_inactive_seeding_time=-1i,download_speed=0i,up_limit=0i,seeding_time=146659i,inactive_seeding_time_limit=-2i,downloaded_session=3698092707i,seeding_time_limit=-2i,priority=0i,progress=1,num_seeds=0i,ratio_limit=-2i,completed=3694100172i,trackers_count=1i,upspeed=0i,download_limit=0i,last_activity=1700844203i,availability=-1i,eta=8640000i,num_incomplete=204i,added_on=1700839030i,uploaded_session=645354i,time_active=43543,ratio=0.10420013329319708,max_ratio=-1i,num_complete=23i,completion_on=345i,downloaded=43534i,size=4546i 1700987990000000000
 tags,host=host count=31i 1700109890000000000
 category,host=host count=10i 1700109890000000000
 ```
