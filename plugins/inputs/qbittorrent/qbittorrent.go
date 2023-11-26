@@ -22,11 +22,19 @@ var sampleConfig string
 var globalMainData *MainData
 
 type QBittorrent struct {
+	//todo support URLS
 	URL      string        `toml:"url"`
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
 	cookie []*http.Cookie
+}
+
+func (q *QBittorrent) Init() error {
+	if q.Username.Empty() && q.Password.Empty() {
+		return fmt.Errorf("username and password is empty")
+	}
+	return nil
 }
 
 func (*QBittorrent) SampleConfig() string {
@@ -160,10 +168,6 @@ func (q *QBittorrent) login() ([]*http.Cookie, error) {
 	getURL, err := q.getURL("/api/v2/auth/login")
 	if err != nil {
 		return nil, err
-	}
-
-	if q.Username.Empty() && q.Password.Empty() {
-		return nil, fmt.Errorf("username and password is empty")
 	}
 
 	username, err := q.Username.Get()
