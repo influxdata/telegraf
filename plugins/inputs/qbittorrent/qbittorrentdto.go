@@ -404,21 +404,31 @@ func (t *Torrent) toFieldMap() map[string]interface{} {
 func (t Torrent) toTagsMap() map[string]string {
 	result := map[string]string{
 		"category":      t.Category,
-		"auto_tmm":      strconv.FormatBool(*t.AutoTMM),
 		"content_path":  t.ContentPath,
 		"download_path": t.DownloadPath,
-		"fl_piece_prio": strconv.FormatBool(*t.FLPiecePrio),
-		"force_start":   strconv.FormatBool(*t.ForceStart),
 		"infohash_v1":   t.InfohashV1,
 		"infohash_v2":   t.InfohashV2,
 		"magnet_uri":    t.MagnetURI,
 		"name":          t.Name,
-		"seq_download":  strconv.FormatBool(*t.SeqDownload),
-		"super_seeding": strconv.FormatBool(*t.SuperSeeding),
 		"save_path":     t.SavePath,
 		"state":         t.State,
 		"tags":          t.Tags,
 		"tracker":       t.Tracker,
+	}
+	if t.AutoTMM != nil {
+		result["auto_tmm"] = strconv.FormatBool(*t.AutoTMM)
+	}
+	if t.FLPiecePrio != nil {
+		result["fl_piece_prio"] = strconv.FormatBool(*t.FLPiecePrio)
+	}
+	if t.ForceStart != nil {
+		result["force_start"] = strconv.FormatBool(*t.ForceStart)
+	}
+	if t.SeqDownload != nil {
+		result["seq_download"] = strconv.FormatBool(*t.SeqDownload)
+	}
+	if t.SuperSeeding != nil {
+		result["super_seeding"] = strconv.FormatBool(*t.SuperSeeding)
 	}
 	return result
 }
