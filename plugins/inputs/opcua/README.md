@@ -185,7 +185,7 @@ This node configuration produces a metric like this:
 opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 ```
 
-With 'DataType' enabled in Additional Metrics, this node configuration 
+With 'DataType' enabled in Additional Metrics, this node configuration
 produces a metric like this:
 
 ```text
