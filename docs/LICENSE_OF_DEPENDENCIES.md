@@ -26,6 +26,7 @@ following works:
 - github.com/Azure/go-ntlmssp [MIT License](https://github.com/Azure/go-ntlmssp/blob/master/LICENSE)
 - github.com/AzureAD/microsoft-authentication-library-for-go [MIT License](https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/main/LICENSE)
 - github.com/ClickHouse/clickhouse-go [MIT License](https://github.com/ClickHouse/clickhouse-go/blob/master/LICENSE)
+- github.com/IBM/nzgo [MIT License](https://github.com/IBM/nzgo/blob/master/LICENSE.md)
 - github.com/JohnCGriffin/overflow [MIT License](https://github.com/JohnCGriffin/overflow/blob/master/README.md)
 - github.com/Masterminds/goutils [Apache License 2.0](https://github.com/Masterminds/goutils/blob/master/LICENSE.txt)
 - github.com/Masterminds/semver [MIT License](https://github.com/Masterminds/semver/blob/master/LICENSE.txt)

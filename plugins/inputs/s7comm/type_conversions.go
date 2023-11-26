@@ -9,11 +9,11 @@ import (
 
 var helper = &gos7.Helper{}
 
-func determineConversion(dtype string, extra int) converterFunc {
+func determineConversion(dtype string) converterFunc {
 	switch dtype {
 	case "X":
 		return func(buf []byte) interface{} {
-			return (buf[0] & (1 << extra)) != 0
+			return buf[0] != 0
 		}
 	case "B":
 		return func(buf []byte) interface{} {
@@ -29,7 +29,7 @@ func determineConversion(dtype string, extra int) converterFunc {
 				return ""
 			}
 			// Get the length of the encoded string
-			length := int(buf[0])
+			length := int(buf[1])
 			// Clip the string if we do not fill the whole buffer
 			if length < len(buf)-2 {
 				return string(buf[2 : 2+length])

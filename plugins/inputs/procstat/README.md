@@ -12,6 +12,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- supervisor_unit
 - win_service
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -41,6 +42,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # include_systemd_children = false
   ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
+  ## Supervisor service names of hypervisorctl management
+  # supervisor_units = ["webserver", "proxy"]
 
   ## Windows service name
   # win_service = ""
@@ -78,6 +81,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
+### Darwin specifics
+
+If you use this plugin with `supervisor_units` *and* `pattern` on Darwin, you
+**have to** use the `pgrep` finder as the underlying library relies on `pgrep`.
+
 ### Permissions
 
 Some files or directories may require elevated permissions. As such a user may
@@ -109,6 +117,7 @@ Below are an example set of tags and fields:
     - systemd_unit (when defined)
     - cgroup (when defined)
     - cgroup_full (when cgroup or systemd_unit is used with glob)
+    - supervisor_unit (when defined)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)
@@ -179,6 +188,7 @@ Below are an example set of tags and fields:
     - user
     - systemd_unit
     - cgroup
+    - supervisor_unit
     - win_service
     - result
   - fields:

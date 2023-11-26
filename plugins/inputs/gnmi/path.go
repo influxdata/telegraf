@@ -8,7 +8,7 @@ import (
 )
 
 // Regular expression to see if a path element contains an origin
-var originPattern = regexp.MustCompile(`^([\w-_]+):`)
+var originPattern = regexp.MustCompile(`^([\w-]+):`)
 
 type keySegment struct {
 	name string

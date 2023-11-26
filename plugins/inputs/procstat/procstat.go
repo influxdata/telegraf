@@ -4,6 +4,7 @@ package procstat
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,11 +23,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var (
-	defaultPIDFinder = NewPgrep
-	defaultProcess   = NewProc
-)
-
 type PID int32
 
 type Procstat struct {
@@ -38,9 +34,10 @@ type Procstat struct {
 	CmdLineTag             bool `toml:"cmdline_tag"`
 	ProcessName            string
 	User                   string
-	SystemdUnit            string `toml:"systemd_unit"`
-	IncludeSystemdChildren bool   `toml:"include_systemd_children"`
-	CGroup                 string `toml:"cgroup"`
+	SystemdUnits           string   `toml:"systemd_units"`
+	SupervisorUnit         []string `toml:"supervisor_unit"`
+	IncludeSystemdChildren bool     `toml:"include_systemd_children"`
+	CGroup                 string   `toml:"cgroup"`
 	PidTag                 bool
 	WinService             string `toml:"win_service"`
 	Mode                   string
@@ -64,28 +61,43 @@ func (*Procstat) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Procstat) Gather(acc telegraf.Accumulator) error {
-	if p.createPIDFinder == nil {
-		switch p.PidFinder {
-		case "native":
-			p.createPIDFinder = NewNativeFinder
-		case "pgrep":
-			p.createPIDFinder = NewPgrep
-		default:
-			p.PidFinder = "pgrep"
-			p.createPIDFinder = defaultPIDFinder
-		}
-	}
-	if p.createProcess == nil {
-		p.createProcess = defaultProcess
+func (p *Procstat) Init() error {
+	if strings.ToLower(p.Mode) == "solaris" {
+		p.solarisMode = true
 	}
 
+	switch p.PidFinder {
+	case "":
+		p.PidFinder = "pgrep"
+		p.createPIDFinder = NewPgrep
+	case "native":
+		p.createPIDFinder = NewNativeFinder
+	case "pgrep":
+		p.createPIDFinder = NewPgrep
+	default:
+		return fmt.Errorf("unknown pid_finder %q", p.PidFinder)
+	}
+
+	// gopsutil relies on pgrep when looking up children on darwin
+	// see https://github.com/shirou/gopsutil/blob/v3.23.10/process/process_darwin.go#L235
+	requiresChildren := len(p.SupervisorUnit) > 0 && p.Pattern != ""
+	if requiresChildren && p.PidFinder == "native" && runtime.GOOS == "darwin" {
+		return errors.New("configuration requires the 'pgrep' finder on you OS")
+	}
+
+	return nil
+}
+
+func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	pidCount := 0
 	now := time.Now()
 	newProcs := make(map[PID]Process, len(p.procs))
 	tags := make(map[string]string)
 	pidTags := p.findPids()
 	for _, pidTag := range pidTags {
+		if len(pidTag.PIDS) < 1 && len(p.SupervisorUnit) > 0 {
+			continue
+		}
 		pids := pidTag.PIDS
 		err := pidTag.Err
 		pidCount += len(pids)
@@ -120,6 +132,9 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
+	if len(p.SupervisorUnit) > 0 {
+		tags["supervisor_unit"] = strings.Join(p.SupervisorUnit, ";")
+	}
 	acc.AddFields("procstat_lookup", fields, tags, now)
 
 	return nil
@@ -338,7 +353,51 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 func (p *Procstat) findPids() []PidsTags {
 	var pidTags []PidsTags
 
-	if p.SystemdUnit != "" {
+	if len(p.SupervisorUnit) > 0 {
+		groups, groupsTags, err := p.supervisorPIDs()
+		if err != nil {
+			pidTags = append(pidTags, PidsTags{nil, nil, err})
+			return pidTags
+		}
+		// According to the PID, find the system process number and use pgrep to filter to get the number of child processes
+		for _, group := range groups {
+			f, err := p.getPIDFinder()
+			if err != nil {
+				pidTags = append(pidTags, PidsTags{nil, nil, err})
+				return pidTags
+			}
+
+			p.Pattern = groupsTags[group]["pid"]
+			if p.Pattern == "" {
+				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
+				return pidTags
+			}
+
+			pids, tags, err := p.SimpleFindPids(f)
+			if err != nil {
+				pidTags = append(pidTags, PidsTags{nil, nil, err})
+				return pidTags
+			}
+			// Handle situations where the PID does not exist
+			if len(pids) == 0 {
+				pidTags = append(pidTags, PidsTags{nil, groupsTags[group], err})
+				continue
+			}
+			stats := groupsTags[group]
+			// Merge tags map
+			for k, v := range stats {
+				_, ok := tags[k]
+				if !ok {
+					tags[k] = v
+				}
+			}
+			// Remove duplicate pid tags
+			delete(tags, "pid")
+			pidTags = append(pidTags, PidsTags{pids, tags, err})
+		}
+
+		return pidTags
+	} else if p.SystemdUnits != "" {
 		groups := p.systemdUnitPIDs()
 		return groups
 	} else if p.CGroup != "" {
@@ -369,6 +428,9 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 	} else if p.Exe != "" {
 		pids, err = f.Pattern(p.Exe)
 		tags = map[string]string{"exe": p.Exe}
+	} else if len(p.SupervisorUnit) > 0 && p.Pattern != "" {
+		pids, err = f.ChildPattern(p.Pattern)
+		tags = map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
 	} else if p.Pattern != "" {
 		pids, err = f.FullPattern(p.Pattern)
 		tags = map[string]string{"pattern": p.Pattern}
@@ -388,22 +450,65 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 // execCommand is so tests can mock out exec.Command usage.
 var execCommand = exec.Command
 
+func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, error) {
+	out, err := execCommand("supervisorctl", "status", strings.Join(p.SupervisorUnit, " ")).Output()
+	if err != nil {
+		if !strings.Contains(err.Error(), "exit status 3") {
+			return nil, nil, err
+		}
+	}
+	lines := strings.Split(string(out), "\n")
+	// Get the PID, running status, running time and boot time of the main process:
+	// pid 11779, uptime 17:41:16
+	// Exited too quickly (process log may have details)
+	mainPids := make(map[string]map[string]string)
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		kv := strings.Fields(line)
+		if len(kv) < 2 {
+			// Not a key-value pair
+			continue
+		}
+		name := kv[0]
+
+		statusMap := map[string]string{
+			"supervisor_unit": name,
+			"status":          kv[1],
+		}
+
+		switch kv[1] {
+		case "FATAL", "EXITED", "BACKOFF", "STOPPING":
+			statusMap["error"] = strings.Join(kv[2:], " ")
+		case "RUNNING":
+			statusMap["pid"] = strings.ReplaceAll(kv[3], ",", "")
+			statusMap["uptimes"] = kv[5]
+		case "STOPPED", "UNKNOWN", "STARTING":
+			// No additional info
+		}
+		mainPids[name] = statusMap
+	}
+
+	return p.SupervisorUnit, mainPids, nil
+}
+
 func (p *Procstat) systemdUnitPIDs() []PidsTags {
 	if p.IncludeSystemdChildren {
-		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
+		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnits)
 		return p.cgroupPIDs()
 	}
 
 	var pidTags []PidsTags
-
 	pids, err := p.simpleSystemdUnitPIDs()
-	tags := map[string]string{"systemd_unit": p.SystemdUnit}
+	tags := map[string]string{"systemd_unit": p.SystemdUnits}
 	pidTags = append(pidTags, PidsTags{pids, tags, err})
 	return pidTags
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
-	out, err := execCommand("systemctl", "show", p.SystemdUnit).Output()
+	out, err := execCommand("systemctl", "show", p.SystemdUnits).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -503,16 +608,8 @@ func (p *Procstat) winServicePIDs() ([]PID, error) {
 	return pids, nil
 }
 
-func (p *Procstat) Init() error {
-	if strings.ToLower(p.Mode) == "solaris" {
-		p.solarisMode = true
-	}
-
-	return nil
-}
-
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
-		return &Procstat{}
+		return &Procstat{createProcess: NewProc}
 	})
 }

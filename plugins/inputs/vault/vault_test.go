@@ -238,7 +238,10 @@ func TestIntegration(t *testing.T) {
 
 	// Collect the metrics and compare
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	require.Eventually(t, func() bool {
+		require.NoError(t, plugin.Gather(&acc))
+		return len(acc.GetTelegrafMetrics()) > 50
+	}, 5*time.Second, 100*time.Millisecond)
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsStructureSubset(t, expected, actual, options...)

@@ -2,6 +2,7 @@
 package elasticsearch
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -17,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -97,7 +98,7 @@ type indexStat struct {
 type Elasticsearch struct {
 	Local                      bool            `toml:"local"`
 	Servers                    []string        `toml:"servers"`
-	HTTPTimeout                config.Duration `toml:"http_timeout"`
+	HTTPTimeout                config.Duration `toml:"http_timeout" deprecated:"1.29.0;use 'timeout' instead"`
 	ClusterHealth              bool            `toml:"cluster_health"`
 	ClusterHealthLevel         string          `toml:"cluster_health_level"`
 	ClusterStats               bool            `toml:"cluster_stats"`
@@ -109,9 +110,11 @@ type Elasticsearch struct {
 	Password                   string          `toml:"password"`
 	NumMostRecentIndices       int             `toml:"num_most_recent_indices"`
 
-	tls.ClientConfig
+	Log telegraf.Logger `toml:"-"`
 
-	client          *http.Client
+	client *http.Client
+	httpconfig.HTTPClientConfig
+
 	serverInfo      map[string]serverInfo
 	serverInfoMutex sync.Mutex
 	indexMatchers   map[string]filter.Filter
@@ -128,9 +131,12 @@ func (i serverInfo) isMaster() bool {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HTTPTimeout:                config.Duration(time.Second * 5),
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
+		HTTPClientConfig: httpconfig.HTTPClientConfig{
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
+			Timeout:               config.Duration(5 * time.Second),
+		},
 	}
 }
 
@@ -277,20 +283,12 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := e.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
+	ctx := context.Background()
+	if e.HTTPTimeout != 0 {
+		e.HTTPClientConfig.Timeout = e.HTTPTimeout
+		e.HTTPClientConfig.ResponseHeaderTimeout = e.HTTPTimeout
 	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(e.HTTPTimeout),
-		TLSClientConfig:       tlsCfg,
-	}
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(e.HTTPTimeout),
-	}
-
-	return client, nil
+	return e.HTTPClientConfig.CreateClient(ctx, e.Log)
 }
 
 func (e *Elasticsearch) nodeStatsURL(baseURL string) string {
