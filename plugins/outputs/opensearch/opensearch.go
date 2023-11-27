@@ -22,7 +22,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -49,7 +49,7 @@ type Opensearch struct {
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	URLs                []string        `toml:"urls"`
 	Log                 telegraf.Logger `toml:"-"`
-	commontls.ClientConfig
+	tls.ClientConfig
 
 	pipelineName string
 	indexTmpl    *template.Template
