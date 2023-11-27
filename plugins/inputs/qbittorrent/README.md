@@ -25,7 +25,7 @@ in principle but have not been tested.
 
 ## Metrics
 
-- server_state
+- qbittorrent
   - all_time_download
   - all_time_upload
   - average_time_queue
