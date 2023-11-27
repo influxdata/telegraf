@@ -55,53 +55,56 @@ func TestMainDataPartialUpdate(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	for _, m := range data.toMetrics() {
+	for _, m := range data.toMetrics("source1") {
 		acc.AddMetric(m)
 	}
 
-	require.True(t, acc.HasInt64Field("torrents", "added_on"))
-	addedOnValue, _ := acc.Int64Field("torrents", "added_on")
+	require.True(t, acc.HasTag("qbittorrent", "source"))
+	require.True(t, acc.HasTag("torrent", "source"))
+
+	require.True(t, acc.HasInt64Field("torrent", "added_on"))
+	addedOnValue, _ := acc.Int64Field("torrent", "added_on")
 	require.Equal(t, int64(1000), addedOnValue)
-	etaValue, _ := acc.Int64Field("torrents", "eta")
+	etaValue, _ := acc.Int64Field("torrent", "eta")
 	require.Equal(t, int64(1000), etaValue)
-	downloadedSessionValue, _ := acc.Int64Field("torrents", "downloaded_session")
+	downloadedSessionValue, _ := acc.Int64Field("torrent", "downloaded_session")
 	require.Equal(t, int64(1000), downloadedSessionValue)
 
-	allTimeDownloadValue, _ := acc.Int64Field("server_state", "all_time_download")
+	allTimeDownloadValue, _ := acc.Int64Field("qbittorrent", "all_time_download")
 	require.Equal(t, int64(1000), allTimeDownloadValue)
-	allTimeUploadValue, _ := acc.Int64Field("server_state", "all_time_upload")
+	allTimeUploadValue, _ := acc.Int64Field("qbittorrent", "all_time_upload")
 	require.Equal(t, int64(1000), allTimeUploadValue)
 
-	categoryCount, _ := acc.Int64Field("category", "count")
+	categoryCount, _ := acc.Int64Field("qbittorrent", "category_count")
 	require.Equal(t, int64(1), categoryCount)
 
-	tagsCount, _ := acc.Int64Field("tags", "count")
+	tagsCount, _ := acc.Int64Field("qbittorrent", "tag_count")
 	require.Equal(t, int64(0), tagsCount)
 
 	var update testutil.Accumulator
 
 	data.partialUpdate(&updateValue)
 
-	for _, m := range data.toMetrics() {
-		acc.AddMetric(m)
+	for _, m := range data.toMetrics("source1") {
+		update.AddMetric(m)
 	}
 
-	updateAddedOnValue, _ := acc.Int64Field("torrents", "added_on")
+	updateAddedOnValue, _ := acc.Int64Field("torrent", "added_on")
 	require.Equal(t, int64(1000), updateAddedOnValue)
-	updateEtaValue, _ := update.Int64Field("torrents", "eta")
+	updateEtaValue, _ := update.Int64Field("torrent", "eta")
 	require.Equal(t, int64(900), updateEtaValue)
-	updateDownloadedSessionValue, _ := update.Int64Field("torrents", "downloaded_session")
+	updateDownloadedSessionValue, _ := update.Int64Field("torrent", "downloaded_session")
 	require.Equal(t, int64(1100), updateDownloadedSessionValue)
 
-	updateAllTimeDownloadValue, _ := update.Int64Field("server_state", "all_time_download")
+	updateAllTimeDownloadValue, _ := update.Int64Field("qbittorrent", "all_time_download")
 	require.Equal(t, int64(1100), updateAllTimeDownloadValue)
-	updateAllTimeUploadValue, _ := update.Int64Field("server_state", "all_time_upload")
+	updateAllTimeUploadValue, _ := update.Int64Field("qbittorrent", "all_time_upload")
 	require.Equal(t, int64(1200), updateAllTimeUploadValue)
 
-	updateCategoryCount, _ := update.Int64Field("category", "count")
+	updateCategoryCount, _ := update.Int64Field("qbittorrent", "category_count")
 	require.Equal(t, int64(2), updateCategoryCount)
 
-	updateTagsCount, _ := update.Int64Field("tags", "count")
+	updateTagsCount, _ := update.Int64Field("qbittorrent", "tag_count")
 	require.Equal(t, int64(1), updateTagsCount)
-	require.True(t, update.HasTag("torrents", "name"))
+	require.True(t, update.HasTag("torrent", "name"))
 }

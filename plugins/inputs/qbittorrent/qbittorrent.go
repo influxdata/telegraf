@@ -50,7 +50,7 @@ func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	for _, m := range q.mainData.toMetrics() {
+	for _, m := range q.mainData.toMetrics(q.URL) {
 		acc.AddMetric(m)
 	}
 

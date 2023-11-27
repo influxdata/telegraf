@@ -501,10 +501,10 @@ func (m *MainData) partialUpdate(update *MainData) {
 	}
 }
 
-func (m *MainData) toMetrics() []telegraf.Metric {
+func (m *MainData) toMetrics(source string) []telegraf.Metric {
 	ts := time.Now().UTC()
 	tags := make(map[string]string)
-
+	tags["source"] = source
 	var result []telegraf.Metric
 	var serverStateField = m.ServerState.toFieldMap()
 	serverStateField["tag_count"] = len(m.Tags)
@@ -514,6 +514,7 @@ func (m *MainData) toMetrics() []telegraf.Metric {
 	for k, v := range m.Torrents {
 		torrentTag := m.Torrents[k].toTagsMap()
 		torrentTag["hash"] = k
+		torrentTag["source"] = source
 		result = append(result, metric.New("torrent", torrentTag, v.toFieldMap(), ts, telegraf.Gauge))
 	}
 
