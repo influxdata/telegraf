@@ -31,7 +31,7 @@ type QBittorrent struct {
 
 func (q *QBittorrent) Init() error {
 	if q.Username.Empty() && q.Password.Empty() {
-		return fmt.Errorf("username and password is empty")
+		return errors.New("username and password is empty")
 	}
 	return nil
 }
