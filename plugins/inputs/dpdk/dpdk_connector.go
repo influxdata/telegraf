@@ -8,7 +8,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 const (
@@ -57,6 +59,22 @@ func (conn *dpdkConnector) connect() (*initMessage, error) {
 		return nil, err
 	}
 	return conn.initMessage, nil
+}
+
+// Add metadata fields to data
+func (conn *dpdkConnector) addMetadataFields(metadataFields []string, data map[string]interface{}) {
+	if conn.initMessage == nil {
+		return
+	}
+
+	for _, field := range metadataFields {
+		switch field {
+		case dpdkMetadataFieldPidName:
+			data[dpdkMetadataFieldPidName] = conn.initMessage.Pid
+		case dpdkMetadataFieldVersionName:
+			data[dpdkMetadataFieldVersionName] = conn.initMessage.Version
+		}
+	}
 }
 
 // Fetches all identifiers of devices and then creates all possible combinations of commands for each device
@@ -116,6 +134,50 @@ func (conn *dpdkConnector) getCommandResponse(fullCommand string) ([]byte, error
 		return nil, fmt.Errorf("got empty response during execution of %q command", fullCommand)
 	}
 	return buf[:messageLength], nil
+}
+
+// Executes command, parses response and creates/writes metrics from response to accumulator
+func (conn *dpdkConnector) processCommand(log telegraf.Logger, acc telegraf.Accumulator, commandWithParams string, metadataFields []string) {
+	buf, err := conn.getCommandResponse(commandWithParams)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	var parsedResponse map[string]interface{}
+	err = json.Unmarshal(buf, &parsedResponse)
+	if err != nil {
+		acc.AddError(fmt.Errorf("failed to unmarshal json response from %q command: %w", commandWithParams, err))
+		return
+	}
+
+	command := stripParams(commandWithParams)
+	value := parsedResponse[command]
+	if isEmpty(value) {
+		log.Warnf("got empty json on %q command", commandWithParams)
+		return
+	}
+
+	jf := jsonparser.JSONFlattener{}
+	err = jf.FullFlattenJSON("", value, true, true)
+	if err != nil {
+		acc.AddError(fmt.Errorf("failed to flatten response: %w", err))
+		return
+	}
+
+	err = processCommandResponse(command, jf.Fields)
+	if err != nil {
+		log.Warnf("Failed to process a response of the command: %s. Error: %v. Continue to handle data", command, err)
+	}
+
+	// Add metadata fields if required
+	conn.addMetadataFields(metadataFields, jf.Fields)
+
+	// Add common fields
+	acc.AddFields(pluginName, jf.Fields, map[string]string{
+		"command": command,
+		"params":  getParams(commandWithParams),
+	})
 }
 
 func (conn *dpdkConnector) tryClose() error {

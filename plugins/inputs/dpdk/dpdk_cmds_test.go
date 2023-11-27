@@ -17,7 +17,8 @@ func Test_LinkStatusCommand(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{%q: "DOWN"}}`, ethdevLinkStatusCommand, linkStatusStringFieldName)
 		simulateResponse(mockConn, response, nil)
-		dpdk.processCommand(dpdk.connectors[0], mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand))
+		dpdkConn := dpdk.connectors[0]
+		dpdkConn.processCommand(testutil.Logger{}, mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand), nil)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(
@@ -43,7 +44,8 @@ func Test_LinkStatusCommand(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{%q: "UP"}}`, ethdevLinkStatusCommand, linkStatusStringFieldName)
 		simulateResponse(mockConn, response, nil)
-		dpdk.processCommand(dpdk.connectors[0], mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand))
+		dpdkConn := dpdk.connectors[0]
+		dpdkConn.processCommand(testutil.Logger{}, mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand), nil)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(
@@ -69,7 +71,8 @@ func Test_LinkStatusCommand(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{}}`, ethdevLinkStatusCommand)
 		simulateResponse(mockConn, response, nil)
-		dpdk.processCommand(dpdk.connectors[0], mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand))
+		dpdkConn := dpdk.connectors[0]
+		dpdkConn.processCommand(testutil.Logger{}, mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand), nil)
 
 		actual := mockAcc.GetTelegrafMetrics()
 		testutil.RequireMetricsEqual(t, nil, actual, testutil.IgnoreTime())
@@ -80,7 +83,8 @@ func Test_LinkStatusCommand(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{"tag1": 1}}`, ethdevLinkStatusCommand)
 		simulateResponse(mockConn, response, nil)
-		dpdk.processCommand(dpdk.connectors[0], mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand))
+		dpdkConn := dpdk.connectors[0]
+		dpdkConn.processCommand(testutil.Logger{}, mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand), nil)
 		expected := []telegraf.Metric{
 			testutil.MustMetric(
 				"dpdk",
@@ -104,7 +108,8 @@ func Test_LinkStatusCommand(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{%q:{%q: "BOB"}}`, ethdevLinkStatusCommand, linkStatusStringFieldName)
 		simulateResponse(mockConn, response, nil)
-		dpdk.processCommand(dpdk.connectors[0], mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand))
+		dpdkConn := dpdk.connectors[0]
+		dpdkConn.processCommand(testutil.Logger{}, mockAcc, fmt.Sprintf("%s,1", ethdevLinkStatusCommand), nil)
 
 		expected := []telegraf.Metric{
 			testutil.MustMetric(

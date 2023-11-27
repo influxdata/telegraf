@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func Test_readMaxOutputLen(t *testing.T) {
@@ -181,5 +182,60 @@ func Test_getCommandResponse(t *testing.T) {
 		require.Error(t, err)
 		require.Empty(t, buf)
 		require.Contains(t, err.Error(), "got empty response during execution of")
+	})
+}
+
+func Test_processCommand(t *testing.T) {
+	t.Run("should pass if received valid response", func(t *testing.T) {
+		mockConn, dpdk, mockAcc := prepareEnvironment()
+		defer mockConn.AssertExpectations(t)
+		response := `{"/": ["/", "/eal/app_params", "/eal/params", "/ethdev/link_status, /ethdev/info"]}`
+		simulateResponse(mockConn, response, nil)
+
+		for _, dpdkConn := range dpdk.connectors {
+			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/", nil)
+		}
+
+		require.Empty(t, mockAcc.Errors)
+	})
+
+	t.Run("if received a non-JSON object then should return error", func(t *testing.T) {
+		mockConn, dpdk, mockAcc := prepareEnvironment()
+		defer mockConn.AssertExpectations(t)
+		response := `notAJson`
+		simulateResponse(mockConn, response, nil)
+
+		for _, dpdkConn := range dpdk.connectors {
+			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/", nil)
+		}
+
+		require.Len(t, mockAcc.Errors, 1)
+		require.Contains(t, mockAcc.Errors[0].Error(), "invalid character")
+	})
+
+	t.Run("if failed to get command response then accumulator should contain error", func(t *testing.T) {
+		mockConn, dpdk, mockAcc := prepareEnvironment()
+		defer mockConn.AssertExpectations(t)
+		mockConn.On("Write", mock.Anything).Return(0, fmt.Errorf("deadline exceeded"))
+		mockConn.On("SetDeadline", mock.Anything).Return(nil)
+		mockConn.On("Close").Return(nil)
+		for _, dpdkConn := range dpdk.connectors {
+			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/", nil)
+		}
+
+		require.Len(t, mockAcc.Errors, 1)
+		require.Contains(t, mockAcc.Errors[0].Error(), "deadline exceeded")
+	})
+
+	t.Run("if response contains nil or empty value then error shouldn't be returned in accumulator", func(t *testing.T) {
+		mockConn, dpdk, mockAcc := prepareEnvironment()
+		defer mockConn.AssertExpectations(t)
+		response := `{"/test": null}`
+		simulateResponse(mockConn, response, nil)
+		for _, dpdkConn := range dpdk.connectors {
+			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/test,param", nil)
+		}
+
+		require.Empty(t, mockAcc.Errors)
 	})
 }

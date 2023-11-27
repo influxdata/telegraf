@@ -5,7 +5,6 @@ package dpdk
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 //go:embed sample.conf
@@ -91,24 +89,22 @@ func (dpdk *dpdk) Init() error {
 		return fmt.Errorf("unreachable_socket_behavior: %w", err)
 	}
 
-	glob, err := prepareGlob(dpdk.SocketPath)
+	glob, err := globpath.Compile(dpdk.SocketPath + "*")
 	if err != nil {
 		return err
 	}
 	dpdk.socketGlobPath = glob
+	return nil
+}
 
-	if err = dpdk.maintainConnections(); err != nil {
+// Start implements ServiceInput interface
+func (dpdk *dpdk) Start(telegraf.Accumulator) error {
+	if err := dpdk.maintainConnections(); err != nil {
 		if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
 			return err
 		}
 		dpdk.Log.Warnf("Unreachable socket issue occurred: %v", err)
 	}
-
-	return nil
-}
-
-// Start is empty to implement ServiceInput interface
-func (dpdk *dpdk) Start(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -136,7 +132,7 @@ func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
 	for _, dpdkConn := range dpdk.connectors {
 		commands := dpdk.gatherCommands(dpdkConn, acc)
 		for _, command := range commands {
-			dpdk.processCommand(dpdkConn, acc, command)
+			dpdkConn.processCommand(dpdk.Log, acc, command, dpdk.MetadataFields)
 		}
 	}
 	return nil
@@ -243,18 +239,46 @@ func (dpdk *dpdk) maintainConnections() error {
 	return nil
 }
 
+// Identify scope of sockets to connect/disconnect
 func (dpdk *dpdk) identifySockets() (socketsToConnect []string, socketsToDisconnect []string) {
-	pathsToExistingSockets := []string{dpdk.SocketPath}
+	candidates := []string{dpdk.SocketPath}
 	if choice.Contains(dpdkPluginOptionInMemory, dpdk.PluginOptions) {
-		pathsToExistingSockets = dpdk.getDpdkInMemorySocketPaths()
+		candidates = dpdk.getDpdkInMemorySocketPaths()
 	}
 
-	pathsToConnectedSockets := make([]string, 0, len(dpdk.connectors))
+	// Find sockets in the connected-sockets list that are not among
+	// the candidates anymore and thus need to be removed.
+	toDisconnect := make([]string, 0, len(dpdk.connectors))
 	for _, connector := range dpdk.connectors {
-		pathsToConnectedSockets = append(pathsToConnectedSockets, connector.pathToSocket)
+		var found bool
+		for _, candidate := range candidates {
+			if candidate == connector.pathToSocket {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toDisconnect = append(toDisconnect, connector.pathToSocket)
+		}
 	}
 
-	return getDiffArrays(pathsToConnectedSockets, pathsToExistingSockets)
+	// Find candidates that are not yet in the connected-sockets list as we
+	// need to connect to those later.
+	toConnect := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		var found bool
+		for _, connector := range dpdk.connectors {
+			if candidate == connector.pathToSocket {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toConnect = append(toConnect, candidate)
+		}
+	}
+
+	return toConnect, toDisconnect
 }
 
 // Gathers all unique commands
@@ -279,65 +303,6 @@ func (dpdk *dpdk) gatherCommands(dpdkConnector *dpdkConnector, acc telegraf.Accu
 
 	commands = append(commands, dpdk.AdditionalCommands...)
 	return uniqueValues(commands)
-}
-
-// Executes command, parses response and creates/writes metric from response
-func (dpdk *dpdk) processCommand(dpdkConn *dpdkConnector, acc telegraf.Accumulator, commandWithParams string) {
-	buf, err := dpdkConn.getCommandResponse(commandWithParams)
-	if err != nil {
-		acc.AddError(err)
-		return
-	}
-
-	var parsedResponse map[string]interface{}
-	err = json.Unmarshal(buf, &parsedResponse)
-	if err != nil {
-		acc.AddError(fmt.Errorf("failed to unmarshal json response from %q command: %w", commandWithParams, err))
-		return
-	}
-
-	command := stripParams(commandWithParams)
-	value := parsedResponse[command]
-	if isEmpty(value) {
-		dpdk.Log.Warnf("got empty json on %q command", commandWithParams)
-		return
-	}
-
-	jf := jsonparser.JSONFlattener{}
-	err = jf.FullFlattenJSON("", value, true, true)
-	if err != nil {
-		acc.AddError(fmt.Errorf("failed to flatten response: %w", err))
-		return
-	}
-
-	err = processCommandResponse(command, jf.Fields)
-	if err != nil {
-		dpdk.Log.Warnf("Failed to process a response of the command: %s. Error: %v. Continue to handle data", command, err)
-	}
-
-	// Add metadata fields if required
-	dpdk.addMetadataFields(dpdkConn, jf.Fields)
-
-	// Add common fields
-	acc.AddFields(pluginName, jf.Fields, map[string]string{
-		"command": command,
-		"params":  getParams(commandWithParams),
-	})
-}
-
-func (dpdk *dpdk) addMetadataFields(dpdkConn *dpdkConnector, data map[string]interface{}) {
-	if dpdkConn.initMessage == nil {
-		return
-	}
-
-	for _, field := range dpdk.MetadataFields {
-		switch field {
-		case dpdkMetadataFieldPidName:
-			data[dpdkMetadataFieldPidName] = dpdkConn.initMessage.Pid
-		case dpdkMetadataFieldVersionName:
-			data[dpdkMetadataFieldVersionName] = dpdkConn.initMessage.Version
-		}
-	}
 }
 
 func init() {

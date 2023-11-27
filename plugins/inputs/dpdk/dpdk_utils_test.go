@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -197,50 +198,6 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	})
 }
 
-func TestGetDiffArrays(t *testing.T) {
-	t.Run("Should return empty lists toAdd and toDelete", func(t *testing.T) {
-		oldArray := []string{}
-		newArray := []string{}
-
-		toAdd, toDel := getDiffArrays(oldArray, newArray)
-		require.Empty(t, toAdd)
-		require.Empty(t, toDel)
-	})
-
-	t.Run("Should return only toDel list", func(t *testing.T) {
-		oldArray := []string{"path1"}
-		newArray := []string{}
-
-		toDelExpected := []string{"path1"}
-		toAdd, toDel := getDiffArrays(oldArray, newArray)
-
-		require.Empty(t, toAdd)
-		require.ElementsMatch(t, toDelExpected, toDel)
-	})
-
-	t.Run("Should return only toAdd list", func(t *testing.T) {
-		oldArray := []string{}
-		newArray := []string{"path1"}
-
-		toAddExpected := []string{"path1"}
-		toAdd, toDel := getDiffArrays(oldArray, newArray)
-
-		require.ElementsMatch(t, toAddExpected, toAdd)
-		require.Empty(t, toDel)
-	})
-
-	t.Run("Should return correct list toAdd and toDelete", func(t *testing.T) {
-		oldArray := []string{"path1", "path2", "path3"}
-		newArray := []string{"path1", "path4"}
-
-		toAddExpected := []string{"path4"}
-		toDelExpected := []string{"path2", "path3"}
-		toAdd, toDel := getDiffArrays(oldArray, newArray)
-		require.ElementsMatch(t, toAddExpected, toAdd)
-		require.ElementsMatch(t, toDelExpected, toDel)
-	})
-}
-
 func createSocketForTest(t *testing.T, dirPath string) (string, net.Listener) {
 	var err error
 	var pathToSocket string
@@ -277,4 +234,8 @@ func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) 
 		sockets = append(sockets, socket)
 	}
 	return socketsPaths, sockets
+}
+
+func prepareGlob(path string) (*globpath.GlobPath, error) {
+	return globpath.Compile(path + "*")
 }

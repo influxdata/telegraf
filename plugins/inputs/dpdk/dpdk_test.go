@@ -97,17 +97,6 @@ func Test_Init(t *testing.T) {
 		require.Contains(t, err.Error(), "plugin was configured with nothing to read")
 	})
 
-	t.Run("when socket doesn't exist err should be returned", func(t *testing.T) {
-		dpdk := dpdk{
-			DeviceTypes: []string{"ethdev"},
-			Log:         testutil.Logger{},
-		}
-		err := dpdk.Init()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "no active sockets connections present")
-	})
-
 	t.Run("when UnreachableSocketBehavior specified with unknown value - err should be returned", func(t *testing.T) {
 		dpdk := dpdk{
 			DeviceTypes:               []string{"ethdev"},
@@ -119,6 +108,21 @@ func Test_Init(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unreachable_socket_behavior")
 	})
+}
+
+func Test_Start(t *testing.T) {
+	t.Run("when socket doesn't exist err should be returned", func(t *testing.T) {
+		dpdk := dpdk{
+			DeviceTypes: []string{"ethdev"},
+			Log:         testutil.Logger{},
+		}
+		err := dpdk.Init()
+		require.NoError(t, err)
+
+		err = dpdk.Start(nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no active sockets connections present")
+	})
 
 	t.Run("when socket doesn't exist, but UnreachableSocketBehavior is Ignore err shouldn't be returned", func(t *testing.T) {
 		dpdk := dpdk{
@@ -127,7 +131,9 @@ func Test_Init(t *testing.T) {
 			UnreachableSocketBehavior: unreachableSocketBehaviorIgnore,
 		}
 		err := dpdk.Init()
+		require.NoError(t, err)
 
+		err = dpdk.Start(nil)
 		require.NoError(t, err)
 	})
 
@@ -139,10 +145,12 @@ func Test_Init(t *testing.T) {
 			DeviceTypes: []string{"ethdev"},
 			Log:         testutil.Logger{},
 		}
+		err := dpdk.Init()
+		require.NoError(t, err)
 
 		go simulateSocketResponse(socket, t)
-		err := dpdk.Init()
 
+		err = dpdk.Start(nil)
 		require.NoError(t, err)
 	})
 }
@@ -451,61 +459,6 @@ func prepareEnvironmentWithInitializedMessage(initMsg *initMessage) (*mocks.Conn
 	}
 	mockAcc := &testutil.Accumulator{}
 	return mockConnection, dpdk, mockAcc
-}
-
-func Test_processCommand(t *testing.T) {
-	t.Run("should pass if received valid response", func(t *testing.T) {
-		mockConn, dpdk, mockAcc := prepareEnvironment()
-		defer mockConn.AssertExpectations(t)
-		response := `{"/": ["/", "/eal/app_params", "/eal/params", "/ethdev/link_status, /ethdev/info"]}`
-		simulateResponse(mockConn, response, nil)
-
-		for _, dpdkConn := range dpdk.connectors {
-			dpdk.processCommand(dpdkConn, mockAcc, "/")
-		}
-
-		require.Empty(t, mockAcc.Errors)
-	})
-
-	t.Run("if received a non-JSON object then should return error", func(t *testing.T) {
-		mockConn, dpdk, mockAcc := prepareEnvironment()
-		defer mockConn.AssertExpectations(t)
-		response := `notAJson`
-		simulateResponse(mockConn, response, nil)
-
-		for _, dpdkConn := range dpdk.connectors {
-			dpdk.processCommand(dpdkConn, mockAcc, "/")
-		}
-
-		require.Len(t, mockAcc.Errors, 1)
-		require.Contains(t, mockAcc.Errors[0].Error(), "invalid character")
-	})
-
-	t.Run("if failed to get command response then accumulator should contain error", func(t *testing.T) {
-		mockConn, dpdk, mockAcc := prepareEnvironment()
-		defer mockConn.AssertExpectations(t)
-		mockConn.On("Write", mock.Anything).Return(0, fmt.Errorf("deadline exceeded"))
-		mockConn.On("SetDeadline", mock.Anything).Return(nil)
-		mockConn.On("Close").Return(nil)
-		for _, dpdkConn := range dpdk.connectors {
-			dpdk.processCommand(dpdkConn, mockAcc, "/")
-		}
-
-		require.Len(t, mockAcc.Errors, 1)
-		require.Contains(t, mockAcc.Errors[0].Error(), "deadline exceeded")
-	})
-
-	t.Run("if response contains nil or empty value then error shouldn't be returned in accumulator", func(t *testing.T) {
-		mockConn, dpdk, mockAcc := prepareEnvironment()
-		defer mockConn.AssertExpectations(t)
-		response := `{"/test": null}`
-		simulateResponse(mockConn, response, nil)
-		for _, dpdkConn := range dpdk.connectors {
-			dpdk.processCommand(dpdkConn, mockAcc, "/test,param")
-		}
-
-		require.Empty(t, mockAcc.Errors)
-	})
 }
 
 func Test_appendCommandsWithParams(t *testing.T) {
