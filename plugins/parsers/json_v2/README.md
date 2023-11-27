@@ -5,7 +5,7 @@ syntax supported is [GJSON Path
 Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to
 this playground to test out your GJSON path here:
 [gjson.dev/](https://gjson.dev). You can find multiple examples under the
-`testdata` folder.
+[`testdata`][] folder.
 
 ## Configuration
 
@@ -252,7 +252,9 @@ file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=2
 
 ```
 
-You can find more complicated examples under the folder `testdata`.
+You can find more complicated examples under the folder [`testdata`][].
+
+[`testdata`]: https://github.com/influxdata/telegraf/tree/master/plugins/parsers/json_v2/testdata
 
 ## Types
 
