@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/influxdata/telegraf"
 	tgConf "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
