@@ -24,7 +24,7 @@ type Parser struct {
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
 
-	// **** The struct fields bellow this comment are used for processing individual configs ****
+	// **** The struct fields below this comment are used for processing individual configs ****
 
 	// measurementName is the name of the current config used in each line protocol
 	measurementName string

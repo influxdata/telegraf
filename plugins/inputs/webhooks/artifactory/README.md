@@ -1,12 +1,17 @@
-# artifactory webhook
+# Artifactory webhook
 
-You need to configure to orginizations artifactory instance/s as detailed via the artifactory webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.  Multiple webhooks may need be needed to configure different domains.
+You need to configure to organizations artifactory instance/s as detailed
+via the artifactory webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.
+Multiple webhooks may need be needed to configure different domains.
 
 You can also add a secret that will be used by telegraf to verify the authenticity of the requests.
 
 ## Events
 
-The different events type can be found found in the webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.  Events are identified by their `domain` and `event`.  The following sections break down each event by domain.
+The different events type can be found found in the webhook documentation:
+<https://www.jfrog.com/confluence/display/JFROG/Webhooks>.
+Events are identified by their `domain` and `event`.
+The following sections break down each event by domain.
 
 ### Artifact Domain
 
@@ -84,7 +89,8 @@ The Webhook is triggered when an artifact is copied from a repository.
 
 #### Properties Added Event
 
-The Webhook is triggered when a property is added to an artifact/folder in a repository, or the repository itself.
+The Webhook is triggered when a property is added to an artifact/folder
+in a repository, or the repository itself.
 
 **Tags:**
 
@@ -95,7 +101,7 @@ The Webhook is triggered when a property is added to an artifact/folder in a rep
 * 'name' string
 **Fields**
 * 'property_key' string
-* 'property_values' string (joined comma seperated list)
+* 'property_values' string (joined comma separated list)
 
 #### Properties Deleted Event
 
@@ -112,7 +118,7 @@ The Webhook is triggered when a property is deleted from an artifact/folder in a
 **Fields:**
 
 * 'property_key' string
-* 'property_values' string (joined comma seperated list)
+* 'property_values' string (joined comma separated list)
 
 ### Docker Domain
 
@@ -135,7 +141,7 @@ The Webhook is triggered when a new tag of a Docker image is pushed to a Docker 
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-  * 'achitecture' string
+  * 'architecture' string
   * 'os' string
 
 #### Docker Deleted Event
@@ -157,7 +163,7 @@ The Webhook is triggered when a tag of a Docker image is deleted from a Docker r
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-  * 'achitecture' string
+  * 'architecture' string
   * 'os' string
 
 #### Docker Promoted Event
@@ -179,7 +185,7 @@ The Webhook is triggered when a tag of a Docker image is promoted.
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-  * 'achitecture' string
+  * 'architecture' string
   * 'os' string
 
 ### Build Domain

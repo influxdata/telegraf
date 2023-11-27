@@ -99,12 +99,12 @@ func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 
 	schema, ok := jsonResponse["schema"]
 	if !ok {
-		return nil, fmt.Errorf("malformed respose from schema registry: no 'schema' key")
+		return nil, fmt.Errorf("malformed response from schema registry: no 'schema' key")
 	}
 
 	schemaValue, ok := schema.(string)
 	if !ok {
-		return nil, fmt.Errorf("malformed respose from schema registry: %v cannot be cast to string", schema)
+		return nil, fmt.Errorf("malformed response from schema registry: %v cannot be cast to string", schema)
 	}
 	codec, err := goavro.NewCodec(schemaValue)
 	if err != nil {

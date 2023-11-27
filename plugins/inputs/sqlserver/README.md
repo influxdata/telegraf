@@ -203,7 +203,7 @@ to use them.
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
-  ## Possible queries accross different versions of the collectors
+  ## Possible queries across different versions of the collectors
   ## Queries enabled by default for specific Database Type
 
   ## database_type =  AzureSQLDB  by default collects the following queries

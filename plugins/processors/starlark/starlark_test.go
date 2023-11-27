@@ -3436,7 +3436,7 @@ def apply(metric):
 				mu.Lock()
 				defer mu.Unlock()
 				return len(delivered) == 1
-			}, 1*time.Second, 100*time.Millisecond, "orignal metric not delivered")
+			}, 1*time.Second, 100*time.Millisecond, "original metric not delivered")
 		})
 	}
 }
