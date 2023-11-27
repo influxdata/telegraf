@@ -52,7 +52,7 @@ in principle but have not been tested.
   - use_subcategories
   - write_cache_overload
 
-- torrents
+- torrent
   - added_on
   - amount_left
   - availability
