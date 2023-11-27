@@ -335,7 +335,7 @@ func TestDefautTags(t *testing.T) {
 	parser := Parser{
 		DefaultTags: map[string]string{
 			"defaultTag":    "defaultTagValue",
-			"dockerVersion": "to_be_overriden",
+			"dockerVersion": "to_be_overridden",
 		},
 	}
 	metrics, err := parser.Parse([]byte(validUniqueGauge))
