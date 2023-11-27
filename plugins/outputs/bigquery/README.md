@@ -58,6 +58,36 @@ table on BigQuery:
 * Should contain the metric's fields with the same name and the column type
   should match the field type.
 
+## Compact table
+
+When enabling the compact table, all metrics are inserted to the given table
+with the following schema:
+
+```json
+[
+  {
+    "mode": "REQUIRED",
+    "name": "timestamp",
+    "type": "TIMESTAMP"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "name",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "tags",
+    "type": "JSON"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "fields",
+    "type": "JSON"
+  }
+]
+```
+
 ## Restrictions
 
 Avoid hyphens on BigQuery tables, underlying SDK cannot handle streaming inserts
