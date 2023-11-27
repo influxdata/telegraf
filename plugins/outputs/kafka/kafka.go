@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
