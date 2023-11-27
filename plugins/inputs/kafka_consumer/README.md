@@ -70,7 +70,7 @@ to use them.
 
   ## The name of kafka message header which value should override the metric name.
   ## In case when the same header specified in current option and in msg_headers_to_tags
-  ## option, it will be excluded from the msg_headers_to_tags list. 
+  ## option, it will be excluded from the msg_headers_to_tags list.
   # msg_header_as_metric_name = ""
 
   ## Optional Client id
