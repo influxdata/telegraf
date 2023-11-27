@@ -191,7 +191,7 @@ func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSave
 	return &bigquery.ValuesSaver{
 		Schema: bigquery.Schema{
 			timeStampFieldSchema(),
-			nameFieldSchema(),
+			newStringFieldSchema("name"),
 			newJSONFieldSchema("tags"),
 			newJSONFieldSchema("fields"),
 		},
@@ -211,9 +211,9 @@ func timeStampFieldSchema() *bigquery.FieldSchema {
 	}
 }
 
-func nameFieldSchema() *bigquery.FieldSchema {
+func newStringFieldSchema(name string) *bigquery.FieldSchema {
 	return &bigquery.FieldSchema{
-		Name: "name",
+		Name: name,
 		Type: bigquery.StringFieldType,
 	}
 }
@@ -227,18 +227,11 @@ func newJSONFieldSchema(name string) *bigquery.FieldSchema {
 
 func tagsSchemaAndValues(m telegraf.Metric, s bigquery.Schema, r []bigquery.Value) ([]*bigquery.FieldSchema, []bigquery.Value) {
 	for _, t := range m.TagList() {
-		s = append(s, tagFieldSchema(t))
+		s = append(s, newStringFieldSchema(t.Key))
 		r = append(r, t.Value)
 	}
 
 	return s, r
-}
-
-func tagFieldSchema(t *telegraf.Tag) *bigquery.FieldSchema {
-	return &bigquery.FieldSchema{
-		Name: t.Key,
-		Type: bigquery.StringFieldType,
-	}
 }
 
 func valuesSchemaAndValues(m telegraf.Metric, s bigquery.Schema, r []bigquery.Value) ([]*bigquery.FieldSchema, []bigquery.Value) {
