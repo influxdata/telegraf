@@ -46,6 +46,7 @@ type KafkaConsumer struct {
 	TopicRegexps           []string        `toml:"topic_regexps"`
 	TopicTag               string          `toml:"topic_tag"`
 	MsgHeadersAsTags       []string        `toml:"msg_headers_as_tags"`
+	MsgHeaderAsMetricName  string          `toml:"msg_header_as_metric_name"`
 	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy     string          `toml:"connection_strategy"`
 
@@ -321,11 +322,14 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
+			handler.MsgHeaderToMetricName = k.MsgHeaderAsMetricName
 			//if message headers list specified, put it as map to handler
 			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
 			if len(k.MsgHeadersAsTags) > 0 {
 				for _, header := range k.MsgHeadersAsTags {
-					msgHeadersMap[header] = true
+					if k.MsgHeaderAsMetricName != header {
+						msgHeadersMap[header] = true
+					}
 				}
 			}
 			handler.MsgHeadersToTags = msgHeadersMap
@@ -390,9 +394,10 @@ func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parse
 
 // ConsumerGroupHandler is a sarama.ConsumerGroupHandler implementation.
 type ConsumerGroupHandler struct {
-	MaxMessageLen    int
-	TopicTag         string
-	MsgHeadersToTags map[string]bool
+	MaxMessageLen         int
+	TopicTag              string
+	MsgHeadersToTags      map[string]bool
+	MsgHeaderToMetricName string
 
 	acc    telegraf.TrackingAccumulator
 	sem    semaphore
@@ -482,9 +487,9 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 		return err
 	}
 
-	// Check if any message header should be pass as tag
 	headerKey := ""
-	if len(h.MsgHeadersToTags) > 0 {
+	// Check if any message header should override metric name or should be pass as tag
+	if len(h.MsgHeadersToTags) > 0 || h.MsgHeaderToMetricName != "" {
 		for _, header := range msg.Headers {
 			//convert to a string as the header and value are byte arrays.
 			headerKey = string(header.Key)
@@ -492,6 +497,12 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 				// If message header should be pass as tag then add it to the metrics
 				for _, metric := range metrics {
 					metric.AddTag(headerKey, string(header.Value))
+				}
+			} else {
+				if h.MsgHeaderToMetricName == headerKey {
+					for _, metric := range metrics {
+						metric.SetName(string(header.Value))
+					}
 				}
 			}
 		}
