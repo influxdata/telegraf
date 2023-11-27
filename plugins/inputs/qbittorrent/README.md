@@ -51,6 +51,8 @@ in principle but have not been tested.
   - use_alt_speed_limits
   - use_subcategories
   - write_cache_overload
+  - tag_count
+  - category_count
 
 - torrent
   - added_on
@@ -87,12 +89,6 @@ in principle but have not been tested.
   - uploaded
   - uploaded_session
   - upspeed
-
-- tags
-  - count
-
-- category
-  - count
 
 ## Example Output
 

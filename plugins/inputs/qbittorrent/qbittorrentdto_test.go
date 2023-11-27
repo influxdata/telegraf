@@ -55,10 +55,8 @@ func TestMainDataPartialUpdate(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	for k, v := range data.toMetrics() {
-		for i := range v {
-			acc.AddFields(k, v[i].Fields(), v[i].Tags())
-		}
+	for _, m := range data.toMetrics() {
+		acc.AddMetric(m)
 	}
 
 	require.True(t, acc.HasInt64Field("torrents", "added_on"))
@@ -84,10 +82,8 @@ func TestMainDataPartialUpdate(t *testing.T) {
 
 	data.partialUpdate(&updateValue)
 
-	for k, v := range data.toMetrics() {
-		for i := range v {
-			update.AddFields(k, v[i].Fields(), v[i].Tags())
-		}
+	for _, m := range data.toMetrics() {
+		acc.AddMetric(m)
 	}
 
 	updateAddedOnValue, _ := acc.Int64Field("torrents", "added_on")

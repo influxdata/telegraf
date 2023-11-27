@@ -501,32 +501,23 @@ func (m *MainData) partialUpdate(update *MainData) {
 	}
 }
 
-func (m *MainData) toMetrics() map[string][]telegraf.Metric {
+func (m *MainData) toMetrics() []telegraf.Metric {
 	ts := time.Now().UTC()
 	tags := make(map[string]string)
 
-	var serverStateMetrics []telegraf.Metric
-	serverStateMetrics = append(serverStateMetrics, metric.New("server_state", tags, m.ServerState.toFieldMap(), ts, telegraf.Gauge))
+	var result []telegraf.Metric
+	var serverStateField = m.ServerState.toFieldMap()
+	serverStateField["tag_count"] = len(m.Tags)
+	serverStateField["category_count"] = len(m.Categories)
+	result = append(result, metric.New("qbittorrent", tags, serverStateField, ts, telegraf.Gauge))
 
-	var torrentsMetrics = make([]telegraf.Metric, 0, len(m.Torrents))
 	for k, v := range m.Torrents {
 		torrentTag := m.Torrents[k].toTagsMap()
 		torrentTag["hash"] = k
-		torrentsMetrics = append(torrentsMetrics, metric.New("torrents", torrentTag, v.toFieldMap(), ts, telegraf.Gauge))
+		result = append(result, metric.New("torrent", torrentTag, v.toFieldMap(), ts, telegraf.Gauge))
 	}
 
-	var tagsMetrics []telegraf.Metric
-	tagsMetrics = append(tagsMetrics, metric.New("tags", tags, map[string]interface{}{"count": len(m.Tags)}, ts, telegraf.Counter))
-
-	var categoryMetrics []telegraf.Metric
-	categoryMetrics = append(categoryMetrics, metric.New("category", tags, map[string]interface{}{"count": len(m.Categories)}, ts, telegraf.Counter))
-
-	return map[string][]telegraf.Metric{
-		"server_state": serverStateMetrics,
-		"torrents":     torrentsMetrics,
-		"tags":         tagsMetrics,
-		"category":     categoryMetrics,
-	}
+	return result
 }
 
 type PartialUpdate[T any] interface {

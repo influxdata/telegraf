@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -19,19 +20,22 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var globalMainData *MainData
-
 type QBittorrent struct {
 	URL      string        `toml:"url"`
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
-	cookie []*http.Cookie
+	mainData *MainData
+	cookie   []*http.Cookie
 }
 
 func (q *QBittorrent) Init() error {
 	if q.Username.Empty() && q.Password.Empty() {
 		return errors.New("username and password is empty")
+	}
+	_, err := url.Parse(q.URL)
+	if err != nil {
+		return fmt.Errorf("invalid server URL %q", q.URL)
 	}
 	return nil
 }
@@ -46,10 +50,8 @@ func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	for k, v := range globalMainData.toMetrics() {
-		for i := range v {
-			acc.AddFields(k, v[i].Fields(), v[i].Tags())
-		}
+	for _, m := range q.mainData.toMetrics() {
+		acc.AddMetric(m)
 	}
 
 	return nil
@@ -59,8 +61,8 @@ func (q *QBittorrent) getSyncData() error {
 
 	param := url.Values{}
 
-	if globalMainData != nil {
-		param.Set("rid", strconv.Itoa(int(globalMainData.RID)))
+	if q.mainData != nil {
+		param.Set("rid", strconv.Itoa(int(q.mainData.RID)))
 	}
 	measure, _, err := q.getMeasure("GET", "/api/v2/sync/maindata", nil, param, nil)
 	if err != nil {
@@ -71,11 +73,11 @@ func (q *QBittorrent) getSyncData() error {
 	if err != nil {
 		return jErr
 	}
-	if globalMainData == nil {
-		globalMainData = &mainData
+	if q.mainData == nil {
+		q.mainData = &mainData
 	} else {
 		//partial update
-		globalMainData.partialUpdate(&mainData)
+		q.mainData.partialUpdate(&mainData)
 	}
 
 	return nil
