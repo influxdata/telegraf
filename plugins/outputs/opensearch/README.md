@@ -30,7 +30,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Target index name for metrics (OpenSearch will create if it not exists).
   ## This is a Golang template (see https://pkg.go.dev/text/template)
   ## You can also specify
-  ## metric name (`{{.Name}}`), tag value (`{{.Tag "tag_name"}}`), field value (`{{.Field "feild_name"}}`) 
+  ## metric name (`{{.Name}}`), tag value (`{{.Tag "tag_name"}}`), field value (`{{.Field "field_name"}}`)
   ## If the tag does not exist, the default tag value will be empty string "".
   ## the timestamp (`{{.Time.Format "xxxxxxxxx"}}`).
   ## For example: "telegraf-{{.Time.Format "2006-01-02"}}-{{.Tag "host"}}" would set it to telegraf-2023-07-27-HostName
@@ -63,9 +63,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # auth_bearer_token = ""
 
   ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
+  ## Trusted root certificates for server
+  # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
+  # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
+  # tls_key = "/path/to/keyfile"
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
