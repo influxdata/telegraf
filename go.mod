@@ -121,7 +121,7 @@ require (
 	github.com/jhump/protoreflect v1.15.3
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.2.2
-	github.com/karrick/godirwalk v1.16.2
+	github.com/karrick/godirwalk v1.17.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.17.1
 	github.com/klauspost/pgzip v1.2.6
