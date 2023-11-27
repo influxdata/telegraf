@@ -236,6 +236,10 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 				if err := tailer.Err(); err != nil {
 					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+					if strings.HasSuffix(err.Error(), "permission denied") {
+						t.Log.Errorf("Deleting tailer for %q", tailer.Filename)
+						delete(t.tailers, tailer.Filename)
+					}
 				}
 			}()
 
