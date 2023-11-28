@@ -1331,7 +1331,9 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 	f := models.Filter{}
 
 	c.getFieldStringSlice(tbl, "namepass", &f.NamePass)
+	c.getFieldRuneSlice(tbl, "namepass_separator", &f.NamePassSeparators)
 	c.getFieldStringSlice(tbl, "namedrop", &f.NameDrop)
+	c.getFieldRuneSlice(tbl, "namedrop_separator", &f.NameDropSeparators)
 
 	c.getFieldStringSlice(tbl, "pass", &f.FieldPass)
 	c.getFieldStringSlice(tbl, "fieldpass", &f.FieldPass)
@@ -1446,7 +1448,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"interval",
 		"lvm", // What is this used for?
 		"metric_batch_size", "metric_buffer_limit", "metricpass",
-		"name_override", "name_prefix", "name_suffix", "namedrop", "namepass",
+		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
@@ -1577,6 +1579,23 @@ func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) 
 				*target = i
 			} else {
 				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting int", fieldName))
+			}
+		}
+	}
+}
+
+func (c *Config) getFieldRuneSlice(tbl *ast.Table, fieldName string, target *[]rune) {
+	if node, ok := tbl.Fields[fieldName]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			ary, ok := kv.Value.(*ast.Array)
+			if !ok {
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string slice format", fieldName))
+				return
+			}
+			for _, elem := range ary.Value {
+				if str, ok := elem.(*ast.String); ok {
+					*target = append(*target, []rune(str.Value)...)
+				}
 			}
 		}
 	}

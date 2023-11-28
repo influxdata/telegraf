@@ -18,18 +18,20 @@ type Filter interface {
 //	f.Match("cpu")     // true
 //	f.Match("network") // true
 //	f.Match("memory")  // false
-func Compile(filters []string) (Filter, error) {
+func Compile(filters []string, separators ...rune) (Filter, error) {
 	// return if there is nothing to compile
 	if len(filters) == 0 {
 		return nil, nil
 	}
 
 	// check if we can compile a non-glob filter
-	noGlob := true
-	for _, filter := range filters {
-		if hasMeta(filter) {
-			noGlob = false
-			break
+	noGlob := len(separators) == 0
+	if noGlob {
+		for _, filter := range filters {
+			if hasMeta(filter) {
+				noGlob = false
+				break
+			}
 		}
 	}
 
@@ -38,14 +40,14 @@ func Compile(filters []string) (Filter, error) {
 		// return non-globbing filter if not needed.
 		return compileFilterNoGlob(filters), nil
 	case len(filters) == 1:
-		return glob.Compile(filters[0])
+		return glob.Compile(filters[0], separators...)
 	default:
-		return glob.Compile("{" + strings.Join(filters, ",") + "}")
+		return glob.Compile("{"+strings.Join(filters, ",")+"}", separators...)
 	}
 }
 
-func MustCompile(filters []string) Filter {
-	f, err := Compile(filters)
+func MustCompile(filters []string, separators ...rune) Filter {
+	f, err := Compile(filters, separators...)
 	if err != nil {
 		panic(err)
 	}
@@ -104,13 +106,14 @@ func NewIncludeExcludeFilterDefaults(
 	exclude []string,
 	includeDefault bool,
 	excludeDefault bool,
+	separators ...rune,
 ) (Filter, error) {
-	in, err := Compile(include)
+	in, err := Compile(include, separators...)
 	if err != nil {
 		return nil, err
 	}
 
-	ex, err := Compile(exclude)
+	ex, err := Compile(exclude, separators...)
 	if err != nil {
 		return nil, err
 	}

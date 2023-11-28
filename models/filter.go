@@ -33,10 +33,12 @@ func (tf *TagFilter) Compile() error {
 
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
-	NameDrop       []string
-	nameDropFilter filter.Filter
-	NamePass       []string
-	namePassFilter filter.Filter
+	NameDrop           []string
+	NameDropSeparators []rune
+	nameDropFilter     filter.Filter
+	NamePass           []string
+	NamePassSeparators []rune
+	namePassFilter     filter.Filter
 
 	FieldDrop       []string
 	fieldDropFilter filter.Filter
@@ -78,11 +80,11 @@ func (f *Filter) Compile() error {
 
 	if f.selectActive {
 		var err error
-		f.nameDropFilter, err = filter.Compile(f.NameDrop)
+		f.nameDropFilter, err = filter.Compile(f.NameDrop, f.NameDropSeparators...)
 		if err != nil {
 			return fmt.Errorf("error compiling 'namedrop', %w", err)
 		}
-		f.namePassFilter, err = filter.Compile(f.NamePass)
+		f.namePassFilter, err = filter.Compile(f.NamePass, f.NamePassSeparators...)
 		if err != nil {
 			return fmt.Errorf("error compiling 'namepass', %w", err)
 		}
