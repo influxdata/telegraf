@@ -1587,16 +1587,12 @@ func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) 
 func (c *Config) getFieldRuneSlice(tbl *ast.Table, fieldName string, target *[]rune) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			ary, ok := kv.Value.(*ast.Array)
+			str, ok := kv.Value.(*ast.String)
 			if !ok {
-				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string slice format", fieldName))
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string format", fieldName))
 				return
 			}
-			for _, elem := range ary.Value {
-				if str, ok := elem.(*ast.String); ok {
-					*target = append(*target, []rune(str.Value)...)
-				}
-			}
+			*target = []rune(str.Value)
 		}
 	}
 }
