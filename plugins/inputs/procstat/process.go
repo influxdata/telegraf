@@ -3,6 +3,7 @@ package procstat
 import (
 	"fmt"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -15,7 +16,7 @@ type Process interface {
 	Name() (string, error)
 	SetTag(string, string)
 	MemoryMaps(bool) (*[]process.MemoryMapsStat, error)
-	Metric(prefix string, cmdLineTag, solarisMode bool) telegraf.Metric
+	Metric(prefix string, tagging map[string]bool, solarisMode bool) telegraf.Metric
 }
 
 type PIDFinder interface {
@@ -64,42 +65,12 @@ func (p *Proc) percent(_ time.Duration) (float64, error) {
 }
 
 // Add metrics a single Process
-func (p *Proc) Metric(prefix string, cmdLineTag, solarisMode bool) telegraf.Metric {
+func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) telegraf.Metric {
 	if prefix != "" {
 		prefix += "_"
 	}
 
 	fields := make(map[string]interface{})
-
-	if _, nameInTags := p.tags["process_name"]; !nameInTags {
-		name, err := p.Name()
-		if err == nil {
-			p.tags["process_name"] = name
-		}
-	}
-
-	if _, ok := p.tags["user"]; !ok {
-		user, err := p.Username()
-		if err == nil {
-			p.tags["user"] = user
-		}
-	}
-
-	// If pid is not present as a tag, include it as a field.
-	if _, pidInTags := p.tags["pid"]; !pidInTags {
-		fields["pid"] = p.Pid
-	}
-
-	// Add the command line as a tag if the option is set
-	if cmdLineTag {
-		if _, ok := p.tags["cmdline"]; !ok {
-			cmdline, err := p.Cmdline()
-			if err == nil {
-				p.tags["cmdline"] = cmdline
-			}
-		}
-	}
-
 	numThreads, err := p.NumThreads()
 	if err == nil {
 		fields[prefix+"num_threads"] = numThreads
@@ -206,14 +177,54 @@ func (p *Proc) Metric(prefix string, cmdLineTag, solarisMode bool) telegraf.Metr
 		}
 	}
 
+	// Add the tags as requested by the user
+	cmdline, err := p.Cmdline()
+	if err == nil {
+		if tagging["cmdline"] {
+			p.tags["cmdline"] = cmdline
+		} else {
+			fields[prefix+"cmdline"] = cmdline
+		}
+	}
+
+	if tagging["pid"] {
+		p.tags["pid"] = strconv.Itoa(int(p.Pid))
+	} else {
+		fields["pid"] = p.Pid
+	}
+
 	ppid, err := p.Ppid()
 	if err == nil {
-		fields[prefix+"ppid"] = ppid
+		if tagging["ppid"] {
+			p.tags["ppid"] = strconv.Itoa(int(ppid))
+		} else {
+			fields[prefix+"ppid"] = ppid
+		}
 	}
 
 	status, err := p.Status()
 	if err == nil {
-		fields[prefix+"status"] = status[0]
+		if tagging["status"] {
+			p.tags["status"] = status[0]
+		} else {
+			fields[prefix+"status"] = status[0]
+		}
+	}
+
+	user, err := p.Username()
+	if err == nil {
+		if tagging["user"] {
+			p.tags["user"] = user
+		} else {
+			fields[prefix+"user"] = user
+		}
+	}
+
+	if _, exists := p.tags["process_name"]; !exists {
+		name, err := p.Name()
+		if err == nil {
+			p.tags["process_name"] = name
+		}
 	}
 
 	return metric.New("procstat", p.tags, fields, time.Time{})

@@ -24,6 +24,7 @@ var sampleConfig string
 
 // execCommand is so tests can mock out exec.Command usage.
 var execCommand = exec.Command
+var availableTags = []string{"cmdline", "pid", "ppid", "status", "user"}
 
 type PID int32
 
@@ -33,7 +34,7 @@ type Procstat struct {
 	Exe                    string          `toml:"exe"`
 	Pattern                string          `toml:"pattern"`
 	Prefix                 string          `toml:"prefix"`
-	CmdLineTag             bool            `toml:"cmdline_tag"`
+	CmdLineTag             bool            `toml:"cmdline_tag" deprecated:"1.29.0;use 'tag_with' instead"`
 	ProcessName            string          `toml:"process_name"`
 	User                   string          `toml:"user"`
 	SystemdUnits           string          `toml:"systemd_units"`
@@ -41,14 +42,16 @@ type Procstat struct {
 	SupervisorUnits        []string        `toml:"supervisor_units"`
 	IncludeSystemdChildren bool            `toml:"include_systemd_children"`
 	CGroup                 string          `toml:"cgroup"`
-	PidTag                 bool            `toml:"pid_tag"`
+	PidTag                 bool            `toml:"pid_tag" deprecated:"1.29.0;use 'tag_with' instead"`
 	WinService             string          `toml:"win_service"`
 	Mode                   string          `toml:"mode"`
+	TagWith                []string        `toml:"tag_with"`
 	Log                    telegraf.Logger `toml:"-"`
 
 	solarisMode bool
 	finder      PIDFinder
 	processes   map[PID]Process
+	tagging     map[string]bool
 
 	createProcess func(PID) (Process, error)
 }
@@ -65,6 +68,23 @@ func (*Procstat) SampleConfig() string {
 func (p *Procstat) Init() error {
 	// Check solaris mode
 	p.solarisMode = strings.ToLower(p.Mode) == "solaris"
+
+	// Keep the old settings for compatibility
+	if p.PidTag && !choice.Contains("pid", p.TagWith) {
+		p.TagWith = append(p.TagWith, "pid")
+	}
+	if p.CmdLineTag && !choice.Contains("cmdline", p.TagWith) {
+		p.TagWith = append(p.TagWith, "cmdline")
+	}
+
+	// Check tagging and setup LUT
+	if err := choice.CheckSlice(p.TagWith, availableTags); err != nil {
+		return fmt.Errorf("invalid tag_with setting: %w", err)
+	}
+	p.tagging = make(map[string]bool, len(p.TagWith))
+	for _, tag := range p.TagWith {
+		p.tagging[tag] = true
+	}
 
 	// Keep the old settings for compatibility
 	for _, u := range p.SupervisorUnit {
@@ -159,17 +179,13 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 					proc.SetTag(k, v)
 				}
 
-				// Add pid tag if needed
-				if p.PidTag {
-					proc.SetTag("pid", strconv.Itoa(int(pid)))
-				}
 				if p.ProcessName != "" {
 					proc.SetTag("process_name", p.ProcessName)
 				}
 				p.processes[pid] = proc
 			}
 			running[pid] = true
-			m := proc.Metric(p.Prefix, p.CmdLineTag, p.solarisMode)
+			m := proc.Metric(p.Prefix, p.tagging, p.solarisMode)
 			m.SetTime(now)
 			acc.AddMetric(m)
 		}
