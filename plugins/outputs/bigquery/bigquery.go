@@ -75,14 +75,16 @@ func (s *BigQuery) Connect() error {
 		}
 	}
 
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
-	defer cancel()
+	if s.CompactTable {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
+		defer cancel()
 
-	// Check if the compact table exists
-	_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Metadata(ctx)
-	if s.CompactTable && err != nil {
-		return fmt.Errorf("compact table: %w", err)
+		// Check if the compact table exists
+		_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Metadata(ctx)
+		if err != nil {
+			return fmt.Errorf("compact table: %w", err)
+		}
 	}
 	return nil
 }
