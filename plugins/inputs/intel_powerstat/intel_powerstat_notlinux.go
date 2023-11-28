@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-//go:build !linux
+//go:build !linux || !amd64
 
 package intel_powerstat
 
@@ -21,8 +21,11 @@ func (i *IntelPowerstat) Init() error {
 	i.Log.Warn("current platform is not supported")
 	return nil
 }
+
 func (*IntelPowerstat) SampleConfig() string                { return sampleConfig }
 func (*IntelPowerstat) Gather(_ telegraf.Accumulator) error { return nil }
+func (*IntelPowerstat) Start(_ telegraf.Accumulator) error  { return nil }
+func (*IntelPowerstat) Stop()                               {}
 
 func init() {
 	inputs.Add("intel_powerstat", func() telegraf.Input {
