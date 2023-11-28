@@ -626,7 +626,7 @@ sent onwards to the next stage of processing.
 
 - **namepass**:
 An array of [glob pattern][] strings. Only metrics whose measurement name
-matches a pattern in this list are emitted. Additionally, custom list of 
+matches a pattern in this list are emitted. Additionally, custom list of
 separators can be specified using **namepass_separator**. These separators
 are excluded from wildcard glob pattern matching.
 
