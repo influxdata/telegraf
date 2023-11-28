@@ -77,10 +77,10 @@ sections that follow these configuration keys are defined in more detail.
 * **measurement_name (OPTIONAL)**:  Will set the measurement name to the provided string.
 * **measurement_name_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a measurement name from the JSON input. The query must return a single data value or it will use the default measurement name. This takes precedence over `measurement_name`.
 * **timestamp_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a timestamp from the JSON input. The query must return a single data value or it will default to the current time.
-* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_query is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
+* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_path is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
 the Go "reference time" which is defined to be the specific time:
 `Mon Jan 2 15:04:05 MST 2006`
-* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_query**: This option should be set to a
+* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_path**: This option should be set to a
 [Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
 such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`. Defaults to `UTC`
 
@@ -162,10 +162,10 @@ TOML as an array table using double brackets.
 *Keys to define what JSON keys should be used as timestamps:*
 
 * **timestamp_key(OPTIONAL)**: You can define a json key (for a nested key, prepend the parent keys with underscores) for the value to be set as the timestamp from the JSON input.
-* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_query is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
+* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_key is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
 the Go "reference time" which is defined to be the specific time:
 `Mon Jan 2 15:04:05 MST 2006`
-* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_query**: This option should be set to a
+* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_key**: This option should be set to a
 [Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
 such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`. Defaults to `UTC`
 
