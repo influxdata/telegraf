@@ -499,6 +499,34 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 		},
+		{
+			name: "audience",
+			plugin: &HTTP{
+				URL: u.String() + "/write",
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					OAuth2Config: oauth.OAuth2Config{
+						ClientID:     "howdy",
+						ClientSecret: "secret",
+						TokenURL:     u.String() + "/token",
+						Scopes:       []string{"urn:opc:idm:__myscopes__"},
+						Audience:     "audience",
+					},
+				},
+			},
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				values := url.Values{}
+				values.Add("access_token", token)
+				values.Add("token_type", "bearer")
+				values.Add("expires_in", "3600")
+				_, err = w.Write([]byte(values.Encode()))
+				require.NoError(t, err)
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
+				w.WriteHeader(http.StatusOK)
+			},
+		},
 	}
 
 	for _, tt := range tests {

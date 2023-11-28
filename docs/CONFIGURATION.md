@@ -231,7 +231,7 @@ combining an integer value and time unit as a string value.  Valid time units ar
 
 Global tags can be specified in the `[global_tags]` table in key="value"
 format. All metrics that are gathered will be tagged with the tags specified.
-Global tags are overriden by tags set by plugins.
+Global tags are overridden by tags set by plugins.
 
 ```toml
 [global_tags]
@@ -375,7 +375,7 @@ Parameters that can be used with any input plugin:
   Overrides the `precision` setting of the [agent][Agent] for the plugin.
   Collected metrics are rounded to the precision specified as an [interval][].
 
-  When this value is set on a service input, multiple events occuring at the
+  When this value is set on a service input, multiple events occurring at the
   same timestamp may be merged by the output database.
 
 - **collection_jitter**:
