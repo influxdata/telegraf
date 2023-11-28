@@ -68,7 +68,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## When set to true will add node labels as a comma-separated tag. If none,
   ## are found, then a tag with the value of 'none' is used. Finally, if a
-  ## lable contains a comma it is replaced with an underscore.
+  ## label contains a comma it is replaced with an underscore.
   # node_labels_as_tag = false
 ```
 
