@@ -15,4 +15,4 @@ Please confirm the following by placing an "x" between the []:
 All PRs should resolve an issue, if one does not exist, please open one.
 -->
 
-fixes #
+resolves #
