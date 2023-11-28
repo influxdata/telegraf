@@ -12,12 +12,21 @@ type Filter interface {
 
 // Compile takes a list of string filters and returns a Filter interface
 // for matching a given string against the filter list. The filter list
-// supports glob matching too, ie:
+// supports glob matching with separators too, ie:
 //
 //	f, _ := Compile([]string{"cpu", "mem", "net*"})
 //	f.Match("cpu")     // true
 //	f.Match("network") // true
 //	f.Match("memory")  // false
+//
+// separators are only to be used for globbing filters, ie:
+//
+//	f, _ := Compile([]string{"cpu.*.count"}, '.')
+//	f.Match("cpu.count")     // false
+//	f.Match("cpu.measurement.count") // true
+//	f.Match("cpu.field.measurement.count")  // false
+//
+// Compile will return nil if the filter list is empty.
 func Compile(filters []string, separators ...rune) (Filter, error) {
 	// return if there is nothing to compile
 	if len(filters) == 0 {
@@ -106,14 +115,13 @@ func NewIncludeExcludeFilterDefaults(
 	exclude []string,
 	includeDefault bool,
 	excludeDefault bool,
-	separators ...rune,
 ) (Filter, error) {
-	in, err := Compile(include, separators...)
+	in, err := Compile(include)
 	if err != nil {
 		return nil, err
 	}
 
-	ex, err := Compile(exclude, separators...)
+	ex, err := Compile(exclude)
 	if err != nil {
 		return nil, err
 	}

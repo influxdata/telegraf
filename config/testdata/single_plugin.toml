@@ -1,7 +1,9 @@
 [[inputs.memcached]]
   servers = ["localhost"]
   namepass = ["metricname1"]
+  namepass_separator = "."
   namedrop = ["metricname2"]
+  namedrop_separator = "."
   fieldpass = ["some", "strings"]
   fielddrop = ["other", "stuff"]
   interval = "5s"

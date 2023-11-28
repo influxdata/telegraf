@@ -76,10 +76,12 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 # is unique`
 
 	filter := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:           []string{"metricname2"},
+		NameDropSeparators: []rune{'.'},
+		NamePass:           []string{"metricname1", "ip_192.168.1.1_name"},
+		NamePassSeparators: []rune{'.'},
+		FieldDrop:          []string{"other", "stuff"},
+		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -117,10 +119,12 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	input.Servers = []string{"localhost"}
 
 	filter := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:           []string{"metricname2"},
+		NameDropSeparators: []rune{'.'},
+		NamePass:           []string{"metricname1"},
+		NamePassSeparators: []rune{'.'},
+		FieldDrop:          []string{"other", "stuff"},
+		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -166,10 +170,12 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[0].Servers = []string{"localhost"}
 
 	filterMockup := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:           []string{"metricname2"},
+		NameDropSeparators: []rune{'.'},
+		NamePass:           []string{"metricname1"},
+		NamePassSeparators: []rune{'.'},
+		FieldDrop:          []string{"other", "stuff"},
+		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -210,10 +216,12 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[2].Servers = []string{"192.168.1.1"}
 
 	filterMemcached := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:           []string{"metricname2"},
+		NameDropSeparators: []rune{'.'},
+		NamePass:           []string{"metricname1"},
+		NamePassSeparators: []rune{'.'},
+		FieldDrop:          []string{"other", "stuff"},
+		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",

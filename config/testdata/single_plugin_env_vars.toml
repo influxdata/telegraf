@@ -17,7 +17,9 @@
   # this comment line will be ignored by the parser
   servers = ["$MY_TEST_SERVER"]
   namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"] # this comment will be ignored as well
+  namepass_separator = "."
   namedrop = ["metricname2"]
+  namedrop_separator = "."
   fieldpass = ["some", "strings"]
   fielddrop = ["other", "stuff"]
   interval = "$TEST_INTERVAL"
