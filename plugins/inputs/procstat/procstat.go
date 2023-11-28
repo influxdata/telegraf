@@ -117,7 +117,7 @@ func (p *Procstat) Init() error {
 		// see https://github.com/shirou/gopsutil/blob/v3.23.10/process/process_darwin.go#L235
 		requiresChildren := len(p.SupervisorUnits) > 0 && p.Pattern != ""
 		if requiresChildren && runtime.GOOS == "darwin" {
-			return errors.New("configuration requires the 'pgrep' finder on you OS")
+			return errors.New("configuration requires 'pgrep' finder on your OS")
 		}
 		p.finder = &NativeFinder{}
 	case "test":

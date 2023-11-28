@@ -233,7 +233,7 @@ func TestInitRequiresChildDarwin(t *testing.T) {
 		PidFinder:       "native",
 		Log:             testutil.Logger{},
 	}
-	require.ErrorContains(t, p.Init(), "requires the 'pgrep' finder")
+	require.ErrorContains(t, p.Init(), "requires 'pgrep' finder")
 }
 
 func TestInitMissingPidMethod(t *testing.T) {
