@@ -149,7 +149,7 @@ func TestMinMax(t *testing.T) {
 			},
 		},
 		{
-			name: "Missing field Fileds",
+			name: "Missing field Fields",
 			scale: []scalingValuesMinMax{
 				{
 					InMin:  -1,

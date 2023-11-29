@@ -184,7 +184,7 @@ func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) 
 	case msrFSBFreqString:
 		msrAddress = fsbFreq
 	default:
-		return 0, fmt.Errorf("incorect name of MSR %s", msr)
+		return 0, fmt.Errorf("incorrect name of MSR %s", msr)
 	}
 
 	value, err := m.fs.readFileAtOffsetToUint64(msrFile, msrAddress)

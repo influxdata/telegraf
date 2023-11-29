@@ -82,7 +82,7 @@ Referencing the secret within a plugin occurs by:
   password = "@{docker_secretstore:secret_for_plugin}"
 ```
 
-## Additonal Information
+## Additional Information
 
 [Docker Secrets in Swarm][2]
 
