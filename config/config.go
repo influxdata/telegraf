@@ -1331,9 +1331,9 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 	f := models.Filter{}
 
 	c.getFieldStringSlice(tbl, "namepass", &f.NamePass)
-	c.getFieldRuneSlice(tbl, "namepass_separator", &f.NamePassSeparators)
+	c.getFieldString(tbl, "namepass_separator", &f.NamePassSeparators)
 	c.getFieldStringSlice(tbl, "namedrop", &f.NameDrop)
-	c.getFieldRuneSlice(tbl, "namedrop_separator", &f.NameDropSeparators)
+	c.getFieldString(tbl, "namedrop_separator", &f.NameDropSeparators)
 
 	c.getFieldStringSlice(tbl, "pass", &f.FieldPass)
 	c.getFieldStringSlice(tbl, "fieldpass", &f.FieldPass)
@@ -1580,19 +1580,6 @@ func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) 
 			} else {
 				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting int", fieldName))
 			}
-		}
-	}
-}
-
-func (c *Config) getFieldRuneSlice(tbl *ast.Table, fieldName string, target *[]rune) {
-	if node, ok := tbl.Fields[fieldName]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			str, ok := kv.Value.(*ast.String)
-			if !ok {
-				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string format", fieldName))
-				return
-			}
-			*target = []rune(str.Value)
 		}
 	}
 }

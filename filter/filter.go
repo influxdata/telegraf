@@ -35,12 +35,10 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 
 	// check if we can compile a non-glob filter
 	noGlob := len(separators) == 0
-	if noGlob {
-		for _, filter := range filters {
-			if hasMeta(filter) {
-				noGlob = false
-				break
-			}
+	for _, filter := range filters {
+		if hasMeta(filter) {
+			noGlob = false
+			break
 		}
 	}
 

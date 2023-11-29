@@ -149,7 +149,7 @@ func TestFilter_NamePass(t *testing.T) {
 func TestFilter_NamePass_WithSeparator(t *testing.T) {
 	f := Filter{
 		NamePass:           []string{"foo.*.bar", "foo.*.abc.*.bar"},
-		NamePassSeparators: []rune{'.', ','},
+		NamePassSeparators: ".,",
 	}
 	require.NoError(t, f.Compile())
 
@@ -219,7 +219,7 @@ func TestFilter_NameDrop(t *testing.T) {
 func TestFilter_NameDrop_WithSeparator(t *testing.T) {
 	f := Filter{
 		NameDrop:           []string{"foo.*.bar", "foo.*.abc.*.bar"},
-		NameDropSeparators: []rune{'.', ','},
+		NameDropSeparators: ".,",
 	}
 	require.NoError(t, f.Compile())
 

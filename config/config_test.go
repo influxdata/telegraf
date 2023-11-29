@@ -77,9 +77,9 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 	filter := models.Filter{
 		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: []rune{'.'},
+		NameDropSeparators: ".",
 		NamePass:           []string{"metricname1", "ip_192.168.1.1_name"},
-		NamePassSeparators: []rune{'.'},
+		NamePassSeparators: ".",
 		FieldDrop:          []string{"other", "stuff"},
 		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
@@ -120,9 +120,9 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 	filter := models.Filter{
 		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: []rune{'.'},
+		NameDropSeparators: ".",
 		NamePass:           []string{"metricname1"},
-		NamePassSeparators: []rune{'.'},
+		NamePassSeparators: ".",
 		FieldDrop:          []string{"other", "stuff"},
 		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
@@ -171,9 +171,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	filterMockup := models.Filter{
 		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: []rune{'.'},
+		NameDropSeparators: ".",
 		NamePass:           []string{"metricname1"},
-		NamePassSeparators: []rune{'.'},
+		NamePassSeparators: ".",
 		FieldDrop:          []string{"other", "stuff"},
 		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
@@ -217,9 +217,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	filterMemcached := models.Filter{
 		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: []rune{'.'},
+		NameDropSeparators: ".",
 		NamePass:           []string{"metricname1"},
-		NamePassSeparators: []rune{'.'},
+		NamePassSeparators: ".",
 		FieldDrop:          []string{"other", "stuff"},
 		FieldPass:          []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
