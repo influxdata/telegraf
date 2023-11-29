@@ -193,7 +193,7 @@ func Test_processCommand(t *testing.T) {
 		simulateResponse(mockConn, response, nil)
 
 		for _, dpdkConn := range dpdk.connectors {
-			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/", nil)
+			dpdkConn.processCommand(mockAcc, testutil.Logger{}, "/", nil)
 		}
 
 		require.Empty(t, mockAcc.Errors)
@@ -206,7 +206,7 @@ func Test_processCommand(t *testing.T) {
 		simulateResponse(mockConn, response, nil)
 
 		for _, dpdkConn := range dpdk.connectors {
-			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/", nil)
+			dpdkConn.processCommand(mockAcc, testutil.Logger{}, "/", nil)
 		}
 
 		require.Len(t, mockAcc.Errors, 1)
@@ -220,7 +220,7 @@ func Test_processCommand(t *testing.T) {
 		mockConn.On("SetDeadline", mock.Anything).Return(nil)
 		mockConn.On("Close").Return(nil)
 		for _, dpdkConn := range dpdk.connectors {
-			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/", nil)
+			dpdkConn.processCommand(mockAcc, testutil.Logger{}, "/", nil)
 		}
 
 		require.Len(t, mockAcc.Errors, 1)
@@ -233,7 +233,7 @@ func Test_processCommand(t *testing.T) {
 		response := `{"/test": null}`
 		simulateResponse(mockConn, response, nil)
 		for _, dpdkConn := range dpdk.connectors {
-			dpdkConn.processCommand(testutil.Logger{}, mockAcc, "/test,param", nil)
+			dpdkConn.processCommand(mockAcc, testutil.Logger{}, "/test,param", nil)
 		}
 
 		require.Empty(t, mockAcc.Errors)

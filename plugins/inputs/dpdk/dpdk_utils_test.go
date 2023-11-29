@@ -4,17 +4,13 @@ package dpdk
 
 import (
 	"fmt"
-	"math/rand"
-	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/internal/globpath"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 func Test_isSocket(t *testing.T) {
@@ -132,108 +128,6 @@ func Test_jsonToArray(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to unmarshal json response")
 	})
-}
-
-func Test_getDpdkInMemorySocketPaths(t *testing.T) {
-	var err error
-
-	t.Run("Should return nil if path doesn't exist", func(t *testing.T) {
-		dpdk := dpdk{
-			SocketPath: "/tmp/nothing-should-exist-here/test.socket",
-			Log:        testutil.Logger{},
-		}
-		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
-		require.NoError(t, err)
-
-		socketsPaths := dpdk.getDpdkInMemorySocketPaths()
-		require.Nil(t, socketsPaths)
-	})
-
-	t.Run("Should return nil if can't read the dir", func(t *testing.T) {
-		dpdk := dpdk{
-			SocketPath: "/root/no_access",
-			Log:        testutil.Logger{},
-		}
-		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
-		require.NoError(t, err)
-
-		socketsPaths := dpdk.getDpdkInMemorySocketPaths()
-		require.Nil(t, socketsPaths)
-	})
-
-	t.Run("Should return one socket from socket path", func(t *testing.T) {
-		socketPath, socket := createSocketForTest(t, "")
-		defer socket.Close()
-
-		dpdk := dpdk{
-			SocketPath: socketPath,
-			Log:        testutil.Logger{},
-		}
-		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
-		require.NoError(t, err)
-
-		socketsPaths := dpdk.getDpdkInMemorySocketPaths()
-		require.Len(t, socketsPaths, 1)
-		require.Equal(t, socketPath, socketsPaths[0])
-	})
-
-	t.Run("Should return 2 sockets from socket path", func(t *testing.T) {
-		socketPaths, sockets := createMultipleSocketsForTest(t, 2, "")
-		defer func() {
-			for _, socket := range sockets {
-				socket.Close()
-			}
-		}()
-
-		dpdk := dpdk{
-			SocketPath: socketPaths[0],
-			Log:        testutil.Logger{},
-		}
-		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
-		require.NoError(t, err)
-
-		socketsPathsFromFunc := dpdk.getDpdkInMemorySocketPaths()
-		require.Len(t, socketsPathsFromFunc, 2)
-		require.Equal(t, socketPaths, socketsPathsFromFunc)
-	})
-}
-
-func createSocketForTest(t *testing.T, dirPath string) (string, net.Listener) {
-	var err error
-	var pathToSocket string
-	if len(dirPath) == 0 {
-		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
-		require.NoError(t, err)
-		pathToSocket = filepath.Join(dirPath, dpdkSocketTemplateName)
-	} else {
-		pathToSocket = fmt.Sprintf("%s:%d", filepath.Join(dirPath, dpdkSocketTemplateName), rand.Intn(100)+1)
-	}
-
-	socket, err := net.Listen("unixpacket", pathToSocket)
-	require.NoError(t, err)
-	return pathToSocket, socket
-}
-
-func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) (socketsPaths []string, sockets []net.Listener) {
-	var err error
-	if len(dirPath) == 0 {
-		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
-	}
-	require.NoError(t, err)
-
-	for i := 0; i < numSockets; i++ {
-		var pathToSocket string
-		if i == 0 {
-			pathToSocket = filepath.Join(dirPath, dpdkSocketTemplateName)
-		} else {
-			pathToSocket = filepath.Join(dirPath, fmt.Sprintf("%s:%d", dpdkSocketTemplateName, 1000+i))
-		}
-		socket, err := net.Listen("unixpacket", pathToSocket)
-		require.NoError(t, err)
-		socketsPaths = append(socketsPaths, pathToSocket)
-		sockets = append(sockets, socket)
-	}
-	return socketsPaths, sockets
 }
 
 func prepareGlob(path string) (*globpath.GlobPath, error) {

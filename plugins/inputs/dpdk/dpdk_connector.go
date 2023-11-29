@@ -137,7 +137,7 @@ func (conn *dpdkConnector) getCommandResponse(fullCommand string) ([]byte, error
 }
 
 // Executes command, parses response and creates/writes metrics from response to accumulator
-func (conn *dpdkConnector) processCommand(log telegraf.Logger, acc telegraf.Accumulator, commandWithParams string, metadataFields []string) {
+func (conn *dpdkConnector) processCommand(acc telegraf.Accumulator, log telegraf.Logger, commandWithParams string, metadataFields []string) {
 	buf, err := conn.getCommandResponse(commandWithParams)
 	if err != nil {
 		acc.AddError(err)

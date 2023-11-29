@@ -5,7 +5,10 @@ package dpdk
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -99,19 +102,12 @@ func (dpdk *dpdk) Init() error {
 
 // Start implements ServiceInput interface
 func (dpdk *dpdk) Start(telegraf.Accumulator) error {
-	if err := dpdk.maintainConnections(); err != nil {
-		if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
-			return err
-		}
-		dpdk.Log.Warnf("Unreachable socket issue occurred: %v", err)
-	}
-	return nil
+	return dpdk.maintainConnections()
 }
 
 func (dpdk *dpdk) Stop() {
-	var err error
 	for _, connector := range dpdk.connectors {
-		if err = connector.tryClose(); err != nil {
+		if err := connector.tryClose(); err != nil {
 			dpdk.Log.Warnf("Couldn't close connection for %q: %v", connector.pathToSocket, err)
 		}
 	}
@@ -121,18 +117,14 @@ func (dpdk *dpdk) Stop() {
 // Gather function gathers all unique commands and processes each command sequentially
 // Parallel processing could be achieved by running several instances of this plugin with different settings
 func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
-	if err := dpdk.maintainConnections(); err != nil {
-		if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
-			return err
-		}
-		dpdk.Log.Warnf("Unreachable socket issue occurred: %v", err)
-		return nil
+	if err := dpdk.Start(acc); err != nil {
+		return err
 	}
 
 	for _, dpdkConn := range dpdk.connectors {
-		commands := dpdk.gatherCommands(dpdkConn, acc)
+		commands := dpdk.gatherCommands(acc, dpdkConn)
 		for _, command := range commands {
-			dpdkConn.processCommand(dpdk.Log, acc, command, dpdk.MetadataFields)
+			dpdkConn.processCommand(acc, dpdk.Log, command, dpdk.MetadataFields)
 		}
 	}
 	return nil
@@ -142,31 +134,44 @@ func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
 func (dpdk *dpdk) setupDefaultValues() {
 	if dpdk.SocketPath == "" {
 		dpdk.SocketPath = defaultPathToSocket
-		dpdk.Log.Debugf("Using default %q value for socket_path", defaultPathToSocket)
 	}
 
 	if dpdk.DeviceTypes == nil {
 		dpdk.DeviceTypes = []string{"ethdev"}
-		dpdk.Log.Debugf("Using default %q value for device_types", dpdk.DeviceTypes)
 	}
 
 	if dpdk.MetadataFields == nil {
 		dpdk.MetadataFields = []string{dpdkMetadataFieldPidName}
-		dpdk.Log.Debugf("Using default %q value for metadata_fields", dpdk.MetadataFields)
 	}
 
 	if dpdk.PluginOptions == nil {
 		dpdk.PluginOptions = []string{dpdkPluginOptionInMemory}
-		dpdk.Log.Debugf("Using default %q value for plugin_options", dpdk.PluginOptions)
 	}
 
 	if len(dpdk.UnreachableSocketBehavior) == 0 {
 		dpdk.UnreachableSocketBehavior = unreachableSocketBehaviorError
-		dpdk.Log.Debugf("Using default %q value for unreachable_socket_behavior", unreachableSocketBehaviorError)
 	}
 
 	dpdk.rawdevCommands = []string{"/rawdev/xstats"}
 	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/info", ethdevLinkStatusCommand}
+}
+
+func (dpdk *dpdk) getDpdkInMemorySocketPaths() []string {
+	filePaths := dpdk.socketGlobPath.Match()
+
+	var results []string
+	for _, filePath := range filePaths {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil || fileInfo.IsDir() || !strings.Contains(filePath, dpdkSocketTemplateName) {
+			continue
+		}
+
+		if isInMemorySocketPath(filePath, dpdk.SocketPath) {
+			results = append(results, filePath)
+		}
+	}
+
+	return results
 }
 
 // Checks that user-supplied commands are unique and match DPDK commands format
@@ -196,51 +201,6 @@ func (dpdk *dpdk) validateAdditionalCommands() error {
 
 // Establishes connections do DPDK telemetry sockets
 func (dpdk *dpdk) maintainConnections() error {
-	socketsToConnect, socketsToDisconnect := dpdk.identifySockets()
-
-	// Try to close connection with unused sockets
-	// And delete unused elements from the dpdk.connectors list with the safe approach
-	for _, socketToDisconnect := range socketsToDisconnect {
-		for i := 0; i < len(dpdk.connectors); i++ {
-			connector := dpdk.connectors[i]
-			if socketToDisconnect == connector.pathToSocket {
-				dpdk.Log.Debugf("Close unused connection: %s", socketToDisconnect)
-				if closeErr := connector.tryClose(); closeErr != nil {
-					dpdk.Log.Warnf("Failed to close unused connection - %v", closeErr)
-				}
-				dpdk.connectors = append(dpdk.connectors[:i], dpdk.connectors[i+1:]...)
-				i--
-				break
-			}
-		}
-	}
-
-	// Create connections
-	for _, socketToConnect := range socketsToConnect {
-		connector := newDpdkConnector(socketToConnect, dpdk.AccessTimeout)
-		connectionInitMessage, err := connector.connect()
-		if err != nil {
-			if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
-				return fmt.Errorf("couldn't connect to socket %s: %w", socketToConnect, err)
-			}
-			dpdk.Log.Warnf("Couldn't connect to socket %s: %v", socketToConnect, err)
-			continue
-		}
-
-		dpdk.Log.Debugf("Successfully connected to the socket: %s. Version: %v running as process with PID %v with len %v",
-			socketToConnect, connectionInitMessage.Version, connectionInitMessage.Pid, connectionInitMessage.MaxOutputLen)
-		dpdk.connectors = append(dpdk.connectors, connector)
-	}
-
-	if len(dpdk.connectors) == 0 {
-		return fmt.Errorf("no active sockets connections present")
-	}
-
-	return nil
-}
-
-// Identify scope of sockets to connect/disconnect
-func (dpdk *dpdk) identifySockets() (socketsToConnect []string, socketsToDisconnect []string) {
 	candidates := []string{dpdk.SocketPath}
 	if choice.Contains(dpdkPluginOptionInMemory, dpdk.PluginOptions) {
 		candidates = dpdk.getDpdkInMemorySocketPaths()
@@ -248,8 +208,8 @@ func (dpdk *dpdk) identifySockets() (socketsToConnect []string, socketsToDisconn
 
 	// Find sockets in the connected-sockets list that are not among
 	// the candidates anymore and thus need to be removed.
-	toDisconnect := make([]string, 0, len(dpdk.connectors))
-	for _, connector := range dpdk.connectors {
+	for i := 0; i < len(dpdk.connectors); i++ {
+		connector := dpdk.connectors[i]
 		var found bool
 		for _, candidate := range candidates {
 			if candidate == connector.pathToSocket {
@@ -258,13 +218,17 @@ func (dpdk *dpdk) identifySockets() (socketsToConnect []string, socketsToDisconn
 			}
 		}
 		if !found {
-			toDisconnect = append(toDisconnect, connector.pathToSocket)
+			dpdk.Log.Debugf("Close unused connection: %s", connector.pathToSocket)
+			if closeErr := connector.tryClose(); closeErr != nil {
+				dpdk.Log.Warnf("Failed to close unused connection - %v", closeErr)
+			}
+			dpdk.connectors = append(dpdk.connectors[:i], dpdk.connectors[i+1:]...)
+			i--
 		}
 	}
 
 	// Find candidates that are not yet in the connected-sockets list as we
-	// need to connect to those later.
-	toConnect := make([]string, 0, len(candidates))
+	// need to connect to those.
 	for _, candidate := range candidates {
 		var found bool
 		for _, connector := range dpdk.connectors {
@@ -274,15 +238,35 @@ func (dpdk *dpdk) identifySockets() (socketsToConnect []string, socketsToDisconn
 			}
 		}
 		if !found {
-			toConnect = append(toConnect, candidate)
+			connector := newDpdkConnector(candidate, dpdk.AccessTimeout)
+			connectionInitMessage, err := connector.connect()
+			if err != nil {
+				if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
+					return fmt.Errorf("couldn't connect to socket %s: %w", candidate, err)
+				}
+				dpdk.Log.Warnf("Couldn't connect to socket %s: %v", candidate, err)
+				continue
+			}
+
+			dpdk.Log.Debugf("Successfully connected to the socket: %s. Version: %v running as process with PID %v with len %v",
+				candidate, connectionInitMessage.Version, connectionInitMessage.Pid, connectionInitMessage.MaxOutputLen)
+			dpdk.connectors = append(dpdk.connectors, connector)
 		}
 	}
 
-	return toConnect, toDisconnect
+	if len(dpdk.connectors) == 0 {
+		errMsg := "no active sockets connections present"
+		if dpdk.UnreachableSocketBehavior == unreachableSocketBehaviorError {
+			return errors.New(errMsg)
+		}
+		dpdk.Log.Warnf("Unreachable socket issue occurred: %v", errMsg)
+	}
+
+	return nil
 }
 
 // Gathers all unique commands
-func (dpdk *dpdk) gatherCommands(dpdkConnector *dpdkConnector, acc telegraf.Accumulator) []string {
+func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator, dpdkConnector *dpdkConnector) []string {
 	var commands []string
 	if choice.Contains("ethdev", dpdk.DeviceTypes) {
 		ethdevCommands := removeSubset(dpdk.ethdevCommands, dpdk.ethdevExcludedCommandsFilter)

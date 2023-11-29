@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -158,9 +159,10 @@ func Test_Start(t *testing.T) {
 func TestMaintainConnections(t *testing.T) {
 	t.Run("maintainConnections should return the error if socket doesn't exist", func(t *testing.T) {
 		dpdk := dpdk{
-			SocketPath:  "/tmp/justrandompath",
-			DeviceTypes: []string{"ethdev"},
-			Log:         testutil.Logger{},
+			SocketPath:                "/tmp/justrandompath",
+			DeviceTypes:               []string{"ethdev"},
+			Log:                       testutil.Logger{},
+			UnreachableSocketBehavior: unreachableSocketBehaviorError,
 		}
 
 		require.Empty(t, dpdk.connectors)
@@ -168,14 +170,15 @@ func TestMaintainConnections(t *testing.T) {
 		defer dpdk.Stop()
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "no active sockets connections present")
+		require.Contains(t, err.Error(), "couldn't connect to socket")
 	})
 
 	t.Run("maintainConnections should return the error if socket not found with dpdkPluginOptionInMemory", func(t *testing.T) {
 		dpdk := dpdk{
-			SocketPath:    defaultPathToSocket,
-			Log:           testutil.Logger{},
-			PluginOptions: []string{dpdkPluginOptionInMemory},
+			SocketPath:                defaultPathToSocket,
+			Log:                       testutil.Logger{},
+			PluginOptions:             []string{dpdkPluginOptionInMemory},
+			UnreachableSocketBehavior: unreachableSocketBehaviorError,
 		}
 		var err error
 		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
@@ -490,7 +493,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
 		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
 		dpdk.AdditionalCommands = []string{}
-		commands := dpdk.gatherCommands(dpdk.connectors[0], mockAcc)
+		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.ElementsMatch(t, commands, expectedCommands)
 		require.Empty(t, mockAcc.Errors)
@@ -506,7 +509,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		dpdk.DeviceTypes = []string{"rawdev"}
 		dpdk.rawdevCommands = []string{"/rawdev/xstats"}
 		dpdk.AdditionalCommands = []string{}
-		commands := dpdk.gatherCommands(dpdk.connectors[0], mockAcc)
+		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.ElementsMatch(t, commands, expectedCommands)
 		require.Empty(t, mockAcc.Errors)
@@ -523,7 +526,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
 		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{"/ethdev/xstats"})
 		dpdk.AdditionalCommands = []string{}
-		commands := dpdk.gatherCommands(dpdk.connectors[0], mockAcc)
+		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.ElementsMatch(t, commands, expectedCommands)
 		require.Empty(t, mockAcc.Errors)
@@ -538,10 +541,74 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
 		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
 		dpdk.AdditionalCommands = []string{}
-		commands := dpdk.gatherCommands(dpdk.connectors[0], mockAcc)
+		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.Empty(t, commands)
 		require.Len(t, mockAcc.Errors, 1)
+	})
+}
+
+func Test_getDpdkInMemorySocketPaths(t *testing.T) {
+	var err error
+
+	t.Run("Should return nil if path doesn't exist", func(t *testing.T) {
+		dpdk := dpdk{
+			SocketPath: "/tmp/nothing-should-exist-here/test.socket",
+			Log:        testutil.Logger{},
+		}
+		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
+		require.NoError(t, err)
+
+		socketsPaths := dpdk.getDpdkInMemorySocketPaths()
+		require.Nil(t, socketsPaths)
+	})
+
+	t.Run("Should return nil if can't read the dir", func(t *testing.T) {
+		dpdk := dpdk{
+			SocketPath: "/root/no_access",
+			Log:        testutil.Logger{},
+		}
+		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
+		require.NoError(t, err)
+
+		socketsPaths := dpdk.getDpdkInMemorySocketPaths()
+		require.Nil(t, socketsPaths)
+	})
+
+	t.Run("Should return one socket from socket path", func(t *testing.T) {
+		socketPath, socket := createSocketForTest(t, "")
+		defer socket.Close()
+
+		dpdk := dpdk{
+			SocketPath: socketPath,
+			Log:        testutil.Logger{},
+		}
+		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
+		require.NoError(t, err)
+
+		socketsPaths := dpdk.getDpdkInMemorySocketPaths()
+		require.Len(t, socketsPaths, 1)
+		require.Equal(t, socketPath, socketsPaths[0])
+	})
+
+	t.Run("Should return 2 sockets from socket path", func(t *testing.T) {
+		socketPaths, sockets := createMultipleSocketsForTest(t, 2, "")
+		defer func() {
+			for _, socket := range sockets {
+				socket.Close()
+			}
+		}()
+
+		dpdk := dpdk{
+			SocketPath: socketPaths[0],
+			Log:        testutil.Logger{},
+		}
+		dpdk.socketGlobPath, err = prepareGlob(dpdk.SocketPath)
+		require.NoError(t, err)
+
+		socketsPathsFromFunc := dpdk.getDpdkInMemorySocketPaths()
+		require.Len(t, socketsPathsFromFunc, 2)
+		require.Equal(t, socketPaths, socketsPathsFromFunc)
 	})
 }
 
@@ -802,6 +869,44 @@ func simulateResponse(mockConn *mocks.Conn, response string, readErr error) {
 	if readErr != nil {
 		mockConn.On("Close").Return(nil)
 	}
+}
+
+func createSocketForTest(t *testing.T, dirPath string) (string, net.Listener) {
+	var err error
+	var pathToSocket string
+	if len(dirPath) == 0 {
+		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
+		require.NoError(t, err)
+		pathToSocket = filepath.Join(dirPath, dpdkSocketTemplateName)
+	} else {
+		pathToSocket = fmt.Sprintf("%s:%d", filepath.Join(dirPath, dpdkSocketTemplateName), rand.Intn(100)+1)
+	}
+
+	socket, err := net.Listen("unixpacket", pathToSocket)
+	require.NoError(t, err)
+	return pathToSocket, socket
+}
+
+func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) (socketsPaths []string, sockets []net.Listener) {
+	var err error
+	if len(dirPath) == 0 {
+		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
+	}
+	require.NoError(t, err)
+
+	for i := 0; i < numSockets; i++ {
+		var pathToSocket string
+		if i == 0 {
+			pathToSocket = filepath.Join(dirPath, dpdkSocketTemplateName)
+		} else {
+			pathToSocket = filepath.Join(dirPath, fmt.Sprintf("%s:%d", dpdkSocketTemplateName, 1000+i))
+		}
+		socket, err := net.Listen("unixpacket", pathToSocket)
+		require.NoError(t, err)
+		socketsPaths = append(socketsPaths, pathToSocket)
+		sockets = append(sockets, socket)
+	}
+	return socketsPaths, sockets
 }
 
 func simulateSocketResponse(socket net.Listener, t *testing.T) {

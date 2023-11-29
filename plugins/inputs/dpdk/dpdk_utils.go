@@ -39,24 +39,6 @@ func getParams(command string) string {
 	return command[index+1:]
 }
 
-func (dpdk *dpdk) getDpdkInMemorySocketPaths() []string {
-	filePaths := dpdk.socketGlobPath.Match()
-
-	var results []string
-	for _, filePath := range filePaths {
-		fileInfo, err := os.Stat(filePath)
-		if err != nil || fileInfo.IsDir() || !strings.Contains(filePath, dpdkSocketTemplateName) {
-			continue
-		}
-
-		if isInMemorySocketPath(filePath, dpdk.SocketPath) {
-			results = append(results, filePath)
-		}
-	}
-
-	return results
-}
-
 // Checks if the provided filePath contains in-memory socket
 func isInMemorySocketPath(filePath, socketPath string) bool {
 	if filePath == socketPath {
