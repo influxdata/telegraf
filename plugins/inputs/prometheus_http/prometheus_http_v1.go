@@ -39,7 +39,7 @@ type PrometheusHttpV1 struct {
 	client   *http.Client
 	name     string
 	url      string
-	username string
+	user     string
 	password string
 	step     string
 	params   string
@@ -61,8 +61,8 @@ func (p *PrometheusHttpV1) httpDoRequest(method, query string, params url.Values
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connection", "close")
-	if p.username != "" || p.password != "" {
-		req.SetBasicAuth(p.username, p.password)
+	if p.user != "" || p.password != "" {
+		req.SetBasicAuth(p.user, p.password)
 	}
 
 	resp, err := p.client.Do(req)
@@ -211,7 +211,7 @@ func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, p
 	return nil
 }
 
-func NewPrometheusHttpV1(name string, log telegraf.Logger, ctx context.Context, url string, username string, password string, timeout int, step string, params string) *PrometheusHttpV1 {
+func NewPrometheusHttpV1(name string, log telegraf.Logger, ctx context.Context, url string, user string, password string, timeout int, step string, params string) *PrometheusHttpV1 {
 
 	t := time.Duration(timeout)
 
@@ -237,7 +237,7 @@ func NewPrometheusHttpV1(name string, log telegraf.Logger, ctx context.Context, 
 		ctx:      ctx,
 		client:   client,
 		url:      url,
-		username: username,
+		user:     user,
 		password: password,
 		step:     step,
 		params:   params,

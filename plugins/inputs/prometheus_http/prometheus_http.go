@@ -70,8 +70,8 @@ type PrometheusHttpPeriod struct {
 type PrometheusHttp struct {
 	Name          string                  `toml:"name"`
 	URL           string                  `toml:"url"`
-	HttpUsername  string                  `toml:"http_username"`
-	HttpPassword  string                  `toml:"http_password"`
+	User          string                  `toml:"user"`
+	Password      string                  `toml:"password"`
 	Metrics       []*PrometheusHttpMetric `toml:"metric"`
 	Duration      config.Duration         `toml:"duration"`
 	Interval      config.Duration         `toml:"interval"`
@@ -508,7 +508,7 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 	if ds == nil {
 		switch p.Version {
 		case "v1":
-			ds = NewPrometheusHttpV1(p.Name, p.Log, context.Background(), p.URL, p.HttpUsername, p.HttpPassword, int(timeout), step, params)
+			ds = NewPrometheusHttpV1(p.Name, p.Log, context.Background(), p.URL, p.User, p.Password, int(timeout), step, params)
 		}
 	}
 
