@@ -76,12 +76,10 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 # is unique`
 
 	filter := models.Filter{
-		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: ".",
-		NamePass:           []string{"metricname1", "ip_192.168.1.1_name"},
-		NamePassSeparators: ".",
-		FieldDrop:          []string{"other", "stuff"},
-		FieldPass:          []string{"some", "strings"},
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -114,6 +112,47 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
+
+	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	input.Servers = []string{"localhost"}
+
+	filter := models.Filter{
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
+		TagDropFilters: []models.TagFilter{
+			{
+				Name:   "badtag",
+				Values: []string{"othertag"},
+			},
+		},
+		TagPassFilters: []models.TagFilter{
+			{
+				Name:   "goodtag",
+				Values: []string{"mytag"},
+			},
+		},
+	}
+	require.NoError(t, filter.Compile())
+	inputConfig := &models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
+		Interval: 5 * time.Second,
+	}
+	inputConfig.Tags = make(map[string]string)
+
+	// Ignore Log, Parser and ID
+	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	c.Inputs[0].Config.ID = ""
+	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
+	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
+}
+
+func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_separators.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -170,12 +209,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[0].Servers = []string{"localhost"}
 
 	filterMockup := models.Filter{
-		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: ".",
-		NamePass:           []string{"metricname1"},
-		NamePassSeparators: ".",
-		FieldDrop:          []string{"other", "stuff"},
-		FieldPass:          []string{"some", "strings"},
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -216,12 +253,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[2].Servers = []string{"192.168.1.1"}
 
 	filterMemcached := models.Filter{
-		NameDrop:           []string{"metricname2"},
-		NameDropSeparators: ".",
-		NamePass:           []string{"metricname1"},
-		NamePassSeparators: ".",
-		FieldDrop:          []string{"other", "stuff"},
-		FieldPass:          []string{"some", "strings"},
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",

@@ -1,9 +1,11 @@
 [[inputs.memcached]]
-  servers = ["192.168.1.1"]
+  servers = ["localhost"]
   namepass = ["metricname1"]
+  namepass_separator = "."
   namedrop = ["metricname2"]
-  pass = ["some", "strings"]
-  drop = ["other", "stuff"]
+  namedrop_separator = "."
+  fieldpass = ["some", "strings"]
+  fielddrop = ["other", "stuff"]
   interval = "5s"
   [inputs.memcached.tagpass]
     goodtag = ["mytag"]
