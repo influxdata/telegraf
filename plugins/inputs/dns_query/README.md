@@ -1,6 +1,6 @@
 # DNS Query Input Plugin
 
-The DNS plugin gathers dns query times in miliseconds - like
+The DNS plugin gathers dns query times in milliseconds - like
 [Dig](https://en.wikipedia.org/wiki/Dig_\(command\))
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

@@ -1,5 +1,21 @@
-# Read metrics from MQTT topic(s)
-[[inputs.mqtt_consumer]]
+package inputs_procstat_test
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	_ "github.com/influxdata/telegraf/migrations/inputs_procstat" // register migration
+	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"    // register plugin
+)
+
+func TestNoMigration(t *testing.T) {
+	defaultCfg := []byte(`
+  # Read metrics from MQTT topic(s)
+  [[inputs.mqtt_consumer]]
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple
   ## clusters or standalone servers, use a separate plugin instance.
   ##   example: servers = ["tcp://localhost:1883"]
@@ -9,9 +25,9 @@
 
   ## Topics that will be subscribed to.
   topics = [
-    "telegraf/host01/cpu",
-    "telegraf/+/mem",
-    "sensors/#",
+  "telegraf/host01/cpu",
+  "telegraf/+/mem",
+  "sensors/#",
   ]
 
   ## The message topic will be stored in a tag specified by this value.  If set
@@ -46,9 +62,7 @@
   ## In order for this option to work you must also set client_id to identify
   ## the client.  To receive messages that arrived while the client is offline,
   ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
-  ## publishing. Finally, using a persistent session will use the initial
-  ## connection topics and not subscribe to any new topics even after
-  ## reconnecting or restarting without a change in client ID.
+  ## publishing.
   # persistent_session = false
 
   ## If unset, a random client ID will be generated.
@@ -87,3 +101,60 @@
   ## Value supported is int, float, unit
   #   [[inputs.mqtt_consumer.topic.types]]
   #      key = type
+`)
+
+	// Migrate and check that nothing changed
+	output, n, err := config.ApplyMigrations(defaultCfg)
+	require.NoError(t, err)
+	require.NotEmpty(t, output)
+	require.Zero(t, n)
+	require.Equal(t, string(defaultCfg), string(output))
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			inputFile := filepath.Join(testcasePath, "telegraf.conf")
+			expectedFile := filepath.Join(testcasePath, "expected.conf")
+
+			// Read the expected output
+			expected := config.NewConfig()
+			require.NoError(t, expected.LoadConfig(expectedFile))
+			require.NotEmpty(t, expected.Inputs)
+
+			// Read the input data
+			input, remote, err := config.LoadConfigFile(inputFile)
+			require.NoError(t, err)
+			require.False(t, remote)
+			require.NotEmpty(t, input)
+
+			// Migrate
+			output, n, err := config.ApplyMigrations(input)
+			require.NoError(t, err)
+			require.NotEmpty(t, output)
+			require.GreaterOrEqual(t, n, uint64(1))
+			actual := config.NewConfig()
+			require.NoError(t, actual.LoadConfigData(output))
+
+			// Test the output
+			require.Len(t, actual.Inputs, len(expected.Inputs))
+			actualIDs := make([]string, 0, len(expected.Inputs))
+			expectedIDs := make([]string, 0, len(expected.Inputs))
+			for i := range actual.Inputs {
+				actualIDs = append(actualIDs, actual.Inputs[i].ID())
+				expectedIDs = append(expectedIDs, expected.Inputs[i].ID())
+			}
+			require.ElementsMatch(t, expectedIDs, actualIDs, string(output))
+		})
+	}
+}

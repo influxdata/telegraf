@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,7 +37,8 @@ type Procstat struct {
 	ProcessName            string          `toml:"process_name"`
 	User                   string          `toml:"user"`
 	SystemdUnits           string          `toml:"systemd_units"`
-	SupervisorUnit         []string        `toml:"supervisor_unit"`
+	SupervisorUnit         []string        `toml:"supervisor_unit" deprecated:"1.29.0;use 'supervisor_units' instead"`
+	SupervisorUnits        []string        `toml:"supervisor_units"`
 	IncludeSystemdChildren bool            `toml:"include_systemd_children"`
 	CGroup                 string          `toml:"cgroup"`
 	PidTag                 bool            `toml:"pid_tag"`
@@ -64,9 +66,16 @@ func (p *Procstat) Init() error {
 	// Check solaris mode
 	p.solarisMode = strings.ToLower(p.Mode) == "solaris"
 
+	// Keep the old settings for compatibility
+	for _, u := range p.SupervisorUnit {
+		if !choice.Contains(u, p.SupervisorUnits) {
+			p.SupervisorUnits = append(p.SupervisorUnits, u)
+		}
+	}
+
 	// Check filtering
 	switch {
-	case len(p.SupervisorUnit) > 0, p.SystemdUnits != "", p.WinService != "",
+	case len(p.SupervisorUnits) > 0, p.SystemdUnits != "", p.WinService != "",
 		p.CGroup != "", p.PidFile != "", p.Exe != "", p.Pattern != "",
 		p.User != "":
 		// Do nothing as those are valid settings
@@ -86,7 +95,7 @@ func (p *Procstat) Init() error {
 	case "native":
 		// gopsutil relies on pgrep when looking up children on darwin
 		// see https://github.com/shirou/gopsutil/blob/v3.23.10/process/process_darwin.go#L235
-		requiresChildren := len(p.SupervisorUnit) > 0 && p.Pattern != ""
+		requiresChildren := len(p.SupervisorUnits) > 0 && p.Pattern != ""
 		if requiresChildren && runtime.GOOS == "darwin" {
 			return errors.New("configuration requires the 'pgrep' finder on you OS")
 		}
@@ -124,7 +133,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	var count int
 	running := make(map[PID]bool)
 	for _, r := range results {
-		if len(r.PIDs) < 1 && len(p.SupervisorUnit) > 0 {
+		if len(r.PIDs) < 1 && len(p.SupervisorUnits) > 0 {
 			continue
 		}
 		count += len(r.PIDs)
@@ -183,8 +192,8 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		"pid_finder": p.PidFinder,
 		"result":     "success",
 	}
-	if len(p.SupervisorUnit) > 0 {
-		tags["supervisor_unit"] = strings.Join(p.SupervisorUnit, ";")
+	if len(p.SupervisorUnits) > 0 {
+		tags["supervisor_unit"] = strings.Join(p.SupervisorUnits, ";")
 	}
 	acc.AddFields("procstat_lookup", fields, tags, now)
 
@@ -194,7 +203,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids() ([]PidsTags, error) {
 	switch {
-	case len(p.SupervisorUnit) > 0:
+	case len(p.SupervisorUnits) > 0:
 		return p.findSupervisorUnits()
 	case p.SystemdUnits != "":
 		return p.systemdUnitPIDs()
@@ -286,7 +295,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 }
 
 func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, error) {
-	out, err := execCommand("supervisorctl", "status", strings.Join(p.SupervisorUnit, " ")).Output()
+	out, err := execCommand("supervisorctl", "status", strings.Join(p.SupervisorUnits, " ")).Output()
 	if err != nil {
 		if !strings.Contains(err.Error(), "exit status 3") {
 			return nil, nil, err
@@ -326,7 +335,7 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 		mainPids[name] = statusMap
 	}
 
-	return p.SupervisorUnit, mainPids, nil
+	return p.SupervisorUnits, mainPids, nil
 }
 
 func (p *Procstat) systemdUnitPIDs() ([]PidsTags, error) {

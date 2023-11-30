@@ -202,10 +202,10 @@ func TestInitRequiresChildDarwin(t *testing.T) {
 	}
 
 	p := Procstat{
-		Pattern:        "somepattern",
-		SupervisorUnit: []string{"a_unit"},
-		PidFinder:      "native",
-		Log:            testutil.Logger{},
+		Pattern:         "somepattern",
+		SupervisorUnits: []string{"a_unit"},
+		PidFinder:       "native",
+		Log:             testutil.Logger{},
 	}
 	require.ErrorContains(t, p.Init(), "requires the 'pgrep' finder")
 }
@@ -513,10 +513,10 @@ func TestGather_SameTimestamps(t *testing.T) {
 
 func TestGather_supervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
-		SupervisorUnit: []string{"TestGather_supervisorUnitPIDs"},
-		PidFinder:      "test",
-		Log:            testutil.Logger{},
-		finder:         newTestFinder([]PID{pid}),
+		SupervisorUnits: []string{"TestGather_supervisorUnitPIDs"},
+		PidFinder:       "test",
+		Log:             testutil.Logger{},
+		finder:          newTestFinder([]PID{pid}),
 	}
 	require.NoError(t, p.Init())
 
@@ -530,10 +530,10 @@ func TestGather_supervisorUnitPIDs(t *testing.T) {
 
 func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
-		SupervisorUnit: []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
-		PidFinder:      "test",
-		Log:            testutil.Logger{},
-		finder:         newTestFinder([]PID{pid}),
+		SupervisorUnits: []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
+		PidFinder:       "test",
+		Log:             testutil.Logger{},
+		finder:          newTestFinder([]PID{pid}),
 	}
 	require.NoError(t, p.Init())
 

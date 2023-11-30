@@ -39,7 +39,7 @@ processes 86031
 Number of forks since boot.
 ```
 
-Kernel Samepage Merging is generally documented in [kernel documenation][1] and
+Kernel Samepage Merging is generally documented in [kernel documentation][1] and
 the available metrics exposed via sysfs are documented in [admin guide][2]
 
 [1]: https://www.kernel.org/doc/html/latest/mm/ksm.html
