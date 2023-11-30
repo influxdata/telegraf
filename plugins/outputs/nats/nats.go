@@ -4,6 +4,7 @@ package nats
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -41,9 +41,13 @@ type NATS struct {
 }
 
 type JetstreamConfig struct {
-	AutoCreateStream bool                   `toml:"auto_create_stream"`
-	StreamConfig     jetstream.StreamConfig `toml:"stream_config"`
+	AutoCreateStream bool   `toml:"auto_create_stream"`
+	Stream           string `toml:"stream"`
+	StreamJSON       string `toml:"stream_config_json"`
 	// Other jetsream options
+
+	// storing local copy of stream config
+	streamConfig jetstream.StreamConfig
 }
 
 func (*NATS) SampleConfig() string {
@@ -102,12 +106,26 @@ func (n *NATS) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
-		if n.Jetstream.AutoCreateStream && !n.streamExists(n.Jetstream.StreamConfig.Name) {
-			err = choice.Check(n.Subject, n.Jetstream.StreamConfig.Subjects)
-			if err != nil {
-				return errors.New("jetstream subjects array does not contain NATS subject")
+		if n.Jetstream.Stream == "" {
+			return errors.New("stream cannot be empty")
+		}
+		streamExists := n.streamExists(n.Jetstream.Stream)
+		if !streamExists {
+			if !n.Jetstream.AutoCreateStream {
+				return fmt.Errorf("stream %s does not exist", n.Jetstream.Stream)
 			}
-			err = n.createStream(n.Jetstream.StreamConfig.Name)
+			streamConfigJSON := strings.TrimSpace(n.Jetstream.StreamJSON)
+			var streamCfg jetstream.StreamConfig
+			if len(streamConfigJSON) > 0 {
+				err = json.Unmarshal([]byte(streamConfigJSON), &streamCfg)
+				if err != nil {
+					return fmt.Errorf("invalid jetstream config %w", err)
+				}
+			}
+			streamCfg.Name = n.Jetstream.Stream
+			streamCfg.Subjects = []string{n.Subject}
+			n.Jetstream.streamConfig = streamCfg
+			err = n.createStream(streamCfg)
 			if err != nil {
 				return fmt.Errorf("failed to create stream: %w", err)
 			}
@@ -121,8 +139,8 @@ func (n *NATS) streamExists(stream string) bool {
 	return err == nil
 }
 
-func (n *NATS) createStream(stream string) error {
-	_, err := n.jetstreamClient.CreateStream(context.Background(), n.Jetstream.StreamConfig)
+func (n *NATS) createStream(streamCfg jetstream.StreamConfig) error {
+	_, err := n.jetstreamClient.CreateStream(context.Background(), streamCfg)
 	return err
 }
 
