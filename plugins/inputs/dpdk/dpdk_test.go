@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -918,4 +919,8 @@ func simulateSocketResponse(socket net.Listener, t *testing.T) {
 
 	_, err = conn.Write(initMessage)
 	require.NoError(t, err)
+}
+
+func prepareGlob(path string) (*globpath.GlobPath, error) {
+	return globpath.Compile(path + "*")
 }

@@ -210,14 +210,7 @@ func (dpdk *dpdk) maintainConnections() error {
 	// the candidates anymore and thus need to be removed.
 	for i := 0; i < len(dpdk.connectors); i++ {
 		connector := dpdk.connectors[i]
-		var found bool
-		for _, candidate := range candidates {
-			if candidate == connector.pathToSocket {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !choice.Contains(connector.pathToSocket, candidates) {
 			dpdk.Log.Debugf("Close unused connection: %s", connector.pathToSocket)
 			if closeErr := connector.tryClose(); closeErr != nil {
 				dpdk.Log.Warnf("Failed to close unused connection - %v", closeErr)

@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/influxdata/telegraf/internal/globpath"
 )
 
 func Test_isSocket(t *testing.T) {
@@ -128,8 +126,4 @@ func Test_jsonToArray(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to unmarshal json response")
 	})
-}
-
-func prepareGlob(path string) (*globpath.GlobPath, error) {
-	return globpath.Compile(path + "*")
 }
