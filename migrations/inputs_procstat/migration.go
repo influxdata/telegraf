@@ -57,6 +57,63 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		delete(plugin, "supervisor_unit")
 	}
 
+	// The tagging options both need the 'tag_with' setting
+	var tagwith []string
+	newTagWith, found := plugin["tag_with"]
+	if found {
+		ntw, ok := newTagWith.([]interface{})
+		if !ok {
+			return nil, "", fmt.Errorf("setting 'tag_with' has wrong type %T", newTagWith)
+		}
+		for _, raw := range ntw {
+			s, ok := raw.(string)
+			if !ok {
+				return nil, "", fmt.Errorf("setting 'tag_with' contains wrong type %T", raw)
+			}
+			if !choice.Contains(s, tagwith) {
+				tagwith = append(tagwith, s)
+			}
+		}
+	}
+
+	// Tagging with PID
+	if oldPidTag, found := plugin["pid_tag"]; found {
+		applied = true
+
+		pt, ok := oldPidTag.(bool)
+		if !ok {
+			return nil, "", fmt.Errorf("setting 'pid_tag' has wrong type %T", oldPidTag)
+		}
+
+		// Add the pid-tagging to 'tag_with' if requested
+		if pt && !choice.Contains("pid", tagwith) {
+			tagwith = append(tagwith, "pid")
+			plugin["tag_with"] = tagwith
+		}
+
+		// Remove deprecated setting
+		delete(plugin, "pid_tag")
+	}
+
+	// Tagging with command-line
+	if oldCmdlinedTag, found := plugin["cmdline_tag"]; found {
+		applied = true
+
+		ct, ok := oldCmdlinedTag.(bool)
+		if !ok {
+			return nil, "", fmt.Errorf("setting 'cmdline_tag' has wrong type %T", oldCmdlinedTag)
+		}
+
+		// Add the pid-tagging to 'tag_with' if requested
+		if ct && !choice.Contains("cmdline", tagwith) {
+			tagwith = append(tagwith, "cmdline")
+			plugin["tag_with"] = tagwith
+		}
+
+		// Remove deprecated setting
+		delete(plugin, "cmdline_tag")
+	}
+
 	// No options migrated so we can exit early
 	if !applied {
 		return nil, "", migrations.ErrNotApplicable
