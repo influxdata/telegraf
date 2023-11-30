@@ -99,11 +99,6 @@ type MetricNode struct {
 	gjson.Result
 }
 
-func (p *Parser) Reset() {
-	// Reset parser to a consistent state
-	p.subPathResults = nil
-}
-
 func (p *Parser) Init() error {
 	// Propagate the default metric name to the configs in case it is not set there
 	for i, cfg := range p.Configs {
@@ -118,8 +113,6 @@ func (p *Parser) Init() error {
 			p.Configs[i].Location = loc
 		}
 	}
-	p.Reset()
-
 	return nil
 }
 
@@ -138,9 +131,8 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 	p.parseMutex.Lock()
 	defer p.parseMutex.Unlock()
 
-	// Reset Parser instance in case it has been left in an inconsistent state,
-	// otherwise reusing the instance may yield parsing errors.
-	p.Reset()
+	// Clear intermediate results if left by previous call
+	p.subPathResults = nil
 
 	reader := strings.NewReader(string(input))
 	body, _ := utfbom.Skip(reader)
