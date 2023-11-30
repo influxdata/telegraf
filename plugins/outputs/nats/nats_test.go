@@ -131,10 +131,10 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			// Verify that we can connect to the NATS daemon
 			err = tc.nats.Connect()
 			if tc.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			if tc.nats.Jetstream != nil {
 				stream, err := tc.nats.jetstreamClient.Stream(context.Background(), tc.nats.Jetstream.Stream)
@@ -143,7 +143,7 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 				require.NoError(t, err)
 
 				if tc.matchConfig {
-					assert.EqualValues(t, tc.nats.Jetstream.streamConfig, si.Config)
+					require.EqualValues(t, tc.nats.Jetstream.streamConfig, si.Config)
 				}
 			}
 			// Verify that we can successfully write data to the NATS daemon
