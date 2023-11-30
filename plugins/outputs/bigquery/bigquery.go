@@ -33,10 +33,9 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	Timeout          config.Duration `toml:"timeout"`
-	ReplaceHyphenTo  string          `toml:"replace_hyphen_to"`
-	CompactTable     bool            `toml:"compact_table"`
-	CompactTableName string          `toml:"compact_table_name"`
+	Timeout         config.Duration `toml:"timeout"`
+	ReplaceHyphenTo string          `toml:"replace_hyphen_to"`
+	CompactTable    string          `toml:"compact_table"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -58,10 +57,6 @@ func (s *BigQuery) Init() error {
 		return errors.New(`"dataset" is required`)
 	}
 
-	if s.CompactTable && s.CompactTableName == "" {
-		return errors.New(`"compact_table_name" is required`)
-	}
-
 	s.warnedOnHyphens = make(map[string]bool)
 
 	return nil
@@ -74,13 +69,13 @@ func (s *BigQuery) Connect() error {
 		}
 	}
 
-	if s.CompactTable {
+	if s.CompactTable != "" {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 		defer cancel()
 
 		// Check if the compact table exists
-		_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Metadata(ctx)
+		_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Metadata(ctx)
 		if err != nil {
 			return fmt.Errorf("compact table: %w", err)
 		}
@@ -114,7 +109,7 @@ func (s *BigQuery) setUpDefaultClient() error {
 
 // Write the metrics to Google Cloud BigQuery.
 func (s *BigQuery) Write(metrics []telegraf.Metric) error {
-	if s.CompactTable {
+	if s.CompactTable != "" {
 		return s.writeCompact(metrics)
 	}
 
@@ -140,7 +135,7 @@ func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
 
-	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTableName).Inserter()
+	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Inserter()
 
 	compactValues := make([]*bigquery.ValuesSaver, len(metrics))
 	for i, m := range metrics {

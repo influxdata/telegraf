@@ -38,14 +38,6 @@ func TestInit(t *testing.T) {
 			plugin:      &BigQuery{},
 		},
 		{
-			name: "compact table is not set",
-			plugin: &BigQuery{
-				Dataset:      "test-dataset",
-				CompactTable: true,
-			},
-			errorString: `"compact_table_name" is required`,
-		},
-		{
 			name: "valid config",
 			plugin: &BigQuery{
 				Dataset: "test-dataset",
@@ -115,15 +107,42 @@ func TestConnect(t *testing.T) {
 	srv := localBigQueryServer(t)
 	defer srv.Close()
 
-	b := &BigQuery{
-		Project: "test-project",
-		Dataset: "test-dataset",
-		Timeout: defaultTimeout,
+	tests := []struct {
+		name         string
+		compactTable string
+		errorString  string
+	}{
+		{name: "normal"},
+		{
+			name:         "compact table existing",
+			compactTable: "test-metrics",
+		},
+		{
+			name:         "compact table not existing",
+			compactTable: "foobar",
+			errorString:  "compact table: googleapi: got HTTP response code 404",
+		},
 	}
 
-	require.NoError(t, b.Init())
-	require.NoError(t, b.setUpTestClient(srv.URL))
-	require.NoError(t, b.Connect())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BigQuery{
+				Project:      "test-project",
+				Dataset:      "test-dataset",
+				Timeout:      defaultTimeout,
+				CompactTable: tt.compactTable,
+			}
+
+			require.NoError(t, b.Init())
+			require.NoError(t, b.setUpTestClient(srv.URL))
+
+			if tt.errorString != "" {
+				require.ErrorContains(t, b.Connect(), tt.errorString)
+			} else {
+				require.NoError(t, b.Connect())
+			}
+		})
+	}
 }
 
 func TestWrite(t *testing.T) {
@@ -161,11 +180,10 @@ func TestWriteCompact(t *testing.T) {
 	defer srv.Close()
 
 	b := &BigQuery{
-		Project:          "test-project",
-		Dataset:          "test-dataset",
-		Timeout:          defaultTimeout,
-		CompactTable:     true,
-		CompactTableName: "test-metrics",
+		Project:      "test-project",
+		Dataset:      "test-dataset",
+		Timeout:      defaultTimeout,
+		CompactTable: "test-metrics",
 	}
 
 	mockMetrics := testutil.MockMetrics()
