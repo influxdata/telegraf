@@ -1341,7 +1341,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldinclude' instead",
 		})
-		f.FieldPass = append(f.FieldPass, oldPass...)
+		f.FieldInclude = append(f.FieldInclude, oldPass...)
 	}
 	var oldFieldPass []string
 	c.getFieldStringSlice(tbl, "fieldpass", &oldFieldPass)
@@ -1351,9 +1351,9 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldinclude' instead",
 		})
-		f.FieldPass = append(f.FieldPass, oldFieldPass...)
+		f.FieldInclude = append(f.FieldInclude, oldFieldPass...)
 	}
-	c.getFieldStringSlice(tbl, "fieldinclude", &f.FieldPass)
+	c.getFieldStringSlice(tbl, "fieldinclude", &f.FieldInclude)
 
 	var oldDrop []string
 	c.getFieldStringSlice(tbl, "drop", &oldDrop)
@@ -1363,7 +1363,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldexclude' instead",
 		})
-		f.FieldDrop = append(f.FieldDrop, oldDrop...)
+		f.FieldExclude = append(f.FieldExclude, oldDrop...)
 	}
 	var oldFieldDrop []string
 	c.getFieldStringSlice(tbl, "fielddrop", &oldFieldDrop)
@@ -1373,9 +1373,9 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldexclude' instead",
 		})
-		f.FieldDrop = append(f.FieldDrop, oldFieldDrop...)
+		f.FieldExclude = append(f.FieldExclude, oldFieldDrop...)
 	}
-	c.getFieldStringSlice(tbl, "fieldexclude", &f.FieldDrop)
+	c.getFieldStringSlice(tbl, "fieldexclude", &f.FieldExclude)
 
 	c.getFieldTagFilter(tbl, "tagpass", &f.TagPassFilters)
 	c.getFieldTagFilter(tbl, "tagdrop", &f.TagDropFilters)

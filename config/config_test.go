@@ -76,10 +76,10 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 # is unique`
 
 	filter := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1", "ip_192.168.1.1_name"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -117,10 +117,10 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	input.Servers = []string{"localhost"}
 
 	filter := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -166,10 +166,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[0].Servers = []string{"localhost"}
 
 	filterMockup := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -210,10 +210,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[2].Servers = []string{"192.168.1.1"}
 
 	filterMemcached := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -317,8 +317,8 @@ func TestConfig_DeprecatedFilters(t *testing.T) {
 	require.NoError(t, c.LoadConfig("./testdata/deprecated_field_filter.toml"))
 
 	require.Len(t, c.Inputs, 1)
-	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldPass)
-	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldDrop)
+	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldInclude)
+	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldExclude)
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
