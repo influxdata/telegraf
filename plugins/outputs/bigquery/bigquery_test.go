@@ -196,10 +196,11 @@ func TestWriteCompact(t *testing.T) {
 
 	var rows []map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(receivedBody["rows"], &rows))
+	require.Len(t, rows, 1)
+	require.Contains(t, rows[0], "json")
 
 	var row interface{}
 	require.NoError(t, json.Unmarshal(rows[0]["json"], &row))
-
 	require.Equal(t, map[string]interface{}{
 		"timestamp": "2009-11-10T23:00:00Z",
 		"name":      "test1",
@@ -232,7 +233,8 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll":
+		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll",
+			"/projects/test-project/datasets/test-dataset/tables/test-metrics/insertAll":
 			decoder := json.NewDecoder(r.Body)
 			require.NoError(t, decoder.Decode(&receivedBody))
 
@@ -242,13 +244,6 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 		case "/projects/test-project/datasets/test-dataset/tables/test-metrics":
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte("{}"))
-			require.NoError(t, err)
-		case "/projects/test-project/datasets/test-dataset/tables/test-metrics/insertAll":
-			decoder := json.NewDecoder(r.Body)
-			require.NoError(t, decoder.Decode(&receivedBody))
-
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(successfulResponse))
 			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusNotFound)
