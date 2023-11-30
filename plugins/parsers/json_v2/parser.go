@@ -100,6 +100,7 @@ type MetricNode struct {
 }
 
 func (p *Parser) Reset() {
+	// Reset parser to a consistent state
 	p.subPathResults = nil
 }
 
@@ -137,6 +138,8 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 	p.parseMutex.Lock()
 	defer p.parseMutex.Unlock()
 
+	// Reset Parser instance in case it has been left in an inconsistent state,
+	// otherwise reusing the instance may yield parsing errors.
 	p.Reset()
 
 	reader := strings.NewReader(string(input))
