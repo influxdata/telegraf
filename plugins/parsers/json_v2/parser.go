@@ -130,6 +130,10 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 	p.parseMutex.Lock()
 	defer p.parseMutex.Unlock()
+
+	// Clear intermediate results if left by previous call
+	p.subPathResults = nil
+
 	reader := strings.NewReader(string(input))
 	body, _ := utfbom.Skip(reader)
 	input, err := io.ReadAll(body)
