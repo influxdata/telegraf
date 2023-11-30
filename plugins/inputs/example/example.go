@@ -55,7 +55,7 @@ func (m *Example) Init() error {
 	}
 
 	// Set your defaults.
-	// Please note: In golang all fields are initialzed to their nil value, so you should not
+	// Please note: In golang all fields are initialized to their nil value, so you should not
 	// set these fields if the nil value is what you want (e.g. for booleans).
 	if m.NumberFields < 1 {
 		m.Log.Debugf("Setting number of fields to default from invalid value %d", m.NumberFields)
@@ -75,7 +75,7 @@ func (m *Example) Init() error {
 	}
 	defer password.Destroy()
 
-	// Initialze your internal states
+	// Initialize your internal states
 	m.count = 1
 
 	return nil

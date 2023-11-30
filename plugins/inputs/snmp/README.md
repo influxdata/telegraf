@@ -54,7 +54,7 @@ details.
   # version = 2
 
   ## Unconnected UDP socket
-  ## When true, SNMP reponses are accepted from any address not just
+  ## When true, SNMP responses are accepted from any address not just
   ## the requested address. This can be useful when gathering from
   ## redundant/failover systems.
   # unconnected_udp_socket = false

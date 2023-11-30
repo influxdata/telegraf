@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -23,10 +24,11 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 	}
 
 	oauthConfig := clientcredentials.Config{
-		ClientID:     o.ClientID,
-		ClientSecret: o.ClientSecret,
-		TokenURL:     o.TokenURL,
-		Scopes:       o.Scopes,
+		ClientID:       o.ClientID,
+		ClientSecret:   o.ClientSecret,
+		TokenURL:       o.TokenURL,
+		Scopes:         o.Scopes,
+		EndpointParams: make(url.Values),
 	}
 
 	if o.Audience != "" {

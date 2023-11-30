@@ -149,7 +149,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     register = "coil"
 
     ## Name of the measurement.
-    ## Can be overriden by the individual field definitions. Defaults to "modbus"
+    ## Can be overridden by the individual field definitions. Defaults to "modbus"
     # measurement = "modbus"
 
     ## Request optimization algorithm.
