@@ -3383,6 +3383,14 @@ def apply(metric):
 `,
 		},
 		{
+			name:       "return deep copy",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+	return deepcopy(metric)
+`,
+		},
+		{
 			name:       "return new metric in a list",
 			numMetrics: 1,
 			source: `
@@ -3393,6 +3401,14 @@ def apply(metric):
 `,
 		},
 		{
+			name:       "return only deep copy in a list",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+	return [deepcopy(metric)]
+`,
+		},
+		{
 			name:       "return original and new metric in a list",
 			numMetrics: 2,
 			source: `
@@ -3400,6 +3416,14 @@ def apply(metric):
 	newmetric = Metric("new_metric")
 	newmetric.fields["vaue"] = 42
 	return [metric, newmetric]
+`,
+		},
+		{
+			name:       "return original and deepcopy in a list",
+			numMetrics: 2,
+			source: `
+def apply(metric):
+	return [metric, deepcopy(metric)]
 `,
 		},
 	}
@@ -3428,6 +3452,7 @@ def apply(metric):
 			// Ensure we get back the correct number of metrics
 			require.Len(t, acc.GetTelegrafMetrics(), tt.numMetrics)
 			for _, m := range acc.GetTelegrafMetrics() {
+				fmt.Printf("%T\n", m)
 				m.Accept()
 			}
 

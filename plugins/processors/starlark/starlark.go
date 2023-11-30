@@ -75,11 +75,10 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 					continue
 				}
 
-				// Previous metric was found, accept the starlark metric, add
+				// Previous metric was found, ignore the new metric, add
 				// the original metric to the accumulator
 				if v.ID == origMetric.HashID() {
 					origFound = true
-					m.Accept()
 					s.results = append(s.results, origMetric)
 					acc.AddMetric(origMetric)
 					continue
@@ -105,10 +104,9 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 		s.results = s.results[:0]
 	case *common.Metric:
 		m := rv.Unwrap()
-		// If we got the original metric back, use that and drop the new one.
+		// If we got the original metric back, use that and ignore the new one.
 		// Otherwise mark the original as accepted and use the new metric.
 		if origMetric.HashID() == rv.ID {
-			m.Accept()
 			acc.AddMetric(origMetric)
 		} else {
 			origMetric.Accept()

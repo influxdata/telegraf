@@ -54,7 +54,6 @@ func deepcopy(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwar
 	}
 
 	dup := sm.metric.Copy()
-	dup.Drop()
 	return &Metric{metric: dup}, nil
 }
 
