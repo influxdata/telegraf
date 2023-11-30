@@ -45,7 +45,7 @@ values.
 
   ## A list of metadata separators. If csv_metadata_rows is set,
   ## csv_metadata_separators must contain at least one separator.
-  ## Please note that separators are case sensitive and the sequence of the seperators are respected.
+  ## Please note that separators are case sensitive and the sequence of the separators are respected.
   csv_metadata_separators = [":", "="]
 
   ## A set of metadata trim characters.

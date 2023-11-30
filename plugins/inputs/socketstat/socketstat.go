@@ -132,7 +132,7 @@ func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffe
 		// formats depending on the protocol.
 		tags, fields = getTagsAndState(proto, words, ss.Log)
 
-		// This line containted metrics, so record that.
+		// This line contained metrics, so record that.
 		flushData = true
 	}
 	if flushData {

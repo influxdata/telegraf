@@ -5,7 +5,7 @@ syntax supported is [GJSON Path
 Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to
 this playground to test out your GJSON path here:
 [gjson.dev/](https://gjson.dev). You can find multiple examples under the
-`testdata` folder.
+[`testdata`][] folder.
 
 ## Configuration
 
@@ -180,7 +180,7 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 *Configuration to modify the resutling line protocol:*
 
 * **disable_prepend_keys (OPTIONAL)**: Set to true to prevent resulting nested data to contain the parent key prepended to its key **NOTE**: duplicate names can overwrite each other when this is enabled
-* **renames (OPTIONAL, defined in TOML as a table using single bracket)**: A table matching the json key with the desired name (oppossed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results
+* **renames (OPTIONAL, defined in TOML as a table using single bracket)**: A table matching the json key with the desired name (opposed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results
 * **fields (OPTIONAL, defined in TOML as a table using single bracket)**: A table matching the json key with the desired type (int,string,bool,float), if you define a key that is an array or object then all nested values will become that type
 
 ## Arrays and Objects
@@ -194,7 +194,7 @@ The following describes the high-level approach when parsing arrays and objects:
 When handling nested arrays and objects, these above rules continue to apply as
 the parser creates line protocol. When an object has multiple array's as values,
 the array's will become separate line protocol containing only non-array values
-from the obejct. Below you can see an example of this behavior, with an input
+from the object. Below you can see an example of this behavior, with an input
 json containing an array of book objects that has a nested array of characters.
 
 Example JSON:
@@ -252,7 +252,9 @@ file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=2
 
 ```
 
-You can find more complicated examples under the folder `testdata`.
+You can find more complicated examples under the folder [`testdata`][].
+
+[`testdata`]: https://github.com/influxdata/telegraf/tree/master/plugins/parsers/json_v2/testdata
 
 ## Types
 
