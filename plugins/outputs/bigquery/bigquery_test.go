@@ -185,8 +185,8 @@ func TestWriteCompact(t *testing.T) {
 	require.Equal(t, map[string]interface{}{
 		"timestamp": "2009-11-10T23:00:00Z",
 		"name":      "test1",
-		"tags":      "{\"tag1\":\"value1\"}\n",
-		"fields":    "{\"value\":1}\n",
+		"tags":      `{"tag1":"value1"}`,
+		"fields":    `{"value":1}`,
 	}, row)
 
 	require.NoError(t, b.Close())

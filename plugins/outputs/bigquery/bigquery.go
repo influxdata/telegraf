@@ -4,6 +4,7 @@ package bigquery
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -18,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
 //go:embed sample.conf
@@ -40,8 +40,7 @@ type BigQuery struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	client     *bigquery.Client
-	serializer json.Serializer
+	client *bigquery.Client
 
 	warnedOnHyphens map[string]bool
 }
@@ -65,7 +64,7 @@ func (s *BigQuery) Init() error {
 
 	s.warnedOnHyphens = make(map[string]bool)
 
-	return s.serializer.Init()
+	return nil
 }
 
 func (s *BigQuery) Connect() error {
@@ -178,14 +177,12 @@ func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
 }
 
 func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
-	s.serializer.Transformation = "tags"
-	tags, err := s.serializer.Serialize(m)
+	tags, err := json.Marshal(m.Tags())
 	if err != nil {
 		s.Log.Warnf("serializing tags: %v", err)
 	}
 
-	s.serializer.Transformation = "fields"
-	fields, err := s.serializer.Serialize(m)
+	fields, err := json.Marshal(m.Fields())
 	if err != nil {
 		s.Log.Warnf("serializing fields: %v", err)
 	}
