@@ -193,7 +193,7 @@ with an error.
 
 In case you need to call some code that may return an error, you can delegate
 the call to the built-in function `catch` which takes as argument a `Callable`
-and returns the error that occured if any, `None` otherwise.
+and returns the error that occurred if any, `None` otherwise.
 
 So for example:
 

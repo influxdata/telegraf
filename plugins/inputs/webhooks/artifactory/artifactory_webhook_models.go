@@ -119,7 +119,7 @@ type DockerEvent struct {
 		ImageName string `json:"image_name"`
 		Tag       string `json:"tag"`
 		Platforms []struct {
-			Architecture string `json:"achitecture"`
+			Architecture string `json:"architecture"`
 			Os           string `json:"os"`
 		} `json:"platforms"`
 	} `json:"data"`

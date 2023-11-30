@@ -304,7 +304,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-// BulkIndexer supports pipeline at config level so seperate indexer instance for each unique pipeline
+// BulkIndexer supports pipeline at config level so separate indexer instance for each unique pipeline
 func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string]opensearchutil.BulkIndexer {
 	var indexers = make(map[string]opensearchutil.BulkIndexer)
 

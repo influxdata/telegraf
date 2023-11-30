@@ -297,7 +297,7 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 	}
 
 	// Walk over the struct fields and call the given function. If we encounter more complex embedded
-	// elements (stucts, slices/arrays, maps) we need to descend into those elements as they might
+	// elements (structs, slices/arrays, maps) we need to descend into those elements as they might
 	// contain structures nested in the current structure.
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)

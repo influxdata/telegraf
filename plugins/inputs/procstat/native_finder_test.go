@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"os/user"
 	"runtime"
 	"testing"
 
@@ -11,17 +12,15 @@ import (
 )
 
 func BenchmarkPattern(b *testing.B) {
-	finder, err := NewNativeFinder()
-	require.NoError(b, err)
+	finder := &NativeFinder{}
 	for n := 0; n < b.N; n++ {
-		_, err = finder.Pattern(".*")
+		_, err := finder.Pattern(".*")
 		require.NoError(b, err)
 	}
 }
 
 func BenchmarkFullPattern(b *testing.B) {
-	finder, err := NewNativeFinder()
-	require.NoError(b, err)
+	finder := &NativeFinder{}
 	for n := 0; n < b.N; n++ {
 		_, err := finder.FullPattern(".*")
 		require.NoError(b, err)
@@ -53,10 +52,47 @@ func TestChildPattern(t *testing.T) {
 	expected = append(expected, PID(cmd2.Process.Pid))
 
 	// Use the plugin to find the children
-	finder, err := NewNativeFinder()
+	finder := &NativeFinder{}
+	parent, err := finder.Pattern(parentName)
 	require.NoError(t, err)
-
-	childs, err := finder.ChildPattern(parentName)
+	require.Len(t, parent, 1)
+	childs, err := finder.Children(parent[0])
 	require.NoError(t, err)
 	require.ElementsMatch(t, expected, childs)
+}
+
+func TestGather_RealPatternIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	pg := &NativeFinder{}
+	pids, err := pg.Pattern(`procstat`)
+	require.NoError(t, err)
+	require.NotEmpty(t, pids)
+}
+
+func TestGather_RealFullPatternIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping integration test on Non-Windows OS")
+	}
+	pg := &NativeFinder{}
+	pids, err := pg.FullPattern(`%procstat%`)
+	require.NoError(t, err)
+	require.NotEmpty(t, pids)
+}
+
+func TestGather_RealUserIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	currentUser, err := user.Current()
+	require.NoError(t, err)
+
+	pg := &NativeFinder{}
+	pids, err := pg.UID(currentUser.Username)
+	require.NoError(t, err)
+	require.NotEmpty(t, pids)
 }

@@ -24,7 +24,7 @@ type Parser struct {
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
 
-	// **** The struct fields bellow this comment are used for processing indvidual configs ****
+	// **** The struct fields below this comment are used for processing individual configs ****
 
 	// measurementName is the name of the current config used in each line protocol
 	measurementName string
@@ -165,7 +165,7 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
-					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+					err := fmt.Errorf("use of 'timestamp_path' requires 'timestamp_format'")
 					return nil, err
 				}
 
@@ -379,7 +379,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 	} else {
 		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
-				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+				err := fmt.Errorf("use of 'timestamp_key' requires 'timestamp_format'")
 				return nil, err
 			}
 			var loc *time.Location
