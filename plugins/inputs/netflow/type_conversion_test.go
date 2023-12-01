@@ -9,7 +9,7 @@ import (
 
 func TestDecodeInt32(t *testing.T) {
 	buf := []byte{0x82, 0xad, 0x80, 0x86}
-	v, err := decodeInt32(buf)
+	v, err := decodeInt(buf)
 	require.NoError(t, err)
 	out, ok := v.(int64)
 	require.True(t, ok)

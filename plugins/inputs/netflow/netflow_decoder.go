@@ -468,7 +468,7 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	431: {{"layer2_frames_total", decodeUint}},                        // layer2FrameTotalCount
 	432: {{"pseudo_wire_dst", decodeIP}},                              // pseudoWireDestinationIPv4Address
 	433: {{"ignored_layer2_frames_total", decodeUint}},                // ignoredLayer2FrameTotalCount
-	434: {{"mib_obj_value_int", decodeInt32}},                         // mibObjectValueInteger
+	434: {{"mib_obj_value_int", decodeInt}},                           // mibObjectValueInteger
 	435: {{"mib_obj_value_str", decodeString}},                        // mibObjectValueOctetString
 	436: {{"mib_obj_value_oid", decodeHex}},                           // mibObjectValueOID
 	437: {{"mib_obj_value_bits", decodeHex}},                          // mibObjectValueBits

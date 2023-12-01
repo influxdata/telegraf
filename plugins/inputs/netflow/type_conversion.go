@@ -83,8 +83,20 @@ func initIPv4OptionMapping() error {
 	return nil
 }
 
-func decodeInt32(b []byte) (interface{}, error) {
-	return int64(int32(binary.BigEndian.Uint32(b))), nil
+func decodeInt(b []byte) (interface{}, error) {
+	switch len(b) {
+	case 0:
+		return int64(0), nil
+	case 1:
+		return int64(int8(b[0])), nil
+	case 2:
+		return int64(int16(binary.BigEndian.Uint16(b))), nil
+	case 4:
+		return int64(int32(binary.BigEndian.Uint32(b))), nil
+	case 8:
+		return int64(binary.BigEndian.Uint64(b)), nil
+	}
+	return nil, fmt.Errorf("invalid length for int buffer %v", b)
 }
 
 func decodeUint(b []byte) (interface{}, error) {
