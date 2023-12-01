@@ -64,7 +64,7 @@ func (q *QBittorrent) getSyncData() error {
 	if q.mainData != nil {
 		param.Set("rid", strconv.Itoa(int(q.mainData.RID)))
 	}
-	measure, _, err := q.getMeasure("GET", "/api/v2/sync/maindata", nil, param, nil)
+	measure, _, err := q.getMeasure("GET", "/api/v2/sync/maindata", nil, param, nil, false)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (q *QBittorrent) getURL(path string) (*url.URL, error) {
 	return parseURL, nil
 }
 
-func (q *QBittorrent) getMeasure(method string, path string, headers map[string]string, param url.Values, reqBody io.Reader) (string, int, error) {
+func (q *QBittorrent) getMeasure(method string, path string, headers map[string]string, param url.Values, reqBody io.Reader, retry bool) (string, int, error) {
 	if q.cookie == nil || len(q.cookie) == 0 {
 		cookie, err := q.login()
 		if err != nil {
@@ -150,6 +150,11 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusForbidden && !retry {
+			// Reset cookie and retry
+			q.cookie = nil
+			return q.getMeasure(method, path, headers, param, reqBody, true)
+		}
 		err = fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
 			reqURL,
 			resp.StatusCode,
