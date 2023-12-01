@@ -21,7 +21,7 @@ func TestUniqueUsers(t *testing.T) {
 			},
 		},
 		{
-			name:     "emptry entry",
+			name:     "empty entry",
 			expected: 0,
 			data:     []host.UserStat{},
 		},

@@ -20,7 +20,7 @@ func TestInitDefault(t *testing.T) {
 	// This test should succeed with the default initialization.
 
 	// Use whatever you use in the init() function plus the mandatory options.
-	// ATTENTION: Always initialze the "Log" as you will get SIGSEGV otherwise.
+	// ATTENTION: Always initialize the "Log" as you will get SIGSEGV otherwise.
 	plugin := &Example{
 		DeviceName: "test",
 		Timeout:    config.Duration(100 * time.Millisecond),
@@ -42,7 +42,7 @@ func TestInitFail(t *testing.T) {
 	// and check if you reach them
 
 	// We setup a table-test here to specify "setting" - "expected error" values.
-	// Eventhough it seems overkill here for the example plugin, we reuse this structure
+	// Even though it seems overkill here for the example plugin, we reuse this structure
 	// later for checking the metrics
 	tests := []struct {
 		name     string
@@ -58,7 +58,7 @@ func TestInitFail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Always initialze the logger to avoid SIGSEGV. This is done automatically by
+			// Always initialize the logger to avoid SIGSEGV. This is done automatically by
 			// telegraf during normal operation.
 			tt.plugin.Log = testutil.Logger{}
 			err := tt.plugin.Init()
@@ -225,8 +225,8 @@ func TestFixedValue(t *testing.T) {
 			acc.Wait(len(tt.expected))
 
 			// Compare the metrics in a convenient way. Here we ignore
-			// the metric time during comparision as we cannot inject the time
-			// during test. For more comparision options check testutil package.
+			// the metric time during comparison as we cannot inject the time
+			// during test. For more comparison options check testutil package.
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}

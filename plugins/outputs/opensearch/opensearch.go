@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -23,7 +22,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -50,14 +49,14 @@ type Opensearch struct {
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	URLs                []string        `toml:"urls"`
 	Log                 telegraf.Logger `toml:"-"`
+	tls.ClientConfig
 
-	pipelineName  string
-	indexTmpl     *template.Template
-	pipelineTmpl  *template.Template
-	onSucc        func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
-	onFail        func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
-	configOptions httpconfig.HTTPClientConfig
-	osClient      *opensearch.Client
+	pipelineName string
+	indexTmpl    *template.Template
+	pipelineTmpl *template.Template
+	onSucc       func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
+	onFail       func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem, error)
+	osClient     *opensearch.Client
 }
 
 //go:embed template.json
@@ -158,16 +157,17 @@ func (o *Opensearch) newClient() error {
 	}
 	defer password.Destroy()
 
+	tlsConfig, err := o.ClientConfig.TLSConfig()
+	if err != nil {
+		return fmt.Errorf("creating TLS config failed: %w", err)
+	}
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
 		Username:  username.String(),
 		Password:  password.String(),
-	}
-
-	if o.configOptions.InsecureSkipVerify {
-		clientConfig.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
 	}
 
 	header := http.Header{}
@@ -304,7 +304,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-// BulkIndexer supports pipeline at config level so seperate indexer instance for each unique pipeline
+// BulkIndexer supports pipeline at config level so separate indexer instance for each unique pipeline
 func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string]opensearchutil.BulkIndexer {
 	var indexers = make(map[string]opensearchutil.BulkIndexer)
 

@@ -128,7 +128,7 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 		token.Destroy()
 		request.Header.Set("Authorization", bearer)
 	} else if h.TokenFile != "" {
-		token, err := os.ReadFile(h.BearerToken)
+		token, err := os.ReadFile(h.TokenFile)
 		if err != nil {
 			return err
 		}

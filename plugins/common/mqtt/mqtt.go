@@ -72,7 +72,7 @@ func NewClient(cfg *MqttConfig) (Client, error) {
 	case "5":
 		return NewMQTTv5Client(cfg)
 	}
-	return nil, fmt.Errorf("unsuported protocol %q: must be \"3.1.1\" or \"5\"", cfg.Protocol)
+	return nil, fmt.Errorf("unsupported protocol %q: must be \"3.1.1\" or \"5\"", cfg.Protocol)
 }
 
 func parseServers(servers []string) ([]*url.URL, error) {

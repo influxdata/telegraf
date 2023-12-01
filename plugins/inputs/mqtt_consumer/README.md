@@ -25,7 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `usernane` and
+This plugin supports secrets from secret-stores for the `username` and
 `password` option.
 See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
@@ -83,7 +83,9 @@ to use them.
   ## In order for this option to work you must also set client_id to identify
   ## the client.  To receive messages that arrived while the client is offline,
   ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
-  ## publishing.
+  ## publishing. Finally, using a persistent session will use the initial
+  ## connection topics and not subscribe to any new topics even after
+  ## reconnecting or restarting without a change in client ID.
   # persistent_session = false
 
   ## If unset, a random client ID will be generated.

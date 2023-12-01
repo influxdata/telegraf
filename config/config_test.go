@@ -150,6 +150,49 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
+func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_separators.toml"))
+
+	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	input.Servers = []string{"localhost"}
+
+	filter := models.Filter{
+		NameDrop:           []string{"metricname2"},
+		NameDropSeparators: ".",
+		NamePass:           []string{"metricname1"},
+		NamePassSeparators: ".",
+		FieldDrop:          []string{"other", "stuff"},
+		FieldPass:          []string{"some", "strings"},
+		TagDropFilters: []models.TagFilter{
+			{
+				Name:   "badtag",
+				Values: []string{"othertag"},
+			},
+		},
+		TagPassFilters: []models.TagFilter{
+			{
+				Name:   "goodtag",
+				Values: []string{"mytag"},
+			},
+		},
+	}
+	require.NoError(t, filter.Compile())
+	inputConfig := &models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
+		Interval: 5 * time.Second,
+	}
+	inputConfig.Tags = make(map[string]string)
+
+	// Ignore Log, Parser and ID
+	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	c.Inputs[0].Config.ID = ""
+	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
+	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
+}
+
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := config.NewConfig()
 
@@ -621,7 +664,7 @@ func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetSerializer() for %q", format)
@@ -820,7 +863,7 @@ func TestConfig_ParserInterface(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
@@ -1039,7 +1082,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)

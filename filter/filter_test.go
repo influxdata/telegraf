@@ -35,6 +35,18 @@ func TestCompile(t *testing.T) {
 	require.False(t, f.Match("cpu0"))
 	require.True(t, f.Match("mem"))
 	require.True(t, f.Match("network"))
+
+	f, err = Compile([]string{"cpu.*.count"}, '.')
+	require.NoError(t, err)
+	require.False(t, f.Match("cpu.count"))
+	require.True(t, f.Match("cpu.measurement.count"))
+	require.False(t, f.Match("cpu.field.measurement.count"))
+
+	f, err = Compile([]string{"cpu.*.count"}, '.', ',')
+	require.NoError(t, err)
+	require.True(t, f.Match("cpu.measurement.count"))
+	require.False(t, f.Match("cpu.,.count")) // ',' is not considered under * as it is specified as a separator
+	require.False(t, f.Match("cpu.field,measurement.count"))
 }
 
 func TestIncludeExclude(t *testing.T) {
