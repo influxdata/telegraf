@@ -76,11 +76,11 @@ func (dpdk *dpdk) Init() error {
 	}
 
 	if dpdk.AccessTimeout < 0 {
-		return fmt.Errorf("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")
+		return errors.New("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")
 	}
 
 	if len(dpdk.AdditionalCommands) == 0 && len(dpdk.DeviceTypes) == 0 {
-		return fmt.Errorf("plugin was configured with nothing to read")
+		return errors.New("plugin was configured with nothing to read")
 	}
 
 	dpdk.ethdevExcludedCommandsFilter, err = filter.Compile(dpdk.EthdevConfig.EthdevExcludeCommands)
@@ -180,11 +180,11 @@ func (dpdk *dpdk) validateAdditionalCommands() error {
 
 	for _, cmd := range dpdk.AdditionalCommands {
 		if len(cmd) == 0 {
-			return fmt.Errorf("got empty command")
+			return errors.New("got empty command")
 		}
 
 		if cmd[0] != '/' {
-			return fmt.Errorf("%q command should start with '/'", cmd)
+			return fmt.Errorf("%q command should start with slash", cmd)
 		}
 
 		if commandWithoutParams := stripParams(cmd); len(commandWithoutParams) >= maxCommandLength {
@@ -213,7 +213,7 @@ func (dpdk *dpdk) maintainConnections() error {
 		if !choice.Contains(connector.pathToSocket, candidates) {
 			dpdk.Log.Debugf("Close unused connection: %s", connector.pathToSocket)
 			if closeErr := connector.tryClose(); closeErr != nil {
-				dpdk.Log.Warnf("Failed to close unused connection - %v", closeErr)
+				dpdk.Log.Warnf("Failed to close unused connection: %v", closeErr)
 			}
 			dpdk.connectors = append(dpdk.connectors[:i], dpdk.connectors[i+1:]...)
 			i--

@@ -69,7 +69,7 @@ func Test_Init(t *testing.T) {
 		err := dpdk.Init()
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "command should start with '/'")
+		require.Contains(t, err.Error(), "command should start with slash")
 	})
 
 	t.Run("when AccessTime is < 0 then error should be returned", func(t *testing.T) {
@@ -347,7 +347,7 @@ func Test_validateAdditionalCommands(t *testing.T) {
 		err := dpdk.validateAdditionalCommands()
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "command should start with '/'")
+		require.Contains(t, err.Error(), "command should start with slash")
 	})
 
 	t.Run("when validating long command (without parameters) then error should be returned", func(t *testing.T) {
