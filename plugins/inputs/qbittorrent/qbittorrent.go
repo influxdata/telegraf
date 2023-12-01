@@ -71,9 +71,8 @@ func (q *QBittorrent) getSyncData() error {
 	}
 
 	var mainData MainData
-	jErr := json.Unmarshal([]byte(measure), &mainData)
-	if err != nil {
-		return jErr
+	if err := json.Unmarshal([]byte(measure), &mainData); err != nil {
+		return fmt.Errorf("decoding data failed: %w", err)
 	}
 	if q.mainData == nil {
 		q.mainData = &mainData
