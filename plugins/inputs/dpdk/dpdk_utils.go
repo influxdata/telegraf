@@ -4,6 +4,7 @@ package dpdk
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -79,7 +80,7 @@ func isSocket(path string) error {
 // Converts JSON array containing devices identifiers from DPDK response to string slice
 func jsonToArray(input []byte, command string) ([]string, error) {
 	if len(input) == 0 {
-		return nil, fmt.Errorf("got empty object instead of json")
+		return nil, errors.New("got empty object instead of json")
 	}
 
 	var rawMessage map[string]json.RawMessage

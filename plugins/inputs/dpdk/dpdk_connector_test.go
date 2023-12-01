@@ -4,7 +4,7 @@ package dpdk
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -17,7 +17,7 @@ import (
 func Test_readMaxOutputLen(t *testing.T) {
 	t.Run("should return error if timeout occurred", func(t *testing.T) {
 		conn := &mocks.Conn{}
-		conn.On("Read", mock.Anything).Return(0, fmt.Errorf("timeout"))
+		conn.On("Read", mock.Anything).Return(0, errors.New("timeout"))
 		conn.On("SetDeadline", mock.Anything).Return(nil)
 		connector := dpdkConnector{connection: conn}
 
@@ -137,7 +137,7 @@ func Test_getCommandResponse(t *testing.T) {
 	t.Run("should return error if failed to set timeout duration", func(t *testing.T) {
 		mockConn, dpdk, _ := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		mockConn.On("SetDeadline", mock.Anything).Return(fmt.Errorf("deadline error"))
+		mockConn.On("SetDeadline", mock.Anything).Return(errors.New("deadline error"))
 
 		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
@@ -149,7 +149,7 @@ func Test_getCommandResponse(t *testing.T) {
 	t.Run("should return error if timeout occurred during Write operation", func(t *testing.T) {
 		mockConn, dpdk, _ := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		mockConn.On("Write", mock.Anything).Return(0, fmt.Errorf("write timeout"))
+		mockConn.On("Write", mock.Anything).Return(0, errors.New("write timeout"))
 		mockConn.On("SetDeadline", mock.Anything).Return(nil)
 		mockConn.On("Close").Return(nil)
 
@@ -163,7 +163,7 @@ func Test_getCommandResponse(t *testing.T) {
 	t.Run("should return error if timeout occurred during Read operation", func(t *testing.T) {
 		mockConn, dpdk, _ := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		simulateResponse(mockConn, "", fmt.Errorf("read timeout"))
+		simulateResponse(mockConn, "", errors.New("read timeout"))
 
 		buf, err := dpdk.connectors[0].getCommandResponse(command)
 
@@ -216,7 +216,7 @@ func Test_processCommand(t *testing.T) {
 	t.Run("if failed to get command response then accumulator should contain error", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		mockConn.On("Write", mock.Anything).Return(0, fmt.Errorf("deadline exceeded"))
+		mockConn.On("Write", mock.Anything).Return(0, errors.New("deadline exceeded"))
 		mockConn.On("SetDeadline", mock.Anything).Return(nil)
 		mockConn.On("Close").Return(nil)
 		for _, dpdkConn := range dpdk.connectors {

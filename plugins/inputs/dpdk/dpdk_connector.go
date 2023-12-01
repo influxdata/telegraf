@@ -4,6 +4,7 @@ package dpdk
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -195,7 +196,7 @@ func (conn *dpdkConnector) tryClose() error {
 
 func (conn *dpdkConnector) setTimeout() error {
 	if conn.connection == nil {
-		return fmt.Errorf("connection had not been established before")
+		return errors.New("connection had not been established before")
 	}
 
 	if conn.accessTimeout == 0 {
@@ -235,7 +236,7 @@ func (conn *dpdkConnector) readInitMessage() (*initMessage, error) {
 	}
 
 	if connectionInitMessage.MaxOutputLen == 0 {
-		return nil, fmt.Errorf("failed to read maxOutputLen information")
+		return nil, errors.New("failed to read maxOutputLen information")
 	}
 
 	return &connectionInitMessage, nil
