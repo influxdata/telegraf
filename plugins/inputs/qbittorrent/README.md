@@ -2,7 +2,8 @@
 
 The qbittorrent plugin will gather and create metrics about the status of the torrent server.
 
-Compatible qbittorrent API versions must be higher than 2.9.2. Lower versions might work but are neither tested nor recommended to use with this plugin.
+Compatible qbittorrent API versions must be higher than 2.9.2. 
+Lower versions might work but are neither tested nor recommended to use with this plugin.
 
 ## Global configuration options
 

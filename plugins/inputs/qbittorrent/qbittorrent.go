@@ -49,7 +49,6 @@ func (*QBittorrent) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather ..
 func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
 	err := q.getSyncData()
 	if err != nil {
@@ -62,18 +61,16 @@ func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 func (q *QBittorrent) getSyncData() error {
-	var mainData MainData
-
 	param := url.Values{}
-
 	if q.mainData != nil {
 		param.Set("rid", strconv.Itoa(int(q.mainData.RID)))
 	}
-	measure, _, err := q.getMeasure("GET", "/api/v2/sync/maindata", nil, param, nil, false)
+	measure, err := q.getMeasure(param, false)
 	if err != nil {
 		return err
 	}
 
+	var mainData MainData
 	jErr := json.Unmarshal([]byte(measure), &mainData)
 	if err != nil {
 		return jErr
@@ -103,45 +100,45 @@ func (q *QBittorrent) getURL(path string) (*url.URL, error) {
 	return parseURL, nil
 }
 
-func (q *QBittorrent) getMeasure(method string, path string, headers map[string]string, param url.Values, reqBody io.Reader, retry bool) (string, int, error) {
+func (q *QBittorrent) getMeasure(param url.Values, retry bool) (string, error) {
 	if q.cookie == nil || len(q.cookie) == 0 {
 		cookie, err := q.login()
 		if err != nil {
-			return "", -1, err
+			return "", err
 		}
 		q.cookie = cookie
 	}
 
-	getURL, err := q.getURL(path)
+	getURL, err := q.getURL("/api/v2/sync/maindata")
 	if err != nil {
-		return "", -1, err
+		return "", err
 	}
 
 	getURL.RawQuery = param.Encode()
 	reqURL := getURL.String()
 
 	// Create + send request
-	req, err := http.NewRequest(method, reqURL, reqBody)
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
-		return "", -1, err
+		return "", err
 	}
 	for c := range q.cookie {
 		req.AddCookie(q.cookie[c])
 	}
 
-	// Add header parameters
-	for k, v := range headers {
-		if strings.ToLower(k) == "host" {
-			req.Host = v
-		} else {
-			req.Header.Add(k, v)
-		}
-	}
+	//// Add header parameters
+	//for k, v := range headers {
+	//	if strings.ToLower(k) == "host" {
+	//		req.Host = v
+	//	} else {
+	//		req.Header.Add(k, v)
+	//	}
+	//}
 
 	var client = new(http.Client)
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", -1, err
+		return "", err
 	}
 
 	defer func() {
@@ -150,7 +147,7 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return string(respBody), 1, err
+		return string(respBody), err
 	}
 
 	// Process response
@@ -158,7 +155,7 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 		if resp.StatusCode == http.StatusForbidden && !retry {
 			// Reset cookie and retry
 			q.cookie = nil
-			return q.getMeasure(method, path, headers, param, reqBody, true)
+			return q.getMeasure(param, true)
 		}
 		err = fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
 			reqURL,
@@ -166,10 +163,10 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
 			http.StatusText(http.StatusOK))
-		return string(respBody), resp.StatusCode, err
+		return string(respBody), err
 	}
 
-	return string(respBody), resp.StatusCode, nil
+	return string(respBody), nil
 }
 
 func (q *QBittorrent) login() ([]*http.Cookie, error) {
