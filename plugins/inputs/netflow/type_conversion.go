@@ -89,6 +89,8 @@ func decodeInt32(b []byte) (interface{}, error) {
 
 func decodeUint(b []byte) (interface{}, error) {
 	switch len(b) {
+	case 0:
+		return uint64(0), nil
 	case 1:
 		return uint64(b[0]), nil
 	case 2:
