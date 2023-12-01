@@ -56,7 +56,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = ""
 
   ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  ## Expects a credentials file with a JWT and nkey seed
   # credentials = "/etc/telegraf/nats.creds"
+
+  ## Optional NATS 2.0 Nkey seed file
+  ## Expects a file with the nkey seed
+  # credentials = "/etc/telegraf/seed.txt"
 
   ## Use Transport Layer Security
   # secure = false
