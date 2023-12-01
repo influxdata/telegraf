@@ -6,8 +6,8 @@ import (
 	ptel "github.com/intel/powertelemetry"
 )
 
-// TopologyFetcher fetches topology information of the host.
-type TopologyFetcher interface {
+// topologyFetcher fetches topology information of the host.
+type topologyFetcher interface {
 	// GetMsrCPUIDs returns a slice with available CPU IDs of the host for which msr will access to.
 	GetMsrCPUIDs() []int
 
@@ -27,14 +27,14 @@ type TopologyFetcher interface {
 	GetPackageDieIDs(packageID int) ([]int, error)
 }
 
-// CPUFreqFetcher fetches supported CPU-related metrics relying on core frequency.
-type CPUFreqFetcher interface {
+// cpuFreqFetcher fetches supported CPU-related metrics relying on core frequency.
+type cpuFreqFetcher interface {
 	// GetCPUFrequency returns the current frequency value of a given CPU ID, in MHz.
 	GetCPUFrequency(cpuID int) (float64, error)
 }
 
-// CPUMsrFetcher fetches supported CPU-related metrics relying on msr registers.
-type CPUMsrFetcher interface {
+// cpuMsrFetcher fetches supported CPU-related metrics relying on msr registers.
+type cpuMsrFetcher interface {
 	// GetCPUTemperature returns the temperature value of a given CPU ID, in degrees Celsius.
 	GetCPUTemperature(cpuID int) (uint64, error)
 
@@ -61,8 +61,8 @@ type CPUMsrFetcher interface {
 	GetCPUBusyFrequencyMhz(cpuID int) (float64, error)
 }
 
-// CPUPerfFetcher fetches supported CPU-related metrics relying on perf events.
-type CPUPerfFetcher interface {
+// cpuPerfFetcher fetches supported CPU-related metrics relying on perf events.
+type cpuPerfFetcher interface {
 	// ReadPerfEvents reads values of perf events needed to get C0X state residency metrics.
 	// Below getter methods that need this operation to be performed previously.
 	ReadPerfEvents() error
@@ -86,8 +86,8 @@ type CPUPerfFetcher interface {
 	GetCPUC0SubstateC0WaitPercent(cpuID int) (float64, error)
 }
 
-// PackageRaplFetcher fetches supported package related metrics relying on rapl.
-type PackageRaplFetcher interface {
+// packageRaplFetcher fetches supported package related metrics relying on rapl.
+type packageRaplFetcher interface {
 	// GetCurrentPackagePowerConsumptionWatts returns the current package power consumption value of a given package ID, in watts.
 	GetCurrentPackagePowerConsumptionWatts(packageID int) (float64, error)
 
@@ -98,8 +98,8 @@ type PackageRaplFetcher interface {
 	GetPackageThermalDesignPowerWatts(packageID int) (float64, error)
 }
 
-// PackageUncoreFreqFetcher fetches supported package related metrics relying on uncore frequency.
-type PackageUncoreFreqFetcher interface {
+// packageUncoreFreqFetcher fetches supported package related metrics relying on uncore frequency.
+type packageUncoreFreqFetcher interface {
 	// GetInitialUncoreFrequencyMin returns the minimum initial uncore frequency value of a given package ID, in MHz.
 	GetInitialUncoreFrequencyMin(packageID, dieID int) (float64, error)
 
@@ -116,8 +116,8 @@ type PackageUncoreFreqFetcher interface {
 	GetCurrentUncoreFrequency(packageID, dieID int) (float64, error)
 }
 
-// PackageMsrFetcher fetches supported package related metrics relying on msr registers.
-type PackageMsrFetcher interface {
+// packageMsrFetcher fetches supported package related metrics relying on msr registers.
+type packageMsrFetcher interface {
 	// GetCPUBaseFrequency returns the CPU base frequency value of a given package ID, in MHz.
 	GetCPUBaseFrequency(packageID int) (uint64, error)
 
@@ -125,15 +125,15 @@ type PackageMsrFetcher interface {
 	GetMaxTurboFreqList(packageID int) ([]ptel.MaxTurboFreq, error)
 }
 
-// MetricFetcher fetches metrics supported by this plugin.
-type MetricFetcher interface {
-	TopologyFetcher
+// metricFetcher fetches metrics supported by this plugin.
+type metricFetcher interface {
+	topologyFetcher
 
-	CPUFreqFetcher
-	CPUMsrFetcher
-	CPUPerfFetcher
+	cpuFreqFetcher
+	cpuMsrFetcher
+	cpuPerfFetcher
 
-	PackageRaplFetcher
-	PackageUncoreFreqFetcher
-	PackageMsrFetcher
+	packageRaplFetcher
+	packageUncoreFreqFetcher
+	packageMsrFetcher
 }

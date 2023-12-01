@@ -24,8 +24,6 @@ func (i *IntelPowerstat) Init() error {
 
 func (*IntelPowerstat) SampleConfig() string                { return sampleConfig }
 func (*IntelPowerstat) Gather(_ telegraf.Accumulator) error { return nil }
-func (*IntelPowerstat) Start(_ telegraf.Accumulator) error  { return nil }
-func (*IntelPowerstat) Stop()                               {}
 
 func init() {
 	inputs.Add("intel_powerstat", func() telegraf.Input {

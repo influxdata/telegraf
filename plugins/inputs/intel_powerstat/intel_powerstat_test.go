@@ -45,8 +45,7 @@ func TestParsePackageMetrics(t *testing.T) {
 				"current_energy_consumption", // unsupported metric
 				packageCurrentDramPowerConsumption.String(),
 			},
-			parsed: nil,
-			err:    errors.New("invalid package metric specified: \"current_energy_consumption\""),
+			err: errors.New("invalid package metric specified: \"current_energy_consumption\""),
 		},
 		{
 			name: "InvalidPackageMetric",
@@ -55,8 +54,7 @@ func TestParsePackageMetrics(t *testing.T) {
 				cpuTemperature.String(), // not a package metric
 				packageCurrentDramPowerConsumption.String(),
 			},
-			parsed: nil,
-			err:    fmt.Errorf("invalid package metric specified: %q", cpuTemperature.String()),
+			err: fmt.Errorf("invalid package metric specified: %q", cpuTemperature.String()),
 		},
 		{
 			name: "HasDuplicates",
@@ -66,20 +64,23 @@ func TestParsePackageMetrics(t *testing.T) {
 				packageCurrentDramPowerConsumption.String(),
 				packageThermalDesignPower.String(), // duplicate
 			},
-			parsed: nil,
-			err:    errors.New("package metrics contains duplicates"),
+			err: errors.New("package metrics contains duplicates"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parsedOut, err := parsePackageMetrics(tc.metrics)
+			p := &PowerStat{
+				PackageMetrics: tc.metrics,
+			}
 
-			require.Equal(t, tc.parsed, parsedOut)
+			err := p.parsePackageMetrics()
+
 			if tc.err != nil {
 				require.ErrorContains(t, err, tc.err.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.parsed, p.PackageMetrics)
 			}
 		})
 	}
@@ -105,8 +106,7 @@ func TestParseCPUMetrics(t *testing.T) {
 				cpuC1StateResidency.String(),
 				cpuTemperature.String(),
 			},
-			parsed: nil,
-			err:    errors.New("invalid core metric specified: \"cpu_c9_state_residency\""),
+			err: errors.New("invalid core metric specified: \"cpu_c9_state_residency\""),
 		},
 		{
 			name: "InvalidCoreMetric",
@@ -116,8 +116,7 @@ func TestParseCPUMetrics(t *testing.T) {
 				cpuC1StateResidency.String(),
 				cpuTemperature.String(),
 			},
-			parsed: nil,
-			err:    fmt.Errorf("invalid core metric specified: %q", packageTurboLimit.String()),
+			err: fmt.Errorf("invalid core metric specified: %q", packageTurboLimit.String()),
 		},
 		{
 			name: "HasDuplicates",
@@ -127,20 +126,23 @@ func TestParseCPUMetrics(t *testing.T) {
 				cpuTemperature.String(),
 				cpuC0StateResidency.String(), // duplicate
 			},
-			parsed: nil,
-			err:    errors.New("core metrics contains duplicates"),
+			err: errors.New("core metrics contains duplicates"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parsedOut, err := parseCPUMetrics(tc.metrics)
+			p := &PowerStat{
+				CPUMetrics: tc.metrics,
+			}
 
-			require.Equal(t, tc.parsed, parsedOut)
+			err := p.parseCPUMetrics()
+
 			if tc.err != nil {
 				require.ErrorContains(t, err, tc.err.Error())
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.parsed, p.CPUMetrics)
 			}
 		})
 	}
@@ -205,8 +207,12 @@ func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parsedOut := parseCPUTimeRelatedMsrMetrics(tc.metrics)
-			require.Equal(t, tc.parsed, parsedOut)
+			p := &PowerStat{
+				CPUMetrics: tc.metrics,
+			}
+
+			p.parseCPUTimeRelatedMsrMetrics()
+			require.Equal(t, tc.parsed, p.parsedCPUTimedMsrMetrics)
 		})
 	}
 }
@@ -263,8 +269,12 @@ func TestParseCPUPerfMetrics(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parsedOut := parseCPUPerfMetrics(tc.metrics)
-			require.Equal(t, tc.parsed, parsedOut)
+			p := &PowerStat{
+				CPUMetrics: tc.metrics,
+			}
+
+			p.parseCPUPerfMetrics()
+			require.Equal(t, tc.parsed, p.parsedCPUPerfMetrics)
 		})
 	}
 }
@@ -309,8 +319,12 @@ func TestParsePackageRaplMetrics(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parsedOut := parsePackageRaplMetrics(tc.metrics)
-			require.Equal(t, tc.parsed, parsedOut)
+			p := &PowerStat{
+				PackageMetrics: tc.metrics,
+			}
+
+			p.parsePackageRaplMetrics()
+			require.Equal(t, tc.parsed, p.parsedPackageRaplMetrics)
 		})
 	}
 }
@@ -353,8 +367,12 @@ func TestParsePackageMsrMetrics(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parsedOut := parsePackageMsrMetrics(tc.metrics)
-			require.Equal(t, tc.parsed, parsedOut)
+			p := &PowerStat{
+				PackageMetrics: tc.metrics,
+			}
+
+			p.parsePackageMsrMetrics()
+			require.Equal(t, tc.parsed, p.parsedPackageMsrMetrics)
 		})
 	}
 }
@@ -551,7 +569,7 @@ func TestParseConfig(t *testing.T) {
 			ExcludedCPUs: []string{"0"},
 		}
 
-		require.ErrorContains(t, p.parseConfig(), "configuration error. Provide either one 'included_cpus'/'excluded_cpus' configuration option, or none")
+		require.ErrorContains(t, p.parseConfig(), "both 'included_cpus' and 'excluded_cpus' configured; provide only one or none of the two")
 	})
 
 	t.Run("FailedToParseIncludedCPUs", func(t *testing.T) {
@@ -604,7 +622,7 @@ func TestParseConfig(t *testing.T) {
 			},
 		}
 
-		require.ErrorContains(t, p.parseConfig(), "failed to parse event definitions path: file path is empty")
+		require.ErrorContains(t, p.parseConfig(), "'event_definitions' contains an empty path")
 	})
 
 	t.Run("EventDefinitionsDoesNotExist", func(t *testing.T) {
@@ -616,7 +634,7 @@ func TestParseConfig(t *testing.T) {
 			EventDefinitions: "./testdata/doesNotExist.json",
 		}
 
-		require.ErrorContains(t, p.parseConfig(), "failed to parse event definitions path: file \"./testdata/doesNotExist.json\" does not exist")
+		require.ErrorContains(t, p.parseConfig(), "'event_definitions' file \"./testdata/doesNotExist.json\" does not exist")
 	})
 
 	t.Run("NoMetricsProvided", func(t *testing.T) {
@@ -706,7 +724,7 @@ type mockOptGenerator struct {
 	mock.Mock
 }
 
-func (m *mockOptGenerator) Generate(cfg OptConfig) []ptel.Option {
+func (m *mockOptGenerator) generate(cfg optConfig) []ptel.Option {
 	args := m.Called(cfg)
 	return args.Get(0).([]ptel.Option)
 }
@@ -716,19 +734,16 @@ func TestSampleConfig(t *testing.T) {
 	require.NotZero(t, p.SampleConfig())
 }
 
-func TestStart(t *testing.T) {
+func TestInit(t *testing.T) {
 	t.Run("FailedToDisableUnsupportedMetrics", func(t *testing.T) {
 		t.Setenv("HOST_PROC", "./testdata/cpu_model_missing")
 
-		acc := &testutil.Accumulator{}
-
 		p := &PowerStat{}
 
-		require.ErrorContains(t, p.Start(acc), "error occurred while parsing CPU model")
+		require.ErrorContains(t, p.Init(), "error occurred while parsing CPU model")
 	})
 
 	t.Run("FailedToParseConfigWithDuplicates", func(t *testing.T) {
-		acc := &testutil.Accumulator{}
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
@@ -737,12 +752,11 @@ func TestStart(t *testing.T) {
 			Log:          logger,
 		}
 
-		require.ErrorContains(t, p.Start(acc), "failed to parse included CPUs")
+		require.ErrorContains(t, p.Init(), "failed to parse included CPUs")
 		require.Empty(t, logger.Warnings())
 	})
 
 	t.Run("FailedToParseConfigWithNegativeTimeout", func(t *testing.T) {
-		acc := &testutil.Accumulator{}
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
@@ -751,11 +765,13 @@ func TestStart(t *testing.T) {
 			Log:            logger,
 		}
 
-		require.ErrorContains(t, p.Start(acc), "msr_read_timeout should be positive number or equal to 0 (to disable timeouts)")
+		require.ErrorContains(t, p.Init(), "msr_read_timeout should be positive number or equal to 0 (to disable timeouts)")
 		require.Empty(t, logger.Warnings())
 	})
+}
 
-	t.Run("FailedToCreateMetricFetcher", func(t *testing.T) {
+func TestStart(t *testing.T) {
+	t.Run("FailedToStart", func(t *testing.T) {
 		t.Setenv("HOST_PROC", "./testdata")
 
 		acc := &testutil.Accumulator{}
@@ -763,8 +779,8 @@ func TestStart(t *testing.T) {
 
 		p := &PowerStat{
 			// has CPU ID out of bounds
-			IncludedCPUs: []string{"0-9"},
-			Log:          logger,
+			parsedIncludedCores: []int{0, 9},
+			Log:                 logger,
 
 			option: &optGenerator{},
 		}
@@ -778,14 +794,13 @@ func TestStart(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		mOptGenerator := &mockOptGenerator{}
-		mOptGenerator.On("Generate", mock.AnythingOfType("OptConfig")).Return(
+		mOptGenerator.On("generate", mock.AnythingOfType("optConfig")).Return(
 			[]ptel.Option{
 				ptel.WithRapl("/dummy/path"),
 			},
 		)
 
 		p := &PowerStat{
-			IncludedCPUs: []string{"0"},
 			PackageMetrics: []string{
 				packageCurrentPowerConsumption.String(), // needs rapl
 			},
@@ -796,7 +811,7 @@ func TestStart(t *testing.T) {
 
 		require.NoError(t, p.Start(acc))
 		require.Len(t, logger.Warnings(), 1)
-		require.Contains(t, logger.Warnings()[0], "Plugin initialized with errors")
+		require.Contains(t, logger.Warnings()[0], "Plugin started with errors")
 	})
 }
 
@@ -2203,7 +2218,9 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 
 	c0State := 3.0
 	c1State := 2.0
+	c3State := 1.5
 	c6State := 1.0
+	busyCycles := 0.5
 
 	acc := &testutil.Accumulator{}
 
@@ -2215,8 +2232,14 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 	// mock getting CPU C1 state residency value.
 	mFetcher.On("GetCPUC1StateResidency", cpuID).Return(c1State, nil).Once()
 
+	// mock getting CPU C3 state residency value.
+	mFetcher.On("GetCPUC3StateResidency", cpuID).Return(c3State, nil).Once()
+
 	// mock getting CPU C6 state residency value.
 	mFetcher.On("GetCPUC6StateResidency", cpuID).Return(c6State, nil).Once()
+
+	// mock getting CPU C0 state residency value, triggered when calling add CPU busy cycle metric.
+	mFetcher.On("GetCPUC0StateResidency", cpuID).Return(busyCycles, nil).Once()
 
 	p := &PowerStat{
 		CPUMetrics: []string{
@@ -2228,7 +2251,9 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 			// Time-related MSR metrics.
 			cpuC0StateResidency.String(),
 			cpuC1StateResidency.String(),
+			cpuC3StateResidency.String(),
 			cpuC6StateResidency.String(),
+			cpuBusyCycles.String(),
 		},
 		PackageMetrics:   []string{},
 		EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -2242,7 +2267,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 	p.addCPUTimeRelatedMsrMetrics(acc, cpuID, coreID, packageID)
 
 	require.Empty(t, acc.Errors)
-	require.Len(t, acc.GetTelegrafMetrics(), 3)
+	require.Len(t, acc.GetTelegrafMetrics(), 5)
 	acc.AssertContainsTaggedFields(
 		t,
 		// measurement
@@ -2280,6 +2305,36 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 		// fields
 		map[string]interface{}{
 			"cpu_c6_state_residency_percent": c6State,
+		},
+		// tags
+		map[string]string{
+			"cpu_id":     strconv.Itoa(cpuID),
+			"core_id":    strconv.Itoa(coreID),
+			"package_id": strconv.Itoa(packageID),
+		},
+	)
+	acc.AssertContainsTaggedFields(
+		t,
+		// measurement
+		"powerstat_core",
+		// fields
+		map[string]interface{}{
+			"cpu_c3_state_residency_percent": c3State,
+		},
+		// tags
+		map[string]string{
+			"cpu_id":     strconv.Itoa(cpuID),
+			"core_id":    strconv.Itoa(coreID),
+			"package_id": strconv.Itoa(packageID),
+		},
+	)
+	acc.AssertContainsTaggedFields(
+		t,
+		// measurement
+		"powerstat_core",
+		// fields
+		map[string]interface{}{
+			"cpu_busy_cycles_percent": busyCycles,
 		},
 		// tags
 		map[string]string{

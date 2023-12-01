@@ -145,8 +145,8 @@ func isValidPackageMetric(metric string) bool {
 	return true
 }
 
-// Numeric is a type constraint definition.
-type Numeric interface {
+// numeric is a type constraint definition.
+type numeric interface {
 	float64 | uint64
 }
 
@@ -223,7 +223,7 @@ func (m *metricCommon) measurement() string {
 
 // cpuMetric is a generic type that has the information to identify a CPU-related metric,
 // as well as function to retrieve its value at any time. Implements metricAdder interface.
-type cpuMetric[T Numeric] struct {
+type cpuMetric[T numeric] struct {
 	metricCommon
 
 	cpuID     int
@@ -253,7 +253,7 @@ func (m *cpuMetric[T]) tags() map[string]string {
 
 // packageMetric is a generic type that has the information to identify a package-related metric,
 // as well as the function to retrieve its value at any time. Implements metricAdder interface.
-type packageMetric[T Numeric] struct {
+type packageMetric[T numeric] struct {
 	metricCommon
 
 	packageID int
@@ -280,7 +280,7 @@ func (m *packageMetric[T]) tags() map[string]string {
 }
 
 // round returns the result of rounding the argument, only if its a 64 bit floating-point type.
-func round[T Numeric](val T) T {
+func round[T numeric](val T) T {
 	if v, ok := any(val).(float64); ok {
 		val = T(math.Round(v*100) / 100)
 	}

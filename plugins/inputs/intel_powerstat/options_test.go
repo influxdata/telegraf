@@ -9,15 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerate(t *testing.T) {
 	t.Run("NoCPUsSpecified", func(t *testing.T) {
 		g := &optGenerator{}
-		opts := g.Generate(OptConfig{
+		opts := g.generate(optConfig{
 			cpuMetrics: []string{
 				cpuFrequency.String(),            // needs coreFreq
 				cpuC0SubstateC01Percent.String(), // needs perf
@@ -33,7 +32,7 @@ func TestGenerate(t *testing.T) {
 
 	t.Run("ExcludedCPUs", func(t *testing.T) {
 		g := &optGenerator{}
-		opts := g.Generate(OptConfig{
+		opts := g.generate(optConfig{
 			excludedCPUs: []int{0, 1, 2, 3},
 			cpuMetrics: []string{
 				// needs msr
@@ -50,7 +49,7 @@ func TestGenerate(t *testing.T) {
 
 	t.Run("IncludedCPUs", func(t *testing.T) {
 		g := &optGenerator{}
-		opts := g.Generate(OptConfig{
+		opts := g.generate(optConfig{
 			includedCPUs: []int{0, 1, 2, 3},
 			cpuMetrics: []string{
 				cpuFrequency.String(),               // needs coreFreq
@@ -68,7 +67,7 @@ func TestGenerate(t *testing.T) {
 
 	t.Run("WithMsrTimeout", func(t *testing.T) {
 		g := &optGenerator{}
-		opts := g.Generate(OptConfig{
+		opts := g.generate(optConfig{
 			cpuMetrics: []string{
 				cpuTemperature.String(),
 			},
@@ -89,7 +88,7 @@ func TestGenerate(t *testing.T) {
 
 	t.Run("WithMsr", func(t *testing.T) {
 		g := &optGenerator{}
-		opts := g.Generate(OptConfig{
+		opts := g.generate(optConfig{
 			cpuMetrics: []string{
 				cpuC7StateResidency.String(),
 			},
@@ -110,7 +109,7 @@ func TestGenerate(t *testing.T) {
 
 	t.Run("WithLogger", func(t *testing.T) {
 		g := &optGenerator{}
-		opts := g.Generate(OptConfig{
+		opts := g.generate(optConfig{
 			cpuMetrics: []string{
 				cpuC3StateResidency.String(),
 			},

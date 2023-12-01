@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -44,11 +45,8 @@ type PowerStat struct {
 	parsedPackageRaplMetrics []string
 	parsedPackageMsrMetrics  []string
 
-	option  OptGenerator
-	fetcher MetricFetcher
-
-	cpuMetricsMap    map[string]func(telegraf.Accumulator, int, int, int)
-	packageMetricMap map[string]func(telegraf.Accumulator, int)
+	option  optionGenerator
+	fetcher metricFetcher
 
 	needsCoreFreq       bool
 	needsMsrCPU         bool
@@ -66,8 +64,8 @@ func (*PowerStat) SampleConfig() string {
 	return sampleConfig
 }
 
-// Start initializes the MetricFetcher interface of the receiver to gather metrics.
-func (p *PowerStat) Start(_ telegraf.Accumulator) error {
+// Init parses config file and sets up configuration of the plugin.
+func (p *PowerStat) Init() error {
 	if err := p.disableUnsupportedMetrics(); err != nil {
 		return err
 	}
@@ -76,7 +74,15 @@ func (p *PowerStat) Start(_ telegraf.Accumulator) error {
 		return err
 	}
 
-	opts := p.option.Generate(OptConfig{
+	p.option = &optGenerator{}
+	p.logOnce = make(map[string]struct{})
+
+	return nil
+}
+
+// Start initializes the metricFetcher interface of the receiver to gather metrics.
+func (p *PowerStat) Start(_ telegraf.Accumulator) error {
+	opts := p.option.generate(optConfig{
 		cpuMetrics:     p.CPUMetrics,
 		packageMetrics: p.PackageMetrics,
 		includedCPUs:   p.parsedIncludedCores,
@@ -91,9 +97,13 @@ func (p *PowerStat) Start(_ telegraf.Accumulator) error {
 	p.fetcher, err = ptel.New(opts...)
 	if err != nil {
 		if !errors.As(err, &initErr) {
+			// Error caused by failing to get information about the CPU, or CPU is not supported.
 			return fmt.Errorf("failed to initialize metric fetcher interface: %w", err)
 		}
-		p.Log.Warnf("Plugin initialized with errors: %v", err)
+
+		// One or more modules, needed to get metrics, failed to initialize. The plugin continues its execution, and it will not
+		// gather metrics relying on these modules. Instead, logs the error message including module names that failed to initialize.
+		p.Log.Warnf("Plugin started with errors: %v", err)
 	}
 
 	return nil
@@ -132,36 +142,33 @@ func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 
 // parseConfig is a helper method that parses configuration fields from the receiver such as included/excluded CPU IDs.
 func (p *PowerStat) parseConfig() error {
-	var err error
-
 	if p.MsrReadTimeout < 0 {
 		return errors.New("msr_read_timeout should be positive number or equal to 0 (to disable timeouts)")
 	}
 
-	p.PackageMetrics, err = parsePackageMetrics(p.PackageMetrics)
-	if err != nil {
+	if err := p.parsePackageMetrics(); err != nil {
 		return fmt.Errorf("failed to parse package metrics: %w", err)
 	}
 
-	p.CPUMetrics, err = parseCPUMetrics(p.CPUMetrics)
-	if err != nil {
+	if err := p.parseCPUMetrics(); err != nil {
 		return fmt.Errorf("failed to parse core metrics: %w", err)
 	}
 
 	if len(p.CPUMetrics) == 0 && len(p.PackageMetrics) == 0 {
-		return fmt.Errorf("no metrics were found in the configuration file")
+		return errors.New("no metrics were found in the configuration file")
 	}
 
-	p.parsedCPUTimedMsrMetrics = parseCPUTimeRelatedMsrMetrics(p.CPUMetrics)
-	p.parsedCPUPerfMetrics = parseCPUPerfMetrics(p.CPUMetrics)
+	p.parseCPUTimeRelatedMsrMetrics()
+	p.parseCPUPerfMetrics()
 
-	p.parsedPackageRaplMetrics = parsePackageRaplMetrics(p.PackageMetrics)
-	p.parsedPackageMsrMetrics = parsePackageMsrMetrics(p.PackageMetrics)
+	p.parsePackageRaplMetrics()
+	p.parsePackageMsrMetrics()
 
 	if len(p.ExcludedCPUs) != 0 && len(p.IncludedCPUs) != 0 {
-		return errors.New("configuration error. Provide either one 'included_cpus'/'excluded_cpus' configuration option, or none")
+		return errors.New("both 'included_cpus' and 'excluded_cpus' configured; provide only one or none of the two")
 	}
 
+	var err error
 	if len(p.ExcludedCPUs) != 0 {
 		p.parsedExcludedCores, err = parseCores(p.ExcludedCPUs)
 		if err != nil {
@@ -179,155 +186,151 @@ func (p *PowerStat) parseConfig() error {
 	p.needsCoreFreq = needsCoreFreq(p.CPUMetrics)
 	p.needsMsrCPU = needsMsr(p.CPUMetrics)
 	p.needsPerf = needsPerf(p.CPUMetrics)
-	if p.needsPerf {
-		if err = checkFile(p.EventDefinitions); err != nil {
-			return fmt.Errorf("failed to parse event definitions path: %w", err)
-		}
-	}
-
 	p.needsTimeRelatedMsr = needsTimeRelatedMsr(p.CPUMetrics)
 
 	p.needsRapl = needsRapl(p.PackageMetrics)
 	p.needsMsrPackage = needsMsr(p.PackageMetrics)
 
-	p.cpuMetricsMap = map[string]func(telegraf.Accumulator, int, int, int){
-		cpuC0StateResidency.String():        p.addCPUC0StateResidency,
-		cpuC1StateResidency.String():        p.addCPUC1StateResidency,
-		cpuC3StateResidency.String():        p.addCPUC3StateResidency,
-		cpuC6StateResidency.String():        p.addCPUC6StateResidency,
-		cpuC7StateResidency.String():        p.addCPUC7StateResidency,
-		cpuBusyFrequency.String():           p.addCPUBusyFrequency,
-		cpuBusyCycles.String():              p.addCPUBusyCycles,
-		cpuC0SubstateC01Percent.String():    p.addCPUC0SubstateC01Percent,
-		cpuC0SubstateC02Percent.String():    p.addCPUC0SubstateC02Percent,
-		cpuC0SubstateC0WaitPercent.String(): p.addCPUC0SubstateC0WaitPercent,
+	// Skip checks on event_definitions file path if perf module is not needed.
+	if !p.needsPerf {
+		return nil
 	}
 
-	p.packageMetricMap = map[string]func(telegraf.Accumulator, int){
-		packageCurrentPowerConsumption.String():     p.addCurrentPackagePower,
-		packageCurrentDramPowerConsumption.String(): p.addCurrentDramPower,
-		packageThermalDesignPower.String():          p.addThermalDesignPower,
-		packageCPUBaseFrequency.String():            p.addCPUBaseFrequency,
-		packageTurboLimit.String():                  p.addMaxTurboFreqLimits,
+	// Check that event_definitions option contains a valid file path.
+	if len(p.EventDefinitions) == 0 {
+		return errors.New("'event_definitions' contains an empty path")
+	}
+
+	fInfo, err := os.Lstat(p.EventDefinitions)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("'event_definitions' file %q does not exist", p.EventDefinitions)
+		}
+		return fmt.Errorf("could not get the info for file %q: %w", p.EventDefinitions, err)
+	}
+
+	// Check that file is not a symlink.
+	if fMode := fInfo.Mode(); fMode&os.ModeSymlink != 0 {
+		return fmt.Errorf("file %q is a symlink", p.EventDefinitions)
 	}
 
 	return nil
 }
 
-// parsePackageMetrics takes a slice of package metrics. It ensures all metrics in the slice
-// are supported package-specific, and there are no duplicates. If metrics slice is nil, then
-// default package metrics are provided.
-func parsePackageMetrics(metrics []string) ([]string, error) {
-	if metrics == nil {
-		return []string{
+// parsePackageMetrics ensures all metrics in 'package_metrics' configuration option are supported, package-specific,
+// and there are no duplicates. If 'package_metrics' is not provided, the following default package metrics are set:
+// "current_power_consumption", "current_dram_power_consumption", and "thermal_design_power".
+func (p *PowerStat) parsePackageMetrics() error {
+	if p.PackageMetrics == nil {
+		// Sets default package metrics if `package_metrics` config option is an empty list.
+		p.PackageMetrics = []string{
 			packageCurrentPowerConsumption.String(),
 			packageCurrentDramPowerConsumption.String(),
 			packageThermalDesignPower.String(),
-		}, nil
+		}
+		return nil
 	}
 
-	for _, m := range metrics {
+	for _, m := range p.PackageMetrics {
 		if !isValidPackageMetric(m) {
-			return nil, fmt.Errorf("invalid package metric specified: %q", m)
+			return fmt.Errorf("invalid package metric specified: %q", m)
 		}
 	}
 
-	if hasDuplicate(metrics) {
-		return nil, errors.New("package metrics contains duplicates")
+	if hasDuplicate(p.PackageMetrics) {
+		return errors.New("package metrics contains duplicates")
 	}
-	return metrics, nil
+	return nil
 }
 
-// parseCPUMetrics takes a slice of CPU metrics. It ensures all metrics in the slice are
-// supported CPU-specific, and there are no duplicates.
-func parseCPUMetrics(metrics []string) ([]string, error) {
-	for _, m := range metrics {
+// parseCPUMetrics ensures all metrics in 'cpu_metrics' configuration option are supported, package-specific,
+// and there are no duplicates.
+func (p *PowerStat) parseCPUMetrics() error {
+	for _, m := range p.CPUMetrics {
 		if !isValidCoreMetric(m) {
-			return nil, fmt.Errorf("invalid core metric specified: %q", m)
+			return fmt.Errorf("invalid core metric specified: %q", m)
+		}
+
+		if m == cpuBusyCycles.String() {
+			models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.intel_powerstat", "cpu_metrics", m, telegraf.DeprecationInfo{
+				Since:     "1.23.0",
+				RemovalIn: "2.0.0",
+				Notice:    "'cpu_c0_state_residency' metric name should be used instead.",
+			})
 		}
 	}
 
-	if hasDuplicate(metrics) {
-		return nil, errors.New("core metrics contains duplicates")
+	if hasDuplicate(p.CPUMetrics) {
+		return errors.New("core metrics contains duplicates")
 	}
-	return metrics, nil
+	return nil
 }
 
-// parsedCPUTimedMsrMetrics takes a slice of unique CPU metrics, and returns only the metrics which
-// depend on time-related MSR offset reads.
-func parseCPUTimeRelatedMsrMetrics(metrics []string) []string {
-	slice := []string{
-		cpuC0StateResidency.String(),
-		cpuC1StateResidency.String(),
-		cpuC3StateResidency.String(),
-		cpuC6StateResidency.String(),
-		cpuC7StateResidency.String(),
-		cpuBusyCycles.String(),
-		cpuBusyFrequency.String(),
-	}
-
-	cpuTimeRelatedMsrMetrics := make([]string, 0, len(slice))
-	for _, m := range metrics {
-		if choice.Contains(m, slice) {
-			cpuTimeRelatedMsrMetrics = append(cpuTimeRelatedMsrMetrics, m)
+// parsedCPUTimedMsrMetrics parses only the metrics which depend on time-related MSR offset reads from CPU metrics
+// of the receiver, and sets them to a separate slice.
+func (p *PowerStat) parseCPUTimeRelatedMsrMetrics() {
+	p.parsedCPUTimedMsrMetrics = make([]string, 0)
+	for _, m := range p.CPUMetrics {
+		switch m {
+		case cpuC0StateResidency.String():
+		case cpuC1StateResidency.String():
+		case cpuC3StateResidency.String():
+		case cpuC6StateResidency.String():
+		case cpuC7StateResidency.String():
+		case cpuBusyCycles.String():
+		case cpuBusyFrequency.String():
+		default:
+			continue
 		}
+		p.parsedCPUTimedMsrMetrics = append(p.parsedCPUTimedMsrMetrics, m)
 	}
-
-	return cpuTimeRelatedMsrMetrics
 }
 
-// parsedCPUTimedMsrMetrics takes a slice of unique CPU metrics, and returns only the metrics which
-// depend on perf event reads.
-func parseCPUPerfMetrics(metrics []string) []string {
-	slice := []string{
-		cpuC0SubstateC01Percent.String(),
-		cpuC0SubstateC02Percent.String(),
-		cpuC0SubstateC0WaitPercent.String(),
-	}
-
-	cpuPerfMetrics := make([]string, 0, len(slice))
-	for _, m := range metrics {
-		if choice.Contains(m, slice) {
-			cpuPerfMetrics = append(cpuPerfMetrics, m)
+// parseCPUPerfMetrics parses only the metrics which depend on perf event reads from CPU metrics of the receiver, and sets
+// them to a separate slice.
+func (p *PowerStat) parseCPUPerfMetrics() {
+	p.parsedCPUPerfMetrics = make([]string, 0)
+	for _, m := range p.CPUMetrics {
+		switch m {
+		case cpuC0SubstateC01Percent.String():
+		case cpuC0SubstateC02Percent.String():
+		case cpuC0SubstateC0WaitPercent.String():
+		default:
+			continue
 		}
+		p.parsedCPUPerfMetrics = append(p.parsedCPUPerfMetrics, m)
 	}
-
-	return cpuPerfMetrics
 }
 
-// parsePackageRaplMetrics takes a slice of unique package metrics, and returns only the metrics which depend on rapl.
-func parsePackageRaplMetrics(metrics []string) []string {
-	slice := []string{
-		packageCurrentPowerConsumption.String(),
-		packageCurrentDramPowerConsumption.String(),
-		packageThermalDesignPower.String(),
-	}
-
-	packageRaplMetrics := make([]string, 0, len(slice))
-	for _, m := range metrics {
-		if choice.Contains(m, slice) {
-			packageRaplMetrics = append(packageRaplMetrics, m)
+// parsePackageRaplMetrics parses only the metrics which depend on rapl from package metrics of the receiver, and sets
+// them to a separate slice.
+func (p *PowerStat) parsePackageRaplMetrics() {
+	p.parsedPackageRaplMetrics = make([]string, 0)
+	for _, m := range p.PackageMetrics {
+		switch m {
+		case packageCurrentPowerConsumption.String():
+		case packageCurrentDramPowerConsumption.String():
+		case packageThermalDesignPower.String():
+		default:
+			continue
 		}
+		p.parsedPackageRaplMetrics = append(p.parsedPackageRaplMetrics, m)
 	}
-
-	return packageRaplMetrics
 }
 
-// parsePackageMsrMetrics takes a slice of unique package metrics, and returns only the metrics which depend on msr.
-func parsePackageMsrMetrics(metrics []string) []string {
-	slice := []string{
-		packageCPUBaseFrequency.String(),
-		packageTurboLimit.String(),
-	}
-
-	packageMsrMetrics := make([]string, 0, len(slice))
-	for _, m := range metrics {
-		if choice.Contains(m, slice) {
-			packageMsrMetrics = append(packageMsrMetrics, m)
+// parsePackageMsrMetrics parses only the metrics which depend on msr from package metrics of the receiver, and sets
+// them to a separate slice.
+func (p *PowerStat) parsePackageMsrMetrics() {
+	p.parsedPackageMsrMetrics = make([]string, 0)
+	for _, m := range p.PackageMetrics {
+		switch m {
+		case packageCPUBaseFrequency.String():
+		case packageTurboLimit.String():
+		default:
+			continue
 		}
+		p.parsedPackageMsrMetrics = append(p.parsedPackageMsrMetrics, m)
 	}
-
-	return packageMsrMetrics
 }
 
 // hasDuplicate takes a slice of a generic type, and returns true
@@ -379,7 +382,7 @@ func parseGroupCores(coreGroup string) ([]int, error) {
 		} else {
 			singleCore, err := strconv.Atoi(coreElem)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse single core: %w", err)
+				return nil, fmt.Errorf("failed to parse single core %q: %w", coreElem, err)
 			}
 			cores = append(cores, singleCore)
 		}
@@ -408,34 +411,13 @@ func parseCoreRange(coreRange string) ([]int, error) {
 	if high < low {
 		return nil, errors.New("high bound of core range cannot be less than low bound")
 	}
-	return makeCores(low, high), nil
-}
 
-// makeCores takes a low and high bounds of an interval of integers, and returns
-// a slice will all integers within the interval.
-func makeCores(low, high int) []int {
 	cores := make([]int, high-low+1)
 	for i := range cores {
 		cores[i] = i + low
 	}
-	return cores
-}
 
-func checkFile(path string) error {
-	if len(path) == 0 {
-		return errors.New("file path is empty")
-	}
-	fInfo, err := os.Lstat(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("file %q does not exist", path)
-		}
-		return fmt.Errorf("could not get the info for file %q: %w", path, err)
-	}
-	if fMode := fInfo.Mode(); fMode&os.ModeSymlink != 0 {
-		return fmt.Errorf("file %q is a symlink", path)
-	}
-	return nil
+	return cores, nil
 }
 
 // addCPUMetrics takes an accumulator, and adds to it enabled metrics which rely on
@@ -502,8 +484,21 @@ func (p *PowerStat) addPerCPUMsrMetrics(acc telegraf.Accumulator, cpuID, coreID,
 // to update the values of MSR offsets read.
 func (p *PowerStat) addCPUTimeRelatedMsrMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
 	for _, m := range p.parsedCPUTimedMsrMetrics {
-		if fn, ok := p.cpuMetricsMap[m]; ok {
-			fn(acc, cpuID, coreID, packageID)
+		switch m {
+		case cpuC0StateResidency.String():
+			p.addCPUC0StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC1StateResidency.String():
+			p.addCPUC1StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC3StateResidency.String():
+			p.addCPUC3StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC6StateResidency.String():
+			p.addCPUC6StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC7StateResidency.String():
+			p.addCPUC7StateResidency(acc, cpuID, coreID, packageID)
+		case cpuBusyFrequency.String():
+			p.addCPUBusyFrequency(acc, cpuID, coreID, packageID)
+		case cpuBusyCycles.String():
+			p.addCPUBusyCycles(acc, cpuID, coreID, packageID)
 		}
 	}
 }
@@ -545,14 +540,19 @@ func (p *PowerStat) addCPUPerfMetrics(acc telegraf.Accumulator) {
 // addPerCPUPerfMetrics adds to the accumulator enabled metrics, which rely on perf, for a given CPU ID.
 func (p *PowerStat) addPerCPUPerfMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
 	for _, m := range p.parsedCPUPerfMetrics {
-		if fn, ok := p.cpuMetricsMap[m]; ok {
-			fn(acc, cpuID, coreID, packageID)
+		switch m {
+		case cpuC0SubstateC01Percent.String():
+			p.addCPUC0SubstateC01Percent(acc, cpuID, coreID, packageID)
+		case cpuC0SubstateC02Percent.String():
+			p.addCPUC0SubstateC02Percent(acc, cpuID, coreID, packageID)
+		case cpuC0SubstateC0WaitPercent.String():
+			p.addCPUC0SubstateC0WaitPercent(acc, cpuID, coreID, packageID)
 		}
 	}
 }
 
-// getDataCPUID takes a TopologyFetcher and CPU ID, and returns the core ID and package ID corresponding to the CPU ID.
-func getDataCPUID(t TopologyFetcher, cpuID int) (coreID int, packageID int, err error) {
+// getDataCPUID takes a topologyFetcher and CPU ID, and returns the core ID and package ID corresponding to the CPU ID.
+func getDataCPUID(t topologyFetcher, cpuID int) (coreID int, packageID int, err error) {
 	coreID, err = t.GetCPUCoreID(cpuID)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get core ID from CPU ID %v: %w", cpuID, err)
@@ -589,8 +589,13 @@ func (p *PowerStat) addPackageMetrics(acc telegraf.Accumulator) {
 // addPerPackageRaplMetrics adds to the accumulator enabled metrics, which rely on rapl, for a given package ID.
 func (p *PowerStat) addPerPackageRaplMetrics(acc telegraf.Accumulator, packageID int) {
 	for _, m := range p.parsedPackageRaplMetrics {
-		if fn, ok := p.packageMetricMap[m]; ok {
-			fn(acc, packageID)
+		switch m {
+		case packageCurrentPowerConsumption.String():
+			p.addCurrentPackagePower(acc, packageID)
+		case packageCurrentDramPowerConsumption.String():
+			p.addCurrentDramPower(acc, packageID)
+		case packageThermalDesignPower.String():
+			p.addThermalDesignPower(acc, packageID)
 		}
 	}
 }
@@ -598,8 +603,11 @@ func (p *PowerStat) addPerPackageRaplMetrics(acc telegraf.Accumulator, packageID
 // addPerPackageMsrMetrics adds to the accumulator enabled metrics, which rely on msr registers, for a given package ID.
 func (p *PowerStat) addPerPackageMsrMetrics(acc telegraf.Accumulator, packageID int) {
 	for _, m := range p.parsedPackageMsrMetrics {
-		if fn, ok := p.packageMetricMap[m]; ok {
-			fn(acc, packageID)
+		switch m {
+		case packageCPUBaseFrequency.String():
+			p.addCPUBaseFrequency(acc, packageID)
+		case packageTurboLimit.String():
+			p.addMaxTurboFreqLimits(acc, packageID)
 		}
 	}
 }
@@ -984,7 +992,7 @@ func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, pa
 }
 
 // getUncoreFreqInitialLimits returns the initial uncore frequency limits of a given package ID and die ID.
-func getUncoreFreqInitialLimits(fetcher MetricFetcher, packageID, dieID int) (initialMin float64, initialMax float64, err error) {
+func getUncoreFreqInitialLimits(fetcher metricFetcher, packageID, dieID int) (initialMin float64, initialMax float64, err error) {
 	initialMin, err = fetcher.GetInitialUncoreFrequencyMin(packageID, dieID)
 	if err != nil {
 		return 0.0, 0.0, fmt.Errorf("failed to get initial minimum uncore frequency limit: %w", err)
@@ -1006,7 +1014,7 @@ type uncoreFreqValues struct {
 
 // getUncoreFreqCurrentValues returns the current uncore frequency value as well as current min and max uncore frequency limits of a given
 // package ID and die ID.
-func getUncoreFreqCurrentValues(fetcher MetricFetcher, packageID, dieID int) (uncoreFreqValues, error) {
+func getUncoreFreqCurrentValues(fetcher metricFetcher, packageID, dieID int) (uncoreFreqValues, error) {
 	currMin, err := fetcher.GetCustomizedUncoreFrequencyMin(packageID, dieID)
 	if err != nil {
 		return uncoreFreqValues{}, fmt.Errorf("failed to get current minimum uncore frequency limit: %w", err)
@@ -1208,11 +1216,6 @@ func logErrorOnce(acc telegraf.Accumulator, logOnceMap map[string]struct{}, key 
 
 func init() {
 	inputs.Add("intel_powerstat", func() telegraf.Input {
-		return &PowerStat{
-			MsrReadTimeout: 0,
-
-			option:  &optGenerator{},
-			logOnce: make(map[string]struct{}),
-		}
+		return &PowerStat{}
 	})
 }

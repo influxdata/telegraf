@@ -11,8 +11,8 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 )
 
-// OptConfig represents plugin configuration fields needed to generate options.
-type OptConfig struct {
+// optConfig represents plugin configuration fields needed to generate options.
+type optConfig struct {
 	cpuMetrics     []string
 	packageMetrics []string
 	includedCPUs   []int
@@ -22,18 +22,18 @@ type OptConfig struct {
 	log            telegraf.Logger
 }
 
-// OptGenerator takes a struct with the plugin configuration, and generates options
+// optionGenerator takes a struct with the plugin configuration, and generates options
 // needed to gather metrics.
-type OptGenerator interface {
-	Generate(cfg OptConfig) []ptel.Option
+type optionGenerator interface {
+	generate(cfg optConfig) []ptel.Option
 }
 
-// optGenerator implements OptGenerator interface.
+// optGenerator implements optionGenerator interface.
 type optGenerator struct{}
 
-// Generate takes plugin configuration options and generates options needed
+// generate takes plugin configuration options and generates options needed
 // to gather requested metrics.
-func (g *optGenerator) Generate(cfg OptConfig) []ptel.Option {
+func (g *optGenerator) generate(cfg optConfig) []ptel.Option {
 	opts := make([]ptel.Option, 0)
 
 	metrics := make([]string, 0, len(cfg.cpuMetrics)+len(cfg.packageMetrics))
