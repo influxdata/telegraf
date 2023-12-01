@@ -505,7 +505,7 @@ func (m *MainData) toMetrics(source string) []telegraf.Metric {
 	ts := time.Now().UTC()
 	tags := make(map[string]string)
 	tags["source"] = source
-	var result []telegraf.Metric
+	result := make([]telegraf.Metric, len(m.Torrents)+1)
 	var serverStateField = m.ServerState.toFieldMap()
 	serverStateField["tag_count"] = len(m.Tags)
 	serverStateField["category_count"] = len(m.Categories)
