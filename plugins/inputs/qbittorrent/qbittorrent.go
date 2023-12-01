@@ -221,7 +221,10 @@ func (q *QBittorrent) login() ([]*http.Cookie, error) {
 }
 func init() {
 	inputs.Add("qbittorrent", func() telegraf.Input {
-		var qb = QBittorrent{URL: "http://127.0.0.1:8080", Username: config.NewSecret([]byte("admin")), Password: config.NewSecret([]byte("admin"))}
-		return &qb
+		return &QBittorrent{
+			URL:      "http://127.0.0.1:8080",
+			Username: config.NewSecret([]byte("admin")),
+			Password: config.NewSecret([]byte("admin")),
+		}
 	})
 }
