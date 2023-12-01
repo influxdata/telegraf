@@ -112,11 +112,8 @@ func (q *QBittorrent) getMeasure(method string, path string, headers map[string]
 		return "", -1, err
 	}
 
-	paramStr := param.Encode()
+	getURL.RawQuery = param.Encode()
 	reqURL := getURL.String()
-	if paramStr != "" {
-		reqURL = fmt.Sprintf("%s?%s", reqURL, paramStr)
-	}
 
 	// Create + send request
 	req, err := http.NewRequest(method, reqURL, reqBody)
