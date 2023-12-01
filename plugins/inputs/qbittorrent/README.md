@@ -1,6 +1,6 @@
 # QBittorrent Input Plugin
 
-The qbittorrent plugin will get torrents status.
+The qbittorrent plugin will gather and create metrics about the status of the torrent server.
 
 Compatible qbittorrent API versions must be higher than 2.9.2.
 Versions lower than 2.9.2 and higher than 2.1.1 are also compatible
