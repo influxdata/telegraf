@@ -42,32 +42,6 @@ to use them.
   ## For jetstream this is also the subject where messages will be published
   subject = "telegraf"
 
-  ## Jetstream specific configuration. If specified, telegraf will use Jetstream to publish messages
-  # [outputs.nats.jetstream]
-    ## Specifies whether telegraf should create the stream at the startup or not. It will only create if it doesn't exist.
-    # auto_create_stream = true
-
-    ## Name of the stream where nats jetstream will publish the messages
-    # stream = "my-jetstream"
-
-    ## When the `auto_create_stream` option is set to true in the JetStream configuration, 
-    ## telegraf dynamically creates the JetStream stream config using the JSON provided. 
-    ## In this scenario, the `name` and `subjects` fields from the JSON configuration will be ignored, and the values will be determined as follows:
-    ## The stream name (`name`) will be taken from the `stream` field in the `jetstream` section of the Telegraf configuration.
-    ## The subjects (`Subjects`) for the stream will be derived from the `subject` field in the `nats` section of the Telegraf configuration.
-    # stream_config_json = '''
-    # {
-    #     "retention": "workqueue",
-    #     "max_consumers": 10,
-    #     "discard": "old",
-    #     "storage": "file",
-    #     "max_msgs": 100000,
-    #     "max_bytes": 104857600,  // 100 MB
-    #     "max_age": 86400000000000, // in the int64 format
-    #     "num_replicas": 1
-    # }
-    # '''
-
   ## Use Transport Layer Security
   # secure = false
 
@@ -83,4 +57,37 @@ to use them.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
+
+  ## If the value is non-empty, enable jetstream based publishing.
+  ## Name of the stream where nats jetstream will publish the messages.
+  ## If the stream already exists, it will Update it using the fields specified in the jetstream section.
+  ## Else it will create it.
+  # jetstream_stream = "telegraf-metrics-stream"
+
+  ## Jetstream specific configuration
+  ## If this section is empty, and jetstream_stream is specified, the stream_create config would have
+  ## just the two fields- Name(jetstream_stream) and Subjects([]string{subject})
+  ## Since this is a table, it should be present at the end of the plugin section. Else you can use inline table format.
+  # [outputs.nats.jetstream]
+    ## Full jetstream create stream config, refer: https://docs.nats.io/nats-concepts/jetstream/streams
+    ## The `name` and `subjects` fields from configuration will be ignored, and the values will be determined as follows:
+    ## The stream name (`name`) will be taken from the `jetstream_stream` field in the `outputs.nats` section of the Telegraf configuration.
+    ## The subjects (`Subjects`) for the stream will be derived from the `subject` field in the `outputs.nats` section of the Telegraf configuration.
+    # retention = "limits"
+    # max_consumers = -1
+    # max_msgs_per_subject = -1
+    # max_msgs = -1
+    # max_bytes = -1
+    # max_age = 0
+    # max_msg_size = -1
+    # storage = "file"
+    # discard = "old"
+    # num_replicas = 1
+    # duplicate_window = 120000000000
+    # sealed = false
+    # deny_delete = false
+    # deny_purge = false
+    # allow_rollup_hdrs = false
+    # allow_direct = true
+    # mirror_direct = false
 ```

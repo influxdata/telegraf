@@ -5,10 +5,10 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/influxdata/toml"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
@@ -23,14 +23,15 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string         `toml:"servers"`
-	Secure      bool             `toml:"secure"`
-	Name        string           `toml:"name"`
-	Username    config.Secret    `toml:"username"`
-	Password    config.Secret    `toml:"password"`
-	Credentials string           `toml:"credentials"`
-	Subject     string           `toml:"subject"`
-	Jetstream   *JetstreamConfig `toml:"jetstream"`
+	Servers     []string                `toml:"servers"`
+	Secure      bool                    `toml:"secure"`
+	Name        string                  `toml:"name"`
+	Username    config.Secret           `toml:"username"`
+	Password    config.Secret           `toml:"password"`
+	Credentials string                  `toml:"credentials"`
+	Subject     string                  `toml:"subject"`
+	Stream      string                  `toml:"jetstream_stream"`
+	Jetstream   *JetstreamConfigWrapper `toml:"jetstream"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -40,14 +41,51 @@ type NATS struct {
 	serializer      serializers.Serializer
 }
 
-type JetstreamConfig struct {
-	AutoCreateStream bool   `toml:"auto_create_stream"`
-	Stream           string `toml:"stream"`
-	StreamJSON       string `toml:"stream_config_json"`
-	// Other jetsream options
+type JetstreamConfigWrapper struct {
+	jetstream.StreamConfig
+}
 
-	// storing local copy of stream config
-	streamConfig jetstream.StreamConfig
+func (jw *JetstreamConfigWrapper) UnmarshalTOML(data []byte) error {
+	var tomlMap map[string]interface{}
+
+	if err := toml.Unmarshal(data, &tomlMap); err != nil {
+		return err
+	}
+
+	// Extract the deeply nested table by specifying the keys(in order)
+	keys := []string{"outputs", "nats", "jetstream"}
+
+	nestedTable, err := extractNestedTable(tomlMap, keys...)
+	if err != nil {
+		return err
+	}
+	jsonBytes, err := json.Marshal(nestedTable)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(jsonBytes, &jw.StreamConfig)
+}
+
+// recursive function to extract a nested table
+func extractNestedTable(tomlMap map[string]interface{}, keys ...string) (map[string]interface{}, error) {
+	if len(keys) == 0 {
+		return tomlMap, nil
+	}
+
+	key := keys[0]
+	remainingKeys := keys[1:]
+
+	value, ok := tomlMap[key]
+	if !ok {
+		return nil, fmt.Errorf("key '%s' not found in TOML data", key)
+	}
+
+	innerMap, ok := value.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("value of key '%s' is not a table", key)
+	}
+
+	return extractNestedTable(innerMap, remainingKeys...)
 }
 
 func (*NATS) SampleConfig() string {
@@ -100,48 +138,32 @@ func (n *NATS) Connect() error {
 
 	// try and connect
 	n.conn, err = nats.Connect(strings.Join(n.Servers, ","), opts...)
-	if n.Jetstream != nil {
+	if err != nil {
+		return err
+	}
+	if n.Stream != "" {
+		n.Log.Info("Jetstream enabled for this plugin")
 		// connect to jetstream
 		n.jetstreamClient, err = jetstream.New(n.conn)
 		if err != nil {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
-		if n.Jetstream.Stream == "" {
-			return errors.New("stream cannot be empty")
+		_, err := n.jetstreamClient.Stream(context.Background(), n.Stream)
+		if err == nil {
+			return nil
 		}
-		streamExists := n.streamExists(n.Jetstream.Stream)
-		if !streamExists {
-			if !n.Jetstream.AutoCreateStream {
-				return fmt.Errorf("stream %s does not exist", n.Jetstream.Stream)
-			}
-			streamConfigJSON := strings.TrimSpace(n.Jetstream.StreamJSON)
-			var streamCfg jetstream.StreamConfig
-			if len(streamConfigJSON) > 0 {
-				err = json.Unmarshal([]byte(streamConfigJSON), &streamCfg)
-				if err != nil {
-					return fmt.Errorf("invalid jetstream config %w", err)
-				}
-			}
-			streamCfg.Name = n.Jetstream.Stream
-			streamCfg.Subjects = []string{n.Subject}
-			n.Jetstream.streamConfig = streamCfg
-			err = n.createStream(streamCfg)
-			if err != nil {
-				return fmt.Errorf("failed to create stream: %w", err)
-			}
+		n.Log.Infof("stream %s does not exist. creating stream", n.Stream)
+		if n.Jetstream == nil {
+			n.Jetstream = &JetstreamConfigWrapper{}
+		}
+		n.Jetstream.StreamConfig.Name = n.Stream
+		n.Jetstream.StreamConfig.Subjects = []string{n.Subject}
+		_, err = n.jetstreamClient.CreateStream(context.Background(), n.Jetstream.StreamConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create stream: %w", err)
 		}
 	}
-	return err
-}
-
-func (n *NATS) streamExists(stream string) bool {
-	_, err := n.jetstreamClient.Stream(context.Background(), stream)
-	return err == nil
-}
-
-func (n *NATS) createStream(streamCfg jetstream.StreamConfig) error {
-	_, err := n.jetstreamClient.CreateStream(context.Background(), streamCfg)
-	return err
+	return nil
 }
 
 func (n *NATS) Close() error {
