@@ -433,7 +433,7 @@ func (t Torrent) toTagsMap() map[string]string {
 	return result
 }
 
-type MainData struct {
+type serverMetric struct {
 	Categories        map[string]Category `json:"categories"`
 	CategoriesRemoved []string            `json:"categories_removed"`
 	FullUpdate        *bool               `json:"full_update"`
@@ -446,7 +446,7 @@ type MainData struct {
 	Trackers          map[string][]string `json:"trackers"`
 }
 
-func (m *MainData) partialUpdate(update *MainData) {
+func (m *serverMetric) partialUpdate(update *serverMetric) {
 	m.RID = update.RID
 	for k, v := range update.Categories {
 		category, exists := m.Categories[k]
@@ -501,7 +501,7 @@ func (m *MainData) partialUpdate(update *MainData) {
 	}
 }
 
-func (m *MainData) toMetrics(source string) []telegraf.Metric {
+func (m *serverMetric) toMetrics(source string) []telegraf.Metric {
 	ts := time.Now().UTC()
 	tags := make(map[string]string)
 	tags["source"] = source

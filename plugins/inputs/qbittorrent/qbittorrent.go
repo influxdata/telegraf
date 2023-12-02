@@ -27,7 +27,7 @@ type QBittorrent struct {
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
-	mainData *MainData
+	mainData *serverMetric
 	cookie   []*http.Cookie
 }
 
@@ -60,6 +60,7 @@ func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
 
 	return nil
 }
+
 func (q *QBittorrent) getSyncData() error {
 	param := url.Values{}
 	if q.mainData != nil {
@@ -70,7 +71,7 @@ func (q *QBittorrent) getSyncData() error {
 		return err
 	}
 
-	var mainData MainData
+	var mainData serverMetric
 	if err := json.Unmarshal([]byte(measure), &mainData); err != nil {
 		return fmt.Errorf("decoding data failed: %w", err)
 	}

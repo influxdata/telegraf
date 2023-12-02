@@ -7,7 +7,7 @@ import (
 )
 
 func TestMainDataPartialUpdate(t *testing.T) {
-	data := MainData{
+	data := serverMetric{
 		RID: 0,
 		Categories: map[string]Category{
 			"test": {
@@ -32,7 +32,7 @@ func TestMainDataPartialUpdate(t *testing.T) {
 			AllTimeUpload:   1000,
 		},
 	}
-	updateValue := MainData{
+	updateValue := serverMetric{
 		RID: 0,
 		Categories: map[string]Category{
 			"update-test": {
