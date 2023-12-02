@@ -14,10 +14,8 @@ with this plugin.
 ```toml @sample.conf
 # Read QBittorrent status information
 [[inputs.qbittorrent]]
-  ## Url of QBittorrent server
-  # Tls can be:
-  # url = "https://127.0.0.1:8080"
-  url = "http://127.0.0.1:8080"
+  ## QBittorrent server to monitor
+  # url = "http://127.0.0.1:8080"
 
   ## Credentials for QBittorrent
   # username = "admin"
