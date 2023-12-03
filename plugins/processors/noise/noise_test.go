@@ -177,7 +177,7 @@ func TestAddNoise(t *testing.T) {
 	}
 }
 
-// Tests that int64 & uint64 overflow errors are catched
+// Tests that int64 & uint64 overflow errors are caught
 func TestAddNoiseOverflowCheck(t *testing.T) {
 	tests := []struct {
 		name         string

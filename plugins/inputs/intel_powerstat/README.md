@@ -28,6 +28,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # and per-CPU metrics like temperature, power and utilization. Please see the
 # plugin readme for details on software and hardware compatability.
 # This plugin ONLY supports Linux.
+# plugin readme for details on software and hardware compatibility.
+# This plugin ONLY supports Linux
 [[inputs.intel_powerstat]]
   ## The user can choose which package metrics are monitored by the plugin with
   ## the package_metrics setting:

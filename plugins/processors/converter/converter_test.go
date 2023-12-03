@@ -434,7 +434,7 @@ func TestConverter(t *testing.T) {
 			},
 		},
 		{
-			name: "from string field hexidecimal",
+			name: "from string field hexadecimal",
 			converter: &Converter{
 				Fields: &Conversion{
 					Integer:  []string{"a"},

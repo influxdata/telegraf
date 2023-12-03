@@ -212,7 +212,7 @@ with only occasional changes.
 ### Tags
 
 No tags are applied by this aggregator.
-Existing tags are passed throug the aggregator untouched.
+Existing tags are passed through the aggregator untouched.
 
 ## Example Output
 

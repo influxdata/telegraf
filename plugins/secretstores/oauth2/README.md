@@ -43,7 +43,7 @@ store usage.
   # service = "custom"
 
   ## Setting to overwrite the queried token-endpoint
-  ## This setting is optional for some serices but mandatory for others such
+  ## This setting is optional for some services but mandatory for others such
   ## as "custom" or "auth0". Please check the documentation at
   ## https://github.com/influxdata/telegraf/blob/master/plugins/secretstores/oauth2/README.md
   # token_endpoint = ""

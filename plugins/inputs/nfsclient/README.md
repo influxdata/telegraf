@@ -28,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Read more low-level metrics (optional, defaults to false)
   # fullstat = false
 
-  ## List of mounts to explictly include or exclude (optional)
+  ## List of mounts to explicitly include or exclude (optional)
   ## The pattern (Go regexp) is matched against the mount point (not the
   ## device being mounted).  If include_mounts is set, all mounts are ignored
   ## unless present in the list. If a mount is listed in both include_mounts
@@ -154,7 +154,7 @@ as it changes occasionally.
     - sillyrenames (int, count): Number of times an in-use file was removed (thus creating a temporary ".nfsXXXXXX" file)
     - shortreads (int, count): Number of times the NFS server returned less data than requested.
     - shortwrites (int, count): Number of times NFS server reports it wrote less data than requested.
-    - delay (int, count): Occurances of EJUKEBOX ("Jukebox Delay", probably unused)
+    - delay (int, count): Occurrences of EJUKEBOX ("Jukebox Delay", probably unused)
     - pnfsreads (int, count): Count of NFS v4.1+ pNFS reads.
     - pnfswrites (int, count): Count of NFS v4.1+ pNFS writes.
 

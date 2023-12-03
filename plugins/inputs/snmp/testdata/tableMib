@@ -625,7 +625,7 @@ atPhysAddress OBJECT-TYPE
             Setting this object to a null string (one of zero
             length) has the effect of invaliding the
             corresponding entry in the atTable object.  That
-            is, it effectively dissasociates the interface
+            is, it effectively disassociates the interface
             identified with said entry from the mapping
             identified with said entry.  It is an
             implementation-specific matter as to whether the
@@ -1140,7 +1140,7 @@ ipRouteType OBJECT-TYPE
             Setting this object to the value invalid(2) has
             the effect of invalidating the corresponding entry
             in the ipRouteTable object.  That is, it
-            effectively dissasociates the destination
+            effectively disassociates the destination
             identified with said entry from the route
             identified with said entry.  It is an
             implementation-specific matter as to whether the
@@ -1339,7 +1339,7 @@ ipNetToMediaType OBJECT-TYPE
             Setting this object to the value invalid(2) has
             the effect of invalidating the corresponding entry
             in the ipNetToMediaTable.  That is, it effectively
-            dissasociates the interface identified with said
+            disassociates the interface identified with said
             entry from the mapping identified with said entry.
             It is an implementation-specific matter as to
             whether the agent removes an invalidated entry

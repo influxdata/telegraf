@@ -41,12 +41,12 @@ metric=name field=field_N host=foo  59 1234567890
 `Carbon2` serializer has a configuration option - `carbon2_format` - to change how
 metrics names are being constructed.
 
-By default `metric` will only inclue the metric name and a separate field `field`
+By default `metric` will only include the metric name and a separate field `field`
 will contain the field name.
 This is the behavior of `carbon2_format = "field_separate"` which is the default
 behavior (even if unspecified).
 
-Optionally user can opt in to change this to make the metric inclue the field name
+Optionally user can opt in to change this to make the metric include the field name
 after the `_`.
 This is the behavior of `carbon2_format = "metric_includes_field"` which would
 make the above example look like:

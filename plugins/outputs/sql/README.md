@@ -37,7 +37,7 @@ driver selected.
 Through the nature of the inputs plugins, the amounts of columns inserted within
 rows for a given metric may differ. Since the tables are created based on the
 tags and fields available within an input metric, it's possible the created
-table won't contain all the neccessary columns. You might need to initialize
+table won't contain all the necessary columns. You might need to initialize
 the schema yourself, to avoid this scenario.
 
 ## Advanced options
