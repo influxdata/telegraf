@@ -1324,7 +1324,7 @@ func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.
 }
 
 // buildFilter builds a Filter
-// (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
+// (tags, fields, namepass, namedrop, metricpass) to
 // be inserted into the models.OutputConfig/models.InputConfig
 // to be used for glob filtering on tags and measurements
 func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, error) {

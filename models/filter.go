@@ -31,7 +31,7 @@ func (tf *TagFilter) Compile() error {
 	return nil
 }
 
-// Filter containing drop/pass and tagdrop/tagpass rules
+// Filter containing drop/pass and include/exclude rules
 type Filter struct {
 	NameDrop           []string
 	NameDropSeparators string
