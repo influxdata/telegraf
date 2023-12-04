@@ -73,7 +73,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Enabling this timeout can be useful in situations where, on heavily loaded systems,
   ## the code waits too long for a kernel response to MSR read requests.
   ## 0 disables the timeout (default).
-  # msr_read_timeout = 0
+  # msr_read_timeout = "0ms"
 ```
 
 ### Configuration notes
