@@ -44,6 +44,7 @@ type GlobalFlags struct {
 	debug          bool
 	once           bool
 	quiet          bool
+	unprotected    bool
 }
 
 type WindowFlags struct {
@@ -83,6 +84,12 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.secretstoreFilters = f.secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
+
+	// Disable secret protection before performing any other operation
+	if g.unprotected {
+		log.Println("W! Running without secret protection!")
+		config.DisableSecretProtection()
+	}
 
 	// Set global password
 	if g.password != "" {
@@ -150,7 +157,7 @@ func (t *Telegraf) reloadLoop() error {
 			select {
 			case sig := <-signals:
 				if sig == syscall.SIGHUP {
-					log.Printf("I! Reloading Telegraf config")
+					log.Println("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
 				}
@@ -325,17 +332,18 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	// Compute the amount of locked memory needed for the secrets
-	required := 2 * c.NumberSecrets * uint64(os.Getpagesize())
-	available := getLockedMemoryLimit()
-	if required > available {
-		required /= 1024
-		available /= 1024
-		log.Printf("I! Found %d secrets...", c.NumberSecrets)
-		msg := fmt.Sprintf("Insufficient lockable memory %dkb when %dkb is required.", available, required)
-		msg += " Please increase the limit for Telegraf in your Operating System!"
-		log.Printf("W! " + color.RedString(msg))
+	if !t.GlobalFlags.unprotected {
+		required := 3 * c.NumberSecrets * uint64(os.Getpagesize())
+		available := getLockedMemoryLimit()
+		if required > available {
+			required /= 1024
+			available /= 1024
+			log.Printf("I! Found %d secrets...", c.NumberSecrets)
+			msg := fmt.Sprintf("Insufficient lockable memory %dkb when %dkb is required.", available, required)
+			msg += " Please increase the limit for Telegraf in your Operating System!"
+			log.Printf("W! " + color.RedString(msg))
+		}
 	}
-
 	ag := agent.NewAgent(c)
 
 	// Notify systemd that telegraf is ready
