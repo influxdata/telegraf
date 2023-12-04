@@ -44,6 +44,7 @@ type natsConsumer struct {
 	Username    string   `toml:"username"`
 	Password    string   `toml:"password"`
 	Credentials string   `toml:"credentials"`
+	NkeySeed    string   `toml:"nkey_seed"`
 	JsSubjects  []string `toml:"jetstream_subjects"`
 
 	tls.ClientConfig
@@ -104,6 +105,14 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 	if n.Credentials != "" {
 		options = append(options, nats.UserCredentials(n.Credentials))
+	}
+
+	if n.NkeySeed != "" {
+		opt, err := nats.NkeyOptionFromSeed(n.NkeySeed)
+		if err != nil {
+			return err
+		}
+		options = append(options, opt)
 	}
 
 	if n.Secure {
