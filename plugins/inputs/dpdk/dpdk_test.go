@@ -44,7 +44,7 @@ func Test_Init(t *testing.T) {
 		require.Nil(t, dpdk.MetadataFields)
 
 		_ = dpdk.Init()
-		require.Equal(t, []string{dpdkMetadataFieldPidName}, dpdk.MetadataFields)
+		require.Equal(t, []string{dpdkMetadataFieldPidName, dpdkMetadataFieldVersionName}, dpdk.MetadataFields)
 	})
 
 	t.Run("when PluginOptions field isn't set then it should be set to default value (in_memory)", func(t *testing.T) {

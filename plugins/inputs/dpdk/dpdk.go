@@ -141,7 +141,7 @@ func (dpdk *dpdk) setupDefaultValues() {
 	}
 
 	if dpdk.MetadataFields == nil {
-		dpdk.MetadataFields = []string{dpdkMetadataFieldPidName}
+		dpdk.MetadataFields = []string{dpdkMetadataFieldPidName, dpdkMetadataFieldVersionName}
 	}
 
 	if dpdk.PluginOptions == nil {

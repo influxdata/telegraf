@@ -112,7 +112,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Supported options:
   ##  - "pid" - exposes PID of DPDK process. Example: pid=2179660i
   ##  - "version" - exposes version of DPDK. Example: version="DPDK 21.11.2"
-  # metadata_fields = ["pid"]
+  # metadata_fields = ["pid", "version"]
 
   ## Allows turning off collecting data for individual "ethdev" commands.
   ## Remove "/ethdev/link_status" from list to gather link status metrics.
