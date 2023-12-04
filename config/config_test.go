@@ -162,8 +162,8 @@ func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 		NameDropSeparators: ".",
 		NamePass:           []string{"metricname1"},
 		NamePassSeparators: ".",
-		FieldDrop:          []string{"other", "stuff"},
-		FieldPass:          []string{"some", "strings"},
+		FieldExclude:       []string{"other", "stuff"},
+		FieldInclude:       []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
