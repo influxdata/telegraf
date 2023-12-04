@@ -64,7 +64,7 @@ by the tacacs server, or filled by telegraf in case of a timeout.
 ### field `responsetime_ms`
 
 The field responsetime_ms is response time of the tacacs server
-in miliseconds of the furthest achieved stage of auth.
+in milliseconds of the furthest achieved stage of auth.
 In case of timeout, its filled by telegraf to be the value of
 the configured response_timeout.
 

@@ -275,7 +275,7 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 		}
 		requests = optimizeGroup(total, params.MaxBatchSize)
 	case "max_insert":
-		// Similar to aggressive but keeps the number of touched registers bellow a threshold
+		// Similar to aggressive but keeps the number of touched registers below a threshold
 		var total request
 		for _, g := range groups {
 			if len(g.fields) > 0 {

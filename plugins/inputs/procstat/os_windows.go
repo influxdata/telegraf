@@ -6,9 +6,14 @@ import (
 	"errors"
 	"unsafe"
 
+	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/mgr"
 )
+
+func processName(p *process.Process) (string, error) {
+	return p.Name()
+}
 
 func getService(name string) (*mgr.Service, error) {
 	m, err := mgr.Connect()
@@ -48,3 +53,5 @@ func queryPidWithWinServiceName(winServiceName string) (uint32, error) {
 
 	return p.ProcessId, nil
 }
+
+func collectMemmap(Process, string, map[string]any) {}

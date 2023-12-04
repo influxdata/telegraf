@@ -1331,7 +1331,9 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 	f := models.Filter{}
 
 	c.getFieldStringSlice(tbl, "namepass", &f.NamePass)
+	c.getFieldString(tbl, "namepass_separator", &f.NamePassSeparators)
 	c.getFieldStringSlice(tbl, "namedrop", &f.NameDrop)
+	c.getFieldString(tbl, "namedrop_separator", &f.NameDropSeparators)
 
 	c.getFieldStringSlice(tbl, "pass", &f.FieldPass)
 	c.getFieldStringSlice(tbl, "fieldpass", &f.FieldPass)
@@ -1446,7 +1448,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"interval",
 		"lvm", // What is this used for?
 		"metric_batch_size", "metric_buffer_limit", "metricpass",
-		"name_override", "name_prefix", "name_suffix", "namedrop", "namepass",
+		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":

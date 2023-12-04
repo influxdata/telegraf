@@ -1,7 +1,7 @@
 # ctrlX Data Layer Input Plugin
 
 The `ctrlx_datalayer` plugin gathers data from the ctrlX Data Layer,
-a communication middleware runnning on
+a communication middleware running on
 [ctrlX CORE devices](https://ctrlx-core.com) from
 [Bosch Rexroth](https://boschrexroth.com). The platform is used for
 professional automation applications like industrial automation, building

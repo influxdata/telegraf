@@ -1,12 +1,20 @@
-# artifactory webhook
+# Artifactory Webhook
 
-You need to configure to orginizations artifactory instance/s as detailed via the artifactory webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.  Multiple webhooks may need be needed to configure different domains.
+You need to configure the organization's artifactory instance(s) as detailed
+via the artifactory [webhook documentation][webhook docs]. Multiple webhooks may
+need be needed to configure different domains.
 
-You can also add a secret that will be used by telegraf to verify the authenticity of the requests.
+You can also add a secret that will be used by telegraf to verify the
+authenticity of the requests.
+
+[webhook docs]: https://www.jfrog.com/confluence/display/JFROG/Webhooks
 
 ## Events
 
-The different events type can be found found in the webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.  Events are identified by their `domain` and `event`.  The following sections break down each event by domain.
+The different events type can be found found in the webhook documentation:
+<https://www.jfrog.com/confluence/display/JFROG/Webhooks>.
+Events are identified by their `domain` and `event`.
+The following sections break down each event by domain.
 
 ### Artifact Domain
 
@@ -84,7 +92,8 @@ The Webhook is triggered when an artifact is copied from a repository.
 
 #### Properties Added Event
 
-The Webhook is triggered when a property is added to an artifact/folder in a repository, or the repository itself.
+The Webhook is triggered when a property is added to an artifact/folder
+in a repository, or the repository itself.
 
 **Tags:**
 
@@ -95,11 +104,12 @@ The Webhook is triggered when a property is added to an artifact/folder in a rep
 * 'name' string
 **Fields**
 * 'property_key' string
-* 'property_values' string (joined comma seperated list)
+* 'property_values' string (joined comma separated list)
 
 #### Properties Deleted Event
 
-The Webhook is triggered when a property is deleted from an artifact/folder in a repository, or the repository itself.
+The Webhook is triggered when a property is deleted from an artifact/folder in a
+repository, or the repository itself.
 
 **Tags:**
 
@@ -112,13 +122,14 @@ The Webhook is triggered when a property is deleted from an artifact/folder in a
 **Fields:**
 
 * 'property_key' string
-* 'property_values' string (joined comma seperated list)
+* 'property_values' string (joined comma separated list)
 
 ### Docker Domain
 
 #### Docker Pushed Event
 
-The Webhook is triggered when a new tag of a Docker image is pushed to a Docker repository.
+The Webhook is triggered when a new tag of a Docker image is pushed to a Docker
+repository.
 
 **Tags:**
 
@@ -135,12 +146,13 @@ The Webhook is triggered when a new tag of a Docker image is pushed to a Docker 
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-  * 'achitecture' string
+  * 'architecture' string
   * 'os' string
 
 #### Docker Deleted Event
 
-The Webhook is triggered when a tag of a Docker image is deleted from a Docker repository.
+The Webhook is triggered when a tag of a Docker image is deleted from a Docker
+repository.
 
 **Tags:**
 
@@ -157,7 +169,7 @@ The Webhook is triggered when a tag of a Docker image is deleted from a Docker r
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-  * 'achitecture' string
+  * 'architecture' string
   * 'os' string
 
 #### Docker Promoted Event
@@ -179,7 +191,7 @@ The Webhook is triggered when a tag of a Docker image is promoted.
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-  * 'achitecture' string
+  * 'architecture' string
   * 'os' string
 
 ### Build Domain
@@ -376,7 +388,8 @@ The Webhook is triggered when Release Bundle distribution has failed.
 
 #### Release Bundle Version Deletion Started EVent
 
-The Webhook is triggered when a Release Bundle version deletion has started on one or more Edge nodes.
+The Webhook is triggered when a Release Bundle version deletion has started on
+one or more Edge nodes.
 
 **Tags:**
 
@@ -398,7 +411,8 @@ The Webhook is triggered when a Release Bundle version deletion has started on o
 
 #### Release Bundle Version Deletion Completed Event
 
-The Webhook is triggered when a Release Bundle version deletion has completed from one or more Edge nodes.
+The Webhook is triggered when a Release Bundle version deletion has completed
+from one or more Edge nodes.
 
 **Tags:**
 
@@ -420,7 +434,8 @@ The Webhook is triggered when a Release Bundle version deletion has completed fr
 
 #### Release Bundle Version Deletion Failed Event
 
-The Webhook is triggered when a Release Bundle version deletion has failed on one or more Edge nodes.
+The Webhook is triggered when a Release Bundle version deletion has failed on
+one or more Edge nodes.
 
 **Tags:**
 
@@ -461,7 +476,8 @@ The Webhook is triggered when a Release Bundle was received on an Edge Node.
 
 ### Release Bundle Delete Started Event
 
-The Webhook is triggered when a Release Bundle deletion from an Edge Node completed.
+The Webhook is triggered when a Release Bundle deletion from an Edge Node
+completed.
 
 **Tags:**
 
@@ -478,7 +494,8 @@ The Webhook is triggered when a Release Bundle deletion from an Edge Node comple
 
 #### Release Bundle Delete Completed Event
 
-The Webhook is triggered when a Release Bundle deletion from an Edge Node completed.
+The Webhook is triggered when a Release Bundle deletion from an Edge Node
+completed.
 
 **Tags:**
 

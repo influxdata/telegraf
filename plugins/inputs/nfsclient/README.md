@@ -45,7 +45,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## NFSv3 and NFSv4 have different lists.  While it is not possible to
   ## have different include/exclude lists for NFSv3/4, unused elements
   ## in the list should be okay.  It is possible to have different lists
-  ## for different mountpoints:  use mulitple [[input.nfsclient]] stanzas,
+  ## for different mountpoints:  use multiple [[input.nfsclient]] stanzas,
   ## with their own lists.  See "include_mounts" above, and be careful of
   ## duplicate metrics.
   # include_operations = []
@@ -89,9 +89,9 @@ MOUNT_PROC: /host/proc/self/mountstats
   - bytes (integer, bytes) - The total number of bytes exchanged doing this operation. This is bytes sent _and_ received, including overhead _and_ payload.  (bytes = OP_bytes_sent + OP_bytes_recv.  See nfs_ops below)
   - ops (integer, count) - The number of operations of this type executed.
   - retrans (integer, count) - The number of times an operation had to be retried (retrans = OP_trans - OP_ops.  See nfs_ops below)
-  - exe (integer, miliseconds) - The number of miliseconds it took to process the operations.
-  - rtt (integer, miliseconds) - The total round-trip time for all operations.
-  - rtt_per_op (float, miliseconds) - The average round-trip time per operation.
+  - exe (integer, milliseconds) - The number of milliseconds it took to process the operations.
+  - rtt (integer, milliseconds) - The total round-trip time for all operations.
+  - rtt_per_op (float, milliseconds) - The average round-trip time per operation.
 
 In addition enabling `fullstat` will make many more metrics available.
 

@@ -43,7 +43,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 By default this plugin collects metrics about ZFS internals pool and dataset.
 These metrics are either counters or measure sizes
 in bytes. These metrics will be in the `zfs` measurement with the field
-names listed bellow.
+names listed below.
 
 If `poolMetrics` is enabled then additional metrics will be gathered for
 each pool.
@@ -52,7 +52,7 @@ If `datasetMetrics` is enabled then additional metrics will be gathered for
 each dataset.
 
 - zfs
-    With fields listed bellow.
+    With fields listed below.
 
 ### ARC Stats (FreeBSD and Linux)
 
