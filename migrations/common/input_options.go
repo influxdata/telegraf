@@ -17,11 +17,27 @@ type InputOptions struct {
 	NameDrop       []string            `toml:"namedrop,omitempty"`
 	FieldPassOld   []string            `toml:"pass,omitempty"`
 	FieldPass      []string            `toml:"fieldpass,omitempty"`
+	FieldInclude   []string            `toml:"fieldinclude,omitempty"`
 	FieldDropOld   []string            `toml:"drop,omitempty"`
 	FieldDrop      []string            `toml:"fielddrop,omitempty"`
+	FieldExclude   []string            `toml:"fieldexclude,omitempty"`
 	TagPassFilters map[string][]string `toml:"tagpass,omitempty"`
 	TagDropFilters map[string][]string `toml:"tagdrop,omitempty"`
 	TagExclude     []string            `toml:"tagexclude,omitempty"`
 	TagInclude     []string            `toml:"taginclude,omitempty"`
 	MetricPass     string              `toml:"metricpass,omitempty"`
+}
+
+func (io *InputOptions) Migrate() {
+	io.FieldInclude = append(io.FieldInclude, io.FieldPassOld...)
+	io.FieldInclude = append(io.FieldInclude, io.FieldPass...)
+
+	io.FieldPassOld = nil
+	io.FieldPass = nil
+
+	io.FieldExclude = append(io.FieldExclude, io.FieldDropOld...)
+	io.FieldExclude = append(io.FieldExclude, io.FieldDrop...)
+
+	io.FieldDropOld = nil
+	io.FieldDrop = nil
 }

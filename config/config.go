@@ -1289,7 +1289,7 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	}
 
 	var err error
-	conf.Filter, err = c.buildFilter(tbl)
+	conf.Filter, err = c.buildFilter("aggregators."+name, tbl)
 	if err != nil {
 		return conf, err
 	}
@@ -1313,7 +1313,7 @@ func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.
 	}
 
 	var err error
-	conf.Filter, err = c.buildFilter(tbl)
+	conf.Filter, err = c.buildFilter(category+"."+name, tbl)
 	if err != nil {
 		return conf, err
 	}
@@ -1324,10 +1324,10 @@ func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.
 }
 
 // buildFilter builds a Filter
-// (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
+// (tags, fields, namepass, namedrop, metricpass) to
 // be inserted into the models.OutputConfig/models.InputConfig
 // to be used for glob filtering on tags and measurements
-func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
+func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, error) {
 	f := models.Filter{}
 
 	c.getFieldStringSlice(tbl, "namepass", &f.NamePass)
@@ -1335,11 +1335,49 @@ func (c *Config) buildFilter(tbl *ast.Table) (models.Filter, error) {
 	c.getFieldStringSlice(tbl, "namedrop", &f.NameDrop)
 	c.getFieldString(tbl, "namedrop_separator", &f.NameDropSeparators)
 
-	c.getFieldStringSlice(tbl, "pass", &f.FieldPass)
-	c.getFieldStringSlice(tbl, "fieldpass", &f.FieldPass)
+	var oldPass []string
+	c.getFieldStringSlice(tbl, "pass", &oldPass)
+	if len(oldPass) > 0 {
+		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "pass", telegraf.DeprecationInfo{
+			Since:     "0.10.4",
+			RemovalIn: "2.0.0",
+			Notice:    "use 'fieldinclude' instead",
+		})
+		f.FieldInclude = append(f.FieldInclude, oldPass...)
+	}
+	var oldFieldPass []string
+	c.getFieldStringSlice(tbl, "fieldpass", &oldFieldPass)
+	if len(oldFieldPass) > 0 {
+		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fieldpass", telegraf.DeprecationInfo{
+			Since:     "1.29.0",
+			RemovalIn: "2.0.0",
+			Notice:    "use 'fieldinclude' instead",
+		})
+		f.FieldInclude = append(f.FieldInclude, oldFieldPass...)
+	}
+	c.getFieldStringSlice(tbl, "fieldinclude", &f.FieldInclude)
 
-	c.getFieldStringSlice(tbl, "drop", &f.FieldDrop)
-	c.getFieldStringSlice(tbl, "fielddrop", &f.FieldDrop)
+	var oldDrop []string
+	c.getFieldStringSlice(tbl, "drop", &oldDrop)
+	if len(oldDrop) > 0 {
+		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "drop", telegraf.DeprecationInfo{
+			Since:     "0.10.4",
+			RemovalIn: "2.0.0",
+			Notice:    "use 'fieldexclude' instead",
+		})
+		f.FieldExclude = append(f.FieldExclude, oldDrop...)
+	}
+	var oldFieldDrop []string
+	c.getFieldStringSlice(tbl, "fielddrop", &oldFieldDrop)
+	if len(oldFieldDrop) > 0 {
+		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fielddrop", telegraf.DeprecationInfo{
+			Since:     "1.29.0",
+			RemovalIn: "2.0.0",
+			Notice:    "use 'fieldexclude' instead",
+		})
+		f.FieldExclude = append(f.FieldExclude, oldFieldDrop...)
+	}
+	c.getFieldStringSlice(tbl, "fieldexclude", &f.FieldExclude)
 
 	c.getFieldTagFilter(tbl, "tagpass", &f.TagPassFilters)
 	c.getFieldTagFilter(tbl, "tagdrop", &f.TagDropFilters)
@@ -1392,7 +1430,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	}
 
 	var err error
-	cp.Filter, err = c.buildFilter(tbl)
+	cp.Filter, err = c.buildFilter("inputs."+name, tbl)
 	if err != nil {
 		return cp, err
 	}
@@ -1407,7 +1445,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 // models.OutputConfig to be inserted into models.RunningInput
 // Note: error exists in the return for future calls that might require error
 func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
-	filter, err := c.buildFilter(tbl)
+	filter, err := c.buildFilter("outputs."+name, tbl)
 	if err != nil {
 		return nil, err
 	}
@@ -1443,7 +1481,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "alias", "always_include_local_tags",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
-		"fielddrop", "fieldpass", "flush_interval", "flush_jitter",
+		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",
 		"grace",
 		"interval",
 		"lvm", // What is this used for?

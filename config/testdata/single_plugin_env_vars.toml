@@ -18,8 +18,8 @@
   servers = ["$MY_TEST_SERVER"]
   namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"] # this comment will be ignored as well
   namedrop = ["metricname2"]
-  fieldpass = ["some", "strings"]
-  fielddrop = ["other", "stuff"]
+  fieldinclude = ["some", "strings"]
+  fieldexclude = ["other", "stuff"]
   interval = "$TEST_INTERVAL"
    ##### this input is provided to test multiline strings
   command = """
