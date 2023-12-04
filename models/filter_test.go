@@ -146,6 +146,42 @@ func TestFilter_NamePass(t *testing.T) {
 	}
 }
 
+func TestFilter_NamePass_WithSeparator(t *testing.T) {
+	f := Filter{
+		NamePass:           []string{"foo.*.bar", "foo.*.abc.*.bar"},
+		NamePassSeparators: ".,",
+	}
+	require.NoError(t, f.Compile())
+
+	passes := []string{
+		"foo..bar",
+		"foo.abc.bar",
+		"foo..abc..bar",
+		"foo.xyz.abc.xyz-xyz.bar",
+	}
+
+	drops := []string{
+		"foo.bar",
+		"foo.abc,.bar", // "abc," is not considered under * as ',' is specified as a separator
+		"foo..abc.bar", // ".abc" shall not be matched under * as '.' is specified as a separator
+		"foo.abc.abc.bar",
+		"foo.xyz.abc.xyz.xyz.bar",
+		"foo.xyz.abc.xyz,xyz.bar",
+	}
+
+	for _, measurement := range passes {
+		if !f.shouldNamePass(measurement) {
+			t.Errorf("Expected measurement %s to pass", measurement)
+		}
+	}
+
+	for _, measurement := range drops {
+		if f.shouldNamePass(measurement) {
+			t.Errorf("Expected measurement %s to drop", measurement)
+		}
+	}
+}
+
 func TestFilter_NameDrop(t *testing.T) {
 	f := Filter{
 		NameDrop: []string{"foo*", "cpu_usage_idle"},
@@ -165,6 +201,42 @@ func TestFilter_NameDrop(t *testing.T) {
 		"barfoo",
 		"bar_foo",
 		"cpu_usage_busy",
+	}
+
+	for _, measurement := range passes {
+		if !f.shouldNamePass(measurement) {
+			t.Errorf("Expected measurement %s to pass", measurement)
+		}
+	}
+
+	for _, measurement := range drops {
+		if f.shouldNamePass(measurement) {
+			t.Errorf("Expected measurement %s to drop", measurement)
+		}
+	}
+}
+
+func TestFilter_NameDrop_WithSeparator(t *testing.T) {
+	f := Filter{
+		NameDrop:           []string{"foo.*.bar", "foo.*.abc.*.bar"},
+		NameDropSeparators: ".,",
+	}
+	require.NoError(t, f.Compile())
+
+	drops := []string{
+		"foo..bar",
+		"foo.abc.bar",
+		"foo..abc..bar",
+		"foo.xyz.abc.xyz-xyz.bar",
+	}
+
+	passes := []string{
+		"foo.bar",
+		"foo.abc,.bar", // "abc," is not considered under * as ',' is specified as a separator
+		"foo..abc.bar", // ".abc" shall not be matched under * as '.' is specified as a separator
+		"foo.abc.abc.bar",
+		"foo.xyz.abc.xyz.xyz.bar",
+		"foo.xyz.abc.xyz,xyz.bar",
 	}
 
 	for _, measurement := range passes {

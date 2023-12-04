@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -116,8 +117,9 @@ type testProc struct {
 	tags map[string]string
 }
 
-func newTestProc(_ PID) (Process, error) {
+func newTestProc(pid PID) (Process, error) {
 	proc := &testProc{
+		pid:  pid,
 		tags: make(map[string]string),
 	}
 	return proc, nil
@@ -139,14 +141,12 @@ func (p *testProc) MemoryMaps(bool) (*[]process.MemoryMapsStat, error) {
 	return &[]process.MemoryMapsStat{}, nil
 }
 
-func (p *testProc) Metric(prefix string, cmdLineTag, _ bool) telegraf.Metric {
+func (p *testProc) Metric(prefix string, tagging map[string]bool, _ bool) telegraf.Metric {
 	if prefix != "" {
 		prefix += "_"
 	}
 
 	fields := map[string]interface{}{
-		"pid":                                   int32(p.pid),
-		"ppid":                                  int32(0),
 		prefix + "num_fds":                      int32(0),
 		prefix + "num_threads":                  int32(0),
 		prefix + "voluntary_context_switches":   int64(0),
@@ -167,20 +167,46 @@ func (p *testProc) Metric(prefix string, cmdLineTag, _ bool) telegraf.Metric {
 		prefix + "memory_rss":                   uint64(0),
 		prefix + "memory_vms":                   uint64(0),
 		prefix + "memory_usage":                 float32(0),
-		prefix + "status":                       "running",
 	}
 
 	tags := map[string]string{
 		"process_name": "test_proc",
-		"user":         "testuser",
 	}
 	for k, v := range p.tags {
 		tags[k] = v
 	}
 
-	if cmdLineTag {
+	// Add the tags as requested by the user
+	if tagging["cmdline"] {
 		tags["cmdline"] = "test_proc"
+	} else {
+		fields[prefix+"cmdline"] = "test_proc"
 	}
+
+	if tagging["pid"] {
+		tags["pid"] = strconv.Itoa(int(p.pid))
+	} else {
+		fields["pid"] = int32(p.pid)
+	}
+
+	if tagging["ppid"] {
+		tags["ppid"] = "0"
+	} else {
+		fields[prefix+"ppid"] = int32(0)
+	}
+
+	if tagging["status"] {
+		tags["status"] = "running"
+	} else {
+		fields[prefix+"status"] = "running"
+	}
+
+	if tagging["user"] {
+		tags["user"] = "testuser"
+	} else {
+		fields[prefix+"user"] = "testuser"
+	}
+
 	return metric.New("procstat", tags, fields, time.Time{})
 }
 
@@ -207,7 +233,7 @@ func TestInitRequiresChildDarwin(t *testing.T) {
 		PidFinder:       "native",
 		Log:             testutil.Logger{},
 	}
-	require.ErrorContains(t, p.Init(), "requires the 'pgrep' finder")
+	require.ErrorContains(t, p.Init(), "requires 'pgrep' finder")
 }
 
 func TestInitMissingPidMethod(t *testing.T) {
