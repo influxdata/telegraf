@@ -135,11 +135,17 @@ func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
 
+	// Always returns an instance, even if table doesn't exist (anymore).
 	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Inserter()
 
-	compactValues := make([]*bigquery.ValuesSaver, len(metrics))
-	for i, m := range metrics {
-		compactValues[i] = s.newCompactValuesSaver(m)
+	var compactValues []*bigquery.ValuesSaver
+	for _, m := range metrics {
+		valueSaver, err := s.newCompactValuesSaver(m)
+		if err != nil {
+			s.Log.Warnf("could not prepare metric as compact value: %v", err)
+		} else {
+			compactValues = append(compactValues, valueSaver)
+		}
 	}
 	return inserter.Put(ctx, compactValues)
 }
@@ -171,15 +177,15 @@ func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
 	}
 }
 
-func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
+func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) (*bigquery.ValuesSaver, error) {
 	tags, err := json.Marshal(m.Tags())
 	if err != nil {
-		s.Log.Warnf("serializing tags: %v", err)
+		return nil, fmt.Errorf("serializing tags: %w", err)
 	}
 
 	fields, err := json.Marshal(m.Fields())
 	if err != nil {
-		s.Log.Warnf("serializing fields: %v", err)
+		return nil, fmt.Errorf("serializing fields: %w", err)
 	}
 
 	return &bigquery.ValuesSaver{
@@ -195,7 +201,7 @@ func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) *bigquery.ValuesSave
 			string(tags),
 			string(fields),
 		},
-	}
+	}, nil
 }
 
 func timeStampFieldSchema() *bigquery.FieldSchema {
