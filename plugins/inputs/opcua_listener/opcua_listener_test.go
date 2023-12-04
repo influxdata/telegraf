@@ -11,7 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/testutil"
@@ -166,13 +168,43 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 	defer container.Terminate()
 
 	testopctags := []OPCTags{
-		{"ProductName", "0", "i", "2261", "String"},
-		{"ProductUri", "0", "i", "2262", "String"},
-		{"ManufacturerName", "0", "i", "2263", "String"},
-		{"badnode", "1", "i", "1337", "None"},
-		{"goodnode", "1", "s", "the.answer", "Int32"},
-		{"DateTime", "1", "i", "51037", "DateTime"},
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+		{"badnode", "1", "i", "1337", nil},
+		{"goodnode", "1", "s", "the.answer", int32(42)},
+		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
 	}
+	testopctypes := []string{
+		"String",
+		"String",
+		"String",
+		"Null",
+		"Int32",
+		"DateTime",
+	}
+	testopcquality := []string{
+		"OK (0x0)",
+		"OK (0x0)",
+		"OK (0x0)",
+		"User does not have permission to perform the requested operation. StatusBadUserAccessDenied (0x801F0000)",
+		"OK (0x0)",
+		"OK (0x0)",
+	}
+	expectedopcmetrics := []telegraf.Metric{}
+	for i, x := range testopctags {
+		now := time.Now()
+		tags := map[string]string{
+			"id": fmt.Sprintf("ns=%s;%s=%s", x.Namespace, x.IdentifierType, x.Identifier),
+		}
+		fields := map[string]interface{}{
+			x.Name:     x.Want,
+			"Quality":  testopcquality[i],
+			"DataType": testopctypes[i],
+		}
+		expectedopcmetrics = append(expectedopcmetrics, metric.New("testing", tags, fields, now))
+	}
+
 	tagsRemaining := make([]string, 0, len(testopctags))
 	for i, tag := range testopctags {
 		if tag.Want != nil {
@@ -221,37 +253,32 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 	for {
 		select {
 		case m := <-res:
-			resTagName := "???"
-			resDataType := "???"
-			resDataTypeExpected := "???"
 			for fieldName, fieldValue := range m.Fields() {
-				switch fieldName {
-				case "DataType":
-					resDataType = fmt.Sprintf("%v", fieldValue)
-				default:
-					for _, tag := range testopctags {
-						if fieldName == tag.Name {
-							resTagName = fieldName
-							resDataTypeExpected = fmt.Sprintf("%v", tag.Want)
+				for _, tag := range testopctags {
+					if fieldName != tag.Name {
+						continue
+					}
+					if tag.Want == nil {
+						t.Errorf("Tag: %s has value: %v", tag.Name, fieldValue)
+						return
+					}
+
+					newRemaining := make([]string, 0, len(tagsRemaining))
+					for _, remainingTag := range tagsRemaining {
+						if fieldName != remainingTag {
+							newRemaining = append(newRemaining, remainingTag)
+							break
 						}
 					}
+
+					if len(newRemaining) <= 0 {
+						return
+					}
+					// Test if the received metric matches one of the expected
+					testutil.RequireMetricsSubset(t, []telegraf.Metric{m}, expectedopcmetrics, testutil.IgnoreTime())
+					tagsRemaining = newRemaining
 				}
 			}
-			require.Equal(t, resDataTypeExpected, resDataType)
-
-			newRemaining := make([]string, 0, len(tagsRemaining))
-			for _, remainingTag := range tagsRemaining {
-				if resTagName != remainingTag {
-					newRemaining = append(newRemaining, remainingTag)
-					break
-				}
-			}
-
-			if len(newRemaining) <= 0 {
-				return
-			}
-
-			tagsRemaining = newRemaining
 
 		case <-ctx.Done():
 			msg := ""

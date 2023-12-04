@@ -2,7 +2,6 @@ package opcua
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -10,7 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/testutil"
@@ -176,6 +177,35 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 		{"goodnode", "1", "s", "the.answer", int32(42)},
 		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
 	}
+	testopctypes := []string{
+		"String",
+		"String",
+		"String",
+		"Null",
+		"Int32",
+		"DateTime",
+	}
+	testopcquality := []string{
+		"OK (0x0)",
+		"OK (0x0)",
+		"OK (0x0)",
+		"User does not have permission to perform the requested operation. StatusBadUserAccessDenied (0x801F0000)",
+		"OK (0x0)",
+		"OK (0x0)",
+	}
+	expectedopcmetrics := []telegraf.Metric{}
+	for i, x := range testopctags {
+		now := time.Now()
+		tags := map[string]string{
+			"id": fmt.Sprintf("ns=%s;%s=%s", x.Namespace, x.IdentifierType, x.Identifier),
+		}
+		fields := map[string]interface{}{
+			x.Name:     x.Want,
+			"Quality":  testopcquality[i],
+			"DataType": testopctypes[i],
+		}
+		expectedopcmetrics = append(expectedopcmetrics, metric.New("testing", tags, fields, now))
+	}
 
 	readConfig := ReadClientConfig{
 		InputClientConfig: input.InputClientConfig{
@@ -205,20 +235,12 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 	err = client.Connect()
 	require.NoError(t, err, "Connect")
 
-	for i, v := range client.LastReceivedData {
-		actualDataType := "???"
-		for _, k := range client.MetricForNode(i).FieldList() {
-			if k.Key == "DataType" {
-				actualDataType = fmt.Sprintf("%v", k.Value)
-			}
-		}
-		require.NotEqual(t, "???", actualDataType)
+	actualopcmetrics := []telegraf.Metric{}
 
-		// Convert returned OPC-UA DataType to String and select just the DataType
-		expectedDataType := strings.Replace(v.DataType.String(), "TypeID", "", 1)
-
-		require.Equal(t, expectedDataType, actualDataType)
+	for i := range client.LastReceivedData {
+		actualopcmetrics = append(actualopcmetrics, client.MetricForNode(i))
 	}
+	testutil.RequireMetricsEqual(t, expectedopcmetrics, actualopcmetrics, testutil.IgnoreTime())
 }
 
 func TestReadClientIntegrationWithPasswordAuth(t *testing.T) {

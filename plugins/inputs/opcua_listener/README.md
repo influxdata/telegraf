@@ -230,7 +230,7 @@ to use them.
   ## Include additional Fields in each metric
   # [inputs.opcua.additional_fields]
     ## OPC-UA DataType
-    # include_datatype = true
+    # include_datatype = false
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
@@ -258,14 +258,14 @@ To gather data from this node enter the following line into the 'nodes' property
 This node configuration produces a metric like this:
 
 ```text
-opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
+opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)" 1597820490000000000
 ```
 
 With 'DataType' enabled in Additional Metrics, this node configuration
 produces a metric like this:
 
 ```text
-opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)",DataType="Float" 1597820490000000000
+opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
 ## Group Configuration
