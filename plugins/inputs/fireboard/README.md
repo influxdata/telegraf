@@ -53,7 +53,7 @@ values are included if they are less than a minute old.
 - fireboard
   - tags:
     - channel
-    - scale (Celsius; Fahrenheit)
+    - scale (Celcius; Fahrenheit)
     - title (name of the Fireboard)
     - uuid (UUID of the Fireboard)
   - fields:
