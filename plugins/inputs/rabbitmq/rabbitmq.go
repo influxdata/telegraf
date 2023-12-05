@@ -70,6 +70,7 @@ type RabbitMQ struct {
 	upstreamFilter    filter.Filter
 }
 
+// OverviewResponse ...
 type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
@@ -77,14 +78,17 @@ type OverviewResponse struct {
 	Listeners    []Listeners   `json:"listeners"`
 }
 
+// Listeners ...
 type Listeners struct {
 	Protocol string `json:"protocol"`
 }
 
+// Details ...
 type Details struct {
 	Rate float64 `json:"rate"`
 }
 
+// MessageStats ...
 type MessageStats struct {
 	Ack                     int64
 	AckDetails              Details `json:"ack_details"`
@@ -104,6 +108,7 @@ type MessageStats struct {
 	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
 }
 
+// ObjectTotals ...
 type ObjectTotals struct {
 	Channels    int64
 	Connections int64
@@ -112,6 +117,7 @@ type ObjectTotals struct {
 	Queues      int64
 }
 
+// QueueTotals ...
 type QueueTotals struct {
 	Messages                   int64
 	MessagesReady              int64 `json:"messages_ready"`
@@ -123,6 +129,7 @@ type QueueTotals struct {
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
+// Queue ...
 type Queue struct {
 	QueueTotals            // just to not repeat the same code
 	MessageStats           `json:"message_stats"`
@@ -140,6 +147,7 @@ type Queue struct {
 	HeadMessageTimestamp   *int64   `json:"head_message_timestamp"`
 }
 
+// Node ...
 type Node struct {
 	Name string
 
@@ -186,6 +194,7 @@ type Exchange struct {
 	AutoDelete   bool `json:"auto_delete"`
 }
 
+// FederationLinkChannelMessageStats ...
 type FederationLinkChannelMessageStats struct {
 	Confirm                 int64   `json:"confirm"`
 	ConfirmDetails          Details `json:"confirm_details"`
@@ -195,6 +204,7 @@ type FederationLinkChannelMessageStats struct {
 	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
 }
 
+// FederationLinkChannel ...
 type FederationLinkChannel struct {
 	AcksUncommitted        int64                             `json:"acks_uncommitted"`
 	ConsumerCount          int64                             `json:"consumer_count"`
@@ -204,6 +214,7 @@ type FederationLinkChannel struct {
 	MessageStats           FederationLinkChannelMessageStats `json:"message_stats"`
 }
 
+// FederationLink ...
 type FederationLink struct {
 	Type             string                `json:"type"`
 	Queue            string                `json:"queue"`
@@ -219,6 +230,7 @@ type HealthCheck struct {
 	Status string `json:"status"`
 }
 
+// MemoryResponse ...
 type MemoryResponse struct {
 	Memory *Memory `json:"memory"`
 }
@@ -253,6 +265,7 @@ type ErrorResponse struct {
 	Reason string `json:"reason"`
 }
 
+// gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
 var gatherFunctions = map[string]gatherFunc{
@@ -306,6 +319,7 @@ func (r *RabbitMQ) Init() error {
 	return nil
 }
 
+// Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for name, f := range gatherFunctions {
