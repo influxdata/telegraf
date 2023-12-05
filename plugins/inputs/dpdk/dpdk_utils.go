@@ -4,6 +4,7 @@ package dpdk
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -39,6 +40,25 @@ func getParams(command string) string {
 	return command[index+1:]
 }
 
+// Checks if the provided filePath contains in-memory socket
+func isInMemorySocketPath(filePath, socketPath string) bool {
+	if filePath == socketPath {
+		return true
+	}
+
+	socketPathPrefix := fmt.Sprintf("%s:", socketPath)
+	if strings.HasPrefix(filePath, socketPathPrefix) {
+		suffix := filePath[len(socketPathPrefix):]
+		if number, err := strconv.Atoi(suffix); err == nil {
+			if number > 0 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // Checks if provided path points to socket
 func isSocket(path string) error {
 	pathInfo, err := os.Lstat(path)
@@ -60,7 +80,7 @@ func isSocket(path string) error {
 // Converts JSON array containing devices identifiers from DPDK response to string slice
 func jsonToArray(input []byte, command string) ([]string, error) {
 	if len(input) == 0 {
-		return nil, fmt.Errorf("got empty object instead of json")
+		return nil, errors.New("got empty object instead of json")
 	}
 
 	var rawMessage map[string]json.RawMessage
@@ -72,7 +92,7 @@ func jsonToArray(input []byte, command string) ([]string, error) {
 	var intArray []int64
 	err = json.Unmarshal(rawMessage[command], &intArray)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall json response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal json response: %w", err)
 	}
 
 	stringArray := make([]string, 0, len(intArray))

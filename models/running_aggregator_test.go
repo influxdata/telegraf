@@ -217,7 +217,7 @@ func TestAddDoesNotModifyMetric(t *testing.T) {
 	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
-			FieldPass: []string{"a"},
+			FieldInclude: []string{"a"},
 		},
 		DropOriginal: true,
 	})

@@ -3,7 +3,7 @@
 #[[inputs.diskio]]
 #  alias = "diskio1s"
 #  interval = "1s"
-#  fieldpass = ["reads", "writes"]
+#  fieldinclude = ["reads", "writes"]
 #  name_suffix = "1s"
 #
 # Example Input:

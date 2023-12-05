@@ -50,11 +50,7 @@ func (d *netflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metr
 			"sys_uptime":        msg.SysUptime,
 			"seq_number":        msg.FlowSequence,
 			"engine_type":       mapEngineType(msg.EngineType),
-			"engine_id":         decodeHex([]byte{msg.EngineId}),
 			"sampling_interval": msg.SamplingInterval,
-			"src":               decodeIPFromUint32(record.SrcAddr),
-			"dst":               decodeIPFromUint32(record.DstAddr),
-			"next_hop":          decodeIPFromUint32(record.NextHop),
 			"in_snmp":           record.Input,
 			"out_snmp":          record.Output,
 			"in_packets":        record.DPkts,
@@ -65,12 +61,34 @@ func (d *netflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metr
 			"dst_port":          record.DstPort,
 			"tcp_flags":         mapTCPFlags(record.TCPFlags),
 			"protocol":          mapL4Proto(record.Proto),
-			"src_tos":           decodeHex([]byte{record.Tos}),
 			"bgp_src_as":        record.SrcAS,
 			"bgp_dst_as":        record.DstAS,
 			"src_mask":          record.SrcMask,
 			"dst_mask":          record.DstMask,
 		}
+
+		var err error
+		fields["engine_id"], err = decodeHex([]byte{msg.EngineId})
+		if err != nil {
+			return nil, fmt.Errorf("decoding 'engine_id' failed: %w", err)
+		}
+		fields["src"], err = decodeIPFromUint32(record.SrcAddr)
+		if err != nil {
+			return nil, fmt.Errorf("decoding 'src' failed: %w", err)
+		}
+		fields["dst"], err = decodeIPFromUint32(record.DstAddr)
+		if err != nil {
+			return nil, fmt.Errorf("decoding 'dst' failed: %w", err)
+		}
+		fields["next_hop"], err = decodeIPFromUint32(record.NextHop)
+		if err != nil {
+			return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
+		}
+		fields["src_tos"], err = decodeHex([]byte{record.Tos})
+		if err != nil {
+			return nil, fmt.Errorf("decoding 'src_tos' failed: %w", err)
+		}
+
 		metrics = append(metrics, metric.New("netflow", tags, fields, t))
 	}
 

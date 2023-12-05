@@ -31,17 +31,19 @@ func (tf *TagFilter) Compile() error {
 	return nil
 }
 
-// Filter containing drop/pass and tagdrop/tagpass rules
+// Filter containing drop/pass and include/exclude rules
 type Filter struct {
-	NameDrop       []string
-	nameDropFilter filter.Filter
-	NamePass       []string
-	namePassFilter filter.Filter
+	NameDrop           []string
+	NameDropSeparators string
+	nameDropFilter     filter.Filter
+	NamePass           []string
+	NamePassSeparators string
+	namePassFilter     filter.Filter
 
-	FieldDrop       []string
-	fieldDropFilter filter.Filter
-	FieldPass       []string
-	fieldPassFilter filter.Filter
+	FieldExclude       []string
+	fieldExcludeFilter filter.Filter
+	FieldInclude       []string
+	fieldIncludeFilter filter.Filter
 
 	TagDropFilters []TagFilter
 	TagPassFilters []TagFilter
@@ -67,7 +69,7 @@ func (f *Filter) Compile() error {
 	f.selectActive = f.selectActive || len(f.TagPassFilters) > 0 || len(f.TagDropFilters) > 0
 	f.selectActive = f.selectActive || f.MetricPass != ""
 
-	f.modifyActive = len(f.FieldPass) > 0 || len(f.FieldDrop) > 0
+	f.modifyActive = len(f.FieldInclude) > 0 || len(f.FieldExclude) > 0
 	f.modifyActive = f.modifyActive || len(f.TagInclude) > 0 || len(f.TagExclude) > 0
 
 	f.isActive = f.selectActive || f.modifyActive
@@ -78,11 +80,11 @@ func (f *Filter) Compile() error {
 
 	if f.selectActive {
 		var err error
-		f.nameDropFilter, err = filter.Compile(f.NameDrop)
+		f.nameDropFilter, err = filter.Compile(f.NameDrop, []rune(f.NameDropSeparators)...)
 		if err != nil {
 			return fmt.Errorf("error compiling 'namedrop', %w", err)
 		}
-		f.namePassFilter, err = filter.Compile(f.NamePass)
+		f.namePassFilter, err = filter.Compile(f.NamePass, []rune(f.NamePassSeparators)...)
 		if err != nil {
 			return fmt.Errorf("error compiling 'namepass', %w", err)
 		}
@@ -101,13 +103,13 @@ func (f *Filter) Compile() error {
 
 	if f.modifyActive {
 		var err error
-		f.fieldDropFilter, err = filter.Compile(f.FieldDrop)
+		f.fieldExcludeFilter, err = filter.Compile(f.FieldExclude)
 		if err != nil {
-			return fmt.Errorf("error compiling 'fielddrop', %w", err)
+			return fmt.Errorf("error compiling 'fieldexclude', %w", err)
 		}
-		f.fieldPassFilter, err = filter.Compile(f.FieldPass)
+		f.fieldIncludeFilter, err = filter.Compile(f.FieldInclude)
 		if err != nil {
-			return fmt.Errorf("error compiling 'fieldpass', %w", err)
+			return fmt.Errorf("error compiling 'fieldinclude', %w", err)
 		}
 
 		f.tagExcludeFilter, err = filter.Compile(f.TagExclude)
@@ -159,9 +161,9 @@ func (f *Filter) Select(metric telegraf.Metric) (bool, error) {
 }
 
 // Modify removes any tags and fields from the metric according to the
-// fieldpass/fielddrop and taginclude/tagexclude filters.
+// fieldinclude/fieldexclude and taginclude/tagexclude filters.
 func (f *Filter) Modify(metric telegraf.Metric) {
-	if !f.isActive {
+	if !f.modifyActive {
 		return
 	}
 
@@ -196,23 +198,17 @@ func (f *Filter) shouldNamePass(key string) bool {
 	return true
 }
 
-// shouldFieldPass returns true if the metric should pass, false if it should drop
-// based on the drop/pass filter parameters
-func (f *Filter) shouldFieldPass(key string) bool {
-	return ShouldPassFilters(f.fieldPassFilter, f.fieldDropFilter, key)
-}
-
 // shouldTagsPass returns true if the metric should pass, false if it should drop
 // based on the tagdrop/tagpass filter parameters
 func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
 	return ShouldTagsPass(f.TagPassFilters, f.TagDropFilters, tags)
 }
 
-// filterFields removes fields according to fieldpass/fielddrop.
+// filterFields removes fields according to fieldinclude/fieldexclude.
 func (f *Filter) filterFields(metric telegraf.Metric) {
 	filterKeys := []string{}
 	for _, field := range metric.FieldList() {
-		if !f.shouldFieldPass(field.Key) {
+		if !ShouldPassFilters(f.fieldIncludeFilter, f.fieldExcludeFilter, field.Key) {
 			filterKeys = append(filterKeys, field.Key)
 		}
 	}
@@ -225,24 +221,12 @@ func (f *Filter) filterFields(metric telegraf.Metric) {
 // filterTags removes tags according to taginclude/tagexclude.
 func (f *Filter) filterTags(metric telegraf.Metric) {
 	filterKeys := []string{}
-	if f.tagIncludeFilter != nil {
-		for _, tag := range metric.TagList() {
-			if !f.tagIncludeFilter.Match(tag.Key) {
-				filterKeys = append(filterKeys, tag.Key)
-			}
+	for _, tag := range metric.TagList() {
+		if !ShouldPassFilters(f.tagIncludeFilter, f.tagExcludeFilter, tag.Key) {
+			filterKeys = append(filterKeys, tag.Key)
 		}
-	}
-	for _, key := range filterKeys {
-		metric.RemoveTag(key)
 	}
 
-	if f.tagExcludeFilter != nil {
-		for _, tag := range metric.TagList() {
-			if f.tagExcludeFilter.Match(tag.Key) {
-				filterKeys = append(filterKeys, tag.Key)
-			}
-		}
-	}
 	for _, key := range filterKeys {
 		metric.RemoveTag(key)
 	}

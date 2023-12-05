@@ -6,6 +6,10 @@ creates metrics using one of the supported [input data formats][].
 A [Queue Group][queue group] is used when subscribing to subjects so multiple
 instances of telegraf can read from a NATS cluster in parallel.
 
+There are three methods of (optionally) authenticating with NATS:
+[username/password][userpass], [a NATS creds file][creds] (NATS 2.0), or
+an [nkey seed file][nkey] (NATS 2.0).
+
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
 This plugin is a service input. Normal plugins gather metrics determined by the
@@ -51,12 +55,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## name a queue group
   queue_group = "telegraf_consumers"
 
-  ## Optional credentials
+  ## Optional authentication with username and password credentials
   # username = ""
   # password = ""
 
-  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  ## Optional authentication with NATS credentials file (NATS 2.0)
   # credentials = "/etc/telegraf/nats.creds"
+
+  ## Optional authentication with nkey seed file (NATS 2.0)
+  # nkey_seed = "/etc/telegraf/seed.txt"
 
   ## Use Transport Layer Security
   # secure = false
@@ -95,6 +102,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [nats]: https://www.nats.io/about/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
 [queue group]: https://www.nats.io/documentation/concepts/nats-queueing/
+[userpass]: https://docs.nats.io/using-nats/developer/connecting/userpass
+[creds]: https://docs.nats.io/using-nats/developer/connecting/creds
+[nkey]: https://docs.nats.io/using-nats/developer/connecting/nkey
 
 ## Metrics
 

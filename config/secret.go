@@ -37,6 +37,14 @@ type secretImpl interface {
 	Wipe(secret []byte)
 }
 
+func EnableSecretProtection() {
+	selectedImpl = &protectedSecretImpl{}
+}
+
+func DisableSecretProtection() {
+	selectedImpl = &unprotectedSecretImpl{}
+}
+
 // secretContainer represents an abstraction of the container holding the
 // actual secret value
 type secretContainer interface {

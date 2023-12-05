@@ -62,7 +62,6 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			fields := map[string]interface{}{
 				"ip_version":        decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":        msg.Uptime,
-				"agent_ip":          decodeIP(msg.AgentIP),
 				"agent_subid":       msg.SubAgentId,
 				"seq_number":        sample.Header.SampleSequenceNumber,
 				"sampling_interval": sample.SamplingRate,
@@ -70,6 +69,12 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				"sampling_drops":    sample.Drops,
 				"in_snmp":           sample.Input,
 			}
+
+			fields["agent_ip"], err = decodeIP(msg.AgentIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'agent_ip' failed: %w", err)
+			}
+
 			if sample.Output>>31 == 0 {
 				fields["out_snmp"] = sample.Output & 0x7fffffff
 			}
@@ -95,7 +100,6 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			fields := map[string]interface{}{
 				"ip_version":        decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":        msg.Uptime,
-				"agent_ip":          decodeIP(msg.AgentIP),
 				"agent_subid":       msg.SubAgentId,
 				"seq_number":        sample.Header.SampleSequenceNumber,
 				"sampling_interval": sample.SamplingRate,
@@ -103,6 +107,11 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				"sampling_drops":    sample.Drops,
 				"in_snmp":           sample.InputIfValue,
 			}
+			fields["agent_ip"], err = decodeIP(msg.AgentIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'agent_ip' failed: %w", err)
+			}
+
 			if sample.OutputIfFormat == 0 {
 				fields["out_snmp"] = sample.OutputIfValue
 			}
@@ -128,10 +137,14 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			fields := map[string]interface{}{
 				"ip_version":  decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":  msg.Uptime,
-				"agent_ip":    decodeIP(msg.AgentIP),
 				"agent_subid": msg.SubAgentId,
 				"seq_number":  sample.Header.SampleSequenceNumber,
 			}
+			fields["agent_ip"], err = decodeIP(msg.AgentIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'agent_ip' failed: %w", err)
+			}
+
 			// Decode the source information
 			if name := decodeSflowSourceInterface(sample.Header.SourceIdType); name != "" {
 				fields[name] = sample.Header.SourceIdValue
@@ -170,41 +183,79 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 				fields[k] = v
 			}
 		case sflow.SampledEthernet:
+			var err error
 			fields["eth_total_len"] = record.Length
-			fields["in_src_mac"] = decodeMAC(record.SrcMac)
-			fields["out_dst_mac"] = decodeMAC(record.DstMac)
+			fields["in_src_mac"], err = decodeMAC(record.SrcMac)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'in_src_mac' failed: %w", err)
+			}
+			fields["out_dst_mac"], err = decodeMAC(record.DstMac)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'out_dst_mac' failed: %w", err)
+			}
 			fields["datalink_frame_type"] = layers.EthernetType(record.EthType & 0x0000ffff).String()
 		case sflow.SampledIPv4:
+			var err error
 			fields["ipv4_total_len"] = record.Base.Length
 			fields["protocol"] = mapL4Proto(uint8(record.Base.Protocol & 0x000000ff))
-			fields["src"] = decodeIP(record.Base.SrcIP)
-			fields["dst"] = decodeIP(record.Base.DstIP)
+			fields["src"], err = decodeIP(record.Base.SrcIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'src' failed: %w", err)
+			}
+			fields["dst"], err = decodeIP(record.Base.DstIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'dst' failed: %w", err)
+			}
 			fields["src_port"] = record.Base.SrcPort
 			fields["dst_port"] = record.Base.DstPort
 			fields["src_tos"] = record.Tos
-			fields["tcp_flags"] = decodeTCPFlags([]byte{byte(record.Base.TcpFlags & 0x000000ff)})
+			fields["tcp_flags"], err = decodeTCPFlags([]byte{byte(record.Base.TcpFlags & 0x000000ff)})
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'tcp_flags' failed: %w", err)
+			}
 		case sflow.SampledIPv6:
+			var err error
 			fields["ipv6_total_len"] = record.Base.Length
 			fields["protocol"] = mapL4Proto(uint8(record.Base.Protocol & 0x000000ff))
-			fields["src"] = decodeIP(record.Base.SrcIP)
-			fields["dst"] = decodeIP(record.Base.DstIP)
+			fields["src"], err = decodeIP(record.Base.SrcIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'src' failed: %w", err)
+			}
+			fields["dst"], err = decodeIP(record.Base.DstIP)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'dst' failed: %w", err)
+			}
 			fields["src_port"] = record.Base.SrcPort
 			fields["dst_port"] = record.Base.DstPort
-			fields["tcp_flags"] = decodeTCPFlags([]byte{byte(record.Base.TcpFlags & 0x000000ff)})
+			fields["tcp_flags"], err = decodeTCPFlags([]byte{byte(record.Base.TcpFlags & 0x000000ff)})
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'tcp_flags' failed: %w", err)
+			}
 		case sflow.ExtendedSwitch:
 			fields["vlan_src"] = record.SrcVlan
 			fields["vlan_src_priority"] = record.SrcPriority
 			fields["vlan_dst"] = record.DstVlan
 			fields["vlan_dst_priority"] = record.DstPriority
 		case sflow.ExtendedRouter:
-			fields["next_hop"] = decodeIP(record.NextHop)
+			var err error
+			fields["next_hop"], err = decodeIP(record.NextHop)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
+			}
 			fields["src_mask"] = record.SrcMaskLen
 			fields["dst_mask"] = record.DstMaskLen
 		case sflow.ExtendedGateway:
-			fields["next_hop"] = decodeIP(record.NextHop)
+			var err error
+			fields["next_hop"], err = decodeIP(record.NextHop)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
+			}
 			fields["bgp_src_as"] = record.SrcAS
 			fields["bgp_dst_as"] = record.ASDestinations
-			fields["bgp_next_hop"] = decodeIP(record.NextHop)
+			fields["bgp_next_hop"], err = decodeIP(record.NextHop)
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'bgp_next_hop' failed: %w", err)
+			}
 			fields["bgp_prev_as"] = record.SrcPeerAS
 			if len(record.ASPath) > 0 {
 				fields["bgp_next_as"] = record.ASPath[0]

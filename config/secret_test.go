@@ -7,6 +7,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -435,129 +436,6 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 	}
 }
 
-func TestSecretEqualTo(t *testing.T) {
-	mysecret := "a wonderful test"
-	s := NewSecret([]byte(mysecret))
-	defer s.Destroy()
-
-	equal, err := s.EqualTo([]byte(mysecret))
-	require.NoError(t, err)
-	require.True(t, equal)
-
-	equal, err = s.EqualTo([]byte("some random text"))
-	require.NoError(t, err)
-	require.False(t, equal)
-}
-
-func TestSecretStoreInvalidReference(t *testing.T) {
-	// Make sure we clean-up our mess
-	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
-
-	cfg := []byte(
-		`
-[[inputs.mockup]]
-	secret = "@{mock:test}"
-`)
-
-	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
-	require.Len(t, c.Inputs, 1)
-
-	// Create a mockup secretstore
-	store := &MockupSecretStore{
-		Secrets: map[string][]byte{"test": []byte("Arca Jeth")},
-	}
-	require.NoError(t, store.Init())
-	c.SecretStores["foo"] = store
-	err := c.LinkSecrets()
-	require.EqualError(t, err, `unknown secret-store for "@{mock:test}"`)
-
-	for _, input := range c.Inputs {
-		plugin := input.Input.(*MockupSecretPlugin)
-		secret, err := plugin.Secret.Get()
-		require.EqualError(t, err, `unlinked parts in secret: @{mock:test}`)
-		require.Empty(t, secret)
-	}
-}
-
-func TestSecretStoreStaticChanging(t *testing.T) {
-	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
-
-	cfg := []byte(
-		`
-[[inputs.mockup]]
-	secret = "@{mock:secret}"
-`)
-
-	c := NewConfig()
-	err := c.LoadConfigData(cfg)
-	require.NoError(t, err)
-	require.Len(t, c.Inputs, 1)
-
-	// Create a mockup secretstore
-	store := &MockupSecretStore{
-		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
-		Dynamic: false,
-	}
-	require.NoError(t, store.Init())
-	c.SecretStores["mock"] = store
-	require.NoError(t, c.LinkSecrets())
-
-	sequence := []string{"Ood Bnar", "Thon", "Obi-Wan Kenobi", "Arca Jeth"}
-	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
-	secret, err := plugin.Secret.Get()
-	require.NoError(t, err)
-	defer secret.Destroy()
-
-	require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
-
-	for _, v := range sequence {
-		store.Secrets["secret"] = []byte(v)
-		secret, err := plugin.Secret.Get()
-		require.NoError(t, err)
-
-		// The secret should not change as the store is marked non-dyamic!
-		require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
-		secret.Destroy()
-	}
-}
-
-func TestSecretStoreDynamic(t *testing.T) {
-	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
-
-	cfg := []byte(
-		`
-[[inputs.mockup]]
-	secret = "@{mock:secret}"
-`)
-
-	c := NewConfig()
-	err := c.LoadConfigData(cfg)
-	require.NoError(t, err)
-	require.Len(t, c.Inputs, 1)
-
-	// Create a mockup secretstore
-	store := &MockupSecretStore{
-		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
-		Dynamic: true,
-	}
-	require.NoError(t, store.Init())
-	c.SecretStores["mock"] = store
-	require.NoError(t, c.LinkSecrets())
-
-	sequence := []string{"Ood Bnar", "Thon", "Obi-Wan Kenobi", "Arca Jeth"}
-	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
-	for _, v := range sequence {
-		store.Secrets["secret"] = []byte(v)
-		secret, err := plugin.Secret.Get()
-		require.NoError(t, err)
-
-		// The secret should not change as the store is marked non-dynamic!
-		require.EqualValues(t, v, secret.TemporaryString())
-		secret.Destroy()
-	}
-}
-
 func TestSecretStoreDeclarationMissingID(t *testing.T) {
 	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
 
@@ -604,8 +482,152 @@ func TestSecretStoreDeclarationValidID(t *testing.T) {
 	}
 }
 
-func TestSecretSet(t *testing.T) {
-	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+type SecretImplTestSuite struct {
+	suite.Suite
+	protected bool
+}
+
+func (tsuite *SecretImplTestSuite) SetupSuite() {
+	if tsuite.protected {
+		EnableSecretProtection()
+	} else {
+		DisableSecretProtection()
+	}
+}
+
+func (*SecretImplTestSuite) TearDownSuite() {
+	EnableSecretProtection()
+}
+
+func (*SecretImplTestSuite) TearDownTest() {
+	unlinkedSecrets = make([]*Secret, 0)
+}
+
+func (tsuite *SecretImplTestSuite) TestSecretEqualTo() {
+	t := tsuite.T()
+	mysecret := "a wonderful test"
+	s := NewSecret([]byte(mysecret))
+	defer s.Destroy()
+
+	equal, err := s.EqualTo([]byte(mysecret))
+	require.NoError(t, err)
+	require.True(t, equal)
+
+	equal, err = s.EqualTo([]byte("some random text"))
+	require.NoError(t, err)
+	require.False(t, equal)
+}
+
+func (tsuite *SecretImplTestSuite) TestSecretStoreInvalidReference() {
+	t := tsuite.T()
+
+	cfg := []byte(
+		`
+[[inputs.mockup]]
+	secret = "@{mock:test}"
+`)
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfigData(cfg))
+	require.Len(t, c.Inputs, 1)
+
+	// Create a mockup secretstore
+	store := &MockupSecretStore{
+		Secrets: map[string][]byte{"test": []byte("Arca Jeth")},
+	}
+	require.NoError(t, store.Init())
+	c.SecretStores["foo"] = store
+	err := c.LinkSecrets()
+	require.EqualError(t, err, `unknown secret-store for "@{mock:test}"`)
+
+	for _, input := range c.Inputs {
+		plugin := input.Input.(*MockupSecretPlugin)
+		secret, err := plugin.Secret.Get()
+		require.EqualError(t, err, `unlinked parts in secret: @{mock:test}`)
+		require.Empty(t, secret)
+	}
+}
+
+func (tsuite *SecretImplTestSuite) TestSecretStoreStaticChanging() {
+	t := tsuite.T()
+
+	cfg := []byte(
+		`
+[[inputs.mockup]]
+	secret = "@{mock:secret}"
+`)
+
+	c := NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+
+	// Create a mockup secretstore
+	store := &MockupSecretStore{
+		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
+		Dynamic: false,
+	}
+	require.NoError(t, store.Init())
+	c.SecretStores["mock"] = store
+	require.NoError(t, c.LinkSecrets())
+
+	sequence := []string{"Ood Bnar", "Thon", "Obi-Wan Kenobi", "Arca Jeth"}
+	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+	secret, err := plugin.Secret.Get()
+	require.NoError(t, err)
+	defer secret.Destroy()
+
+	require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
+
+	for _, v := range sequence {
+		store.Secrets["secret"] = []byte(v)
+		secret, err := plugin.Secret.Get()
+		require.NoError(t, err)
+
+		// The secret should not change as the store is marked non-dyamic!
+		require.EqualValues(t, "Ood Bnar", secret.TemporaryString())
+		secret.Destroy()
+	}
+}
+
+func (tsuite *SecretImplTestSuite) TestSecretStoreDynamic() {
+	t := tsuite.T()
+
+	cfg := []byte(
+		`
+[[inputs.mockup]]
+	secret = "@{mock:secret}"
+`)
+
+	c := NewConfig()
+	err := c.LoadConfigData(cfg)
+	require.NoError(t, err)
+	require.Len(t, c.Inputs, 1)
+
+	// Create a mockup secretstore
+	store := &MockupSecretStore{
+		Secrets: map[string][]byte{"secret": []byte("Ood Bnar")},
+		Dynamic: true,
+	}
+	require.NoError(t, store.Init())
+	c.SecretStores["mock"] = store
+	require.NoError(t, c.LinkSecrets())
+
+	sequence := []string{"Ood Bnar", "Thon", "Obi-Wan Kenobi", "Arca Jeth"}
+	plugin := c.Inputs[0].Input.(*MockupSecretPlugin)
+	for _, v := range sequence {
+		store.Secrets["secret"] = []byte(v)
+		secret, err := plugin.Secret.Get()
+		require.NoError(t, err)
+
+		// The secret should not change as the store is marked non-dynamic!
+		require.EqualValues(t, v, secret.TemporaryString())
+		secret.Destroy()
+	}
+}
+
+func (tsuite *SecretImplTestSuite) TestSecretSet() {
+	t := tsuite.T()
 
 	cfg := []byte(`
       [[inputs.mockup]]
@@ -630,9 +652,8 @@ func TestSecretSet(t *testing.T) {
 	require.EqualValues(t, "another secret", newsecret.TemporaryString())
 }
 
-func TestSecretSetResolve(t *testing.T) {
-	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
-
+func (tsuite *SecretImplTestSuite) TestSecretSetResolve() {
+	t := tsuite.T()
 	cfg := []byte(`
       [[inputs.mockup]]
 	    secret = "@{mock:secret}"
@@ -664,8 +685,8 @@ func TestSecretSetResolve(t *testing.T) {
 	require.EqualValues(t, "Ood Bnar is cool", newsecret.TemporaryString())
 }
 
-func TestSecretSetResolveInvalid(t *testing.T) {
-	defer func() { unlinkedSecrets = make([]*Secret, 0) }()
+func (tsuite *SecretImplTestSuite) TestSecretSetResolveInvalid() {
+	t := tsuite.T()
 
 	cfg := []byte(`
       [[inputs.mockup]]
@@ -693,6 +714,29 @@ func TestSecretSetResolveInvalid(t *testing.T) {
 
 	err = plugin.Secret.Set([]byte("@{mock:another_secret}"))
 	require.ErrorContains(t, err, `linking new secrets failed: unlinked part "@{mock:another_secret}"`)
+}
+
+func TestSecretImplUnprotected(t *testing.T) {
+	impl := &unprotectedSecretImpl{}
+	container := impl.Container([]byte("foobar"))
+	require.NotNil(t, container)
+	c, ok := container.(*unprotectedSecretContainer)
+	require.True(t, ok)
+	require.Equal(t, "foobar", string(c.buf.content))
+	buf, err := container.Buffer()
+	require.NoError(t, err)
+	require.NotNil(t, buf)
+	require.Equal(t, []byte("foobar"), buf.Bytes())
+	require.Equal(t, "foobar", buf.TemporaryString())
+	require.Equal(t, "foobar", buf.String())
+}
+
+func TestSecretImplTestSuiteUnprotected(t *testing.T) {
+	suite.Run(t, &SecretImplTestSuite{protected: false})
+}
+
+func TestSecretImplTestSuiteProtected(t *testing.T) {
+	suite.Run(t, &SecretImplTestSuite{protected: true})
 }
 
 /*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
