@@ -232,8 +232,7 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 	client, err := readConfig.CreateReadClient(testutil.Logger{})
 	require.NoError(t, err)
 
-	err = client.Connect()
-	require.NoError(t, err, "Connect")
+	require.NoError(t, client.Connect(), "Connect")
 
 	actualopcmetrics := []telegraf.Metric{}
 
