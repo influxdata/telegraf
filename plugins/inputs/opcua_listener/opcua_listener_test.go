@@ -163,8 +163,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	testopctags := []OPCTags{
