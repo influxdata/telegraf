@@ -18,10 +18,6 @@ type OpcUAWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
 }
 
-type OpcUAAdditionalFields struct {
-	IncludeDataType bool `toml:"include_datatype"`
-}
-
 type ConnectionState opcua.ConnState
 
 const (
@@ -48,8 +44,8 @@ type OpcUAClientConfig struct {
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
 
-	OptionalFields OpcUAAdditionalFields `toml:"additional_fields"`
-	Workarounds    OpcUAWorkarounds      `toml:"workarounds"`
+	OptionalFields []string         `toml:"optional_fields"`
+	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
 }
 
 func (o *OpcUAClientConfig) Validate() error {

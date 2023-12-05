@@ -71,6 +71,11 @@ to use them.
   ##     "source" -- uses the timestamp provided by the source
   # timestamp = "gather"
   #
+  ## Include additional Fields in each metric
+  ## Available options are:
+  ##   DataType -- OPC-UA Data Type (string)
+  # optional_fields = []
+  #
   ## Node ID configuration
   ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
@@ -151,11 +156,6 @@ to use them.
   #   identifier_type = ""
   #   identifier = ""
 
-  ## Include additional Fields in each metric
-  # [inputs.opcua.additional_fields]
-    ## OPC-UA DataType
-    # include_datatype = false
-
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
@@ -185,7 +185,7 @@ This node configuration produces a metric like this:
 opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)" 1597820490000000000
 ```
 
-With 'DataType' enabled in Additional Metrics, this node configuration
+With 'DataType' entered in Additional Metrics, this node configuration
 produces a metric like this:
 
 ```text

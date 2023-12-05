@@ -222,7 +222,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
 				Workarounds:    opcua.OpcUAWorkarounds{},
-				OptionalFields: opcua.OpcUAAdditionalFields{IncludeDataType: true},
+				OptionalFields: []string{"DataType"},
 			},
 			MetricName: "testing",
 			RootNodes:  make([]input.NodeSettings, 0),
@@ -258,6 +258,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 					if fieldName != tag.Name {
 						continue
 					}
+					// nil-value tags should not be sent from server, error if one does
 					if tag.Want == nil {
 						t.Errorf("Tag: %s has value: %v", tag.Name, fieldValue)
 						return
@@ -308,6 +309,9 @@ auth_method = "Anonymous"
 timestamp_format = "2006-01-02T15:04:05Z07:00"
 username = ""
 password = ""
+
+optional_fields = ["DataType"]
+
 nodes = [
   {name="name",  namespace="1", identifier_type="s", identifier="one"},
   {name="name2", namespace="2", identifier_type="s", identifier="two"},
@@ -329,9 +333,6 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 
 [inputs.opcua_listener.workarounds]
 additional_valid_status_codes = ["0xC0"]
-
-[inputs.opcua_listener.additional_fields]
-include_datatype = true
 `
 
 	c := config.NewConfig()
@@ -394,7 +395,7 @@ include_datatype = true
 		},
 	}, o.SubscribeClientConfig.Groups)
 	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.SubscribeClientConfig.Workarounds)
-	require.Equal(t, opcua.OpcUAAdditionalFields{IncludeDataType: true}, o.SubscribeClientConfig.OptionalFields)
+	require.Equal(t, []string{"DataType"}, o.SubscribeClientConfig.OptionalFields)
 }
 
 func TestSubscribeClientConfigWithMonitoringParams(t *testing.T) {

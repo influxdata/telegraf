@@ -217,7 +217,7 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
 				Workarounds:    opcua.OpcUAWorkarounds{},
-				OptionalFields: opcua.OpcUAAdditionalFields{IncludeDataType: true},
+				OptionalFields: []string{"DataType"},
 			},
 			MetricName: "testing",
 			RootNodes:  make([]input.NodeSettings, 0),
@@ -316,6 +316,8 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 
+optional_fields = ["DataType"]
+
 [[inputs.opcua.nodes]]
   name = "name"
   namespace = "1"
@@ -359,8 +361,6 @@ additional_valid_status_codes = ["0xC0"]
 [inputs.opcua.request_workarounds]
 use_unregistered_reads = true
 
-[inputs.opcua.additional_fields]
-include_datatype = true
 `
 
 	c := config.NewConfig()
@@ -430,7 +430,7 @@ include_datatype = true
 	}, o.ReadClientConfig.Groups)
 	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.ReadClientConfig.Workarounds)
 	require.Equal(t, ReadClientWorkarounds{UseUnregisteredReads: true}, o.ReadClientConfig.ReadClientWorkarounds)
-	require.Equal(t, opcua.OpcUAAdditionalFields{IncludeDataType: true}, o.ReadClientConfig.OptionalFields)
+	require.Equal(t, []string{"DataType"}, o.ReadClientConfig.OptionalFields)
 	err = o.Init()
 	require.NoError(t, err)
 	require.Len(t, o.client.NodeMetricMapping, 5, "incorrect number of nodes")
