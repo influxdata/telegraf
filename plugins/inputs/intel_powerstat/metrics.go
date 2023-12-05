@@ -70,25 +70,45 @@ func (m cpuMetricType) String() string {
 	return ""
 }
 
-// isValidCoreMetric returns true if a given metric is a supported core metric.
-func isValidCoreMetric(metric string) bool {
-	switch metric {
-	case cpuFrequency.String():
-	case cpuTemperature.String():
-	case cpuBusyFrequency.String():
-	case cpuC0StateResidency.String():
-	case cpuC1StateResidency.String():
-	case cpuC3StateResidency.String():
-	case cpuC6StateResidency.String():
-	case cpuC7StateResidency.String():
-	case cpuBusyCycles.String():
-	case cpuC0SubstateC01Percent.String():
-	case cpuC0SubstateC02Percent.String():
-	case cpuC0SubstateC0WaitPercent.String():
-	default:
-		return false
+// UnmarshalText parses the cpu metric from the TOML config file
+func (m *cpuMetricType) UnmarshalText(data []byte) (err error) {
+	parsedMetric, err := cpuMetricTypeFromString(string(data))
+	if err != nil {
+		return err
 	}
-	return true
+	*m = parsedMetric
+	return nil
+}
+
+func cpuMetricTypeFromString(metric string) (cpuMetricType, error) {
+	switch metric {
+	case "cpu_frequency":
+		return cpuFrequency, nil
+	case "cpu_temperature":
+		return cpuTemperature, nil
+	case "cpu_busy_frequency":
+		return cpuBusyFrequency, nil
+	case "cpu_c0_state_residency":
+		return cpuC0StateResidency, nil
+	case "cpu_c1_state_residency":
+		return cpuC1StateResidency, nil
+	case "cpu_c3_state_residency":
+		return cpuC3StateResidency, nil
+	case "cpu_c6_state_residency":
+		return cpuC6StateResidency, nil
+	case "cpu_c7_state_residency":
+		return cpuC7StateResidency, nil
+	case "cpu_busy_cycles":
+		return cpuBusyCycles, nil
+	case "cpu_c0_substate_c01":
+		return cpuC0SubstateC01Percent, nil
+	case "cpu_c0_substate_c02":
+		return cpuC0SubstateC02Percent, nil
+	case "cpu_c0_substate_c0_wait":
+		return cpuC0SubstateC0WaitPercent, nil
+	}
+
+	return -1, fmt.Errorf("invalid cpu metric specified: %q", metric)
 }
 
 // packageMetricType is an enum type to identify package metrics.
@@ -130,19 +150,33 @@ func (m packageMetricType) String() string {
 	return ""
 }
 
-// isValidCoreMetric returns true if a given metric is a supported package metric.
-func isValidPackageMetric(metric string) bool {
-	switch metric {
-	case packageCurrentPowerConsumption.String():
-	case packageCurrentDramPowerConsumption.String():
-	case packageThermalDesignPower.String():
-	case packageCPUBaseFrequency.String():
-	case packageUncoreFrequency.String():
-	case packageTurboLimit.String():
-	default:
-		return false
+// UnmarshalText parses the package metric from the TOML config file
+func (m *packageMetricType) UnmarshalText(data []byte) (err error) {
+	parsedMetric, err := packageMetricTypeFromString(string(data))
+	if err != nil {
+		return err
 	}
-	return true
+	*m = parsedMetric
+	return nil
+}
+
+func packageMetricTypeFromString(metric string) (packageMetricType, error) {
+	switch metric {
+	case "current_power_consumption":
+		return packageCurrentPowerConsumption, nil
+	case "current_dram_power_consumption":
+		return packageCurrentDramPowerConsumption, nil
+	case "thermal_design_power":
+		return packageThermalDesignPower, nil
+	case "cpu_base_frequency":
+		return packageCPUBaseFrequency, nil
+	case "uncore_frequency":
+		return packageUncoreFrequency, nil
+	case "max_turbo_frequency":
+		return packageTurboLimit, nil
+	}
+
+	return -1, fmt.Errorf("invalid package metric specified: %q", metric)
 }
 
 // numeric is a type constraint definition.
@@ -279,7 +313,7 @@ func (m *packageMetric[T]) tags() map[string]string {
 	}
 }
 
-// round returns the result of rounding the argument, only if its a 64 bit floating-point type.
+// round returns the result of rounding the argument, only if it's a 64 bit floating-point type.
 func round[T numeric](val T) T {
 	if v, ok := any(val).(float64); ok {
 		val = T(math.Round(v*100) / 100)

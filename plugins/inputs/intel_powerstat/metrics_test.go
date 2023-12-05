@@ -118,28 +118,34 @@ func TestPackageMetric_String(t *testing.T) {
 	}
 }
 
-func TestIsValidCoreMetric(t *testing.T) {
-	t.Run("True", func(t *testing.T) {
+func TestCPUMetricTypeFromString(t *testing.T) {
+	t.Run("Valid", func(t *testing.T) {
 		for m := cpuMetricType(0); m < cpuC0SubstateC0WaitPercent+1; m++ {
-			require.Truef(t, isValidCoreMetric(m.String()), "Metric %v", m)
+			val, err := cpuMetricTypeFromString(m.String())
+			require.NoError(t, err)
+			require.Equal(t, m, val)
 		}
 	})
 
-	t.Run("False", func(t *testing.T) {
-		invalid := cpuC0SubstateC0WaitPercent + 1
-		require.False(t, isValidCoreMetric(invalid.String()))
+	t.Run("Invalid", func(t *testing.T) {
+		val, err := cpuMetricTypeFromString("invalid")
+		require.Error(t, err)
+		require.Equal(t, cpuMetricType(-1), val)
 	})
 }
 
-func TestIsValidPackageMetric(t *testing.T) {
-	t.Run("True", func(t *testing.T) {
+func TestPackageMetricTypeFromString(t *testing.T) {
+	t.Run("Valid", func(t *testing.T) {
 		for m := packageMetricType(0); m < packageTurboLimit+1; m++ {
-			require.Truef(t, isValidPackageMetric(m.String()), "Metric %v", m)
+			val, err := packageMetricTypeFromString(m.String())
+			require.NoError(t, err)
+			require.Equal(t, m, val)
 		}
 	})
 
-	t.Run("False", func(t *testing.T) {
-		invalid := packageTurboLimit + 1
-		require.False(t, isValidPackageMetric(invalid.String()))
+	t.Run("Invalid", func(t *testing.T) {
+		val, err := packageMetricTypeFromString("invalid")
+		require.Error(t, err)
+		require.Equal(t, packageMetricType(-1), val)
 	})
 }

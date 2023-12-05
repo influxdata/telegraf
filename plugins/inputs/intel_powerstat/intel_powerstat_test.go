@@ -15,54 +15,43 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type parseMetricTestCase struct {
+type parsePackageMetricTestCase struct {
 	name    string
-	metrics []string
-	parsed  []string
+	metrics []packageMetricType
+	parsed  []packageMetricType
+	err     error
+}
+
+type parseCPUMetricTestCase struct {
+	name    string
+	metrics []cpuMetricType
+	parsed  []cpuMetricType
 	err     error
 }
 
 func TestParsePackageMetrics(t *testing.T) {
-	testCases := []parseMetricTestCase{
+	testCases := []parsePackageMetricTestCase{
 		{
 			name:    "NilSlice",
 			metrics: nil,
-			parsed: []string{
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+			parsed: []packageMetricType{
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 		},
 		{
 			name:    "EmptySlice",
-			metrics: []string{},
-			parsed:  []string{},
-		},
-		{
-			name: "UnsupportedMetric",
-			metrics: []string{
-				packageCurrentPowerConsumption.String(),
-				"current_energy_consumption", // unsupported metric
-				packageCurrentDramPowerConsumption.String(),
-			},
-			err: errors.New("invalid package metric specified: \"current_energy_consumption\""),
-		},
-		{
-			name: "InvalidPackageMetric",
-			metrics: []string{
-				packageCurrentPowerConsumption.String(),
-				cpuTemperature.String(), // not a package metric
-				packageCurrentDramPowerConsumption.String(),
-			},
-			err: fmt.Errorf("invalid package metric specified: %q", cpuTemperature.String()),
+			metrics: []packageMetricType{},
+			parsed:  []packageMetricType{},
 		},
 		{
 			name: "HasDuplicates",
-			metrics: []string{
-				packageCurrentPowerConsumption.String(),
-				packageThermalDesignPower.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(), // duplicate
+			metrics: []packageMetricType{
+				packageCurrentPowerConsumption,
+				packageThermalDesignPower,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower, // duplicate
 			},
 			err: errors.New("package metrics contains duplicates"),
 		},
@@ -87,7 +76,7 @@ func TestParsePackageMetrics(t *testing.T) {
 }
 
 func TestParseCPUMetrics(t *testing.T) {
-	testCases := []parseMetricTestCase{
+	testCases := []parseCPUMetricTestCase{
 		{
 			name:    "NilSlice",
 			metrics: nil,
@@ -95,38 +84,18 @@ func TestParseCPUMetrics(t *testing.T) {
 		},
 		{
 			name:    "EmptySlice",
-			metrics: []string{},
-			parsed:  []string{},
-		},
-		{
-			name: "UnsupportedMetric",
-			metrics: []string{
-				cpuC0StateResidency.String(),
-				"cpu_c9_state_residency", // unsupported metric
-				cpuC1StateResidency.String(),
-				cpuTemperature.String(),
-			},
-			err: errors.New("invalid core metric specified: \"cpu_c9_state_residency\""),
-		},
-		{
-			name: "InvalidCoreMetric",
-			metrics: []string{
-				cpuC0StateResidency.String(),
-				packageTurboLimit.String(), // not a core metric
-				cpuC1StateResidency.String(),
-				cpuTemperature.String(),
-			},
-			err: fmt.Errorf("invalid core metric specified: %q", packageTurboLimit.String()),
+			metrics: []cpuMetricType{},
+			parsed:  []cpuMetricType{},
 		},
 		{
 			name: "HasDuplicates",
-			metrics: []string{
-				cpuC0StateResidency.String(),
-				cpuC1StateResidency.String(),
-				cpuTemperature.String(),
-				cpuC0StateResidency.String(), // duplicate
+			metrics: []cpuMetricType{
+				cpuC0StateResidency,
+				cpuC1StateResidency,
+				cpuTemperature,
+				cpuC0StateResidency, // duplicate
 			},
-			err: errors.New("core metrics contains duplicates"),
+			err: errors.New("cpu metrics contains duplicates"),
 		},
 	}
 
@@ -149,58 +118,58 @@ func TestParseCPUMetrics(t *testing.T) {
 }
 
 func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
-	testCases := []parseMetricTestCase{
+	testCases := []parseCPUMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []string{},
-			parsed:  []string{},
+			metrics: []cpuMetricType{},
+			parsed:  []cpuMetricType{},
 		},
 		{
 			name: "NotFound",
-			metrics: []string{
+			metrics: []cpuMetricType{
 				// Metric not relying on MSR.
-				cpuFrequency.String(),
+				cpuFrequency,
 
 				// Metric relying on single MSR read.
-				cpuTemperature.String(),
+				cpuTemperature,
 
 				// Metrics relying on perf events.
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC0SubstateC0WaitPercent.String(),
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC0SubstateC0WaitPercent,
 			},
-			parsed: []string{},
+			parsed: []cpuMetricType{},
 		},
 		{
 			name: "Found",
-			metrics: []string{
+			metrics: []cpuMetricType{
 				// Metric not relying on MSR.
-				cpuFrequency.String(),
+				cpuFrequency,
 
 				// Metric relying on single MSR read.
-				cpuTemperature.String(),
+				cpuTemperature,
 
 				// Metrics relying on time-related MSR offset reads.
-				cpuC0StateResidency.String(),
-				cpuC1StateResidency.String(),
-				cpuC3StateResidency.String(),
-				cpuC6StateResidency.String(),
-				cpuC7StateResidency.String(),
-				cpuBusyCycles.String(),
-				cpuBusyFrequency.String(),
+				cpuC0StateResidency,
+				cpuC1StateResidency,
+				cpuC3StateResidency,
+				cpuC6StateResidency,
+				cpuC7StateResidency,
+				cpuBusyCycles,
+				cpuBusyFrequency,
 
 				// Metrics relying on perf events.
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
 			},
-			parsed: []string{
-				cpuC0StateResidency.String(),
-				cpuC1StateResidency.String(),
-				cpuC3StateResidency.String(),
-				cpuC6StateResidency.String(),
-				cpuC7StateResidency.String(),
-				cpuBusyCycles.String(),
-				cpuBusyFrequency.String(),
+			parsed: []cpuMetricType{
+				cpuC0StateResidency,
+				cpuC1StateResidency,
+				cpuC3StateResidency,
+				cpuC6StateResidency,
+				cpuC7StateResidency,
+				cpuBusyCycles,
+				cpuBusyFrequency,
 			},
 		},
 	}
@@ -218,51 +187,51 @@ func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
 }
 
 func TestParseCPUPerfMetrics(t *testing.T) {
-	testCases := []parseMetricTestCase{
+	testCases := []parseCPUMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []string{},
-			parsed:  []string{},
+			metrics: []cpuMetricType{},
+			parsed:  []cpuMetricType{},
 		},
 		{
 			name: "NotFound",
-			metrics: []string{
+			metrics: []cpuMetricType{
 				// Metric not relying on MSR.
-				cpuFrequency.String(),
+				cpuFrequency,
 
 				// Metric relying on single MSR read.
-				cpuTemperature.String(),
+				cpuTemperature,
 
 				// Metrics relying on time-related MSR offset reads.
-				cpuC3StateResidency.String(),
-				cpuC6StateResidency.String(),
-				cpuBusyFrequency.String(),
+				cpuC3StateResidency,
+				cpuC6StateResidency,
+				cpuBusyFrequency,
 			},
-			parsed: []string{},
+			parsed: []cpuMetricType{},
 		},
 		{
 			name: "Found",
-			metrics: []string{
+			metrics: []cpuMetricType{
 				// Metric not relying on MSR.
-				cpuFrequency.String(),
+				cpuFrequency,
 
 				// Metric relying on single MSR read.
-				cpuTemperature.String(),
+				cpuTemperature,
 
 				// Metrics relying on perf events.
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC0SubstateC0WaitPercent.String(),
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC0SubstateC0WaitPercent,
 
 				// Metrics relying on time-related MSR offset reads.
-				cpuC3StateResidency.String(),
-				cpuC6StateResidency.String(),
-				cpuBusyFrequency.String(),
+				cpuC3StateResidency,
+				cpuC6StateResidency,
+				cpuBusyFrequency,
 			},
-			parsed: []string{
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC0SubstateC0WaitPercent.String(),
+			parsed: []cpuMetricType{
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC0SubstateC0WaitPercent,
 			},
 		},
 	}
@@ -280,39 +249,39 @@ func TestParseCPUPerfMetrics(t *testing.T) {
 }
 
 func TestParsePackageRaplMetrics(t *testing.T) {
-	testCases := []parseMetricTestCase{
+	testCases := []parsePackageMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []string{},
-			parsed:  []string{},
+			metrics: []packageMetricType{},
+			parsed:  []packageMetricType{},
 		},
 		{
 			name: "NotFound",
-			metrics: []string{
+			metrics: []packageMetricType{
 				// Metrics not relying on rapl.
-				packageTurboLimit.String(),
-				packageCPUBaseFrequency.String(),
-				packageUncoreFrequency.String(),
+				packageTurboLimit,
+				packageCPUBaseFrequency,
+				packageUncoreFrequency,
 			},
-			parsed: []string{},
+			parsed: []packageMetricType{},
 		},
 		{
 			name: "Found",
-			metrics: []string{
+			metrics: []packageMetricType{
 				// Metrics not relying on rapl.
-				packageTurboLimit.String(),
-				packageCPUBaseFrequency.String(),
-				packageUncoreFrequency.String(),
+				packageTurboLimit,
+				packageCPUBaseFrequency,
+				packageUncoreFrequency,
 
 				// Metrics relying on rapl.
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
-			parsed: []string{
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+			parsed: []packageMetricType{
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 		},
 	}
@@ -330,37 +299,37 @@ func TestParsePackageRaplMetrics(t *testing.T) {
 }
 
 func TestParsePackageMsrMetrics(t *testing.T) {
-	testCases := []parseMetricTestCase{
+	testCases := []parsePackageMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []string{},
-			parsed:  []string{},
+			metrics: []packageMetricType{},
+			parsed:  []packageMetricType{},
 		},
 		{
 			name: "NotFound",
-			metrics: []string{
+			metrics: []packageMetricType{
 				// Metrics not relying on msr.
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
-			parsed: []string{},
+			parsed: []packageMetricType{},
 		},
 		{
 			name: "Found",
-			metrics: []string{
+			metrics: []packageMetricType{
 				// Metrics not relying on msr.
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 
 				// Metrics relying uniquely on msr.
-				packageTurboLimit.String(),
-				packageCPUBaseFrequency.String(),
+				packageTurboLimit,
+				packageCPUBaseFrequency,
 			},
-			parsed: []string{
-				packageTurboLimit.String(),
-				packageCPUBaseFrequency.String(),
+			parsed: []packageMetricType{
+				packageTurboLimit,
+				packageCPUBaseFrequency,
 			},
 		},
 	}
@@ -590,35 +559,24 @@ func TestParseConfig(t *testing.T) {
 		require.ErrorContains(t, p.parseConfig(), "failed to parse excluded CPUs")
 	})
 
-	t.Run("FailedToParsePackageMetrics", func(t *testing.T) {
-		p := &PowerStat{
-			// has invalid metric
-			PackageMetrics: []string{
-				"invalid",
-			},
-		}
-
-		require.ErrorContains(t, p.parseConfig(), "failed to parse package metrics")
-	})
-
 	t.Run("FailedToParseCPUMetrics", func(t *testing.T) {
 		p := &PowerStat{
 			// has duplicates
-			CPUMetrics: []string{
-				cpuFrequency.String(),
-				cpuTemperature.String(),
-				cpuFrequency.String(), // duplicate
+			CPUMetrics: []cpuMetricType{
+				cpuFrequency,
+				cpuTemperature,
+				cpuFrequency, // duplicate
 			},
 		}
 
-		require.ErrorContains(t, p.parseConfig(), "failed to parse core metrics")
+		require.ErrorContains(t, p.parseConfig(), "failed to parse cpu metrics")
 	})
 
 	t.Run("EventDefinitionsNotProvidedForPerf", func(t *testing.T) {
 		p := &PowerStat{
 			// has duplicates
-			CPUMetrics: []string{
-				cpuC0SubstateC01Percent.String(),
+			CPUMetrics: []cpuMetricType{
+				cpuC0SubstateC01Percent,
 			},
 		}
 
@@ -628,8 +586,8 @@ func TestParseConfig(t *testing.T) {
 	t.Run("EventDefinitionsDoesNotExist", func(t *testing.T) {
 		p := &PowerStat{
 			// has duplicates
-			CPUMetrics: []string{
-				cpuC0SubstateC02Percent.String(),
+			CPUMetrics: []cpuMetricType{
+				cpuC0SubstateC02Percent,
 			},
 			EventDefinitions: "./testdata/doesNotExist.json",
 		}
@@ -640,7 +598,7 @@ func TestParseConfig(t *testing.T) {
 	t.Run("NoMetricsProvided", func(t *testing.T) {
 		p := &PowerStat{
 			// Disable default package metrics.
-			PackageMetrics: []string{},
+			PackageMetrics: []packageMetricType{},
 		}
 
 		require.ErrorContains(t, p.parseConfig(), "no metrics were found in the configuration file")
@@ -648,11 +606,11 @@ func TestParseConfig(t *testing.T) {
 
 	t.Run("DisablePackageMetrics", func(t *testing.T) {
 		p := &PowerStat{
-			CPUMetrics: []string{
-				cpuBusyFrequency.String(),
+			CPUMetrics: []cpuMetricType{
+				cpuBusyFrequency,
 			},
 			// Disable default package metrics.
-			PackageMetrics: []string{},
+			PackageMetrics: []packageMetricType{},
 		}
 
 		require.NoError(t, p.parseConfig())
@@ -667,10 +625,10 @@ func TestParseConfig(t *testing.T) {
 
 		require.NoError(t, p.parseConfig())
 		require.Equal(t,
-			[]string{
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+			[]packageMetricType{
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 			p.PackageMetrics)
 	})
@@ -698,14 +656,14 @@ func TestParseConfig(t *testing.T) {
 	t.Run("MetricsWithIncludedCPUs", func(t *testing.T) {
 		p := &PowerStat{
 			IncludedCPUs: []string{"0-3,6"},
-			CPUMetrics: []string{
-				cpuC0StateResidency.String(),
-				cpuC1StateResidency.String(),
-				cpuC3StateResidency.String(),
+			CPUMetrics: []cpuMetricType{
+				cpuC0StateResidency,
+				cpuC1StateResidency,
+				cpuC3StateResidency,
 			},
-			PackageMetrics: []string{
-				packageUncoreFrequency.String(),
-				packageTurboLimit.String(),
+			PackageMetrics: []packageMetricType{
+				packageUncoreFrequency,
+				packageTurboLimit,
 			},
 		}
 
@@ -801,8 +759,8 @@ func TestStart(t *testing.T) {
 		)
 
 		p := &PowerStat{
-			PackageMetrics: []string{
-				packageCurrentPowerConsumption.String(), // needs rapl
+			PackageMetrics: []packageMetricType{
+				packageCurrentPowerConsumption, // needs rapl
 			},
 			Log: logger,
 
@@ -820,7 +778,7 @@ func TestGather(t *testing.T) {
 		acc := &testutil.Accumulator{}
 
 		p := &PowerStat{
-			PackageMetrics: []string{},
+			PackageMetrics: []packageMetricType{},
 		}
 
 		require.NoError(t, p.Gather(acc))
@@ -888,9 +846,9 @@ func TestGather(t *testing.T) {
 		mFetcher.On("GetCurrentPackagePowerConsumptionWatts", mock.AnythingOfType("int")).Return(packagePower, nil).Times(len(packageIDs))
 
 		p := &PowerStat{
-			PackageMetrics: []string{
-				packageCurrentPowerConsumption.String(),
-				packageCPUBaseFrequency.String(),
+			PackageMetrics: []packageMetricType{
+				packageCurrentPowerConsumption,
+				packageCPUBaseFrequency,
 			},
 			fetcher: mFetcher,
 		}
@@ -940,11 +898,11 @@ func TestGather(t *testing.T) {
 
 		p := &PowerStat{
 			// Disables package metrics
-			PackageMetrics: []string{},
-			CPUMetrics: []string{
-				cpuFrequency.String(),
-				cpuTemperature.String(),
-				cpuBusyFrequency.String(),
+			PackageMetrics: []packageMetricType{},
+			CPUMetrics: []cpuMetricType{
+				cpuFrequency,
+				cpuTemperature,
+				cpuBusyFrequency,
 			},
 
 			fetcher: mFetcher,
@@ -996,11 +954,11 @@ func TestGather(t *testing.T) {
 
 		p := &PowerStat{
 			// Disables package metrics
-			PackageMetrics: []string{},
-			CPUMetrics: []string{
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC0SubstateC0WaitPercent.String(),
+			PackageMetrics: []packageMetricType{},
+			CPUMetrics: []cpuMetricType{
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC0SubstateC0WaitPercent,
 			},
 			EventDefinitions: "./testdata/sapphirerapids_core.json",
 
@@ -1064,12 +1022,12 @@ func TestGather(t *testing.T) {
 
 		p := &PowerStat{
 			// Disables package metrics
-			PackageMetrics: []string{},
-			CPUMetrics: []string{
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC1StateResidency.String(),
-				cpuC6StateResidency.String(),
+			PackageMetrics: []packageMetricType{},
+			CPUMetrics: []cpuMetricType{
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC1StateResidency,
+				cpuC6StateResidency,
 			},
 			EventDefinitions: "./testdata/sapphirerapids_core.json",
 
@@ -1147,11 +1105,11 @@ func TestGather(t *testing.T) {
 		mFetcher.On("GetCurrentUncoreFrequency", mock.AnythingOfType("int"), mock.AnythingOfType("int")).Return(curr, nil).Times(len(packageIDs) * len(dieIDs))
 
 		p := &PowerStat{
-			PackageMetrics: []string{
-				packageUncoreFrequency.String(),
+			PackageMetrics: []packageMetricType{
+				packageUncoreFrequency,
 			},
-			CPUMetrics: []string{
-				cpuC7StateResidency.String(),
+			CPUMetrics: []cpuMetricType{
+				cpuC7StateResidency,
 			},
 
 			fetcher: mFetcher,
@@ -1248,23 +1206,23 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metrics relying on msr flag
-				cpuC0StateResidency.String(),
-				cpuC1StateResidency.String(),
-				cpuC6StateResidency.String(),
-				cpuBusyFrequency.String(),
-				cpuBusyCycles.String(),
-				cpuTemperature.String(),
+				cpuC0StateResidency,
+				cpuC1StateResidency,
+				cpuC6StateResidency,
+				cpuBusyFrequency,
+				cpuBusyCycles,
+				cpuTemperature,
 			},
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// Metrics relying on msr flag
-				packageCPUBaseFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageTurboLimit,
 
 				// Metrics not relying on msr flag
-				packageCurrentPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageThermalDesignPower,
 			},
 
 			Log: logger,
@@ -1275,8 +1233,8 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, p.CPUMetrics)
 		require.Len(t, p.PackageMetrics, 2)
-		require.Contains(t, p.PackageMetrics, packageCurrentPowerConsumption.String())
-		require.Contains(t, p.PackageMetrics, packageThermalDesignPower.String())
+		require.Contains(t, p.PackageMetrics, packageCurrentPowerConsumption)
+		require.Contains(t, p.PackageMetrics, packageThermalDesignPower)
 		require.Len(t, logger.Warnings(), 8)
 	})
 
@@ -1286,15 +1244,15 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metrics relying on aperfmperf flag
-				cpuC0StateResidency.String(),
-				cpuC1StateResidency.String(),
-				cpuBusyFrequency.String(),
-				cpuBusyCycles.String(),
+				cpuC0StateResidency,
+				cpuC1StateResidency,
+				cpuBusyFrequency,
+				cpuBusyCycles,
 
 				// Metrics not relying on aperfmperf flag
-				cpuTemperature.String(),
+				cpuTemperature,
 			},
 
 			Log: logger,
@@ -1304,7 +1262,7 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, p.CPUMetrics, 1)
-		require.Contains(t, p.CPUMetrics, cpuTemperature.String())
+		require.Contains(t, p.CPUMetrics, cpuTemperature)
 		require.Len(t, logger.Warnings(), 4)
 	})
 
@@ -1314,14 +1272,14 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metrics relying on dts flag
-				cpuTemperature.String(),
+				cpuTemperature,
 
 				// Metrics not relying on dts flag
-				cpuBusyFrequency.String(),
+				cpuBusyFrequency,
 			},
-			PackageMetrics: []string{},
+			PackageMetrics: []packageMetricType{},
 
 			Log: logger,
 		}
@@ -1330,7 +1288,7 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, p.CPUMetrics, 1)
-		require.Contains(t, p.CPUMetrics, cpuBusyFrequency.String())
+		require.Contains(t, p.CPUMetrics, cpuBusyFrequency)
 		require.Len(t, logger.Warnings(), 1)
 	})
 
@@ -1340,19 +1298,19 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metrics not supported by CPU
-				cpuTemperature.String(),
-				cpuC1StateResidency.String(),
-				cpuC3StateResidency.String(),
-				cpuC6StateResidency.String(),
-				cpuC7StateResidency.String(),
+				cpuTemperature,
+				cpuC1StateResidency,
+				cpuC3StateResidency,
+				cpuC6StateResidency,
+				cpuC7StateResidency,
 			},
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// Metrics not supported by CPU
-				packageCPUBaseFrequency.String(),
+				packageCPUBaseFrequency,
 
-				packageUncoreFrequency.String(),
+				packageUncoreFrequency,
 			},
 
 			Log: logger,
@@ -1362,7 +1320,7 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Empty(t, p.CPUMetrics)
-		require.Contains(t, p.PackageMetrics, packageUncoreFrequency.String())
+		require.Contains(t, p.PackageMetrics, packageUncoreFrequency)
 		require.Len(t, logger.Warnings(), 6)
 	})
 }
@@ -1374,7 +1332,7 @@ func TestDisableCPUMetric(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{"cpu_c1_state_residency"},
+			CPUMetrics: []cpuMetricType{cpuC1StateResidency},
 			Log:        logger,
 		}
 
@@ -1390,7 +1348,7 @@ func TestDisableCPUMetric(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{"cpu_c1_state_residency", "cpu_c3_state_residency", "cpu_c6_state_residency"},
+			CPUMetrics: []cpuMetricType{cpuC1StateResidency, cpuC3StateResidency, cpuC6StateResidency},
 			Log:        logger,
 		}
 
@@ -1412,7 +1370,7 @@ func TestDisablePackageMetric(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			PackageMetrics: []string{"current_power_consumption"},
+			PackageMetrics: []packageMetricType{packageCurrentPowerConsumption},
 			Log:            logger,
 		}
 
@@ -1428,7 +1386,7 @@ func TestDisablePackageMetric(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
-			PackageMetrics: []string{"current_power_consumption", "max_turbo_frequency", "cpu_base_frequency"},
+			PackageMetrics: []packageMetricType{packageCurrentPowerConsumption, packageTurboLimit, packageCPUBaseFrequency},
 			Log:            logger,
 		}
 
@@ -1614,7 +1572,7 @@ func (m *fetcherMock) GetMaxTurboFreqList(packageID int) ([]ptel.MaxTurboFreq, e
 
 func TestAddCPUMetrics(t *testing.T) {
 	// Disable package metrics when parseConfig method is called.
-	packageMetrics := []string{}
+	packageMetrics := []packageMetricType{}
 
 	t.Run("NoAvailableCPUs", func(t *testing.T) {
 		acc := &testutil.Accumulator{}
@@ -1687,13 +1645,13 @@ func TestAddCPUMetrics(t *testing.T) {
 			mFetcher.On("GetCPUFrequency", cpuID).Return(cpuFreq, nil).Once()
 
 			p := &PowerStat{
-				CPUMetrics: []string{
+				CPUMetrics: []cpuMetricType{
 					// Metric which relies on coreFreq.
-					cpuFrequency.String(),
+					cpuFrequency,
 
 					// Metrics which do not rely on coreFreq nor msr.
-					cpuC0SubstateC01Percent.String(),
-					cpuC0SubstateC02Percent.String(),
+					cpuC0SubstateC01Percent,
+					cpuC0SubstateC02Percent,
 				},
 				PackageMetrics:   packageMetrics,
 				EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -1750,13 +1708,13 @@ func TestAddCPUMetrics(t *testing.T) {
 		mFetcher.On("GetCPUFrequency", 1).Return(0.0, errors.New("mock error")).Once()
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metric which relies on coreFreq.
-				cpuFrequency.String(),
+				cpuFrequency,
 
 				// Metrics which do not rely on coreFreq nor msr
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
 			},
 			PackageMetrics:   packageMetrics,
 			EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -1813,13 +1771,13 @@ func TestAddCPUMetrics(t *testing.T) {
 			mFetcher.On("GetCPUTemperature", 1).Return(uint64(0), errors.New("mock error")).Once()
 
 			p := &PowerStat{
-				CPUMetrics: []string{
+				CPUMetrics: []cpuMetricType{
 					// Metrics which rely on single-read msr registers.
-					cpuTemperature.String(),
+					cpuTemperature,
 
 					// Metrics which do not rely on coreFreq nor msr
-					cpuC0SubstateC01Percent.String(),
-					cpuC0SubstateC02Percent.String(),
+					cpuC0SubstateC01Percent,
+					cpuC0SubstateC02Percent,
 				},
 				PackageMetrics:   packageMetrics,
 				EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -1878,14 +1836,14 @@ func TestAddCPUMetrics(t *testing.T) {
 			mFetcher.On("GetCPUBusyFrequencyMhz", 1).Return(cpuBusyFreq, nil).Once()
 
 			p := &PowerStat{
-				CPUMetrics: []string{
+				CPUMetrics: []cpuMetricType{
 					// Metrics which rely on time-related msr reads.
-					cpuBusyFrequency.String(),
+					cpuBusyFrequency,
 
 					// Metrics which do not rely on coreFreq nor msr
-					cpuC0SubstateC01Percent.String(),
-					cpuC0SubstateC02Percent.String(),
-					cpuC0SubstateC0WaitPercent.String(),
+					cpuC0SubstateC01Percent,
+					cpuC0SubstateC02Percent,
+					cpuC0SubstateC0WaitPercent,
 				},
 				PackageMetrics:   packageMetrics,
 				EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -1922,7 +1880,7 @@ func TestAddCPUMetrics(t *testing.T) {
 
 func TestAddPerCPUMsrMetrics(t *testing.T) {
 	// Disable package metrics when parseConfig method is called.
-	packageMetrics := []string{}
+	packageMetrics := []packageMetricType{}
 
 	t.Run("WithoutMsrMetrics", func(t *testing.T) {
 		cpuID := 0
@@ -1932,10 +1890,10 @@ func TestAddPerCPUMsrMetrics(t *testing.T) {
 		acc := &testutil.Accumulator{}
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// metrics which do not rely on msr
-				cpuFrequency.String(),
-				cpuC0SubstateC01Percent.String(),
+				cpuFrequency,
+				cpuC0SubstateC01Percent,
 			},
 		}
 
@@ -1949,13 +1907,13 @@ func TestAddPerCPUMsrMetrics(t *testing.T) {
 		cpuID := 0
 		coreID := 1
 		packageID := 0
-		cpuMetrics := []string{
+		cpuMetrics := []cpuMetricType{
 			// metric that relies on a single msr read.
-			cpuTemperature.String(),
+			cpuTemperature,
 
 			// metrics that do not rely on msr.
-			cpuFrequency.String(),
-			cpuC0SubstateC01Percent.String(),
+			cpuFrequency,
+			cpuC0SubstateC01Percent,
 		}
 
 		t.Run("WithError", func(t *testing.T) {
@@ -2075,14 +2033,14 @@ func TestAddPerCPUMsrMetrics(t *testing.T) {
 		c1State := 5.15
 		c6State := 8.10
 
-		cpuMetrics := []string{
+		cpuMetrics := []cpuMetricType{
 			// metrics that rely on a time-related msr.
-			cpuC1StateResidency.String(),
-			cpuC6StateResidency.String(),
+			cpuC1StateResidency,
+			cpuC6StateResidency,
 
 			// metrics which do not rely on msr.
-			cpuFrequency.String(),
-			cpuC0SubstateC01Percent.String(),
+			cpuFrequency,
+			cpuC0SubstateC01Percent,
 		}
 
 		t.Run("FailedToUpdate", func(t *testing.T) {
@@ -2242,20 +2200,20 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 	mFetcher.On("GetCPUC0StateResidency", cpuID).Return(busyCycles, nil).Once()
 
 	p := &PowerStat{
-		CPUMetrics: []string{
+		CPUMetrics: []cpuMetricType{
 			// Metrics which are not time-related MSR.
-			cpuFrequency.String(),
-			cpuTemperature.String(),
-			cpuC0SubstateC01Percent.String(),
+			cpuFrequency,
+			cpuTemperature,
+			cpuC0SubstateC01Percent,
 
 			// Time-related MSR metrics.
-			cpuC0StateResidency.String(),
-			cpuC1StateResidency.String(),
-			cpuC3StateResidency.String(),
-			cpuC6StateResidency.String(),
-			cpuBusyCycles.String(),
+			cpuC0StateResidency,
+			cpuC1StateResidency,
+			cpuC3StateResidency,
+			cpuC6StateResidency,
+			cpuBusyCycles,
 		},
-		PackageMetrics:   []string{},
+		PackageMetrics:   []packageMetricType{},
 		EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 		fetcher: mFetcher,
@@ -2348,7 +2306,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 
 func TestAddCPUPerfMetrics(t *testing.T) {
 	// Disable package metrics when parseConfig method is called.
-	packageMetrics := []string{}
+	packageMetrics := []packageMetricType{}
 
 	t.Run("FailedToReadPerfEvents", func(t *testing.T) {
 		acc := &testutil.Accumulator{}
@@ -2413,18 +2371,18 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 		mFetcher.On("GetPerfCPUIDs").Return(nil).Once()
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metrics which do not rely on perf.
-				cpuFrequency.String(),
-				cpuTemperature.String(),
-				cpuBusyCycles.String(),
+				cpuFrequency,
+				cpuTemperature,
+				cpuBusyCycles,
 
 				// Metrics which rely on perf.
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC0SubstateC0WaitPercent.String(),
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC0SubstateC0WaitPercent,
 			},
-			PackageMetrics:   []string{},
+			PackageMetrics:   []packageMetricType{},
 			EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 			fetcher: mFetcher,
@@ -2460,18 +2418,18 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 			mFetcher.On("GetCPUPackageID", cpuID).Return(0, errors.New("mock error")).Once()
 
 			p := &PowerStat{
-				CPUMetrics: []string{
+				CPUMetrics: []cpuMetricType{
 					// Metrics which do not rely on perf.
-					cpuFrequency.String(),
-					cpuTemperature.String(),
-					cpuBusyCycles.String(),
+					cpuFrequency,
+					cpuTemperature,
+					cpuBusyCycles,
 
 					// Metrics which rely on perf.
-					cpuC0SubstateC01Percent.String(),
-					cpuC0SubstateC02Percent.String(),
-					cpuC0SubstateC0WaitPercent.String(),
+					cpuC0SubstateC01Percent,
+					cpuC0SubstateC02Percent,
+					cpuC0SubstateC0WaitPercent,
 				},
-				PackageMetrics:   []string{},
+				PackageMetrics:   []packageMetricType{},
 				EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 				fetcher: mFetcher,
@@ -2520,14 +2478,14 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 			mFetcher.On("GetCPUPackageID", 1).Return(0, errors.New("mock error")).Once()
 
 			p := &PowerStat{
-				CPUMetrics: []string{
+				CPUMetrics: []cpuMetricType{
 					// Metrics which do not rely on perf.
-					cpuFrequency.String(),
-					cpuTemperature.String(),
-					cpuC6StateResidency.String(),
+					cpuFrequency,
+					cpuTemperature,
+					cpuC6StateResidency,
 
 					// Metrics which rely on perf.
-					cpuC0SubstateC01Percent.String(),
+					cpuC0SubstateC01Percent,
 				},
 				PackageMetrics:   packageMetrics,
 				EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -2595,16 +2553,16 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 		mFetcher.On("GetCPUC0SubstateC0WaitPercent", cpuID).Return(c0Wait, nil).Once()
 
 		p := &PowerStat{
-			CPUMetrics: []string{
+			CPUMetrics: []cpuMetricType{
 				// Metrics which do not rely on perf.
-				cpuFrequency.String(),
-				cpuTemperature.String(),
-				cpuC6StateResidency.String(),
+				cpuFrequency,
+				cpuTemperature,
+				cpuC6StateResidency,
 
 				// Metrics which rely on perf.
-				cpuC0SubstateC01Percent.String(),
-				cpuC0SubstateC02Percent.String(),
-				cpuC0SubstateC0WaitPercent.String(),
+				cpuC0SubstateC01Percent,
+				cpuC0SubstateC02Percent,
+				cpuC0SubstateC0WaitPercent,
 			},
 			PackageMetrics:   packageMetrics,
 			EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -2671,17 +2629,17 @@ func TestAddPerCPUPerfMetrics(t *testing.T) {
 	mFetcher.On("GetCPUC0SubstateC02Percent", cpuID).Return(c02Percent, nil).Once()
 
 	p := &PowerStat{
-		CPUMetrics: []string{
+		CPUMetrics: []cpuMetricType{
 			// Metrics which do not rely on perf.
-			cpuFrequency.String(),
-			cpuTemperature.String(),
-			cpuC6StateResidency.String(),
+			cpuFrequency,
+			cpuTemperature,
+			cpuC6StateResidency,
 
 			// Metrics which rely on perf.
-			cpuC0SubstateC01Percent.String(),
-			cpuC0SubstateC02Percent.String(),
+			cpuC0SubstateC01Percent,
+			cpuC0SubstateC02Percent,
 		},
-		PackageMetrics:   []string{},
+		PackageMetrics:   []packageMetricType{},
 		EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 		fetcher: mFetcher,
@@ -2818,9 +2776,9 @@ func TestAddPackageMetrics(t *testing.T) {
 		mFetcher.On("GetPackageThermalDesignPowerWatts", 1).Return(0.0, errors.New("mock error")).Once()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on rapl
-				packageThermalDesignPower.String(),
+				packageThermalDesignPower,
 			},
 
 			fetcher: mFetcher,
@@ -2866,9 +2824,9 @@ func TestAddPackageMetrics(t *testing.T) {
 		mFetcher.On("GetCPUBaseFrequency", 1).Return(baseFreq, nil).Once()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on msr
-				packageCPUBaseFrequency.String(),
+				packageCPUBaseFrequency,
 			},
 
 			fetcher: mFetcher,
@@ -2926,8 +2884,8 @@ func TestAddPackageMetrics(t *testing.T) {
 		mFetcher.On("GetCustomizedUncoreFrequencyMax", mock.AnythingOfType("int"), dieID).Return(0.0, errors.New("mock error")).Twice()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
-				packageUncoreFrequency.String(),
+			PackageMetrics: []packageMetricType{
+				packageUncoreFrequency,
 			},
 
 			fetcher: mFetcher,
@@ -2984,11 +2942,11 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 		acc := &testutil.Accumulator{}
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which do not rely on rapl
-				packageCPUBaseFrequency.String(),
-				packageUncoreFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageUncoreFrequency,
+				packageTurboLimit,
 			},
 		}
 
@@ -3014,15 +2972,15 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 		mFetcher.On("GetPackageThermalDesignPowerWatts", packageID).Return(0.0, mError).Twice()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on rapl
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 
 				// metrics which do not rely on rapl
-				packageCPUBaseFrequency.String(),
-				packageUncoreFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageUncoreFrequency,
+				packageTurboLimit,
 			},
 
 			fetcher: mFetcher,
@@ -3068,16 +3026,16 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 		mFetcher.On("GetPackageThermalDesignPowerWatts", packageID).Return(tdp, nil).Once()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on rapl
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 
 				// metrics which do not rely on rapl
-				packageCPUBaseFrequency.String(),
-				packageUncoreFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageUncoreFrequency,
+				packageTurboLimit,
 			},
 
 			fetcher: mFetcher,
@@ -3131,14 +3089,14 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 		mFetcher.On("GetCurrentDramPowerConsumptionWatts", packageID).Return(currPower, nil).Once()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on rapl
-				packageCurrentDramPowerConsumption.String(),
+				packageCurrentDramPowerConsumption,
 
 				// metrics which do not rely on rapl
-				packageCPUBaseFrequency.String(),
-				packageUncoreFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageUncoreFrequency,
+				packageTurboLimit,
 			},
 
 			fetcher: mFetcher,
@@ -3174,11 +3132,11 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 		acc := &testutil.Accumulator{}
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which do not rely on msr
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 		}
 
@@ -3204,15 +3162,15 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 		mFetcher.On("GetMaxTurboFreqList", packageID).Return(nil, mError).Twice()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on msr
-				packageCPUBaseFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageTurboLimit,
 
 				// metrics which do not rely on msr
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 
 			fetcher: mFetcher,
@@ -3254,15 +3212,15 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 		mFetcher.On("GetMaxTurboFreqList", packageID).Return(nil, errors.New("mock error")).Once()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on msr
-				packageCPUBaseFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageTurboLimit,
 
 				// metrics which do not rely on msr
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 
 			fetcher: mFetcher,
@@ -3312,15 +3270,15 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 		mFetcher.On("GetMaxTurboFreqList", packageID).Return(maxTurboFreqList, nil).Once()
 
 		p := &PowerStat{
-			PackageMetrics: []string{
+			PackageMetrics: []packageMetricType{
 				// metrics which rely on msr
-				packageCPUBaseFrequency.String(),
-				packageTurboLimit.String(),
+				packageCPUBaseFrequency,
+				packageTurboLimit,
 
 				// metrics which do not rely on msr
-				packageCurrentPowerConsumption.String(),
-				packageCurrentDramPowerConsumption.String(),
-				packageThermalDesignPower.String(),
+				packageCurrentPowerConsumption,
+				packageCurrentDramPowerConsumption,
+				packageThermalDesignPower,
 			},
 
 			fetcher: mFetcher,
@@ -5028,23 +4986,23 @@ func TestGetUncoreFreqCurrentValues(t *testing.T) {
 	})
 
 	t.Run("Ok", func(t *testing.T) {
-		min := 500.0
-		max := 1500.0
+		minUncore := 500.0
+		maxUncore := 1500.0
 		current := 750.0
 
 		uncoreFreqValExp := uncoreFreqValues{
-			currMin: min,
-			currMax: max,
+			currMin: minUncore,
+			currMax: maxUncore,
 			curr:    current,
 		}
 
 		mFetcher := &fetcherMock{}
 
 		// mock getting custom minimum uncore frequency limit.
-		mFetcher.On("GetCustomizedUncoreFrequencyMin", packageID, dieID).Return(min, nil).Once()
+		mFetcher.On("GetCustomizedUncoreFrequencyMin", packageID, dieID).Return(minUncore, nil).Once()
 
 		// mock getting custom maximum uncore frequency limit.
-		mFetcher.On("GetCustomizedUncoreFrequencyMax", packageID, dieID).Return(max, nil).Once()
+		mFetcher.On("GetCustomizedUncoreFrequencyMax", packageID, dieID).Return(maxUncore, nil).Once()
 
 		// mock getting current uncore frequency value.
 		mFetcher.On("GetCurrentUncoreFrequency", packageID, dieID).Return(current, nil).Once()
@@ -5117,7 +5075,7 @@ func TestAddMaxTurboFreqLimits(t *testing.T) {
 		mFetcher.AssertExpectations(t)
 	})
 
-	t.Run("CPUIsHybird", func(t *testing.T) {
+	t.Run("CPUIsHybrid", func(t *testing.T) {
 		packageID := 1
 
 		maxTurboFreqList := []ptel.MaxTurboFreq{

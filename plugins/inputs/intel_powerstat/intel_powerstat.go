@@ -19,7 +19,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -29,21 +28,21 @@ var sampleConfig string
 
 // PowerStat plugin enables monitoring of platform metrics.
 type PowerStat struct {
-	CPUMetrics       []string        `toml:"cpu_metrics"`
-	PackageMetrics   []string        `toml:"package_metrics"`
-	IncludedCPUs     []string        `toml:"included_cpus"`
-	ExcludedCPUs     []string        `toml:"excluded_cpus"`
-	EventDefinitions string          `toml:"event_definitions"`
-	MsrReadTimeout   config.Duration `toml:"msr_read_timeout"`
-	Log              telegraf.Logger `toml:"-"`
+	CPUMetrics       []cpuMetricType     `toml:"cpu_metrics"`
+	PackageMetrics   []packageMetricType `toml:"package_metrics"`
+	IncludedCPUs     []string            `toml:"included_cpus"`
+	ExcludedCPUs     []string            `toml:"excluded_cpus"`
+	EventDefinitions string              `toml:"event_definitions"`
+	MsrReadTimeout   config.Duration     `toml:"msr_read_timeout"`
+	Log              telegraf.Logger     `toml:"-"`
 
 	parsedIncludedCores []int
 	parsedExcludedCores []int
 
-	parsedCPUTimedMsrMetrics []string
-	parsedCPUPerfMetrics     []string
-	parsedPackageRaplMetrics []string
-	parsedPackageMsrMetrics  []string
+	parsedCPUTimedMsrMetrics []cpuMetricType
+	parsedCPUPerfMetrics     []cpuMetricType
+	parsedPackageRaplMetrics []packageMetricType
+	parsedPackageMsrMetrics  []packageMetricType
 
 	option  optionGenerator
 	fetcher metricFetcher
@@ -151,7 +150,7 @@ func (p *PowerStat) parseConfig() error {
 	}
 
 	if err := p.parseCPUMetrics(); err != nil {
-		return fmt.Errorf("failed to parse core metrics: %w", err)
+		return fmt.Errorf("failed to parse cpu metrics: %w", err)
 	}
 
 	if len(p.CPUMetrics) == 0 && len(p.PackageMetrics) == 0 {
@@ -184,12 +183,12 @@ func (p *PowerStat) parseConfig() error {
 	}
 
 	p.needsCoreFreq = needsCoreFreq(p.CPUMetrics)
-	p.needsMsrCPU = needsMsr(p.CPUMetrics)
+	p.needsMsrCPU = needsMsrCPU(p.CPUMetrics)
 	p.needsPerf = needsPerf(p.CPUMetrics)
 	p.needsTimeRelatedMsr = needsTimeRelatedMsr(p.CPUMetrics)
 
 	p.needsRapl = needsRapl(p.PackageMetrics)
-	p.needsMsrPackage = needsMsr(p.PackageMetrics)
+	p.needsMsrPackage = needsMsrPackage(p.PackageMetrics)
 
 	// Skip checks on event_definitions file path if perf module is not needed.
 	if !p.needsPerf {
@@ -217,24 +216,18 @@ func (p *PowerStat) parseConfig() error {
 	return nil
 }
 
-// parsePackageMetrics ensures all metrics in 'package_metrics' configuration option are supported, package-specific,
-// and there are no duplicates. If 'package_metrics' is not provided, the following default package metrics are set:
+// parsePackageMetrics ensures there are no duplicates in 'package_metrics'.
+// If 'package_metrics' is not provided, the following default package metrics are set:
 // "current_power_consumption", "current_dram_power_consumption", and "thermal_design_power".
 func (p *PowerStat) parsePackageMetrics() error {
 	if p.PackageMetrics == nil {
 		// Sets default package metrics if `package_metrics` config option is an empty list.
-		p.PackageMetrics = []string{
-			packageCurrentPowerConsumption.String(),
-			packageCurrentDramPowerConsumption.String(),
-			packageThermalDesignPower.String(),
+		p.PackageMetrics = []packageMetricType{
+			packageCurrentPowerConsumption,
+			packageCurrentDramPowerConsumption,
+			packageThermalDesignPower,
 		}
 		return nil
-	}
-
-	for _, m := range p.PackageMetrics {
-		if !isValidPackageMetric(m) {
-			return fmt.Errorf("invalid package metric specified: %q", m)
-		}
 	}
 
 	if hasDuplicate(p.PackageMetrics) {
@@ -243,25 +236,19 @@ func (p *PowerStat) parsePackageMetrics() error {
 	return nil
 }
 
-// parseCPUMetrics ensures all metrics in 'cpu_metrics' configuration option are supported, package-specific,
-// and there are no duplicates.
+// parseCPUMetrics ensures there are no duplicates in 'cpu_metrics'.
+// Also, it warns if deprecated metric has been set.
 func (p *PowerStat) parseCPUMetrics() error {
-	for _, m := range p.CPUMetrics {
-		if !isValidCoreMetric(m) {
-			return fmt.Errorf("invalid core metric specified: %q", m)
-		}
-
-		if m == cpuBusyCycles.String() {
-			models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.intel_powerstat", "cpu_metrics", m, telegraf.DeprecationInfo{
-				Since:     "1.23.0",
-				RemovalIn: "2.0.0",
-				Notice:    "'cpu_c0_state_residency' metric name should be used instead.",
-			})
-		}
+	if slices.Contains(p.CPUMetrics, cpuBusyCycles) {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.intel_powerstat", "cpu_metrics", cpuBusyCycles, telegraf.DeprecationInfo{
+			Since:     "1.23.0",
+			RemovalIn: "2.0.0",
+			Notice:    "'cpu_c0_state_residency' metric name should be used instead.",
+		})
 	}
 
 	if hasDuplicate(p.CPUMetrics) {
-		return errors.New("core metrics contains duplicates")
+		return errors.New("cpu metrics contains duplicates")
 	}
 	return nil
 }
@@ -269,16 +256,16 @@ func (p *PowerStat) parseCPUMetrics() error {
 // parsedCPUTimedMsrMetrics parses only the metrics which depend on time-related MSR offset reads from CPU metrics
 // of the receiver, and sets them to a separate slice.
 func (p *PowerStat) parseCPUTimeRelatedMsrMetrics() {
-	p.parsedCPUTimedMsrMetrics = make([]string, 0)
+	p.parsedCPUTimedMsrMetrics = make([]cpuMetricType, 0)
 	for _, m := range p.CPUMetrics {
 		switch m {
-		case cpuC0StateResidency.String():
-		case cpuC1StateResidency.String():
-		case cpuC3StateResidency.String():
-		case cpuC6StateResidency.String():
-		case cpuC7StateResidency.String():
-		case cpuBusyCycles.String():
-		case cpuBusyFrequency.String():
+		case cpuC0StateResidency:
+		case cpuC1StateResidency:
+		case cpuC3StateResidency:
+		case cpuC6StateResidency:
+		case cpuC7StateResidency:
+		case cpuBusyCycles:
+		case cpuBusyFrequency:
 		default:
 			continue
 		}
@@ -289,12 +276,12 @@ func (p *PowerStat) parseCPUTimeRelatedMsrMetrics() {
 // parseCPUPerfMetrics parses only the metrics which depend on perf event reads from CPU metrics of the receiver, and sets
 // them to a separate slice.
 func (p *PowerStat) parseCPUPerfMetrics() {
-	p.parsedCPUPerfMetrics = make([]string, 0)
+	p.parsedCPUPerfMetrics = make([]cpuMetricType, 0)
 	for _, m := range p.CPUMetrics {
 		switch m {
-		case cpuC0SubstateC01Percent.String():
-		case cpuC0SubstateC02Percent.String():
-		case cpuC0SubstateC0WaitPercent.String():
+		case cpuC0SubstateC01Percent:
+		case cpuC0SubstateC02Percent:
+		case cpuC0SubstateC0WaitPercent:
 		default:
 			continue
 		}
@@ -305,12 +292,12 @@ func (p *PowerStat) parseCPUPerfMetrics() {
 // parsePackageRaplMetrics parses only the metrics which depend on rapl from package metrics of the receiver, and sets
 // them to a separate slice.
 func (p *PowerStat) parsePackageRaplMetrics() {
-	p.parsedPackageRaplMetrics = make([]string, 0)
+	p.parsedPackageRaplMetrics = make([]packageMetricType, 0)
 	for _, m := range p.PackageMetrics {
 		switch m {
-		case packageCurrentPowerConsumption.String():
-		case packageCurrentDramPowerConsumption.String():
-		case packageThermalDesignPower.String():
+		case packageCurrentPowerConsumption:
+		case packageCurrentDramPowerConsumption:
+		case packageThermalDesignPower:
 		default:
 			continue
 		}
@@ -321,11 +308,11 @@ func (p *PowerStat) parsePackageRaplMetrics() {
 // parsePackageMsrMetrics parses only the metrics which depend on msr from package metrics of the receiver, and sets
 // them to a separate slice.
 func (p *PowerStat) parsePackageMsrMetrics() {
-	p.parsedPackageMsrMetrics = make([]string, 0)
+	p.parsedPackageMsrMetrics = make([]packageMetricType, 0)
 	for _, m := range p.PackageMetrics {
 		switch m {
-		case packageCPUBaseFrequency.String():
-		case packageTurboLimit.String():
+		case packageCPUBaseFrequency:
+		case packageTurboLimit:
 		default:
 			continue
 		}
@@ -447,7 +434,7 @@ func (p *PowerStat) addCPUMetrics(acc telegraf.Accumulator) {
 // time-related MSR offset reads.
 func (p *PowerStat) addPerCPUMsrMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
 	// cpuTemperature metric is a single MSR offset read.
-	if choice.Contains(cpuTemperature.String(), p.CPUMetrics) {
+	if slices.Contains(p.CPUMetrics, cpuTemperature) {
 		p.addCPUTemperature(acc, cpuID, coreID, packageID)
 	}
 
@@ -485,19 +472,19 @@ func (p *PowerStat) addPerCPUMsrMetrics(acc telegraf.Accumulator, cpuID, coreID,
 func (p *PowerStat) addCPUTimeRelatedMsrMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
 	for _, m := range p.parsedCPUTimedMsrMetrics {
 		switch m {
-		case cpuC0StateResidency.String():
+		case cpuC0StateResidency:
 			p.addCPUC0StateResidency(acc, cpuID, coreID, packageID)
-		case cpuC1StateResidency.String():
+		case cpuC1StateResidency:
 			p.addCPUC1StateResidency(acc, cpuID, coreID, packageID)
-		case cpuC3StateResidency.String():
+		case cpuC3StateResidency:
 			p.addCPUC3StateResidency(acc, cpuID, coreID, packageID)
-		case cpuC6StateResidency.String():
+		case cpuC6StateResidency:
 			p.addCPUC6StateResidency(acc, cpuID, coreID, packageID)
-		case cpuC7StateResidency.String():
+		case cpuC7StateResidency:
 			p.addCPUC7StateResidency(acc, cpuID, coreID, packageID)
-		case cpuBusyFrequency.String():
+		case cpuBusyFrequency:
 			p.addCPUBusyFrequency(acc, cpuID, coreID, packageID)
-		case cpuBusyCycles.String():
+		case cpuBusyCycles:
 			p.addCPUBusyCycles(acc, cpuID, coreID, packageID)
 		}
 	}
@@ -541,11 +528,11 @@ func (p *PowerStat) addCPUPerfMetrics(acc telegraf.Accumulator) {
 func (p *PowerStat) addPerCPUPerfMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
 	for _, m := range p.parsedCPUPerfMetrics {
 		switch m {
-		case cpuC0SubstateC01Percent.String():
+		case cpuC0SubstateC01Percent:
 			p.addCPUC0SubstateC01Percent(acc, cpuID, coreID, packageID)
-		case cpuC0SubstateC02Percent.String():
+		case cpuC0SubstateC02Percent:
 			p.addCPUC0SubstateC02Percent(acc, cpuID, coreID, packageID)
-		case cpuC0SubstateC0WaitPercent.String():
+		case cpuC0SubstateC0WaitPercent:
 			p.addCPUC0SubstateC0WaitPercent(acc, cpuID, coreID, packageID)
 		}
 	}
@@ -580,7 +567,7 @@ func (p *PowerStat) addPackageMetrics(acc telegraf.Accumulator) {
 		}
 
 		// Add uncore frequency metric which relies on both uncoreFreq and msr.
-		if choice.Contains(packageUncoreFrequency.String(), p.PackageMetrics) {
+		if slices.Contains(p.PackageMetrics, packageUncoreFrequency) {
 			p.addUncoreFrequency(acc, packageID)
 		}
 	}
@@ -590,11 +577,11 @@ func (p *PowerStat) addPackageMetrics(acc telegraf.Accumulator) {
 func (p *PowerStat) addPerPackageRaplMetrics(acc telegraf.Accumulator, packageID int) {
 	for _, m := range p.parsedPackageRaplMetrics {
 		switch m {
-		case packageCurrentPowerConsumption.String():
+		case packageCurrentPowerConsumption:
 			p.addCurrentPackagePower(acc, packageID)
-		case packageCurrentDramPowerConsumption.String():
+		case packageCurrentDramPowerConsumption:
 			p.addCurrentDramPower(acc, packageID)
-		case packageThermalDesignPower.String():
+		case packageThermalDesignPower:
 			p.addThermalDesignPower(acc, packageID)
 		}
 	}
@@ -604,9 +591,9 @@ func (p *PowerStat) addPerPackageRaplMetrics(acc telegraf.Accumulator, packageID
 func (p *PowerStat) addPerPackageMsrMetrics(acc telegraf.Accumulator, packageID int) {
 	for _, m := range p.parsedPackageMsrMetrics {
 		switch m {
-		case packageCPUBaseFrequency.String():
+		case packageCPUBaseFrequency:
 			p.addCPUBaseFrequency(acc, packageID)
-		case packageTurboLimit.String():
+		case packageTurboLimit:
 			p.addMaxTurboFreqLimits(acc, packageID)
 		}
 	}
@@ -946,7 +933,7 @@ func (p *PowerStat) addUncoreFrequencyInitialLimits(acc telegraf.Accumulator, pa
 	logErrorOnce(
 		acc,
 		p.logOnce,
-		fmt.Sprintf("%s_%s_initial", moduleErr.Name, packageUncoreFrequency.String()),
+		fmt.Sprintf("%s_%s_initial", moduleErr.Name, packageUncoreFrequency),
 		fmt.Errorf("failed to get %q initial limits: %w", packageUncoreFrequency, moduleErr),
 	)
 }
@@ -986,7 +973,7 @@ func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, pa
 	logErrorOnce(
 		acc,
 		p.logOnce,
-		fmt.Sprintf("%s_%s_current", moduleErr.Name, packageUncoreFrequency.String()),
+		fmt.Sprintf("%s_%s_current", moduleErr.Name, packageUncoreFrequency),
 		fmt.Errorf("failed to get %q current value and limits: %w", packageUncoreFrequency, moduleErr),
 	)
 }
@@ -1045,7 +1032,7 @@ func (p *PowerStat) addMaxTurboFreqLimits(acc telegraf.Accumulator, packageID in
 	if err != nil {
 		// Always add to the accumulator errors not related to module not initialized.
 		if !errors.As(err, &moduleErr) {
-			acc.AddError(fmt.Errorf("failed to get %q for package ID %v: %w", packageTurboLimit.String(), packageID, err))
+			acc.AddError(fmt.Errorf("failed to get %q for package ID %v: %w", packageTurboLimit, packageID, err))
 			return
 		}
 
@@ -1053,7 +1040,7 @@ func (p *PowerStat) addMaxTurboFreqLimits(acc telegraf.Accumulator, packageID in
 		logErrorOnce(
 			acc,
 			p.logOnce,
-			fmt.Sprintf("%s_%s", moduleErr.Name, packageTurboLimit.String()),
+			fmt.Sprintf("%s_%s", moduleErr.Name, packageTurboLimit),
 			fmt.Errorf("failed to get %q: %w", packageTurboLimit, moduleErr),
 		)
 		return
@@ -1183,8 +1170,8 @@ func (p *PowerStat) disableUnsupportedMetrics() error {
 // disableCPUMetric removes given cpu metric from cpu_metrics.
 func (p *PowerStat) disableCPUMetric(metricToDisable cpuMetricType) {
 	startLen := len(p.CPUMetrics)
-	p.CPUMetrics = slices.DeleteFunc(p.CPUMetrics, func(cpuMetric string) bool {
-		return cpuMetric == metricToDisable.String()
+	p.CPUMetrics = slices.DeleteFunc(p.CPUMetrics, func(cpuMetric cpuMetricType) bool {
+		return cpuMetric == metricToDisable
 	})
 
 	if len(p.CPUMetrics) < startLen {
@@ -1195,8 +1182,8 @@ func (p *PowerStat) disableCPUMetric(metricToDisable cpuMetricType) {
 // disablePackageMetric removes given package metric from package_metrics.
 func (p *PowerStat) disablePackageMetric(metricToDisable packageMetricType) {
 	startLen := len(p.PackageMetrics)
-	p.PackageMetrics = slices.DeleteFunc(p.PackageMetrics, func(packageMetric string) bool {
-		return packageMetric == metricToDisable.String()
+	p.PackageMetrics = slices.DeleteFunc(p.PackageMetrics, func(packageMetric packageMetricType) bool {
+		return packageMetric == metricToDisable
 	})
 
 	if len(p.PackageMetrics) < startLen {
