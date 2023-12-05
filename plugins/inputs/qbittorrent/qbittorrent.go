@@ -75,6 +75,9 @@ func (q *QBittorrent) Init() error {
 	}
 
 	requester, err := io.ReadAll(payload)
+	if err != nil {
+		return fmt.Errorf("reading requset err:%w", err)
+	}
 	q.HTTPClientConfig.Body = string(requester)
 
 	if q.HTTPClientConfig.Headers == nil {
@@ -134,7 +137,6 @@ func (q *QBittorrent) getURL(path string) (*url.URL, error) {
 }
 
 func (q *QBittorrent) getMeasure() (string, error) {
-
 	getURL, err := q.getURL("/api/v2/sync/maindata")
 	if err != nil {
 		return "", err

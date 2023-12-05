@@ -26,6 +26,8 @@ func TestGetMainData_URL(t *testing.T) {
 		Password: config.NewSecret([]byte("test")),
 	}
 
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 

@@ -452,7 +452,7 @@ func (m *serverMetric) partialUpdate(update *serverMetric) {
 		category, exists := m.Categories[k]
 		if exists {
 			localV := v
-			(&category).partialUpdate(&localV)
+			category.partialUpdate(&localV)
 			m.Categories[k] = category
 		} else {
 			m.Categories[k] = v
@@ -521,10 +521,10 @@ func (m *serverMetric) toMetrics(source string) []telegraf.Metric {
 	return result
 }
 
-type PartialUpdate[T any] interface {
-	partialUpdate(*T)
-}
-
-type ToFieldMap interface {
-	toFieldMap() map[string]interface{}
-}
+//type PartialUpdate[T any] interface {
+//	partialUpdate(*T)
+//}
+//
+//type ToFieldMap interface {
+//	toFieldMap() map[string]interface{}
+//}
