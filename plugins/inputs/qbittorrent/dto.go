@@ -161,7 +161,7 @@ type Torrent struct {
 	AddedOn                  int64   `json:"added_on"`
 	AmountLeft               int64   `json:"amount_left"`
 	AutoTMM                  *bool   `json:"auto_tmm"`
-	Availability             int64   `json:"availability"`
+	Availability             float64 `json:"availability"`
 	Category                 string  `json:"category"`
 	Completed                int64   `json:"completed"`
 	CompletionOn             int64   `json:"completion_on"`

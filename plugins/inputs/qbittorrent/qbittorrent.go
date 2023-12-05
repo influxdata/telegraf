@@ -3,6 +3,7 @@ package qbittorrent
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -13,9 +14,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/cookie"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -27,8 +31,11 @@ type QBittorrent struct {
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
-	mainData *serverMetric
-	cookie   []*http.Cookie
+	Log telegraf.Logger `toml:"-"`
+
+	serverMetric *serverMetric
+	httpconfig.HTTPClientConfig
+	client *http.Client
 }
 
 func (q *QBittorrent) Init() error {
@@ -42,6 +49,45 @@ func (q *QBittorrent) Init() error {
 	if err != nil {
 		return fmt.Errorf("invalid server URL %q", q.URL)
 	}
+
+	getURL, err := q.getURL("/api/v2/auth/login")
+	if err != nil {
+		return err
+	}
+
+	q.HTTPClientConfig.URL = getURL.String()
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	username, err := q.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	_ = writer.WriteField("username", username.String())
+	password, err := q.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	_ = writer.WriteField("password", password.String())
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("writer close err: %w", err)
+	}
+
+	requester, err := io.ReadAll(payload)
+	q.HTTPClientConfig.Body = string(requester)
+
+	if q.HTTPClientConfig.Headers == nil {
+		q.HTTPClientConfig.Headers = map[string]string{"Content-Type": writer.FormDataContentType()}
+	} else {
+		q.HTTPClientConfig.Headers["Content-Type"] = writer.FormDataContentType()
+	}
+
+	client, err := q.HTTPClientConfig.CreateClient(context.Background(), q.Log)
+	if err != nil {
+		return fmt.Errorf("create client err: %w", err)
+	}
+	q.client = client
 	return nil
 }
 
@@ -50,23 +96,7 @@ func (*QBittorrent) SampleConfig() string {
 }
 
 func (q *QBittorrent) Gather(acc telegraf.Accumulator) error {
-	err := q.getSyncData()
-	if err != nil {
-		return err
-	}
-	for _, m := range q.mainData.toMetrics(q.URL) {
-		acc.AddMetric(m)
-	}
-
-	return nil
-}
-
-func (q *QBittorrent) getSyncData() error {
-	param := url.Values{}
-	if q.mainData != nil {
-		param.Set("rid", strconv.Itoa(int(q.mainData.RID)))
-	}
-	measure, err := q.getMeasure(param, false)
+	measure, err := q.getMeasure()
 	if err != nil {
 		return err
 	}
@@ -75,11 +105,14 @@ func (q *QBittorrent) getSyncData() error {
 	if err := json.Unmarshal([]byte(measure), &mainData); err != nil {
 		return fmt.Errorf("decoding data failed: %w", err)
 	}
-	if q.mainData == nil {
-		q.mainData = &mainData
+	if q.serverMetric == nil {
+		q.serverMetric = &mainData
 	} else {
 		//partial update
-		q.mainData.partialUpdate(&mainData)
+		q.serverMetric.partialUpdate(&mainData)
+	}
+	for _, m := range q.serverMetric.toMetrics(q.URL) {
+		acc.AddMetric(m)
 	}
 
 	return nil
@@ -100,43 +133,21 @@ func (q *QBittorrent) getURL(path string) (*url.URL, error) {
 	return parseURL, nil
 }
 
-func (q *QBittorrent) getMeasure(param url.Values, retry bool) (string, error) {
-	if q.cookie == nil || len(q.cookie) == 0 {
-		cookie, err := q.login()
-		if err != nil {
-			return "", err
-		}
-		q.cookie = cookie
-	}
+func (q *QBittorrent) getMeasure() (string, error) {
 
 	getURL, err := q.getURL("/api/v2/sync/maindata")
 	if err != nil {
 		return "", err
 	}
 
+	param := url.Values{}
+	if q.serverMetric != nil {
+		param.Set("rid", strconv.Itoa(int(q.serverMetric.RID)))
+	}
 	getURL.RawQuery = param.Encode()
 	reqURL := getURL.String()
 
-	// Create + send request
-	req, err := http.NewRequest("GET", reqURL, nil)
-	if err != nil {
-		return "", err
-	}
-	for c := range q.cookie {
-		req.AddCookie(q.cookie[c])
-	}
-
-	//// Add header parameters
-	//for k, v := range headers {
-	//	if strings.ToLower(k) == "host" {
-	//		req.Host = v
-	//	} else {
-	//		req.Header.Add(k, v)
-	//	}
-	//}
-
-	var client = new(http.Client)
-	resp, err := client.Do(req)
+	resp, err := q.client.Get(reqURL)
 	if err != nil {
 		return "", err
 	}
@@ -152,11 +163,6 @@ func (q *QBittorrent) getMeasure(param url.Values, retry bool) (string, error) {
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		if resp.StatusCode == http.StatusForbidden && !retry {
-			// Reset cookie and retry
-			q.cookie = nil
-			return q.getMeasure(param, true)
-		}
 		err = fmt.Errorf("response from url %q has status code %d (%s), expected %d (%s)",
 			reqURL,
 			resp.StatusCode,
@@ -169,63 +175,18 @@ func (q *QBittorrent) getMeasure(param url.Values, retry bool) (string, error) {
 	return string(respBody), nil
 }
 
-func (q *QBittorrent) login() ([]*http.Cookie, error) {
-	getURL, err := q.getURL("/api/v2/auth/login")
-	if err != nil {
-		return nil, err
-	}
-
-	username, err := q.Username.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting username failed: %w", err)
-	}
-	defer username.Destroy()
-
-	passwd, err := q.Password.Get()
-	if err != nil {
-		return nil, fmt.Errorf("getting password failed: %w", err)
-	}
-	defer passwd.Destroy()
-
-	payload := &bytes.Buffer{}
-	writer := multipart.NewWriter(payload)
-	_ = writer.WriteField("username", username.String())
-	_ = writer.WriteField("password", passwd.String())
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", getURL.String(), payload)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Referer", fmt.Sprintf("%s://%s", getURL.Scheme, getURL.Host))
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	var client = new(http.Client)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("can not auth,may be server url is not corret")
-	}
-	cookie := resp.Cookies()
-	if len(cookie) == 0 {
-		return nil, fmt.Errorf("can not auth,may be username or password is not corret")
-	}
-
-	return cookie, nil
-}
 func init() {
 	inputs.Add("qbittorrent", func() telegraf.Input {
 		return &QBittorrent{
 			URL:      "http://127.0.0.1:8080",
 			Username: config.NewSecret([]byte("admin")),
 			Password: config.NewSecret([]byte("admin")),
+			HTTPClientConfig: httpconfig.HTTPClientConfig{
+				Timeout: config.Duration(5 * time.Second),
+				CookieAuthConfig: cookie.CookieAuthConfig{
+					Renewal: config.Duration(3600 * time.Second),
+				},
+			},
 		}
 	})
 }

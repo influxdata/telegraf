@@ -1,13 +1,57 @@
 package qbittorrent
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/cookie"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
+
+func Test1(t *testing.T) {
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("username", "heletian")
+	_ = writer.WriteField("password", "hlt1216")
+	err := writer.Close()
+	if err != nil {
+		t.Log(err)
+		return
+	}
+	requstbody, err := io.ReadAll(payload)
+	clientConfig := httpconfig.HTTPClientConfig{
+		Timeout: config.Duration(5 * time.Second),
+		CookieAuthConfig: cookie.CookieAuthConfig{
+			URL:     "http://192.168.31.170:8080/api/v2/auth/login",
+			Method:  "POST",
+			Body:    string(requstbody),
+			Headers: map[string]string{"Content-Type": writer.FormDataContentType()},
+		},
+	}
+	client, err := clientConfig.CreateClient(context.Background(), testutil.Logger{})
+
+	if err != nil {
+		t.Log(err)
+		return
+	}
+
+	resp, err := client.Get("http://192.168.31.170:8080/api/v2/sync/maindata")
+	if err != nil {
+		t.Log(err)
+		return
+	}
+	respBody, err := io.ReadAll(resp.Body)
+	fmt.Println("return====", string(respBody))
+}
 
 func TestGetMainData_URL(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -21,10 +65,6 @@ func TestGetMainData_URL(t *testing.T) {
 
 	plugin := &QBittorrent{
 		URL: fakeServer.URL,
-		cookie: []*http.Cookie{{
-			Name:  "cookieName",
-			Value: "cookieValue",
-		}},
 	}
 
 	var acc testutil.Accumulator
