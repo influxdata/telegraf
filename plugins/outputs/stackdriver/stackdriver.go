@@ -574,10 +574,19 @@ func (s *Stackdriver) buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValu
 	}
 	m.RemoveField("sum")
 
+	countInter, ok := m.GetField("count")
+	if !ok {
+		return nil, fmt.Errorf("no count field present")
+	}
+	count, err := internal.ToFloat64(countInter)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert count value to float64: %w", err)
+	}
+	m.RemoveField("count")
+
 	// Build map of the buckets and their values
 	buckets := make([]float64, 0)
 	bucketCounts := make([]int64, 0)
-	var totalCount int64
 	for _, field := range m.FieldList() {
 		// Skip fields with +Inf/-Inf
 		if strings.Contains(strings.ToLower(field.Key), "inf") {
@@ -595,7 +604,6 @@ func (s *Stackdriver) buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValu
 
 		buckets = append(buckets, bucket)
 		bucketCounts = append(bucketCounts, count)
-		totalCount += count
 	}
 
 	sort.Slice(buckets, func(i, j int) bool {
@@ -605,16 +613,18 @@ func (s *Stackdriver) buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValu
 		return bucketCounts[i] < bucketCounts[j]
 	})
 
-	var mean float64
-	if totalCount > 0 {
-		mean = sum / float64(totalCount)
+	// Bucket counts contain the count for a specific bucket, not the running
+	// total like Prometheus histograms use. Loop backwards to determine the
+	// count of each bucket rather than the running total count.
+	for i := len(bucketCounts) - 1; i > 0; i-- {
+		bucketCounts[i] = bucketCounts[i] - bucketCounts[i-1]
 	}
 
 	v := &monitoringpb.TypedValue{
 		Value: &monitoringpb.TypedValue_DistributionValue{
 			DistributionValue: &distribution.Distribution{
-				Count:        totalCount,
-				Mean:         mean,
+				Count:        int64(count),
+				Mean:         sum / count,
 				BucketCounts: bucketCounts,
 				BucketOptions: &distribution.Distribution_BucketOptions{
 					Options: &distribution.Distribution_BucketOptions_ExplicitBuckets{

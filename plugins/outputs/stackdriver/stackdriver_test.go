@@ -1115,11 +1115,12 @@ func TestBuildHistogram(t *testing.T) {
 		map[string]string{},
 		map[string]interface{}{
 			"sum":   1,
-			"count": 1,
+			"count": 2,
 			"5.0":   0.0,
-			"10.0":  0.0,
+			"10.0":  1.0,
 			"15.0":  1.0,
-			"+Inf":  1.0,
+			"20.0":  2.0,
+			"+Inf":  2.0,
 		},
 		time.Unix(0, 0),
 	)
@@ -1128,10 +1129,12 @@ func TestBuildHistogram(t *testing.T) {
 
 	dist := value.GetDistributionValue()
 	require.NotNil(t, dist)
-	require.Equal(t, int64(1), dist.Count)
-	require.Equal(t, 1.0, dist.Mean)
-	require.Len(t, dist.BucketCounts, 3)
-	require.Len(t, dist.BucketOptions.GetExplicitBuckets().Bounds, 3)
+	require.Equal(t, int64(2), dist.Count)
+	require.Equal(t, 0.5, dist.Mean)
+	require.Len(t, dist.BucketCounts, 4)
+	require.Equal(t, []int64{0, 1, 0, 1}, dist.BucketCounts)
+	require.Len(t, dist.BucketOptions.GetExplicitBuckets().Bounds, 4)
+	require.Equal(t, []float64{5.0, 10.0, 15.0, 20.0}, dist.BucketOptions.GetExplicitBuckets().Bounds)
 }
 
 func TestStackdriverValueInvalid(t *testing.T) {
