@@ -47,7 +47,7 @@ func (q *QBittorrent) Init() error {
 	}
 	_, err := url.Parse(q.URL)
 	if err != nil {
-		return fmt.Errorf("invalid server URL %q", q.URL)
+		return fmt.Errorf("invalid server URL %q: %w", q.URL, err)
 	}
 
 	getURL, err := q.getURL("/api/v2/auth/login")

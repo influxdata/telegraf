@@ -7,7 +7,16 @@ Compatible qbittorrent API versions must be higher than 2.9.2.
 Lower versions might work but are neither tested nor recommended to use
 with this plugin.
 
-## Global configuration options
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
