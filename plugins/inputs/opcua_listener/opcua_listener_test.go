@@ -242,8 +242,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 		return o.SetupOptions() == nil
 	}, 5*time.Second, 10*time.Millisecond)
 
-	err = o.Connect()
-	require.NoError(t, err, "Connection failed")
+	require.NoError(t, o.Connect(), "Connection failed")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
