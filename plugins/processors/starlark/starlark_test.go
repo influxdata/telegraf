@@ -3349,6 +3349,15 @@ def apply(metric):
 `,
 		},
 		{
+			name:       "return none after a deepcopy",
+			numMetrics: 0,
+			source: `
+def apply(metric):
+	deepcopy(metric)
+	return None
+`,
+		},
+		{
 			name:       "return empty list of metrics",
 			numMetrics: 0,
 			source: `
