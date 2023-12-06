@@ -30,12 +30,9 @@ func (p *Metric) String() string {
 
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
-	sync.Mutex
-	*sync.Cond
-
+	nMetrics    uint64 // Needs to be first to avoid unaligned atomic operations on 32-bit archs
 	Metrics     []*Metric
 	accumulated []telegraf.Metric
-	nMetrics    uint64
 	Discard     bool
 	Errors      []error
 	debug       bool
@@ -43,6 +40,9 @@ type Accumulator struct {
 	delivered   []telegraf.DeliveryInfo
 
 	TimeFunc func() time.Time
+
+	sync.Mutex
+	*sync.Cond
 }
 
 func (a *Accumulator) NMetrics() uint64 {
