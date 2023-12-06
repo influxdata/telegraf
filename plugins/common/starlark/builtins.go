@@ -52,9 +52,7 @@ func deepcopy(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwar
 	if err := starlark.UnpackPositionalArgs("deepcopy", args, kwargs, 1, &sm); err != nil {
 		return nil, err
 	}
-
 	dup := sm.metric.Copy()
-	dup.Drop()
 	return &Metric{metric: dup}, nil
 }
 
