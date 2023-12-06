@@ -356,17 +356,7 @@ cpu,42
 		return &parser, err
 	})
 
-	err = plugin.Init()
-	require.NoError(t, err)
-
-	acc := testutil.Accumulator{}
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
-	defer plugin.Stop()
-	err = plugin.Gather(&acc)
-	require.NoError(t, err)
-	acc.Wait(2)
-	plugin.Stop()
+	require.NoError(t, plugin.Init())
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric("cpu",
@@ -386,6 +376,15 @@ cpu,42
 			},
 			time.Unix(0, 0)),
 	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(&acc))
+	require.Eventually(t, func() bool {
+		return acc.NFields() >= len(expected)
+	}, 3*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
