@@ -777,8 +777,8 @@ func TestConnectionLoss(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
-	plugin.Gather(&acc)
-	plugin.Gather(&acc)
+	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(&acc))
 	plugin.Stop()
 	listener.Close()
 
