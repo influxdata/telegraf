@@ -3402,6 +3402,14 @@ def apply(metric):
 	return [metric, newmetric]
 `,
 		},
+		{
+			name:       "return original and deep-copy",
+			numMetrics: 2,
+			source: `
+def apply(metric):
+    return [metric, deepcopy(metric)]
+`,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
