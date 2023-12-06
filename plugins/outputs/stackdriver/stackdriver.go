@@ -588,10 +588,16 @@ func (s *Stackdriver) buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValu
 	buckets := make([]float64, 0)
 	bucketCounts := make([]int64, 0)
 	for _, field := range m.FieldList() {
-		// Skip fields with +Inf/-Inf
-		if strings.Contains(strings.ToLower(field.Key), "inf") {
+		// Add the +inf value to bucket counts, no need to define a bound
+		if strings.Contains(strings.ToLower(field.Key), "+inf") {
+			count, err := internal.ToInt64(field.Value)
+			if err != nil {
+				continue
+			}
+			bucketCounts = append(bucketCounts, count)
 			continue
 		}
+
 		bucket, err := strconv.ParseFloat(field.Key, 64)
 		if err != nil {
 			continue

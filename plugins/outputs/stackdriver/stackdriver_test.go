@@ -1120,7 +1120,8 @@ func TestBuildHistogram(t *testing.T) {
 			"10.0":  1.0,
 			"15.0":  1.0,
 			"20.0":  2.0,
-			"+Inf":  2.0,
+			"+Inf":  3.0,
+			"foo":   4.0,
 		},
 		time.Unix(0, 0),
 	)
@@ -1131,8 +1132,8 @@ func TestBuildHistogram(t *testing.T) {
 	require.NotNil(t, dist)
 	require.Equal(t, int64(2), dist.Count)
 	require.Equal(t, 0.5, dist.Mean)
-	require.Len(t, dist.BucketCounts, 4)
-	require.Equal(t, []int64{0, 1, 0, 1}, dist.BucketCounts)
+	require.Len(t, dist.BucketCounts, 5)
+	require.Equal(t, []int64{0, 1, 0, 1, 1}, dist.BucketCounts)
 	require.Len(t, dist.BucketOptions.GetExplicitBuckets().Bounds, 4)
 	require.Equal(t, []float64{5.0, 10.0, 15.0, 20.0}, dist.BucketOptions.GetExplicitBuckets().Bounds)
 }
