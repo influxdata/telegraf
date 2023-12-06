@@ -3407,7 +3407,7 @@ def apply(metric):
 			numMetrics: 2,
 			source: `
 def apply(metric):
-    return [metric, deepcopy(metric)]
+    return [metric, deepcopy(metric, track=True)]
 `,
 		},
 		{
