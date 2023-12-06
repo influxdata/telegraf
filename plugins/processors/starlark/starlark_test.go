@@ -3419,6 +3419,15 @@ def apply(metric):
     return [metric]
 `,
 		},
+		{
+			name:       "deep-copy but do not return original metric",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    x = deepcopy(metric, track=True)
+    return [x]
+`,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
