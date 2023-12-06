@@ -30,15 +30,21 @@ func splitMaxBatchSize(g request, maxBatchSize uint16) []request {
 			fields:  []field{},
 			address: start,
 		}
+
+		// Initialize the end to a safe value avoiding infinite loops
+		end := g.address + g.length
 		for _, f := range g.fields[idx:] {
-			// End of field still fits into the batch
-			if f.address+f.length <= start+maxBatchSize {
-				current.fields = append(current.fields, f)
-				idx++
+			// If the current field exceeds the batch size we need to split
+			// the request here
+			if f.address+f.length > start+maxBatchSize {
+				break
 			}
+			// End of field still fits into the batch so add it to the request
+			current.fields = append(current.fields, f)
+			end = f.address + f.length
+			idx++
 		}
 
-		end := start + maxBatchSize
 		if end > g.address+g.length {
 			end = g.address + g.length
 		}

@@ -466,8 +466,8 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 		// Non-bit value handling
 		for i, field := range request.fields {
 			// Determine the offset of the field values in the read array
-			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
-			length := 2 * field.length                      // field length is in registers a 16bit
+			offset := 2 * uint32(field.address-request.address) // registers are 16bit = 2 byte
+			length := 2 * uint32(field.length)                  // field length is in registers a 16bit
 
 			// Convert the actual value
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
@@ -493,8 +493,8 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 		// Non-bit value handling
 		for i, field := range request.fields {
 			// Determine the offset of the field values in the read array
-			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
-			length := 2 * field.length                      // field length is in registers a 16bit
+			offset := 2 * uint32(field.address-request.address) // registers are 16bit = 2 byte
+			length := 2 * uint32(field.length)                  // field length is in registers a 16bit
 
 			// Convert the actual value
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
