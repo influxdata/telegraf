@@ -126,18 +126,20 @@ func (s *S7comm) Init() error {
 		s.Server += ":102"
 	}
 
-	// Create the requests
-	return s.createRequests()
-}
-
-// Start initializes the connection to the remote endpoint
-func (s *S7comm) Start(_ telegraf.Accumulator) error {
 	// Create handler for the connection
 	s.handler = gos7.NewTCPClientHandler(s.Server, s.Rack, s.Slot)
 	s.handler.Timeout = time.Duration(s.Timeout)
 	if s.DebugConnection {
 		s.handler.Logger = log.New(os.Stderr, "D! [inputs.s7comm]", log.LstdFlags)
 	}
+
+	// Create the requests
+	return s.createRequests()
+}
+
+// Start initializes the connection to the remote endpoint
+func (s *S7comm) Start(_ telegraf.Accumulator) error {
+	s.Log.Debugf("Connecting to %q...", s.Server)
 	if err := s.handler.Connect(); err != nil {
 		return fmt.Errorf("connecting to %q failed: %w", s.Server, err)
 	}
@@ -149,6 +151,7 @@ func (s *S7comm) Start(_ telegraf.Accumulator) error {
 // Stop disconnects from the remote endpoint and cleans up
 func (s *S7comm) Stop() {
 	if s.handler != nil {
+		s.Log.Debugf("Disconnecting from %q...", s.handler.Address)
 		s.handler.Close()
 	}
 }
@@ -162,7 +165,11 @@ func (s *S7comm) Gather(acc telegraf.Accumulator) error {
 		// Read the batch
 		s.Log.Debugf("Reading batch %d...", i+1)
 		if err := s.client.AGReadMulti(b.items, len(b.items)); err != nil {
-			return fmt.Errorf("reading batch %d failed: %w", i+1, err)
+			// Try to reconnect and skip this gather cycle to avoid hammering
+			// the network if the server is down or under load.
+			s.Log.Errorf("reading batch %d failed: %v; reconnecting...", i+1, err)
+			s.Stop()
+			return s.Start(acc)
 		}
 
 		// Dissect the received data into fields
