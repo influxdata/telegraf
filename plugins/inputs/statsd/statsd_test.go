@@ -2024,38 +2024,34 @@ func TestParse_DeltaCounter(t *testing.T) {
 
 	require.Eventuallyf(t, func() bool {
 		require.NoError(t, statsd.Gather(acc))
-		acc.Lock()
-		defer acc.Unlock()
-
-		fmt.Println(acc.NMetrics())
-		expected := []telegraf.Metric{
-			testutil.MustMetric(
-				"cpu_time_idle",
-				map[string]string{
-					"metric_type": "counter",
-					"temporality": "delta",
-				},
-				map[string]interface{}{
-					"value": 42,
-				},
-				time.Now(),
-				telegraf.Counter,
-			),
-		}
-		got := acc.GetTelegrafMetrics()
-		testutil.RequireMetricsEqual(t, expected, got, testutil.IgnoreTime(), testutil.IgnoreFields("start_time"))
-
-		startTime, ok := got[0].GetField("start_time")
-		require.True(t, ok, "expected start_time field")
-
-		startTimeStr, ok := startTime.(string)
-		require.True(t, ok, "expected start_time field to be a string")
-
-		_, err = time.Parse(time.RFC3339, startTimeStr)
-		require.NoError(t, err, "execpted start_time field to be in RFC3339 format")
-
 		return acc.NMetrics() >= 1
 	}, time.Second, 100*time.Millisecond, "Expected 1 metric found %d", acc.NMetrics())
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu_time_idle",
+			map[string]string{
+				"metric_type": "counter",
+				"temporality": "delta",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+	got := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, got, testutil.IgnoreTime(), testutil.IgnoreFields("start_time"))
+
+	startTime, ok := got[0].GetField("start_time")
+	require.True(t, ok, "expected start_time field")
+
+	startTimeStr, ok := startTime.(string)
+	require.True(t, ok, "expected start_time field to be a string")
+
+	_, err = time.Parse(time.RFC3339, startTimeStr)
+	require.NoError(t, err, "execpted start_time field to be in RFC3339 format")
 
 	require.NoError(t, conn.Close())
 }
