@@ -51,7 +51,7 @@ type OpcUAClientConfig struct {
 
 func (o *OpcUAClientConfig) Validate() error {
 	if err := o.validateOptionalFields(); err != nil {
-		return err
+		return fmt.Errorf("invalid Optional Field: %w", err)
 	}
 
 	err := o.validateEndpoint()
