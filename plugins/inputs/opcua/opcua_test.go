@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/testutil"
@@ -150,6 +152,95 @@ func TestReadClientIntegration(t *testing.T) {
 	}
 }
 
+func TestReadClientIntegrationAdditionalFields(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []OPCTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+		{"badnode", "1", "i", "1337", nil},
+		{"goodnode", "1", "s", "the.answer", int32(42)},
+		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
+	}
+	testopctypes := []string{
+		"String",
+		"String",
+		"String",
+		"Null",
+		"Int32",
+		"DateTime",
+	}
+	testopcquality := []string{
+		"OK (0x0)",
+		"OK (0x0)",
+		"OK (0x0)",
+		"User does not have permission to perform the requested operation. StatusBadUserAccessDenied (0x801F0000)",
+		"OK (0x0)",
+		"OK (0x0)",
+	}
+	expectedopcmetrics := []telegraf.Metric{}
+	for i, x := range testopctags {
+		now := time.Now()
+		tags := map[string]string{
+			"id": fmt.Sprintf("ns=%s;%s=%s", x.Namespace, x.IdentifierType, x.Identifier),
+		}
+		fields := map[string]interface{}{
+			x.Name:     x.Want,
+			"Quality":  testopcquality[i],
+			"DataType": testopctypes[i],
+		}
+		expectedopcmetrics = append(expectedopcmetrics, metric.New("testing", tags, fields, now))
+	}
+
+	readConfig := ReadClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+				OptionalFields: []string{"DataType"},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+	}
+
+	for _, tags := range testopctags {
+		readConfig.RootNodes = append(readConfig.RootNodes, MapOPCTag(tags))
+	}
+
+	client, err := readConfig.CreateReadClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.NoError(t, client.Connect())
+
+	actualopcmetrics := []telegraf.Metric{}
+
+	for i := range client.LastReceivedData {
+		actualopcmetrics = append(actualopcmetrics, client.MetricForNode(i))
+	}
+	testutil.RequireMetricsEqual(t, expectedopcmetrics, actualopcmetrics, testutil.IgnoreTime())
+}
+
 func TestReadClientIntegrationWithPasswordAuth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -223,6 +314,8 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 
+optional_fields = ["DataType"]
+
 [[inputs.opcua.nodes]]
   name = "name"
   namespace = "1"
@@ -265,6 +358,7 @@ additional_valid_status_codes = ["0xC0"]
 
 [inputs.opcua.request_workarounds]
 use_unregistered_reads = true
+
 `
 
 	c := config.NewConfig()
@@ -334,6 +428,7 @@ use_unregistered_reads = true
 	}, o.ReadClientConfig.Groups)
 	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.ReadClientConfig.Workarounds)
 	require.Equal(t, ReadClientWorkarounds{UseUnregisteredReads: true}, o.ReadClientConfig.ReadClientWorkarounds)
+	require.Equal(t, []string{"DataType"}, o.ReadClientConfig.OptionalFields)
 	err = o.Init()
 	require.NoError(t, err)
 	require.Len(t, o.client.NodeMetricMapping, 5, "incorrect number of nodes")

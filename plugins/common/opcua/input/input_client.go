@@ -421,6 +421,9 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 
 	fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
+	if choice.Contains("DataType", o.Config.OptionalFields) {
+		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
+	}
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
 		o.Log.Debugf("status not OK for node %q(metric name %q, tags %q)",
