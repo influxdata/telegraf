@@ -238,10 +238,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 				if bufR[0] == 0 { // message delimiter found
 					break
 				}
-				_, err = bufW.Write(bufR)
-				if err != nil {
-					return err
-				}
+				bufW.Write(bufR)
 			}
 		}
 

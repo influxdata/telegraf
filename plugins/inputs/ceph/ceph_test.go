@@ -173,8 +173,7 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 	expected := filepath.Join(dir, sockFile(prefix, i))
 	found := false
 	for _, s := range sockets {
-		_, err := fmt.Printf("Checking %s\n", s.socket)
-		require.NoError(t, err)
+		fmt.Printf("Checking %s\n", s.socket)
 		if s.socket == expected {
 			found = true
 			require.Equal(t, s.sockType, sockType, "Unexpected socket type for %q", s)

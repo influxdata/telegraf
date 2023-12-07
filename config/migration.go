@@ -92,8 +92,8 @@ func assignTextToSections(data []byte, sections []section) ([]section, error) {
 
 			line := strings.TrimSpace(scanner.Text())
 			if strings.HasPrefix(line, "#") {
-				_, _ = buf.Write(scanner.Bytes())
-				_, _ = buf.WriteString("\n")
+				buf.Write(scanner.Bytes())
+				buf.WriteString("\n")
 				continue
 			} else if buf.Len() > 0 {
 				if _, err := io.Copy(sections[idx].raw, &buf); err != nil {
@@ -102,8 +102,8 @@ func assignTextToSections(data []byte, sections []section) ([]section, error) {
 				buf.Reset()
 			}
 
-			_, _ = sections[idx].raw.Write(scanner.Bytes())
-			_, _ = sections[idx].raw.WriteString("\n")
+			sections[idx].raw.Write(scanner.Bytes())
+			sections[idx].raw.WriteString("\n")
 		}
 		if err := scanner.Err(); err != nil {
 			return nil, fmt.Errorf("splitting by line failed: %w", err)
@@ -120,8 +120,8 @@ func assignTextToSections(data []byte, sections []section) ([]section, error) {
 	}
 	// Write the remaining to the last section
 	for scanner.Scan() {
-		_, _ = sections[len(sections)-1].raw.Write(scanner.Bytes())
-		_, _ = sections[len(sections)-1].raw.WriteString("\n")
+		sections[len(sections)-1].raw.Write(scanner.Bytes())
+		sections[len(sections)-1].raw.WriteString("\n")
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("splitting by line failed: %w", err)

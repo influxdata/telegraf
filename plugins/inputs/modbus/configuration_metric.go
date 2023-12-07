@@ -142,10 +142,7 @@ func (c *ConfigurationPerMetric) Check() error {
 			def.Fields[fidx] = f
 
 			// Check for duplicate field definitions
-			id, err := c.fieldID(seed, def, f)
-			if err != nil {
-				return fmt.Errorf("cannot determine field id for %q: %w", f.Name, err)
-			}
+			id := c.fieldID(seed, def, f)
 			if seenFields[id] {
 				return fmt.Errorf("field %q duplicated in measurement %q (slave %d)", f.Name, def.Measurement, def.SlaveID)
 			}
@@ -313,55 +310,29 @@ func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metric
 	return f, nil
 }
 
-func (c *ConfigurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) (uint64, error) {
+func (c *ConfigurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) uint64 {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
-	if err := mh.WriteByte(def.SlaveID); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
-	if _, err := mh.WriteString(field.RegisterType); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
-	if _, err := mh.WriteString(def.Measurement); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
-	if _, err := mh.WriteString(field.Name); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
+	mh.WriteByte(def.SlaveID)
+	mh.WriteByte(0)
+	mh.WriteString(field.RegisterType)
+	mh.WriteByte(0)
+	mh.WriteString(def.Measurement)
+	mh.WriteByte(0)
+	mh.WriteString(field.Name)
+	mh.WriteByte(0)
 
 	// Tags
 	for k, v := range def.Tags {
-		if _, err := mh.WriteString(k); err != nil {
-			return 0, err
-		}
-		if err := mh.WriteByte('='); err != nil {
-			return 0, err
-		}
-		if _, err := mh.WriteString(v); err != nil {
-			return 0, err
-		}
-		if err := mh.WriteByte(':'); err != nil {
-			return 0, err
-		}
+		mh.WriteString(k)
+		mh.WriteByte('=')
+		mh.WriteString(v)
+		mh.WriteByte(':')
 	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
+	mh.WriteByte(0)
 
-	return mh.Sum64(), nil
+	return mh.Sum64()
 }
 
 func (c *ConfigurationPerMetric) determineOutputDatatype(input string) (string, error) {

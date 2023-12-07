@@ -232,14 +232,12 @@ func TestTruncate(t *testing.T) {
 			name: "should not truncate",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world")
-				require.NoError(t, err)
+				b.WriteString("hello world")
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world")
-				require.NoError(t, err)
+				b.WriteString("hello world")
 				return &b
 			},
 		},
@@ -247,14 +245,12 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate up to the new line",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world\nand all the people")
-				require.NoError(t, err)
+				b.WriteString("hello world\nand all the people")
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world...")
-				require.NoError(t, err)
+				b.WriteString("hello world...")
 				return &b
 			},
 		},
@@ -263,17 +259,16 @@ func TestTruncate(t *testing.T) {
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < 2*MaxStderrBytes; i++ {
-					require.NoError(t, b.WriteByte('b'))
+					b.WriteByte('b')
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < MaxStderrBytes; i++ {
-					require.NoError(t, b.WriteByte('b'))
+					b.WriteByte('b')
 				}
-				_, err := b.WriteString("...")
-				require.NoError(t, err)
+				b.WriteString("...")
 				return &b
 			},
 		},

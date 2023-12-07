@@ -108,11 +108,9 @@ func TestMultilineFlush(t *testing.T) {
 	m, err := c.NewMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
-	_, err = buffer.WriteString("foo")
-	require.NoError(t, err)
+	buffer.WriteString("foo")
 
 	text := m.Flush(&buffer)
-
 	require.Equal(t, "foo", text)
 	require.Zero(t, buffer.Len())
 }

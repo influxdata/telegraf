@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -19,8 +21,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
 
 var dummyEntry = Entry{
@@ -37,9 +37,9 @@ func generateBinary(data []interface{}, order binary.ByteOrder) ([]byte, error) 
 		var err error
 		switch v := x.(type) {
 		case []byte:
-			_, err = buf.Write(v)
+			buf.Write(v)
 		case string:
-			_, err = buf.WriteString(v)
+			buf.WriteString(v)
 		default:
 			err = binary.Write(&buf, order, x)
 		}

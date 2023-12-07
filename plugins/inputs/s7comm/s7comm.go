@@ -236,10 +236,7 @@ func (s *S7comm) createRequests() error {
 			}
 
 			// Check for duplicate field definitions
-			id, err := fieldID(seed, cfg, f)
-			if err != nil {
-				return fmt.Errorf("cannot determine field id for %q: %w", f.Name, err)
-			}
+			id := fieldID(seed, cfg, f)
 			if seenFields[id] {
 				return fmt.Errorf("duplicate field definition field %q in metric %q", f.Name, cfg.Name)
 			}
@@ -382,43 +379,25 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	return item, f, nil
 }
 
-func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) (uint64, error) {
+func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) uint64 {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
-	if _, err := mh.WriteString(def.Name); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
-	if _, err := mh.WriteString(field.Name); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
+	mh.WriteString(def.Name)
+	mh.WriteByte(0)
+	mh.WriteString(field.Name)
+	mh.WriteByte(0)
 
 	// Tags
 	for k, v := range def.Tags {
-		if _, err := mh.WriteString(k); err != nil {
-			return 0, err
-		}
-		if err := mh.WriteByte('='); err != nil {
-			return 0, err
-		}
-		if _, err := mh.WriteString(v); err != nil {
-			return 0, err
-		}
-		if err := mh.WriteByte(':'); err != nil {
-			return 0, err
-		}
+		mh.WriteString(k)
+		mh.WriteByte('=')
+		mh.WriteString(v)
+		mh.WriteByte(':')
 	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
+	mh.WriteByte(0)
 
-	return mh.Sum64(), nil
+	return mh.Sum64()
 }
 
 // Add this plugin to telegraf
