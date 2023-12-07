@@ -53,17 +53,15 @@ func (o *OpcUAClientConfig) Validate() error {
 	if err := o.validateOptionalFields(); err != nil {
 		return err
 	}
-	if err := o.validateEndpoint(); err != nil {
-		return err
-	}
 
-	return nil
+	err := o.validateEndpoint()
+	return err
 }
 
 func (o *OpcUAClientConfig) validateOptionalFields() error {
-	valid_fields := []string{"DataType"}
+	validFields := []string{"DataType"}
 	for _, val := range o.OptionalFields {
-		if !choice.Contains(val, valid_fields) {
+		if !choice.Contains(val, validFields) {
 			return fmt.Errorf("invalid Optional Field %q", val)
 		}
 	}
