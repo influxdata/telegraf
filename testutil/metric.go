@@ -372,3 +372,23 @@ func FromTestMetric(met *Metric) telegraf.Metric {
 	m := telegrafMetric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }
+
+func ToTestMetric(tm telegraf.Metric) *Metric {
+	tags := make(map[string]string, len(tm.TagList()))
+	for _, t := range tm.TagList() {
+		tags[t.Key] = t.Value
+	}
+
+	fields := make(map[string]interface{}, len(tm.FieldList()))
+	for _, f := range tm.FieldList() {
+		fields[f.Key] = f.Value
+	}
+
+	return &Metric{
+		Measurement: tm.Name(),
+		Fields:      fields,
+		Tags:        tags,
+		Time:        tm.Time(),
+		Type:        tm.Type(),
+	}
+}

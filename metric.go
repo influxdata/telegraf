@@ -142,3 +142,9 @@ type UnwrappableMetric interface {
 	// wraps it in the first place.
 	Unwrap() Metric
 }
+
+type TrackingMetric interface {
+	// TrackingID returns the ID used for tracking the metric
+	TrackingID() TrackingID
+	UnwrappableMetric
+}

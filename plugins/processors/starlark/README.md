@@ -84,7 +84,12 @@ of type int, float, string, or bool.
 The timestamp of the metric as an integer in nanoseconds since the Unix
 epoch.
 
-- **deepcopy(*metric*)**: Make a copy of an existing metric.
+- **deepcopy(*metric*, *track=false*)**:
+Copy an existing metric with or without tracking information. If `track` is set
+to `true`, the tracking information is copied.
+**Caution:** Make sure to always return *all* metrics with tracking information!
+Otherwise, the corresponding inputs will never receive the delivery information
+and potentially overrun!
 
 ### Python Differences
 

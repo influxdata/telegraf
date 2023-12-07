@@ -3402,6 +3402,32 @@ def apply(metric):
 	return [metric, newmetric]
 `,
 		},
+		{
+			name:       "return original and deep-copy",
+			numMetrics: 2,
+			source: `
+def apply(metric):
+    return [metric, deepcopy(metric, track=True)]
+`,
+		},
+		{
+			name:       "deep-copy but do not return",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    x = deepcopy(metric)
+    return [metric]
+`,
+		},
+		{
+			name:       "deep-copy but do not return original metric",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    x = deepcopy(metric, track=True)
+    return [x]
+`,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3426,8 +3452,9 @@ def apply(metric):
 			plugin.Stop()
 
 			// Ensure we get back the correct number of metrics
-			require.Len(t, acc.GetTelegrafMetrics(), tt.numMetrics)
-			for _, m := range acc.GetTelegrafMetrics() {
+			actual := acc.GetTelegrafMetrics()
+			require.Lenf(t, actual, tt.numMetrics, "expected %d metrics but got %d", tt.numMetrics, len(actual))
+			for _, m := range actual {
 				m.Accept()
 			}
 
