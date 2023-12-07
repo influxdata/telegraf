@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-//go:build linux
+//go:build linux && amd64
 
 package intel_powerstat
 
@@ -7,909 +7,1202 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"math/big"
+	"os"
+	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	ptel "github.com/intel/powertelemetry"
+	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
+	"golang.org/x/exp/constraints"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	cpuFrequency                       = "cpu_frequency"
-	cpuBusyFrequency                   = "cpu_busy_frequency"
-	cpuTemperature                     = "cpu_temperature"
-	cpuC0StateResidency                = "cpu_c0_state_residency"
-	cpuC1StateResidency                = "cpu_c1_state_residency"
-	cpuC6StateResidency                = "cpu_c6_state_residency"
-	cpuBusyCycles                      = "cpu_busy_cycles"
-	packageCurrentPowerConsumption     = "current_power_consumption"
-	packageCurrentDramPowerConsumption = "current_dram_power_consumption"
-	packageThermalDesignPower          = "thermal_design_power"
-	packageTurboLimit                  = "max_turbo_frequency"
-	packageUncoreFrequency             = "uncore_frequency"
-	packageCPUBaseFrequency            = "cpu_base_frequency"
-	percentageMultiplier               = 100
-)
-
-// PowerStat plugin enables monitoring of platform metrics (power, TDP) and Core metrics like temperature, power and utilization.
+// PowerStat plugin enables monitoring of platform metrics.
 type PowerStat struct {
-	CPUMetrics     []string        `toml:"cpu_metrics"`
-	PackageMetrics []string        `toml:"package_metrics"`
-	Log            telegraf.Logger `toml:"-"`
+	CPUMetrics       []cpuMetricType     `toml:"cpu_metrics"`
+	PackageMetrics   []packageMetricType `toml:"package_metrics"`
+	IncludedCPUs     []string            `toml:"included_cpus"`
+	ExcludedCPUs     []string            `toml:"excluded_cpus"`
+	EventDefinitions string              `toml:"event_definitions"`
+	MsrReadTimeout   config.Duration     `toml:"msr_read_timeout"`
+	Log              telegraf.Logger     `toml:"-"`
 
-	fs   fileService
-	rapl raplService
-	msr  msrService
+	parsedIncludedCores []int
+	parsedExcludedCores []int
 
-	cpuFrequency        bool
-	cpuBusyFrequency    bool
-	cpuTemperature      bool
-	cpuC0StateResidency bool
-	cpuC1StateResidency bool
-	cpuC6StateResidency bool
-	cpuBusyCycles       bool
+	parsedCPUTimedMsrMetrics []cpuMetricType
+	parsedCPUPerfMetrics     []cpuMetricType
+	parsedPackageRaplMetrics []packageMetricType
+	parsedPackageMsrMetrics  []packageMetricType
 
-	packageTurboLimit                  bool
-	packageCurrentPowerConsumption     bool
-	packageCurrentDramPowerConsumption bool
-	packageThermalDesignPower          bool
-	packageUncoreFrequency             bool
-	packageCPUBaseFrequency            bool
+	option  optionGenerator
+	fetcher metricFetcher
 
-	cpuBusClockValue   float64
-	cpuInfo            map[string]*cpuInfo
-	skipFirstIteration bool
-	logOnce            map[string]error
+	needsCoreFreq       bool
+	needsMsrCPU         bool
+	needsPerf           bool
+	needsTimeRelatedMsr bool
+
+	needsRapl       bool
+	needsMsrPackage bool
+
+	logOnce map[string]struct{}
 }
 
+// SampleConfig returns a sample configuration (See sample.conf).
 func (*PowerStat) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init performs one time setup of the plugin
+// Init parses config file and sets up configuration of the plugin.
 func (p *PowerStat) Init() error {
-	p.parsePackageMetricsConfig()
-	p.parseCPUMetricsConfig()
-	err := p.verifyProcessor()
-	if err != nil {
+	if err := p.disableUnsupportedMetrics(); err != nil {
 		return err
 	}
 
-	p.initMSR()
-	p.initRaplService()
-
-	if !p.areCoreMetricsEnabled() && !p.areGlobalMetricsEnabled() {
-		return fmt.Errorf("all configuration options are empty or invalid. Did not find anything to gather")
+	if err := p.parseConfig(); err != nil {
+		return err
 	}
 
-	p.fillCPUBusClock()
-	return nil
-}
-
-func (p *PowerStat) initMSR() {
-	// Initialize MSR service only when there is at least one metric enabled
-	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC0StateResidency || p.cpuC1StateResidency ||
-		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit || p.packageUncoreFrequency || p.packageCPUBaseFrequency {
-		p.msr = newMsrServiceWithFs(p.Log, p.fs)
-	}
-}
-
-func (p *PowerStat) initRaplService() {
-	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit ||
-		p.packageUncoreFrequency || p.packageCPUBaseFrequency {
-		p.rapl = newRaplServiceWithFs(p.Log, p.fs)
-	}
-}
-
-// fill CPUBusClockValue if required
-func (p *PowerStat) fillCPUBusClock() {
-	if p.packageCPUBaseFrequency {
-		// cpuBusClock is the same for every core/socket.
-		busClockInfo := p.getBusClock("0")
-		if busClockInfo == 0 {
-			p.Log.Warn("Disabling package metric: cpu_base_frequency_mhz. Can't detect bus clock value")
-			p.packageCPUBaseFrequency = false
-			return
-		}
-
-		p.cpuBusClockValue = busClockInfo
-	}
-}
-
-// Gather takes in an accumulator and adds the metrics that the Input gathers
-func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
-	if p.areGlobalMetricsEnabled() {
-		p.addGlobalMetrics(acc)
-	}
-
-	if p.areCoreMetricsEnabled() {
-		if p.msr.isMsrLoaded() {
-			p.logOnce["msr"] = nil
-			p.addPerCoreMetrics(acc)
-		} else {
-			err := errors.New("Error while trying to read MSR (probably msr module was not loaded)")
-			if val := p.logOnce["msr"]; val == nil || val.Error() != err.Error() {
-				p.Log.Errorf("%v", err)
-				// Remember that specific error occurs to omit logging next time
-				p.logOnce["msr"] = err
-			}
-		}
-	}
-
-	// Gathering the first iteration of metrics was skipped for most of them because they are based on delta calculations
-	p.skipFirstIteration = false
+	p.option = &optGenerator{}
+	p.logOnce = make(map[string]struct{})
 
 	return nil
 }
 
-func (p *PowerStat) addGlobalMetrics(acc telegraf.Accumulator) {
-	// Prepare RAPL data each gather because there is a possibility to disable rapl kernel module
-	p.rapl.initializeRaplData()
-	for socketID := range p.rapl.getRaplData() {
-		if p.packageTurboLimit {
-			p.addTurboRatioLimit(socketID, acc)
-		}
+// Start initializes the metricFetcher interface of the receiver to gather metrics.
+func (p *PowerStat) Start(_ telegraf.Accumulator) error {
+	opts := p.option.generate(optConfig{
+		cpuMetrics:     p.CPUMetrics,
+		packageMetrics: p.PackageMetrics,
+		includedCPUs:   p.parsedIncludedCores,
+		excludedCPUs:   p.parsedExcludedCores,
+		perfEventFile:  p.EventDefinitions,
+		msrReadTimeout: time.Duration(p.MsrReadTimeout),
+		log:            p.Log,
+	})
 
-		if p.packageUncoreFrequency {
-			die := maxDiePerSocket(socketID)
-			for actualDie := 0; actualDie < die; actualDie++ {
-				p.addUncoreFreq(socketID, strconv.Itoa(actualDie), acc)
-			}
-		}
-
-		if p.packageCPUBaseFrequency {
-			p.addCPUBaseFreq(socketID, acc)
-		}
-
-		err := p.rapl.retrieveAndCalculateData(socketID)
-		if err != nil {
-			// In case of an error skip calculating metrics for this socket
-			if val := p.logOnce[socketID+"rapl"]; val == nil || val.Error() != err.Error() {
-				p.Log.Errorf("Error fetching rapl data for socket %s, err: %v", socketID, err)
-				// Remember that specific error occurs for socketID to omit logging next time
-				p.logOnce[socketID+"rapl"] = err
-			}
-			continue
-		}
-
-		// If error stops occurring, clear logOnce indicator
-		p.logOnce[socketID+"rapl"] = nil
-		if p.packageThermalDesignPower {
-			p.addThermalDesignPowerMetric(socketID, acc)
-		}
-
-		if p.skipFirstIteration {
-			continue
-		}
-		if p.packageCurrentPowerConsumption {
-			p.addCurrentSocketPowerConsumption(socketID, acc)
-		}
-		if p.packageCurrentDramPowerConsumption {
-			p.addCurrentDramPowerConsumption(socketID, acc)
-		}
-	}
-}
-func maxDiePerSocket(_ string) int {
-	/*
-		TODO:
-		At the moment, linux does not distinguish between more dies per socket.
-		This piece of code will need to be upgraded in the future.
-		https://github.com/torvalds/linux/blob/v5.17/arch/x86/include/asm/topology.h#L153
-	*/
-	return 1
-}
-
-func (p *PowerStat) addUncoreFreq(socketID string, die string, acc telegraf.Accumulator) {
-	err := checkFile("/sys/devices/system/cpu/intel_uncore_frequency")
-	if err != nil {
-		err := fmt.Errorf("Error while checking existing intel_uncore_frequency (probably intel-uncore-frequency module was not loaded)")
-		if val := p.logOnce["intel_uncore_frequency"]; val == nil || val.Error() != err.Error() {
-			p.Log.Errorf("%v", err)
-			// Remember that specific error occurs to omit logging next time
-			p.logOnce["intel_uncore_frequency"] = err
-		}
-		return
-	}
-	p.logOnce["intel_uncore_frequency"] = nil
-	p.readUncoreFreq("initial", socketID, die, acc)
-	p.readUncoreFreq("current", socketID, die, acc)
-}
-
-func (p *PowerStat) readUncoreFreq(typeFreq string, socketID string, die string, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{}
-	if typeFreq == "current" {
-		if p.areCoreMetricsEnabled() && p.msr.isMsrLoaded() {
-			p.logOnce[socketID+"msr"] = nil
-			cpuID, err := p.GetCPUIDFromSocketID(socketID)
-			if err != nil {
-				p.Log.Debugf("Error while reading socket ID: %v", err)
-				return
-			}
-			actualUncoreFreq, err := p.msr.readSingleMsr(cpuID, msrUncorePerfStatusString)
-			if err != nil {
-				p.Log.Debugf("Error while reading %s: %v", msrUncorePerfStatusString, err)
-				return
-			}
-			actualUncoreFreq = (actualUncoreFreq & 0x3F) * 100
-			fields["uncore_frequency_mhz_cur"] = actualUncoreFreq
-		} else {
-			err := errors.New("Error while trying to read MSR (probably msr module was not loaded), uncore_frequency_mhz_cur metric will not be collected")
-			if val := p.logOnce[socketID+"msr"]; val == nil || val.Error() != err.Error() {
-				p.Log.Errorf("%v", err)
-				// Remember that specific error occurs for socketID to omit logging next time
-				p.logOnce[socketID+"msr"] = err
-			}
-		}
-	}
-	initMinFreq, err := p.msr.retrieveUncoreFrequency(socketID, typeFreq, "min", die)
-	if err != nil {
-		p.Log.Errorf("Error while retrieving minimum uncore frequency of the socket %s, err: %v", socketID, err)
-		return
-	}
-	initMaxFreq, err := p.msr.retrieveUncoreFrequency(socketID, typeFreq, "max", die)
-	if err != nil {
-		p.Log.Errorf("Error while retrieving maximum uncore frequency of the socket %s, err: %v", socketID, err)
-		return
-	}
-
-	tags := map[string]string{
-		"package_id": socketID,
-		"type":       typeFreq,
-		"die":        die,
-	}
-	fields["uncore_frequency_limit_mhz_min"] = initMinFreq
-	fields["uncore_frequency_limit_mhz_max"] = initMaxFreq
-
-	acc.AddGauge("powerstat_package", fields, tags)
-}
-
-func (p *PowerStat) addThermalDesignPowerMetric(socketID string, acc telegraf.Accumulator) {
-	maxPower, err := p.rapl.getConstraintMaxPowerWatts(socketID)
-	if err != nil {
-		p.Log.Errorf("Error while retrieving TDP of the socket %s, err: %v", socketID, err)
-		return
-	}
-
-	tags := map[string]string{
-		"package_id": socketID,
-	}
-
-	fields := map[string]interface{}{
-		"thermal_design_power_watts": roundFloatToNearestTwoDecimalPlaces(maxPower),
-	}
-
-	acc.AddGauge("powerstat_package", fields, tags)
-}
-
-func (p *PowerStat) addCurrentSocketPowerConsumption(socketID string, acc telegraf.Accumulator) {
-	tags := map[string]string{
-		"package_id": socketID,
-	}
-
-	fields := map[string]interface{}{
-		"current_power_consumption_watts": roundFloatToNearestTwoDecimalPlaces(p.rapl.getRaplData()[socketID].socketCurrentEnergy),
-	}
-
-	acc.AddGauge("powerstat_package", fields, tags)
-}
-
-func (p *PowerStat) addCurrentDramPowerConsumption(socketID string, acc telegraf.Accumulator) {
-	tags := map[string]string{
-		"package_id": socketID,
-	}
-
-	fields := map[string]interface{}{
-		"current_dram_power_consumption_watts": roundFloatToNearestTwoDecimalPlaces(p.rapl.getRaplData()[socketID].dramCurrentEnergy),
-	}
-
-	acc.AddGauge("powerstat_package", fields, tags)
-}
-
-func (p *PowerStat) addPerCoreMetrics(acc telegraf.Accumulator) {
-	var wg sync.WaitGroup
-	wg.Add(len(p.msr.getCPUCoresData()))
-
-	for cpuID := range p.msr.getCPUCoresData() {
-		go p.addMetricsForSingleCore(cpuID, acc, &wg)
-	}
-
-	wg.Wait()
-}
-
-func (p *PowerStat) addMetricsForSingleCore(cpuID string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	if p.cpuFrequency {
-		p.addCPUFrequencyMetric(cpuID, acc)
-	}
-
-	// Read data from MSR only if required
-	if p.cpuC0StateResidency || p.cpuC1StateResidency || p.cpuC6StateResidency || p.cpuBusyCycles || p.cpuTemperature || p.cpuBusyFrequency {
-		err := p.msr.openAndReadMsr(cpuID)
-		if err != nil {
-			// In case of an error exit the function. All metrics past this point are dependent on MSR
-			p.Log.Debugf("Error while reading msr: %v", err)
-			return
-		}
-	}
-
-	if p.cpuTemperature {
-		p.addCPUTemperatureMetric(cpuID, acc)
-	}
-
-	// cpuBusyFrequency metric does some calculations inside that are required in another plugin cycle
-	if p.cpuBusyFrequency {
-		p.addCPUBusyFrequencyMetric(cpuID, acc)
-	}
-
-	if !p.skipFirstIteration {
-		if p.cpuC0StateResidency || p.cpuBusyCycles {
-			p.addCPUC0StateResidencyMetric(cpuID, acc)
-		}
-
-		if p.cpuC1StateResidency {
-			p.addCPUC1StateResidencyMetric(cpuID, acc)
-		}
-
-		if p.cpuC6StateResidency {
-			p.addCPUC6StateResidencyMetric(cpuID, acc)
-		}
-	}
-}
-
-func (p *PowerStat) addCPUFrequencyMetric(cpuID string, acc telegraf.Accumulator) {
-	frequency, err := p.msr.retrieveCPUFrequencyForCore(cpuID)
-
-	// In case of an error leave func
-	if err != nil {
-		p.Log.Debugf("Error while reading file: %v", err)
-		return
-	}
-
-	cpu := p.cpuInfo[cpuID]
-	tags := map[string]string{
-		"package_id": cpu.physicalID,
-		"core_id":    cpu.coreID,
-		"cpu_id":     cpu.cpuID,
-	}
-
-	fields := map[string]interface{}{
-		"cpu_frequency_mhz": roundFloatToNearestTwoDecimalPlaces(frequency),
-	}
-
-	acc.AddGauge("powerstat_core", fields, tags)
-}
-
-func (p *PowerStat) addCPUTemperatureMetric(cpuID string, acc telegraf.Accumulator) {
-	coresData := p.msr.getCPUCoresData()
-	temp := coresData[cpuID].throttleTemp - coresData[cpuID].temp
-
-	cpu := p.cpuInfo[cpuID]
-	tags := map[string]string{
-		"package_id": cpu.physicalID,
-		"core_id":    cpu.coreID,
-		"cpu_id":     cpu.cpuID,
-	}
-	fields := map[string]interface{}{
-		"cpu_temperature_celsius": temp,
-	}
-
-	acc.AddGauge("powerstat_core", fields, tags)
-}
-
-func calculateTurboRatioGroup(coreCounts uint64, msr uint64, group map[int]uint64) {
-	// value of number of active cores of bucket 1 is written in the first 8 bits. The next buckets values are saved on the following 8-bit sides
-	from := coreCounts & 0xFF
-	for i := 0; i < 8; i++ {
-		to := (coreCounts >> (i * 8)) & 0xFF
-		if to == 0 {
-			break
-		}
-		value := (msr >> (i * 8)) & 0xFF
-		// value of freq ratio is stored in 8-bit blocks, and their real value is obtained after multiplication by 100
-		if value != 0 && to != 0 {
-			for ; from <= to; from++ {
-				group[int(from)] = value * 100
-			}
-		}
-		from = to + 1
-	}
-}
-
-func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator) {
 	var err error
-	turboRatioLimitGroups := make(map[int]uint64)
-
-	var cpuID = ""
-	var model = ""
-	for _, v := range p.cpuInfo {
-		if v.physicalID == socketID {
-			cpuID = v.cpuID
-			model = v.model
-		}
-	}
-	if cpuID == "" || model == "" {
-		p.Log.Debug("Error while reading socket ID")
-		return
-	}
-	// dump_hsw_turbo_ratio_limit
-	if model == strconv.FormatInt(0x3F, 10) { // INTEL_FAM6_HASWELL_X
-		coreCounts := uint64(0x1211) // counting the number of active cores 17 and 18
-		msrTurboRatioLimit2, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimit2String)
-		if err != nil {
-			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimit2String, err)
-			return
-		}
-
-		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit2, turboRatioLimitGroups)
-	}
-
-	// dump_ivt_turbo_ratio_limit
-	if (model == strconv.FormatInt(0x3E, 10)) || // INTEL_FAM6_IVYBRIDGE_X
-		(model == strconv.FormatInt(0x3F, 10)) { // INTEL_FAM6_HASWELL_X
-		coreCounts := uint64(0x100F0E0D0C0B0A09) // counting the number of active cores 9 to 16
-		msrTurboRatioLimit1, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimit1String)
-		if err != nil {
-			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimit1String, err)
-			return
-		}
-		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit1, turboRatioLimitGroups)
-	}
-
-	if (model != strconv.FormatInt(0x37, 10)) && // INTEL_FAM6_ATOM_SILVERMONT
-		(model != strconv.FormatInt(0x4A, 10)) && // INTEL_FAM6_ATOM_SILVERMONT_MID
-		(model != strconv.FormatInt(0x5A, 10)) && // INTEL_FAM6_ATOM_AIRMONT_MID
-		(model != strconv.FormatInt(0x2E, 10)) && // INTEL_FAM6_NEHALEM_EX
-		(model != strconv.FormatInt(0x2F, 10)) && // INTEL_FAM6_WESTMERE_EX
-		(model != strconv.FormatInt(0x57, 10)) && // INTEL_FAM6_XEON_PHI_KNL
-		(model != strconv.FormatInt(0x85, 10)) { // INTEL_FAM6_XEON_PHI_KNM
-		coreCounts := uint64(0x0807060504030201)     // default value (counting the number of active cores 1 to 8). May be changed in "if" segment below
-		if (model == strconv.FormatInt(0x5C, 10)) || // INTEL_FAM6_ATOM_GOLDMONT
-			(model == strconv.FormatInt(0x55, 10)) || // INTEL_FAM6_SKYLAKE_X
-			(model == strconv.FormatInt(0x6C, 10) || model == strconv.FormatInt(0x8F, 10) || model == strconv.FormatInt(0x6A, 10)) || // INTEL_FAM6_ICELAKE_X
-			(model == strconv.FormatInt(0x5F, 10)) || // INTEL_FAM6_ATOM_GOLDMONT_D
-			(model == strconv.FormatInt(0x86, 10)) { // INTEL_FAM6_ATOM_TREMONT_D
-			coreCounts, err = p.msr.readSingleMsr(cpuID, msrTurboRatioLimit1String)
-
-			if err != nil {
-				p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimit1String, err)
-				return
-			}
-		}
-
-		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimitString)
-		if err != nil {
-			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimitString, err)
-			return
-		}
-		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit, turboRatioLimitGroups)
-	}
-	// dump_atom_turbo_ratio_limits
-	if model == strconv.FormatInt(0x37, 10) || // INTEL_FAM6_ATOM_SILVERMONT
-		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID
-		model == strconv.FormatInt(0x5A, 10) { // INTEL_FAM6_ATOM_AIRMONT_MID
-		coreCounts := uint64(0x04030201) // counting the number of active cores 1 to 4
-		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrAtomCoreTurboRatiosString)
-
-		if err != nil {
-			p.Log.Debugf("Error while reading %s: %v", msrAtomCoreTurboRatiosString, err)
-			return
-		}
-		value := uint64(0)
-		newValue := uint64(0)
-
-		for i := 0; i < 4; i++ { // value "4" is specific for this group of processors
-			newValue = (msrTurboRatioLimit >> (8 * (i))) & 0x3F // value of freq ratio is stored in 6-bit blocks, saved every 8 bits
-			value = value + (newValue << ((i - 1) * 8))         // now value of freq ratio is stored in 8-bit blocks, saved every 8 bits
-		}
-
-		calculateTurboRatioGroup(coreCounts, value, turboRatioLimitGroups)
-	}
-	// dump_knl_turbo_ratio_limits
-	if model == strconv.FormatInt(0x57, 10) { // INTEL_FAM6_XEON_PHI_KNL
-		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, msrTurboRatioLimitString)
-		if err != nil {
-			p.Log.Debugf("Error while reading %s: %v", msrTurboRatioLimitString, err)
-			return
-		}
-
-		// value of freq ratio of bucket 1 is saved in bits 15 to 8.
-		// each next value is calculated as the previous value - delta. Delta is stored in 3-bit blocks every 8 bits (start at 21 (2*8+5))
-		value := (msrTurboRatioLimit >> 8) & 0xFF
-		newValue := value
-		for i := 2; i < 8; i++ {
-			newValue = newValue - (msrTurboRatioLimit>>(8*i+5))&0x7
-			value = value + (newValue << ((i - 1) * 8))
-		}
-
-		// value of number of active cores of bucket 1 is saved in bits 1 to 7.
-		// each next value is calculated as the previous value + delta. Delta is stored in 5-bit blocks every 8 bits (start at 16 (2*8))
-		coreCounts := (msrTurboRatioLimit & 0xFF) >> 1
-		newBucket := coreCounts
-		for i := 2; i < 8; i++ {
-			newBucket = newBucket + (msrTurboRatioLimit>>(8*i))&0x1F
-			coreCounts = coreCounts + (newBucket << ((i - 1) * 8))
-		}
-		calculateTurboRatioGroup(coreCounts, value, turboRatioLimitGroups)
-	}
-
-	for key, val := range turboRatioLimitGroups {
-		tags := map[string]string{
-			"package_id":   socketID,
-			"active_cores": strconv.Itoa(key),
-		}
-		fields := map[string]interface{}{
-			"max_turbo_frequency_mhz": val,
-		}
-		acc.AddGauge("powerstat_package", fields, tags)
-	}
-}
-
-func (p *PowerStat) addCPUBusyFrequencyMetric(cpuID string, acc telegraf.Accumulator) {
-	coresData := p.msr.getCPUCoresData()
-	mperfDelta := coresData[cpuID].mperfDelta
-	// Avoid division by 0
-	if mperfDelta == 0 {
-		p.Log.Errorf("Value of mperf delta should not equal 0 on core %s", cpuID)
-		return
-	}
-	aperfMperf := float64(coresData[cpuID].aperfDelta) / float64(mperfDelta)
-	tsc := convertProcessorCyclesToHertz(coresData[cpuID].timeStampCounterDelta)
-	timeNow := time.Now().UnixNano()
-	interval := convertNanoSecondsToSeconds(timeNow - coresData[cpuID].readDate)
-	coresData[cpuID].readDate = timeNow
-
-	if p.skipFirstIteration {
-		return
-	}
-
-	if interval == 0 {
-		p.Log.Errorf("Interval between last two Telegraf cycles is 0")
-		return
-	}
-
-	busyMhzValue := roundFloatToNearestTwoDecimalPlaces(tsc * aperfMperf / interval)
-
-	cpu := p.cpuInfo[cpuID]
-	tags := map[string]string{
-		"package_id": cpu.physicalID,
-		"core_id":    cpu.coreID,
-		"cpu_id":     cpu.cpuID,
-	}
-	fields := map[string]interface{}{
-		"cpu_busy_frequency_mhz": busyMhzValue,
-	}
-
-	acc.AddGauge("powerstat_core", fields, tags)
-}
-
-func (p *PowerStat) addCPUC1StateResidencyMetric(cpuID string, acc telegraf.Accumulator) {
-	coresData := p.msr.getCPUCoresData()
-	timestampDeltaBig := new(big.Int).SetUint64(coresData[cpuID].timeStampCounterDelta)
-	// Avoid division by 0
-	if timestampDeltaBig.Sign() < 1 {
-		p.Log.Errorf("Timestamp delta value %v should not be lower than 1", timestampDeltaBig)
-		return
-	}
-
-	// Since counter collection is not atomic it may happen that sum of C0, C1, C3, C6 and C7
-	// is bigger value than TSC, in such case C1 residency shall be set to 0.
-	// Operating on big.Int to avoid overflow
-	mperfDeltaBig := new(big.Int).SetUint64(coresData[cpuID].mperfDelta)
-	c3DeltaBig := new(big.Int).SetUint64(coresData[cpuID].c3Delta)
-	c6DeltaBig := new(big.Int).SetUint64(coresData[cpuID].c6Delta)
-	c7DeltaBig := new(big.Int).SetUint64(coresData[cpuID].c7Delta)
-
-	c1Big := new(big.Int).Sub(timestampDeltaBig, mperfDeltaBig)
-	c1Big.Sub(c1Big, c3DeltaBig)
-	c1Big.Sub(c1Big, c6DeltaBig)
-	c1Big.Sub(c1Big, c7DeltaBig)
-
-	if c1Big.Sign() < 0 {
-		c1Big = c1Big.SetInt64(0)
-	}
-	c1Value := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier * float64(c1Big.Uint64()) / float64(timestampDeltaBig.Uint64()))
-
-	cpu := p.cpuInfo[cpuID]
-	tags := map[string]string{
-		"package_id": cpu.physicalID,
-		"core_id":    cpu.coreID,
-		"cpu_id":     cpu.cpuID,
-	}
-	fields := map[string]interface{}{
-		"cpu_c1_state_residency_percent": c1Value,
-	}
-
-	acc.AddGauge("powerstat_core", fields, tags)
-}
-
-func (p *PowerStat) addCPUC6StateResidencyMetric(cpuID string, acc telegraf.Accumulator) {
-	coresData := p.msr.getCPUCoresData()
-	// Avoid division by 0
-	if coresData[cpuID].timeStampCounterDelta == 0 {
-		p.Log.Errorf("Timestamp counter on offset %d should not equal 0 on cpuID %s",
-			timestampCounterLocation, cpuID)
-		return
-	}
-	c6Value := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier *
-		float64(coresData[cpuID].c6Delta) / float64(coresData[cpuID].timeStampCounterDelta))
-
-	cpu := p.cpuInfo[cpuID]
-	tags := map[string]string{
-		"package_id": cpu.physicalID,
-		"core_id":    cpu.coreID,
-		"cpu_id":     cpu.cpuID,
-	}
-	fields := map[string]interface{}{
-		"cpu_c6_state_residency_percent": c6Value,
-	}
-
-	acc.AddGauge("powerstat_core", fields, tags)
-}
-
-func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accumulator) {
-	coresData := p.msr.getCPUCoresData()
-	// Avoid division by 0
-	if coresData[cpuID].timeStampCounterDelta == 0 {
-		p.Log.Errorf("Timestamp counter on offset %d should not equal 0 on cpuID %s",
-			timestampCounterLocation, cpuID)
-		return
-	}
-	c0Value := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier *
-		float64(coresData[cpuID].mperfDelta) / float64(coresData[cpuID].timeStampCounterDelta))
-	cpu := p.cpuInfo[cpuID]
-	tags := map[string]string{
-		"package_id": cpu.physicalID,
-		"core_id":    cpu.coreID,
-		"cpu_id":     cpu.cpuID,
-	}
-	if p.cpuC0StateResidency {
-		fields := map[string]interface{}{
-			"cpu_c0_state_residency_percent": c0Value,
-		}
-		acc.AddGauge("powerstat_core", fields, tags)
-	}
-	if p.cpuBusyCycles {
-		deprecatedFields := map[string]interface{}{
-			"cpu_busy_cycles_percent": c0Value,
-		}
-		acc.AddGauge("powerstat_core", deprecatedFields, tags)
-	}
-}
-
-func (p *PowerStat) addCPUBaseFreq(socketID string, acc telegraf.Accumulator) {
-	cpuID, err := p.GetCPUIDFromSocketID(socketID)
+	var initErr *ptel.MultiError
+	p.fetcher, err = ptel.New(opts...)
 	if err != nil {
-		p.Log.Debugf("Error while getting CPU ID from Socket ID: %v", err)
-		return
-	}
+		if !errors.As(err, &initErr) {
+			// Error caused by failing to get information about the CPU, or CPU is not supported.
+			return fmt.Errorf("failed to initialize metric fetcher interface: %w", err)
+		}
 
-	msrPlatformInfoMsr, err := p.msr.readSingleMsr(cpuID, msrPlatformInfoString)
-	if err != nil {
-		p.Log.Debugf("Error while reading %s: %v", msrPlatformInfoString, err)
-		return
-	}
-
-	// the value of the freq ratio is saved in bits 15 to 8.
-	// to get the freq -> ratio * busClock
-	cpuBaseFreq := float64((msrPlatformInfoMsr>>8)&0xFF) * p.cpuBusClockValue
-	if cpuBaseFreq == 0 {
-		p.Log.Debugf("Error while adding CPU base frequency, cpuBaseFreq is zero for the socket: %s", socketID)
-		return
-	}
-
-	tags := map[string]string{
-		"package_id": socketID,
-	}
-	fields := map[string]interface{}{
-		"cpu_base_frequency_mhz": uint64(cpuBaseFreq),
-	}
-	acc.AddGauge("powerstat_package", fields, tags)
-}
-
-func (p *PowerStat) getBusClock(cpuID string) float64 {
-	cpuInfo, ok := p.cpuInfo[cpuID]
-	if !ok {
-		p.Log.Debugf("Cannot find cpuInfo for cpu: %s", cpuID)
-		return 0
-	}
-
-	model := cpuInfo.model
-	busClock100 := []int64{0x2A, 0x2D, 0x3A, 0x3E, 0x3C, 0x3F, 0x45, 0x46, 0x3D, 0x47, 0x4F, 0x56, 0x4E, 0x5E, 0x55, 0x8E, 0x9E, 0xA5, 0xA6, 0x66, 0x6A, 0x6C,
-		0x7D, 0x7E, 0x9D, 0x8A, 0xA7, 0x8C, 0x8D, 0x8F, 0x97, 0x9A, 0xBE, 0xB7, 0xBA, 0xBF, 0xAC, 0xAA, 0x5C, 0x5F, 0x7A, 0x86, 0x96, 0x9C, 0x57, 0x85}
-	busClock133 := []int64{0x1E, 0x1F, 0x1A, 0x2E, 0x25, 0x2C, 0x2F, 0x4C}
-	busClockCalculate := []int64{0x37, 0x4D}
-
-	if contains(convertIntegerArrayToStringArray(busClock100), model) {
-		return 100.0
-	} else if contains(convertIntegerArrayToStringArray(busClock133), model) {
-		return 133.0
-	} else if contains(convertIntegerArrayToStringArray(busClockCalculate), model) {
-		return p.getSilvermontBusClock(cpuID)
-	}
-
-	p.Log.Debugf("Couldn't find the freq for the model: %s", model)
-	return 0.0
-}
-
-func (p *PowerStat) getSilvermontBusClock(cpuID string) float64 {
-	silvermontFreqTable := []float64{83.3, 100.0, 133.3, 116.7, 80.0}
-	msr, err := p.msr.readSingleMsr(cpuID, msrFSBFreqString)
-	if err != nil {
-		p.Log.Debugf("Error while reading %s: %v", msrFSBFreqString, err)
-		return 0.0
-	}
-
-	i := int(msr & 0xf)
-	if i >= len(silvermontFreqTable) {
-		p.Log.Debugf("Unknown msr value: %d, using default bus clock value: %f", i, silvermontFreqTable[3])
-		//same behaviour as in turbostat
-		i = 3
-	}
-
-	return silvermontFreqTable[i]
-}
-
-func (p *PowerStat) parsePackageMetricsConfig() {
-	if p.PackageMetrics == nil {
-		// if Package Metric config is empty, use the default settings.
-		p.packageCurrentPowerConsumption = true
-		p.packageCurrentDramPowerConsumption = true
-		p.packageThermalDesignPower = true
-		return
-	}
-
-	if contains(p.PackageMetrics, packageTurboLimit) {
-		p.packageTurboLimit = true
-	}
-	if contains(p.PackageMetrics, packageCurrentPowerConsumption) {
-		p.packageCurrentPowerConsumption = true
-	}
-
-	if contains(p.PackageMetrics, packageCurrentDramPowerConsumption) {
-		p.packageCurrentDramPowerConsumption = true
-	}
-	if contains(p.PackageMetrics, packageThermalDesignPower) {
-		p.packageThermalDesignPower = true
-	}
-	if contains(p.PackageMetrics, packageUncoreFrequency) {
-		p.packageUncoreFrequency = true
-	}
-	if contains(p.PackageMetrics, packageCPUBaseFrequency) {
-		p.packageCPUBaseFrequency = true
-	}
-}
-
-func (p *PowerStat) parseCPUMetricsConfig() {
-	if len(p.CPUMetrics) == 0 {
-		return
-	}
-
-	if contains(p.CPUMetrics, cpuFrequency) {
-		p.cpuFrequency = true
-	}
-
-	if contains(p.CPUMetrics, cpuC0StateResidency) {
-		p.cpuC0StateResidency = true
-	}
-
-	if contains(p.CPUMetrics, cpuC1StateResidency) {
-		p.cpuC1StateResidency = true
-	}
-
-	if contains(p.CPUMetrics, cpuC6StateResidency) {
-		p.cpuC6StateResidency = true
-	}
-
-	if contains(p.CPUMetrics, cpuBusyCycles) {
-		p.cpuBusyCycles = true
-	}
-
-	if contains(p.CPUMetrics, cpuBusyFrequency) {
-		p.cpuBusyFrequency = true
-	}
-
-	if contains(p.CPUMetrics, cpuTemperature) {
-		p.cpuTemperature = true
-	}
-}
-
-func (p *PowerStat) verifyProcessor() error {
-	allowedProcessorModelsForC1C6 := []int64{0x37, 0x4D, 0x5C, 0x5F, 0x7A, 0x4C, 0x86, 0x96, 0x9C,
-		0x1A, 0x1E, 0x1F, 0x2E, 0x25, 0x2C, 0x2F, 0x2A, 0x2D, 0x3A, 0x3E, 0x4E, 0x5E, 0x55, 0x8E,
-		0x9E, 0x6A, 0x6C, 0x7D, 0x7E, 0x9D, 0x3C, 0x3F, 0x45, 0x46, 0x3D, 0x47, 0x4F, 0x56,
-		0x66, 0x57, 0x85, 0xA5, 0xA6, 0x8A, 0x8F, 0x8C, 0x8D, 0xA7, 0x97, 0x9A, 0xBE, 0xB7, 0xBA, 0xBF, 0xAC, 0xAA}
-	stats, err := p.fs.getCPUInfoStats()
-	if err != nil {
-		return err
-	}
-
-	p.cpuInfo = stats
-
-	// First CPU is sufficient for verification
-	firstCPU := p.cpuInfo["0"]
-	if firstCPU == nil {
-		return fmt.Errorf("first core not found while parsing /proc/cpuinfo")
-	}
-
-	if firstCPU.vendorID != "GenuineIntel" || firstCPU.cpuFamily != "6" {
-		return fmt.Errorf("Intel processor not found, vendorId: %s", firstCPU.vendorID)
-	}
-
-	if !contains(convertIntegerArrayToStringArray(allowedProcessorModelsForC1C6), firstCPU.model) {
-		p.cpuC1StateResidency = false
-		p.cpuC6StateResidency = false
-	}
-
-	if !strings.Contains(firstCPU.flags, "msr") {
-		p.packageCPUBaseFrequency = false
-		p.cpuTemperature = false
-		p.cpuC6StateResidency = false
-		p.cpuC0StateResidency = false
-		p.cpuBusyCycles = false
-		p.cpuBusyFrequency = false
-		p.cpuC1StateResidency = false
-	}
-
-	if !strings.Contains(firstCPU.flags, "aperfmperf") {
-		p.cpuBusyCycles = false
-		p.cpuBusyFrequency = false
-		p.cpuC0StateResidency = false
-		p.cpuC1StateResidency = false
-	}
-
-	if !strings.Contains(firstCPU.flags, "dts") {
-		p.cpuTemperature = false
+		// One or more modules, needed to get metrics, failed to initialize. The plugin continues its execution, and it will not
+		// gather metrics relying on these modules. Instead, logs the error message including module names that failed to initialize.
+		p.Log.Warnf("Plugin started with errors: %v", err)
 	}
 
 	return nil
 }
 
-func contains[T comparable](s []T, e T) bool {
+// Stop deactivates perf events if one or more of the requested metrics rely on perf.
+func (p *PowerStat) Stop() {
+	if !p.needsPerf {
+		return
+	}
+
+	if err := p.fetcher.DeactivatePerfEvents(); err != nil {
+		p.Log.Errorf("Failed to deactivate perf events: %v", err)
+	}
+}
+
+// Gather collects the plugin's metrics.
+func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
+	// gather CPU metrics relying on coreFreq and msr which share CPU IDs.
+	if p.needsCoreFreq || p.needsMsrCPU {
+		p.addCPUMetrics(acc)
+	}
+
+	// gather CPU metrics relying on perf.
+	if p.needsPerf {
+		p.addCPUPerfMetrics(acc)
+	}
+
+	// gather package metrics.
+	if len(p.PackageMetrics) != 0 {
+		p.addPackageMetrics(acc)
+	}
+
+	return nil
+}
+
+// parseConfig is a helper method that parses configuration fields from the receiver such as included/excluded CPU IDs.
+func (p *PowerStat) parseConfig() error {
+	if p.MsrReadTimeout < 0 {
+		return errors.New("msr_read_timeout should be positive number or equal to 0 (to disable timeouts)")
+	}
+
+	if err := p.parsePackageMetrics(); err != nil {
+		return fmt.Errorf("failed to parse package metrics: %w", err)
+	}
+
+	if err := p.parseCPUMetrics(); err != nil {
+		return fmt.Errorf("failed to parse cpu metrics: %w", err)
+	}
+
+	if len(p.CPUMetrics) == 0 && len(p.PackageMetrics) == 0 {
+		return errors.New("no metrics were found in the configuration file")
+	}
+
+	p.parseCPUTimeRelatedMsrMetrics()
+	p.parseCPUPerfMetrics()
+
+	p.parsePackageRaplMetrics()
+	p.parsePackageMsrMetrics()
+
+	if len(p.ExcludedCPUs) != 0 && len(p.IncludedCPUs) != 0 {
+		return errors.New("both 'included_cpus' and 'excluded_cpus' configured; provide only one or none of the two")
+	}
+
+	var err error
+	if len(p.ExcludedCPUs) != 0 {
+		p.parsedExcludedCores, err = parseCores(p.ExcludedCPUs)
+		if err != nil {
+			return fmt.Errorf("failed to parse excluded CPUs: %w", err)
+		}
+	}
+
+	if len(p.IncludedCPUs) != 0 {
+		p.parsedIncludedCores, err = parseCores(p.IncludedCPUs)
+		if err != nil {
+			return fmt.Errorf("failed to parse included CPUs: %w", err)
+		}
+	}
+
+	p.needsCoreFreq = needsCoreFreq(p.CPUMetrics)
+	p.needsMsrCPU = needsMsrCPU(p.CPUMetrics)
+	p.needsPerf = needsPerf(p.CPUMetrics)
+	p.needsTimeRelatedMsr = needsTimeRelatedMsr(p.CPUMetrics)
+
+	p.needsRapl = needsRapl(p.PackageMetrics)
+	p.needsMsrPackage = needsMsrPackage(p.PackageMetrics)
+
+	// Skip checks on event_definitions file path if perf module is not needed.
+	if !p.needsPerf {
+		return nil
+	}
+
+	// Check that event_definitions option contains a valid file path.
+	if len(p.EventDefinitions) == 0 {
+		return errors.New("'event_definitions' contains an empty path")
+	}
+
+	fInfo, err := os.Lstat(p.EventDefinitions)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("'event_definitions' file %q does not exist", p.EventDefinitions)
+		}
+		return fmt.Errorf("could not get the info for file %q: %w", p.EventDefinitions, err)
+	}
+
+	// Check that file is not a symlink.
+	if fMode := fInfo.Mode(); fMode&os.ModeSymlink != 0 {
+		return fmt.Errorf("file %q is a symlink", p.EventDefinitions)
+	}
+
+	return nil
+}
+
+// parsePackageMetrics ensures there are no duplicates in 'package_metrics'.
+// If 'package_metrics' is not provided, the following default package metrics are set:
+// "current_power_consumption", "current_dram_power_consumption", and "thermal_design_power".
+func (p *PowerStat) parsePackageMetrics() error {
+	if p.PackageMetrics == nil {
+		// Sets default package metrics if `package_metrics` config option is an empty list.
+		p.PackageMetrics = []packageMetricType{
+			packageCurrentPowerConsumption,
+			packageCurrentDramPowerConsumption,
+			packageThermalDesignPower,
+		}
+		return nil
+	}
+
+	if hasDuplicate(p.PackageMetrics) {
+		return errors.New("package metrics contains duplicates")
+	}
+	return nil
+}
+
+// parseCPUMetrics ensures there are no duplicates in 'cpu_metrics'.
+// Also, it warns if deprecated metric has been set.
+func (p *PowerStat) parseCPUMetrics() error {
+	if slices.Contains(p.CPUMetrics, cpuBusyCycles) {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.intel_powerstat", "cpu_metrics", cpuBusyCycles, telegraf.DeprecationInfo{
+			Since:     "1.23.0",
+			RemovalIn: "2.0.0",
+			Notice:    "'cpu_c0_state_residency' metric name should be used instead.",
+		})
+	}
+
+	if hasDuplicate(p.CPUMetrics) {
+		return errors.New("cpu metrics contains duplicates")
+	}
+	return nil
+}
+
+// parsedCPUTimedMsrMetrics parses only the metrics which depend on time-related MSR offset reads from CPU metrics
+// of the receiver, and sets them to a separate slice.
+func (p *PowerStat) parseCPUTimeRelatedMsrMetrics() {
+	p.parsedCPUTimedMsrMetrics = make([]cpuMetricType, 0)
+	for _, m := range p.CPUMetrics {
+		switch m {
+		case cpuC0StateResidency:
+		case cpuC1StateResidency:
+		case cpuC3StateResidency:
+		case cpuC6StateResidency:
+		case cpuC7StateResidency:
+		case cpuBusyCycles:
+		case cpuBusyFrequency:
+		default:
+			continue
+		}
+		p.parsedCPUTimedMsrMetrics = append(p.parsedCPUTimedMsrMetrics, m)
+	}
+}
+
+// parseCPUPerfMetrics parses only the metrics which depend on perf event reads from CPU metrics of the receiver, and sets
+// them to a separate slice.
+func (p *PowerStat) parseCPUPerfMetrics() {
+	p.parsedCPUPerfMetrics = make([]cpuMetricType, 0)
+	for _, m := range p.CPUMetrics {
+		switch m {
+		case cpuC0SubstateC01Percent:
+		case cpuC0SubstateC02Percent:
+		case cpuC0SubstateC0WaitPercent:
+		default:
+			continue
+		}
+		p.parsedCPUPerfMetrics = append(p.parsedCPUPerfMetrics, m)
+	}
+}
+
+// parsePackageRaplMetrics parses only the metrics which depend on rapl from package metrics of the receiver, and sets
+// them to a separate slice.
+func (p *PowerStat) parsePackageRaplMetrics() {
+	p.parsedPackageRaplMetrics = make([]packageMetricType, 0)
+	for _, m := range p.PackageMetrics {
+		switch m {
+		case packageCurrentPowerConsumption:
+		case packageCurrentDramPowerConsumption:
+		case packageThermalDesignPower:
+		default:
+			continue
+		}
+		p.parsedPackageRaplMetrics = append(p.parsedPackageRaplMetrics, m)
+	}
+}
+
+// parsePackageMsrMetrics parses only the metrics which depend on msr from package metrics of the receiver, and sets
+// them to a separate slice.
+func (p *PowerStat) parsePackageMsrMetrics() {
+	p.parsedPackageMsrMetrics = make([]packageMetricType, 0)
+	for _, m := range p.PackageMetrics {
+		switch m {
+		case packageCPUBaseFrequency:
+		case packageTurboLimit:
+		default:
+			continue
+		}
+		p.parsedPackageMsrMetrics = append(p.parsedPackageMsrMetrics, m)
+	}
+}
+
+// hasDuplicate takes a slice of a generic type, and returns true
+// if the slice contains duplicates. Otherwise, it returns false.
+func hasDuplicate[S ~[]E, E constraints.Ordered](s S) bool {
+	m := make(map[E]struct{}, len(s))
 	for _, v := range s {
-		if v == e {
+		if _, ok := m[v]; ok {
+			return true
+		}
+		m[v] = struct{}{}
+	}
+	return false
+}
+
+// parseCores takes a slice of strings where each string represents a group of
+// one or more CPU IDs (e.g. ["0", "1-3", "4,5,6"] or ["1-3,4"]). It returns a slice
+// of integers.
+func parseCores(cores []string) ([]int, error) {
+	parsedCores := make([]int, 0, len(cores))
+	for _, elem := range cores {
+		pCores, err := parseGroupCores(elem)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse core group: %w", err)
+		}
+		parsedCores = append(parsedCores, pCores...)
+	}
+
+	if hasDuplicate(parsedCores) {
+		return nil, errors.New("core values cannot be duplicated")
+	}
+	return parsedCores, nil
+}
+
+// parseGroupCores takes a string which represents a group of one or more
+// CPU IDs (e.g. "0", "1-3", or "4,5,6") and returns a slice of integers with
+// all CPU IDs within the group.
+func parseGroupCores(coreGroup string) ([]int, error) {
+	coreElems := strings.Split(coreGroup, ",")
+	cores := make([]int, 0, len(coreElems))
+
+	for _, coreElem := range coreElems {
+		if strings.Contains(coreElem, "-") {
+			pCores, err := parseCoreRange(coreElem)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse core range %q: %w", coreElem, err)
+			}
+			cores = append(cores, pCores...)
+		} else {
+			singleCore, err := strconv.Atoi(coreElem)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse single core %q: %w", coreElem, err)
+			}
+			cores = append(cores, singleCore)
+		}
+	}
+	return cores, nil
+}
+
+// parseCoreRange takes a string representing a core range (e.g. "0-4"), and
+// returns a slice of integers with all elements within this range.
+func parseCoreRange(coreRange string) ([]int, error) {
+	rangeVals := strings.Split(coreRange, "-")
+	if len(rangeVals) != 2 {
+		return nil, errors.New("invalid core range format")
+	}
+
+	low, err := strconv.Atoi(rangeVals[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse low bounds' core range: %w", err)
+	}
+
+	high, err := strconv.Atoi(rangeVals[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse high bounds' core range: %w", err)
+	}
+
+	if high < low {
+		return nil, errors.New("high bound of core range cannot be less than low bound")
+	}
+
+	cores := make([]int, high-low+1)
+	for i := range cores {
+		cores[i] = i + low
+	}
+
+	return cores, nil
+}
+
+// addCPUMetrics takes an accumulator, and adds to it enabled metrics which rely on
+// coreFreq and msr.
+func (p *PowerStat) addCPUMetrics(acc telegraf.Accumulator) {
+	for _, cpuID := range p.fetcher.GetMsrCPUIDs() {
+		coreID, packageID, err := getDataCPUID(p.fetcher, cpuID)
+		if err != nil {
+			acc.AddError(fmt.Errorf("failed to get coreFreq and/or msr metrics for CPU ID %v: %w", cpuID, err))
+			continue
+		}
+
+		// Add requested metrics which rely on coreFreq.
+		if p.needsCoreFreq {
+			p.addCPUFrequency(acc, cpuID, coreID, packageID)
+		}
+
+		// Add requested metrics which rely on msr.
+		if p.needsMsrCPU {
+			p.addPerCPUMsrMetrics(acc, cpuID, coreID, packageID)
+		}
+	}
+}
+
+// addPerCPUMsrMetrics adds to the accumulator enabled metrics, which rely on msr,
+// for a given CPU ID. MSR-related metrics comprise single-time MSR read and several
+// time-related MSR offset reads.
+func (p *PowerStat) addPerCPUMsrMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	// cpuTemperature metric is a single MSR offset read.
+	if slices.Contains(p.CPUMetrics, cpuTemperature) {
+		p.addCPUTemperature(acc, cpuID, coreID, packageID)
+	}
+
+	if !p.needsTimeRelatedMsr {
+		return
+	}
+
+	// Read several time-related MSR offsets.
+	var moduleErr *ptel.ModuleNotInitializedError
+	err := p.fetcher.UpdatePerCPUMetrics(cpuID)
+	if err == nil {
+		// Add time-related MSR offset metrics to the accumulator
+		p.addCPUTimeRelatedMsrMetrics(acc, cpuID, coreID, packageID)
+		return
+	}
+
+	// Always add to the accumulator errors not related to module not initialized.
+	if !errors.As(err, &moduleErr) {
+		acc.AddError(fmt.Errorf("failed to update MSR time-related metrics for CPU ID %v: %w", cpuID, err))
+		return
+	}
+
+	// Add only once module not initialized error related to msr module and updating time-related msr metrics.
+	logErrorOnce(
+		acc,
+		p.logOnce,
+		"msr_time_related",
+		fmt.Errorf("failed to update MSR time-related metrics: %w", moduleErr),
+	)
+}
+
+// addCPUTimeRelatedMsrMetrics adds to the accumulator enabled time-related MSR metrics,
+// for a given CPU ID. NOTE: Requires to run first fetcher.UpdatePerCPUMetrics method
+// to update the values of MSR offsets read.
+func (p *PowerStat) addCPUTimeRelatedMsrMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	for _, m := range p.parsedCPUTimedMsrMetrics {
+		switch m {
+		case cpuC0StateResidency:
+			p.addCPUC0StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC1StateResidency:
+			p.addCPUC1StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC3StateResidency:
+			p.addCPUC3StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC6StateResidency:
+			p.addCPUC6StateResidency(acc, cpuID, coreID, packageID)
+		case cpuC7StateResidency:
+			p.addCPUC7StateResidency(acc, cpuID, coreID, packageID)
+		case cpuBusyFrequency:
+			p.addCPUBusyFrequency(acc, cpuID, coreID, packageID)
+		case cpuBusyCycles:
+			p.addCPUBusyCycles(acc, cpuID, coreID, packageID)
+		}
+	}
+}
+
+// addCPUPerfMetrics takes an accumulator, and adds to it enabled metrics which rely on perf.
+func (p *PowerStat) addCPUPerfMetrics(acc telegraf.Accumulator) {
+	var moduleErr *ptel.ModuleNotInitializedError
+
+	// Read events related to perf-related metrics.
+	err := p.fetcher.ReadPerfEvents()
+	if err != nil {
+		// Always add to the accumulator errors not related to module not initialized.
+		if !errors.As(err, &moduleErr) {
+			acc.AddError(fmt.Errorf("failed to read perf events: %w", err))
+			return
+		}
+
+		// Add only once module not initialized error related to perf module and reading perf-related metrics.
+		logErrorOnce(
+			acc,
+			p.logOnce,
+			"perf_read",
+			fmt.Errorf("failed to read perf events: %w", moduleErr),
+		)
+		return
+	}
+
+	for _, cpuID := range p.fetcher.GetPerfCPUIDs() {
+		coreID, packageID, err := getDataCPUID(p.fetcher, cpuID)
+		if err != nil {
+			acc.AddError(fmt.Errorf("failed to get perf metrics for CPU ID %v: %w", cpuID, err))
+			continue
+		}
+
+		p.addPerCPUPerfMetrics(acc, cpuID, coreID, packageID)
+	}
+}
+
+// addPerCPUPerfMetrics adds to the accumulator enabled metrics, which rely on perf, for a given CPU ID.
+func (p *PowerStat) addPerCPUPerfMetrics(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	for _, m := range p.parsedCPUPerfMetrics {
+		switch m {
+		case cpuC0SubstateC01Percent:
+			p.addCPUC0SubstateC01Percent(acc, cpuID, coreID, packageID)
+		case cpuC0SubstateC02Percent:
+			p.addCPUC0SubstateC02Percent(acc, cpuID, coreID, packageID)
+		case cpuC0SubstateC0WaitPercent:
+			p.addCPUC0SubstateC0WaitPercent(acc, cpuID, coreID, packageID)
+		}
+	}
+}
+
+// getDataCPUID takes a topologyFetcher and CPU ID, and returns the core ID and package ID corresponding to the CPU ID.
+func getDataCPUID(t topologyFetcher, cpuID int) (coreID int, packageID int, err error) {
+	coreID, err = t.GetCPUCoreID(cpuID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get core ID from CPU ID %v: %w", cpuID, err)
+	}
+
+	packageID, err = t.GetCPUPackageID(cpuID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get package ID from CPU ID %v: %w", cpuID, err)
+	}
+
+	return coreID, packageID, nil
+}
+
+// addPackageMetrics takes an accumulator, and adds enabled package metrics to it.
+func (p *PowerStat) addPackageMetrics(acc telegraf.Accumulator) {
+	for _, packageID := range p.fetcher.GetPackageIDs() {
+		// Add requested metrics which rely on rapl.
+		if p.needsRapl {
+			p.addPerPackageRaplMetrics(acc, packageID)
+		}
+
+		// Add requested metrics which rely on msr.
+		if p.needsMsrPackage {
+			p.addPerPackageMsrMetrics(acc, packageID)
+		}
+
+		// Add uncore frequency metric which relies on both uncoreFreq and msr.
+		if slices.Contains(p.PackageMetrics, packageUncoreFrequency) {
+			p.addUncoreFrequency(acc, packageID)
+		}
+	}
+}
+
+// addPerPackageRaplMetrics adds to the accumulator enabled metrics, which rely on rapl, for a given package ID.
+func (p *PowerStat) addPerPackageRaplMetrics(acc telegraf.Accumulator, packageID int) {
+	for _, m := range p.parsedPackageRaplMetrics {
+		switch m {
+		case packageCurrentPowerConsumption:
+			p.addCurrentPackagePower(acc, packageID)
+		case packageCurrentDramPowerConsumption:
+			p.addCurrentDramPower(acc, packageID)
+		case packageThermalDesignPower:
+			p.addThermalDesignPower(acc, packageID)
+		}
+	}
+}
+
+// addPerPackageMsrMetrics adds to the accumulator enabled metrics, which rely on msr registers, for a given package ID.
+func (p *PowerStat) addPerPackageMsrMetrics(acc telegraf.Accumulator, packageID int) {
+	for _, m := range p.parsedPackageMsrMetrics {
+		switch m {
+		case packageCPUBaseFrequency:
+			p.addCPUBaseFrequency(acc, packageID)
+		case packageTurboLimit:
+			p.addMaxTurboFreqLimits(acc, packageID)
+		}
+	}
+}
+
+// addCPUFrequency fetches CPU frequency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUFrequency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuFrequency,
+				units:  "mhz",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUFrequency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUFrequency fetches CPU temperature metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUTemperature(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[uint64]{
+			metricCommon: metricCommon{
+				metric: cpuTemperature,
+				units:  "celsius",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUTemperature,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC0StateResidency fetches C0 state residency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC0StateResidency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC0StateResidency,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC0StateResidency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC1StateResidency fetches C1 state residency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC1StateResidency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC1StateResidency,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC1StateResidency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC3StateResidency fetches C3 state residency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC3StateResidency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC3StateResidency,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC3StateResidency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC6StateResidency fetches C6 state residency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC6StateResidency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC6StateResidency,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC6StateResidency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC7StateResidency fetches C7 state residency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC7StateResidency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC7StateResidency,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC7StateResidency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUBusyFrequency fetches CPU busy frequency metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUBusyFrequency(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuBusyFrequency,
+				units:  "mhz",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUBusyFrequencyMhz,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUBusyCycles fetches CPU busy cycles metric for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUBusyCycles(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuBusyCycles,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC0StateResidency,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC0SubstateC01Percent fetches a value indicating the percentage of time the processor spent in its C0.1 substate
+// out of the total time in the C0 state for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC0SubstateC01Percent(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC0SubstateC01Percent,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC0SubstateC01Percent,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC0SubstateC02Percent fetches a value indicating the percentage of time the processor spent in its C0.2 substate
+// out of the total time in the C0 state for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC0SubstateC02Percent(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC0SubstateC02Percent,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC0SubstateC02Percent,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUC0SubstateC0WaitPercent fetches a value indicating the percentage of time the processor spent in its C0_Wait substate
+// out of the total time in the C0 state for a given CPU ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUC0SubstateC0WaitPercent(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
+	addMetric(
+		acc,
+		&cpuMetric[float64]{
+			metricCommon: metricCommon{
+				metric: cpuC0SubstateC0WaitPercent,
+				units:  "percent",
+			},
+			cpuID:     cpuID,
+			coreID:    coreID,
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUC0SubstateC0WaitPercent,
+		},
+		p.logOnce,
+	)
+}
+
+// addCurrentPackagePower fetches the current package power metric for a given package ID, and adds it to the accumulator.
+func (p *PowerStat) addCurrentPackagePower(acc telegraf.Accumulator, packageID int) {
+	addMetric(
+		acc,
+		&packageMetric[float64]{
+			metricCommon: metricCommon{
+				metric: packageCurrentPowerConsumption,
+				units:  "watts",
+			},
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCurrentPackagePowerConsumptionWatts,
+		},
+		p.logOnce,
+	)
+}
+
+// addCurrentPackagePower fetches the current dram power metric for a given package ID, and adds it to the accumulator.
+func (p *PowerStat) addCurrentDramPower(acc telegraf.Accumulator, packageID int) {
+	addMetric(
+		acc,
+		&packageMetric[float64]{
+			metricCommon: metricCommon{
+				metric: packageCurrentDramPowerConsumption,
+				units:  "watts",
+			},
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCurrentDramPowerConsumptionWatts,
+		},
+		p.logOnce,
+	)
+}
+
+// addCurrentPackagePower fetches the thermal design power metric for a given package ID, and adds it to the accumulator.
+func (p *PowerStat) addThermalDesignPower(acc telegraf.Accumulator, packageID int) {
+	addMetric(
+		acc,
+		&packageMetric[float64]{
+			metricCommon: metricCommon{
+				metric: packageThermalDesignPower,
+				units:  "watts",
+			},
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetPackageThermalDesignPowerWatts,
+		},
+		p.logOnce,
+	)
+}
+
+// addCPUBaseFrequency fetches the CPU base frequency metric for a given package ID, and adds it to the accumulator.
+func (p *PowerStat) addCPUBaseFrequency(acc telegraf.Accumulator, packageID int) {
+	addMetric(
+		acc,
+		&packageMetric[uint64]{
+			metricCommon: metricCommon{
+				metric: packageCPUBaseFrequency,
+				units:  "mhz",
+			},
+			packageID: packageID,
+			fetchFn:   p.fetcher.GetCPUBaseFrequency,
+		},
+		p.logOnce,
+	)
+}
+
+// addUncoreFrequency fetches the uncore frequency metrics for a given package ID, and adds it to the accumulator.
+func (p *PowerStat) addUncoreFrequency(acc telegraf.Accumulator, packageID int) {
+	dieIDs, err := p.fetcher.GetPackageDieIDs(packageID)
+	if err != nil {
+		acc.AddError(fmt.Errorf("failed to get die IDs for package ID %v: %w", packageID, err))
+		return
+	}
+
+	for _, dieID := range dieIDs {
+		// Add initial uncore frequency limits.
+		p.addUncoreFrequencyInitialLimits(acc, packageID, dieID)
+
+		// Add current uncore frequency limits and value.
+		p.addUncoreFrequencyCurrentValues(acc, packageID, dieID)
+	}
+}
+
+// addUncoreFrequencyInitialLimits fetches uncore frequency initial limits for a given pair of package and die ID,
+// and adds it to the accumulator.
+func (p *PowerStat) addUncoreFrequencyInitialLimits(acc telegraf.Accumulator, packageID, dieID int) {
+	initMin, initMax, err := getUncoreFreqInitialLimits(p.fetcher, packageID, dieID)
+	if err == nil {
+		acc.AddGauge(
+			// measurement
+			"powerstat_package",
+			// fields
+			map[string]interface{}{
+				"uncore_frequency_limit_mhz_min": round(initMin),
+				"uncore_frequency_limit_mhz_max": round(initMax),
+			},
+			// tags
+			map[string]string{
+				"package_id": strconv.Itoa(packageID),
+				"type":       "initial",
+				"die":        strconv.Itoa(dieID),
+			},
+		)
+		return
+	}
+
+	// Always add to the accumulator errors not related to module not initialized.
+	var moduleErr *ptel.ModuleNotInitializedError
+	if !errors.As(err, &moduleErr) {
+		acc.AddError(fmt.Errorf("failed to get initial uncore frequency limits for package ID %v and die ID %v: %w", packageID, dieID, err))
+		return
+	}
+
+	// Add only once module not initialized error related to uncore_frequency module and uncore frequency initial limits.
+	logErrorOnce(
+		acc,
+		p.logOnce,
+		fmt.Sprintf("%s_%s_initial", moduleErr.Name, packageUncoreFrequency),
+		fmt.Errorf("failed to get %q initial limits: %w", packageUncoreFrequency, moduleErr),
+	)
+}
+
+// addUncoreFrequencyCurrentValues fetches uncore frequency current limits and value for a given pair of package and die ID,
+// and adds it to the accumulator.
+func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, packageID, dieID int) {
+	val, err := getUncoreFreqCurrentValues(p.fetcher, packageID, dieID)
+	if err == nil {
+		acc.AddGauge(
+			// measurement
+			"powerstat_package",
+			// fields
+			map[string]interface{}{
+				"uncore_frequency_limit_mhz_min": round(val.currMin),
+				"uncore_frequency_limit_mhz_max": round(val.currMax),
+				"uncore_frequency_mhz_cur":       uint64(val.curr),
+			},
+			// tags
+			map[string]string{
+				"package_id": strconv.Itoa(packageID),
+				"type":       "current",
+				"die":        strconv.Itoa(dieID),
+			},
+		)
+		return
+	}
+
+	// Always add to the accumulator errors not related to module not initialized.
+	var moduleErr *ptel.ModuleNotInitializedError
+	if !errors.As(err, &moduleErr) {
+		acc.AddError(fmt.Errorf("failed to get current uncore frequency values for package ID %v and die ID %v: %w", packageID, dieID, err))
+		return
+	}
+
+	// Add only once module not initialized error related to uncore_frequency module and uncore frequency current value and limits.
+	logErrorOnce(
+		acc,
+		p.logOnce,
+		fmt.Sprintf("%s_%s_current", moduleErr.Name, packageUncoreFrequency),
+		fmt.Errorf("failed to get %q current value and limits: %w", packageUncoreFrequency, moduleErr),
+	)
+}
+
+// getUncoreFreqInitialLimits returns the initial uncore frequency limits of a given package ID and die ID.
+func getUncoreFreqInitialLimits(fetcher metricFetcher, packageID, dieID int) (initialMin float64, initialMax float64, err error) {
+	initialMin, err = fetcher.GetInitialUncoreFrequencyMin(packageID, dieID)
+	if err != nil {
+		return 0.0, 0.0, fmt.Errorf("failed to get initial minimum uncore frequency limit: %w", err)
+	}
+
+	initialMax, err = fetcher.GetInitialUncoreFrequencyMax(packageID, dieID)
+	if err != nil {
+		return 0.0, 0.0, fmt.Errorf("failed to get initial maximum uncore frequency limit: %w", err)
+	}
+
+	return initialMin, initialMax, nil
+}
+
+type uncoreFreqValues struct {
+	currMin float64
+	currMax float64
+	curr    float64
+}
+
+// getUncoreFreqCurrentValues returns the current uncore frequency value as well as current min and max uncore frequency limits of a given
+// package ID and die ID.
+func getUncoreFreqCurrentValues(fetcher metricFetcher, packageID, dieID int) (uncoreFreqValues, error) {
+	currMin, err := fetcher.GetCustomizedUncoreFrequencyMin(packageID, dieID)
+	if err != nil {
+		return uncoreFreqValues{}, fmt.Errorf("failed to get current minimum uncore frequency limit: %w", err)
+	}
+
+	currMax, err := fetcher.GetCustomizedUncoreFrequencyMax(packageID, dieID)
+	if err != nil {
+		return uncoreFreqValues{}, fmt.Errorf("failed to get current maximum uncore frequency limit: %w", err)
+	}
+
+	current, err := fetcher.GetCurrentUncoreFrequency(packageID, dieID)
+	if err != nil {
+		return uncoreFreqValues{}, fmt.Errorf("failed to get current uncore frequency: %w", err)
+	}
+
+	return uncoreFreqValues{
+		currMin: currMin,
+		currMax: currMax,
+		curr:    current,
+	}, nil
+}
+
+// addMaxTurboFreqLimits fetches the max turbo frequency limits metric for a given package ID, and adds it to the accumulator.
+func (p *PowerStat) addMaxTurboFreqLimits(acc telegraf.Accumulator, packageID int) {
+	var moduleErr *ptel.ModuleNotInitializedError
+
+	turboFreqList, err := p.fetcher.GetMaxTurboFreqList(packageID)
+	if err != nil {
+		// Always add to the accumulator errors not related to module not initialized.
+		if !errors.As(err, &moduleErr) {
+			acc.AddError(fmt.Errorf("failed to get %q for package ID %v: %w", packageTurboLimit, packageID, err))
+			return
+		}
+
+		// Add only once module not initialized error related to msr module and max turbo frequency limits metric.
+		logErrorOnce(
+			acc,
+			p.logOnce,
+			fmt.Sprintf("%s_%s", moduleErr.Name, packageTurboLimit),
+			fmt.Errorf("failed to get %q: %w", packageTurboLimit, moduleErr),
+		)
+		return
+	}
+
+	isHybrid := isHybridCPU(turboFreqList)
+	for _, v := range turboFreqList {
+		tags := map[string]string{
+			"package_id":   strconv.Itoa(packageID),
+			"active_cores": strconv.Itoa(int(v.ActiveCores)),
+		}
+
+		if isHybrid {
+			var hybridTag string
+			if v.Secondary {
+				hybridTag = "secondary"
+			} else {
+				hybridTag = "primary"
+			}
+			tags["hybrid"] = hybridTag
+		}
+
+		acc.AddGauge(
+			// measurement
+			"powerstat_package",
+			// fields
+			map[string]interface{}{
+				"max_turbo_frequency_mhz": v.Value,
+			},
+			// tags
+			tags,
+		)
+	}
+}
+
+// isHybridCPU is a helper function that takes a slice of MaxTurboFreq structs and returns true if the CPU where these values belong to,
+// is a hybrid CPU. Otherwise, returns false.
+func isHybridCPU(turboFreqList []ptel.MaxTurboFreq) bool {
+	for _, v := range turboFreqList {
+		if v.Secondary {
 			return true
 		}
 	}
 	return false
 }
 
-func (p *PowerStat) areCoreMetricsEnabled() bool {
-	return p.msr != nil && len(p.msr.getCPUCoresData()) > 0
-}
-
-func (p *PowerStat) areGlobalMetricsEnabled() bool {
-	return p.rapl != nil
-}
-
-func (p *PowerStat) GetCPUIDFromSocketID(socketID string) (string, error) {
-	for _, v := range p.cpuInfo {
-		if v.physicalID == socketID {
-			return v.cpuID, nil
-		}
+// disableUnsupportedMetrics checks whether the processor is capable of gathering specific metrics.
+// In case it is not, disableUnsupportedMetrics will disable the option to gather those metrics.
+// Error is returned if there is an issue with retrieving processor information.
+func (p *PowerStat) disableUnsupportedMetrics() error {
+	cpus, err := cpuUtil.Info()
+	if err != nil {
+		return fmt.Errorf("error occurred while parsing CPU information: %w", err)
 	}
-	return "", fmt.Errorf("can't find cpuID for socketID: %s", socketID)
-}
-
-// newPowerStat creates and returns PowerStat struct
-func newPowerStat(fs fileService) *PowerStat {
-	p := &PowerStat{
-		skipFirstIteration: true,
-		fs:                 fs,
-		logOnce:            make(map[string]error),
+	if len(cpus) == 0 {
+		return errors.New("no CPUs were found")
 	}
 
-	return p
+	// First CPU is sufficient for verification
+	firstCPU := cpus[0]
+	cpuModel, err := strconv.Atoi(firstCPU.Model)
+	if err != nil {
+		return fmt.Errorf("error occurred while parsing CPU model: %w", err)
+	}
+
+	if err := ptel.CheckIfCPUC1StateResidencySupported(cpuModel); err != nil {
+		p.disableCPUMetric(cpuC1StateResidency)
+	}
+
+	if err := ptel.CheckIfCPUC3StateResidencySupported(cpuModel); err != nil {
+		p.disableCPUMetric(cpuC3StateResidency)
+	}
+
+	if err := ptel.CheckIfCPUC6StateResidencySupported(cpuModel); err != nil {
+		p.disableCPUMetric(cpuC6StateResidency)
+	}
+
+	if err := ptel.CheckIfCPUC7StateResidencySupported(cpuModel); err != nil {
+		p.disableCPUMetric(cpuC7StateResidency)
+	}
+
+	if err := ptel.CheckIfCPUTemperatureSupported(cpuModel); err != nil {
+		p.disableCPUMetric(cpuTemperature)
+	}
+
+	if err := ptel.CheckIfCPUBaseFrequencySupported(cpuModel); err != nil {
+		p.disablePackageMetric(packageCPUBaseFrequency)
+	}
+
+	allowedModelsForPerfRelated := []int{
+		0x8F, // INTEL_FAM6_SAPPHIRERAPIDS_X
+		0xCF, // INTEL_FAM6_EMERALDRAPIDS_X
+	}
+	if !slices.Contains(allowedModelsForPerfRelated, cpuModel) {
+		p.disableCPUMetric(cpuC0SubstateC01Percent)
+		p.disableCPUMetric(cpuC0SubstateC02Percent)
+		p.disableCPUMetric(cpuC0SubstateC0WaitPercent)
+	}
+
+	if !slices.Contains(firstCPU.Flags, "msr") {
+		p.disableCPUMetric(cpuC0StateResidency)
+		p.disableCPUMetric(cpuC1StateResidency)
+		p.disableCPUMetric(cpuC3StateResidency)
+		p.disableCPUMetric(cpuC6StateResidency)
+		p.disableCPUMetric(cpuC7StateResidency)
+		p.disableCPUMetric(cpuBusyCycles)
+		p.disableCPUMetric(cpuBusyFrequency)
+		p.disableCPUMetric(cpuTemperature)
+		p.disablePackageMetric(packageCPUBaseFrequency)
+		p.disablePackageMetric(packageTurboLimit)
+	}
+
+	if !slices.Contains(firstCPU.Flags, "aperfmperf") {
+		p.disableCPUMetric(cpuC0StateResidency)
+		p.disableCPUMetric(cpuC1StateResidency)
+		p.disableCPUMetric(cpuBusyCycles)
+		p.disableCPUMetric(cpuBusyFrequency)
+	}
+
+	if !slices.Contains(firstCPU.Flags, "dts") {
+		p.disableCPUMetric(cpuTemperature)
+	}
+
+	return nil
+}
+
+// disableCPUMetric removes given cpu metric from cpu_metrics.
+func (p *PowerStat) disableCPUMetric(metricToDisable cpuMetricType) {
+	startLen := len(p.CPUMetrics)
+	p.CPUMetrics = slices.DeleteFunc(p.CPUMetrics, func(cpuMetric cpuMetricType) bool {
+		return cpuMetric == metricToDisable
+	})
+
+	if len(p.CPUMetrics) < startLen {
+		p.Log.Warnf("%q is not supported by CPU, metric will not be gathered.", metricToDisable)
+	}
+}
+
+// disablePackageMetric removes given package metric from package_metrics.
+func (p *PowerStat) disablePackageMetric(metricToDisable packageMetricType) {
+	startLen := len(p.PackageMetrics)
+	p.PackageMetrics = slices.DeleteFunc(p.PackageMetrics, func(packageMetric packageMetricType) bool {
+		return packageMetric == metricToDisable
+	})
+
+	if len(p.PackageMetrics) < startLen {
+		p.Log.Warnf("%q is not supported by CPU, metric will not be gathered.", metricToDisable)
+	}
+}
+
+// logErrorOnce takes an accumulator, a key string value error map, a key string and an error. It adds the error to the accumulator only if the
+// key is not in the logOnceMap. Additionally, if the key is not in logOnceMap map, adds the key to it. This is to prevent excessive error messages
+// from flooding the accumulator.
+func logErrorOnce(acc telegraf.Accumulator, logOnceMap map[string]struct{}, key string, err error) {
+	if _, ok := logOnceMap[key]; !ok {
+		acc.AddError(err)
+		logOnceMap[key] = struct{}{}
+	}
 }
 
 func init() {
 	inputs.Add("intel_powerstat", func() telegraf.Input {
-		return newPowerStat(newFileService())
+		return &PowerStat{}
 	})
 }
