@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 type OpcUAWorkarounds struct {
@@ -49,7 +50,24 @@ type OpcUAClientConfig struct {
 }
 
 func (o *OpcUAClientConfig) Validate() error {
-	return o.validateEndpoint()
+	if err := o.validateOptionalFields(); err != nil {
+		return err
+	}
+	if err := o.validateEndpoint(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *OpcUAClientConfig) validateOptionalFields() error {
+	valid_fields := []string{"DataType"}
+	for _, val := range o.OptionalFields {
+		if !choice.Contains(val, valid_fields) {
+			return fmt.Errorf("invalid Optional Field %q", val)
+		}
+	}
+	return nil
 }
 
 func (o *OpcUAClientConfig) validateEndpoint() error {
