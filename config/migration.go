@@ -200,6 +200,31 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 		applied++
 	}
 
+	// Do general migrations applying to all plugins
+	for idx, s := range sections {
+		parts := strings.Split(s.name, ".")
+		if len(parts) != 2 {
+			continue
+		}
+		log.Printf("D!   applying general migrations to plugin %q in line %d...", s.name, s.begin)
+		category, name := parts[0], parts[1]
+		for _, migrate := range migrations.GeneralMigrations {
+			result, msg, err := migrate(category, name, s.content)
+			if err != nil {
+				if errors.Is(err, migrations.ErrNotApplicable) {
+					continue
+				}
+				return nil, 0, fmt.Errorf("migrating options of %q (line %d) failed: %w", s.name, s.begin, err)
+			}
+			if msg != "" {
+				log.Printf("I! Plugin %q in line %d: %s", s.name, s.begin, msg)
+			}
+			s.raw = bytes.NewBuffer(result)
+			applied++
+		}
+		sections[idx] = s
+	}
+
 	// Reconstruct the config file from the sections
 	var buf bytes.Buffer
 	for _, s := range sections {

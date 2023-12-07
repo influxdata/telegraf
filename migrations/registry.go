@@ -31,6 +31,14 @@ func AddPluginOptionMigration(name string, f PluginOptionMigrationFunc) {
 	PluginOptionMigrations[name] = f
 }
 
+type GeneralMigrationFunc func(string, string, *ast.Table) ([]byte, string, error)
+
+var GeneralMigrations []GeneralMigrationFunc
+
+func AddGeneralMigration(f GeneralMigrationFunc) {
+	GeneralMigrations = append(GeneralMigrations, f)
+}
+
 type pluginTOMLStruct map[string]map[string][]interface{}
 
 func CreateTOMLStruct(category, name string) pluginTOMLStruct {
