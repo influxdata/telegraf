@@ -91,5 +91,9 @@ func GetCounterCacheKey(m telegraf.Metric, f *telegraf.Field) string {
 		tags = append(tags, strings.Join([]string{t.Key, t.Value}, "="))
 	}
 	sort.Strings(tags)
-	return path.Join(m.Name(), strings.Join(tags, "/"), f.Key)
+	key := ""
+	if f != nil {
+		key = f.Key
+	}
+	return path.Join(m.Name(), strings.Join(tags, "/"), key)
 }
