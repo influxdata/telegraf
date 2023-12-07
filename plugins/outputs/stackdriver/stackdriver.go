@@ -52,6 +52,9 @@ type Stackdriver struct {
 }
 
 const (
+	// The user-defined limits are documented below:
+	// https://cloud.google.com/monitoring/quotas#custom_metrics_quotas
+
 	// QuotaLabelsPerMetricDescriptor is the limit
 	// to labels (tags) per metric descriptor.
 	QuotaLabelsPerMetricDescriptor = 30
