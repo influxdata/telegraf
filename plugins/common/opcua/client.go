@@ -54,8 +54,7 @@ func (o *OpcUAClientConfig) Validate() error {
 		return fmt.Errorf("invalid 'optional_fields': %w", err)
 	}
 
-	err := o.validateEndpoint()
-	return err
+	return o.validateEndpoint()
 }
 
 func (o *OpcUAClientConfig) validateOptionalFields() error {
