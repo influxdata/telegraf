@@ -10,11 +10,11 @@ reported as gauges, unless they are specified to be delta counters using the
 ingestion protocol documentation][proto-docs] for details on the types defined
 there.
 
-[api-v2]: https://www.dynatrace.com/support/help/dynatrace-api/environment-api/metric-v2/
+[api-v2]: https://docs.dynatrace.com/docs/shortlink/api-metrics-v2
 
-[docs]: https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/telegraf/
+[docs]: https://docs.dynatrace.com/docs/shortlink/telegraf
 
-[proto-docs]: https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol
+[proto-docs]: https://docs.dynatrace.com/docs/shortlink/metric-ingestion-protocol
 
 ## Requirements
 
@@ -87,9 +87,9 @@ The endpoint for the Dynatrace Metrics API v2 is
 ```
 
 You can learn more about how to use the Dynatrace API
-[here](https://www.dynatrace.com/support/help/dynatrace-api/).
+[here](https://docs.dynatrace.com/docs/shortlink/section-api).
 
-[api-auth]: https://www.dynatrace.com/support/help/dynatrace-api/basics/dynatrace-api-authentication/
+[api-auth]: https://docs.dynatrace.com/docs/shortlink/api-authentication
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -170,7 +170,7 @@ then an API token is required.
 url = "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
 ```
 
-[post-ingest]: https://www.dynatrace.com/support/help/dynatrace-api/environment-api/metric-v2/post-ingest-metrics/
+[post-ingest]: https://docs.dynatrace.com/docs/shortlink/api-metrics-v2-post-datapoints
 
 ### `api_token`
 
