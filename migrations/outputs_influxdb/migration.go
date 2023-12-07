@@ -1,7 +1,6 @@
 package outputs_influxdb
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/influxdata/toml"
@@ -27,16 +26,10 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		var urls []string
 		// Merge the old URL and the new URLs with deduplication
 		if newURLs, found := plugin["urls"]; found {
-			list, ok := newURLs.([]interface{})
-			if !ok {
-				return nil, "", errors.New("'urls' setting is not a list")
-			}
-			for _, raw := range list {
-				nu, ok := raw.(string)
-				if !ok {
-					return nil, "", fmt.Errorf("unexpected 'urls' entry %v (%T)", raw, raw)
-				}
-				urls = append(urls, nu)
+			var err error
+			urls, err = migrations.AsStringSlice(newURLs)
+			if err != nil {
+				return nil, "", fmt.Errorf("'urls' setting: %w", err)
 			}
 		}
 		ou, ok := oldURL.(string)

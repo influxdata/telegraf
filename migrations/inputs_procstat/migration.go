@@ -20,33 +20,23 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Check for deprecated option(s) and migrate them
 	var applied bool
-	if oldUnits, found := plugin["supervisor_unit"]; found {
+	if rawOldUnits, found := plugin["supervisor_unit"]; found {
 		applied = true
 
 		// Check if the new option already exists and merge the two
 		var units []string
 		if newUnits, found := plugin["supervisor_units"]; found {
-			nu, ok := newUnits.([]interface{})
-			if !ok {
-				return nil, "", fmt.Errorf("setting 'supervisor_units' has wrong type %T", newUnits)
-			}
-			for _, raw := range nu {
-				u, ok := raw.(string)
-				if !ok {
-					return nil, "", fmt.Errorf("setting 'supervisor_units' contains wrong type %T", raw)
-				}
-				units = append(units, u)
+			var err error
+			units, err = migrations.AsStringSlice(newUnits)
+			if err != nil {
+				return nil, "", fmt.Errorf("setting 'supervisor_units': %w", err)
 			}
 		}
-		ou, ok := oldUnits.([]interface{})
-		if !ok {
-			return nil, "", fmt.Errorf("setting 'supervisor_unit' has wrong type %T", oldUnits)
+		oldUnits, err := migrations.AsStringSlice(rawOldUnits)
+		if err != nil {
+			return nil, "", fmt.Errorf("setting 'supervisor_unit': %w", err)
 		}
-		for _, raw := range ou {
-			u, ok := raw.(string)
-			if !ok {
-				return nil, "", fmt.Errorf("setting 'supervisor_unit' contains wrong type %T", raw)
-			}
+		for _, u := range oldUnits {
 			if !choice.Contains(u, units) {
 				units = append(units, u)
 			}
@@ -59,20 +49,11 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// The tagging options both need the 'tag_with' setting
 	var tagwith []string
-	newTagWith, found := plugin["tag_with"]
-	if found {
-		ntw, ok := newTagWith.([]interface{})
-		if !ok {
-			return nil, "", fmt.Errorf("setting 'tag_with' has wrong type %T", newTagWith)
-		}
-		for _, raw := range ntw {
-			s, ok := raw.(string)
-			if !ok {
-				return nil, "", fmt.Errorf("setting 'tag_with' contains wrong type %T", raw)
-			}
-			if !choice.Contains(s, tagwith) {
-				tagwith = append(tagwith, s)
-			}
+	if rawNewTagWith, found := plugin["tag_with"]; found {
+		var err error
+		tagwith, err = migrations.AsStringSlice(rawNewTagWith)
+		if err != nil {
+			return nil, "", fmt.Errorf("setting 'tag_with': %w", err)
 		}
 	}
 
