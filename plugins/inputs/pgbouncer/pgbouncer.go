@@ -98,15 +98,9 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string, ma
 		if !ok {
 			return nil, nil, fmt.Errorf("database not a string, but %T", *columnMap["database"])
 		}
-		_, err := dbname.WriteString(name)
-		if err != nil {
-			return nil, nil, fmt.Errorf("writing database name failed: %w", err)
-		}
+		dbname.WriteString(name)
 	} else {
-		_, err := dbname.WriteString("pgbouncer")
-		if err != nil {
-			return nil, nil, fmt.Errorf("writing 'pgbouncer' failed: %w", err)
-		}
+		dbname.WriteString("pgbouncer")
 	}
 
 	var tagAddress string

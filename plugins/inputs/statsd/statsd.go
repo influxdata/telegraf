@@ -494,9 +494,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				return fmt.Errorf("bufPool is not a bytes buffer")
 			}
 			b.Reset()
-			if _, err := b.Write(buf[:n]); err != nil {
-				return err
-			}
+			b.Write(buf[:n])
 			select {
 			case s.in <- input{
 				Buffer: b,

@@ -84,29 +84,24 @@ func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 	if m.matchQuotation(text) || m.matchString(text) {
 		// Restore the newline removed by tail's scanner
 		if buffer.Len() > 0 && m.config.PreserveNewline {
-			_, _ = buffer.WriteString("\n")
+			buffer.WriteString("\n")
 		}
-		// Ignore the returned error as we cannot do anything about it anyway
-		_, _ = buffer.WriteString(text)
+		buffer.WriteString(text)
 		return ""
 	}
 
 	if m.config.MatchWhichLine == Previous {
 		previousText := buffer.String()
 		buffer.Reset()
-		if _, err := buffer.WriteString(text); err != nil {
-			return ""
-		}
+		buffer.WriteString(text)
 		text = previousText
 	} else {
 		// Next
 		if buffer.Len() > 0 {
 			if m.config.PreserveNewline {
-				_, _ = buffer.WriteString("\n")
+				buffer.WriteString("\n")
 			}
-			if _, err := buffer.WriteString(text); err != nil {
-				return ""
-			}
+			buffer.WriteString(text)
 			text = buffer.String()
 			buffer.Reset()
 		}

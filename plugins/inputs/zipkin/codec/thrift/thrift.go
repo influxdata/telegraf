@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
 )
@@ -16,9 +17,7 @@ import (
 // UnmarshalThrift converts raw bytes in thrift format to a slice of spans
 func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 	buffer := thrift.NewTMemoryBuffer()
-	if _, err := buffer.Write(body); err != nil {
-		return nil, err
-	}
+	buffer.Write(body)
 
 	transport := thrift.NewTBinaryProtocolConf(buffer, nil)
 	_, size, err := transport.ReadListBegin(context.Background())

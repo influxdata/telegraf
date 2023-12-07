@@ -225,7 +225,7 @@ func CompressWithGzip(data io.Reader) io.ReadCloser {
 		// instance reading from the reader returned by the CompressWithGzip
 		// function. If "err" is nil, the below function will correctly report
 		// io.EOF.
-		_ = pipeWriter.CloseWithError(err)
+		pipeWriter.CloseWithError(err)
 	}()
 
 	// Return a reader which then can be read by the caller to collect the

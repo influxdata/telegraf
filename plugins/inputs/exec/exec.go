@@ -85,7 +85,7 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 			byt, err := b.ReadBytes(0x0D)
 			byt = bytes.TrimRight(byt, "\x0d")
 			if len(byt) > 0 {
-				_, _ = buf.Write(byt)
+				buf.Write(byt)
 			}
 			if errors.Is(err, io.EOF) {
 				return buf

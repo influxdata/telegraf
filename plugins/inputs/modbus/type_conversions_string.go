@@ -15,8 +15,8 @@ func determineConverterString(byteOrder string) (fieldConverterFunc, error) {
 		var buf bytes.Buffer
 		for i := 0; i < len(b); i += 2 {
 			v := tohost(b[i : i+2])
-			_ = buf.WriteByte(byte(v >> 8))
-			_ = buf.WriteByte(byte(v & 0xFF))
+			buf.WriteByte(byte(v >> 8))
+			buf.WriteByte(byte(v & 0xFF))
 		}
 		// Remove everything after null-termination
 		s, _ := bytes.CutSuffix(buf.Bytes(), []byte{0x00})

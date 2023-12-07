@@ -221,10 +221,7 @@ func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 			q.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
-		_, err = buf.Write(octets)
-		if err != nil {
-			return nil, err
-		}
+		buf.Write(octets)
 	}
 	body := buf.Bytes()
 	return body, nil

@@ -144,10 +144,7 @@ func (s *GraphiteSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, 
 		if err != nil {
 			return nil, err
 		}
-		_, err = batch.Write(buf)
-		if err != nil {
-			return nil, err
-		}
+		batch.Write(buf)
 	}
 	return batch.Bytes(), nil
 }
