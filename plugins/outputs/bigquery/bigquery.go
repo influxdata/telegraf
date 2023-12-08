@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -102,7 +103,10 @@ func (s *BigQuery) setUpDefaultClient() error {
 		credentialsOption = option.WithCredentials(creds)
 	}
 
-	client, err := bigquery.NewClient(ctx, s.Project, credentialsOption)
+	client, err := bigquery.NewClient(ctx, s.Project,
+		credentialsOption,
+		option.WithUserAgent(internal.ProductToken()),
+	)
 	s.client = client
 	return err
 }
