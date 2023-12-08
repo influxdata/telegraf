@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"container/list"
 
 	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
@@ -29,6 +30,7 @@ const (
 var (
 	offsets      = make(map[string]int64)
 	offsetsMutex = new(sync.Mutex)
+	l            = list.New();
 )
 
 type empty struct{}
@@ -207,6 +209,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	var poll bool
+	var flag bool
 	if t.WatchMethod == "poll" {
 		poll = true
 	}
@@ -223,6 +226,21 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				// we're already tailing this file
 				continue
 			}
+
+			//Check whether tailing has started
+			flag = true
+			for e := l.Front(); e != nil; e = e.Next() {
+				if( e.Value == filepath) {
+					flag = false
+				}
+			}
+
+			if (flag == false) {
+				// we have already started tailing this file
+				continue
+			}
+			l.PushBack(filepath)
+
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
 
@@ -265,6 +283,8 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				}
 				t.tailers[tailer.Filename] = tailer
 
+				t.Log.Debugf("Tail added for %q", file)
+
 				parser, err := t.parserFunc()
 				if err != nil {
 					t.Log.Errorf("Creating parser: %s", err.Error())
@@ -273,6 +293,15 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 				t.receiver(parser, tailer)
 				t.Log.Debugf("Tail removed for %q", tailer.Filename)
+
+				// Cleanup of the list
+				t.tailers[tailer.Filename] = nil;
+				for e := l.Front(); e != nil; e = e.Next() {
+					if( e.Value == filepath) {
+						l.Remove(e)
+					}
+				}
+
 
 				if err := tailer.Err(); err != nil {
 					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
