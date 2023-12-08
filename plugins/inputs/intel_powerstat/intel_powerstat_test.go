@@ -729,7 +729,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	t.Run("FailedToStart", func(t *testing.T) {
+	t.Run("FailedToStartCPUDoesNotExist", func(t *testing.T) {
 		t.Setenv("HOST_PROC", "./testdata")
 
 		acc := &testutil.Accumulator{}
@@ -747,7 +747,23 @@ func TestStart(t *testing.T) {
 		require.Empty(t, logger.Warnings())
 	})
 
+	t.Run("FailedToStartNotSupportedCPUVendor", func(t *testing.T) {
+		t.Setenv("HOST_PROC", "./testdata/vendor_not_supported")
+
+		acc := &testutil.Accumulator{}
+		logger := &testutil.CaptureLogger{}
+
+		p := &PowerStat{
+			Log:    logger,
+			option: &optGenerator{},
+		}
+
+		require.ErrorContains(t, p.Start(acc), "host processor is not supported")
+	})
+
 	t.Run("WithWarning", func(t *testing.T) {
+		t.Setenv("HOST_PROC", "./testdata")
+
 		acc := &testutil.Accumulator{}
 		logger := &testutil.CaptureLogger{}
 
