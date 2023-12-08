@@ -702,6 +702,8 @@ func TestInit(t *testing.T) {
 	})
 
 	t.Run("FailedToParseConfigWithDuplicates", func(t *testing.T) {
+		t.Setenv("HOST_PROC", "./testdata")
+
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
@@ -715,6 +717,8 @@ func TestInit(t *testing.T) {
 	})
 
 	t.Run("FailedToParseConfigWithNegativeTimeout", func(t *testing.T) {
+		t.Setenv("HOST_PROC", "./testdata")
+
 		logger := &testutil.CaptureLogger{}
 
 		p := &PowerStat{
