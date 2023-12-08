@@ -38,9 +38,22 @@ const (
 	PfMaxActiveProcesses = "max active processes"
 	PfMaxChildrenReached = "max children reached"
 	PfSlowRequests       = "slow requests"
+	PfStartTime          = "start time"
+	PfRequests           = "requests"
+	PfRequestDuration    = "request duration"
+	PfContentLength      = "content length"
+	PfLastRequestCPU     = "last request cpu"
+	PfLastRequestMemory  = "last request memory"
+
+	// These are strings
+	PfScript        = "script"
+	PfState         = "state"
+	PfUser          = "user"
+	PfRequestURI    = "request uri"
+	PfRequestMethod = "request method"
 )
 
-type metric map[string]int64
+type metric map[string]any
 type poolStat map[string]metric
 
 type phpfpm struct {
@@ -223,11 +236,23 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 			PfTotalProcesses,
 			PfMaxActiveProcesses,
 			PfMaxChildrenReached,
-			PfSlowRequests:
+			PfSlowRequests,
+			PfStartTime,
+			PfRequests,
+			PfRequestDuration,
+			PfContentLength,
+			PfLastRequestCPU,
+			PfLastRequestMemory:
 			fieldValue, err := strconv.ParseInt(strings.Trim(keyvalue[1], " "), 10, 64)
 			if err == nil {
 				stats[currentPool][fieldName] = fieldValue
 			}
+		case PfScript,
+			PfState,
+			PfUser,
+			PfRequestURI,
+			PfRequestMethod:
+			stats[currentPool][fieldName] = strings.Trim(keyvalue[1], " ")
 		}
 	}
 

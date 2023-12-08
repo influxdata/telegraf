@@ -294,7 +294,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), `unable to connect to phpfpm status page 'http://aninvalidone'`)
+	require.Contains(t, err.Error(), `unable to connect to phpfpm status page "http://aninvalidone"`)
 	require.Contains(t, err.Error(), `lookup aninvalidone`)
 }
 
