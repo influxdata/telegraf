@@ -221,10 +221,10 @@ func TestAutoDetect(t *testing.T) {
 		CompactTable: "test-metrics",
 	}
 
-	credentialsJson := []byte(`{ "type": "service_account", "project_id": "test-project"}`)
+	credentialsJSON := []byte(`{"type": "service_account", "project_id": "test-project"}`)
 
 	require.NoError(t, b.Init())
-	require.NoError(t, b.setUpTestClientWithJSON(srv.URL, credentialsJson))
+	require.NoError(t, b.setUpTestClientWithJSON(srv.URL, credentialsJSON))
 	require.NoError(t, b.Connect())
 	require.NoError(t, b.Close())
 }
@@ -246,10 +246,10 @@ func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	return nil
 }
 
-func (b *BigQuery) setUpTestClientWithJSON(endpointURL string, credentialsJson []byte) error {
+func (b *BigQuery) setUpTestClientWithJSON(endpointURL string, credentialsJSON []byte) error {
 	noAuth := option.WithoutAuthentication()
 	endpoint := option.WithEndpoint(endpointURL)
-	credentials := option.WithCredentialsJSON(credentialsJson)
+	credentials := option.WithCredentialsJSON(credentialsJSON)
 
 	ctx := context.Background()
 
