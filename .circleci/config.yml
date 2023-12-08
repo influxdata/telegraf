@@ -134,7 +134,7 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
+            - run: GOARCH=<< parameters.arch >> go list ./... | circleci tests run --command "xargs ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out --" --split-by=timings
       - when:
           condition:
             and:
