@@ -24,6 +24,11 @@ func (pkg *packageInfo) ToSPDX() {
 }
 
 func (pkg *packageInfo) Classify() (float64, error) {
+	// Check for a valid SPDX
+	if pkg.spdx == "" {
+		return 0.0, fmt.Errorf("empty SPDX for license %q", pkg.license)
+	}
+
 	// Download the license text
 	source, err := normalizeURL(pkg.url)
 	if err != nil {
