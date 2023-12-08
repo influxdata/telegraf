@@ -211,6 +211,24 @@ func TestWriteCompact(t *testing.T) {
 	require.NoError(t, b.Close())
 }
 
+func TestAutoDetect(t *testing.T) {
+	srv := localBigQueryServer(t)
+	defer srv.Close()
+
+	b := &BigQuery{
+		Dataset:      "test-dataset",
+		Timeout:      defaultTimeout,
+		CompactTable: "test-metrics",
+	}
+
+	credentialsJson := []byte(`{ "type": "service_account", "project_id": "test-project"}`)
+
+	require.NoError(t, b.Init())
+	require.NoError(t, b.setUpTestClientWithJSON(srv.URL, credentialsJson))
+	require.NoError(t, b.Connect())
+	require.NoError(t, b.Close())
+}
+
 func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	noAuth := option.WithoutAuthentication()
 	endpoint := option.WithEndpoint(endpointURL)
@@ -226,6 +244,19 @@ func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	b.client = c
 
 	return nil
+}
+
+func (b *BigQuery) setUpTestClientWithJSON(endpointURL string, credentialsJson []byte) error {
+	noAuth := option.WithoutAuthentication()
+	endpoint := option.WithEndpoint(endpointURL)
+	credentials := option.WithCredentialsJSON(credentialsJson)
+
+	ctx := context.Background()
+
+	c, err := bigquery.NewClient(ctx, b.Project, credentials, noAuth, endpoint)
+
+	b.client = c
+	return err
 }
 
 func localBigQueryServer(t *testing.T) *httptest.Server {
