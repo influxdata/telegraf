@@ -75,7 +75,7 @@ func (s *BigQuery) Connect() error {
 		defer cancel()
 
 		// Check if the compact table exists
-		_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Metadata(ctx)
+		_, err := s.client.Dataset(s.Dataset).Table(s.CompactTable).Metadata(ctx)
 		if err != nil {
 			return fmt.Errorf("compact table: %w", err)
 		}
@@ -136,7 +136,7 @@ func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
 	defer cancel()
 
 	// Always returns an instance, even if table doesn't exist (anymore).
-	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Inserter()
+	inserter := s.client.Dataset(s.Dataset).Table(s.CompactTable).Inserter()
 
 	var compactValues []*bigquery.ValuesSaver
 	for _, m := range metrics {
@@ -269,7 +269,7 @@ func (s *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	defer cancel()
 
 	tableName := s.metricToTable(metricName)
-	table := s.client.DatasetInProject(s.Project, s.Dataset).Table(tableName)
+	table := s.client.Dataset(s.Dataset).Table(tableName)
 	inserter := table.Inserter()
 
 	if err := inserter.Put(ctx, metrics); err != nil {
