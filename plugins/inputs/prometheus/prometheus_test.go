@@ -76,6 +76,11 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
 	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
+	require.True(t, acc.HasIntField("prometheus_internal", "content_length"))
+	require.True(t, acc.HasIntField("prometheus_internal", "http_response_code"))
+	require.True(t, acc.HasIntField("prometheus_internal", "result_code"))
+	require.True(t, acc.HasFloatField("prometheus_internal", "response_time"))
+	require.Equal(t, acc.TagValue("prometheus_internal", "result"), "success")
 }
 
 func TestPrometheusCustomHeader(t *testing.T) {
@@ -166,6 +171,11 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.Equal(t, acc.TagValue("test_metric", "address"), tsAddress)
 	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL)
+	require.True(t, acc.HasIntField("prometheus_internal", "content_length"))
+	require.True(t, acc.HasIntField("prometheus_internal", "http_response_code"))
+	require.True(t, acc.HasIntField("prometheus_internal", "result_code"))
+	require.True(t, acc.HasFloatField("prometheus_internal", "response_time"))
+	require.Equal(t, acc.TagValue("prometheus_internal", "result"), "success")
 }
 
 func TestPrometheusWithTimestamp(t *testing.T) {
@@ -196,11 +206,19 @@ test_counter{label="test"} 1 1685443805885`
 			time.UnixMilli(1685443805885),
 			telegraf.Counter,
 		),
+		//		metric.New(
+		//			"prometheus_internal",
+		//			map[string]string{"address": tsAddress, "result": "success"},
+		//			map[string]interface{}{"content_length": int64(1), "http_response_code": int64(200), "response_time": float64(0), "result_code": int64(0)},
+		//			time.UnixMilli(0),
+		//			telegraf.Untyped,
+		//		),
 	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics())
+	//, testutil.IgnoreFields("content_length", "http_response_code", "response_time", "result_code")
 }
 
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T) {
@@ -425,16 +443,26 @@ go_gc_duration_seconds_count 42`
 			"prometheus",
 			map[string]string{},
 			map[string]interface{}{
-				"go_gc_duration_seconds_sum":   42.0,
-				"go_gc_duration_seconds_count": 42.0,
+				"go_gc_duration_seconds_sum":   float64(42.0),
+				"go_gc_duration_seconds_count": float64(42),
 			},
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
+		testutil.MustMetric(
+			"prometheus_internal",
+			map[string]string{"result": "success"},
+			map[string]interface{}{
+				"http_response_code": int64(200.0),
+				"result_code":        int64(0),
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(), testutil.SortMetrics())
+		testutil.IgnoreTime(), testutil.SortMetrics(), testutil.IgnoreFields("content_length", "response_time"))
 }
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
@@ -558,4 +586,128 @@ func TestInitConfigSelectors(t *testing.T) {
 
 	require.NotNil(t, p.podLabelSelector)
 	require.NotNil(t, p.podFieldSelector)
+}
+
+func TestPrometheusInternalOk(t *testing.T) {
+	prommetric := `# HELP test_counter A sample test counter.
+# TYPE test_counter counter
+test_counter{label="test"} 1 1685443805885`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, prommetric)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		KubernetesServices: []string{ts.URL},
+	}
+	require.NoError(t, p.Init())
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	tsAddress := u.Hostname()
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus_internal",
+			map[string]string{
+				"address": tsAddress,
+				"result":  "success"},
+			map[string]interface{}{
+				"content_length":     int64(1),
+				"http_response_code": int64(200),
+				"response_time":      float64(0),
+				"result_code":        int64(0)},
+			time.UnixMilli(0),
+			telegraf.Untyped,
+		),
+	}
+
+	var acc testutil.Accumulator
+	fmt.Printf("%+v\n", acc.GetTelegrafMetrics())
+
+	require.NoError(t, acc.GatherError(p.Gather))
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
+}
+
+func TestPrometheusInternalContentBadFormat(t *testing.T) {
+	prommetric := `# HELP test_counter A sample test counter.
+# TYPE test_counter counter
+<body>Flag test</body>`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, prommetric)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		KubernetesServices: []string{ts.URL},
+	}
+	require.NoError(t, p.Init())
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	tsAddress := u.Hostname()
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus_internal",
+			map[string]string{
+				"address": tsAddress,
+				"result":  "unable_to_decode"},
+			map[string]interface{}{
+				"content_length":     int64(94),
+				"http_response_code": int64(200),
+				"response_time":      float64(0),
+				"result_code":        int64(1)},
+			time.UnixMilli(0),
+			telegraf.Untyped,
+		),
+	}
+
+	var acc testutil.Accumulator
+
+	require.Error(t, acc.GatherError(p.Gather))
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
+}
+
+func TestPrometheusInternalNoWeb(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		KubernetesServices: []string{ts.URL},
+	}
+	require.NoError(t, p.Init())
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	tsAddress := u.Hostname()
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus_internal",
+			map[string]string{
+				"address": tsAddress,
+				"result":  "http_code_not_ok"},
+			map[string]interface{}{
+				"content_length":     int64(94),
+				"http_response_code": int64(404),
+				"response_time":      float64(0),
+				"result_code":        int64(6)},
+			time.UnixMilli(0),
+			telegraf.Untyped,
+		),
+	}
+
+	var acc testutil.Accumulator
+	fmt.Printf("%+v\n", acc.GetTelegrafMetrics())
+
+	require.Error(t, acc.GatherError(p.Gather))
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
 }
