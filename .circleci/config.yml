@@ -9,6 +9,7 @@ executors:
     resource_class: large
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.21.5'
+    parallelism: 4
     environment:
       GOFLAGS: -p=4
   mac:
