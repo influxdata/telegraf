@@ -151,6 +151,8 @@ commands:
             - run:
                 name: "Create report"
                 command: /go/bin/goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
+      - store_test_results:
+          path: test-results
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
