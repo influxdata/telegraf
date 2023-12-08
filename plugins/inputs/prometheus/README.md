@@ -352,7 +352,8 @@ Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
 There is also internal metrics that is add :
-- http_response
+
+- prometheus_internal
   - tags:
     - url
     - address
