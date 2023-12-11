@@ -32,6 +32,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If set to true, the gather time will be used.
   # ignore_timestamp = false
 
+  ## Return the prometheus_internal metrics.
+  # internal_metric = false
+
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
@@ -351,7 +354,7 @@ All metrics receive the `url` tag indicating the related URL specified in the
 Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
-There is also internal metrics that is add :
+There is also internal metrics that is add (Must be unable with internal_metric):
 
 * prometheus_internal
   * tags:

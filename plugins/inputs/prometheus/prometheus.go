@@ -83,6 +83,8 @@ type Prometheus struct {
 
 	IgnoreTimestamp bool `toml:"ignore_timestamp"`
 
+	InternalMetric bool `toml:"internal_metric"`
+
 	Log telegraf.Logger
 
 	httpconfig.HTTPClientConfig
@@ -352,7 +354,9 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Add metrics
-			acc.AddFields("prometheus_internal", internalFields, tags)
+			if p.InternalMetric {
+				acc.AddFields("prometheus_internal", internalFields, tags)
+			}
 		}(URL)
 	}
 

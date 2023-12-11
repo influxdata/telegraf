@@ -76,11 +76,6 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
 	require.Equal(t, ts.URL+"/metrics", acc.TagValue("test_metric", "url"))
-	require.True(t, acc.HasIntField("prometheus_internal", "content_length"))
-	require.True(t, acc.HasIntField("prometheus_internal", "http_response_code"))
-	require.True(t, acc.HasIntField("prometheus_internal", "result_code"))
-	require.True(t, acc.HasFloatField("prometheus_internal", "response_time"))
-	require.Equal(t, "success", acc.TagValue("prometheus_internal", "result"))
 }
 
 func TestPrometheusCustomHeader(t *testing.T) {
@@ -171,11 +166,6 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.Equal(t, tsAddress, acc.TagValue("test_metric", "address"))
 	require.Equal(t, ts.URL, acc.TagValue("test_metric", "url"))
-	require.True(t, acc.HasIntField("prometheus_internal", "content_length"))
-	require.True(t, acc.HasIntField("prometheus_internal", "http_response_code"))
-	require.True(t, acc.HasIntField("prometheus_internal", "result_code"))
-	require.True(t, acc.HasFloatField("prometheus_internal", "response_time"))
-	require.Equal(t, "success", acc.TagValue("prometheus_internal", "result"))
 }
 
 func TestPrometheusWithTimestamp(t *testing.T) {
@@ -441,20 +431,10 @@ go_gc_duration_seconds_count 42`
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
-		testutil.MustMetric(
-			"prometheus_internal",
-			map[string]string{"result": "success"},
-			map[string]interface{}{
-				"http_response_code": int64(200.0),
-				"result_code":        int64(0),
-			},
-			time.Unix(0, 0),
-			telegraf.Untyped,
-		),
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(), testutil.SortMetrics(), testutil.IgnoreFields("content_length", "response_time"))
+		testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
@@ -593,6 +573,7 @@ test_counter{label="test"} 1 1685443805885`
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
+		InternalMetric:     true,
 	}
 	require.NoError(t, p.Init())
 
@@ -636,6 +617,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
+		InternalMetric:     true,
 	}
 	require.NoError(t, p.Init())
 
@@ -674,6 +656,7 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
+		InternalMetric:     true,
 	}
 	require.NoError(t, p.Init())
 
