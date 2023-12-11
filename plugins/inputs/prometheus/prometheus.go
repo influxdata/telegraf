@@ -337,7 +337,7 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var fields map[string]interface{}
+	var internalFields map[string]interface{}
 	var tags map[string]string
 
 	allURLs, err := p.GetAllURLs()
@@ -348,13 +348,13 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serviceURL URLAndAddress) {
 			defer wg.Done()
-			fields, tags, err = p.gatherURL(serviceURL, acc)
+			internalFields, tags, err = p.gatherURL(serviceURL, acc)
 			if err != nil {
 				acc.AddError(err)
 			}
 
 			// Add metrics
-			acc.AddFields("prometheus_internal", fields, tags)
+			acc.AddFields("prometheus_internal", internalFields, tags)
 		}(URL)
 	}
 

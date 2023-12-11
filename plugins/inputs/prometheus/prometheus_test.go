@@ -75,12 +75,12 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
+	require.Equal(t, ts.URL+"/metrics", acc.TagValue("test_metric", "url"))
 	require.True(t, acc.HasIntField("prometheus_internal", "content_length"))
 	require.True(t, acc.HasIntField("prometheus_internal", "http_response_code"))
 	require.True(t, acc.HasIntField("prometheus_internal", "result_code"))
 	require.True(t, acc.HasFloatField("prometheus_internal", "response_time"))
-	require.Equal(t, acc.TagValue("prometheus_internal", "result"), "success")
+	require.Equal(t, "success", acc.TagValue("prometheus_internal", "result"))
 }
 
 func TestPrometheusCustomHeader(t *testing.T) {
@@ -169,13 +169,13 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
-	require.Equal(t, acc.TagValue("test_metric", "address"), tsAddress)
-	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL)
+	require.Equal(t, tsAddress, acc.TagValue("test_metric", "address"))
+	require.Equal(t, ts.URL, acc.TagValue("test_metric", "url"))
 	require.True(t, acc.HasIntField("prometheus_internal", "content_length"))
 	require.True(t, acc.HasIntField("prometheus_internal", "http_response_code"))
 	require.True(t, acc.HasIntField("prometheus_internal", "result_code"))
 	require.True(t, acc.HasFloatField("prometheus_internal", "response_time"))
-	require.Equal(t, acc.TagValue("prometheus_internal", "result"), "success")
+	require.Equal(t, "success", acc.TagValue("prometheus_internal", "result"))
 }
 
 func TestPrometheusWithTimestamp(t *testing.T) {
@@ -206,19 +206,11 @@ test_counter{label="test"} 1 1685443805885`
 			time.UnixMilli(1685443805885),
 			telegraf.Counter,
 		),
-		//		metric.New(
-		//			"prometheus_internal",
-		//			map[string]string{"address": tsAddress, "result": "success"},
-		//			map[string]interface{}{"content_length": int64(1), "http_response_code": int64(200), "response_time": float64(0), "result_code": int64(0)},
-		//			time.UnixMilli(0),
-		//			telegraf.Untyped,
-		//		),
 	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics())
-	//, testutil.IgnoreFields("content_length", "http_response_code", "response_time", "result_code")
 }
 
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T) {
