@@ -354,7 +354,7 @@ All metrics receive the `url` tag indicating the related URL specified in the
 Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
-There is also internal metrics that is add 
+There is also internal metrics that is add
 (Must be unable with internal_metric) :
 
 * prometheus_internal
