@@ -354,14 +354,14 @@ tag is also added indicating the discovered ip address.
 There is also internal metrics that is add :
 
 * prometheus_internal
-  - tags:
-    + url
-    + address
-  - fields:
-    + response_time (float, seconds)
-    + content_length (int, response body length)
-    + http_response_code (int, response status code)
-    + result_code (int, [see below](#result_code))
+  * tags:
+    * url
+    * address
+  * fields:
+    * response_time (float, seconds)
+    * content_length (int, response body length)
+    * http_response_code (int, response status code)
+    * result_code (int, [see below](#result_code))
 
 ### `result_code`
 
