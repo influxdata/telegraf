@@ -504,15 +504,15 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 	if resp.StatusCode != http.StatusOK {
 		setResult("http_code_not_ok", internalFields, tags)
-		return internalfields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
+		return internalFields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		setResult("body_read_error", internalfields, tags)
-		return internalfields, tags, fmt.Errorf("error reading body: %w", err)
+		setResult("body_read_error", internalFields, tags)
+		return internalFields, tags, fmt.Errorf("error reading body: %w", err)
 	}
-	internalfields["content_length"] = len(body)
+	internalFields["content_length"] = len(body)
 
 	if p.MetricVersion == 2 {
 		parser := parserV2.Parser{
@@ -525,8 +525,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	}
 
 	if err != nil {
-		setResult("unable_to_decode", internalfields, tags)
-		return internalfields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
+		setResult("unable_to_decode", internalFields, tags)
+		return internalFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
 	for _, metric := range metrics {
