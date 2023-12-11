@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -3329,6 +3331,140 @@ func TestAllScriptTestData(t *testing.T) {
 			return nil
 		})
 		require.NoError(t, err)
+	}
+}
+
+func TestTracking(t *testing.T) {
+	var testCases = []struct {
+		name       string
+		source     string
+		numMetrics int
+	}{
+		{
+			name:       "return none",
+			numMetrics: 0,
+			source: `
+def apply(metric):
+	return None
+`,
+		},
+		{
+			name:       "return empty list of metrics",
+			numMetrics: 0,
+			source: `
+def apply(metric):
+	return []
+`,
+		},
+		{
+			name:       "return original metric",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+	return metric
+`,
+		},
+		{
+			name:       "return original metric in a list",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+	return [metric]
+`,
+		},
+		{
+			name:       "return new metric",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+	newmetric = Metric("new_metric")
+	newmetric.fields["vaue"] = 42
+	return newmetric
+`,
+		},
+		{
+			name:       "return new metric in a list",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+	newmetric = Metric("new_metric")
+	newmetric.fields["vaue"] = 42
+	return [newmetric]
+`,
+		},
+		{
+			name:       "return original and new metric in a list",
+			numMetrics: 2,
+			source: `
+def apply(metric):
+	newmetric = Metric("new_metric")
+	newmetric.fields["vaue"] = 42
+	return [metric, newmetric]
+`,
+		},
+		{
+			name:       "return original and deep-copy",
+			numMetrics: 2,
+			source: `
+def apply(metric):
+    return [metric, deepcopy(metric, track=True)]
+`,
+		},
+		{
+			name:       "deep-copy but do not return",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    x = deepcopy(metric)
+    return [metric]
+`,
+		},
+		{
+			name:       "deep-copy but do not return original metric",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    x = deepcopy(metric, track=True)
+    return [x]
+`,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a tracking metric and tap the delivery information
+			var mu sync.Mutex
+			delivered := make([]telegraf.DeliveryInfo, 0, 1)
+			notify := func(di telegraf.DeliveryInfo) {
+				mu.Lock()
+				defer mu.Unlock()
+				delivered = append(delivered, di)
+			}
+
+			// Configure the plugin
+			plugin := newStarlarkFromSource(tt.source)
+			require.NoError(t, plugin.Init())
+			acc := &testutil.Accumulator{}
+			require.NoError(t, plugin.Start(acc))
+
+			// Process expected metrics and compare with resulting metrics
+			input, _ := metric.WithTracking(testutil.TestMetric(1.23), notify)
+			require.NoError(t, plugin.Add(input, acc))
+			plugin.Stop()
+
+			// Ensure we get back the correct number of metrics
+			actual := acc.GetTelegrafMetrics()
+			require.Lenf(t, actual, tt.numMetrics, "expected %d metrics but got %d", tt.numMetrics, len(actual))
+			for _, m := range actual {
+				m.Accept()
+			}
+
+			// Simulate output acknowledging delivery of metrics and check delivery
+			require.Eventuallyf(t, func() bool {
+				mu.Lock()
+				defer mu.Unlock()
+				return len(delivered) == 1
+			}, 1*time.Second, 100*time.Millisecond, "original metric not delivered")
+		})
 	}
 }
 

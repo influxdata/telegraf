@@ -5,8 +5,10 @@ type FilterOptions struct {
 	NameDrop       []string            `toml:"namedrop,omitempty"`
 	FieldPassOld   []string            `toml:"pass,omitempty"`
 	FieldPass      []string            `toml:"fieldpass,omitempty"`
+	FieldInclude   []string            `toml:"fieldinclude,omitempty"`
 	FieldDropOld   []string            `toml:"drop,omitempty"`
 	FieldDrop      []string            `toml:"fielddrop,omitempty"`
+	FieldExclude   []string            `toml:"fieldexclude,omitempty"`
 	TagPassFilters map[string][]string `toml:"tagpass,omitempty"`
 	TagDropFilters map[string][]string `toml:"tagdrop,omitempty"`
 	TagExclude     []string            `toml:"tagexclude,omitempty"`

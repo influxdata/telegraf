@@ -81,6 +81,7 @@ linters-settings:
       - badCall
       - badCond
       - badLock
+      - badRegexp
       - badSorting
       - builtinShadowDecl
       - caseOrder

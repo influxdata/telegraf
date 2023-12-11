@@ -206,26 +206,20 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		// extract the database name from the column map
 		switch datname := (*c).(type) {
 		case string:
-			if _, err := dbname.WriteString(datname); err != nil {
-				return err
-			}
+			dbname.WriteString(datname)
 		default:
 			database, err := p.GetConnectDatabase(tagAddress)
 			if err != nil {
 				return err
 			}
-			if _, err := dbname.WriteString(database); err != nil {
-				return err
-			}
+			dbname.WriteString(database)
 		}
 	} else {
 		database, err := p.GetConnectDatabase(tagAddress)
 		if err != nil {
 			return err
 		}
-		if _, err := dbname.WriteString(database); err != nil {
-			return err
-		}
+		dbname.WriteString(database)
 	}
 
 	// Process the additional tags

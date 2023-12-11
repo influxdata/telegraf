@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 type OpcUAWorkarounds struct {
@@ -44,11 +45,21 @@ type OpcUAClientConfig struct {
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
 
-	Workarounds OpcUAWorkarounds `toml:"workarounds"`
+	OptionalFields []string         `toml:"optional_fields"`
+	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
 }
 
 func (o *OpcUAClientConfig) Validate() error {
+	if err := o.validateOptionalFields(); err != nil {
+		return fmt.Errorf("invalid 'optional_fields': %w", err)
+	}
+
 	return o.validateEndpoint()
+}
+
+func (o *OpcUAClientConfig) validateOptionalFields() error {
+	validFields := []string{"DataType"}
+	return choice.CheckSlice(o.OptionalFields, validFields)
 }
 
 func (o *OpcUAClientConfig) validateEndpoint() error {

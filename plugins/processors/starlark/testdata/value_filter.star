@@ -1,7 +1,7 @@
 # Filter metrics by value
 '''
 In this example we look at the `value` field of the metric.
-If the value is zeor, we delete all the fields, effectively dropping the metric.
+If the value is zero, we delete all the fields, effectively dropping the metric.
 
 Example Input:
 temperature sensor="001A0",value=111.48 1618488000000000999

@@ -12,7 +12,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -92,18 +91,14 @@ func insertInclude(buf *bytes.Buffer, include string) error {
 func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	// Insert newlines before and after
 	if b.Newlines {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
+		buf.Write([]byte("\n"))
 	}
 
 	// Insert all includes in the order they occurred
 	for i, include := range b.Includes {
 		if i > 0 {
 			// Add a separating newline between included blocks
-			if _, err := buf.Write([]byte("\n")); err != nil {
-				return errors.New("adding newline failed")
-			}
+			buf.Write([]byte("\n"))
 		}
 		if err := insertInclude(buf, include); err != nil {
 			return err
@@ -111,9 +106,7 @@ func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	}
 	// Make sure we add a trailing newline
 	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) || b.Newlines {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
+		buf.Write([]byte("\n"))
 	}
 
 	return nil
@@ -228,13 +221,9 @@ func main() {
 	offset := 0
 	for _, b := range blocksToReplace {
 		// Copy everything up to the beginning of the block we want to replace and make sure we get a newline
-		if _, err := output.Write(readme[offset:b.Start]); err != nil {
-			log.Fatalf("Writing non-replaced content failed: %v", err)
-		}
+		output.Write(readme[offset:b.Start])
 		if !bytes.HasSuffix(output.Bytes(), []byte("\n")) {
-			if _, err := output.Write([]byte("\n")); err != nil {
-				log.Fatalf("Writing failed: %v", err)
-			}
+			output.Write([]byte("\n"))
 		}
 		offset = b.Stop
 
@@ -244,9 +233,7 @@ func main() {
 		}
 	}
 	// Copy the remaining of the original file...
-	if _, err := output.Write(readme[offset:]); err != nil {
-		log.Fatalf("Writing remaining content failed: %v", err)
-	}
+	output.Write(readme[offset:])
 
 	// Write output with same permission as input
 	file, err := os.OpenFile(inputFilename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, perm)

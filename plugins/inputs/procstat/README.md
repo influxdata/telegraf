@@ -12,6 +12,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- supervisor_unit
 - win_service
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -41,6 +42,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # include_systemd_children = false
   ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
+  ## Supervisor service names of hypervisorctl management
+  # supervisor_units = ["webserver", "proxy"]
 
   ## Windows service name
   # win_service = ""
@@ -52,19 +55,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Field name prefix
   # prefix = ""
 
-  ## When true add the full cmdline as a tag.
-  # cmdline_tag = false
-
   ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
   # mode = "irix"
 
-  ## Add the PID as a tag instead of as a field.  When collecting multiple
-  ## processes with otherwise matching tags this setting should be enabled to
-  ## ensure each process has a unique identity.
-  ##
-  ## Enabling this option may result in a large number of series, especially
-  ## when processes have a short lifetime.
-  # pid_tag = false
+  ## Add the given information tag instead of a field
+  ## This allows to create unique metrics/series when collecting processes with
+  ## otherwise identical tags. However, please be careful as this can easily
+  ## result in a large number of series, especially with short-lived processes,
+  ## creating high cardinality at the output.
+  ## Available options are:
+  ##   cmdline -- full commandline
+  ##   pid     -- ID of the process
+  ##   ppid    -- ID of the process' parent
+  ##   status  -- state of the process
+  ##   user    -- username owning the process
+  # tag_with = []
+
 
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
   ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
@@ -77,6 +83,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
+
+### Darwin specifics
+
+If you use this plugin with `supervisor_units` *and* `pattern` on Darwin, you
+**have to** use the `pgrep` finder as the underlying library relies on `pgrep`.
 
 ### Permissions
 
@@ -109,6 +120,7 @@ Below are an example set of tags and fields:
     - systemd_unit (when defined)
     - cgroup (when defined)
     - cgroup_full (when cgroup or systemd_unit is used with glob)
+    - supervisor_unit (when defined)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)
@@ -179,6 +191,7 @@ Below are an example set of tags and fields:
     - user
     - systemd_unit
     - cgroup
+    - supervisor_unit
     - win_service
     - result
   - fields:

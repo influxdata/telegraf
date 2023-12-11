@@ -24,7 +24,7 @@ type Parser struct {
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
 
-	// **** The struct fields bellow this comment are used for processing indvidual configs ****
+	// **** The struct fields below this comment are used for processing individual configs ****
 
 	// measurementName is the name of the current config used in each line protocol
 	measurementName string
@@ -130,6 +130,10 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 	p.parseMutex.Lock()
 	defer p.parseMutex.Unlock()
+
+	// Clear intermediate results if left by previous call
+	p.subPathResults = nil
+
 	reader := strings.NewReader(string(input))
 	body, _ := utfbom.Skip(reader)
 	input, err := io.ReadAll(body)
@@ -165,7 +169,7 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
-					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+					err := fmt.Errorf("use of 'timestamp_path' requires 'timestamp_format'")
 					return nil, err
 				}
 
@@ -346,6 +350,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 				n.ParentIndex = n.Index + result.ParentIndex
 				r, err := p.combineObject(n, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 
@@ -366,6 +371,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 			n.ParentIndex = n.Index + result.ParentIndex
 			r, err := p.expandArray(n, timestamp)
 			if err != nil {
+				p.Log.Error(err)
 				return false
 			}
 			results = append(results, r...)
@@ -377,7 +383,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 	} else {
 		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
-				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+				err := fmt.Errorf("use of 'timestamp_key' requires 'timestamp_format'")
 				return nil, err
 			}
 			var loc *time.Location
@@ -586,6 +592,7 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 			if val.IsObject() {
 				results, err = p.combineObject(arrayNode, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 			} else {
@@ -593,6 +600,7 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 				arrayNode.ParentIndex -= result.Index
 				r, err := p.expandArray(arrayNode, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 				results = cartesianProduct(r, results)

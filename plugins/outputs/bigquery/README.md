@@ -36,6 +36,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Character to replace hyphens on Metric name
   # replace_hyphen_to = "_"
+
+  ## Write all metrics in a single compact table
+  # compact_table = ""
 ```
 
 Leaving `project` empty indicates the plugin will try to retrieve the project
@@ -53,6 +56,36 @@ table on BigQuery:
   be set to string.
 * Should contain the metric's fields with the same name and the column type
   should match the field type.
+
+## Compact table
+
+When enabling the compact table, all metrics are inserted to the given table
+with the following schema:
+
+```json
+[
+  {
+    "mode": "REQUIRED",
+    "name": "timestamp",
+    "type": "TIMESTAMP"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "name",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "tags",
+    "type": "JSON"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "fields",
+    "type": "JSON"
+  }
+]
+```
 
 ## Restrictions
 

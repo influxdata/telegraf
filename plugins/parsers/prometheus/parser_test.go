@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -334,7 +335,7 @@ func TestDefautTags(t *testing.T) {
 	parser := Parser{
 		DefaultTags: map[string]string{
 			"defaultTag":    "defaultTagValue",
-			"dockerVersion": "to_be_overriden",
+			"dockerVersion": "to_be_overridden",
 		},
 	}
 	metrics, err := parser.Parse([]byte(validUniqueGauge))
@@ -390,10 +391,10 @@ test_counter{label="test"} 1 %d
 	)
 
 	parser := Parser{IgnoreTimestamp: true}
-	metric, _ := parser.ParseLine(metricsWithTimestamps)
+	m, _ := parser.ParseLine(metricsWithTimestamps)
 
-	testutil.RequireMetricEqual(t, expected, metric, testutil.IgnoreTime(), testutil.SortMetrics())
-	require.WithinDuration(t, time.Now(), metric.Time(), 5*time.Second)
+	testutil.RequireMetricEqual(t, expected, m, testutil.IgnoreTime(), testutil.SortMetrics())
+	require.WithinDuration(t, time.Now(), m.Time(), 5*time.Second)
 }
 
 func parse(buf []byte) ([]telegraf.Metric, error) {
@@ -646,4 +647,61 @@ func TestHistogramInfBucketPresence(t *testing.T) {
 	metrics := makeBuckets(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
 
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+const benchmarkData = `
+# HELP benchmark_a Test metric for benchmarking
+# TYPE benchmark_a gauge
+benchmark_a{source="myhost",tags_platform="python",tags_sdkver="3.11.5"} 5 1653643420000
+
+# HELP benchmark_b Test metric for benchmarking
+# TYPE benchmark_b gauge
+benchmark_b{source="myhost",tags_platform="python",tags_sdkver="3.11.4"} 4 1653643420000
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		IgnoreTimestamp: false,
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"benchmark_a": 5.0,
+			},
+			time.Unix(1653643420, 0),
+			telegraf.Gauge,
+		),
+		metric.New(
+			"prometheus",
+			map[string]string{
+				"source":        "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"benchmark_b": 4.0,
+			},
+			time.Unix(1653643420, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{}
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
 }

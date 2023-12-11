@@ -84,7 +84,7 @@ func getTags(pools []poolInfo) map[string]string {
 }
 
 func gather(lines []string, fileLines int) ([]string, []string, error) {
-	if len(lines) != fileLines {
+	if len(lines) < fileLines {
 		return nil, nil, errors.New("expected lines in kstat does not match")
 	}
 
@@ -172,7 +172,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	}
 
 	if gatherErr != nil {
-		return err
+		return gatherErr
 	}
 
 	acc.AddFields("zfs_pool", fields, tags)

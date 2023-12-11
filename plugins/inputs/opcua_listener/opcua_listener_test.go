@@ -11,7 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/testutil"
@@ -148,6 +150,147 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	}
 }
 
+func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []OPCTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+		{"badnode", "1", "i", "1337", nil},
+		{"goodnode", "1", "s", "the.answer", int32(42)},
+		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
+	}
+	testopctypes := []string{
+		"String",
+		"String",
+		"String",
+		"Null",
+		"Int32",
+		"DateTime",
+	}
+	testopcquality := []string{
+		"OK (0x0)",
+		"OK (0x0)",
+		"OK (0x0)",
+		"User does not have permission to perform the requested operation. StatusBadUserAccessDenied (0x801F0000)",
+		"OK (0x0)",
+		"OK (0x0)",
+	}
+	expectedopcmetrics := []telegraf.Metric{}
+	for i, x := range testopctags {
+		now := time.Now()
+		tags := map[string]string{
+			"id": fmt.Sprintf("ns=%s;%s=%s", x.Namespace, x.IdentifierType, x.Identifier),
+		}
+		fields := map[string]interface{}{
+			x.Name:     x.Want,
+			"Quality":  testopcquality[i],
+			"DataType": testopctypes[i],
+		}
+		expectedopcmetrics = append(expectedopcmetrics, metric.New("testing", tags, fields, now))
+	}
+
+	tagsRemaining := make([]string, 0, len(testopctags))
+	for i, tag := range testopctags {
+		if tag.Want != nil {
+			tagsRemaining = append(tagsRemaining, testopctags[i].Name)
+		}
+	}
+
+	subscribeConfig := SubscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+				OptionalFields: []string{"DataType"},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	for _, tags := range testopctags {
+		subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, MapOPCTag(tags))
+	}
+	o, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	// give initial setup a couple extra attempts, as on CircleCI this can be
+	// attempted to soon
+	require.Eventually(t, func() bool {
+		return o.SetupOptions() == nil
+	}, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(t, o.Connect(), "Connection failed")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	res, err := o.StartStreamValues(ctx)
+	require.NoError(t, err)
+
+	for {
+		select {
+		case m := <-res:
+			for fieldName, fieldValue := range m.Fields() {
+				for _, tag := range testopctags {
+					if fieldName != tag.Name {
+						continue
+					}
+					// nil-value tags should not be sent from server, error if one does
+					if tag.Want == nil {
+						t.Errorf("Tag: %s has value: %v", tag.Name, fieldValue)
+						return
+					}
+
+					newRemaining := make([]string, 0, len(tagsRemaining))
+					for _, remainingTag := range tagsRemaining {
+						if fieldName != remainingTag {
+							newRemaining = append(newRemaining, remainingTag)
+							break
+						}
+					}
+
+					if len(newRemaining) <= 0 {
+						return
+					}
+					// Test if the received metric matches one of the expected
+					testutil.RequireMetricsSubset(t, []telegraf.Metric{m}, expectedopcmetrics, testutil.IgnoreTime())
+					tagsRemaining = newRemaining
+				}
+			}
+
+		case <-ctx.Done():
+			msg := ""
+			for _, tag := range tagsRemaining {
+				msg += tag + ", "
+			}
+
+			t.Errorf("Tags %s are remaining without a received value", msg)
+			return
+		}
+	}
+}
+
 func TestSubscribeClientConfig(t *testing.T) {
 	toml := `
 [[inputs.opcua_listener]]
@@ -164,6 +307,9 @@ auth_method = "Anonymous"
 timestamp_format = "2006-01-02T15:04:05Z07:00"
 username = ""
 password = ""
+
+optional_fields = ["DataType"]
+
 nodes = [
   {name="name",  namespace="1", identifier_type="s", identifier="one"},
   {name="name2", namespace="2", identifier_type="s", identifier="two"},
@@ -247,6 +393,7 @@ additional_valid_status_codes = ["0xC0"]
 		},
 	}, o.SubscribeClientConfig.Groups)
 	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.SubscribeClientConfig.Workarounds)
+	require.Equal(t, []string{"DataType"}, o.SubscribeClientConfig.OptionalFields)
 }
 
 func TestSubscribeClientConfigWithMonitoringParams(t *testing.T) {

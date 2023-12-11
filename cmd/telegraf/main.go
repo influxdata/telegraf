@@ -233,6 +233,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			debug:          cCtx.Bool("debug"),
 			once:           cCtx.Bool("once"),
 			quiet:          cCtx.Bool("quiet"),
+			unprotected:    cCtx.Bool("unprotected"),
 		}
 
 		w := WindowFlags{
@@ -313,6 +314,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name:  "quiet",
 					Usage: "run in quiet mode",
+				},
+				&cli.BoolFlag{
+					Name:  "unprotected",
+					Usage: "do not protect secrets in memory",
 				},
 				&cli.BoolFlag{
 					Name: "test",

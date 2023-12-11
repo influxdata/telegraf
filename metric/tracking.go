@@ -151,6 +151,11 @@ func (m *trackingMetric) decr() {
 }
 
 // Unwrap allows to access the underlying metric directly e.g. for go-templates
+func (m *trackingMetric) TrackingID() telegraf.TrackingID {
+	return m.d.id
+}
+
+// Unwrap allows to access the underlying metric directly e.g. for go-templates
 func (m *trackingMetric) Unwrap() telegraf.Metric {
 	return m.Metric
 }

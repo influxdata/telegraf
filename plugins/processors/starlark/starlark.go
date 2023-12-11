@@ -47,12 +47,12 @@ func (s *Starlark) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) error {
 	parameters, found := s.GetParameters("apply")
 	if !found {
 		return fmt.Errorf("the parameters of the apply function could not be found")
 	}
-	parameters[0].(*common.Metric).Wrap(metric)
+	parameters[0].(*common.Metric).Wrap(origMetric)
 
 	rv, err := s.Call("apply")
 	if err != nil {
@@ -65,6 +65,7 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 		iter := rv.Iterate()
 		defer iter.Done()
 		var v starlark.Value
+		var origFound bool
 		for iter.Next(&v) {
 			switch v := v.(type) {
 			case *common.Metric:
@@ -73,6 +74,16 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 					s.Log.Errorf("Duplicate metric reference detected")
 					continue
 				}
+
+				// Previous metric was found, accept the starlark metric, add
+				// the original metric to the accumulator
+				if v.ID == origMetric.HashID() {
+					origFound = true
+					s.results = append(s.results, origMetric)
+					acc.AddMetric(origMetric)
+					continue
+				}
+
 				s.results = append(s.results, m)
 				acc.AddMetric(m)
 			default:
@@ -82,8 +93,8 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 
 		// If the script didn't return the original metrics, mark it as
 		// successfully handled.
-		if !containsMetric(s.results, metric) {
-			metric.Accept()
+		if !origFound {
+			origMetric.Drop()
 		}
 
 		// clear results
@@ -93,15 +104,16 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 		s.results = s.results[:0]
 	case *common.Metric:
 		m := rv.Unwrap()
-
-		// If the script returned a different metric, mark this metric as
-		// successfully handled.
-		if m != metric {
-			metric.Accept()
+		// If we got the original metric back, use that and drop the new one.
+		// Otherwise mark the original as accepted and use the new metric.
+		if origMetric.HashID() == rv.ID {
+			acc.AddMetric(origMetric)
+		} else {
+			origMetric.Accept()
+			acc.AddMetric(m)
 		}
-		acc.AddMetric(m)
 	case starlark.NoneType:
-		metric.Drop()
+		origMetric.Drop()
 	default:
 		return fmt.Errorf("invalid type returned: %T", rv)
 	}
@@ -111,9 +123,9 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 func (s *Starlark) Stop() {
 }
 
-func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
+func containsMetric(metrics []telegraf.Metric, target telegraf.Metric) bool {
 	for _, m := range metrics {
-		if m == metric {
+		if m == target {
 			return true
 		}
 	}

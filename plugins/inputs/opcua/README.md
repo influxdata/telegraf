@@ -71,6 +71,11 @@ to use them.
   ##     "source" -- uses the timestamp provided by the source
   # timestamp = "gather"
   #
+  ## Include additional Fields in each metric
+  ## Available options are:
+  ##   DataType -- OPC-UA Data Type (string)
+  # optional_fields = []
+  #
   ## Node ID configuration
   ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
@@ -177,7 +182,14 @@ To gather data from this node enter the following line into the 'nodes' property
 This node configuration produces a metric like this:
 
 ```text
-opcua,id=ns\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
+opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)" 1597820490000000000
+```
+
+With 'DataType' entered in Additional Metrics, this node configuration
+produces a metric like this:
+
+```text
+opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
 ## Group Configuration

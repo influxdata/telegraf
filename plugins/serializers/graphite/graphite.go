@@ -17,8 +17,8 @@ import (
 const DefaultTemplate = "host.tags.measurement.field"
 
 var (
-	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
-	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
+	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`) //nolint: gocritic  // valid range for use-case
+	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)         //nolint: gocritic  // valid range for use-case
 	compatibleLeadingTildeDrop  = regexp.MustCompile(`^[~]*(.*)`)
 	hyphenChars                 = strings.NewReplacer(
 		"/", "-",
@@ -144,10 +144,7 @@ func (s *GraphiteSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, 
 		if err != nil {
 			return nil, err
 		}
-		_, err = batch.Write(buf)
-		if err != nil {
-			return nil, err
-		}
+		batch.Write(buf)
 	}
 	return batch.Bytes(), nil
 }

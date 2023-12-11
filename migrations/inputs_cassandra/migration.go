@@ -48,8 +48,8 @@ type jolokiaAgent struct {
 
 	NamePass       []string            `toml:"namepass,omitempty"`
 	NameDrop       []string            `toml:"namedrop,omitempty"`
-	FieldPass      []string            `toml:"fieldpass,omitempty"`
-	FieldDrop      []string            `toml:"fielddrop,omitempty"`
+	FieldInclude   []string            `toml:"fieldinclude,omitempty"`
+	FieldExclude   []string            `toml:"fieldexclude,omitempty"`
 	TagPassFilters map[string][]string `toml:"tagpass,omitempty"`
 	TagDropFilters map[string][]string `toml:"tagdrop,omitempty"`
 	TagExclude     []string            `toml:"tagexclude,omitempty"`
@@ -191,6 +191,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 }
 
 func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
+	o.Migrate()
+
 	j.Interval = o.Interval
 	j.Precision = o.Precision
 	j.CollectionJitter = o.CollectionJitter
@@ -212,13 +214,11 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 	if len(o.NameDrop) > 0 {
 		j.NameDrop = append(j.NameDrop, o.NameDrop...)
 	}
-	if len(o.FieldPass) > 0 || len(o.FieldDropOld) > 0 {
-		j.FieldPass = append(j.FieldPass, o.FieldPass...)
-		j.FieldPass = append(j.FieldPass, o.FieldPassOld...)
+	if len(o.FieldInclude) > 0 {
+		j.FieldInclude = append(j.FieldInclude, o.FieldInclude...)
 	}
-	if len(o.FieldDrop) > 0 || len(o.FieldDropOld) > 0 {
-		j.FieldDrop = append(j.FieldDrop, o.FieldDrop...)
-		j.FieldDrop = append(j.FieldDrop, o.FieldDropOld...)
+	if len(o.FieldExclude) > 0 {
+		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
 		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))

@@ -247,9 +247,7 @@ func (c *child) handleRecord(rec *record) error {
 			return err
 		}
 		if req.pw != nil {
-			if err := req.pw.CloseWithError(ErrRequestAborted); err != nil {
-				return err
-			}
+			req.pw.CloseWithError(ErrRequestAborted)
 		}
 		if !req.keepConn {
 			// connection will close upon return

@@ -231,7 +231,7 @@ combining an integer value and time unit as a string value.  Valid time units ar
 
 Global tags can be specified in the `[global_tags]` table in key="value"
 format. All metrics that are gathered will be tagged with the tags specified.
-Global tags are overriden by tags set by plugins.
+Global tags are overridden by tags set by plugins.
 
 ```toml
 [global_tags]
@@ -375,7 +375,7 @@ Parameters that can be used with any input plugin:
   Overrides the `precision` setting of the [agent][Agent] for the plugin.
   Collected metrics are rounded to the precision specified as an [interval][].
 
-  When this value is set on a service input, multiple events occuring at the
+  When this value is set on a service input, multiple events occurring at the
   same timestamp may be merged by the output database.
 
 - **collection_jitter**:
@@ -457,7 +457,7 @@ avoid measurement collisions when defining multiple plugins:
   percpu = true
   totalcpu = false
   name_override = "percpu_usage"
-  fielddrop = ["cpu_time*"]
+  fieldexclude = ["cpu_time*"]
 ```
 
 ### Output Plugins
@@ -582,7 +582,7 @@ the originals.
 
 ```toml
 [[inputs.system]]
-  fieldpass = ["load1"] # collects system load1 metric.
+  fieldinclude = ["load1"] # collects system load1 metric.
 
 [[aggregators.minmax]]
   period = "30s"        # send & clear the aggregate every 30s.
@@ -600,7 +600,7 @@ to the `namepass` parameter.
 [[inputs.swap]]
 
 [[inputs.system]]
-  fieldpass = ["load1"] # collects system load1 metric.
+  fieldinclude = ["load1"] # collects system load1 metric.
 
 [[aggregators.minmax]]
   period = "30s"        # send & clear the aggregate every 30s.
@@ -626,11 +626,15 @@ sent onwards to the next stage of processing.
 
 - **namepass**:
 An array of [glob pattern][] strings. Only metrics whose measurement name
-matches a pattern in this list are emitted.
+matches a pattern in this list are emitted. Additionally, custom list of
+separators can be specified using `namepass_separator`. These separators
+are excluded from wildcard glob pattern matching.
 
 - **namedrop**:
 The inverse of `namepass`. If a match is found the metric is discarded. This
-is tested on metrics after they have passed the `namepass` test.
+is tested on metrics after they have passed the `namepass` test. Additionally,
+custom list of separators can be specified using `namedrop_separator`. These
+separators are excluded from wildcard glob pattern matching.
 
 - **tagpass**:
 A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
@@ -684,14 +688,14 @@ removed the metric is removed. Tags and fields are modified before a metric is
 passed to a processor, aggregator, or output plugin. When used with an input
 plugin the filter applies after the input runs.
 
-- **fieldpass**:
+- **fieldinclude**:
 An array of [glob pattern][] strings.  Only fields whose field key matches a
 pattern in this list are emitted.
 
-- **fielddrop**:
-The inverse of `fieldpass`.  Fields with a field key matching one of the
+- **fieldexclude**:
+The inverse of `fieldinclude`.  Fields with a field key matching one of the
 patterns will be discarded from the metric.  This is tested on metrics after
-they have passed the `fieldpass` test.
+they have passed the `fieldinclude` test.
 
 - **taginclude**:
 An array of [glob pattern][] strings.  Only tags with a tag key matching one of
@@ -713,7 +717,7 @@ tags and the agent `host` tag.
 [[inputs.cpu]]
   percpu = true
   totalcpu = false
-  fielddrop = ["cpu_time"]
+  fieldexclude = ["cpu_time"]
   # Don't collect CPU data for cpu6 & cpu7
   [inputs.cpu.tagdrop]
     cpu = [ "cpu6", "cpu7" ]
@@ -742,18 +746,18 @@ tags and the agent `host` tag.
     instance = ["isatap*", "Local*"]
 ```
 
-#### Using fieldpass and fielddrop
+#### Using fieldinclude and fieldexclude
 
 ```toml
 # Drop all metrics for guest & steal CPU usage
 [[inputs.cpu]]
   percpu = false
   totalcpu = true
-  fielddrop = ["usage_guest", "usage_steal"]
+  fieldexclude = ["usage_guest", "usage_steal"]
 
 # Only store inode related metrics for disks
 [[inputs.disk]]
-  fieldpass = ["inodes*"]
+  fieldinclude = ["inodes*"]
 ```
 
 #### Using namepass and namedrop
@@ -768,6 +772,26 @@ tags and the agent `host` tag.
 [[inputs.prometheus]]
   urls = ["http://kube-node-1:4194/metrics"]
   namepass = ["rest_client_*"]
+```
+
+#### Using namepass and namedrop with separators
+
+```toml
+# Pass all metrics of type 'A.C.B' and drop all others like 'A.C.D.B'
+[[inputs.socket_listener]]
+  data_format = "graphite"
+  templates = ["measurement*"]
+
+  namepass = ["A.*.B"]
+  namepass_separator = "."
+
+# Drop all metrics of type 'A.C.B' and pass all others like 'A.C.D.B'
+[[inputs.socket_listener]]
+  data_format = "graphite"
+  templates = ["measurement*"]
+
+  namedrop = ["A.*.B"]
+  namedrop_separator = "."
 ```
 
 #### Using taginclude and tagexclude

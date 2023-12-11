@@ -74,12 +74,8 @@ func (p Packet) Compile() (payload []byte, err error) {
 		return nil, err
 	}
 
-	if _, err = buffer.WriteString(p.Body); err != nil {
-		return nil, err
-	}
-	if _, err = buffer.Write(padding[:]); err != nil {
-		return nil, err
-	}
+	buffer.WriteString(p.Body)
+	buffer.Write(padding[:])
 
 	return buffer.Bytes(), nil
 }

@@ -2,6 +2,10 @@ package s7comm
 
 import (
 	_ "embed"
+	"encoding/binary"
+	"io"
+	"net"
+	"sync/atomic"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -258,6 +262,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							Area:     0x84,
 							WordLen:  0x01,
+							Bit:      2,
 							DBNumber: 5,
 							Start:    3,
 							Amount:   1,
@@ -697,4 +702,85 @@ func TestMetricCollisions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConnectionLoss(t *testing.T) {
+	// Create fake S7 comm server that can accept connects
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	var connectionAttempts uint32
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+
+			// Count the number of connection attempts
+			atomic.AddUint32(&connectionAttempts, 1)
+
+			buf := make([]byte, 4096)
+
+			// Wait for ISO connection telegram
+			if _, err := io.ReadAtLeast(conn, buf, 22); err != nil {
+				conn.Close()
+				return
+			}
+
+			// Send fake response
+			response := make([]byte, 22)
+			response[5] = 0xD0
+			binary.BigEndian.PutUint16(response[2:4], uint16(len(response)))
+			if _, err := conn.Write(response); err != nil {
+				conn.Close()
+				return
+			}
+
+			// Wait for PDU negotiation telegram
+			if _, err := io.ReadAtLeast(conn, buf, 25); err != nil {
+				conn.Close()
+				return
+			}
+
+			// Send fake response
+			response = make([]byte, 27)
+			binary.BigEndian.PutUint16(response[2:4], uint16(len(response)))
+			binary.BigEndian.PutUint16(response[25:27], uint16(480))
+			if _, err := conn.Write(response); err != nil {
+				return
+			}
+
+			// Always close after connection is established
+			conn.Close()
+		}
+	}()
+	plugin := &S7comm{
+		Server:          listener.Addr().String(),
+		Rack:            0,
+		Slot:            2,
+		DebugConnection: true,
+		Configs: []metricDefinition{
+			{
+				Fields: []metricFieldDefinition{
+					{
+						Name:    "foo",
+						Address: "DB1.W2",
+					},
+				},
+			},
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	listener.Close()
+
+	require.Equal(t, 3, int(atomic.LoadUint32(&connectionAttempts)))
 }

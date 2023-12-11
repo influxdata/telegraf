@@ -43,7 +43,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 By default this plugin collects metrics about ZFS internals pool and dataset.
 These metrics are either counters or measure sizes
 in bytes. These metrics will be in the `zfs` measurement with the field
-names listed bellow.
+names listed below.
 
 If `poolMetrics` is enabled then additional metrics will be gathered for
 each pool.
@@ -52,7 +52,7 @@ If `datasetMetrics` is enabled then additional metrics will be gathered for
 each dataset.
 
 - zfs
-    With fields listed bellow.
+    With fields listed below.
 
 ### ARC Stats (FreeBSD and Linux)
 
@@ -223,6 +223,27 @@ For ZFS >= 2.1.x the format has changed significantly:
   - nunlinks (integer, count)
   - nunlinked (integer, count)
 
+For ZFS >= 2.2.x the following additional fields are available:
+
+- additional fields for ZFS > 2.2.x
+  - zil_commit_count (integer, count)
+  - zil_commit_writer_count (integer, count)
+  - zil_itx_count (integer, count)
+  - zil_itx_indirect_count (integer, count)
+  - zil_itx_indirect_bytes (integer, bytes)
+  - zil_itx_copied_count (integer, count)
+  - zil_itx_copied_bytes (integer, bytes)
+  - zil_itx_needcopy_count (integer, count)
+  - zil_itx_needcopy_bytes (integer, bytes)
+  - zil_itx_metaslab_normal_count (integer, count)
+  - zil_itx_metaslab_normal_bytes (integer, bytes)
+  - zil_itx_metaslab_normal_write (integer, bytes)
+  - zil_itx_metaslab_normal_alloc (integer, bytes)
+  - zil_itx_metaslab_slog_count (integer, count)
+  - zil_itx_metaslab_slog_bytes (integer, bytes)
+  - zil_itx_metaslab_slog_write (integer, bytes)
+  - zil_itx_metaslab_slog_alloc (integer, bytes)
+
 On FreeBSD:
 
 - zfs_pool
@@ -391,6 +412,7 @@ memory is too low)
 
 ### ZIL (Linux Only)
 
-note: ZIL measurements are system-wide, neither per-pool nor per-dataset
+note: `zil` measurements in `kstatMetrics` are system-wide, in `poolMetrics`
+they are pool-wide
 
 `zil_commit_count` counts when ZFS transactions are committed to a ZIL

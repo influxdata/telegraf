@@ -4,6 +4,7 @@ package bigquery
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -34,6 +36,7 @@ type BigQuery struct {
 
 	Timeout         config.Duration `toml:"timeout"`
 	ReplaceHyphenTo string          `toml:"replace_hyphen_to"`
+	CompactTable    string          `toml:"compact_table"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -62,9 +65,22 @@ func (s *BigQuery) Init() error {
 
 func (s *BigQuery) Connect() error {
 	if s.client == nil {
-		return s.setUpDefaultClient()
+		if err := s.setUpDefaultClient(); err != nil {
+			return err
+		}
 	}
 
+	if s.CompactTable != "" {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
+		defer cancel()
+
+		// Check if the compact table exists
+		_, err := s.client.Dataset(s.Dataset).Table(s.CompactTable).Metadata(ctx)
+		if err != nil {
+			return fmt.Errorf("compact table: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -81,19 +97,26 @@ func (s *BigQuery) setUpDefaultClient() error {
 		creds, err := google.FindDefaultCredentials(ctx)
 		if err != nil {
 			return fmt.Errorf(
-				"unable to find Google Cloud Platform Application Default Credentials: %v. "+
+				"unable to find Google Cloud Platform Application Default Credentials: %w. "+
 					"Either set ADC or provide CredentialsFile config", err)
 		}
 		credentialsOption = option.WithCredentials(creds)
 	}
 
-	client, err := bigquery.NewClient(ctx, s.Project, credentialsOption)
+	client, err := bigquery.NewClient(ctx, s.Project,
+		credentialsOption,
+		option.WithUserAgent(internal.ProductToken()),
+	)
 	s.client = client
 	return err
 }
 
 // Write the metrics to Google Cloud BigQuery.
 func (s *BigQuery) Write(metrics []telegraf.Metric) error {
+	if s.CompactTable != "" {
+		return s.writeCompact(metrics)
+	}
+
 	groupedMetrics := s.groupByMetricName(metrics)
 
 	var wg sync.WaitGroup
@@ -109,6 +132,26 @@ func (s *BigQuery) Write(metrics []telegraf.Metric) error {
 	wg.Wait()
 
 	return nil
+}
+
+func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
+	defer cancel()
+
+	// Always returns an instance, even if table doesn't exist (anymore).
+	inserter := s.client.Dataset(s.Dataset).Table(s.CompactTable).Inserter()
+
+	var compactValues []*bigquery.ValuesSaver
+	for _, m := range metrics {
+		valueSaver, err := s.newCompactValuesSaver(m)
+		if err != nil {
+			s.Log.Warnf("could not prepare metric as compact value: %v", err)
+		} else {
+			compactValues = append(compactValues, valueSaver)
+		}
+	}
+	return inserter.Put(ctx, compactValues)
 }
 
 func (s *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSaver {
@@ -138,6 +181,33 @@ func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
 	}
 }
 
+func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) (*bigquery.ValuesSaver, error) {
+	tags, err := json.Marshal(m.Tags())
+	if err != nil {
+		return nil, fmt.Errorf("serializing tags: %w", err)
+	}
+
+	fields, err := json.Marshal(m.Fields())
+	if err != nil {
+		return nil, fmt.Errorf("serializing fields: %w", err)
+	}
+
+	return &bigquery.ValuesSaver{
+		Schema: bigquery.Schema{
+			timeStampFieldSchema(),
+			newStringFieldSchema("name"),
+			newJSONFieldSchema("tags"),
+			newJSONFieldSchema("fields"),
+		},
+		Row: []bigquery.Value{
+			m.Time(),
+			m.Name(),
+			string(tags),
+			string(fields),
+		},
+	}, nil
+}
+
 func timeStampFieldSchema() *bigquery.FieldSchema {
 	return &bigquery.FieldSchema{
 		Name: timeStampFieldName,
@@ -145,20 +215,27 @@ func timeStampFieldSchema() *bigquery.FieldSchema {
 	}
 }
 
+func newStringFieldSchema(name string) *bigquery.FieldSchema {
+	return &bigquery.FieldSchema{
+		Name: name,
+		Type: bigquery.StringFieldType,
+	}
+}
+
+func newJSONFieldSchema(name string) *bigquery.FieldSchema {
+	return &bigquery.FieldSchema{
+		Name: name,
+		Type: bigquery.JSONFieldType,
+	}
+}
+
 func tagsSchemaAndValues(m telegraf.Metric, s bigquery.Schema, r []bigquery.Value) ([]*bigquery.FieldSchema, []bigquery.Value) {
 	for _, t := range m.TagList() {
-		s = append(s, tagFieldSchema(t))
+		s = append(s, newStringFieldSchema(t.Key))
 		r = append(r, t.Value)
 	}
 
 	return s, r
-}
-
-func tagFieldSchema(t *telegraf.Tag) *bigquery.FieldSchema {
-	return &bigquery.FieldSchema{
-		Name: t.Key,
-		Type: bigquery.StringFieldType,
-	}
 }
 
 func valuesSchemaAndValues(m telegraf.Metric, s bigquery.Schema, r []bigquery.Value) ([]*bigquery.FieldSchema, []bigquery.Value) {
@@ -196,7 +273,7 @@ func (s *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	defer cancel()
 
 	tableName := s.metricToTable(metricName)
-	table := s.client.DatasetInProject(s.Project, s.Dataset).Table(tableName)
+	table := s.client.Dataset(s.Dataset).Table(tableName)
 	inserter := table.Inserter()
 
 	if err := inserter.Put(ctx, metrics); err != nil {

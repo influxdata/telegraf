@@ -22,6 +22,11 @@ We recommend posting support questions in our [Community Slack](https://influxda
 
 ## Contributing code
 
+### AI Generated Code
+
+We currently cannot accept AI generated code contributions. Code contributed
+should be your own per the CLA.
+
 ### Creating a pull request
 
 1. [Sign the CLA][cla].

@@ -113,6 +113,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## white space with '_', replace '/' with '-', and remove charachters not
   ## matching 'a-zA-Z_\-0-9\.;='.
   #sanitize_name_method = ""
+
+  ## Replace dots (.) with underscore (_) and dashes (-) with
+  ## double underscore (__) in metric names.
+  # convert_names = false
 ```
 
 ## Description

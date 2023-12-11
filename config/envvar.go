@@ -58,9 +58,7 @@ func (t *trimmer) process() error {
 		case '#':
 			err = t.comment()
 		default:
-			if err := t.output.WriteByte(c); err != nil {
-				return err
-			}
+			t.output.WriteByte(c)
 			continue
 		}
 		if err != nil {
@@ -165,9 +163,7 @@ func (t *trimmer) doubleQuote() error {
 			// Found terminator
 			return t.output.WriteByte(c)
 		}
-		if err := t.output.WriteByte(c); err != nil {
-			return err
-		}
+		t.output.WriteByte(c)
 	}
 }
 
@@ -192,7 +188,7 @@ func (t *trimmer) tripleDoubleQuote() error {
 			}
 			continue
 		case '"':
-			_ = t.output.WriteByte(c)
+			t.output.WriteByte(c)
 			if t.hasNQuotes('"', 2) {
 				// Consumer the two additional ending quotes
 				_, _ = t.readWriteByte()
@@ -201,9 +197,7 @@ func (t *trimmer) tripleDoubleQuote() error {
 			}
 			continue
 		}
-		if err := t.output.WriteByte(c); err != nil {
-			return err
-		}
+		t.output.WriteByte(c)
 	}
 }
 

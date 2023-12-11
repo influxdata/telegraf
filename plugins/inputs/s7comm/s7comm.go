@@ -126,18 +126,20 @@ func (s *S7comm) Init() error {
 		s.Server += ":102"
 	}
 
-	// Create the requests
-	return s.createRequests()
-}
-
-// Start initializes the connection to the remote endpoint
-func (s *S7comm) Start(_ telegraf.Accumulator) error {
 	// Create handler for the connection
 	s.handler = gos7.NewTCPClientHandler(s.Server, s.Rack, s.Slot)
 	s.handler.Timeout = time.Duration(s.Timeout)
 	if s.DebugConnection {
 		s.handler.Logger = log.New(os.Stderr, "D! [inputs.s7comm]", log.LstdFlags)
 	}
+
+	// Create the requests
+	return s.createRequests()
+}
+
+// Start initializes the connection to the remote endpoint
+func (s *S7comm) Start(_ telegraf.Accumulator) error {
+	s.Log.Debugf("Connecting to %q...", s.Server)
 	if err := s.handler.Connect(); err != nil {
 		return fmt.Errorf("connecting to %q failed: %w", s.Server, err)
 	}
@@ -149,6 +151,7 @@ func (s *S7comm) Start(_ telegraf.Accumulator) error {
 // Stop disconnects from the remote endpoint and cleans up
 func (s *S7comm) Stop() {
 	if s.handler != nil {
+		s.Log.Debugf("Disconnecting from %q...", s.handler.Address)
 		s.handler.Close()
 	}
 }
@@ -162,7 +165,11 @@ func (s *S7comm) Gather(acc telegraf.Accumulator) error {
 		// Read the batch
 		s.Log.Debugf("Reading batch %d...", i+1)
 		if err := s.client.AGReadMulti(b.items, len(b.items)); err != nil {
-			return fmt.Errorf("reading batch %d failed: %w", i+1, err)
+			// Try to reconnect and skip this gather cycle to avoid hammering
+			// the network if the server is down or under load.
+			s.Log.Errorf("reading batch %d failed: %v; reconnecting...", i+1, err)
+			s.Stop()
+			return s.Start(acc)
 		}
 
 		// Dissect the received data into fields
@@ -229,10 +236,7 @@ func (s *S7comm) createRequests() error {
 			}
 
 			// Check for duplicate field definitions
-			id, err := fieldID(seed, cfg, f)
-			if err != nil {
-				return fmt.Errorf("cannot determine field id for %q: %w", f.Name, err)
-			}
+			id := fieldID(seed, cfg, f)
 			if seenFields[id] {
 				return fmt.Errorf("duplicate field definition field %q in metric %q", f.Name, cfg.Name)
 			}
@@ -301,9 +305,9 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Check the amount parameter if any
-	var extra int
+	var extra, bit int
 	switch dtype {
-	case "X", "S":
+	case "S":
 		// We require an extra parameter
 		x := groups["extra"]
 		if x == "" {
@@ -316,6 +320,21 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 		}
 		if extra < 1 {
 			return nil, nil, fmt.Errorf("invalid extra parameter %d", extra)
+		}
+	case "X":
+		// We require an extra parameter
+		x := groups["extra"]
+		if x == "" {
+			return nil, nil, errors.New("extra parameter required")
+		}
+
+		bit, err = strconv.Atoi(x)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid extra parameter: %w", err)
+		}
+		if bit < 0 || bit > 7 {
+			// Ensure bit address is valid
+			return nil, nil, fmt.Errorf("invalid extra parameter: bit address %d out of range", bit)
 		}
 	default:
 		if groups["extra"] != "" {
@@ -348,6 +367,7 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	item := &gos7.S7DataItem{
 		Area:     area,
 		WordLen:  wordlen,
+		Bit:      bit,
 		DBNumber: areaidx,
 		Start:    start,
 		Amount:   amount,
@@ -355,47 +375,29 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	}
 
 	// Determine the type converter function
-	f := determineConversion(dtype, extra)
+	f := determineConversion(dtype)
 	return item, f, nil
 }
 
-func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) (uint64, error) {
+func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) uint64 {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
-	if _, err := mh.WriteString(def.Name); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
-	if _, err := mh.WriteString(field.Name); err != nil {
-		return 0, err
-	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
+	mh.WriteString(def.Name)
+	mh.WriteByte(0)
+	mh.WriteString(field.Name)
+	mh.WriteByte(0)
 
 	// Tags
 	for k, v := range def.Tags {
-		if _, err := mh.WriteString(k); err != nil {
-			return 0, err
-		}
-		if err := mh.WriteByte('='); err != nil {
-			return 0, err
-		}
-		if _, err := mh.WriteString(v); err != nil {
-			return 0, err
-		}
-		if err := mh.WriteByte(':'); err != nil {
-			return 0, err
-		}
+		mh.WriteString(k)
+		mh.WriteByte('=')
+		mh.WriteString(v)
+		mh.WriteByte(':')
 	}
-	if err := mh.WriteByte(0); err != nil {
-		return 0, err
-	}
+	mh.WriteByte(0)
 
-	return mh.Sum64(), nil
+	return mh.Sum64()
 }
 
 // Add this plugin to telegraf

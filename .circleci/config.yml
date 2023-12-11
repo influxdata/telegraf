@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.21.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.21.5'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -40,7 +40,7 @@ commands:
         default: "v1"
       goversion:
         type: string
-        default: 1.21.3
+        default: 1.21.5
     steps:
       - check-changed-files-or-halt
       - when:
@@ -229,7 +229,7 @@ jobs:
     parameters:
       goversion:
         type: string
-        default: 1.21.3
+        default: 1.21.5
       cache_version:
         type: string
         default: "v1"
@@ -261,7 +261,7 @@ jobs:
     parameters:
       goversion:
         type: string
-        default: 1.21.3
+        default: 1.21.5
       cache_version:
         type: string
         default: "v1"
@@ -298,7 +298,7 @@ jobs:
     parameters:
       goversion:
         type: string
-        default: 1.21.3
+        default: 1.21.5
       cache_version:
         type: string
         default: "v1"
@@ -321,7 +321,7 @@ jobs:
     parameters:
       goversion:
         type: string
-        default: 1.21.3
+        default: 1.21.5
       cache_version:
         type: string
         default: "v1"
@@ -350,7 +350,7 @@ jobs:
     parameters:
       goversion:
         type: string
-        default: 1.21.3
+        default: 1.21.5
       cache_version:
         type: string
         default: "v1"

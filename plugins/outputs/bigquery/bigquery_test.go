@@ -107,15 +107,42 @@ func TestConnect(t *testing.T) {
 	srv := localBigQueryServer(t)
 	defer srv.Close()
 
-	b := &BigQuery{
-		Project: "test-project",
-		Dataset: "test-dataset",
-		Timeout: defaultTimeout,
+	tests := []struct {
+		name         string
+		compactTable string
+		errorString  string
+	}{
+		{name: "normal"},
+		{
+			name:         "compact table existing",
+			compactTable: "test-metrics",
+		},
+		{
+			name:         "compact table not existing",
+			compactTable: "foobar",
+			errorString:  "compact table: googleapi: got HTTP response code 404",
+		},
 	}
 
-	require.NoError(t, b.Init())
-	require.NoError(t, b.setUpTestClient(srv.URL))
-	require.NoError(t, b.Connect())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BigQuery{
+				Project:      "test-project",
+				Dataset:      "test-dataset",
+				Timeout:      defaultTimeout,
+				CompactTable: tt.compactTable,
+			}
+
+			require.NoError(t, b.Init())
+			require.NoError(t, b.setUpTestClient(srv.URL))
+
+			if tt.errorString != "" {
+				require.ErrorContains(t, b.Connect(), tt.errorString)
+			} else {
+				require.NoError(t, b.Connect())
+			}
+		})
+	}
 }
 
 func TestWrite(t *testing.T) {
@@ -148,6 +175,60 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, mockMetrics[0].Fields()["value"], row.Value)
 }
 
+func TestWriteCompact(t *testing.T) {
+	srv := localBigQueryServer(t)
+	defer srv.Close()
+
+	b := &BigQuery{
+		Project:      "test-project",
+		Dataset:      "test-dataset",
+		Timeout:      defaultTimeout,
+		CompactTable: "test-metrics",
+	}
+
+	mockMetrics := testutil.MockMetrics()
+
+	require.NoError(t, b.Init())
+	require.NoError(t, b.setUpTestClient(srv.URL))
+	require.NoError(t, b.Connect())
+
+	require.NoError(t, b.Write(mockMetrics))
+
+	var rows []map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(receivedBody["rows"], &rows))
+	require.Len(t, rows, 1)
+	require.Contains(t, rows[0], "json")
+
+	var row interface{}
+	require.NoError(t, json.Unmarshal(rows[0]["json"], &row))
+	require.Equal(t, map[string]interface{}{
+		"timestamp": "2009-11-10T23:00:00Z",
+		"name":      "test1",
+		"tags":      `{"tag1":"value1"}`,
+		"fields":    `{"value":1}`,
+	}, row)
+
+	require.NoError(t, b.Close())
+}
+
+func TestAutoDetect(t *testing.T) {
+	srv := localBigQueryServer(t)
+	defer srv.Close()
+
+	b := &BigQuery{
+		Dataset:      "test-dataset",
+		Timeout:      defaultTimeout,
+		CompactTable: "test-metrics",
+	}
+
+	credentialsJSON := []byte(`{"type": "service_account", "project_id": "test-project"}`)
+
+	require.NoError(t, b.Init())
+	require.NoError(t, b.setUpTestClientWithJSON(srv.URL, credentialsJSON))
+	require.NoError(t, b.Connect())
+	require.NoError(t, b.Close())
+}
+
 func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	noAuth := option.WithoutAuthentication()
 	endpoint := option.WithEndpoint(endpointURL)
@@ -165,20 +246,40 @@ func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	return nil
 }
 
+func (b *BigQuery) setUpTestClientWithJSON(endpointURL string, credentialsJSON []byte) error {
+	noAuth := option.WithoutAuthentication()
+	endpoint := option.WithEndpoint(endpointURL)
+	credentials := option.WithCredentialsJSON(credentialsJSON)
+
+	ctx := context.Background()
+
+	c, err := bigquery.NewClient(ctx, b.Project, credentials, noAuth, endpoint)
+
+	b.client = c
+	return err
+}
+
 func localBigQueryServer(t *testing.T) *httptest.Server {
 	srv := httptest.NewServer(http.NotFoundHandler())
 
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll":
+		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll",
+			"/projects/test-project/datasets/test-dataset/tables/test-metrics/insertAll":
 			decoder := json.NewDecoder(r.Body)
 			require.NoError(t, decoder.Decode(&receivedBody))
 
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(successfulResponse))
 			require.NoError(t, err)
+		case "/projects/test-project/datasets/test-dataset/tables/test-metrics":
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte("{}"))
+			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(r.URL.String()))
+			require.NoError(t, err)
 		}
 	})
 

@@ -24,36 +24,20 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		applied = true
 
 		// Convert the options to the actual type
-		deprecatedMountpoints, ok := rawDeprecatedMountpoints.([]interface{})
-		if !ok {
-			err := fmt.Errorf("unexpected type for deprecated 'mountpoints' option: %T", rawDeprecatedMountpoints)
-			return nil, "", err
+		deprecatedMountpoints, err := migrations.AsStringSlice(rawDeprecatedMountpoints)
+		if err != nil {
+			return nil, "", fmt.Errorf("'mountpoints' option: %w", err)
 		}
 
 		// Merge the option with the replacement
 		var mountpoints []string
 		if rawMountpoints, found := plugin["mount_points"]; found {
-			mountpointsList, ok := rawMountpoints.([]interface{})
-			if !ok {
-				err := fmt.Errorf("unexpected type for 'mount_points' option: %T", rawMountpoints)
-				return nil, "", err
-			}
-			for _, raw := range mountpointsList {
-				mp, ok := raw.(string)
-				if !ok {
-					err := fmt.Errorf("unexpected type for 'mount_points' option: %T", raw)
-					return nil, "", err
-				}
-				mountpoints = append(mountpoints, mp)
+			mountpoints, err = migrations.AsStringSlice(rawMountpoints)
+			if err != nil {
+				return nil, "", fmt.Errorf("'mount_points' option: %w", err)
 			}
 		}
-		for _, raw := range deprecatedMountpoints {
-			dmp, ok := raw.(string)
-			if !ok {
-				err := fmt.Errorf("unexpected type for deprecated 'mountpoints' option: %T", raw)
-				return nil, "", err
-			}
-
+		for _, dmp := range deprecatedMountpoints {
 			if !choice.Contains(dmp, mountpoints) {
 				mountpoints = append(mountpoints, dmp)
 			}

@@ -524,3 +524,53 @@ func TestParseThreshold(t *testing.T) {
 		require.Equal(t, tests[i].eErr, err)
 	}
 }
+
+const benchmarkData = `DISK OK - free space: / 3326 MB (56%); | /=2643MB;5948;5958;0;5968
+/ 15272 MB (77%);
+/boot 68 MB (69%);
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"nagios",
+			map[string]string{
+				"perfdata": "/",
+				"unit":     "MB",
+			},
+			map[string]interface{}{
+				"critical_gt": 5958.0,
+				"critical_lt": 0.0,
+				"min":         0.0,
+				"max":         5968.0,
+				"value":       2643.0,
+				"warning_gt":  5948.0,
+				"warning_lt":  0.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"nagios_state",
+			map[string]string{},
+			map[string]interface{}{
+				"long_service_output": "/ 15272 MB (77%);\n/boot 68 MB (69%);",
+				"service_output":      "DISK OK - free space: / 3326 MB (56%);",
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{}
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
+}

@@ -75,7 +75,7 @@ type Statsd struct {
 	DeleteCounters  bool     `toml:"delete_counters"`
 	DeleteSets      bool     `toml:"delete_sets"`
 	DeleteTimings   bool     `toml:"delete_timings"`
-	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;1.30.0;use 'metric_separator' instead"`
+	ConvertNames    bool     `toml:"convert_names"`
 
 	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
@@ -494,9 +494,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				return fmt.Errorf("bufPool is not a bytes buffer")
 			}
 			b.Reset()
-			if _, err := b.Write(buf[:n]); err != nil {
-				return err
-			}
+			b.Write(buf[:n])
 			select {
 			case s.in <- input{
 				Buffer: b,

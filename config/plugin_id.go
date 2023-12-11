@@ -69,16 +69,10 @@ func generatePluginID(prefix string, table *ast.Table) (string, error) {
 	// Hash the config options to get the ID. We also prefix the ID with
 	// the plugin name to prevent overlap with other plugin types.
 	hash := sha256.New()
-	if _, err := hash.Write(append([]byte(prefix), 0)); err != nil {
-		return "", fmt.Errorf("hashing name failed: %w", err)
-	}
+	hash.Write(append([]byte(prefix), 0))
 	for _, kv := range cfg {
-		if _, err := hash.Write([]byte(kv.Key + ":" + kv.Value)); err != nil {
-			return "", fmt.Errorf("hashing entry %q failed: %w", kv.Key, err)
-		}
-		if _, err := hash.Write([]byte{0}); err != nil {
-			return "", fmt.Errorf("adding option end marker failed: %w", err)
-		}
+		hash.Write([]byte(kv.Key + ":" + kv.Value))
+		hash.Write([]byte{0})
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
