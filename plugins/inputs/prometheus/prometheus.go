@@ -363,7 +363,7 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {
+func setResult(resultString string, internalFields map[string]interface{}, tags map[string]string) {
 	resultCodes := map[string]int{
 		"success":           0,
 		"unable_to_decode":  1,
@@ -375,13 +375,13 @@ func setResult(resultString string, fields map[string]interface{}, tags map[stri
 	}
 
 	tags["result"] = resultString
-	fields["result_code"] = resultCodes[resultString]
+	internalFields["result_code"] = resultCodes[resultString]
 }
 
-func setError(err error, fields map[string]interface{}, tags map[string]string) error {
+func setError(err error, internalFields map[string]interface{}, tags map[string]string) error {
 	var timeoutError net.Error
 	if errors.As(err, &timeoutError) && timeoutError.Timeout() {
-		setResult("timeout", fields, tags)
+		setResult("timeout", internalFields, tags)
 		return timeoutError
 	}
 
@@ -396,12 +396,12 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 		var parseErr *net.ParseError
 
 		if errors.As(opErr, &dnsErr) {
-			setResult("dns_error", fields, tags)
+			setResult("dns_error", internalFields, tags)
 			return dnsErr
 		} else if errors.As(opErr, &parseErr) {
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
-			setResult("address_error", fields, tags)
+			setResult("address_error", internalFields, tags)
 			return parseErr
 		}
 	}
@@ -414,7 +414,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	var err error
 	var uClient *http.Client
 	var metrics []telegraf.Metric
-	fields := make(map[string]interface{})
+	internalFields := make(map[string]interface{})
 	tags := map[string]string{}
 	u.OriginalURL.User = nil
 	if p.URLTag != "" {
@@ -491,28 +491,28 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 		resp, err = uClient.Do(req)
 	}
 	if err != nil {
-		if setError(err, fields, tags) == nil {
+		if setError(err, internalFields, tags) == nil {
 			// Any error not recognized by `set_error` is considered a "connection_failed"
-			setResult("connection_failed", fields, tags)
+			setResult("connection_failed", internalFields, tags)
 		}
-		return fields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
+		return internalFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
 	}
-	fields["response_time"] = time.Since(start).Seconds()
-	fields["http_response_code"] = resp.StatusCode
+	internalFields["response_time"] = time.Since(start).Seconds()
+	internalFields["http_response_code"] = resp.StatusCode
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		setResult("http_code_not_ok", fields, tags)
-		return fields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
+		setResult("http_code_not_ok", internalFields, tags)
+		return internalfields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		setResult("body_read_error", fields, tags)
-		return fields, tags, fmt.Errorf("error reading body: %w", err)
+		setResult("body_read_error", internalfields, tags)
+		return internalfields, tags, fmt.Errorf("error reading body: %w", err)
 	}
-	fields["content_length"] = len(body)
+	internalfields["content_length"] = len(body)
 
 	if p.MetricVersion == 2 {
 		parser := parserV2.Parser{
@@ -525,8 +525,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	}
 
 	if err != nil {
-		setResult("unable_to_decode", fields, tags)
-		return fields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
+		setResult("unable_to_decode", internalfields, tags)
+		return internalfields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
 	for _, metric := range metrics {
@@ -556,9 +556,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 		}
 	}
-	setResult("success", fields, tags)
+	setResult("success", internalFields, tags)
 
-	return fields, tags, nil
+	return internalFields, tags, nil
 }
 
 func (p *Prometheus) addHeaders(req *http.Request) {
