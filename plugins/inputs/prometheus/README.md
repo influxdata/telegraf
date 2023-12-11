@@ -353,11 +353,11 @@ tag is also added indicating the discovered ip address.
 
 There is also internal metrics that is add :
 
-- prometheus_internal
-  * tags:
+* prometheus_internal
+  - tags:
     + url
     + address
-  * fields:
+  - fields:
     + response_time (float, seconds)
     + content_length (int, response body length)
     + http_response_code (int, response status code)
