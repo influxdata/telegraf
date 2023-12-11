@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -75,7 +76,7 @@ func (s *BigQuery) Connect() error {
 		defer cancel()
 
 		// Check if the compact table exists
-		_, err := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Metadata(ctx)
+		_, err := s.client.Dataset(s.Dataset).Table(s.CompactTable).Metadata(ctx)
 		if err != nil {
 			return fmt.Errorf("compact table: %w", err)
 		}
@@ -102,7 +103,10 @@ func (s *BigQuery) setUpDefaultClient() error {
 		credentialsOption = option.WithCredentials(creds)
 	}
 
-	client, err := bigquery.NewClient(ctx, s.Project, credentialsOption)
+	client, err := bigquery.NewClient(ctx, s.Project,
+		credentialsOption,
+		option.WithUserAgent(internal.ProductToken()),
+	)
 	s.client = client
 	return err
 }
@@ -136,7 +140,7 @@ func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
 	defer cancel()
 
 	// Always returns an instance, even if table doesn't exist (anymore).
-	inserter := s.client.DatasetInProject(s.Project, s.Dataset).Table(s.CompactTable).Inserter()
+	inserter := s.client.Dataset(s.Dataset).Table(s.CompactTable).Inserter()
 
 	var compactValues []*bigquery.ValuesSaver
 	for _, m := range metrics {
@@ -269,7 +273,7 @@ func (s *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	defer cancel()
 
 	tableName := s.metricToTable(metricName)
-	table := s.client.DatasetInProject(s.Project, s.Dataset).Table(tableName)
+	table := s.client.Dataset(s.Dataset).Table(tableName)
 	inserter := table.Inserter()
 
 	if err := inserter.Put(ctx, metrics); err != nil {

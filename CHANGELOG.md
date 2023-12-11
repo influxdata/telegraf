@@ -1,17 +1,125 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
-## Unreleased
+## v1.29.0 [2023-12-11]
 
 ### Important Changes
 
-- Remove useless, all-zero fields in `inputs.procstat`. Up to now, Telegraf
+- Removed useless, all-zero fields in `inputs.procstat`. Up to now, Telegraf
   reports the fields `cpu_time_guest`, `cpu_time_guest_nice`, `cpu_time_idle`,
   `cpu_time_irq`, `cpu_time_nice`, `cpu_time_soft_irq` and `cpu_time_steal`
   which are never set by the underlying library. As a consequence those fields
   were always zero. [#14224](https://github.com/influxdata/telegraf/pull/14224)
   removes those useless fields. In case you reference them, please adapt your
   queries!
+
+### New Plugins
+
+- [#13995](https://github.com/influxdata/telegraf/pull/13995) `inputs.ldap` Add LDAP input plugin supporting OpenLDAP and 389ds
+- [#11958](https://github.com/influxdata/telegraf/pull/11958) `outputs.opensearch` Add OpenSearch output plugin
+- [#14330](https://github.com/influxdata/telegraf/pull/14330) `processors.filter` Add filter processor plugin
+- [#13657](https://github.com/influxdata/telegraf/pull/13657) `secretstores` Add systemd-credentials plugin
+
+### Features
+
+- [#14361](https://github.com/influxdata/telegraf/pull/14361) `agent` Allow separators for namepass and namedrop filters
+- [#14062](https://github.com/influxdata/telegraf/pull/14062) `aggregators.final` Allow to specify output strategy
+- [#14103](https://github.com/influxdata/telegraf/pull/14103) `common.http` Add support for connecting over unix-socket
+- [#14345](https://github.com/influxdata/telegraf/pull/14345) `common.opcua` Add option to include OPC-UA DataType as a field
+- [#14012](https://github.com/influxdata/telegraf/pull/14012) `config` Deprecate `fieldpass` and `fielddrop` modifiers
+- [#14004](https://github.com/influxdata/telegraf/pull/14004) `input.intel_pmt` Add pci_bdf tag to uniquely identify GPUs and other peripherals
+- [#14001](https://github.com/influxdata/telegraf/pull/14001) `inputs.amqp_consumer` Add secretstore support for username and password
+- [#13894](https://github.com/influxdata/telegraf/pull/13894) `inputs.docker` Add disk usage
+- [#14308](https://github.com/influxdata/telegraf/pull/14308) `inputs.dpdk` Add options to customize error-behavior and metric layout
+- [#14207](https://github.com/influxdata/telegraf/pull/14207) `inputs.elasticsearch` Use HTTPClientConfig struct
+- [#14207](https://github.com/influxdata/telegraf/pull/14207) `inputs.elasticsearch_query` Use HTTPClientConfig struct
+- [#14091](https://github.com/influxdata/telegraf/pull/14091) `inputs.gnmi` Rework plugin
+- [#14189](https://github.com/influxdata/telegraf/pull/14189) `inputs.http_response` Add body form config option
+- [#14363](https://github.com/influxdata/telegraf/pull/14363) `inputs.intel_powerstat` Extract business logic to external library
+- [#13924](https://github.com/influxdata/telegraf/pull/13924) `inputs.kafka_consumer` Add message headers as metric tags
+- [#14320](https://github.com/influxdata/telegraf/pull/14320) `inputs.kafka_consumer` Add option to set metric name from message header
+- [#14207](https://github.com/influxdata/telegraf/pull/14207) `inputs.kibana` Use HTTPClientConfig struct
+- [#13993](https://github.com/influxdata/telegraf/pull/13993) `inputs.kube_inventory` Support filtering pods and nodes by node name
+- [#13996](https://github.com/influxdata/telegraf/pull/13996) `inputs.kube_inventory` Support using kubelet to get pods data
+- [#14092](https://github.com/influxdata/telegraf/pull/14092) `inputs.ldap` Collect additional fields
+- [#14207](https://github.com/influxdata/telegraf/pull/14207) `inputs.logstash` Use HTTPClientConfig struct
+- [#14145](https://github.com/influxdata/telegraf/pull/14145) `inputs.modbus` Add support for string fields
+- [#14375](https://github.com/influxdata/telegraf/pull/14375) `inputs.nats_consumer` Add nkey-seed-file authentication
+- [#13923](https://github.com/influxdata/telegraf/pull/13923) `inputs.opcua_listener` Add monitoring params
+- [#14214](https://github.com/influxdata/telegraf/pull/14214) `inputs.openweathermap` Add per-city query scheme for current weather
+- [#13417](https://github.com/influxdata/telegraf/pull/13417) `inputs.procstat` Obtain process information through supervisor
+- [#13991](https://github.com/influxdata/telegraf/pull/13991) `inputs.rabbitmq` Add secretstore support for username and password
+- [#14143](https://github.com/influxdata/telegraf/pull/14143) `inputs.redfish` Allow specifying which metrics to collect
+- [#14111](https://github.com/influxdata/telegraf/pull/14111) `inputs.snmp` Hint to use source tag
+- [#14172](https://github.com/influxdata/telegraf/pull/14172) `inputs.socket_listener` Add vsock support to socket listener and writer
+- [#13978](https://github.com/influxdata/telegraf/pull/13978) `inputs.sql` Add Oracle driver
+- [#14200](https://github.com/influxdata/telegraf/pull/14200) `inputs.sql` Add IBM Netezza driver
+- [#14073](https://github.com/influxdata/telegraf/pull/14073) `inputs.win_service` Reduce required rights to GENERIC_READ
+- [#14401](https://github.com/influxdata/telegraf/pull/14401) `migrations` Add migration for fieldpass and fielddrop
+- [#14114](https://github.com/influxdata/telegraf/pull/14114) `migrations` Add migration for inputs.jolokia
+- [#14122](https://github.com/influxdata/telegraf/pull/14122) `migrations` Add migration for inputs.kafka_consumer_legacy
+- [#14123](https://github.com/influxdata/telegraf/pull/14123) `migrations` Add migration for inputs.snmp_legacy
+- [#14119](https://github.com/influxdata/telegraf/pull/14119) `migrations` Add migration for inputs.tcp_listener
+- [#14120](https://github.com/influxdata/telegraf/pull/14120) `migrations` Add migration for inputs.udp_listener
+- [#14121](https://github.com/influxdata/telegraf/pull/14121) `migrations` Add migration for outputs.riemann_legacy
+- [#14141](https://github.com/influxdata/telegraf/pull/14141) `migrations` Add option migration for inputs.disk
+- [#14233](https://github.com/influxdata/telegraf/pull/14233) `migrations` Add option migration for inputs.mqtt_consumer
+- [#14234](https://github.com/influxdata/telegraf/pull/14234) `migrations` Add option migration for inputs.nats_consumer
+- [#14341](https://github.com/influxdata/telegraf/pull/14341) `migrations` Add option migration for outputs.influxdb
+- [#14047](https://github.com/influxdata/telegraf/pull/14047) `outputs.azure_data_explorer` Set user agent string
+- [#14342](https://github.com/influxdata/telegraf/pull/14342) `outputs.bigquery` Allow to add metrics in one compact table
+- [#14086](https://github.com/influxdata/telegraf/pull/14086) `outputs.bigquery` Make project no longer a required field
+- [#13672](https://github.com/influxdata/telegraf/pull/13672) `outputs.exec` Add ability to exec command once per metric
+- [#14108](https://github.com/influxdata/telegraf/pull/14108) `outputs.prometheus_client` Support listening on vsock
+- [#14172](https://github.com/influxdata/telegraf/pull/14172) `outputs.socket_writer` Add vsock support to socket listener and writer
+- [#14017](https://github.com/influxdata/telegraf/pull/14017) `outputs.stackdriver` Add metric type config options
+- [#14275](https://github.com/influxdata/telegraf/pull/14275) `outputs.stackdriver` Enable histogram support
+- [#14136](https://github.com/influxdata/telegraf/pull/14136) `outputs.wavefront` Use common/http to configure http client
+- [#13903](https://github.com/influxdata/telegraf/pull/13903) `parsers.avro` Allow connection to https schema registry
+- [#13914](https://github.com/influxdata/telegraf/pull/13914) `parsers.avro` Get metric name from the message field
+- [#13945](https://github.com/influxdata/telegraf/pull/13945) `parsers.avro` Support multiple modes for union handling
+- [#14065](https://github.com/influxdata/telegraf/pull/14065) `processors.dedup` Add state persistence between runs
+- [#13971](https://github.com/influxdata/telegraf/pull/13971) `processors.regex` Allow batch transforms using named groups
+- [#13998](https://github.com/influxdata/telegraf/pull/13998) `secrets` Add unprotected secret implementation
+
+### Bugfixes
+
+- [#14331](https://github.com/influxdata/telegraf/pull/14331) `common.oauth` Initialize EndpointParams to avoid panic with audience settings
+- [#14350](https://github.com/influxdata/telegraf/pull/14350) `inputs.http` Use correct token variable
+- [#14420](https://github.com/influxdata/telegraf/pull/14420) `inputs.intel_powerstat` Fix unit tests to work on every CPU/platform
+- [#14388](https://github.com/influxdata/telegraf/pull/14388) `inputs.modbus` Split large request correctly at field borders
+- [#14373](https://github.com/influxdata/telegraf/pull/14373) `inputs.netflow` Handle malformed inputs gracefully
+- [#14394](https://github.com/influxdata/telegraf/pull/14394) `inputs.s7comm` Reconnect if query fails
+- [#14357](https://github.com/influxdata/telegraf/pull/14357) `inputs.tail` Retry opening file after permission denied
+- [#14419](https://github.com/influxdata/telegraf/pull/14419) `license` Correct spelling of jmhodges/clock license
+- [#14416](https://github.com/influxdata/telegraf/pull/14416) `outputs.bigquery` Correct use of auto-detected project ID
+- [#14340](https://github.com/influxdata/telegraf/pull/14340) `outputs.opensearch` Expose TLS setting correctly
+- [#14021](https://github.com/influxdata/telegraf/pull/14021) `outputs.opensearch` Migrate to new secrets API
+- [#14232](https://github.com/influxdata/telegraf/pull/14232) `outputs.prometheus_client` Ensure v1 collector data expires promptly
+- [#13961](https://github.com/influxdata/telegraf/pull/13961) `parsers.avro` Clean up Warnf error wrapping error
+- [#13939](https://github.com/influxdata/telegraf/pull/13939) `parsers.avro` Attempt to read CA cert file only if filename is not empty string
+- [#14351](https://github.com/influxdata/telegraf/pull/14351) `parsers.json v2` Correct wrong name of config option
+- [#14344](https://github.com/influxdata/telegraf/pull/14344) `parsers.json_v2` Reset state before parsing
+- [#14395](https://github.com/influxdata/telegraf/pull/14395) `processors.starlark` Avoid negative refcounts for tracking metrics
+- [#14137](https://github.com/influxdata/telegraf/pull/14137) `processors.starlark` Maintain tracking information post-apply
+
+### Dependency Updates
+
+- [#14352](https://github.com/influxdata/telegraf/pull/14352) `deps` Bump cloud.google.com/go/bigquery from 1.56.0 to 1.57.1
+- [#14324](https://github.com/influxdata/telegraf/pull/14324) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.26.0 to 1.27.2
+- [#14323](https://github.com/influxdata/telegraf/pull/14323) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor from 0.10.1 to 0.10.2
+- [#14354](https://github.com/influxdata/telegraf/pull/14354) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor from 0.10.2 to 0.11.0
+- [#14355](https://github.com/influxdata/telegraf/pull/14355) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources from 1.1.1 to 1.2.0
+- [#14382](https://github.com/influxdata/telegraf/pull/14382) `deps` Bump github.com/golang-jwt/jwt/v5 from 5.0.0 to 5.2.0
+- [#14385](https://github.com/influxdata/telegraf/pull/14385) `deps` Bump github.com/IBM/sarama from 1.41.3 to 1.42.1
+- [#14384](https://github.com/influxdata/telegraf/pull/14384) `deps` Bump github.com/influxdata/tail from 1.0.1-0.20210707231403-b283181d1fa7 to 1.0.1-0.20221130111531-19b97bffd978
+- [#14383](https://github.com/influxdata/telegraf/pull/14383) `deps` Bump github.com/jackc/pgconn from 1.14.0 to 1.14.1
+- [#14386](https://github.com/influxdata/telegraf/pull/14386) `deps` Bump github.com/nats-io/nats-server/v2 from 2.9.23 to 2.10.6
+- [#14321](https://github.com/influxdata/telegraf/pull/14321) `deps` Bump github.com/prometheus/prometheus from 0.46.0 to 0.48.0
+- [#14325](https://github.com/influxdata/telegraf/pull/14325) `deps` Bump github.com/vmware/govmomi from 0.32.0 to 0.33.1
+- [#14353](https://github.com/influxdata/telegraf/pull/14353) `deps` Bump golang.org/x/text from 0.13.0 to 0.14.0
+- [#14322](https://github.com/influxdata/telegraf/pull/14322) `deps` Bump k8s.io/api from 0.28.3 to 0.28.4
+- [#14349](https://github.com/influxdata/telegraf/pull/14349) `deps` Point kafka dependency to IBM organization
 
 ## v1.28.5 [2023-11-15]
 
@@ -155,7 +263,7 @@
 
 ### Important Changes
 
-- [#13791](https://github.com/influxdata/telegraf/pull/11493) `metricpass`
+- [#13791](https://github.com/influxdata/telegraf/pull/13791) `metricpass`
 Removed the Python compatibility support for "not", "and", and "or" keywords.
 This support was incorrectly removing these keywords from actual data. Users
 should instead use the standard "!", "&&", and "||" operators.
