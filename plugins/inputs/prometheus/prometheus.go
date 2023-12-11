@@ -346,7 +346,7 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serviceURL URLAndAddress) {
 			defer wg.Done()
-			internalFields, tags, err = p.gatherURL(serviceURL, acc)
+			internalFields, tags, err := p.gatherURL(serviceURL, acc)
 			if err != nil {
 				acc.AddError(err)
 			}
