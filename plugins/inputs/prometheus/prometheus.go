@@ -337,8 +337,6 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var internalFields map[string]interface{}
-	var tags map[string]string
 
 	allURLs, err := p.GetAllURLs()
 	if err != nil {
