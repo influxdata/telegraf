@@ -178,14 +178,9 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		return err
 	}
 
-	var customResolver cwClient.EndpointResolver
-	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
-		customResolver = cwClient.EndpointResolverFromURL(c.CredentialConfig.EndpointURL)
-	}
-
 	c.client = cwClient.NewFromConfig(awsCreds, func(options *cwClient.Options) {
-		if customResolver != nil {
-			options.EndpointResolver = customResolver
+		if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+			options.BaseEndpoint = &c.CredentialConfig.EndpointURL
 		}
 
 		options.ClientLogMode = 0
@@ -321,7 +316,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, []string) {
 		params := &cwClient.ListMetricsInput{
 			Dimensions:            []types.DimensionFilter{},
 			Namespace:             aws.String(namespace),
-			IncludeLinkedAccounts: c.IncludeLinkedAccounts,
+			IncludeLinkedAccounts: &c.IncludeLinkedAccounts,
 		}
 		if c.RecentlyActive == "PT3H" {
 			params.RecentlyActive = types.RecentlyActivePt3h
