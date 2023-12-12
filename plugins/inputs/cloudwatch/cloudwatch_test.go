@@ -50,7 +50,7 @@ func (m *mockGatherCloudWatchClient) ListMetrics(
 			},
 		},
 	}
-	if params.IncludeLinkedAccounts {
+	if params.IncludeLinkedAccounts != nil && *params.IncludeLinkedAccounts {
 		(*response).OwningAccounts = []string{"123456789012", "923456789017"}
 	}
 	return response, nil
