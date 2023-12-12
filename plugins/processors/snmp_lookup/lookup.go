@@ -180,12 +180,14 @@ func (l *Lookup) prepareCache(gs snmpConnection, index string) error {
 	tagMap, inCache := l.cache.Peek(agent)
 	_, indexExists := tagMap.rows[index]
 
-	// Cache miss
+	// Cache miss or non existing index and not recently refreshed the table
 	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
+		// Check if another process is alreay loading the table, wait until done if so
 		if done, busy := l.sigs[agent]; busy {
 			l.lock.Unlock()
 			<-done
 		} else {
+			// No other process is already loading the table, let others know by creating a channel
 			l.sigs[agent] = make(chan struct{})
 			l.lock.Unlock()
 
@@ -194,11 +196,13 @@ func (l *Lookup) prepareCache(gs snmpConnection, index string) error {
 				return fmt.Errorf("could not connect: %w", err)
 			}
 
+			// build the table for the configured tags
 			if err := l.loadTagMap(gs); err != nil {
 				l.signalAgentReady(agent)
 				return fmt.Errorf("could not load table: %w", err)
 			}
 
+			// Done loading, inform other processes
 			l.signalAgentReady(agent)
 		}
 	} else {
@@ -215,6 +219,7 @@ func (l *Lookup) signalAgentReady(agent string) {
 	l.lock.Unlock()
 }
 
+// getConnectionNoMock prepares a snmpConnection from the given metric tags (if present)
 func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, error) {
 	clientConfig := l.ClientConfig
 
@@ -281,6 +286,8 @@ func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, er
 	return gs, nil
 }
 
+// loadTagMap gathers the configured table from the snmp agent and
+// stores all tags into the cache
 func (l *Lookup) loadTagMap(gs snmpConnection) error {
 	agent := gs.Host()
 	l.Log.Debugf("Building lookup table for %q", agent)
@@ -294,12 +301,14 @@ func (l *Lookup) loadTagMap(gs snmpConnection) error {
 		rows:    make(tagMapRows, len(table.Rows)),
 	}
 
+	// Copy tags for all rows in the tagMap
 	for _, row := range table.Rows {
 		index := row.Tags["index"]
 		delete(row.Tags, "index")
 		tagMap.rows[index] = row.Tags
 	}
 
+	// Add the found tags for all indexes on this agent to the cache
 	l.cache.Add(agent, tagMap)
 
 	return nil
