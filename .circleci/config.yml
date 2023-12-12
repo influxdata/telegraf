@@ -224,7 +224,7 @@ commands:
             - 'dist'
 
 jobs:
-  test-go-linux:
+  prechecks:
     executor: telegraf-ci
     parameters:
       goversion:
@@ -242,8 +242,46 @@ jobs:
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
-      - run: 'make check'
+      - run:
+          name: "Check linux 386"
+          command: 'GOOS=linux GOARCH=386 make check'
+      - run:
+          name: "Check linux amd64"
+          command: 'GOOS=linux GOARCH=amd64 make check'
+      - run:
+          name: "Check windows amd64"
+          command: 'GOOS=windows GOARCH=amd64 make check'
+      - run:
+          name: "Check darwin arm64"
+          command: 'GOOS=darwin GOARCH=arm64 make check'
       - run: 'make check-deps'
+      - save_cache:
+          name: "Save Go caches"
+          key: go-caches-<< parameters.cache_version >>-linux-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
+          paths:
+            - '/go/pkg/mod'
+            - '~/.cache/golangci-lint'
+            - '~/.cache/go-build'
+      - persist_to_workspace:
+          root: '/go'
+          paths:
+            - '*'
+  test-go-linux:
+    executor: telegraf-ci
+    parameters:
+      goversion:
+        type: string
+        default: 1.21.5
+      cache_version:
+        type: string
+        default: "v1"
+    steps:
+      - checkout
+      - restore_cache:
+          name: "Restore Go caches"
+          key: go-caches-<< parameters.cache_version >>-linux-amd64-go<< parameters.goversion >>-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'make deps'
       - test-go
       - save_cache:
           name: "Save Go caches"
@@ -271,9 +309,6 @@ jobs:
           name: "Restore Go caches"
           key: go-caches-<< parameters.cache_version >>-linux-386-go<< parameters.goversion >>-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
-      - run: 'GOARCH=386 make deps'
-      - run: 'GOARCH=386 make tidy'
-      - run: 'GOARCH=386 make check'
       - test-go:
           arch: "386"
       - save_cache:
@@ -695,23 +730,37 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'prechecks':
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-linux':
+          requires:
+            - 'prechecks'
           filters:
             tags:
               only: /.*/
       - 'test-go-linux-386':
+          requires:
+            - 'prechecks'
           filters:
             tags:
               only: /.*/
       - 'test-go-mac':
+          requires:
+            - 'prechecks'
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          requires:
+            - 'prechecks'
           filters:
             tags:
               only: /.*/
       - 'test-integration':
+          requires:
+            - 'prechecks'
           filters:
             tags:
               only: /.*/
@@ -913,6 +962,7 @@ workflows:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'prechecks'
       - 'test-go-linux'
       - 'test-go-linux-386'
       - 'test-go-mac'
