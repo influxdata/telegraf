@@ -460,10 +460,10 @@ func TestGather_PercentSecondPass(t *testing.T) {
 
 func TestGather_systemdUnitPIDs(t *testing.T) {
 	p := Procstat{
-		SystemdUnits: "TestGather_systemdUnitPIDs",
-		PidFinder:    "test",
-		Log:          testutil.Logger{},
-		finder:       newTestFinder([]PID{pid}),
+		SystemdUnit: "TestGather_systemdUnitPIDs",
+		PidFinder:   "test",
+		Log:         testutil.Logger{},
+		finder:      newTestFinder([]PID{pid}),
 	}
 	require.NoError(t, p.Init())
 
