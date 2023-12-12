@@ -74,7 +74,7 @@ require (
 	github.com/eclipse/paho.golang v0.11.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/fatih/color v1.15.0
-	github.com/go-ldap/ldap/v3 v3.4.5
+	github.com/go-ldap/ldap/v3 v3.4.6
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/go-ole/go-ole v1.2.6
 	github.com/go-redis/redis/v7 v7.4.1
@@ -311,7 +311,7 @@ require (
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fxamacker/cbor v1.5.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaroon-bakery/macaroonpb v1.0.0 // indirect
