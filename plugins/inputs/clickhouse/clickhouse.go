@@ -130,7 +130,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	for i := range connects {
 		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
 			ch.tables,
-			ch.zookeeper,
 			ch.replicationQueue,
 			ch.detachedParts,
 			ch.dictionaries,
@@ -138,6 +137,11 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 			ch.disks,
 			ch.processes,
 			ch.textLog,
+		}
+
+		// Clickhouse Cloud does not give user's permissions to the zookeeper table
+		if !strings.Contains(connects[i].url.String(), "clickhouse.cloud") {
+			metricsFuncs = append(metricsFuncs, ch.zookeeper)
 		}
 
 		for _, metricFunc := range metricsFuncs {

@@ -3,6 +3,9 @@
 This plugin gathers the statistic data from
 [ClickHouse](https://github.com/ClickHouse/ClickHouse) server.
 
+User's on Clickhouse Cloud will not see the Zookeeper metrics as they may not
+have permissions to query those tables.
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
