@@ -37,7 +37,7 @@ type Procstat struct {
 	CmdLineTag             bool            `toml:"cmdline_tag" deprecated:"1.29.0;use 'tag_with' instead"`
 	ProcessName            string          `toml:"process_name"`
 	User                   string          `toml:"user"`
-	SystemdUnits           string          `toml:"systemd_units"`
+	SystemdUnit            string          `toml:"systemd_unit"`
 	SupervisorUnit         []string        `toml:"supervisor_unit" deprecated:"1.29.0;use 'supervisor_units' instead"`
 	SupervisorUnits        []string        `toml:"supervisor_units"`
 	IncludeSystemdChildren bool            `toml:"include_systemd_children"`
@@ -95,7 +95,7 @@ func (p *Procstat) Init() error {
 
 	// Check filtering
 	switch {
-	case len(p.SupervisorUnits) > 0, p.SystemdUnits != "", p.WinService != "",
+	case len(p.SupervisorUnits) > 0, p.SystemdUnit != "", p.WinService != "",
 		p.CGroup != "", p.PidFile != "", p.Exe != "", p.Pattern != "",
 		p.User != "":
 		// Do nothing as those are valid settings
@@ -221,7 +221,7 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 	switch {
 	case len(p.SupervisorUnits) > 0:
 		return p.findSupervisorUnits()
-	case p.SystemdUnits != "":
+	case p.SystemdUnit != "":
 		return p.systemdUnitPIDs()
 	case p.WinService != "":
 		pids, err := p.winServicePIDs()
@@ -356,7 +356,7 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 
 func (p *Procstat) systemdUnitPIDs() ([]PidsTags, error) {
 	if p.IncludeSystemdChildren {
-		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnits)
+		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
 		return p.cgroupPIDs()
 	}
 
@@ -365,13 +365,13 @@ func (p *Procstat) systemdUnitPIDs() ([]PidsTags, error) {
 	if err != nil {
 		return nil, err
 	}
-	tags := map[string]string{"systemd_unit": p.SystemdUnits}
+	tags := map[string]string{"systemd_unit": p.SystemdUnit}
 	pidTags = append(pidTags, PidsTags{pids, tags})
 	return pidTags, nil
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
-	out, err := execCommand("systemctl", "show", p.SystemdUnits).Output()
+	out, err := execCommand("systemctl", "show", p.SystemdUnit).Output()
 	if err != nil {
 		return nil, err
 	}
