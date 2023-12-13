@@ -13,11 +13,13 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -71,6 +73,34 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "phpfpm", fields, tags)
+}
+
+func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
+	outputSampleJSON, err := os.ReadFile("testdata/phpfpm.json")
+	require.NoError(t, err)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(outputSampleJSON)))
+		_, err := fmt.Fprint(w, string(outputSampleJSON))
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	expected, err := testutil.ParseMetricsFromFile("testdata/expected.out", parser)
+	require.NoError(t, err)
+
+	input := &phpfpm{
+		Urls:   []string{server.URL + "?full&json"},
+		Format: "json",
+		log:    testutil.Logger{},
+	}
+	require.NoError(t, input.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(input.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.IgnoreTags("url"))
 }
 
 func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {

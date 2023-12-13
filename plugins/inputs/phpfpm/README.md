@@ -39,6 +39,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
 
+  ## Format of stats to parse, set to "status" or "json"
+  ## If the user configures the URL to return JSON (e.g.
+  ## http://localhost/status?json), set to JSON. Otherwise, will attempt to
+  ## parse line-by-line. The JSON mode will produce additonal metrics.
+  # format = "status"
+
   ## Duration allowed to complete HTTP requests.
   # timeout = "5s"
 
@@ -70,6 +76,23 @@ host, and socket path is accessible to telegraf user.
     - max_active_processes
     - max_children_reached
     - slow_requests
+- phpfpm_process
+  - tags:
+    - pool
+    - request method
+    - request uri
+    - script
+    - url
+    - user
+  - fields:
+    - content length
+    - last request cpu
+    - last request memory
+    - request duration
+    - requests
+    - start time
+    - start since
+    - state
 
 ## Example Output
 
@@ -77,4 +100,20 @@ host, and socket path is accessible to telegraf user.
 phpfpm,pool=www accepted_conn=13i,active_processes=2i,idle_processes=1i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083331187
 phpfpm,pool=www2 accepted_conn=12i,active_processes=1i,idle_processes=2i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083691422
 phpfpm,pool=www3 accepted_conn=11i,active_processes=1i,idle_processes=2i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083691658
+```
+
+With the JSON output, additional metrics around processes are generated:
+
+```text
+phpfpm,pool=www,url=http://127.0.0.1:44637?full&json accepted_conn=3879i,active_processes=1i,idle_processes=9i,listen_queue=0i,listen_queue_len=0i,max_active_processes=3i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,start_since=4901i,total_processes=10i
+phpfpm_process,pool=www,request_method=GET,request_uri=/fpm-status?json&full,script=-,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=0,request_duration=159i,requests=386i,start_time=1702044927i,state="Running"
+phpfpm_process,pool=www,request_method=GET,request_uri=/fpm-status,script=-,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=2097152,request_duration=174i,requests=390i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/index.php,script=script.php,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=104.93,last_request_memory=2097152,request_duration=9530i,requests=389i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/ping,script=-,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=2097152,request_duration=127i,requests=399i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/index.php,script=script.php,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=2097152,request_duration=9713i,requests=382i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/ping,script=-,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=2097152,request_duration=133i,requests=383i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/fpm-status?json,script=-,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=2097152,request_duration=154i,requests=381i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/ping,script=-,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=0,last_request_memory=2097152,request_duration=108i,requests=397i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/index.php,script=script.php,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=110.28,last_request_memory=2097152,request_duration=9068i,requests=381i,start_time=1702044927i,state="Idle"
+phpfpm_process,pool=www,request_method=GET,request_uri=/index.php,script=script.php,url=http://127.0.0.1:44637?full&json,user=- content_length=0i,last_request_cpu=64.27,last_request_memory=2097152,request_duration=15559i,requests=391i,start_time=1702044927i,state="Idle"
 ```
