@@ -24,7 +24,7 @@ var (
 // Client is the ECS client contract
 type Client interface {
 	Task() (*Task, error)
-	ContainerStats() (map[string]types.StatsJSON, error)
+	ContainerStats() (map[string]*types.StatsJSON, error)
 }
 
 type httpClient interface {
@@ -129,11 +129,11 @@ func (c *EcsClient) Task() (*Task, error) {
 }
 
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
-func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
+func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 	req, _ := http.NewRequest("GET", c.statsURL, nil)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return map[string]types.StatsJSON{}, err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -146,7 +146,7 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 
 	statsMap, err := unmarshalStats(resp.Body)
 	if err != nil {
-		return map[string]types.StatsJSON{}, err
+		return nil, err
 	}
 
 	return statsMap, nil
@@ -154,9 +154,9 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
 // If either errors, a single error is returned.
-func PollSync(c Client) (*Task, map[string]types.StatsJSON, error) {
+func PollSync(c Client) (*Task, map[string]*types.StatsJSON, error) {
 	var task *Task
-	var stats map[string]types.StatsJSON
+	var stats map[string]*types.StatsJSON
 	var err error
 
 	if stats, err = c.ContainerStats(); err != nil {

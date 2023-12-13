@@ -20,7 +20,7 @@ var pauseStatsPreRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:39:59.933
 var nginxStatsRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:40:00.93733207Z")
 var nginxStatsPreRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:39:59.934291009Z")
 
-var validStats = map[string]types.StatsJSON{
+var validStats = map[string]*types.StatsJSON{
 	pauseStatsKey: {
 		Stats: types.Stats{
 			Read:    pauseStatsRead,

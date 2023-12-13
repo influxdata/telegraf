@@ -54,14 +54,14 @@ func unmarshalTask(r io.Reader) (*Task, error) {
 }
 
 // docker parsers
-func unmarshalStats(r io.Reader) (map[string]types.StatsJSON, error) {
-	var statsMap map[string]types.StatsJSON
+func unmarshalStats(r io.Reader) (map[string]*types.StatsJSON, error) {
+	var statsMap map[string]*types.StatsJSON
 	err := json.NewDecoder(r).Decode(&statsMap)
 	return statsMap, err
 }
 
 // interleaves Stats in to the Container objects in the Task
-func mergeTaskStats(task *Task, stats map[string]types.StatsJSON) {
+func mergeTaskStats(task *Task, stats map[string]*types.StatsJSON) {
 	for i := range task.Containers {
 		c := &task.Containers[i]
 		if strings.Trim(c.ID, " ") == "" {
@@ -71,6 +71,6 @@ func mergeTaskStats(task *Task, stats map[string]types.StatsJSON) {
 		if !ok {
 			continue
 		}
-		c.Stats = stat
+		c.Stats = *stat
 	}
 }
