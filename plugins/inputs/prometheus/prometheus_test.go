@@ -343,6 +343,28 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	require.ErrorContains(t, err, "error making HTTP request to \""+ts.URL+"/metrics\"")
 }
 
+func TestPrometheusContentLengthLimit(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		URLs:               []string{ts.URL},
+		URLTag:             "url",
+		ContentLengthLimit: 1,
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = acc.GatherError(p.Gather)
+	require.NoError(t, err)
+	require.Empty(t, acc.Metrics)
+}
+
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)

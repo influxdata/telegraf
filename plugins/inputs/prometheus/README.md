@@ -106,6 +106,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # Default is 60 minutes.
   # cache_refresh_interval = 60
 
+  ## Content lenght limit
+  ## When set, telegraf will drop responses with length larger than the
+  ## configured value in bytes.
+  # content_length_limit = 0
+
   ## Scrape Services available in Consul Catalog
   # [inputs.prometheus.consul]
   #   enabled = true
