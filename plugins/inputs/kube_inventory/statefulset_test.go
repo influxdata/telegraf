@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestStatefulSet(t *testing.T) {
@@ -210,8 +210,9 @@ func TestStatefulSet(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := &testutil.Accumulator{}
-		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
-			ks.gatherStatefulSet(ss, acc)
+		items := ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items
+		for i := range items {
+			ks.gatherStatefulSet(&items[i], acc)
 		}
 
 		err := acc.FirstError()
@@ -367,8 +368,9 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
-			ks.gatherStatefulSet(ss, acc)
+		items := ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items
+		for i := range items {
+			ks.gatherStatefulSet(&items[i], acc)
 		}
 
 		// Grab selector tags

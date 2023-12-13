@@ -62,7 +62,8 @@ func unmarshalStats(r io.Reader) (map[string]types.StatsJSON, error) {
 
 // interleaves Stats in to the Container objects in the Task
 func mergeTaskStats(task *Task, stats map[string]types.StatsJSON) {
-	for i, c := range task.Containers {
+	for i := range task.Containers {
+		c := &task.Containers[i]
 		if strings.Trim(c.ID, " ") == "" {
 			continue
 		}
@@ -70,6 +71,6 @@ func mergeTaskStats(task *Task, stats map[string]types.StatsJSON) {
 		if !ok {
 			continue
 		}
-		task.Containers[i].Stats = stat
+		c.Stats = stat
 	}
 }

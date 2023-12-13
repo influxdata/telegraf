@@ -645,7 +645,9 @@ func getDatacenters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFi
 		return nil, err
 	}
 	m := make(objectMap, len(resources))
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
@@ -667,7 +669,9 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 	}
 	cache := make(map[string]*types.ManagedObjectReference)
 	m := make(objectMap, len(resources))
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		// Wrap in a function to make defer work correctly.
 		err := func() error {
 			// We're not interested in the immediate parent (a folder), but the data center.
@@ -716,7 +720,9 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 		return nil, err
 	}
 	m := make(objectMap)
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
@@ -745,7 +751,9 @@ func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) 
 		return nil, err
 	}
 	m := make(objectMap)
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
@@ -779,7 +787,9 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 	if err != nil {
 		return nil, err
 	}
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		if r.Runtime.PowerState != "poweredOn" {
 			continue
 		}
@@ -872,7 +882,9 @@ func getDatastores(ctx context.Context, e *Endpoint, resourceFilter *ResourceFil
 		return nil, err
 	}
 	m := make(objectMap)
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		lunID := ""
 		if r.Info != nil {
 			info := r.Info.GetDatastoreInfo()
