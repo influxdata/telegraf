@@ -208,10 +208,12 @@ func setSystemctl(timeout config.Duration, unitType string, pattern string) (*by
 		psplit := strings.SplitN(pattern, " ", -1)
 		params = append(params, psplit...)
 	}
-	params = append(params, "--all", "--plain")
-	// add type as configured in config
-	params = append(params, fmt.Sprintf("--type=%s", unitType))
-	params = append(params, "--no-legend")
+	params = append(params,
+		"--all", "--plain",
+		// add type as configured in config
+		fmt.Sprintf("--type=%s", unitType),
+		"--no-legend",
+	)
 	cmd := exec.Command(systemctlPath, params...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
