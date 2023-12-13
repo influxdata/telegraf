@@ -67,8 +67,8 @@ func (*ClickHouse) SampleConfig() string {
 func (ch *ClickHouse) Init() error {
 	switch ch.Variant {
 	case "":
-		ch.Variant = "self"
-	case "self", "managed":
+		ch.Variant = "self-hosted"
+	case "self-hosted", "managed":
 		// valid options
 	default:
 		return fmt.Errorf("unknown variant %q", ch.Variant)
