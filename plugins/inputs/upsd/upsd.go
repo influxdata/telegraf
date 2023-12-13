@@ -85,7 +85,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
         "driver_version_data":     metrics["driver.version.data"],
         "driver_version_internal": metrics["driver.version.internal"],
         "driver_version_usb":      metrics["driver.version.usb"],
-        "device_type"              metrics["device.type"],
+        "device_type":             metrics["device.type"],
         "ups_firmware":            metrics["ups.firmware"],
         "ups_mfr":                 metrics["ups.mfr"],
         "ups_model":               metrics["ups.model"],
