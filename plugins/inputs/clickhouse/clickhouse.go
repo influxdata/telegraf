@@ -54,12 +54,27 @@ type ClickHouse struct {
 	ClusterInclude []string        `toml:"cluster_include"`
 	ClusterExclude []string        `toml:"cluster_exclude"`
 	Timeout        config.Duration `toml:"timeout"`
-	HTTPClient     http.Client
+	Variant        string          `toml:"variant"`
+
+	HTTPClient http.Client
 	tls.ClientConfig
 }
 
 func (*ClickHouse) SampleConfig() string {
 	return sampleConfig
+}
+
+func (ch *ClickHouse) Init() error {
+	switch ch.Variant {
+	case "":
+		ch.Variant = "self-hosted"
+	case "self-hosted", "managed":
+		// valid options
+	default:
+		return fmt.Errorf("unknown variant %q", ch.Variant)
+	}
+
+	return nil
 }
 
 // Start ClickHouse input service
@@ -130,7 +145,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	for i := range connects {
 		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
 			ch.tables,
-			ch.zookeeper,
 			ch.replicationQueue,
 			ch.detachedParts,
 			ch.dictionaries,
@@ -138,6 +152,12 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 			ch.disks,
 			ch.processes,
 			ch.textLog,
+		}
+
+		// Managed instances on Clickhouse Cloud does not give a user
+		// permissions to the zookeeper table
+		if ch.Variant != "managed" {
+			metricsFuncs = append(metricsFuncs, ch.zookeeper)
 		}
 
 		for _, metricFunc := range metricsFuncs {
