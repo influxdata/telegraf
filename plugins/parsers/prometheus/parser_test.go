@@ -643,7 +643,7 @@ func TestHistogramInfBucketPresence(t *testing.T) {
 
 	m := metricFamily.Metric[0]
 	tags := GetTagsFromLabels(m, map[string]string{})
-	metrics := makeBuckets(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
+	metrics := makeBucketsV2(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
 
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }

@@ -476,15 +476,14 @@ func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 		URLTag:          "url",
 		IgnoreTimestamp: true,
 	}
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
 
-	err = acc.GatherError(p.Gather)
-	require.NoError(t, err)
-
-	m, _ := acc.Get("test_metric")
+	m, found := acc.Get("test_metric")
+	require.True(t, found)
+	require.NotNil(t, m)
 	require.WithinDuration(t, time.Now(), m.Time, 5*time.Second)
 }
 
