@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,15 +41,49 @@ const (
 	PfSlowRequests       = "slow requests"
 )
 
+type JSONMetrics struct {
+	Pool               string `json:"pool"`
+	ProcessManager     string `json:"process manager"`
+	StartTime          int    `json:"start time"`
+	StartSince         int    `json:"start since"`
+	AcceptedConn       int    `json:"accepted conn"`
+	ListenQueue        int    `json:"listen queue"`
+	MaxListenQueue     int    `json:"max listen queue"`
+	ListenQueueLen     int    `json:"listen queue len"`
+	IdleProcesses      int    `json:"idle processes"`
+	ActiveProcesses    int    `json:"active processes"`
+	TotalProcesses     int    `json:"total processes"`
+	MaxActiveProcesses int    `json:"max active processes"`
+	MaxChildrenReached int    `json:"max children reached"`
+	SlowRequests       int    `json:"slow requests"`
+	Processes          []struct {
+		Pid               int     `json:"pid"`
+		State             string  `json:"state"`
+		StartTime         int     `json:"start time"`
+		StartSince        int     `json:"start since"`
+		Requests          int     `json:"requests"`
+		RequestDuration   int     `json:"request duration"`
+		RequestMethod     string  `json:"request method"`
+		RequestURI        string  `json:"request uri"`
+		ContentLength     int     `json:"content length"`
+		User              string  `json:"user"`
+		Script            string  `json:"script"`
+		LastRequestCPU    float64 `json:"last request cpu"`
+		LastRequestMemory float64 `json:"last request memory"`
+	} `json:"processes"`
+}
+
 type metric map[string]int64
 type poolStat map[string]metric
 
 type phpfpm struct {
-	Urls    []string
-	Timeout config.Duration
-	tls.ClientConfig
+	Format  string          `toml:"format"`
+	Timeout config.Duration `toml:"timeout"`
+	Urls    []string        `toml:"urls"`
 
+	tls.ClientConfig
 	client *http.Client
+	log    telegraf.Logger
 }
 
 func (*phpfpm) SampleConfig() string {
@@ -59,6 +94,15 @@ func (p *phpfpm) Init() error {
 	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
+	}
+
+	switch p.Format {
+	case "":
+		p.Format = "status"
+	case "status", "json":
+		// both valid
+	default:
+		return fmt.Errorf("invalid format: %s", p.Format)
 	}
 
 	p.client = &http.Client{
@@ -158,7 +202,7 @@ func (p *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 	}, "/"+statusPath)
 
 	if len(fpmErr) == 0 && err == nil {
-		importMetric(bytes.NewReader(fpmOutput), acc, addr)
+		p.importMetric(bytes.NewReader(fpmOutput), acc, addr)
 		return nil
 	}
 	return fmt.Errorf("unable parse phpfpm status, error: %s; %w", string(fpmErr), err)
@@ -186,12 +230,20 @@ func (p *phpfpm) gatherHTTP(addr string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("unable to get valid stat result from %q: %w", addr, err)
 	}
 
-	importMetric(res.Body, acc, addr)
+	p.importMetric(res.Body, acc, addr)
 	return nil
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
+func (p *phpfpm) importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
+	if p.Format == "json" {
+		p.parseJSON(r, acc, addr)
+	} else {
+		parseLines(r, acc, addr)
+	}
+}
+
+func parseLines(r io.Reader, acc telegraf.Accumulator, addr string) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -242,6 +294,55 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 			fields[strings.ReplaceAll(k, " ", "_")] = v
 		}
 		acc.AddFields("phpfpm", fields, tags)
+	}
+}
+
+func (p *phpfpm) parseJSON(r io.Reader, acc telegraf.Accumulator, addr string) {
+	var metrics JSONMetrics
+	if err := json.NewDecoder(r).Decode(&metrics); err != nil {
+		p.log.Errorf("Unable to decode JSON response: %s", err)
+		return
+	}
+	timestamp := time.Now()
+
+	tags := map[string]string{
+		"pool": metrics.Pool,
+		"url":  addr,
+	}
+	fields := map[string]any{
+		"start_since":          metrics.StartSince,
+		"accepted_conn":        metrics.AcceptedConn,
+		"listen_queue":         metrics.ListenQueue,
+		"max_listen_queue":     metrics.MaxListenQueue,
+		"listen_queue_len":     metrics.ListenQueueLen,
+		"idle_processes":       metrics.IdleProcesses,
+		"active_processes":     metrics.ActiveProcesses,
+		"total_processes":      metrics.TotalProcesses,
+		"max_active_processes": metrics.MaxActiveProcesses,
+		"max_children_reached": metrics.MaxChildrenReached,
+		"slow_requests":        metrics.SlowRequests,
+	}
+	acc.AddFields("phpfpm", fields, tags, timestamp)
+
+	for _, process := range metrics.Processes {
+		tags := map[string]string{
+			"pool":           metrics.Pool,
+			"url":            addr,
+			"user":           process.User,
+			"request_uri":    process.RequestURI,
+			"request_method": process.RequestMethod,
+			"script":         process.Script,
+		}
+		fields := map[string]any{
+			"state":               process.State,
+			"start_time":          process.StartTime,
+			"requests":            process.Requests,
+			"request_duration":    process.RequestDuration,
+			"content_length":      process.ContentLength,
+			"last_request_cpu":    process.LastRequestCPU,
+			"last_request_memory": process.LastRequestMemory,
+		}
+		acc.AddFields("phpfpm_process", fields, tags, timestamp)
 	}
 }
 
