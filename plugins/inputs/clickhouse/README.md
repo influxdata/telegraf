@@ -3,6 +3,9 @@
 This plugin gathers the statistic data from
 [ClickHouse](https://github.com/ClickHouse/ClickHouse) server.
 
+User's on Clickhouse Cloud will not see the Zookeeper metrics as they may not
+have permissions to query those tables.
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -32,6 +35,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## metrics scrape via HTTP(s) clickhouse interface
   ## https://clickhouse.tech/docs/en/interfaces/http/
   servers = ["http://127.0.0.1:8123"]
+
+  ## Server Variant
+  ## When set to "managed", some queries are excluded from being run. This is
+  ## useful for instances hosted in ClickHouse Cloud where certain tables are
+  ## not available.
+  # variant = "self-hosted"
 
   ## If "auto_discovery"" is "true" plugin tries to connect to all servers
   ## available in the cluster with using same "user:password" described in
