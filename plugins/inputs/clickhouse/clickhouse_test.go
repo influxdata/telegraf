@@ -526,7 +526,8 @@ func TestGatherClickhouseCloud(t *testing.T) {
 	defer ts.Close()
 
 	ch := &ClickHouse{
-		Servers: []string{ts.URL + "?clickhouse.cloud"},
+		Servers: []string{ts.URL},
+		Variant: "managed",
 	}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, ch.Gather(acc))
