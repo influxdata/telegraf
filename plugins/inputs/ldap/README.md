@@ -17,7 +17,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # LDAP monitoring plugin
-[[inputs.openldap]]
+[[inputs.ldap]]
   ## Server to monitor
   ## The scheme determines the mode to use for connection with
   ##    ldap://...      -- unencrypted (non-TLS) connection
