@@ -102,7 +102,7 @@ func (p *phpfpm) Init() error {
 	case "status", "json":
 		// both valid
 	default:
-		return fmt.Errorf("invalid mode: %s", p.Format)
+		return fmt.Errorf("invalid format: %s", p.Format)
 	}
 
 	p.client = &http.Client{
