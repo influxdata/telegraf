@@ -17,7 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 func Parse(buf []byte, header http.Header, ignoreTimestamp bool) ([]telegraf.Metric, error) {
@@ -56,7 +56,7 @@ func Parse(buf []byte, header http.Header, ignoreTimestamp bool) ([]telegraf.Met
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
 			// reading tags
-			tags := common.MakeLabels(m, nil)
+			tags := prometheus.GetTagsFromLabels(m, nil)
 
 			// reading fields
 			var fields map[string]interface{}
@@ -84,7 +84,7 @@ func Parse(buf []byte, header http.Header, ignoreTimestamp bool) ([]telegraf.Met
 				} else {
 					t = now
 				}
-				m := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
+				m := metric.New(metricName, tags, fields, t, prometheus.ValueType(mf.GetType()))
 				metrics = append(metrics, m)
 			}
 		}

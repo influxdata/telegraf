@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 )
 
 type Parser struct {
@@ -71,7 +70,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
 			// reading tags
-			tags := common.MakeLabels(m, p.DefaultTags)
+			tags := GetTagsFromLabels(m, p.DefaultTags)
 			t := p.GetTimestamp(m, now)
 
 			if mf.GetType() == dto.MetricType_SUMMARY {
@@ -88,7 +87,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				fields := getNameAndValue(m, metricName)
 				// converting to telegraf metric
 				if len(fields) > 0 {
-					m := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
+					m := metric.New("prometheus", tags, fields, t, ValueType(mf.GetType()))
 					metrics = append(metrics, m)
 				}
 			}
@@ -126,7 +125,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
 	fields[metricName+"_sum"] = m.GetSummary().GetSampleSum()
-	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
+	met := metric.New("prometheus", tags, fields, t, ValueType(metricType))
 	metrics = append(metrics, met)
 
 	for _, q := range m.GetSummary().Quantile {
@@ -136,7 +135,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
 		fields[metricName] = q.GetValue()
 
-		quantileMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		quantileMetric := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
 		metrics = append(metrics, quantileMetric)
 	}
 	return metrics
@@ -150,7 +149,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
 	fields[metricName+"_sum"] = m.GetHistogram().GetSampleSum()
 
-	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
+	met := metric.New("prometheus", tags, fields, t, ValueType(metricType))
 	metrics = append(metrics, met)
 
 	infSeen := false
@@ -160,7 +159,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 		newTags["le"] = fmt.Sprint(b.GetUpperBound())
 		fields[metricName+"_bucket"] = float64(b.GetCumulativeCount())
 
-		histogramMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		histogramMetric := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
 		metrics = append(metrics, histogramMetric)
 		if math.IsInf(b.GetUpperBound(), +1) {
 			infSeen = true
@@ -174,7 +173,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 		fields = make(map[string]interface{})
 		fields[metricName+"_bucket"] = float64(m.GetHistogram().GetSampleCount())
 
-		histogramInfMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		histogramInfMetric := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
 		metrics = append(metrics, histogramInfMetric)
 	}
 	return metrics

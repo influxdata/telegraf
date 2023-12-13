@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -643,7 +642,7 @@ func TestHistogramInfBucketPresence(t *testing.T) {
 	require.NoError(t, err)
 
 	m := metricFamily.Metric[0]
-	tags := common.MakeLabels(m, map[string]string{})
+	tags := GetTagsFromLabels(m, map[string]string{})
 	metrics := makeBuckets(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
 
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
