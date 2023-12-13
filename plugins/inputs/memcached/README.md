@@ -60,7 +60,7 @@ Fields:
 * decr_hits - Number of successful decr reqs
 * decr_misses - Number of decr reqs against missing keys
 * delete_hits - Number of deletion reqs resulting in an item being removed
-* delete_misses - umber of deletions reqs for missing keys
+* delete_misses - Number of deletions reqs for missing keys
 * evicted_active - Items evicted from LRU that had been hit recently but did
   not jump to top of LRU
 * evicted_unfetched - Items evicted from LRU that were never touched by
