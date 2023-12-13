@@ -884,7 +884,7 @@ func Test_rasReader(t *testing.T) {
 		// Remove the temporary file after this test
 		defer os.Remove(fileobj.Name())
 
-		_, err = fileobj.Write([]byte(testFileContent))
+		_, err = fileobj.WriteString(testFileContent)
 		require.NoError(t, err)
 		err = fileobj.Close()
 		require.NoError(t, err)
