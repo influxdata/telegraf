@@ -85,11 +85,9 @@ func TestParsingValidGauge(t *testing.T) {
 		testutil.MustMetric(
 			"prometheus",
 			map[string]string{
-				"osVersion":        "CentOS Linux 7 (Core)",
-				"cadvisorRevision": "",
-				"cadvisorVersion":  "",
-				"dockerVersion":    "1.8.2",
-				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
+				"osVersion":     "CentOS Linux 7 (Core)",
+				"dockerVersion": "1.8.2",
+				"kernelVersion": "3.10.0-229.20.1.el7.x86_64",
 			},
 			map[string]interface{}{
 				"cadvisor_version_info": float64(1),
@@ -318,12 +316,10 @@ func TestDefautTags(t *testing.T) {
 		testutil.MustMetric(
 			"prometheus",
 			map[string]string{
-				"osVersion":        "CentOS Linux 7 (Core)",
-				"cadvisorRevision": "",
-				"cadvisorVersion":  "",
-				"dockerVersion":    "1.8.2",
-				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
-				"defaultTag":       "defaultTagValue",
+				"osVersion":     "CentOS Linux 7 (Core)",
+				"dockerVersion": "1.8.2",
+				"kernelVersion": "3.10.0-229.20.1.el7.x86_64",
+				"defaultTag":    "defaultTagValue",
 			},
 			map[string]interface{}{
 				"cadvisor_version_info": float64(1),
@@ -661,11 +657,9 @@ func TestParseValidPrometheusV1(t *testing.T) {
 		"gauge": float64(1),
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{
-		"osVersion":        "CentOS Linux 7 (Core)",
-		"cadvisorRevision": "",
-		"cadvisorVersion":  "",
-		"dockerVersion":    "1.8.2",
-		"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
+		"osVersion":     "CentOS Linux 7 (Core)",
+		"dockerVersion": "1.8.2",
+		"kernelVersion": "3.10.0-229.20.1.el7.x86_64",
 	}, metrics[0].Tags())
 
 	// Counter value
