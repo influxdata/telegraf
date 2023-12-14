@@ -363,7 +363,7 @@ END LIST VAR fake
 	m = appendVariable(m, "battery.capacity", "NUMBER")
 	m = appendVariable(m, "device.mfr", "STRING:64")
 	m = appendVariable(m, "device.model", "STRING:64")
-	m = appendVariable(m, "driver.versio", "STRING:64")
+	m = appendVariable(m, "driver.version", "STRING:64")
 	m = appendVariable(m, "driver.version.data", "STRING:64")
 	m = appendVariable(m, "driver.version.internal", "STRING:64")
 	m = appendVariable(m, "driver.version.usb", "STRING:64")
