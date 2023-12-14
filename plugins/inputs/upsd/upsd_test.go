@@ -313,6 +313,33 @@ VAR fake ups.realpower.nominal "700"
 VAR fake ups.firmware "CUSTOM_FIRMWARE"
 VAR fake battery.mfr.date "2016-07-26"
 VAR fake ups.status "OL"
+VAR fake input.bypass.frequency "49.9"
+VAR fake input.bypass.voltage "234.0"
+VAR fake input.frequency.nominal "50"
+VAR fake output.current "1.60"
+VAR fake output.frequency "49.9"
+VAR fake output.frequency.nominal "50"
+VAR fake output.voltage.nominal "230"
+VAR fake ups.power "389"
+VAR fake ups.power.nominal "2000"
+VAR fake battery_date ""
+VAR fake battery.capacity "7.00"
+VAR fake device.mfr "Eaton"
+VAR fake device.model "Eaton 2000"
+VAR fake driver.version "2.8.1"
+VAR fake driver.version.data "MGE HID 1.46"
+VAR fake driver.version.internal "0.52"
+VAR fake driver.version.usb "libusb-1.0.26 (API: 0x1000108)"
+VAR fake device.type "ups"
+VAR fake ups.firmware ""
+VAR fake ups.mfr "Eaton"
+VAR fake ups.model "Eaton 2000"
+VAR fake ups.productid "ffff"
+VAR fake ups.test.result "Done and passed"
+VAR fake ups.type "online"
+VAR fake ups.vendorid ""
+VAR fake ups.test.interval "604800"
+VAR fake ups.beeper.status "enabled"
 END LIST VAR fake
 `,
 	})
@@ -331,6 +358,36 @@ END LIST VAR fake
 	m = appendVariable(m, "ups.firmware", "STRING:64")
 	m = appendVariable(m, "battery.mfr.date", "STRING:64")
 	m = appendVariable(m, "ups.status", "STRING:64")
+	m = appendVariable(m, "battery_date", "STRING:64")
+	m = appendVariable(m, "battery.capacity", "NUMBER")
+	m = appendVariable(m, "device.mfr", "STRING:64")
+	m = appendVariable(m, "device.model", "STRING:64")
+	m = appendVariable(m, "driver.versio", "STRING:64")
+	m = appendVariable(m, "driver.version.data", "STRING:64")
+	m = appendVariable(m, "driver.version.internal", "STRING:64")
+	m = appendVariable(m, "driver.version.usb", "STRING:64")
+	m = appendVariable(m, "device.type", "STRING:64")
+	m = appendVariable(m, "ups.firmware", "STRING:64")
+	m = appendVariable(m, "ups.mfr", "STRING:64")
+	m = appendVariable(m, "ups.model", "STRING:64")
+	m = appendVariable(m, "ups.productid", "STRING:64")
+	m = appendVariable(m, "ups.test.result", "STRING:64")
+	m = appendVariable(m, "ups.type: online", "STRING:64")
+	m = appendVariable(m, "ups.vendorid", "STRING:64")
+	m = appendVariable(m, "ups.test.interval", "STRING:64")
+	m = appendVariable(m, "ups.beeper.status", "STRING:64")
+	m = appendVariable(m, "ups.shutdown", "STRING:64")
+	m = appendVariable(m, "outlet.switchable", "STRING:64")
+	m = appendVariable(m, "input.bypass.frequency", "NUMBER")
+	m = appendVariable(m, "input.bypass.voltage", "NUMBER")
+	m = appendVariable(m, "input.frequency.nominal", "NUMBER")
+	m = appendVariable(m, "output.current", "NUMBER")
+	m = appendVariable(m, "output.frequency", "NUMBER")
+	m = appendVariable(m, "output.frequency.nominal", "NUMBER")
+	m = appendVariable(m, "output.voltage.nominal", "NUMBER")
+	m = appendVariable(m, "ups.power", "NUMBER")
+	m = appendVariable(m, "ups.power.nominal", "NUMBER")
+	m = appendVariable(m, "internal_temp", "NUMBER")
 
 	return m
 }
