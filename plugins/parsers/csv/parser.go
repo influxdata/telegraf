@@ -209,6 +209,7 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 		csvReader.Comment, _ = utf8.DecodeRuneInString(p.Comment)
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
+
 	return csvReader
 }
 
