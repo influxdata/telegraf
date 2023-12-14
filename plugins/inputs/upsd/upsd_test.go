@@ -39,23 +39,22 @@ func TestUpsdGather(t *testing.T) {
 					"battery_protection":      "yes",
 					"battery_voltage":         float64(13.4),
 					"battery_capacity":        float64(7.00),
-					"battery_runtime":         "3873",
+					"battery_runtime":         int64(3873),
 					"device_mfr":              "Eaton",
 					"device_model":            "Eaton 2000",
 					"driver_version":          "2.8.1",
 					"driver_version_data":     "MGE HID 1.46",
-					"driver_version_internal": "0.52",
+					"driver_version_internal": float64(0.52),
 					"driver_version_usb":      "libusb-1.0.26 (API: 0x1000108)",
 					"device_type":             "ups",
 					"firmware":                "CUSTOM_FIRMWARE",
-					"ups_firmware":            "1.0",
 					"ups_mfr":                 "Eaton",
 					"ups_model":               "Eaton 2000",
 					"ups_productid":           "ffff",
 					"ups_test_result":         "Done and passed",
 					"ups_type":                "online",
-					"ups_vendorid":            "0463",
-					"ups_test_interval":       "604800",
+					"ups_vendorid":            int64(0463),
+					"ups_test_interval":       int64(604800),
 					"ups_beeper_status":       "enabled",
 					"outlet_switchable":       "no",
 					"input_frequency":         float64(49.9),
@@ -65,7 +64,7 @@ func TestUpsdGather(t *testing.T) {
 					"input_bypass_voltage":    float64(234.0),
 					"input_frequency_nominal": int64(50),
 					"internal_temp":           float64(24.9),
-					"ups_shutdown":            int64(-1),
+					"ups_shutdown":            "enabled",
 					"input_voltage":           float64(242),
 					"load_percent":            float64(23),
 					"nominal_battery_voltage": float64(24),
@@ -97,23 +96,22 @@ func TestUpsdGather(t *testing.T) {
 					"battery_protection":      "yes",
 					"battery_voltage":         float64(13.4),
 					"battery_capacity":        float64(7.00),
-					"battery_runtime":         "3873",
+					"battery_runtime":         int64(3873),
 					"device_mfr":              "Eaton",
 					"device_model":            "Eaton 2000",
 					"driver_version":          "2.8.1",
 					"driver_version_data":     "MGE HID 1.46",
-					"driver_version_internal": "0.52",
+					"driver_version_internal": float64(0.52),
 					"driver_version_usb":      "libusb-1.0.26 (API: 0x1000108)",
 					"device_type":             "ups",
 					"firmware":                "CUSTOM_FIRMWARE",
-					"ups_firmware":            "1.0",
 					"ups_mfr":                 "Eaton",
 					"ups_model":               "Eaton 2000",
 					"ups_productid":           "ffff",
 					"ups_test_result":         "Done and passed",
 					"ups_type":                "online",
 					"ups_vendorid":            "0463",
-					"ups_test_interval":       "604800",
+					"ups_test_interval":       int64(604800),
 					"ups_beeper_status":       "enabled",
 					"outlet_switchable":       "no",
 					"input_frequency":         float64(49.9),
@@ -123,7 +121,7 @@ func TestUpsdGather(t *testing.T) {
 					"input_bypass_voltage":    float64(234.0),
 					"input_frequency_nominal": int64(50),
 					"internal_temp":           float64(24.9),
-					"ups_shutdown":            int64(-1),
+					"ups_shutdown":            "enabled",
 					"input_voltage":           float64(242),
 					"load_percent":            float64(23),
 					"nominal_battery_voltage": float64(24),
@@ -303,7 +301,7 @@ VAR fake device.model "Model 12345"
 VAR fake input.voltage "242.0"
 VAR fake ups.load "23.0"
 VAR fake battery.charge "100.0"
-VAR fake battery.runtime "600.00"
+VAR fake battery.runtime "3873"
 VAR fake output.voltage "230.0"
 VAR fake battery.voltage "13.4"
 VAR fake input.voltage.nominal "230.0"
@@ -321,7 +319,7 @@ VAR fake driver.version.data "MGE HID 1.46"
 VAR fake driver.version.internal "0.52"
 VAR fake driver.version.usb "libusb-1.0.26 (API: 0x1000108)"
 VAR fake device.type "ups"
-VAR fake ups.firmware ""
+VAR fake ups.firmware "1.0"
 VAR fake ups.mfr "Eaton"
 VAR fake ups.model "Eaton 2000"
 VAR fake ups.productid "ffff"
@@ -365,7 +363,7 @@ END LIST VAR fake
 	m = appendVariable(m, "device.model", "STRING:64")
 	m = appendVariable(m, "driver.version", "STRING:64")
 	m = appendVariable(m, "driver.version.data", "STRING:64")
-	m = appendVariable(m, "driver.version.internal", "STRING:64")
+	m = appendVariable(m, "driver.version.internal", "NUMBER")
 	m = appendVariable(m, "driver.version.usb", "STRING:64")
 	m = appendVariable(m, "device.type", "STRING:64")
 	m = appendVariable(m, "ups.firmware", "STRING:64")
@@ -374,8 +372,8 @@ END LIST VAR fake
 	m = appendVariable(m, "ups.productid", "STRING:64")
 	m = appendVariable(m, "ups.test.result", "STRING:64")
 	m = appendVariable(m, "ups.type", "STRING:64")
-	m = appendVariable(m, "ups.vendorid", "STRING:64")
-	m = appendVariable(m, "ups.test.interval", "STRING:64")
+	m = appendVariable(m, "ups.vendorid", "NUMBER")
+	m = appendVariable(m, "ups.test.interval", "NUMBER")
 	m = appendVariable(m, "ups.beeper.status", "STRING:64")
 	m = appendVariable(m, "ups.shutdown", "STRING:64")
 	m = appendVariable(m, "outlet.switchable", "STRING:64")
