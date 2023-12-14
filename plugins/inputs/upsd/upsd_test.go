@@ -373,7 +373,7 @@ END LIST VAR fake
 	m = appendVariable(m, "ups.model", "STRING:64")
 	m = appendVariable(m, "ups.productid", "STRING:64")
 	m = appendVariable(m, "ups.test.result", "STRING:64")
-	m = appendVariable(m, "ups.type: online", "STRING:64")
+	m = appendVariable(m, "ups.type", "STRING:64")
 	m = appendVariable(m, "ups.vendorid", "STRING:64")
 	m = appendVariable(m, "ups.test.interval", "STRING:64")
 	m = appendVariable(m, "ups.beeper.status", "STRING:64")
