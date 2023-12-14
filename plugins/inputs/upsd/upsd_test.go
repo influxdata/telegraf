@@ -322,7 +322,7 @@ VAR fake output.frequency.nominal "50"
 VAR fake output.voltage.nominal "230"
 VAR fake ups.power "389"
 VAR fake ups.power.nominal "2000"
-VAR fake battery_date ""
+VAR fake battery.date ""
 VAR fake battery.capacity "7.00"
 VAR fake device.mfr "Eaton"
 VAR fake device.model "Eaton 2000"
@@ -358,7 +358,7 @@ END LIST VAR fake
 	m = appendVariable(m, "ups.firmware", "STRING:64")
 	m = appendVariable(m, "battery.mfr.date", "STRING:64")
 	m = appendVariable(m, "ups.status", "STRING:64")
-	m = appendVariable(m, "battery_date", "STRING:64")
+	m = appendVariable(m, "battery.date", "STRING:64")
 	m = appendVariable(m, "battery.capacity", "NUMBER")
 	m = appendVariable(m, "device.mfr", "STRING:64")
 	m = appendVariable(m, "device.model", "STRING:64")
