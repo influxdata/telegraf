@@ -857,7 +857,7 @@ func simulateResponse(mockConn *mocks.Conn, response string, readErr error) {
 func createSocketForTest(t *testing.T, dirPath string) (string, net.Listener) {
 	var err error
 	var pathToSocket string
-	
+
 	if len(dirPath) == 0 {
 		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
 		require.NoError(t, err)
