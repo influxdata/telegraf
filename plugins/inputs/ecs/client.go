@@ -144,12 +144,7 @@ func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", c.statsURL, resp.Status, body)
 	}
 
-	statsMap, err := unmarshalStats(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return statsMap, nil
+	return unmarshalStats(resp.Body)
 }
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.

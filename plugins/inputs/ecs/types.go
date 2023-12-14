@@ -56,8 +56,10 @@ func unmarshalTask(r io.Reader) (*Task, error) {
 // docker parsers
 func unmarshalStats(r io.Reader) (map[string]*types.StatsJSON, error) {
 	var statsMap map[string]*types.StatsJSON
-	err := json.NewDecoder(r).Decode(&statsMap)
-	return statsMap, err
+	if err := json.NewDecoder(r).Decode(&statsMap); err != nil {
+		return nil, err
+	}
+	return statsMap, nil
 }
 
 // interleaves Stats in to the Container objects in the Task
