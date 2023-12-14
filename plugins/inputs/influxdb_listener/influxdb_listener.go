@@ -269,7 +269,9 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		body, err = gzip.NewReader(body)
 		if err != nil {
 			h.Log.Debugf("Error decompressing request body: %v", err.Error())
-			badRequest(res, err.Error())
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return
 		}
 		defer body.Close()
@@ -330,7 +332,9 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 	}
 	if !errors.Is(err, influx.EOF) {
 		h.Log.Debugf("Error parsing the request body: %v", err.Error())
-		badRequest(res, err.Error())
+		if err := badRequest(res, err.Error()); err != nil {
+			h.Log.Debugf("error in bad-request: %v", err)
+		}
 		return
 	}
 	if parseErrorCount > 0 {
@@ -343,7 +347,9 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		default:
 			partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 		}
-		partialWrite(res, partialErrorString)
+		if err := partialWrite(res, partialErrorString); err != nil {
+			h.Log.Debugf("error in partial-write: %v", err)
+		}
 		return
 	}
 
@@ -372,7 +378,9 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		body, err = gzip.NewReader(body)
 		if err != nil {
 			h.Log.Debugf("Error decompressing request body: %v", err.Error())
-			badRequest(res, err.Error())
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return
 		}
 		defer body.Close()
@@ -387,7 +395,9 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		err := parser.SetTimePrecision(precision)
 		if err != nil {
 			h.Log.Debugf("error in upstream parser: %v", err)
-			badRequest(res, err.Error())
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return
 		}
 	}
@@ -438,7 +448,9 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 	}
 	if !errors.Is(err, influx_upstream.ErrEOF) {
 		h.Log.Debugf("Error parsing the request body: %v", err.Error())
-		badRequest(res, err.Error())
+		if err := badRequest(res, err.Error()); err != nil {
+			h.Log.Debugf("error in bad-request: %v", err)
+		}
 		return
 	}
 	if parseErrorCount > 0 {
@@ -451,7 +463,9 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		default:
 			partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 		}
-		partialWrite(res, partialErrorString)
+		if err := partialWrite(res, partialErrorString); err != nil {
+			h.Log.Debugf("error in partial-write: %v", err)
+		}
 		return
 	}
 
@@ -468,7 +482,7 @@ func tooLarge(res http.ResponseWriter) error {
 	return err
 }
 
-func badRequest(res http.ResponseWriter, errString string) {
+func badRequest(res http.ResponseWriter, errString string) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	if errString == "" {
@@ -476,15 +490,17 @@ func badRequest(res http.ResponseWriter, errString string) {
 	}
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	fmt.Fprintf(res, `{"error":%q}`, errString)
+	_, err := fmt.Fprintf(res, `{"error":%q}`, errString)
+	return err
 }
 
-func partialWrite(res http.ResponseWriter, errString string) {
+func partialWrite(res http.ResponseWriter, errString string) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	fmt.Fprintf(res, `{"error":%q}`, errString)
+	_, err := fmt.Fprintf(res, `{"error":%q}`, errString)
+	return err
 }
 
 func getPrecisionMultiplier(precision string) time.Duration {

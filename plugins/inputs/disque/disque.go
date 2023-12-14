@@ -106,7 +106,10 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 		if addr.User != nil {
 			pwd, set := addr.User.Password()
 			if set && pwd != "" {
-				fmt.Fprintf(c, "AUTH %s\r\n", pwd)
+				if _, err := fmt.Fprintf(c, "AUTH %s\r\n", pwd); err != nil {
+					return err
+				}
+
 				r := bufio.NewReader(c)
 
 				line, err := r.ReadString('\n')
