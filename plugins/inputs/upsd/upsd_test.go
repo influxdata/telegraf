@@ -337,7 +337,7 @@ VAR fake ups.model "Eaton 2000"
 VAR fake ups.productid "ffff"
 VAR fake ups.test.result "Done and passed"
 VAR fake ups.type "online"
-VAR fake ups.vendorid ""
+VAR fake ups.vendorid "0463"
 VAR fake ups.test.interval "604800"
 VAR fake ups.beeper.status "enabled"
 END LIST VAR fake
