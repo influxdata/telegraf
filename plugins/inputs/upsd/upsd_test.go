@@ -313,15 +313,6 @@ VAR fake ups.realpower.nominal "700"
 VAR fake ups.firmware "CUSTOM_FIRMWARE"
 VAR fake battery.mfr.date "2016-07-26"
 VAR fake ups.status "OL"
-VAR fake input.bypass.frequency "49.9"
-VAR fake input.bypass.voltage "234.0"
-VAR fake input.frequency.nominal "50"
-VAR fake output.current "1.60"
-VAR fake output.frequency "49.9"
-VAR fake output.frequency.nominal "50"
-VAR fake output.voltage.nominal "230"
-VAR fake ups.power "389"
-VAR fake ups.power.nominal "2000"
 VAR fake battery.capacity "7.00"
 VAR fake device.mfr "Eaton"
 VAR fake device.model "Eaton 2000"
@@ -339,6 +330,18 @@ VAR fake ups.type "online"
 VAR fake ups.vendorid "0463"
 VAR fake ups.test.interval "604800"
 VAR fake ups.beeper.status "enabled"
+VAR fake ups.shutdown "enabled"
+VAR fake outlet.switchable "no"
+VAR fake input.bypass.frequency "49.9"
+VAR fake input.bypass.voltage "234.0"
+VAR fake input.frequency.nominal "50"
+VAR fake output.current "1.60"
+VAR fake output.frequency "49.9"
+VAR fake output.frequency.nominal "50"
+VAR fake output.voltage.nominal "230"
+VAR fake ups.power "389"
+VAR fake ups.power.nominal "2000"
+VAR fake ups.temperature "24.9"
 END LIST VAR fake
 `,
 	})
@@ -385,7 +388,7 @@ END LIST VAR fake
 	m = appendVariable(m, "output.voltage.nominal", "NUMBER")
 	m = appendVariable(m, "ups.power", "NUMBER")
 	m = appendVariable(m, "ups.power.nominal", "NUMBER")
-	m = appendVariable(m, "internal_temp", "NUMBER")
+	m = appendVariable(m, "ups.temperature", "NUMBER")
 
 	return m
 }
