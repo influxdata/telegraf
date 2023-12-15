@@ -100,7 +100,7 @@ jobs:
           key: go-v42-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
-  test-go-lint:
+  lint-linux:
     executor: telegraf-ci
     steps:
       - checkout
@@ -119,13 +119,29 @@ jobs:
       - run:
           name: "Linux"
           command: GOGC=20 /go/bin/golangci-lint run --verbose
+  lint-macos:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - run:
           name: "macOS"
-          command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose
+          command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
           no_output_timeout: 30m
+  lint-windows:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - run:
           name: "Windows"
-          command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose
+          command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
           no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci
@@ -537,7 +553,19 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-lint':
+      - 'lint-linux':
+          requires:
+            - 'build-cache'
+          filters:
+            tags:
+              only: /.*/
+      - 'lint-macos':
+          requires:
+            - 'build-cache'
+          filters:
+            tags:
+              only: /.*/
+      - 'lint-windows':
           requires:
             - 'build-cache'
           filters:
@@ -556,20 +584,14 @@ workflows:
             tags:
               only: /.*/
       - 'test-go-mac':
-          requires:
-            - 'build-cache'
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
-          requires:
-            - 'build-cache'
           filters:
             tags:
               only: /.*/
       - 'test-integration':
-          requires:
-            - 'build-cache'
           filters:
             tags:
               only: /.*/
@@ -772,7 +794,13 @@ workflows:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
       - 'build-cache'
-      - 'test-go-lint':
+      - 'lint-linux':
+          requires:
+            - 'build-cache'
+      - 'lint-macos':
+          requires:
+            - 'build-cache'
+      - 'lint-windows':
           requires:
             - 'build-cache'
       - 'test-go-linux':
@@ -781,12 +809,8 @@ workflows:
       - 'test-go-linux-386':
           requires:
             - 'build-cache'
-      - 'test-go-mac':
-          requires:
-            - 'build-cache'
-      - 'test-go-windows':
-          requires:
-            - 'build-cache'
+      - 'test-go-mac'
+      - 'test-go-windows'
       - 'test-licenses':
           requires:
             - 'build-cache'
