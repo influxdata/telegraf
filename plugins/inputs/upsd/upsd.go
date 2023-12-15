@@ -89,8 +89,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"ups_model":           metrics["ups.model"],
 		"ups_productid":       metrics["ups.productid"],
 		"ups_test_result":     metrics["ups.test.result"],
-		"ups_type":            metrics["ups.type"],
-		"ups_vendorid":        metrics["ups.vendorid"],
+		"ups_type":            metrics["ups.type"],		
 		"ups_beeper_status":   metrics["ups.beeper.status"],
 		"ups_shutdown":        metrics["ups.shutdown"],
 		"outlet_switchable":   metrics["outlet.switchable"],
@@ -105,8 +104,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"battery_charge_percent":   "battery.charge",
 		"battery_runtime_low":      "battery.runtime.low",
 		"battery_voltage":          "battery.voltage",
-		"battery_capacity":         "battery.capacity",
-		"battery_runtime":          "battery.runtime",
+		"battery_capacity":         "battery.capacity",		
 		"input_frequency":          "input.frequency",
 		"input_transfer_high":      "input.transfer.high",
 		"input_transfer_low":       "input.transfer.low",
@@ -157,6 +155,13 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		acc.AddError(fmt.Errorf("converting ups.firmware=%q failed: %w", metrics["ups.firmware"], err))
 	} else {
 		fields["firmware"] = val
+	}
+
+	val, err := internal.ToString(metrics["ups.vendorid"])
+	if err != nil {
+		acc.AddError(fmt.Errorf("converting ups.vendorid=%q failed: %w", metrics["ups.vendorid"], err))
+	} else {
+		fields["ups_vendorid"] = val
 	}
 
 	acc.AddFields("upsd", fields, tags)

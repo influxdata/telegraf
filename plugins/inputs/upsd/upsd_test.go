@@ -38,8 +38,7 @@ func TestUpsdGather(t *testing.T) {
 					"battery_mfr_date":         "2016-07-26",
 					"battery_protection":       "yes",
 					"battery_voltage":          float64(13.4),
-					"battery_capacity":         float64(7.00),
-					"battery_runtime":          float64(3873),
+					"battery_capacity":         float64(7.00),					
 					"device_mfr":               "Eaton",
 					"device_model":             "Eaton 2000",
 					"driver_version":           "2.8.1",
@@ -96,8 +95,7 @@ func TestUpsdGather(t *testing.T) {
 					"battery_mfr_date":         "2016-07-26",
 					"battery_protection":       "yes",
 					"battery_voltage":          float64(13.4),
-					"battery_capacity":         float64(7.00),
-					"battery_runtime":          float64(3873),
+					"battery_capacity":         float64(7.00),					
 					"device_mfr":               "Eaton",
 					"device_model":             "Eaton 2000",
 					"driver_version":           "2.8.1",
@@ -303,7 +301,7 @@ VAR fake device.model "Model 12345"
 VAR fake input.voltage "242.0"
 VAR fake ups.load "23.0"
 VAR fake battery.charge "100.0"
-VAR fake battery.runtime "3873"
+VAR fake battery.runtime "600.00"
 VAR fake battery.protection "yes"
 VAR fake output.voltage "230.0"
 VAR fake battery.voltage "13.4"
