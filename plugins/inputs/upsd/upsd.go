@@ -90,11 +90,11 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"ups_productid":       metrics["ups.productid"],
 		"ups_test_result":     metrics["ups.test.result"],
 		"ups_type":            metrics["ups.type"],
-		"ups_beeper_status":   metrics["ups.beeper.status"],
-		"ups_shutdown":        metrics["ups.shutdown"],
-		"outlet_switchable":   metrics["outlet.switchable"],
-		"status_flags":        status,
-		"ups_status":          metrics["ups.status"],
+		//"ups_beeper_status":   metrics["ups.beeper.status"],
+		//"ups_shutdown":        metrics["ups.shutdown"],
+		"outlet_switchable": metrics["outlet.switchable"],
+		"status_flags":      status,
+		"ups_status":        metrics["ups.status"],
 
 		//Compatibility with apcupsd metrics format
 		"time_left_ns": timeLeftNS,
@@ -157,11 +157,25 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		fields["firmware"] = val
 	}
 
-	val2, err := internal.ToString(metrics["ups.vendorid"])
+	val_ups_vendorid, err := internal.ToString(metrics["ups.vendorid"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.vendorid=%q failed: %w", metrics["ups.vendorid"], err))
 	} else {
-		fields["ups_vendorid"] = val2
+		fields["ups_vendorid"] = val_ups_vendorid
+	}
+
+	val_ups_beeper_status, err := internal.ToString(metrics["ups.beeper.status"])
+	if err != nil {
+		acc.AddError(fmt.Errorf("converting ups.beeper.status=%q failed: %w", metrics["ups.beeper.status"], err))
+	} else {
+		fields["ups_beeper_status"] = val_ups_beeper_status
+	}
+
+	val_ups_shutdown, err := internal.ToString(metrics["ups.shutdown"])
+	if err != nil {
+		acc.AddError(fmt.Errorf("converting ups.shutdown=%q failed: %w", metrics["ups.shutdown"], err))
+	} else {
+		fields["ups_shutdown"] = val_ups_shutdown
 	}
 
 	acc.AddFields("upsd", fields, tags)

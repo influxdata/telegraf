@@ -109,7 +109,7 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "0463",
+					"ups_vendorid":             "463",
 					"ups_test_interval":        float64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
