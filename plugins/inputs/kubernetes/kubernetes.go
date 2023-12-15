@@ -127,8 +127,10 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 	}
 
 	nodeUrls := make([]string, 0, len(nodes.Items))
-	for _, n := range nodes.Items {
-		address := getNodeAddress(n)
+	for i := range nodes.Items {
+		n := &nodes.Items[i]
+
+		address := getNodeAddress(n.Status.Addresses)
 		if address == "" {
 			log.Warnf("Unable to node addresses for Node %q", n.Name)
 			continue
@@ -140,10 +142,9 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 }
 
 // Prefer internal addresses, if none found, use ExternalIP
-func getNodeAddress(node v1.Node) string {
+func getNodeAddress(addresses []v1.NodeAddress) string {
 	extAddresses := make([]string, 0)
-
-	for _, addr := range node.Status.Addresses {
+	for _, addr := range addresses {
 		if addr.Type == v1.NodeInternalIP {
 			return addr.Address
 		}

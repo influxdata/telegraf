@@ -141,7 +141,7 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	}
 
 	for k, v := range h.Headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			request.Host = v
 		} else {
 			request.Header.Add(k, v)

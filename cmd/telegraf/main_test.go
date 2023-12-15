@@ -133,7 +133,7 @@ func (m *MockConfig) CollectDeprecationInfos(_, _, _, _ []string) map[string][]c
 
 func (m *MockConfig) PrintDeprecationList(plugins []config.PluginDeprecationInfo) {
 	for _, p := range plugins {
-		_, _ = m.Buffer.Write([]byte(fmt.Sprintf("plugin name: %s\n", p.Name)))
+		fmt.Fprintf(m.Buffer, "plugin name: %s\n", p.Name)
 	}
 }
 

@@ -17,8 +17,8 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesI
 
 	ki.gatherNodeCount(len(list.Items), acc)
 
-	for _, n := range list.Items {
-		ki.gatherNode(n, acc)
+	for i := range list.Items {
+		ki.gatherNode(&list.Items[i], acc)
 	}
 }
 
@@ -29,7 +29,7 @@ func (ki *KubernetesInventory) gatherNodeCount(count int, acc telegraf.Accumulat
 	acc.AddFields(nodeMeasurement, fields, tags)
 }
 
-func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherNode(n *corev1.Node, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"node_name":         n.Name,

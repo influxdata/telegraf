@@ -199,16 +199,17 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
 	if !p.invalidDelimiter && p.Delimiter != "" {
-		csvReader.Comma = []rune(p.Delimiter)[0]
+		csvReader.Comma, _ = utf8.DecodeRuneInString(p.Delimiter)
 	}
 	// Check if delimiter is invalid
 	if p.invalidDelimiter && p.Delimiter != "" {
-		csvReader.Comma = []rune(commaByte)[0]
+		csvReader.Comma, _ = utf8.DecodeRuneInString(commaByte)
 	}
 	if p.Comment != "" {
-		csvReader.Comment = []rune(p.Comment)[0]
+		csvReader.Comment, _ = utf8.DecodeRuneInString(p.Comment)
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
+
 	return csvReader
 }
 

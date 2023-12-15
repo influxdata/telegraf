@@ -22,7 +22,9 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		}
 	}
 
-	for i, gpu := range s.Gpu {
+	for i := range s.Gpu {
+		gpu := &s.Gpu[i]
+
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}

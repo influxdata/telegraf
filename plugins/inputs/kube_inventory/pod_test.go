@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPod(t *testing.T) {
@@ -447,8 +447,9 @@ func TestPod(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
-			ks.gatherPod(pod, acc)
+		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
+		for i := range items {
+			ks.gatherPod(&items[i], acc)
 		}
 
 		err := acc.FirstError()
@@ -682,8 +683,9 @@ func TestPodSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
-			ks.gatherPod(pod, acc)
+		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
+		for i := range items {
+			ks.gatherPod(&items[i], acc)
 		}
 
 		// Grab selector tags
@@ -992,8 +994,9 @@ func TestPodPendingContainers(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
-			ks.gatherPod(pod, acc)
+		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
+		for i := range items {
+			ks.gatherPod(&items[i], acc)
 		}
 
 		err := acc.FirstError()

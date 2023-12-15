@@ -131,13 +131,14 @@ type metric struct {
 
 func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 	metrics := []metric{}
-	for cardID, payload := range gpus {
+	for cardID := range gpus {
 		if strings.Contains(cardID, "card") {
 			tags := map[string]string{
 				"name": cardID,
 			}
 			fields := map[string]interface{}{}
 
+			payload := gpus[cardID]
 			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
 			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
 			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)

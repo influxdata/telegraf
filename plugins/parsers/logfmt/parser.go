@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logfmt/logfmt"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
@@ -42,7 +43,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
 		for decoder.ScanKeyval() {
-			if string(decoder.Value()) == "" {
+			if len(decoder.Value()) == 0 {
 				continue
 			}
 
