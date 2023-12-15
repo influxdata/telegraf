@@ -117,9 +117,14 @@ linters-settings:
       - unnecessaryDefer
       - weakCond
       # performance
-      - hugeParam
-      - rangeValCopy
-
+      - equalFold
+      - hugeParam      
+      - preferDecodeRune
+      - preferFprint      
+      - preferStringWriter
+      - rangeValCopy      
+      - stringXbytes
+      
     # Settings passed to gocritic.
     # The settings key is the name of a supported gocritic checker.
     # The list of supported checkers can be find in https://go-critic.github.io/overview.
@@ -132,6 +137,7 @@ linters-settings:
         # Size in bytes that makes the warning trigger.
         # Default: 128
         sizeThreshold: 512
+
   gosec:
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules
