@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/blues/jsonata-go"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	chttp "github.com/influxdata/telegraf/plugins/common/http"
@@ -158,7 +159,7 @@ func (h *HTTP) query() ([]byte, error) {
 	}
 
 	for k, v := range h.Headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			request.Host = v
 		} else {
 			request.Header.Add(k, v)

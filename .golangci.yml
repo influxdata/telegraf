@@ -117,10 +117,15 @@ linters-settings:
       - unnecessaryDefer
       - weakCond
       # performance
+      - equalFold
       - indexAlloc
+      - preferDecodeRune
+      - preferFprint
+      - preferStringWriter
       - preferWriteByte
       - rangeExprCopy
       - sliceClear
+      - stringXbytes
   gosec:
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules

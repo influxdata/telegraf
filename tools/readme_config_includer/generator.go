@@ -91,14 +91,14 @@ func insertInclude(buf *bytes.Buffer, include string) error {
 func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	// Insert newlines before and after
 	if b.Newlines {
-		buf.Write([]byte("\n"))
+		buf.WriteByte('\n')
 	}
 
 	// Insert all includes in the order they occurred
 	for i, include := range b.Includes {
 		if i > 0 {
 			// Add a separating newline between included blocks
-			buf.Write([]byte("\n"))
+			buf.WriteByte('\n')
 		}
 		if err := insertInclude(buf, include); err != nil {
 			return err
@@ -106,7 +106,7 @@ func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	}
 	// Make sure we add a trailing newline
 	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) || b.Newlines {
-		buf.Write([]byte("\n"))
+		buf.WriteByte('\n')
 	}
 
 	return nil
