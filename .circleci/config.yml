@@ -137,22 +137,6 @@ commands:
             - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
       - when:
           condition:
-            and:
-              - equal: [ "master", << pipeline.git.branch >> ]
-              - equal: [ "linux", << parameters.os >> ]
-              - equal: [ "amd64", << parameters.arch >> ]
-          steps:
-            - run:
-                name: "Installing goveralls"
-                command: go install github.com/mattn/goveralls@latest
-            - run:
-                name: "Remove plugins/parsers/influx/machine.go from coverage"
-                command: sed -i '/github.com\/influxdata\/telegraf\/plugins\/parsers\/influx\/machine.go/d' coverage.out
-            - run:
-                name: "Create report"
-                command: /go/bin/goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
-      - when:
-          condition:
             equal: [ linux, << parameters.os >> ]
           steps:
             - save_cache:
