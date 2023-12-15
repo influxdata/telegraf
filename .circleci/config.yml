@@ -24,20 +24,6 @@ commands:
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
-  test-lint:
-    steps:
-      - run:
-          name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
-      - run:
-          name: "Linux"
-          command: GOGC=20 /go/bin/golangci-lint run --verbose
-      - run:
-          name: "macOS"
-          command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose
-      - run:
-          name: "Windows"
-          command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose
   test-go:
     parameters:
       os:
@@ -50,20 +36,6 @@ commands:
         type: string
         default: "gotestsum"
     steps:
-      - checkout
-      - check-changed-files-or-halt
-      - when:
-          condition:
-            equal: [ darwin, << parameters.os >> ]
-          steps:
-            - run: 'sh ./scripts/installgo_mac.sh'
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: choco feature enable -n allowGlobalConfirmation
-            - run: 'sh ./scripts/installgo_windows.sh'
-            - run: choco install mingw --version=12.2.0.03042023
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -83,6 +55,9 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - attach_workspace:
           at: '/go'
       - when:
@@ -112,26 +87,63 @@ commands:
           paths:
             - 'dist'
 jobs:
+  build-cache:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
+      - run: go get -v -t -d ./...
+      - save_cache:
+          key: go-v42-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
   test-go-lint:
     executor: telegraf-ci
     steps:
       - checkout
       - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
-      - test-lint
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - run:
+          name: "Linux"
+          command: GOGC=20 /go/bin/golangci-lint run --verbose
+      - run:
+          name: "macOS"
+          command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose
+          no_output_timeout: 30m
+      - run:
+          name: "Windows"
+          command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose
+          no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci
     steps:
+      - checkout
+      - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - test-go
   test-go-linux-386:
     executor: telegraf-ci
     steps:
       - checkout
       - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - run: 'GOARCH=386 make deps'
       - run: 'GOARCH=386 make tidy'
       - run: 'GOARCH=386 make check'
@@ -150,23 +162,50 @@ jobs:
   test-go-mac:
     executor: mac
     steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_mac.sh'
+      - restore_cache:
+          keys:
+            - go-v42-macos-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
           arch: arm64
+      - save_cache:
+          key: go-v42-macos-{{ checksum "go.sum" }}
+          paths:
+            - "~/go/pkg/mod"
+            - "~/Library/Caches/go-build"
   test-go-windows:
     executor:
         name: win/default
         shell: bash.exe
         size: xlarge
     steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: choco feature enable -n allowGlobalConfirmation
+      - run: 'sh ./scripts/installgo_windows.sh'
+      - run: choco install mingw --version=12.2.0.03042023
+      - restore_cache:
+          keys:
+            - go-v42-windows-{{ checksum "go.sum" }}
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
+      - save_cache:
+          key: go-v42-macos-{{ checksum "go.sum" }}
+          paths:
+            - '~\go\pkg\mod'
+            - '~\AppData\Local\go-build'
   test-licenses:
     executor: telegraf-ci
     steps:
       - checkout
       - check-changed-files-or-halt
+      - restore_cache:
+          keys:
+            - go-v42-{{ checksum "go.sum" }}
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
   windows-package:
@@ -494,27 +533,43 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'build-cache':
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-lint':
+          requires:
+            - 'build-cache'
           filters:
             tags:
               only: /.*/
       - 'test-go-linux':
+          requires:
+            - 'build-cache'
           filters:
             tags:
               only: /.*/
       - 'test-go-linux-386':
+          requires:
+            - 'build-cache'
           filters:
             tags:
               only: /.*/
       - 'test-go-mac':
+          requires:
+            - 'build-cache'
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          requires:
+            - 'build-cache'
           filters:
             tags:
               only: /.*/
       - 'test-integration':
+          requires:
+            - 'build-cache'
           filters:
             tags:
               only: /.*/
@@ -716,12 +771,25 @@ workflows:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
-      - 'test-go-lint'
-      - 'test-go-linux'
-      - 'test-go-linux-386'
-      - 'test-go-mac'
-      - 'test-go-windows'
-      - 'test-licenses'
+      - 'build-cache'
+      - 'test-go-lint':
+          requires:
+            - 'build-cache'
+      - 'test-go-linux':
+          requires:
+            - 'build-cache'
+      - 'test-go-linux-386':
+          requires:
+            - 'build-cache'
+      - 'test-go-mac':
+          requires:
+            - 'build-cache'
+      - 'test-go-windows':
+          requires:
+            - 'build-cache'
+      - 'test-licenses':
+          requires:
+            - 'build-cache'
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true
