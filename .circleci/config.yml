@@ -202,7 +202,7 @@ jobs:
     executor:
         name: win/default
         shell: bash.exe
-        size: xlarge
+        size: large
     steps:
       - checkout
       - check-changed-files-or-halt
