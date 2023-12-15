@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const cgroupID = "c69461b2c836cc3f0e3e5deb07b1f16e25f6009da2a48bb0adc7dd580befaf55"
@@ -53,7 +54,7 @@ func TestParseCgroupV2Meta(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	metastats(cgroupID, validMeta.Containers[0], &acc, tags, time.Now())
+	metastats(cgroupID, &validMeta.Containers[0], &acc, tags, time.Now())
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())

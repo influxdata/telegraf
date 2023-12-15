@@ -157,7 +157,8 @@ func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumul
 }
 
 func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegraf.Accumulator) {
-	for _, c := range task.Containers {
+	for i := range task.Containers {
+		c := &task.Containers[i]
 		if !ecs.containerNameFilter.Match(c.Name) {
 			continue
 		}

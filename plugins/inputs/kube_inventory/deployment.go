@@ -3,8 +3,9 @@ package kube_inventory
 import (
 	"context"
 
-	"github.com/influxdata/telegraf"
 	v1 "k8s.io/api/apps/v1"
+
+	"github.com/influxdata/telegraf"
 )
 
 func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
@@ -13,12 +14,12 @@ func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ki *Kuber
 		acc.AddError(err)
 		return
 	}
-	for _, d := range list.Items {
-		ki.gatherDeployment(d, acc)
+	for i := range list.Items {
+		ki.gatherDeployment(&list.Items[i], acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherDeployment(d *v1.Deployment, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{
 		"replicas_available":   d.Status.AvailableReplicas,
 		"replicas_unavailable": d.Status.UnavailableReplicas,
