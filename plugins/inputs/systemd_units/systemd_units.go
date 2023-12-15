@@ -211,7 +211,7 @@ func setSystemctl(timeout config.Duration, unitType string, pattern string) (*by
 	params = append(params,
 		"--all", "--plain",
 		// add type as configured in config
-		fmt.Sprintf("--type=%s", unitType),
+		"--type="+unitType,
 		"--no-legend",
 	)
 	cmd := exec.Command(systemctlPath, params...)

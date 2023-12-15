@@ -316,9 +316,8 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	}
 
 	// make this for two tags
-	var fields []map[string]interface{}
-	fields = append(fields,
-		map[string]interface{}{
+	fields := []map[string]interface{}{
+		{
 			"jobstats_read_calls":      uint64(1),
 			"jobstats_read_min_size":   uint64(4096),
 			"jobstats_read_max_size":   uint64(4096),
@@ -354,7 +353,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 			"jobstats_samedir_rename":  uint64(705),
 			"jobstats_crossdir_rename": uint64(200),
 		},
-		map[string]interface{}{
+		{
 			"jobstats_read_calls":      uint64(1),
 			"jobstats_read_min_size":   uint64(1024),
 			"jobstats_read_max_size":   uint64(1024),
@@ -390,7 +389,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 			"jobstats_samedir_rename":  uint64(706),
 			"jobstats_crossdir_rename": uint64(201),
 		},
-	)
+	}
 
 	for index := 0; index < len(fields); index++ {
 		acc.AssertContainsTaggedFields(t, "lustre2", fields[index], tags[index])

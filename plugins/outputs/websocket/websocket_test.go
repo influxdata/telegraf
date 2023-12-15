@@ -151,11 +151,10 @@ func TestWebSocket_Write_OK(t *testing.T) {
 	w := initWebSocket(s)
 	connect(t, w)
 
-	var metrics []telegraf.Metric
-	metrics = append(metrics,
+	metrics := []telegraf.Metric{
 		testutil.TestMetric(0.4, "test"),
 		testutil.TestMetric(0.5, "test"),
-	)
+	}
 	err := w.Write(metrics)
 	require.NoError(t, err)
 
