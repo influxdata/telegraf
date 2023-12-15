@@ -138,7 +138,7 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "couldn't read request body", http.StatusBadRequest)
 			return
 		}
-		if string(body) == "" {
+		if len(body) == 0 {
 			http.Error(w, "body was empty", http.StatusBadRequest)
 			return
 		}

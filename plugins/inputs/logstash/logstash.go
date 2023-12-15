@@ -151,7 +151,7 @@ func (logstash *Logstash) gatherJSONData(address string, value interface{}) erro
 	}
 
 	for header, value := range logstash.Headers {
-		if strings.ToLower(header) == "host" {
+		if strings.EqualFold(header, "host") {
 			request.Host = value
 		} else {
 			request.Header.Add(header, value)
