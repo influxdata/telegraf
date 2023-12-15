@@ -128,6 +128,9 @@ jobs:
           keys:
             - go-v42-{{ checksum "go.sum" }}
       - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - run:
           name: "macOS"
           command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
           no_output_timeout: 30m
@@ -139,6 +142,9 @@ jobs:
       - restore_cache:
           keys:
             - go-v42-{{ checksum "go.sum" }}
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
       - run:
           name: "Windows"
           command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
@@ -210,7 +216,7 @@ jobs:
           os: windows
           gotestsum: "gotestsum.exe"
       - save_cache:
-          key: go-v42-macos-{{ checksum "go.sum" }}
+          key: go-v42-windows-{{ checksum "go.sum" }}
           paths:
             - '~\go\pkg\mod'
             - '~\AppData\Local\go-build'
