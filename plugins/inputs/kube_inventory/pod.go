@@ -25,12 +25,12 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 		acc.AddError(err)
 		return
 	}
-	for _, p := range listRef.Items {
-		ki.gatherPod(p, acc)
+	for i := range listRef.Items {
+		ki.gatherPod(&listRef.Items[i], acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherPod(p corev1.Pod, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, acc telegraf.Accumulator) {
 	creationTs := p.GetCreationTimestamp()
 	if creationTs.IsZero() {
 		return
@@ -50,7 +50,7 @@ func (ki *KubernetesInventory) gatherPod(p corev1.Pod, acc telegraf.Accumulator)
 	}
 }
 
-func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.ContainerStatus, c corev1.Container, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.ContainerStatus, c corev1.Container, acc telegraf.Accumulator) {
 	stateCode := 3
 	stateReason := ""
 	state := "unknown"

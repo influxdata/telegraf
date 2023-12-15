@@ -4,13 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNode(t *testing.T) {
@@ -157,8 +157,9 @@ func TestNode(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, node := range ((v.handler.responseMap["/nodes/"]).(corev1.NodeList)).Items {
-			ks.gatherNode(node, acc)
+		items := ((v.handler.responseMap["/nodes/"]).(corev1.NodeList)).Items
+		for i := range items {
+			ks.gatherNode(&items[i], acc)
 		}
 
 		err := acc.FirstError()

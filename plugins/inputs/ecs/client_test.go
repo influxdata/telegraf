@@ -15,14 +15,14 @@ import (
 
 type pollMock struct {
 	task  func() (*Task, error)
-	stats func() (map[string]types.StatsJSON, error)
+	stats func() (map[string]*types.StatsJSON, error)
 }
 
 func (p *pollMock) Task() (*Task, error) {
 	return p.task()
 }
 
-func (p *pollMock) ContainerStats() (map[string]types.StatsJSON, error) {
+func (p *pollMock) ContainerStats() (map[string]*types.StatsJSON, error) {
 	return p.stats()
 }
 
@@ -31,7 +31,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 		name    string
 		mock    *pollMock
 		want    *Task
-		want1   map[string]types.StatsJSON
+		want1   map[string]*types.StatsJSON
 		wantErr bool
 	}{
 		{
@@ -40,7 +40,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]types.StatsJSON, error) {
+				stats: func() (map[string]*types.StatsJSON, error) {
 					return validStats, nil
 				},
 			},
@@ -53,7 +53,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return nil, errors.New("err")
 				},
-				stats: func() (map[string]types.StatsJSON, error) {
+				stats: func() (map[string]*types.StatsJSON, error) {
 					return validStats, nil
 				},
 			},
@@ -65,7 +65,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]types.StatsJSON, error) {
+				stats: func() (map[string]*types.StatsJSON, error) {
 					return nil, errors.New("err")
 				},
 			},
@@ -170,7 +170,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 	tests := []struct {
 		name    string
 		client  httpClient
-		want    map[string]types.StatsJSON
+		want    map[string]*types.StatsJSON
 		wantErr bool
 	}{
 		{
@@ -192,7 +192,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 					return nil, errors.New("err")
 				},
 			},
-			want:    map[string]types.StatsJSON{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
@@ -205,7 +205,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 					}, nil
 				},
 			},
-			want:    map[string]types.StatsJSON{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
