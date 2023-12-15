@@ -67,7 +67,7 @@ func (*Procstat) SampleConfig() string {
 
 func (p *Procstat) Init() error {
 	// Check solaris mode
-	p.solarisMode = strings.ToLower(p.Mode) == "solaris"
+	p.solarisMode = strings.EqualFold(p.Mode, "solaris")
 
 	// Keep the old settings for compatibility
 	if p.PidTag && !choice.Contains("pid", p.TagWith) {

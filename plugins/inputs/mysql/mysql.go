@@ -656,7 +656,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			colValue := vals[i]
 
 			if m.GatherAllSlaveChannels &&
-				(strings.ToLower(colName) == "channel_name" || strings.ToLower(colName) == "connection_name") {
+				(strings.EqualFold(colName, "channel_name") || strings.EqualFold(colName, "connection_name")) {
 				// Since the default channel name is empty, we need this block
 				channelName := "default"
 				if len(colValue) > 0 {

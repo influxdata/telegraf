@@ -173,7 +173,7 @@ func (l *Loki) writeMetrics(s Streams) error {
 	}
 
 	for k, v := range l.Headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			req.Host = v
 		}
 		req.Header.Set(k, v)

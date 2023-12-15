@@ -459,7 +459,7 @@ func checkSocketPath(path string) error {
 func validateEventdevCommands(commands []string) error {
 	eventdevCommandRegex := regexp.MustCompile("^/eventdev/[a-z_]+$")
 	for _, command := range commands {
-		if !eventdevCommandRegex.Match([]byte(command)) {
+		if !eventdevCommandRegex.MatchString(command) {
 			return fmt.Errorf("provided command is not valid - %v", command)
 		}
 	}
