@@ -334,6 +334,7 @@ func (p *phpfpm) parseJSON(r io.Reader, acc telegraf.Accumulator, addr string) {
 			"script":         process.Script,
 		}
 		fields := map[string]any{
+			"pid":                 process.Pid,
 			"state":               process.State,
 			"start_time":          process.StartTime,
 			"requests":            process.Requests,
