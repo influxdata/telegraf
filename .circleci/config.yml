@@ -24,6 +24,20 @@ commands:
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
+  test-lint:
+    steps:
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - run:
+          name: "Linux"
+          command: GOGC=20 /go/bin/golangci-lint run --verbose
+      - run:
+          name: "macOS"
+          command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose
+      - run:
+          name: "Windows"
+          command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose
   test-go:
     parameters:
       os:
@@ -65,20 +79,6 @@ commands:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw --version=12.2.0.03042023
-      - when:
-          condition:
-            and:
-              - equal: [ "amd64", << parameters.arch >> ]
-              - equal: [ linux, << parameters.os >> ]
-          steps:
-            - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
-      - when:
-          condition:
-            and:
-              - equal: [ "amd64", << parameters.arch >> ]
-              - equal: [ linux, << parameters.os >> ]
-          steps:
-            - run: GOGC=20 /go/bin/golangci-lint run --verbose
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -149,7 +149,7 @@ commands:
           paths:
             - 'dist'
 jobs:
-  test-go-linux:
+  test-go-lint:
     executor: telegraf-ci
     parameters:
       cache_version:
@@ -165,6 +165,23 @@ jobs:
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
+      - test-lint
+      - save_cache:
+          name: 'go module cache'
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - '/go/pkg/mod'
+      - persist_to_workspace:
+          root: '/go'
+          paths:
+            - '*'
+  test-go-linux:
+    executor: telegraf-ci
+    parameters:
+      cache_version:
+        type: string
+        default: "v1"
+    steps:
       - test-go
       - save_cache:
           name: 'go module cache'
@@ -569,6 +586,10 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'test-go-lint':
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-linux':
           filters:
             tags:
@@ -787,6 +808,7 @@ workflows:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'test-go-lint'
       - 'test-go-linux'
       - 'test-go-linux-386'
       - 'test-go-mac'
