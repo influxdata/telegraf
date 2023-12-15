@@ -18,6 +18,10 @@ setup_go () {
 
     sudo rm -rfv /usr/local/go
     sudo tar -C /usr/local -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
+
+    echo "$PATH"
+    which go
+    go version
 }
 
 if command -v go >/dev/null 2>&1; then
@@ -30,7 +34,3 @@ if command -v go >/dev/null 2>&1; then
 else
     setup_go
 fi
-
-echo "$PATH"
-command -v go
-go version
