@@ -157,25 +157,25 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		fields["firmware"] = val
 	}
 
-	val_ups_vendorid, err := internal.ToString(metrics["ups.vendorid"])
+	valUpsVendorid, err := internal.ToString(metrics["ups.vendorid"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.vendorid=%q failed: %w", metrics["ups.vendorid"], err))
 	} else {
-		fields["ups_vendorid"] = val_ups_vendorid
+		fields["ups_vendorid"] = valUpsVendorid
 	}
 
-	val_ups_beeper_status, err := internal.ToString(metrics["ups.beeper.status"])
+	valUpsBeeperStatus, err := internal.ToString(metrics["ups.beeper.status"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.beeper.status=%q failed: %w", metrics["ups.beeper.status"], err))
 	} else {
-		fields["ups_beeper_status"] = val_ups_beeper_status
+		fields["ups_beeper_status"] = valUpsBeeperStatus
 	}
 
-	val_ups_shutdown, err := internal.ToString(metrics["ups.shutdown"])
+	valUpsShutdown, err := internal.ToString(metrics["ups.shutdown"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.shutdown=%q failed: %w", metrics["ups.shutdown"], err))
 	} else {
-		fields["ups_shutdown"] = val_ups_shutdown
+		fields["ups_shutdown"] = valUpsShutdown
 	}
 
 	acc.AddFields("upsd", fields, tags)
