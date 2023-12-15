@@ -37,7 +37,7 @@ commands:
         default: "gotestsum"
       cache_version:
         type: string
-        default: "v3"
+        default: "v1"
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -60,28 +60,25 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: rm -rf /c/Go
             - run: choco feature enable -n allowGlobalConfirmation
             - restore_cache:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
-            - run: choco install mingw
-      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2
+            - run: choco install mingw --version=12.2.0.03042023
       - when:
           condition:
-            equal: [ linux, << parameters.os >> ]
+            and:
+              - equal: [ "amd64", << parameters.arch >> ]
+              - equal: [ linux, << parameters.os >> ]
+          steps:
+            - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - when:
+          condition:
+            and:
+              - equal: [ "amd64", << parameters.arch >> ]
+              - equal: [ linux, << parameters.os >> ]
           steps:
             - run: GOGC=20 /go/bin/golangci-lint run --verbose
-      - when:
-          condition:
-            equal: [ darwin, << parameters.os >> ]
-          steps:
-            - run: $HOME/go/bin/golangci-lint run --verbose
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: $HOME/go/bin/golangci-lint.exe run --verbose
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -90,31 +87,6 @@ commands:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
           GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
-      - when:
-          condition:
-            and:
-              - equal: [ "master", << pipeline.git.branch >> ]
-              - equal: [ "linux", << parameters.os >> ]
-              - equal: [ "amd64", << parameters.arch >> ]
-          steps:
-            - run:
-                name: "Installing goveralls"
-                command: go install github.com/mattn/goveralls@latest
-            - run:
-                name: "Remove plugins/parsers/influx/machine.go from coverage"
-                command: sed -i '/github.com\/influxdata\/telegraf\/plugins\/parsers\/influx\/machine.go/d' coverage.out
-            - run:
-                name: "Create report"
-                command: /go/bin/goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
-      - when:
-          condition:
-            equal: [ linux, << parameters.os >> ]
-          steps:
-            - save_cache:
-                name: 'Saving cache'
-                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-                paths:
-                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
@@ -182,7 +154,7 @@ jobs:
     parameters:
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
@@ -208,7 +180,7 @@ jobs:
     parameters:
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
@@ -234,15 +206,16 @@ jobs:
     parameters:
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - test-go:
           os: darwin
+          arch: arm64
   test-go-windows:
     parameters:
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     executor:
         name: win/default
         shell: bash.exe
@@ -257,7 +230,7 @@ jobs:
     parameters:
       cache_version:
         type: string
-        default: "v2"
+        default: "v1"
     steps:
       - checkout
       - restore_cache:
