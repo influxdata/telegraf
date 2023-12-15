@@ -950,7 +950,7 @@ func simulateSocketResponseForGather(socket net.Listener, t *testing.T) {
 
 	require.NoError(t, err)
 	eventdevListWithSecondIndex := []string{"/eventdev/port_list", "/eventdev/queue_list"}
-	_, err = conn.Write([]byte(fmt.Sprintf(`{%q: [0, 1]}`, eventdevListWithSecondIndex[0])))
+	_, err = fmt.Fprintf(conn, `{%q: [0, 1]}`, eventdevListWithSecondIndex[0])
 	require.NoError(t, err)
 }
 

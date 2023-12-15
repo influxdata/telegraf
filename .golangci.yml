@@ -118,6 +118,8 @@ linters-settings:
       - weakCond
       # performance
       - equalFold
+      - preferDecodeRune
+      - preferFprint      
       - preferStringWriter
       - stringXbytes
   gosec:
