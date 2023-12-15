@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDaemonSet(t *testing.T) {
@@ -108,8 +108,9 @@ func TestDaemonSet(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items {
-			ks.gatherDaemonSet(dset, acc)
+		items := ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items
+		for i := range items {
+			ks.gatherDaemonSet(&items[i], acc)
 		}
 
 		err := acc.FirstError()
@@ -268,8 +269,9 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items {
-			ks.gatherDaemonSet(dset, acc)
+		items := ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items
+		for i := range items {
+			ks.gatherDaemonSet(&items[i], acc)
 		}
 
 		// Grab selector tags

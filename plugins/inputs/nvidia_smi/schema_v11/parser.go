@@ -14,7 +14,9 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		return err
 	}
 
-	for i, gpu := range s.GPU {
+	for i := range s.GPU {
+		gpu := &s.GPU[i]
+
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}

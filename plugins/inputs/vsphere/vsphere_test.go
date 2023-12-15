@@ -255,7 +255,8 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 	if expectedName != "" {
 		require.Equal(t, expectedName, vm[0].Name)
 	}
-	for _, v := range vm {
+	for i := range vm {
+		v := &vm[i]
 		require.Equal(t, poweredOn, v.Runtime.PowerState)
 	}
 }
