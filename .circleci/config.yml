@@ -49,34 +49,19 @@ commands:
       gotestsum:
         type: string
         default: "gotestsum"
-      cache_version:
-        type: string
-        default: "v1"
     steps:
       - checkout
       - check-changed-files-or-halt
       - when:
           condition:
-            equal: [ linux, << parameters.os >> ]
-          steps:
-            - restore_cache:
-                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-            - attach_workspace:
-                at: '/go'
-      - when:
-          condition:
             equal: [ darwin, << parameters.os >> ]
           steps:
-            - restore_cache:
-                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_mac.sh'
       - when:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: choco feature enable -n allowGlobalConfirmation
-            - restore_cache:
-                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw --version=12.2.0.03042023
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
@@ -87,28 +72,6 @@ commands:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
           GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
-      - when:
-          condition:
-            equal: [ darwin, << parameters.os >> ]
-          steps:
-            - save_cache:
-                name: 'Saving cache'
-                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-                paths:
-                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
-                  - '/usr/local/Cellar/go'
-                  - '/usr/local/bin/go'
-                  - '/usr/local/bin/gofmt'
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - save_cache:
-                name: 'Saving cache'
-                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-                paths:
-                  - 'C:\Go'
-                  - 'C:\Users\circleci\project\gotestsum.exe'
   package-build:
     parameters:
       type:
@@ -151,14 +114,8 @@ commands:
 jobs:
   test-go-lint:
     executor: telegraf-ci
-    parameters:
-      cache_version:
-        type: string
-        default: "v1"
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
@@ -166,42 +123,14 @@ jobs:
       - run: 'make check'
       - run: 'make check-deps'
       - test-lint
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-      - persist_to_workspace:
-          root: '/go'
-          paths:
-            - '*'
   test-go-linux:
     executor: telegraf-ci
-    parameters:
-      cache_version:
-        type: string
-        default: "v1"
     steps:
       - test-go
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-      - persist_to_workspace:
-          root: '/go'
-          paths:
-            - '*'
   test-go-linux-386:
     executor: telegraf-ci
-    parameters:
-      cache_version:
-        type: string
-        default: "v1"
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'GOARCH=386 make deps'
       - run: 'GOARCH=386 make tidy'
@@ -220,19 +149,11 @@ jobs:
       - run: 'make test-integration'
   test-go-mac:
     executor: mac
-    parameters:
-      cache_version:
-        type: string
-        default: "v1"
     steps:
       - test-go:
           os: darwin
           arch: arm64
   test-go-windows:
-    parameters:
-      cache_version:
-        type: string
-        default: "v1"
     executor:
         name: win/default
         shell: bash.exe
@@ -241,26 +162,13 @@ jobs:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
-
   test-licenses:
     executor: telegraf-ci
-    parameters:
-      cache_version:
-        type: string
-        default: "v1"
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-
   windows-package:
     parameters:
       nightly:
