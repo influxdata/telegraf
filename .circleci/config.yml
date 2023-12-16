@@ -206,6 +206,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - run: git config --system core.longpaths true
       - run: choco feature enable -n allowGlobalConfirmation
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw --version=12.2.0.03042023
