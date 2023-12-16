@@ -90,11 +90,9 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"ups_productid":       metrics["ups.productid"],
 		"ups_test_result":     metrics["ups.test.result"],
 		"ups_type":            metrics["ups.type"],
-		//"ups_beeper_status":   metrics["ups.beeper.status"],
-		//"ups_shutdown":        metrics["ups.shutdown"],
-		"outlet_switchable": metrics["outlet.switchable"],
-		"status_flags":      status,
-		"ups_status":        metrics["ups.status"],
+		"outlet_switchable":   metrics["outlet.switchable"],
+		"status_flags":        status,
+		"ups_status":          metrics["ups.status"],
 
 		//Compatibility with apcupsd metrics format
 		"time_left_ns": timeLeftNS,

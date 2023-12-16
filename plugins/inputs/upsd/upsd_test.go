@@ -52,7 +52,7 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "463",
+					"ups_vendorid":             "0463",
 					"ups_test_interval":        float64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
@@ -109,7 +109,7 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "463",
+					"ups_vendorid":             "0463",
 					"ups_test_interval":        float64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
@@ -326,7 +326,7 @@ VAR fake ups.model "Eaton 2000"
 VAR fake ups.productid "ffff"
 VAR fake ups.test.result "Done and passed"
 VAR fake ups.type "online"
-VAR fake ups.vendorid "463"
+VAR fake ups.vendorid "0463"
 VAR fake ups.test.interval "604800"
 VAR fake ups.beeper.status "enabled"
 VAR fake ups.shutdown "enabled"
