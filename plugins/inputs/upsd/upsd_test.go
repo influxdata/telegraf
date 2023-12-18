@@ -52,7 +52,7 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "0463",
+					"ups_vendorid":             "463",
 					"ups_test_interval":        float64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
@@ -61,7 +61,7 @@ func TestUpsdGather(t *testing.T) {
 					"input_transfer_low":       float64(100),
 					"input_bypass_frequency":   float64(49.9),
 					"input_bypass_voltage":     float64(234.0),
-					"input_frequency_nominal":  float64(50),
+					"input_frequency_nominal":  int64(50),
 					"internal_temp":            float64(24.9),
 					"ups_shutdown":             "enabled",
 					"input_voltage":            float64(242),
@@ -109,7 +109,7 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "0463",
+					"ups_vendorid":             "463",
 					"ups_test_interval":        float64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
@@ -118,7 +118,7 @@ func TestUpsdGather(t *testing.T) {
 					"input_transfer_low":       float64(100),
 					"input_bypass_frequency":   float64(49.9),
 					"input_bypass_voltage":     float64(234.0),
-					"input_frequency_nominal":  float64(50),
+					"input_frequency_nominal":  int64(50),
 					"internal_temp":            float64(24.9),
 					"ups_shutdown":             "enabled",
 					"input_voltage":            float64(242),
@@ -326,7 +326,7 @@ VAR fake ups.model "Eaton 2000"
 VAR fake ups.productid "ffff"
 VAR fake ups.test.result "Done and passed"
 VAR fake ups.type "online"
-VAR fake ups.vendorid "0463"
+VAR fake ups.vendorid "463"
 VAR fake ups.test.interval "604800"
 VAR fake ups.beeper.status "enabled"
 VAR fake ups.shutdown "enabled"
