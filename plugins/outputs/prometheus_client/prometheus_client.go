@@ -217,7 +217,7 @@ func (p *PrometheusClient) listen() (net.Listener, error) {
 		return p.listenTCP(p.Listen)
 	}
 	switch strings.ToLower(u.Scheme) {
-	case "tcp", "http":
+	case "", "tcp", "http":
 		return p.listenTCP(u.Host)
 	case "vsock":
 		return p.listenVsock(u.Host)
