@@ -15,10 +15,11 @@ import (
 var sampleConfig string
 
 type Geo struct {
-	LatField  string `toml:"lat_field"`
-	LonField  string `toml:"lon_field"`
-	TagKey    string `toml:"tag_key"`
-	CellLevel int    `toml:"cell_level"`
+	LatField       string `toml:"lat_field"`
+	LonField       string `toml:"lon_field"`
+	TagKey         string `toml:"tag_key"`
+	CellLevel      int    `toml:"cell_level"`
+	CellLevelField string `toml:"cell_level_field"`
 }
 
 func (*Geo) SampleConfig() string {
@@ -34,6 +35,7 @@ func (g *Geo) Init() error {
 
 func (g *Geo) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
+		cellLevel := g.CellLevel
 		var latOk, lonOk bool
 		var lat, lon float64
 		for _, field := range point.FieldList() {
@@ -43,11 +45,19 @@ func (g *Geo) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			case g.LonField:
 				lon, lonOk = field.Value.(float64)
 			}
+			// Check if user has provided a field to override the cell level
+			if g.CellLevelField != "" && field.Key == g.CellLevelField {
+				if level, ok := field.Value.(int64); ok {
+					if level >= 0 && level <= 30 {
+						cellLevel = int(level)
+					}
+				}
+			}
 		}
 		if latOk && lonOk {
 			cellID := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lon))
 			if cellID.IsValid() {
-				value := cellID.Parent(g.CellLevel).ToToken()
+				value := cellID.Parent(cellLevel).ToToken()
 				point.AddTag(g.TagKey, value)
 			}
 		}

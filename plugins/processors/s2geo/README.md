@@ -29,6 +29,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Cell level (see https://s2geometry.io/resources/s2cell_statistics.html)
   # cell_level = 9
+
+  ## Cell level from field
+  ## If set, the processor will use the value of the field as the cell level
+  ## when it is present, overriding the above cell_level setting. The value must
+  ## be between 0 and 30, inclusive.
+  # cell_level_field = ""
 ```
 
 ## Example
