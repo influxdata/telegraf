@@ -36,14 +36,14 @@ commands:
         type: string
         default: "gotestsum"
     steps:
-      - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      #- run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
             equal: [ "386", << parameters.arch >> ]
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
+          GOARCH=<< parameters.arch >> go test -v ${RACE} -short ./...
   package-build:
     parameters:
       type:
@@ -174,7 +174,7 @@ jobs:
   test-integration:
     machine:
       image: ubuntu-2204:current
-    resource_class: xlarge
+    resource_class: large
     steps:
       - checkout
       - check-changed-files-or-halt
