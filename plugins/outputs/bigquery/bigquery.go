@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"sync"
@@ -187,7 +188,18 @@ func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) (*bigquery.ValuesSav
 		return nil, fmt.Errorf("serializing tags: %w", err)
 	}
 
-	fields, err := json.Marshal(m.Fields())
+	rawFields := make(map[string]interface{}, len(m.FieldList()))
+	for _, field := range m.FieldList() {
+		if fv, ok := field.Value.(float64); ok {
+			// JSON does not support these special values
+			if math.IsNaN(fv) || math.IsInf(fv, 0) {
+				s.Log.Debugf("Ignoring unsupported field %s with value %q for metric %s", field.Key, field.Value, m.Name())
+				continue
+			}
+		}
+		rawFields[field.Key] = field.Value
+	}
+	fields, err := json.Marshal(rawFields)
 	if err != nil {
 		return nil, fmt.Errorf("serializing fields: %w", err)
 	}
