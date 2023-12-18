@@ -156,9 +156,17 @@ jobs:
       - checkout
       - check-changed-files-or-halt
       - run: 'sh ./scripts/installgo_mac.sh'
+      - restore_cache:
+          keys:
+            - go-v42-macos-{{ checksum "go.sum" }}
       - test-go:
           os: darwin
           arch: arm64
+      - save_cache:
+          key: go-v42-macos-{{ checksum "go.sum" }}
+          paths:
+            - "~/go/pkg/mod"
+            - "~/Library/Caches/go-build"
   test-go-windows:
     executor:
         name: win/default
@@ -171,9 +179,17 @@ jobs:
       - run: choco feature enable -n allowGlobalConfirmation
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw --version=12.2.0.03042023
+      - restore_cache:
+          keys:
+            - go-v42-windows-{{ checksum "go.sum" }}
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
+      - save_cache:
+          key: go-v42-windows-{{ checksum "go.sum" }}
+          paths:
+            - '~\go\pkg\mod'
+            - '~\AppData\Local\go-build'
   test-licenses:
     executor: telegraf-ci
     steps:
