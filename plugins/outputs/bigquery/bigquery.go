@@ -193,6 +193,7 @@ func (s *BigQuery) newCompactValuesSaver(m telegraf.Metric) (*bigquery.ValuesSav
 		if fv, ok := field.Value.(float64); ok {
 			// JSON does not support these special values
 			if math.IsNaN(fv) || math.IsInf(fv, 0) {
+				s.Log.Debugf("Ignoring unsupported field %s with value %q for metric %s", field.Key, field.Value, m.Name())
 				continue
 			}
 		}
