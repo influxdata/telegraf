@@ -52,8 +52,8 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "463",
-					"ups_test_interval":        float64(604800),
+					"ups_vendorid":             "CUSTOM_VENDORID",
+					"ups_test_interval":        int64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
 					"input_frequency":          float64(49.9),
@@ -71,7 +71,7 @@ func TestUpsdGather(t *testing.T) {
 					"nominal_power":            int64(700),
 					"output_voltage":           float64(230),
 					"output_current":           float64(1.60),
-					"output.frequency.nominal": float64(50),
+					"output.frequency.nominal": int64(50),
 					"real_power":               float64(41),
 					"status_flags":             uint64(8),
 					"time_left_ns":             int64(600000000000),
@@ -109,8 +109,8 @@ func TestUpsdGather(t *testing.T) {
 					"ups_productid":            "ffff",
 					"ups_test_result":          "Done and passed",
 					"ups_type":                 "online",
-					"ups_vendorid":             "463",
-					"ups_test_interval":        float64(604800),
+					"ups_vendorid":             "CUSTOM_VENDORID",
+					"ups_test_interval":        int64(604800),
 					"ups_beeper_status":        "enabled",
 					"outlet_switchable":        "no",
 					"input_frequency":          float64(49.9),
@@ -128,7 +128,7 @@ func TestUpsdGather(t *testing.T) {
 					"nominal_power":            int64(700),
 					"output_voltage":           float64(230),
 					"output_current":           float64(1.60),
-					"output.frequency.nominal": float64(50),
+					"output.frequency.nominal": int64(50),
 					"real_power":               float64(41),
 					"status_flags":             uint64(8),
 					"time_left_ns":             int64(600000000000),
@@ -326,7 +326,7 @@ VAR fake ups.model "Eaton 2000"
 VAR fake ups.productid "ffff"
 VAR fake ups.test.result "Done and passed"
 VAR fake ups.type "online"
-VAR fake ups.vendorid "463"
+VAR fake ups.vendorid "CUSTOM_VENDORID"
 VAR fake ups.test.interval "604800"
 VAR fake ups.beeper.status "enabled"
 VAR fake ups.shutdown "enabled"
