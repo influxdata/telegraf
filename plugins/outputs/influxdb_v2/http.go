@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -410,7 +411,11 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser 
 
 func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.Headers {
-		req.Header.Set(header, value)
+		if strings.EqualFold(header, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(header, value)
+		}
 	}
 }
 
