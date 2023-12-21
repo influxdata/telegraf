@@ -286,6 +286,10 @@ mipsel += mipsel.deb linux_mipsel.tar.gz
 .PHONY: mipsel
 mipsel:
 	@ echo $(mipsel)
+loongarch64 += linux_loongarch64.tar.gz loongarch64.deb loongarch64.rpm
+.PHONY: loongarch64
+loongarch64:
+	@ echo $(loongarch64)
 arm64 += linux_arm64.tar.gz arm64.deb aarch64.rpm
 .PHONY: arm64
 arm64:
@@ -332,7 +336,7 @@ darwin-arm64 += darwin_arm64.tar.gz
 darwin-arm64:
 	@ echo $(darwin-arm64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(loongarch64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: docs config $(include_packages)
@@ -427,6 +431,9 @@ mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64
+
+riscv64.deb riscv64.rpm linux_loongarch64.tar.gz: export GOOS := linux
+riscv64.deb riscv64.rpm linux_loongarch64.tar.gz: export GOARCH := loong64
 
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x
