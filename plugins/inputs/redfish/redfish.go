@@ -111,6 +111,8 @@ type Thermal struct {
 	Fans []struct {
 		Name                   string
 		MemberID               string
+		FanName                string
+		CurrentReading         *int64
 		Reading                *int64
 		ReadingUnits           *string
 		UpperThresholdCritical *int64
@@ -364,6 +366,9 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
+		if j.FanName != "" {
+			tags["name"] = j.FanName
+		}
 		tags["source"] = system.Hostname
 		tags["state"] = j.Status.State
 		tags["health"] = j.Status.Health
@@ -383,6 +388,8 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 			fields["lower_threshold_critical"] = j.LowerThresholdCritical
 			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 			fields["reading_rpm"] = j.Reading
+		} else if j.CurrentReading != nil {
+			fields["reading_percent"] = j.CurrentReading
 		} else {
 			fields["reading_percent"] = j.Reading
 		}
