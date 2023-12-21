@@ -1,0 +1,72 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Thermal.Thermal",
+    "@odata.etag": "W/\"14E8662D\"",
+    "@odata.id": "/redfish/v1/Chassis/1/Thermal",
+    "@odata.type": "#Thermal.v1_1_0.Thermal",
+    "Id": "Thermal",
+    "Fans": [
+        {
+            "CurrentReading": 17,
+            "FanName": "Fan 1",
+            "Oem": {
+                "Hp": {
+                    "@odata.type": "#HpServerFan.1.0.0.HpServerFan",
+                    "Location": "System",
+                    "Type": "HpServerFan.1.0.0"
+                }
+            },
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "Units": "Percent"
+        }
+    ],
+    "Name": "Thermal",
+    "Temperatures": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#Temperatures/0",
+        "MemberId": "0",
+        "Name": "01-Inlet Ambient",
+        "Oem": {
+          "Hpe": {
+            "@odata.context": "/redfish/v1/$metadata#HpeSeaOfSensors.HpeSeaOfSensors",
+            "@odata.type": "#HpeSeaOfSensors.v2_0_0.HpeSeaOfSensors",
+            "LocationXmm": 15,
+            "LocationYmm": 0
+          }
+        },
+        "PhysicalContext": "Intake",
+        "ReadingCelsius": 19,
+        "SensorNumber": 1,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        },
+        "UpperThresholdCritical": 42,
+        "UpperThresholdFatal": 47
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#Temperatures/42",
+        "MemberId": "42",
+        "Name": "44-P/S 2 Zone",
+        "Oem": {
+          "Hpe": {
+            "@odata.context": "/redfish/v1/$metadata#HpeSeaOfSensors.HpeSeaOfSensors",
+            "@odata.type": "#HpeSeaOfSensors.v2_0_0.HpeSeaOfSensors",
+            "LocationXmm": 4,
+            "LocationYmm": 7
+          }
+        },
+        "PhysicalContext": "PowerSupply",
+        "ReadingCelsius": 34,
+        "SensorNumber": 43,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        },
+        "UpperThresholdCritical": 75,
+        "UpperThresholdFatal": 80
+      }
+    ]
+  }
