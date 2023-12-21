@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -94,7 +95,7 @@ func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
 	input := &phpfpm{
 		Urls:   []string{server.URL + "?full&json"},
 		Format: "json",
-		log:    testutil.Logger{},
+		Log:    testutil.Logger{},
 	}
 	require.NoError(t, input.Init())
 
@@ -358,3 +359,14 @@ max active processes: 1
 max children reached: 2
 slow requests:        1
 `
+
+func TestPhpFpmLogWithoutPanic(t *testing.T) {
+	p := &phpfpm{}
+	// AddInput sets the Logger
+	if err := shim.New().AddInput(p); err != nil {
+		t.Error(err)
+		return
+	}
+
+	p.Log.Debug("test")
+}

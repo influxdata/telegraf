@@ -83,7 +83,7 @@ type phpfpm struct {
 
 	tls.ClientConfig
 	client *http.Client
-	log    telegraf.Logger
+	Log    telegraf.Logger
 }
 
 func (*phpfpm) SampleConfig() string {
@@ -300,7 +300,7 @@ func parseLines(r io.Reader, acc telegraf.Accumulator, addr string) {
 func (p *phpfpm) parseJSON(r io.Reader, acc telegraf.Accumulator, addr string) {
 	var metrics JSONMetrics
 	if err := json.NewDecoder(r).Decode(&metrics); err != nil {
-		p.log.Errorf("Unable to decode JSON response: %s", err)
+		p.Log.Errorf("Unable to decode JSON response: %s", err)
 		return
 	}
 	timestamp := time.Now()
