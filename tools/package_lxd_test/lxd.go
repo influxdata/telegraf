@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	lxd "github.com/lxc/lxd/client"
-	"github.com/lxc/lxd/shared/api"
+	lxd "github.com/lxc/incus/client"
+	"github.com/lxc/incus/shared/api"
 )
 
 var (
@@ -31,9 +31,9 @@ type LXDClient struct {
 
 // Connect to the LXD socket.
 func (c *LXDClient) Connect() error {
-	client, err := lxd.ConnectLXDUnix("", nil)
+	client, err := lxd.ConnectIncusUnix("", nil)
 	if err != nil {
-		client, err = lxd.ConnectLXDUnix("/var/snap/lxd/common/lxd/unix.socket", nil)
+		client, err = lxd.ConnectIncusUnix("/var/snap/lxd/common/lxd/unix.socket", nil)
 		if err != nil {
 			return err
 		}
@@ -66,9 +66,9 @@ func (c *LXDClient) Create(name string, remote string, alias string) error {
 		return fmt.Errorf("unknown remote: %s", remote)
 	}
 
-	req := api.ContainersPost{
+	req := api.InstancesPost{
 		Name: name,
-		Source: api.ContainerSource{
+		Source: api.InstanceSource{
 			Type:     "image",
 			Mode:     "pull",
 			Protocol: "simplestreams",
@@ -78,7 +78,7 @@ func (c *LXDClient) Create(name string, remote string, alias string) error {
 	}
 
 	// Get LXD to create the container (background operation)
-	op, err := c.Client.CreateContainer(req)
+	op, err := c.Client.CreateInstance(req)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *LXDClient) Create(name string, remote string, alias string) error {
 // Delete the given container.
 func (c *LXDClient) Delete(name string) error {
 	fmt.Println("deleting", name)
-	op, err := c.Client.DeleteContainer(name)
+	op, err := c.Client.DeleteInstance(name)
 	if err != nil {
 		return err
 	}
@@ -110,20 +110,20 @@ func (c *LXDClient) Exec(name string, command ...string) error {
 
 	cmd := []string{"/usr/bin/timeout", "-k", strconv.Itoa(killTimeout), strconv.Itoa(timeout)}
 	cmd = append(cmd, command...)
-	req := api.ContainerExecPost{
+	req := api.InstanceExecPost{
 		Command:   cmd,
 		WaitForWS: true,
 	}
 
 	output := &BytesBuffer{bytes.NewBuffer(nil)}
 
-	args := lxd.ContainerExecArgs{
+	args := lxd.InstanceExecArgs{
 		Stdout:   output,
 		Stderr:   output,
 		DataDone: make(chan bool),
 	}
 
-	op, err := c.Client.ExecContainer(name, req, &args)
+	op, err := c.Client.ExecInstance(name, req, &args)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (c *LXDClient) Push(name string, src string, dst string) error {
 	}
 	defer f.Close()
 
-	return c.Client.CreateContainerFile(name, dst, lxd.ContainerFileArgs{
+	return c.Client.CreateInstanceFile(name, dst, lxd.InstanceFileArgs{
 		Content: f,
 		Mode:    0644,
 	})
@@ -167,12 +167,12 @@ func (c *LXDClient) Push(name string, src string, dst string) error {
 // Start the given container.
 func (c *LXDClient) Start(name string) error {
 	fmt.Println("starting", name)
-	reqState := api.ContainerStatePut{
+	reqState := api.InstanceStatePut{
 		Action:  "start",
 		Timeout: -1,
 	}
 
-	op, err := c.Client.UpdateContainerState(name, reqState, "")
+	op, err := c.Client.UpdateInstanceState(name, reqState, "")
 	if err != nil {
 		return err
 	}
@@ -183,13 +183,13 @@ func (c *LXDClient) Start(name string) error {
 // Stop the given container.
 func (c *LXDClient) Stop(name string) error {
 	fmt.Println("stopping", name)
-	reqState := api.ContainerStatePut{
+	reqState := api.InstanceStatePut{
 		Action:  "stop",
 		Force:   true,
 		Timeout: 10,
 	}
 
-	op, err := c.Client.UpdateContainerState(name, reqState, "")
+	op, err := c.Client.UpdateInstanceState(name, reqState, "")
 	if err != nil {
 		return err
 	}
