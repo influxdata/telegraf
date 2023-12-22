@@ -382,7 +382,7 @@ func TestPhpFpmParseJSON_Log_Error_Without_Panic_When_When_JSON_Is_Invalid(t *te
 	// parse valid JSON without panic and without log output
 	validJSON := outputSampleJSON
 	require.NotPanics(t, func() { p.parseJSON(bytes.NewReader(validJSON), &testutil.NopAccumulator{}, "") })
-	require.Equal(t, logOutput.String(), "")
+	require.Equal(t, "", logOutput.String())
 
 	// parse invalid JSON without panic but with log output
 	invalidJSON := []byte("X")
