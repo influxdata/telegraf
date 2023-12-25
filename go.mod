@@ -210,7 +210,7 @@ require (
 	google.golang.org/api v0.150.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b
 	google.golang.org/grpc v1.59.0
-	google.golang.org/protobuf v1.31.1-0.20231027082548-f4a6c1f6e5c1
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
