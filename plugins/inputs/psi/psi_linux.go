@@ -37,7 +37,7 @@ func (psi *Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err e
 
 // uploadPressure Uploads all pressure value to corrosponding fields
 // NOTE: resource=cpu,type=full is omitted because it is always zero
-func (psi *Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
+func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
 	// pressureTotal type=some
 	for _, resource := range []string{"cpu", "memory", "io"} {
 		acc.AddCounter("pressureTotal", map[string]interface{}{
