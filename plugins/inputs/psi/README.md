@@ -64,3 +64,7 @@ pressureTotal,resource=memory,type=full total=60968885 1700000000000000000
 pressureTotal,resource=io,type=some total=6507666709 1700000000000000000
 pressureTotal,resource=io,type=full total=6399637024 1700000000000000000
 ```
+
+## Credits
+
+Part of this plugin was derived from [gridscale/linux-psi-telegraf-plugin](https://github.com/gridscale/linux-psi-telegraf-plugin), available under the same MIT license.

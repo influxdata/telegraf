@@ -18,7 +18,7 @@ func (psi *Psi) Gather(acc telegraf.Accumulator) error {
 }
 
 // getPressureValues - Get the pressure values from /proc/pressure/*
-func (psi *Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
+func (*Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
 	var fs procfs.FS
 	fs, err = procfs.NewDefaultFS()
 	if err != nil {
