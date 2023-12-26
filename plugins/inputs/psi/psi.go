@@ -16,12 +16,12 @@ type Psi struct {
 var sampleConfig string
 
 // SampleConfig returns sample configuration for this plugin
-func (psi *Psi) SampleConfig() string {
+func (*Psi) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns the plugin description
-func (psi *Psi) Description() string {
+func (*Psi) Description() string {
 	return "Gather Pressure Stall Information (PSI) from /proc/pressure/"
 }
 
