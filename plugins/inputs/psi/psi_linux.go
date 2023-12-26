@@ -9,154 +9,84 @@ import (
 
 // Gather Psi metrics
 func (psi *Psi) Gather(acc telegraf.Accumulator) error {
-	cpuPressure, memoryPressure, ioPressure, err := psi.getPressureValues()
+	pressures, err := psi.getPressureValues()
 	if err != nil {
 		return err
 	}
-
-	psi.uploadPressure(cpuPressure, memoryPressure, ioPressure, acc)
+	psi.uploadPressure(pressures, acc)
 	return nil
 }
 
 // getPressureValues - Get the pressure values from /proc/pressure/*
-func (psi *Psi) getPressureValues() (cpuPressure procfs.PSIStats, memoryPressure procfs.PSIStats, ioPressure procfs.PSIStats, err error) {
+func (psi *Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
 	var fs procfs.FS
 	fs, err = procfs.NewDefaultFS()
 	if err != nil {
-		err = fmt.Errorf("procfs not available: %w", err)
-		return
+		return nil, fmt.Errorf("procfs not available: %w", err)
 	}
 
-	cpuPressure, err = fs.PSIStatsForResource("cpu")
-	if err != nil {
-		err = fmt.Errorf("no CPU pressure found: %w", err)
-		return
+	pressures = make(map[string]procfs.PSIStats)
+	for _, resource := range []string{"cpu", "memory", "io"} {
+		pressures[resource], err = fs.PSIStatsForResource(resource)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s pressure: %w", resource, err)
+		}
 	}
-
-	memoryPressure, err = fs.PSIStatsForResource("memory")
-	if err != nil {
-		err = fmt.Errorf("no memory pressure found: %w", err)
-		return
-	}
-
-	ioPressure, err = fs.PSIStatsForResource("io")
-	if err != nil {
-		err = fmt.Errorf("no io pressure found: %w", err)
-		return
-	}
-
-	return
+	return pressures, nil
 }
 
 // uploadPressure Uploads all pressure value to corrosponding fields
-func (psi *Psi) uploadPressure(cpuPressure procfs.PSIStats, memoryPressure procfs.PSIStats, ioPressure procfs.PSIStats, acc telegraf.Accumulator) {
-
-	// pressureTotal some
-
-	acc.AddCounter("pressureTotal", map[string]interface{}{
-		"total": cpuPressure.Some.Total,
-	},
-		map[string]string{
-			"resource": "cpu",
-			"type":     "some",
+// NOTE: resource=cpu,type=full is omitted because it is always zero
+func (psi *Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
+	// pressureTotal type=some
+	for _, resource := range []string{"cpu", "memory", "io"} {
+		acc.AddCounter("pressureTotal", map[string]interface{}{
+			"total": pressures[resource].Some.Total,
 		},
-	)
+			map[string]string{
+				"resource": resource,
+				"type":     "some",
+			},
+		)
+	}
 
-	acc.AddCounter("pressureTotal", map[string]interface{}{
-		"total": memoryPressure.Some.Total,
-	},
-		map[string]string{
-			"resource": "memory",
-			"type":     "some",
+	// pressureTotal type=full
+	for _, resource := range []string{"memory", "io"} {
+		acc.AddCounter("pressureTotal", map[string]interface{}{
+			"total": pressures[resource].Full.Total,
 		},
-	)
+			map[string]string{
+				"resource": resource,
+				"type":     "full",
+			},
+		)
+	}
 
-	acc.AddCounter("pressureTotal", map[string]interface{}{
-		"total": ioPressure.Some.Total,
-	},
-		map[string]string{
-			"resource": "io",
-			"type":     "some",
+	// pressure type=some
+	for _, resource := range []string{"cpu", "memory", "io"} {
+		acc.AddGauge("pressure", map[string]interface{}{
+			"avg10":  pressures[resource].Some.Avg10,
+			"avg60":  pressures[resource].Some.Avg60,
+			"avg300": pressures[resource].Some.Avg300,
 		},
-	)
+			map[string]string{
+				"resource": resource,
+				"type":     "some",
+			},
+		)
+	}
 
-	// pressureTotal full
-
-	acc.AddCounter("pressureTotal", map[string]interface{}{
-		"total": memoryPressure.Full.Total,
-	},
-		map[string]string{
-			"resource": "memory",
-			"type":     "full",
+	// pressure type=full
+	for _, resource := range []string{"memory", "io"} {
+		acc.AddGauge("pressure", map[string]interface{}{
+			"avg10":  pressures[resource].Full.Avg10,
+			"avg60":  pressures[resource].Full.Avg60,
+			"avg300": pressures[resource].Full.Avg300,
 		},
-	)
-
-	acc.AddCounter("pressureTotal", map[string]interface{}{
-		"total": ioPressure.Full.Total,
-	},
-		map[string]string{
-			"resource": "io",
-			"type":     "full",
-		},
-	)
-
-	// pressure some
-
-	acc.AddGauge("pressure", map[string]interface{}{
-		"avg10":  cpuPressure.Some.Avg10,
-		"avg60":  cpuPressure.Some.Avg60,
-		"avg300": cpuPressure.Some.Avg300,
-	},
-		map[string]string{
-			"resource": "cpu",
-			"type":     "some",
-		},
-	)
-
-	acc.AddGauge("pressure", map[string]interface{}{
-		"avg10":  memoryPressure.Some.Avg10,
-		"avg60":  memoryPressure.Some.Avg60,
-		"avg300": memoryPressure.Some.Avg300,
-	},
-		map[string]string{
-			"resource": "memory",
-			"type":     "some",
-		},
-	)
-
-	acc.AddGauge("pressure", map[string]interface{}{
-		"avg10":  ioPressure.Some.Avg10,
-		"avg60":  ioPressure.Some.Avg60,
-		"avg300": ioPressure.Some.Avg300,
-	},
-		map[string]string{
-			"resource": "io",
-			"type":     "some",
-		},
-	)
-
-	// pressure full
-	// NOTE: cpu.full is omitted because it is always zero
-
-	acc.AddGauge("pressure", map[string]interface{}{
-		"avg10":  memoryPressure.Full.Avg10,
-		"avg60":  memoryPressure.Full.Avg60,
-		"avg300": memoryPressure.Full.Avg300,
-	},
-		map[string]string{
-			"resource": "memory",
-			"type":     "full",
-		},
-	)
-
-	acc.AddGauge("pressure", map[string]interface{}{
-		"avg10":  ioPressure.Full.Avg10,
-		"avg60":  ioPressure.Full.Avg60,
-		"avg300": ioPressure.Full.Avg300,
-	},
-		map[string]string{
-			"resource": "io",
-			"type":     "full",
-		},
-	)
+			map[string]string{
+				"resource": resource,
+				"type":     "full",
+			},
+		)
+	}
 }
