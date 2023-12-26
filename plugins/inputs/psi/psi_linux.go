@@ -38,55 +38,39 @@ func (*Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error
 // uploadPressure Uploads all pressure value to corrosponding fields
 // NOTE: resource=cpu,type=full is omitted because it is always zero
 func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
-	// pressureTotal type=some
-	for _, resource := range []string{"cpu", "memory", "io"} {
-		acc.AddCounter("pressureTotal", map[string]interface{}{
-			"total": pressures[resource].Some.Total,
-		},
-			map[string]string{
-				"resource": resource,
-				"type":     "some",
+	// pressureTotal
+	for _, typ := range []string{"some", "full"} {
+		for _, resource := range []string{"cpu", "memory", "io"} {
+			if resource == "cpu" && typ == "full" {
+				continue
+			}
+			acc.AddCounter("pressureTotal", map[string]interface{}{
+				"total": pressures[resource].Some.Total,
 			},
-		)
+				map[string]string{
+					"resource": resource,
+					"type":     typ,
+				},
+			)
+		}
 	}
 
-	// pressureTotal type=full
-	for _, resource := range []string{"memory", "io"} {
-		acc.AddCounter("pressureTotal", map[string]interface{}{
-			"total": pressures[resource].Full.Total,
-		},
-			map[string]string{
-				"resource": resource,
-				"type":     "full",
+	// pressure
+	for _, typ := range []string{"some", "full"} {
+		for _, resource := range []string{"cpu", "memory", "io"} {
+			if resource == "cpu" && typ == "full" {
+				continue
+			}
+			acc.AddGauge("pressure", map[string]interface{}{
+				"avg10":  pressures[resource].Some.Avg10,
+				"avg60":  pressures[resource].Some.Avg60,
+				"avg300": pressures[resource].Some.Avg300,
 			},
-		)
-	}
-
-	// pressure type=some
-	for _, resource := range []string{"cpu", "memory", "io"} {
-		acc.AddGauge("pressure", map[string]interface{}{
-			"avg10":  pressures[resource].Some.Avg10,
-			"avg60":  pressures[resource].Some.Avg60,
-			"avg300": pressures[resource].Some.Avg300,
-		},
-			map[string]string{
-				"resource": resource,
-				"type":     "some",
-			},
-		)
-	}
-
-	// pressure type=full
-	for _, resource := range []string{"memory", "io"} {
-		acc.AddGauge("pressure", map[string]interface{}{
-			"avg10":  pressures[resource].Full.Avg10,
-			"avg60":  pressures[resource].Full.Avg60,
-			"avg300": pressures[resource].Full.Avg300,
-		},
-			map[string]string{
-				"resource": resource,
-				"type":     "full",
-			},
-		)
+				map[string]string{
+					"resource": resource,
+					"type":     typ,
+				},
+			)
+		}
 	}
 }
