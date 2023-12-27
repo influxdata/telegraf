@@ -38,11 +38,15 @@ func (*Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error
 // uploadPressure Uploads all pressure value to corrosponding fields
 // NOTE: resource=cpu,type=full is omitted because it is always zero
 func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
-	// pressureTotal
 	for _, typ := range []string{"some", "full"} {
 		for _, resource := range []string{"cpu", "memory", "io"} {
 			if resource == "cpu" && typ == "full" {
 				continue
+			}
+
+			tags := map[string]string{
+				"resource": resource,
+				"type":     typ,
 			}
 
 			var stat *procfs.PSILine
@@ -53,42 +57,17 @@ func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Ac
 				stat = pressures[resource].Full
 			}
 
+			// pressureTotal
 			acc.AddCounter("pressureTotal", map[string]interface{}{
 				"total": stat.Total,
-			},
-				map[string]string{
-					"resource": resource,
-					"type":     typ,
-				},
-			)
-		}
-	}
+			}, tags)
 
-	// pressure
-	for _, typ := range []string{"some", "full"} {
-		for _, resource := range []string{"cpu", "memory", "io"} {
-			if resource == "cpu" && typ == "full" {
-				continue
-			}
-
-			var stat *procfs.PSILine
-			switch typ {
-			case "some":
-				stat = pressures[resource].Some
-			case "full":
-				stat = pressures[resource].Full
-			}
-
+			// pressure
 			acc.AddGauge("pressure", map[string]interface{}{
 				"avg10":  stat.Avg10,
 				"avg60":  stat.Avg60,
 				"avg300": stat.Avg300,
-			},
-				map[string]string{
-					"resource": resource,
-					"type":     typ,
-				},
-			)
+			}, tags)
 		}
 	}
 }
