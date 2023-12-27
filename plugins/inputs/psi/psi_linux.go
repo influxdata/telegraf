@@ -44,8 +44,17 @@ func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Ac
 			if resource == "cpu" && typ == "full" {
 				continue
 			}
+
+			var stat *procfs.PSILine
+			switch typ {
+			case "some":
+				stat = pressures[resource].Some
+			case "full":
+				stat = pressures[resource].Full
+			}
+
 			acc.AddCounter("pressureTotal", map[string]interface{}{
-				"total": pressures[resource].Some.Total,
+				"total": stat.Total,
 			},
 				map[string]string{
 					"resource": resource,
@@ -61,10 +70,19 @@ func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Ac
 			if resource == "cpu" && typ == "full" {
 				continue
 			}
+
+			var stat *procfs.PSILine
+			switch typ {
+			case "some":
+				stat = pressures[resource].Some
+			case "full":
+				stat = pressures[resource].Full
+			}
+
 			acc.AddGauge("pressure", map[string]interface{}{
-				"avg10":  pressures[resource].Some.Avg10,
-				"avg60":  pressures[resource].Some.Avg60,
-				"avg300": pressures[resource].Some.Avg300,
+				"avg10":  stat.Avg10,
+				"avg60":  stat.Avg60,
+				"avg300": stat.Avg300,
 			},
 				map[string]string{
 					"resource": resource,
