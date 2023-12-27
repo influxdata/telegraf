@@ -17,18 +17,22 @@ func TestPSIStats(t *testing.T) {
 		acc testutil.Accumulator
 	)
 
-	mockPressure := &procfs.PSILine{
+	mockPressureSome := &procfs.PSILine{
 		Avg10:  10,
 		Avg60:  60,
 		Avg300: 300,
 		Total:  114514,
 	}
-
-	mockPSIStats := procfs.PSIStats{
-		Some: mockPressure,
-		Full: mockPressure,
+	mockPressureFull := &procfs.PSILine{
+		Avg10:  1,
+		Avg60:  6,
+		Avg300: 30,
+		Total:  11451,
 	}
-
+	mockPSIStats := procfs.PSIStats{
+		Some: mockPressureSome,
+		Full: mockPressureFull,
+	}
 	mockStats := map[string]procfs.PSIStats{
 		"cpu":    mockPSIStats,
 		"memory": mockPSIStats,
@@ -38,14 +42,27 @@ func TestPSIStats(t *testing.T) {
 	err = psi.Gather(&acc)
 	require.NoError(t, err)
 
-	pressureFields := map[string]interface{}{
-		"avg10":  float64(10),
-		"avg60":  float64(60),
-		"avg300": float64(300),
+	pressureFields := map[string]map[string]interface{}{
+		"some": {
+			"avg10":  float64(10),
+			"avg60":  float64(60),
+			"avg300": float64(300),
+		},
+		"full": {
+			"avg10":  float64(1),
+			"avg60":  float64(6),
+			"avg300": float64(30),
+		},
 	}
-	pressureTotalFields := map[string]interface{}{
-		"total": uint64(114514),
+	pressureTotalFields := map[string]map[string]interface{}{
+		"some": {
+			"total": uint64(114514),
+		},
+		"full": {
+			"total": uint64(11451),
+		},
 	}
+
 	acc.ClearMetrics()
 	psi.uploadPressure(mockStats, &acc)
 	for _, typ := range []string{"some", "full"} {
@@ -54,22 +71,25 @@ func TestPSIStats(t *testing.T) {
 				continue
 			}
 
-			// "pressure" should contain what it should
-			acc.AssertContainsTaggedFields(t, "pressure", pressureFields, map[string]string{
+			tags := map[string]string{
 				"resource": resource,
 				"type":     typ,
-			})
+			}
 
-			// "pressure" should NOT contain a "total" field
-			acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureTotalFields, map[string]string{
-				"resource": resource,
-				"type":     typ,
-			})
+			acc.AssertContainsTaggedFields(t, "pressure", pressureFields[typ], tags)
+			acc.AssertContainsTaggedFields(t, "pressureTotal", pressureTotalFields[typ], tags)
+
+			// "pressure" and "pressureTotal" should contain disjoint set of fields
+			acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureTotalFields[typ], tags)
+			acc.AssertDoesNotContainsTaggedFields(t, "pressureTotal", pressureFields[typ], tags)
 		}
 	}
 
-	acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureFields, map[string]string{
+	// The combination "resource=cpu,type=full" should NOT appear anywhere
+	forbiddenTags := map[string]string{
 		"resource": "cpu",
 		"type":     "full",
-	})
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureFields["full"], forbiddenTags)
+	acc.AssertDoesNotContainsTaggedFields(t, "pressureTotal", pressureTotalFields["full"], forbiddenTags)
 }
