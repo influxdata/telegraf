@@ -329,9 +329,9 @@ to use them.
 
 If you are using authentication within your Elasticsearch cluster, you need to
 create a account and create a role with at least the manage role in the Cluster
-Privileges category.  Otherwise, your account will not be able to connect to your
-Elasticsearch cluster and send logs to your cluster.  After that, you need to
-add "create_indice" and "write" permission to your specific index pattern.
+Privileges category.  Otherwise, your account will not be able to connect to
+your Elasticsearch cluster and send logs to your cluster.  After that, you need
+to add "create_indice" and "write" permission to your specific index pattern.
 
 ### Required parameters
 
