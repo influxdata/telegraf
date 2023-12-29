@@ -37,7 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # exclude_mounts = []
 
   ## List of operations to include or exclude from collecting.  This applies
-  ## only when fullstat=true.  Symantics are similar to {include,exclude}_mounts:
+  ## only when fullstat=true.  Semantics are similar to {include,exclude}_mounts:
   ## the default is to collect everything; when include_operations is set, only
   ## those OPs are collected; when exclude_operations is set, all are collected
   ## except those listed.  If include and exclude are set, the OP is excluded.
