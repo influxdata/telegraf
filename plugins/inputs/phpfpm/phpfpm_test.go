@@ -6,9 +6,12 @@
 package phpfpm
 
 import (
+	"bytes"
 	"crypto/rand"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -19,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -76,8 +80,6 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 }
 
 func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
-	outputSampleJSON, err := os.ReadFile("testdata/phpfpm.json")
-	require.NoError(t, err)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(outputSampleJSON)))
@@ -94,7 +96,7 @@ func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
 	input := &phpfpm{
 		Urls:   []string{server.URL + "?full&json"},
 		Format: "json",
-		log:    testutil.Logger{},
+		Log:    testutil.Logger{},
 	}
 	require.NoError(t, input.Init())
 
@@ -358,3 +360,32 @@ max active processes: 1
 max children reached: 2
 slow requests:        1
 `
+
+//go:embed testdata/phpfpm.json
+var outputSampleJSON []byte
+
+func TestPhpFpmParseJSON_Log_Error_Without_Panic_When_When_JSON_Is_Invalid(t *testing.T) {
+	p := &phpfpm{}
+	// AddInput sets the Logger
+	if err := shim.New().AddInput(p); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// capture log output
+	var logOutput bytes.Buffer
+	log.SetOutput(&logOutput)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
+
+	// parse valid JSON without panic and without log output
+	validJSON := outputSampleJSON
+	require.NotPanics(t, func() { p.parseJSON(bytes.NewReader(validJSON), &testutil.NopAccumulator{}, "") })
+	require.Equal(t, "", logOutput.String())
+
+	// parse invalid JSON without panic but with log output
+	invalidJSON := []byte("X")
+	require.NotPanics(t, func() { p.parseJSON(bytes.NewReader(invalidJSON), &testutil.NopAccumulator{}, "") })
+	require.Contains(t, logOutput.String(), "E! Unable to decode JSON response: invalid character 'X' looking for beginning of value")
+}
