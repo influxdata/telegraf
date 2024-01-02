@@ -245,6 +245,24 @@ func TestInitMissingPidMethod(t *testing.T) {
 }
 
 func TestGather_CreateProcessErrorOk(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"procstat_lookup",
+			map[string]string{
+				"exe":        "foo",
+				"pid_finder": "test",
+				"result":     "success",
+			},
+			map[string]interface{}{
+				"pid_count":   int64(1),
+				"result_code": int64(0),
+				"running":     int64(0),
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
+	}
+
 	p := Procstat{
 		Exe:       exe,
 		PidFinder: "test",
@@ -258,9 +276,64 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, p.Gather(&acc))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestGather_ProcessName(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"procstat",
+			map[string]string{
+				"exe":          "foo",
+				"process_name": "custom_name",
+			},
+			map[string]interface{}{
+				"child_major_faults":           uint64(0),
+				"child_minor_faults":           uint64(0),
+				"cmdline":                      "test_proc",
+				"cpu_time_iowait":              float64(0),
+				"cpu_time_system":              float64(0),
+				"cpu_time_user":                float64(0),
+				"cpu_usage":                    float64(0),
+				"created_at":                   int64(0),
+				"involuntary_context_switches": int64(0),
+				"major_faults":                 uint64(0),
+				"memory_rss":                   uint64(0),
+				"memory_usage":                 float32(0),
+				"memory_vms":                   uint64(0),
+				"minor_faults":                 uint64(0),
+				"num_fds":                      int32(0),
+				"num_threads":                  int32(0),
+				"pid":                          int32(42),
+				"ppid":                         int32(0),
+				"read_bytes":                   uint64(0),
+				"read_count":                   uint64(0),
+				"status":                       "running",
+				"user":                         "testuser",
+				"voluntary_context_switches":   int64(0),
+				"write_bytes":                  uint64(0),
+				"write_count":                  uint64(0),
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
+		testutil.MustMetric(
+			"procstat_lookup",
+			map[string]string{
+				"exe":        "foo",
+				"pid_finder": "test",
+				"result":     "success",
+			},
+			map[string]interface{}{
+				"pid_count":   int64(1),
+				"result_code": int64(0),
+				"running":     int64(1),
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
+	}
+
 	p := Procstat{
 		Exe:           exe,
 		ProcessName:   "custom_name",
@@ -274,7 +347,9 @@ func TestGather_ProcessName(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, p.Gather(&acc))
 
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 	require.Equal(t, "custom_name", acc.TagValue("procstat", "process_name"))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestGather_NoProcessNameUsesReal(t *testing.T) {

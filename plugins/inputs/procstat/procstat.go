@@ -146,6 +146,11 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			"pid_finder": p.PidFinder,
 			"result":     "lookup_error",
 		}
+		for _, pidTag := range results {
+			for key, value := range pidTag.Tags {
+				tags[key] = value
+			}
+		}
 		acc.AddFields("procstat_lookup", fields, tags, now)
 		return err
 	}
@@ -207,6 +212,11 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	tags := map[string]string{
 		"pid_finder": p.PidFinder,
 		"result":     "success",
+	}
+	for _, pidTag := range results {
+		for key, value := range pidTag.Tags {
+			tags[key] = value
+		}
 	}
 	if len(p.SupervisorUnits) > 0 {
 		tags["supervisor_unit"] = strings.Join(p.SupervisorUnits, ";")
