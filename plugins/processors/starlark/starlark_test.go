@@ -3428,6 +3428,15 @@ def apply(metric):
     return [x]
 `,
 		},
+		{
+			name:       "issue #14484",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    metric.tags.pop("tag1")
+    return [metric]
+`,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
