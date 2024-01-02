@@ -118,13 +118,17 @@ linters-settings:
       - weakCond
       # performance
       - equalFold
-      - hugeParam      
+      - indexAlloc
+      - hugeParam
       - preferDecodeRune
-      - preferFprint      
+      - preferFprint
       - preferStringWriter
-      - rangeValCopy      
+      - preferWriteByte
+      - rangeExprCopy
+      - rangeValCopy
+      - sliceClear
       - stringXbytes
-      
+
     # Settings passed to gocritic.
     # The settings key is the name of a supported gocritic checker.
     # The list of supported checkers can be find in https://go-critic.github.io/overview.
