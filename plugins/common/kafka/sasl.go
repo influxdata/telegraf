@@ -33,16 +33,15 @@ func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
+	fmt.Println(username.String())
 	cfg.Net.SASL.User = username.String()
-	cfg.Net.SASL.GSSAPI.Username = username.String()
-	username.Destroy()
+	defer username.Destroy()
 	password, err := k.SASLPassword.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 	cfg.Net.SASL.Password = password.String()
-	cfg.Net.SASL.GSSAPI.Password = password.String()
-	password.Destroy()
+	defer password.Destroy()
 
 	if k.SASLMechanism != "" {
 		cfg.Net.SASL.Mechanism = sarama.SASLMechanism(k.SASLMechanism)
@@ -60,6 +59,8 @@ func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
 		case sarama.SASLTypeGSSAPI:
 			cfg.Net.SASL.GSSAPI.ServiceName = k.SASLGSSAPIServiceName
 			cfg.Net.SASL.GSSAPI.AuthType = gssapiAuthType(k.SASLGSSAPIAuthType)
+			cfg.Net.SASL.GSSAPI.Username = username.String()
+			cfg.Net.SASL.GSSAPI.Password = password.String()
 			cfg.Net.SASL.GSSAPI.DisablePAFXFAST = k.SASLGSSAPIDisablePAFXFAST
 			cfg.Net.SASL.GSSAPI.KerberosConfigPath = k.SASLGSSAPIKerberosConfigPath
 			cfg.Net.SASL.GSSAPI.KeyTabPath = k.SASLGSSAPIKeyTabPath
