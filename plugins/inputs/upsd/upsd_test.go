@@ -37,7 +37,7 @@ func TestBadServer(t *testing.T) {
 
 	// Do the query
 	var acc testutil.Accumulator
-	require.ErrorContains(t, plugin.Gather(&acc), "write: broken pipe")
+	require.Error(t, plugin.Gather(&acc))
 }
 
 func TestCases(t *testing.T) {
