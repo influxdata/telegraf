@@ -153,7 +153,7 @@ require (
 	github.com/p4lang/p4runtime v1.3.0
 	github.com/pborman/ansi v1.0.0
 	github.com/peterbourgon/unixtransport v0.0.3
-	github.com/pion/dtls/v2 v2.2.7
+	github.com/pion/dtls/v2 v2.2.8
 	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/client_model v0.5.0
