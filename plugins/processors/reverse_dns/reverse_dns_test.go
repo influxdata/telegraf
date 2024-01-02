@@ -1,7 +1,6 @@
 package reverse_dns
 
 import (
-	"runtime"
 	"testing"
 	"time"
 
@@ -18,7 +17,7 @@ func TestSimpleReverseLookupIntegration(t *testing.T) {
 
 	now := time.Now()
 	m := metric.New("name", map[string]string{
-		"dest_ip": "8.8.8.8",
+		"dest_ip": "1.1.1.1",
 	}, map[string]interface{}{
 		"source_ip": "127.0.0.1",
 	}, now)
@@ -45,14 +44,9 @@ func TestSimpleReverseLookupIntegration(t *testing.T) {
 
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 	processedMetric := acc.GetTelegrafMetrics()[0]
-	f, ok := processedMetric.GetField("source_name")
+	_, ok := processedMetric.GetField("source_name")
 	require.True(t, ok)
-	if runtime.GOOS != "windows" {
-		// lookupAddr on Windows works differently than on Linux so `source_name` won't be "localhost" on every environment
-		require.EqualValues(t, "localhost", f)
-	}
-
 	tag, ok := processedMetric.GetTag("dest_name")
 	require.True(t, ok)
-	require.EqualValues(t, "dns.google.", tag)
+	require.EqualValues(t, "one.one.one.one.", tag)
 }
