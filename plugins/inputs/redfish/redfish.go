@@ -273,6 +273,7 @@ func (r *Redfish) getPower(ref string) (*Power, error) {
 func (r *Redfish) getThermal(ref string) (*Thermal, error) {
 	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
 	thermal := &Thermal{}
+	fmt.Println(loc.String())
 	err := r.getData(loc.String(), thermal)
 	if err != nil {
 		return nil, err
@@ -360,7 +361,9 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		acc.AddFields("redfish_thermal_temperatures", fields, tags)
 	}
 
+	fmt.Printf("found %d fans\n", len(thermal.Fans))
 	for _, j := range thermal.Fans {
+		fmt.Println(j)
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 		tags["member_id"] = j.MemberID
