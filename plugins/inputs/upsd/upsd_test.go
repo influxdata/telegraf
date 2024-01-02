@@ -119,47 +119,24 @@ func TestUpsdGather(t *testing.T) {
 	}
 }
 
-func TestUpsdGatherFail(t *testing.T) {
-	nut := &Upsd{}
+func TestBadServer(t *testing.T) {
+	// Create and start a server without interactions
+	server := &mockServer{}
+	ctx, cancel := context.WithCancel(context.Background())
+	addr, err := server.listen(ctx)
+	require.NoError(t, err)
+	defer cancel()
 
-	var (
-		tests = []struct {
-			name   string
-			err    bool
-			tags   map[string]string
-			fields map[string]interface{}
-			out    func() []interaction
-		}{
-			{
-				name: "test with bad output",
-				err:  true,
-				out:  genBadOutput,
-			},
-		}
-
-		acc testutil.Accumulator
-	)
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-
-			lAddr, err := listen(ctx, t, tt.out())
-			require.NoError(t, err)
-
-			nut.Server = (lAddr.(*net.TCPAddr)).IP.String()
-			nut.Port = (lAddr.(*net.TCPAddr)).Port
-
-			err = nut.Gather(&acc)
-			if tt.err {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				acc.AssertContainsTaggedFields(t, "upsd", tt.fields, tt.tags)
-			}
-			cancel()
-		})
+	// Setup the plugin
+	plugin := &Upsd{
+		Server: addr.IP.String(),
+		Port:   addr.Port,
 	}
+	require.NoError(t, plugin.Init())
+
+	// Do the query
+	var acc testutil.Accumulator
+	require.ErrorContains(t, plugin.Gather(&acc), "write: broken pipe")
 }
 
 func TestCases(t *testing.T) {
@@ -209,8 +186,8 @@ func TestCases(t *testing.T) {
 			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.Len(t, cfg.Inputs, 1)
 			plugin := cfg.Inputs[0].Input.(*Upsd)
-			plugin.Server = (addr.(*net.TCPAddr)).IP.String()
-			plugin.Port = (addr.(*net.TCPAddr)).Port
+			plugin.Server = addr.IP.String()
+			plugin.Port = addr.Port
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
@@ -218,7 +195,6 @@ func TestCases(t *testing.T) {
 
 			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
-			testutil.PrintMetrics(actual)
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 		})
 	}
@@ -303,7 +279,7 @@ func (s *mockServer) addVariables(variables []variable, types map[string]string)
 	return nil
 }
 
-func (s *mockServer) listen(ctx context.Context) (net.Addr, error) {
+func (s *mockServer) listen(ctx context.Context) (*net.TCPAddr, error) {
 	lc := net.ListenConfig{}
 	ln, err := lc.Listen(ctx, "tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -351,7 +327,7 @@ func (s *mockServer) listen(ctx context.Context) (net.Addr, error) {
 		}
 	}()
 
-	return ln.Addr(), nil
+	return ln.Addr().(*net.TCPAddr), nil
 }
 
 func setupServer(path string) (*mockServer, error) {
@@ -537,10 +513,5 @@ func appendVariable(m []interaction, name string, typ string) []interaction {
 		Expected: "GET TYPE fake " + name + "\n",
 		Response: "TYPE fake " + name + " " + typ + "\n",
 	})
-	return m
-}
-
-func genBadOutput() []interaction {
-	m := make([]interaction, 0)
 	return m
 }
