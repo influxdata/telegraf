@@ -1027,7 +1027,11 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 
 			if !start.Truncate(time.Second).Before(now.Truncate(time.Second)) {
-				e.log.Debugf("Start >= end (rounded to seconds): %s > %s", start, now)
+				// this happens when the hiwater mark was estimated using a larger estInterval than is currently used
+				// the estInterval is reset to 1m in case of some errors
+				// there are no new metrics to be expected here and querying this gets us an error, so: skip!
+				e.log.Debugf("Start >= end (rounded to seconds): %s > %s. Skipping!", start, now)
+				continue
 			}
 
 			// Create bucket if we don't already have it
