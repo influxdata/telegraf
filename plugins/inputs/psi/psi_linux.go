@@ -2,6 +2,7 @@ package psi
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/prometheus/procfs"
@@ -57,17 +58,19 @@ func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Ac
 				stat = pressures[resource].Full
 			}
 
-			// pressureTotal
-			acc.AddCounter("pressureTotal", map[string]interface{}{
+			now := time.Now()
+
+			// pressure
+			acc.AddCounter("pressure", map[string]interface{}{
 				"total": stat.Total,
-			}, tags)
+			}, tags, now)
 
 			// pressure
 			acc.AddGauge("pressure", map[string]interface{}{
 				"avg10":  stat.Avg10,
 				"avg60":  stat.Avg60,
 				"avg300": stat.Avg300,
-			}, tags)
+			}, tags, now)
 		}
 	}
 }

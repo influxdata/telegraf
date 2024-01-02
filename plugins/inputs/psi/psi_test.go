@@ -42,6 +42,7 @@ func TestPSIStats(t *testing.T) {
 	err = psi.Gather(&acc)
 	require.NoError(t, err)
 
+	// separate fields for gauges and counters
 	pressureFields := map[string]map[string]interface{}{
 		"some": {
 			"avg10":  float64(10),
@@ -77,11 +78,7 @@ func TestPSIStats(t *testing.T) {
 			}
 
 			acc.AssertContainsTaggedFields(t, "pressure", pressureFields[typ], tags)
-			acc.AssertContainsTaggedFields(t, "pressureTotal", pressureTotalFields[typ], tags)
-
-			// "pressure" and "pressureTotal" should contain disjoint set of fields
-			acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureTotalFields[typ], tags)
-			acc.AssertDoesNotContainsTaggedFields(t, "pressureTotal", pressureFields[typ], tags)
+			acc.AssertContainsTaggedFields(t, "pressure", pressureTotalFields[typ], tags)
 		}
 	}
 
@@ -91,5 +88,5 @@ func TestPSIStats(t *testing.T) {
 		"type":     "full",
 	}
 	acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureFields["full"], forbiddenTags)
-	acc.AssertDoesNotContainsTaggedFields(t, "pressureTotal", pressureTotalFields["full"], forbiddenTags)
+	acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureTotalFields["full"], forbiddenTags)
 }

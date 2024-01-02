@@ -60,11 +60,11 @@ pressure,resource=memory,type=some avg10=0.00,avg60=0.00,avg300=0.00 17000000000
 pressure,resource=memory,type=full avg10=0.00,avg60=0.00,avg300=0.00 1700000000000000000
 pressure,resource=io,type=some avg10=0.0,avg60=0.0,avg300=0.0 1700000000000000000
 pressure,resource=io,type=full avg10=0.0,avg60=0.0,avg300=0.0 1700000000000000000
-pressureTotal,resource=cpu,type=some total=1088168194 1700000000000000000
-pressureTotal,resource=memory,type=some total=3463792 1700000000000000000
-pressureTotal,resource=memory,type=full total=1429641 1700000000000000000
-pressureTotal,resource=io,type=some total=68568296 1700000000000000000
-pressureTotal,resource=io,type=full total=54982338 1700000000000000000
+pressure,resource=cpu,type=some total=1088168194i 1700000000000000000
+pressure,resource=memory,type=some total=3463792i 1700000000000000000
+pressure,resource=memory,type=full total=1429641i 1700000000000000000
+pressure,resource=io,type=some total=68568296i 1700000000000000000
+pressure,resource=io,type=full total=54982338i 1700000000000000000
 ```
 
 ## Credits
