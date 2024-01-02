@@ -75,79 +75,18 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		u.Log.Warnf("Converting 'battery.runtime' to 'time_left_ns' failed: %v", err)
 	}
 
+	// Add the mandatory information
 	fields := map[string]interface{}{
-		"battery_date":        metrics["battery.date"],
-		"battery_mfr_date":    metrics["battery.mfr.date"],
-		"battery_protection":  metrics["battery.protection"],
-		"device_mfr":          metrics["device.mfr"],
-		"device_model":        metrics["device.model"],
-		"driver_version":      metrics["driver.version"],
-		"driver_version_data": metrics["driver.version.data"],
-		"driver_version_usb":  metrics["driver.version.usb"],
-		"device_type":         metrics["device.type"],
-		"ups_mfr":             metrics["ups.mfr"],
-		"ups_model":           metrics["ups.model"],
-		"ups_productid":       metrics["ups.productid"],
-		"ups_test_result":     metrics["ups.test.result"],
-		"ups_type":            metrics["ups.type"],
-		"outlet_switchable":   metrics["outlet.switchable"],
-		"status_flags":        status,
-		"ups_status":          metrics["ups.status"],
+		"battery_date":     metrics["battery.date"],
+		"battery_mfr_date": metrics["battery.mfr.date"],
+		"status_flags":     status,
+		"ups_status":       metrics["ups.status"],
 
-		//Compatibility with apcupsd metrics format
+		// for compatibility with apcupsd metrics format
 		"time_left_ns": timeLeftNS,
 	}
 
-	floatValues := map[string]string{
-		"battery_charge_percent":   "battery.charge",
-		"battery_runtime_low":      "battery.runtime.low",
-		"battery_voltage":          "battery.voltage",
-		"battery_capacity":         "battery.capacity",
-		"input_frequency":          "input.frequency",
-		"input_transfer_high":      "input.transfer.high",
-		"input_transfer_low":       "input.transfer.low",
-		"input_voltage":            "input.voltage",
-		"input_bypass_frequency":   "input.bypass.frequency",
-		"input_bypass_voltage":     "input.bypass.voltage",
-		"input_frequency_nominal":  "input.frequency.nominal",
-		"internal_temp":            "ups.temperature",
-		"load_percent":             "ups.load",
-		"nominal_battery_voltage":  "battery.voltage.nominal",
-		"nominal_input_voltage":    "input.voltage.nominal",
-		"nominal_power":            "ups.realpower.nominal",
-		"output_voltage":           "output.voltage",
-		"output_current":           "output.current",
-		"output_frequency":         "output.frequency",
-		"output_frequency_nominal": "output.frequency.nominal",
-		"output_voltage_nominal":   "output.voltage.nominal",
-		"ups_power":                "ups.power",
-		"ups_power_nominal":        "ups.power.nominal",
-		"ups_test_interval":        "ups.test.interval",
-		"driver_version_internal":  "driver.version.internal",
-		"real_power":               "ups.realpower",
-		"ups_delay_shutdown":       "ups.delay.shutdown",
-		"ups_delay_start":          "ups.delay.start",
-	}
-
-	for key, rawValue := range floatValues {
-		if metrics[rawValue] == nil {
-			continue
-		}
-
-		if !u.ForceFloat {
-			fields[key] = metrics[rawValue]
-			continue
-		}
-
-		// Force expected float values to actually being float (e.g. if delivered as int)
-		float, err := internal.ToFloat64(metrics[rawValue])
-		if err != nil {
-			acc.AddError(fmt.Errorf("converting %s=%v failed: %w", rawValue, metrics[rawValue], err))
-			continue
-		}
-		fields[key] = float
-	}
-
+	// Define the set of mandatory string fields
 	val, err := internal.ToString(metrics["ups.firmware"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.firmware=%q failed: %w", metrics["ups.firmware"], err))
@@ -155,25 +94,44 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		fields["firmware"] = val
 	}
 
-	valUpsVendorid, err := internal.ToString(metrics["ups.vendorid"])
-	if err != nil {
-		acc.AddError(fmt.Errorf("converting ups.vendorid=%q failed: %w", metrics["ups.vendorid"], err))
-	} else {
-		fields["ups_vendorid"] = valUpsVendorid
+	// Define the default field set to add if existing
+	defaultFieldSet := map[string]string{
+		"battery_charge_percent":  "battery.charge",
+		"battery_runtime_low":     "battery.runtime.low",
+		"battery_voltage":         "battery.voltage",
+		"input_frequency":         "input.frequency",
+		"input_transfer_high":     "input.transfer.high",
+		"input_transfer_low":      "input.transfer.low",
+		"input_voltage":           "input.voltage",
+		"internal_temp":           "ups.temperature",
+		"load_percent":            "ups.load",
+		"nominal_battery_voltage": "battery.voltage.nominal",
+		"nominal_input_voltage":   "input.voltage.nominal",
+		"nominal_power":           "ups.realpower.nominal",
+		"output_voltage":          "output.voltage",
+		"real_power":              "ups.realpower",
+		"ups_delay_shutdown":      "ups.delay.shutdown",
+		"ups_delay_start":         "ups.delay.start",
 	}
 
-	valUpsBeeperStatus, err := internal.ToString(metrics["ups.beeper.status"])
-	if err != nil {
-		acc.AddError(fmt.Errorf("converting ups.beeper.status=%q failed: %w", metrics["ups.beeper.status"], err))
-	} else {
-		fields["ups_beeper_status"] = valUpsBeeperStatus
-	}
+	// Try to gather all default fields
+	for key, k := range defaultFieldSet {
+		// Skip all non-existing fields
+		v := metrics[k]
+		if v == nil {
+			continue
+		}
 
-	valUpsShutdown, err := internal.ToString(metrics["ups.shutdown"])
-	if err != nil {
-		acc.AddError(fmt.Errorf("converting ups.shutdown=%q failed: %w", metrics["ups.shutdown"], err))
-	} else {
-		fields["ups_shutdown"] = valUpsShutdown
+		// Force expected float values to actually being float (e.g. if delivered as int)
+		if u.ForceFloat {
+			float, err := internal.ToFloat64(v)
+			if err != nil {
+				acc.AddError(fmt.Errorf("converting %s=%v failed: %w", k, v, err))
+				continue
+			}
+			v = float
+		}
+		fields[key] = v
 	}
 
 	acc.AddFields("upsd", fields, tags)
