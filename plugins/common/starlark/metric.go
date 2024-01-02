@@ -12,8 +12,7 @@ import (
 )
 
 type Metric struct {
-	ID uint64
-
+	ID             telegraf.TrackingID
 	metric         telegraf.Metric
 	tagIterCount   int
 	fieldIterCount int
@@ -22,7 +21,9 @@ type Metric struct {
 
 // Wrap updates the starlark.Metric to wrap a new telegraf.Metric.
 func (m *Metric) Wrap(metric telegraf.Metric) {
-	m.ID = metric.HashID()
+	if tm, ok := metric.(telegraf.TrackingMetric); ok {
+		m.ID = tm.TrackingID()
+	}
 	m.metric = metric
 	m.tagIterCount = 0
 	m.fieldIterCount = 0
