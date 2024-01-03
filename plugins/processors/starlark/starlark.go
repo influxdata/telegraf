@@ -54,13 +54,13 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 	}
 	parameters[0].(*common.Metric).Wrap(origMetric)
 
-	rv, err := s.Call("apply")
+	returnValue, err := s.Call("apply")
 	if err != nil {
 		s.LogError(err)
 		return err
 	}
 
-	switch rv := rv.(type) {
+	switch rv := returnValue.(type) {
 	case *starlark.List:
 		iter := rv.Iterate()
 		defer iter.Done()
