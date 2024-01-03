@@ -315,7 +315,7 @@ func TestTagsHandling(t *testing.T) {
 			name:   "treat tags as device IDs",
 			plugin: func() *IoTDB { s := newIoTDB(); s.TreatTagsAs = "device_id"; return s }(),
 			expected: recordsWithTags{
-				DeviceIDList:     []string{"root.computer.deviceID.cpu.expensive"},
+				DeviceIDList:     []string{"root.computer.deviceID.cpu.expensive.`Adattatore Ethernet vmxnet3`"},
 				MeasurementsList: [][]string{{"temperature", "counter"}},
 				ValuesList: [][]interface{}{
 					{float64(42.55), int64(987654321)},
@@ -338,6 +338,7 @@ func TestTagsHandling(t *testing.T) {
 				TagsList: [][]*telegraf.Tag{{
 					{Key: "owner", Value: "cpu"},
 					{Key: "price", Value: "expensive"},
+					{Key: "netnic", Value: "Adattatore Ethernet vmxnet3"},
 				}},
 			},
 		},
