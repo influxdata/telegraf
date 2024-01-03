@@ -218,8 +218,7 @@ func genOutput() [][]byte {
 	out := make([][]byte, 0, 2*len(kvs))
 	for _, kv := range kvs {
 		lenb, kvb := kvBytes(kv)
-		out = append(out, lenb)
-		out = append(out, kvb)
+		out = append(out, lenb, kvb)
 	}
 
 	return out
@@ -233,8 +232,7 @@ func genBadOutput() [][]byte {
 	out := make([][]byte, 0, 2*len(kvs))
 	for _, kv := range kvs {
 		lenb, kvb := kvBytes(kv)
-		out = append(out, lenb)
-		out = append(out, kvb)
+		out = append(out, lenb, kvb)
 	}
 
 	return out
