@@ -509,7 +509,11 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 	}
 
 	for header, value := range c.config.Headers {
-		req.Header.Set(header, value)
+		if strings.EqualFold(header, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(header, value)
+		}
 	}
 
 	return nil

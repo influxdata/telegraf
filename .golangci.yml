@@ -119,11 +119,15 @@ linters-settings:
       # performance
       - appendCombine
       - equalFold
+      - indexAlloc
       - hugeParam
       - preferDecodeRune
       - preferFprint
       - preferStringWriter
+      - preferWriteByte
+      - rangeExprCopy
       - rangeValCopy
+      - sliceClear
       - stringXbytes
 
     # Settings passed to gocritic.
