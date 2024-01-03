@@ -206,8 +206,10 @@ func marshalMetric(metric telegraf.Metric) bson.D {
 	for k, v := range metric.Tags() {
 		tags = append(tags, primitive.E{Key: k, Value: v})
 	}
-	bdoc = append(bdoc, primitive.E{Key: "tags", Value: tags})
-	bdoc = append(bdoc, primitive.E{Key: "timestamp", Value: metric.Time()})
+	bdoc = append(bdoc,
+		primitive.E{Key: "tags", Value: tags},
+		primitive.E{Key: "timestamp", Value: metric.Time()},
+	)
 	return bdoc
 }
 

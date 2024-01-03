@@ -117,6 +117,7 @@ linters-settings:
       - unnecessaryDefer
       - weakCond
       # performance
+      - appendCombine
       - equalFold
       - indexAlloc
       - hugeParam

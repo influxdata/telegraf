@@ -19,6 +19,7 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/debug"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -151,9 +152,11 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	appname := "Telegraf"
 
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
-	opts = append(opts, opcua.ApplicationURI(appuri))
-	opts = append(opts, opcua.ApplicationName(appname))
-	opts = append(opts, opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)))
+	opts = append(opts,
+		opcua.ApplicationURI(appuri),
+		opcua.ApplicationName(appname),
+		opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)),
+	)
 
 	certFile := o.Config.Certificate
 	keyFile := o.Config.PrivateKey

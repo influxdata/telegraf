@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestUpsdGather(t *testing.T) {
@@ -201,45 +202,46 @@ type interaction struct {
 
 func genOutput() []interaction {
 	m := make([]interaction, 0)
-	m = append(m, interaction{
-		Expected: "VER\n",
-		Response: "1\n",
-	})
-	m = append(m, interaction{
-		Expected: "NETVER\n",
-		Response: "1\n",
-	})
-	m = append(m, interaction{
-		Expected: "LIST UPS\n",
-		Response: `BEGIN LIST UPS
+	m = append(m,
+		interaction{
+			Expected: "VER\n",
+			Response: "1\n",
+		},
+		interaction{
+			Expected: "NETVER\n",
+			Response: "1\n",
+		},
+		interaction{
+			Expected: "LIST UPS\n",
+			Response: `BEGIN LIST UPS
 UPS fake "fakescription"
 END LIST UPS
 `,
-	})
-	m = append(m, interaction{
-		Expected: "LIST CLIENT fake\n",
-		Response: `BEGIN LIST CLIENT fake
+		},
+		interaction{
+			Expected: "LIST CLIENT fake\n",
+			Response: `BEGIN LIST CLIENT fake
 CLIENT fake 192.168.1.1
 END LIST CLIENT fake
 `,
-	})
-	m = append(m, interaction{
-		Expected: "LIST CMD fake\n",
-		Response: `BEGIN LIST CMD fake
+		},
+		interaction{
+			Expected: "LIST CMD fake\n",
+			Response: `BEGIN LIST CMD fake
 END LIST CMD fake
 `,
-	})
-	m = append(m, interaction{
-		Expected: "GET UPSDESC fake\n",
-		Response: "UPSDESC fake \"stub-ups-description\"\n",
-	})
-	m = append(m, interaction{
-		Expected: "GET NUMLOGINS fake\n",
-		Response: "NUMLOGINS fake 1\n",
-	})
-	m = append(m, interaction{
-		Expected: "LIST VAR fake\n",
-		Response: `BEGIN LIST VAR fake
+		},
+		interaction{
+			Expected: "GET UPSDESC fake\n",
+			Response: "UPSDESC fake \"stub-ups-description\"\n",
+		},
+		interaction{
+			Expected: "GET NUMLOGINS fake\n",
+			Response: "NUMLOGINS fake 1\n",
+		},
+		interaction{
+			Expected: "LIST VAR fake\n",
+			Response: `BEGIN LIST VAR fake
 VAR fake device.serial "ABC123"
 VAR fake device.model "Model 12345"
 VAR fake input.voltage "242.0"
@@ -257,7 +259,8 @@ VAR fake battery.mfr.date "2016-07-26"
 VAR fake ups.status "OL"
 END LIST VAR fake
 `,
-	})
+		},
+	)
 	m = appendVariable(m, "device.serial", "STRING:64")
 	m = appendVariable(m, "device.model", "STRING:64")
 	m = appendVariable(m, "input.voltage", "NUMBER")
@@ -278,14 +281,16 @@ END LIST VAR fake
 }
 
 func appendVariable(m []interaction, name string, typ string) []interaction {
-	m = append(m, interaction{
-		Expected: "GET DESC fake " + name + "\n",
-		Response: "DESC fake" + name + " \"No description here\"\n",
-	})
-	m = append(m, interaction{
-		Expected: "GET TYPE fake " + name + "\n",
-		Response: "TYPE fake " + name + " " + typ + "\n",
-	})
+	m = append(m,
+		interaction{
+			Expected: "GET DESC fake " + name + "\n",
+			Response: "DESC fake" + name + " \"No description here\"\n",
+		},
+		interaction{
+			Expected: "GET TYPE fake " + name + "\n",
+			Response: "TYPE fake " + name + " " + typ + "\n",
+		},
+	)
 	return m
 }
 
