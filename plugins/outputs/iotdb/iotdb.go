@@ -232,7 +232,9 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 
 // checks is the tag contains any IoTDB invalid characters
 func validateTag(tag string) string {
-	matchForbiddenCharacter, _ := regexp.Compile("[^0-9a-zA-Z_:@#${}]")
+	// watch https://iotdb.apache.org/UserGuide/V0.13.x/Reference/Syntax-Conventions.html#identifiers for reference
+	// :@#${} have been excluded after some tests as they seem to not be supported
+	matchForbiddenCharacter, _ := regexp.Compile("[^0-9a-zA-Z_]")
 	// tags made only of int's should be supported
 	// but are still not deemed as valid
 	machNumericString, _ := regexp.Compile("^\\d+$")
