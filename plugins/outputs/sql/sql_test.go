@@ -180,9 +180,9 @@ func TestMysqlIntegration(t *testing.T) {
 			Env: map[string]string{
 				"MARIADB_ROOT_PASSWORD": password,
 			},
-			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
+			Mounts: []testcontainers.ContainerMount{
+				testcontainers.BindMount(initdb, "/docker-entrypoint-initdb.d"),
+				testcontainers.BindMount(outDir, "/out"),
 			},
 			ExposedPorts: []string{"3306/tcp"},
 			WaitingFor:   wait.ForListeningPort("3306/tcp"),
@@ -221,8 +221,7 @@ func TestMysqlIntegration(t *testing.T) {
 	))
 
 	//dump the database
-	var rc int
-	rc, err = mariadbContainer.Exec(ctx, []string{
+	rc, _, err := mariadbContainer.Exec(ctx, []string{
 		"bash",
 		"-c",
 		"mariadb-dump --user=" + username +
@@ -270,9 +269,9 @@ func TestPostgresIntegration(t *testing.T) {
 			Env: map[string]string{
 				"POSTGRES_PASSWORD": password,
 			},
-			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
+			Mounts: []testcontainers.ContainerMount{
+				testcontainers.BindMount(initdb, "/docker-entrypoint-initdb.d"),
+				testcontainers.BindMount(outDir, "/out"),
 			},
 			ExposedPorts: []string{"5432/tcp"},
 			WaitingFor:   wait.ForListeningPort("5432/tcp"),
@@ -315,7 +314,7 @@ func TestPostgresIntegration(t *testing.T) {
 	//dump the database
 	//psql -u postgres
 	var rc int
-	rc, err = cont.Exec(ctx, []string{
+	rc, _, err = cont.Exec(ctx, []string{
 		"bash",
 		"-c",
 		"pg_dump" +
@@ -369,9 +368,9 @@ func TestClickHouseIntegration(t *testing.T) {
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: "yandex/clickhouse-server",
-			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
+			Mounts: []testcontainers.ContainerMount{
+				testcontainers.BindMount(initdb, "/docker-entrypoint-initdb.d"),
+				testcontainers.BindMount(outDir, "/out"),
 			},
 			ExposedPorts: []string{"9000/tcp", "8123/tcp"},
 			WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
@@ -416,7 +415,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	// dump the database
 	var rc int
 	for _, testMetric := range testMetrics {
-		rc, err = cont.Exec(ctx, []string{
+		rc, _, err = cont.Exec(ctx, []string{
 			"bash",
 			"-c",
 			"clickhouse-client" +

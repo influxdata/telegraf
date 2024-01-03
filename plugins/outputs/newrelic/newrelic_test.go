@@ -94,7 +94,7 @@ func TestNewRelic_Write(t *testing.T) {
 		{
 			name: "Test: Test NAN ",
 			metrics: []telegraf.Metric{
-				testutil.TestMetric(math.NaN, "test_NaN"),
+				testutil.TestMetric(math.NaN(), "test_NaN"),
 			},
 			wantErr:      false,
 			auditMessage: ``,

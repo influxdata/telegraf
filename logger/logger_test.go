@@ -101,7 +101,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	cfg := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
 	cfg.LogTarget = LogTargetFile
 	cfg.RotationMaxSize = config.Size(30)
-	writer := newLogWriter(cfg)
+	writer := NewLogWriter(cfg)
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	closer, isCloser := writer.(io.Closer)
 	assert.True(t, isCloser)

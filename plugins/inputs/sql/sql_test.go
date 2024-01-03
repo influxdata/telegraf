@@ -64,8 +64,8 @@ func TestMariaDB(t *testing.T) {
 					"MYSQL_ROOT_PASSWORD": passwd,
 					"MYSQL_DATABASE":      database,
 				},
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
+				Mounts: []testcontainers.ContainerMount{
+					testcontainers.BindMount(testdata, "/docker-entrypoint-initdb.d"),
 				},
 				ExposedPorts: []string{"3306/tcp"},
 				WaitingFor:   wait.ForListeningPort("3306/tcp"),
@@ -183,8 +183,8 @@ func TestPostgreSQL(t *testing.T) {
 					"POSTGRES_PASSWORD": passwd,
 					"POSTGRES_DB":       database,
 				},
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
+				Mounts: []testcontainers.ContainerMount{
+					testcontainers.BindMount(testdata, "/docker-entrypoint-initdb.d"),
 				},
 				ExposedPorts: []string{"5432/tcp"},
 				WaitingFor:   wait.ForListeningPort("5432/tcp"),
@@ -294,8 +294,8 @@ func TestClickHouse(t *testing.T) {
 		req := testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
 				Image: "yandex/clickhouse-server",
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
+				Mounts: []testcontainers.ContainerMount{
+					testcontainers.BindMount(testdata, "/docker-entrypoint-initdb.d"),
 				},
 				ExposedPorts: []string{"9000/tcp", "8123/tcp"},
 				WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
