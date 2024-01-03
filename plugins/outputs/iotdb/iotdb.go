@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"regexp"
 
 	"github.com/apache/iotdb-client-go/client"
 
@@ -230,6 +230,19 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 	return rwt, nil
 }
 
+// checks is the tag contains any IoTDB invalid characters
+func validateTag(tag string) string {
+	matchForbiddenCharacter, _ := regexp.Compile("[^0-9a-zA-Z_:@#${}]")
+	// tags made only of int's should be supported
+	// but are still not deemed as valid
+	machNumericString, _ := regexp.Compile("^\\d+$")
+
+	if matchForbiddenCharacter.MatchString(tag) || machNumericString.MatchString(tag) {
+		return "`" + tag + "`"
+	}
+	return tag
+}
+
 // modify recordsWithTags according to 'TreatTagsAs' Configuration
 func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 	switch s.TreatTagsAs {
@@ -252,16 +265,7 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 		for index, tags := range rwt.TagsList { // for each record
 			topic := []string{rwt.DeviceIDList[index]}
 			for _, tag := range tags { // for each tag, append it's Value
-				tag_value := tag.Value
-				// checking if the tag contains a forbidden character
-				is_not_iotdb_valid, _ := regexp.MatchString("[^0-9a-zA-Z_:@#${}]", tag_value)
-				// even if the documentation states that it should work
-				// if the tag is made only of digits an error is trown
-				is_numeric, _ := regexp.MatchString("^\\d+$", tag_value)
-				if (is_not_iotdb_valid || is_numeric) {
-					// wrapping the tag in `` to make it a valid path
-					tag_value = "`" + tag.Value + "`"
-				}
+				tag_value := validateTag(tag.Value) // validates tag
 				topic = append(topic, tag_value)
 			}
 			rwt.DeviceIDList[index] = strings.Join(topic, ".")
