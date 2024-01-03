@@ -6,6 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
+NotifyAccess=all
 EnvironmentFile=-/etc/default/telegraf
 User=telegraf
 ImportCredential=telegraf.*
