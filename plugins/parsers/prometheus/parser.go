@@ -22,9 +22,9 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	switch p.MetricVersion {
 	case 0, 2:
-		return p.parse_v2(buf)
+		return p.parseV2(buf)
 	case 1:
-		return p.parse_v1(buf)
+		return p.parseV1(buf)
 	}
 	return nil, fmt.Errorf("unknown prometheus metric version %d", p.MetricVersion)
 }

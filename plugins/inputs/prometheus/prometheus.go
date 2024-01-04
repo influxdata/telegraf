@@ -443,12 +443,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	// Parse the metrics
-	parser := parser.Parser{
+	metricParser := parser.Parser{
 		Header:          resp.Header,
 		MetricVersion:   p.MetricVersion,
 		IgnoreTimestamp: p.IgnoreTimestamp,
 	}
-	metrics, err := parser.Parse(body)
+	metrics, err := metricParser.Parse(body)
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}

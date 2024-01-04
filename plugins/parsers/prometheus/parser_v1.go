@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-func (p *Parser) parse_v1(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) parseV1(buf []byte) ([]telegraf.Metric, error) {
 	var parser expfmt.TextParser
 	var metrics []telegraf.Metric
 	var err error
