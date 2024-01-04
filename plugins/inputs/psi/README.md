@@ -44,10 +44,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - tags:
     - resource: cpu, memory, or io
     - type: some or full
-  - fields: avg10, avg60, avg300 for 10-second, 1-minute, and 5-minute averages
-- pressureTotal
-  - tags: same as pressure
-  - fields: total
+  - fields: avg10, avg60, avg300, total
 
 Note that the combination for `resource=cpu,type=full` is omitted because it is
 always zero.

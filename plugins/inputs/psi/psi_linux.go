@@ -59,13 +59,9 @@ func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Ac
 			}
 
 			now := time.Now()
-
-			// pressure
 			acc.AddCounter("pressure", map[string]interface{}{
 				"total": stat.Total,
 			}, tags, now)
-
-			// pressure
 			acc.AddGauge("pressure", map[string]interface{}{
 				"avg10":  stat.Avg10,
 				"avg60":  stat.Avg60,

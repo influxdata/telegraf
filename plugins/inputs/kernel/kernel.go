@@ -34,6 +34,7 @@ type Kernel struct {
 	statFile        string
 	entropyStatFile string
 	ksmStatsDir     string
+	psiDir          string
 }
 
 func (k *Kernel) Init() error {
@@ -46,6 +47,12 @@ func (k *Kernel) Init() error {
 		if _, err := os.Stat(k.ksmStatsDir); os.IsNotExist(err) {
 			// ksm probably not enabled in the kernel, bail out early
 			return fmt.Errorf("directory %q does not exist. Is KSM enabled in this kernel?", k.ksmStatsDir)
+		}
+	}
+	if k.optCollect["psi"] {
+		if _, err := os.Stat(k.psiDir); os.IsNotExist(err) {
+			// psi probably not supported in the kernel, bail out early
+			return fmt.Errorf("directory %q does not exist. Is PSI enabled in this kernel?", k.psiDir)
 		}
 	}
 	return nil

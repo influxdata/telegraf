@@ -11,7 +11,6 @@ The metrics are documented in `man proc` under the `/proc/stat` section.
 The metrics are documented in `man 4 random` under the `/proc/stat` section.
 
 ```text
-
 /proc/sys/kernel/random/entropy_avail
 Contains the value of available entropy
 
@@ -63,6 +62,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Additional gather options
   ## Possible options include:
   ## * ksm - kernel same-page merging
+  ## * psi - pressure stall information
   # collect = []
 ```
 
@@ -91,11 +91,40 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - ksm_stable_node_dups (integer, number of duplicated KSM pages, `stable_node_dups`)
   - ksm_use_zero_pages (integer, whether empty pages should be treated specially, `use_zero_pages`)
 
+- pressure (if `psi` is included in `collect`)
+  - tags:
+    - resource: cpu, memory, or io
+    - type: some or full
+  - fields: avg10, avg60, avg300, total
+
 ## Example Output
+
+Default config:
 
 ```text
 kernel boot_time=1690487872i,context_switches=321398652i,entropy_avail=256i,interrupts=141868628i,processes_forked=946492i 1691339564000000000
+```
 
-kernel boot_time=1690487872i,context_switches=321252729i,entropy_avail=256i,interrupts=141783427i,ksm_full_scans=0i,ksm_max_page_sharing=256i,ksm_merge_across_nodes=1i,ksm_pages_shared=0i,ksm_pages_sharing=0i,ksm_pages_to_scan=100i,ksm_pages_unshared=0i,ksm_pages_volatile=0i,ksm_run=0i,ksm_sleep_millisecs=20i,ksm_stable_node_chains=0i,ksm_stable_node_chains_prune_millisecs=2000i,ksm_stable_node_dups=0i,ksm_use_zero_pages=0i,processes_forked=946467i 1691339522000000000
+If `ksm` is included in `collect`:
 
 ```
+kernel boot_time=1690487872i,context_switches=321252729i,entropy_avail=256i,interrupts=141783427i,ksm_full_scans=0i,ksm_max_page_sharing=256i,ksm_merge_across_nodes=1i,ksm_pages_shared=0i,ksm_pages_sharing=0i,ksm_pages_to_scan=100i,ksm_pages_unshared=0i,ksm_pages_volatile=0i,ksm_run=0i,ksm_sleep_millisecs=20i,ksm_stable_node_chains=0i,ksm_stable_node_chains_prune_millisecs=2000i,ksm_stable_node_dups=0i,ksm_use_zero_pages=0i,processes_forked=946467i 1691339522000000000
+```
+
+If `psi` is included in `collect`:
+
+```text
+pressure,resource=cpu,type=some avg10=1.53,avg60=1.87,avg300=1.73 1700000000000000000
+pressure,resource=memory,type=some avg10=0.00,avg60=0.00,avg300=0.00 1700000000000000000
+pressure,resource=memory,type=full avg10=0.00,avg60=0.00,avg300=0.00 1700000000000000000
+pressure,resource=io,type=some avg10=0.0,avg60=0.0,avg300=0.0 1700000000000000000
+pressure,resource=io,type=full avg10=0.0,avg60=0.0,avg300=0.0 1700000000000000000
+pressure,resource=cpu,type=some total=1088168194i 1700000000000000000
+pressure,resource=memory,type=some total=3463792i 1700000000000000000
+pressure,resource=memory,type=full total=1429641i 1700000000000000000
+pressure,resource=io,type=some total=68568296i 1700000000000000000
+pressure,resource=io,type=full total=54982338i 1700000000000000000
+```
+
+Note that the combination for `resource=cpu,type=full` is omitted because it is
+always zero.
