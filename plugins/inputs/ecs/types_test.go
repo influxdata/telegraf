@@ -41,7 +41,7 @@ func Test_mergeTaskStats(t *testing.T) {
 
 	mergeTaskStats(parsedMetadata, parsedStats)
 
-	for _, cont := range parsedMetadata.Containers {
-		require.Equal(t, validStats[cont.ID], cont.Stats)
+	for i := range parsedMetadata.Containers {
+		require.Equal(t, validStats[parsedMetadata.Containers[i].ID], &parsedMetadata.Containers[i].Stats)
 	}
 }

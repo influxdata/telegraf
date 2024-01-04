@@ -1,6 +1,22 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.29.1 [2023-12-13]
+
+### Bugfixes
+
+- [#14443](https://github.com/influxdata/telegraf/pull/14443) `inputs.clickhouse` Omit zookeeper metrics on clickhouse cloud
+- [#14430](https://github.com/influxdata/telegraf/pull/14430) `inputs.php-fpm` Parse JSON output
+- [#14440](https://github.com/influxdata/telegraf/pull/14440) `inputs.procstat` Revert unintended renaming of systemd_unit option
+
+### Dependency Updates
+
+- [#14435](https://github.com/influxdata/telegraf/pull/14435) `deps` Bump github.com/go-ldap/ldap/v3 from 3.4.5 to 3.4.6
+- [#14433](https://github.com/influxdata/telegraf/pull/14433) `deps` Bump github.com/klauspost/compress from 1.17.3 to 1.17.4
+- [#14432](https://github.com/influxdata/telegraf/pull/14432) `deps` Bump github.com/openzipkin/zipkin-go from 0.4.1 to 0.4.2
+- [#14431](https://github.com/influxdata/telegraf/pull/14431) `deps` Bump github.com/tidwall/gjson from 1.14.4 to 1.17.0
+- [#14441](https://github.com/influxdata/telegraf/pull/14441) `deps` Update all github.com/aws/aws-sdk-go-v2 dependencies
+
 ## v1.29.0 [2023-12-11]
 
 ### Important Changes

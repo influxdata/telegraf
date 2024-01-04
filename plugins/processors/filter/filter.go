@@ -69,7 +69,7 @@ func (f *Filter) applyRules(m telegraf.Metric) bool {
 }
 
 func init() {
-	processors.Add("Filter", func() telegraf.Processor {
+	processors.Add("filter", func() telegraf.Processor {
 		return &Filter{}
 	})
 }

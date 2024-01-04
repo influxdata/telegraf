@@ -270,9 +270,11 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 				continue
 			}
 			propID := normalizeID(tag.Key)
-			collection = append(collection, message{path + "/" + propID, []byte(tag.Value)})
-			collection = append(collection, message{path + "/" + propID + "/$name", []byte(tag.Key)})
-			collection = append(collection, message{path + "/" + propID + "/$datatype", []byte("string")})
+			collection = append(collection,
+				message{path + "/" + propID, []byte(tag.Value)},
+				message{path + "/" + propID + "/$name", []byte(tag.Key)},
+				message{path + "/" + propID + "/$datatype", []byte("string")},
+			)
 		}
 
 		for _, field := range metric.FieldList() {
@@ -283,9 +285,11 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 				continue
 			}
 			propID := normalizeID(field.Key)
-			collection = append(collection, message{path + "/" + propID, []byte(v)})
-			collection = append(collection, message{path + "/" + propID + "/$name", []byte(field.Key)})
-			collection = append(collection, message{path + "/" + propID + "/$datatype", []byte(dt)})
+			collection = append(collection,
+				message{path + "/" + propID, []byte(v)},
+				message{path + "/" + propID + "/$name", []byte(field.Key)},
+				message{path + "/" + propID + "/$datatype", []byte(dt)},
+			)
 		}
 	}
 

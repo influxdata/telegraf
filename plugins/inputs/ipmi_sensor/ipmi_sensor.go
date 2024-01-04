@@ -118,8 +118,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		if os.IsNotExist(err) {
 			dumpOpts := opts
 			// init cache file
-			dumpOpts = append(dumpOpts, "dump")
-			dumpOpts = append(dumpOpts, cacheFile)
+			dumpOpts = append(dumpOpts, "dump", cacheFile)
 			name := m.Path
 			if m.UseSudo {
 				// -n - avoid prompting the user for input of any kind
@@ -132,8 +131,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 				return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 			}
 		}
-		opts = append(opts, "-S")
-		opts = append(opts, cacheFile)
+		opts = append(opts, "-S", cacheFile)
 	}
 	if m.MetricVersion == 2 {
 		opts = append(opts, "elist")
