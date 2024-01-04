@@ -180,9 +180,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 		// Force expected float values to actually being float (e.g. if delivered as int)
 		if u.ForceFloat {
 			float, err := internal.ToFloat64(v)
-			if err != nil {
-				u.Log.Debugf("converting %s=%v failed: %v", varname, v, err)
-			} else {
+			if err == nil {
 				v = float
 			}
 		}
