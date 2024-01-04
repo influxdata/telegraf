@@ -163,7 +163,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Path %q does not exist", path)
+		return nil, fmt.Errorf("path %q does not exist", path)
 	} else if err != nil {
 		return nil, err
 	}
