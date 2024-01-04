@@ -51,7 +51,7 @@ func (m *Metric) String() string {
 	buf.WriteString(m.Time().String())
 	buf.WriteString(")")
 	if m.ID != 0 {
-		buf.WriteString(fmt.Sprintf("[tracking ID=%v]", m.ID))
+		fmt.Fprintf(buf, "[tracking ID=%v]", m.ID)
 	}
 	return buf.String()
 }
