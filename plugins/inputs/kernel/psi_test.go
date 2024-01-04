@@ -10,6 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestPSIEnabledWrongDir(t *testing.T) {
+	k := Kernel{
+		psiDir:        "testdata/this_file_does_not_exist",
+		ConfigCollect: []string{"psi"},
+	}
+
+	require.ErrorContains(t, k.Init(), "PSI is not enabled in this kernel")
+}
+
 func TestPSIStats(t *testing.T) {
 	var (
 		k   *Kernel
