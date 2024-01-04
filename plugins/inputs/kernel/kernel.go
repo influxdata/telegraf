@@ -46,13 +46,13 @@ func (k *Kernel) Init() error {
 	if k.optCollect["ksm"] {
 		if _, err := os.Stat(k.ksmStatsDir); os.IsNotExist(err) {
 			// ksm probably not enabled in the kernel, bail out early
-			return fmt.Errorf("directory %q does not exist. Is KSM enabled in this kernel?", k.ksmStatsDir)
+			return fmt.Errorf("directory %q does not exist. KSM is not enabled in this kernel", k.ksmStatsDir)
 		}
 	}
 	if k.optCollect["psi"] {
 		if _, err := os.Stat(k.psiDir); os.IsNotExist(err) {
 			// psi probably not supported in the kernel, bail out early
-			return fmt.Errorf("directory %q does not exist. Is PSI enabled in this kernel?", k.psiDir)
+			return fmt.Errorf("directory %q does not exist. PSI is not enabled in this kernel", k.psiDir)
 		}
 	}
 	return nil
