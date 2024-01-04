@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/prometheus/procfs"
 )
 
 //go:embed sample.conf
@@ -35,6 +36,7 @@ type Kernel struct {
 	entropyStatFile string
 	ksmStatsDir     string
 	psiDir          string
+	procfs          procfs.FS
 }
 
 func (k *Kernel) Init() error {
@@ -50,9 +52,11 @@ func (k *Kernel) Init() error {
 		}
 	}
 	if k.optCollect["psi"] {
-		if _, err := os.Stat(k.psiDir); os.IsNotExist(err) {
+		procdir := filepath.Dir(k.psiDir)
+		var err error
+		if k.procfs, err = procfs.NewFS(procdir); err != nil {
 			// psi probably not supported in the kernel, bail out early
-			return fmt.Errorf("directory %q does not exist. PSI is not enabled in this kernel", k.psiDir)
+			return fmt.Errorf("failed to initialize procfs on %s: %w", procdir, err)
 		}
 	}
 	return nil

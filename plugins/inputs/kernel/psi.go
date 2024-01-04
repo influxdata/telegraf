@@ -21,16 +21,10 @@ func (k *Kernel) gatherPressure(acc telegraf.Accumulator) error {
 }
 
 // getPressureValues - Get the pressure values from /proc/pressure/*
-func (*Kernel) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
-	var fs procfs.FS
-	fs, err = procfs.NewDefaultFS()
-	if err != nil {
-		return nil, fmt.Errorf("procfs not available: %w", err)
-	}
-
+func (k *Kernel) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
 	pressures = make(map[string]procfs.PSIStats)
 	for _, resource := range []string{"cpu", "memory", "io"} {
-		pressures[resource], err = fs.PSIStatsForResource(resource)
+		pressures[resource], err = k.procfs.PSIStatsForResource(resource)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read %s pressure: %w", resource, err)
 		}

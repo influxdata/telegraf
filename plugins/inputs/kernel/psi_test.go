@@ -6,50 +6,27 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/prometheus/procfs"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPSIEnabledWrongDir(t *testing.T) {
 	k := Kernel{
-		psiDir:        "testdata/this_file_does_not_exist",
+		psiDir:        "testdata/this_directory_does_not_exist/stub",
 		ConfigCollect: []string{"psi"},
 	}
 
-	require.ErrorContains(t, k.Init(), "PSI is not enabled in this kernel")
+	require.ErrorContains(t, k.Init(), "failed to initialize procfs on ")
 }
 
 func TestPSIStats(t *testing.T) {
-	var (
-		k   *Kernel
-		err error
-		acc testutil.Accumulator
-	)
+	var acc testutil.Accumulator
 
-	mockPressureSome := &procfs.PSILine{
-		Avg10:  10,
-		Avg60:  60,
-		Avg300: 300,
-		Total:  114514,
+	k := Kernel{
+		psiDir:        "testdata/pressure",
+		ConfigCollect: []string{"psi"},
 	}
-	mockPressureFull := &procfs.PSILine{
-		Avg10:  1,
-		Avg60:  6,
-		Avg300: 30,
-		Total:  11451,
-	}
-	mockPSIStats := procfs.PSIStats{
-		Some: mockPressureSome,
-		Full: mockPressureFull,
-	}
-	mockStats := map[string]procfs.PSIStats{
-		"cpu":    mockPSIStats,
-		"memory": mockPSIStats,
-		"io":     mockPSIStats,
-	}
-
-	err = k.gatherPressure(&acc)
-	require.NoError(t, err)
+	require.NoError(t, k.Init())
+	require.NoError(t, k.gatherPressure(&acc))
 
 	// separate fields for gauges and counters
 	pressureFields := map[string]map[string]interface{}{
@@ -73,8 +50,6 @@ func TestPSIStats(t *testing.T) {
 		},
 	}
 
-	acc.ClearMetrics()
-	k.uploadPressure(mockStats, &acc)
 	for _, typ := range []string{"some", "full"} {
 		for _, resource := range []string{"cpu", "memory", "io"} {
 			if resource == "cpu" && typ == "full" {
