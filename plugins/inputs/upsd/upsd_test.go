@@ -97,6 +97,9 @@ func TestCases(t *testing.T) {
 			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+			acc.Lock()
+			defer acc.Unlock()
+			require.Empty(t, acc.Errors)
 		})
 	}
 }
