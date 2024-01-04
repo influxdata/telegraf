@@ -171,14 +171,16 @@ func (s *mockServer) addVariables(variables []variable, types map[string]string)
 			return fmt.Errorf("type for variable %q not found", v.Name)
 		}
 
-		s.protocol = append(s.protocol, interaction{
-			Expected: "GET DESC fake " + v.Name + "\n",
-			Response: "DESC fake" + v.Name + " \"No description here\"\n",
-		})
-		s.protocol = append(s.protocol, interaction{
-			Expected: "GET TYPE fake " + v.Name + "\n",
-			Response: "TYPE fake " + v.Name + " " + variableType + "\n",
-		})
+		s.protocol = append(s.protocol,
+			interaction{
+				Expected: "GET DESC fake " + v.Name + "\n",
+				Response: "DESC fake" + v.Name + " \"No description here\"\n",
+			},
+			interaction{
+				Expected: "GET TYPE fake " + v.Name + "\n",
+				Response: "TYPE fake " + v.Name + " " + variableType + "\n",
+			},
+		)
 	}
 
 	return nil
