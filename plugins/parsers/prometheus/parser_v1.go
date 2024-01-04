@@ -55,7 +55,7 @@ func (p *Parser) parseV1(buf []byte) ([]telegraf.Metric, error) {
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
 			// reading tags
-			tags := GetTagsFromLabels(m, nil)
+			tags := GetTagsFromLabels(m, p.DefaultTags)
 
 			// reading fields
 			var fields map[string]interface{}
