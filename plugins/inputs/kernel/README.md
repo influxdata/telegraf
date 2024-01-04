@@ -5,9 +5,12 @@ This plugin is only available on Linux.
 The kernel plugin gathers info about the kernel that doesn't fit into other
 plugins. In general, it is the statistics available in `/proc/stat` that are not
 covered by other plugins as well as the value of
-`/proc/sys/kernel/random/entropy_avail` and optionally, Kernel Samepage Merging and Pressure Stall Information.
+`/proc/sys/kernel/random/entropy_avail` and optionally, Kernel Samepage Merging
+and Pressure Stall Information.
 
-The metrics are documented in `man 5 proc` under the `/proc/stat` section, as well as `man 4 random` under the `/proc interfaces` section (for `entropy_avail`).
+The metrics are documented in `man 5 proc` under the `/proc/stat` section, as
+well as `man 4 random` under the `/proc interfaces` section
+(for `entropy_avail`).
 
 ```text
 /proc/sys/kernel/random/entropy_avail
@@ -38,9 +41,11 @@ Number of forks since boot.
 ```
 
 Kernel Samepage Merging is generally documented in [kernel documentation][1] and
-the available metrics exposed via sysfs are documented in [admin guide][2]
+the available metrics exposed via sysfs are documented in [admin guide][2].
 
-Pressure Stall Information is exposed through `/proc/pressure` and is documented in [kernel documentation][3]. Kernel version 4.20 or later is required. Examples of PSI:
+Pressure Stall Information is exposed through `/proc/pressure` and is documented
+in [kernel documentation][3]. Kernel version 4.20 or later is required.
+Examples of PSI:
 
 ```shell
 # /proc/pressure/cpu
