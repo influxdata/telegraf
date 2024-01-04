@@ -33,7 +33,6 @@ func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	fmt.Println(username.String())
 	cfg.Net.SASL.User = username.String()
 	defer username.Destroy()
 	password, err := k.SASLPassword.Get()
