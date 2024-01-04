@@ -1,0 +1,1 @@
+apiserver_request_latencies,_type=histogram,resource=bindings,verb=POST +Inf=2025,125000=1994,1e+06=2005,250000=1997,2e+06=2012,4e+06=2017,500000=2000,8e+06=2024,count=2025,sum=102726334

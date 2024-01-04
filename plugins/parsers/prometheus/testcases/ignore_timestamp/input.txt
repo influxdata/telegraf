@@ -1,0 +1,2 @@
+# TYPE test_counter counter
+test_counter{label="test"} 1 1601830800000
