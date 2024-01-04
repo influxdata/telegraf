@@ -1,0 +1,16 @@
+device.serial: STRING:64
+device.model: STRING:64
+device.location: STRING:64
+input.voltage: NUMBER
+ups.load: NUMBER
+battery.charge: NUMBER
+battery.runtime: NUMBER
+output.voltage: NUMBER
+battery.voltage: NUMBER
+input.voltage.nominal: NUMBER
+battery.voltage.nominal: NUMBER
+ups.realpower: NUMBER
+ups.realpower.nominal: NUMBER
+ups.firmware: STRING:64
+battery.mfr.date: STRING:64
+ups.status: STRING:64
