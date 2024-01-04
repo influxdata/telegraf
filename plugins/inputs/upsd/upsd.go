@@ -181,10 +181,10 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 		if u.ForceFloat {
 			float, err := internal.ToFloat64(v)
 			if err != nil {
-				acc.AddError(fmt.Errorf("converting %s=%v failed: %w", varname, v, err))
-				continue
+				u.Log.Debugf("converting %s=%v failed: %v", varname, v, err)
+			} else {
+				v = float
 			}
-			v = float
 		}
 		fields[key] = v
 	}
