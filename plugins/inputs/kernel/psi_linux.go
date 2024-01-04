@@ -1,4 +1,4 @@
-package psi
+package kernel
 
 import (
 	"fmt"
@@ -9,17 +9,17 @@ import (
 )
 
 // Gather Psi metrics
-func (psi *Psi) Gather(acc telegraf.Accumulator) error {
-	pressures, err := psi.getPressureValues()
+func (k *Kernel) gatherPressure(acc telegraf.Accumulator) error {
+	pressures, err := k.getPressureValues()
 	if err != nil {
 		return err
 	}
-	psi.uploadPressure(pressures, acc)
+	k.uploadPressure(pressures, acc)
 	return nil
 }
 
 // getPressureValues - Get the pressure values from /proc/pressure/*
-func (*Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
+func (*Kernel) getPressureValues() (pressures map[string]procfs.PSIStats, err error) {
 	var fs procfs.FS
 	fs, err = procfs.NewDefaultFS()
 	if err != nil {
@@ -38,7 +38,7 @@ func (*Psi) getPressureValues() (pressures map[string]procfs.PSIStats, err error
 
 // uploadPressure Uploads all pressure value to corrosponding fields
 // NOTE: resource=cpu,type=full is omitted because it is always zero
-func (*Psi) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
+func (*Kernel) uploadPressure(pressures map[string]procfs.PSIStats, acc telegraf.Accumulator) {
 	for _, typ := range []string{"some", "full"} {
 		for _, resource := range []string{"cpu", "memory", "io"} {
 			if resource == "cpu" && typ == "full" {

@@ -1,6 +1,6 @@
 //go:build linux
 
-package psi
+package kernel
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ import (
 
 func TestPSIStats(t *testing.T) {
 	var (
-		psi *Psi
+		k   *Kernel
 		err error
 		acc testutil.Accumulator
 	)
@@ -39,7 +39,7 @@ func TestPSIStats(t *testing.T) {
 		"io":     mockPSIStats,
 	}
 
-	err = psi.Gather(&acc)
+	err = k.gatherPressure(&acc)
 	require.NoError(t, err)
 
 	// separate fields for gauges and counters
@@ -65,7 +65,7 @@ func TestPSIStats(t *testing.T) {
 	}
 
 	acc.ClearMetrics()
-	psi.uploadPressure(mockStats, &acc)
+	k.uploadPressure(mockStats, &acc)
 	for _, typ := range []string{"some", "full"} {
 		for _, resource := range []string{"cpu", "memory", "io"} {
 			if resource == "cpu" && typ == "full" {

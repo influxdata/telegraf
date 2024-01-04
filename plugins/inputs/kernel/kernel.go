@@ -152,6 +152,12 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	}
 	acc.AddCounter("kernel", fields, map[string]string{})
 
+	if k.optCollect["psi"] {
+		if err := k.gatherPressure(acc); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -5,7 +5,7 @@ This plugin is only available on Linux.
 The kernel plugin gathers info about the kernel that doesn't fit into other
 plugins. In general, it is the statistics available in `/proc/stat` that are not
 covered by other plugins as well as the value of
-`/proc/sys/kernel/random/entropy_avail` and optionally, Kernel Samepage Merging.
+`/proc/sys/kernel/random/entropy_avail` and optionally, Kernel Samepage Merging and Pressure Stall Information.
 
 The metrics are documented in `man proc` under the `/proc/stat` section.
 The metrics are documented in `man 4 random` under the `/proc/stat` section.
@@ -41,8 +41,24 @@ Number of forks since boot.
 Kernel Samepage Merging is generally documented in [kernel documentation][1] and
 the available metrics exposed via sysfs are documented in [admin guide][2]
 
+Pressure Stall Information is documented in [kernel documentation][3]. Kernel version 4.20 or later is required. Examples of PSI:
+
+```shell
+# /proc/pressure/cpu
+some avg10=1.53 avg60=1.87 avg300=1.73 total=1088168194
+
+# /proc/pressure/memory
+some avg10=0.00 avg60=0.00 avg300=0.00 total=3463792
+full avg10=0.00 avg60=0.00 avg300=0.00 total=1429641
+
+# /proc/pressure/io
+some avg10=0.00 avg60=0.00 avg300=0.00 total=68568296
+full avg10=0.00 avg60=0.00 avg300=0.00 total=54982338
+```
+
 [1]: https://www.kernel.org/doc/html/latest/mm/ksm.html
 [2]: https://www.kernel.org/doc/html/latest/admin-guide/mm/ksm.html#ksm-daemon-sysfs-interface
+[3]: https://www.kernel.org/doc/html/latest/accounting/psi.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
