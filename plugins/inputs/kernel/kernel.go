@@ -196,6 +196,7 @@ func init() {
 			statFile:        "/proc/stat",
 			entropyStatFile: "/proc/sys/kernel/random/entropy_avail",
 			ksmStatsDir:     "/sys/kernel/mm/ksm",
+			psiDir:          "/proc/pressure",
 		}
 	})
 }
