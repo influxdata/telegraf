@@ -34,13 +34,13 @@ func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
 	cfg.Net.SASL.User = username.String()
-	username.Destroy()
+	defer username.Destroy()
 	password, err := k.SASLPassword.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 	cfg.Net.SASL.Password = password.String()
-	password.Destroy()
+	defer password.Destroy()
 
 	if k.SASLMechanism != "" {
 		cfg.Net.SASL.Mechanism = sarama.SASLMechanism(k.SASLMechanism)
