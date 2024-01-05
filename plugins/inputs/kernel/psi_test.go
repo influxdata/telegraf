@@ -4,9 +4,13 @@ package kernel
 
 import (
 	"testing"
+	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestPSIEnabledWrongDir(t *testing.T) {
@@ -40,7 +44,7 @@ func TestPSIStats(t *testing.T) {
 				"avg60":  float64(60),
 				"avg300": float64(300),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
@@ -52,7 +56,7 @@ func TestPSIStats(t *testing.T) {
 			map[string]interface{}{
 				"total": uint64(114514),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Counter,
 		),
 		metric.New(
@@ -66,7 +70,7 @@ func TestPSIStats(t *testing.T) {
 				"avg60":  float64(60),
 				"avg300": float64(300),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
@@ -78,7 +82,7 @@ func TestPSIStats(t *testing.T) {
 			map[string]interface{}{
 				"total": uint64(114514),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Counter,
 		),
 		metric.New(
@@ -92,7 +96,7 @@ func TestPSIStats(t *testing.T) {
 				"avg60":  float64(60),
 				"avg300": float64(300),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
@@ -104,7 +108,7 @@ func TestPSIStats(t *testing.T) {
 			map[string]interface{}{
 				"total": uint64(114514),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Counter,
 		),
 		metric.New(
@@ -118,7 +122,7 @@ func TestPSIStats(t *testing.T) {
 				"avg60":  float64(6),
 				"avg300": float64(30),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
@@ -130,7 +134,7 @@ func TestPSIStats(t *testing.T) {
 			map[string]interface{}{
 				"total": uint64(11451),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Counter,
 		),
 		metric.New(
@@ -144,7 +148,7 @@ func TestPSIStats(t *testing.T) {
 				"avg60":  float64(6),
 				"avg300": float64(30),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
@@ -156,11 +160,11 @@ func TestPSIStats(t *testing.T) {
 			map[string]interface{}{
 				"total": uint64(11451),
 			},
-			time.Unix(0,0),
+			time.Unix(0, 0),
 			telegraf.Counter,
 		),
 	}
-	
+
 	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMeticsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }

@@ -12,7 +12,7 @@ import (
 	"strconv"
 
 	"github.com/prometheus/procfs"
-	
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )

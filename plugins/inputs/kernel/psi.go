@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/prometheus/procfs"
+
+	"github.com/influxdata/telegraf"
 )
 
 // Gather PSI metrics
