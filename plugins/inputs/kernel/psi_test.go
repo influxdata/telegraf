@@ -19,58 +19,148 @@ func TestPSIEnabledWrongDir(t *testing.T) {
 }
 
 func TestPSIStats(t *testing.T) {
-	var acc testutil.Accumulator
-
 	k := Kernel{
 		psiDir:        "testdata/pressure",
 		ConfigCollect: []string{"psi"},
 	}
 	require.NoError(t, k.Init())
+
+	var acc testutil.Accumulator
 	require.NoError(t, k.gatherPressure(&acc))
 
-	// separate fields for gauges and counters
-	pressureFields := map[string]map[string]interface{}{
-		"some": {
-			"avg10":  float64(10),
-			"avg60":  float64(60),
-			"avg300": float64(300),
-		},
-		"full": {
-			"avg10":  float64(1),
-			"avg60":  float64(6),
-			"avg300": float64(30),
-		},
+	expected := []telegraf.Metric{
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "cpu",
+				"type":     "some",
+			},
+			map[string]interface{}{
+				"avg10":  float64(10),
+				"avg60":  float64(60),
+				"avg300": float64(300),
+			},
+			time.Unix(0,0),
+			telegraf.Gauge,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "cpu",
+				"type":     "some",
+			},
+			map[string]interface{}{
+				"total": uint64(114514),
+			},
+			time.Unix(0,0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "memory",
+				"type":     "some",
+			},
+			map[string]interface{}{
+				"avg10":  float64(10),
+				"avg60":  float64(60),
+				"avg300": float64(300),
+			},
+			time.Unix(0,0),
+			telegraf.Gauge,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "memory",
+				"type":     "some",
+			},
+			map[string]interface{}{
+				"total": uint64(114514),
+			},
+			time.Unix(0,0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "io",
+				"type":     "some",
+			},
+			map[string]interface{}{
+				"avg10":  float64(10),
+				"avg60":  float64(60),
+				"avg300": float64(300),
+			},
+			time.Unix(0,0),
+			telegraf.Gauge,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "io",
+				"type":     "some",
+			},
+			map[string]interface{}{
+				"total": uint64(114514),
+			},
+			time.Unix(0,0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "memory",
+				"type":     "full",
+			},
+			map[string]interface{}{
+				"avg10":  float64(1),
+				"avg60":  float64(6),
+				"avg300": float64(30),
+			},
+			time.Unix(0,0),
+			telegraf.Gauge,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "memory",
+				"type":     "full",
+			},
+			map[string]interface{}{
+				"total": uint64(11451),
+			},
+			time.Unix(0,0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "io",
+				"type":     "full",
+			},
+			map[string]interface{}{
+				"avg10":  float64(1),
+				"avg60":  float64(6),
+				"avg300": float64(30),
+			},
+			time.Unix(0,0),
+			telegraf.Gauge,
+		),
+		metric.New(
+			"pressure",
+			map[string]string{
+				"resource": "io",
+				"type":     "full",
+			},
+			map[string]interface{}{
+				"total": uint64(11451),
+			},
+			time.Unix(0,0),
+			telegraf.Counter,
+		),
 	}
-	pressureTotalFields := map[string]map[string]interface{}{
-		"some": {
-			"total": uint64(114514),
-		},
-		"full": {
-			"total": uint64(11451),
-		},
-	}
-
-	for _, typ := range []string{"some", "full"} {
-		for _, resource := range []string{"cpu", "memory", "io"} {
-			if resource == "cpu" && typ == "full" {
-				continue
-			}
-
-			tags := map[string]string{
-				"resource": resource,
-				"type":     typ,
-			}
-
-			acc.AssertContainsTaggedFields(t, "pressure", pressureFields[typ], tags)
-			acc.AssertContainsTaggedFields(t, "pressure", pressureTotalFields[typ], tags)
-		}
-	}
-
-	// The combination "resource=cpu,type=full" should NOT appear anywhere
-	forbiddenTags := map[string]string{
-		"resource": "cpu",
-		"type":     "full",
-	}
-	acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureFields["full"], forbiddenTags)
-	acc.AssertDoesNotContainsTaggedFields(t, "pressure", pressureTotalFields["full"], forbiddenTags)
+	
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMeticsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }

@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/prometheus/procfs"
+	
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/prometheus/procfs"
 )
 
 //go:embed sample.conf
@@ -158,7 +159,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 	if k.optCollect["psi"] {
 		if err := k.gatherPressure(acc); err != nil {
-			return err
+			return fmt.Errorf("gathering pressure failed: %w", err)
 		}
 	}
 
