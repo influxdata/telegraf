@@ -200,7 +200,7 @@ func TestKSMEnabledWrongDir(t *testing.T) {
 		ConfigCollect: []string{"ksm"},
 	}
 
-	require.ErrorContains(t, k.Init(), "Is KSM enabled in this kernel?")
+	require.ErrorContains(t, k.Init(), "KSM is not enabled in this kernel")
 }
 
 func TestKSMDisabledNoKSMTags(t *testing.T) {
