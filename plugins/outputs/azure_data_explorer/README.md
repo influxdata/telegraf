@@ -150,7 +150,7 @@ These methods are:
 3. Managed Service Identity (MSI) token
 
     - If you are running Telegraf from Azure VM or infrastructure, then this is
-      the prefered authentication method.
+      the preferred authentication method.
 
 [register]: https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application
 
@@ -233,7 +233,7 @@ stored as dynamic data type, multiple ways to query this data-
   ```
 
   **Note** - This approach could have performance impact in case of large
-  volumes of data, use belwo mentioned approach for such cases.
+  volumes of data, use below mentioned approach for such cases.
 
 1. Use [Update
    policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**:

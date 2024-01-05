@@ -248,7 +248,7 @@ One [metric][] is created for each row of the SNMP table.
       ## Controls if entries from secondary table should be added or not
       ## if joining index is present or not. I set to true, means that join
       ## is outer, and index is prepended with "Secondary." for missing values
-      ## to avoid overlaping indexes from both tables. Can be set per field or
+      ## to avoid overlapping indexes from both tables. Can be set per field or
       ## globally with SecondaryIndexTable, global true overrides per field false.
       # secondary_outer_join = false
 ```

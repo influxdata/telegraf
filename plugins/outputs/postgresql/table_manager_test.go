@@ -229,7 +229,7 @@ func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
 	p.Uint64Type = PgUint8
 	_ = p.Init()
 	if err := p.Connect(); err != nil {
-		if strings.Contains(err.Error(), "retreiving OID for uint8 data type") {
+		if strings.Contains(err.Error(), "retrieving OID for uint8 data type") {
 			t.Skipf("pguint extension is not installed")
 			t.SkipNow()
 		}

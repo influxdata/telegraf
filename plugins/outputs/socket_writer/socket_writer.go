@@ -75,7 +75,7 @@ func (sw *SocketWriter) Connect() error {
 		}
 		port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
 		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-			return fmt.Errorf("Port numner %d is out of range", port)
+			return fmt.Errorf("Port number %d is out of range", port)
 		}
 		c, err = vsock.Dial(uint32(cid), uint32(port), nil)
 		if err != nil {

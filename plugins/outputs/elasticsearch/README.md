@@ -302,7 +302,7 @@ to use them.
   ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
   ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
-  ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
+  ## it will enable data resend and update metric points avoiding duplicated metrics with different id's
   force_document_id = false
 
   ## Specifies the handling of NaN and Inf values.
@@ -329,9 +329,9 @@ to use them.
 
 If you are using authentication within your Elasticsearch cluster, you need to
 create a account and create a role with at least the manage role in the Cluster
-Privileges category.  Overwise, your account will not be able to connect to your
-Elasticsearch cluster and send logs to your cluster.  After that, you need to
-add "create_indice" and "write" permission to your specific index pattern.
+Privileges category.  Otherwise, your account will not be able to connect to
+your Elasticsearch cluster and send logs to your cluster.  After that, you need
+to add "create_indice" and "write" permission to your specific index pattern.
 
 ### Required parameters
 
@@ -373,7 +373,7 @@ the `default_tag_value` will be used instead.
   existing template.
 * `force_document_id`: Set to true will compute a unique hash from as
   sha256(concat(timestamp,measurement,series-hash)),enables resend or update
-  data withoud ES duplicated documents.
+  data without ES duplicated documents.
 * `float_handling`: Specifies how to handle `NaN` and infinite field
   values. `"none"` (default) will do nothing, `"drop"` will drop the field and
   `replace` will replace the field value by the number in

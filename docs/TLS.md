@@ -18,7 +18,7 @@ For client TLS support we have the following options:
 ## Root certificates for verifying server certificates encoded in PEM format.
 # tls_ca = "/etc/telegraf/ca.pem"
 
-## The public and private keypairs for the client encoded in PEM format.  May
+## The public and private key pairs for the client encoded in PEM format.  May
 ## contain intermediate certificates.
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"

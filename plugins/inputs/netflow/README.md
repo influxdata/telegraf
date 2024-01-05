@@ -7,7 +7,7 @@ The internal field mappings for Netflow v5 fields are defined according to
 [Cisco's Netflow v5 documentation][CISCO NF5], Netflow v9 fields are defined
 according to [Cisco's Netflow v9 documentation][CISCO NF9] and the
 [ASA extensions][ASA extensions].
-Definitions for IPFIX are according to [IANA assignement document][IPFIX doc].
+Definitions for IPFIX are according to [IANA assignment document][IPFIX doc].
 
 [IANA assignments]: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
 [CISCO NF5]:        https://www.cisco.com/c/en/us/td/docs/net_mgmt/netflow_collection_engine/3-6/user/guide/format.html#wp1006186
@@ -120,7 +120,7 @@ following information
     - dst_port (uint64, destination port)
     - protocol (string, Layer 4 protocol name)
     - in_bytes (uint64, number of incoming bytes)
-    - in_packets (uint64, number of incomming packets)
+    - in_packets (uint64, number of incoming packets)
     - tcp_flags (string, TCP flags for the flow)
 
 ## Example Output

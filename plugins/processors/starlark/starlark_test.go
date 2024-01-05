@@ -3378,7 +3378,7 @@ def apply(metric):
 			source: `
 def apply(metric):
 	newmetric = Metric("new_metric")
-	newmetric.fields["vaue"] = 42
+	newmetric.fields["value"] = 42
 	return newmetric
 `,
 		},
@@ -3388,7 +3388,7 @@ def apply(metric):
 			source: `
 def apply(metric):
 	newmetric = Metric("new_metric")
-	newmetric.fields["vaue"] = 42
+	newmetric.fields["value"] = 42
 	return [newmetric]
 `,
 		},
@@ -3398,7 +3398,7 @@ def apply(metric):
 			source: `
 def apply(metric):
 	newmetric = Metric("new_metric")
-	newmetric.fields["vaue"] = 42
+	newmetric.fields["value"] = 42
 	return [metric, newmetric]
 `,
 		},

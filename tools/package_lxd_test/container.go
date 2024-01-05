@@ -22,7 +22,7 @@ type Container struct {
 	packageManager string
 }
 
-// create contianer with given name and image
+// create container with given name and image
 func (c *Container) Create(image string) error {
 	if c.Name == "" {
 		return fmt.Errorf("unable to create container: no name given")

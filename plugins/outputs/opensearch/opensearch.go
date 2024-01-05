@@ -322,7 +322,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 				}
 				bulkIndxr, err := createBulkIndexer(osInst, pipelineName)
 				if err != nil {
-					osInst.Log.Errorf("error while intantiating OpenSearch NewBulkIndexer: %v for pipeline: %s", err, pipelineName)
+					osInst.Log.Errorf("error while instantiating OpenSearch NewBulkIndexer: %v for pipeline: %s", err, pipelineName)
 				} else {
 					indexers[pipelineName] = bulkIndxr
 				}
@@ -332,7 +332,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 
 	bulkIndxr, err := createBulkIndexer(osInst, "")
 	if err != nil {
-		osInst.Log.Errorf("error while intantiating OpenSearch NewBulkIndexer: %v for default pipeline", err)
+		osInst.Log.Errorf("error while instantiating OpenSearch NewBulkIndexer: %v for default pipeline", err)
 	} else {
 		indexers["default"] = bulkIndxr
 	}

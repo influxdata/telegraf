@@ -76,7 +76,7 @@ func TestMetricToTable(t *testing.T) {
 			expectedTable:   "table_with_hyphens",
 		},
 		{
-			name:            "custom hypens",
+			name:            "custom hyphens",
 			replaceHyphenTo: "*",
 			metricName:      "table-with-hyphens",
 			expectedTable:   "table*with*hyphens",

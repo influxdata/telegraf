@@ -6,20 +6,20 @@ type linkRoomsSections struct {
 	SectionID uint16
 }
 
-// Sections contains sections informations
+// Sections contains sections information
 type Sections struct {
 	ID   uint16 `json:"id"`
 	Name string `json:"name"`
 }
 
-// Rooms contains rooms informations
+// Rooms contains rooms information
 type Rooms struct {
 	ID        uint16 `json:"id"`
 	Name      string `json:"name"`
 	SectionID uint16 `json:"sectionID"`
 }
 
-// Devices contains devices informations
+// Devices contains devices information
 type Devices struct {
 	ID         uint16 `json:"id"`
 	Name       string `json:"name"`
