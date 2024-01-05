@@ -3428,6 +3428,15 @@ def apply(metric):
     return [x]
 `,
 		},
+		{
+			name:       "issue #14484",
+			numMetrics: 1,
+			source: `
+def apply(metric):
+    metric.tags.pop("tag1")
+    return [metric]
+`,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3464,6 +3473,92 @@ def apply(metric):
 				defer mu.Unlock()
 				return len(delivered) == 1
 			}, 1*time.Second, 100*time.Millisecond, "original metric not delivered")
+		})
+	}
+}
+
+func TestTrackingStateful(t *testing.T) {
+	var testCases = []struct {
+		name     string
+		source   string
+		results  int
+		loops    int
+		delivery int
+	}{
+		{
+			name:     "delayed release",
+			loops:    4,
+			results:  3,
+			delivery: 4,
+			source: `
+state = {"last": None}
+
+def apply(metric):
+  previous = state["last"]
+  state["last"] = deepcopy(metric)
+  return previous
+`,
+		},
+		{
+			name:     "delayed release with tracking",
+			loops:    4,
+			results:  3,
+			delivery: 3,
+			source: `
+state = {"last": None}
+
+def apply(metric):
+  previous = state["last"]
+  state["last"] = deepcopy(metric, track=True)
+  return previous
+`,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a tracking metric and tap the delivery information
+			var mu sync.Mutex
+			delivered := make([]telegraf.TrackingID, 0, tt.delivery)
+			notify := func(di telegraf.DeliveryInfo) {
+				mu.Lock()
+				defer mu.Unlock()
+				delivered = append(delivered, di.ID())
+			}
+
+			// Configure the plugin
+			plugin := newStarlarkFromSource(tt.source)
+			require.NoError(t, plugin.Init())
+			acc := &testutil.Accumulator{}
+			require.NoError(t, plugin.Start(acc))
+
+			// Do the requested number of loops
+			expected := make([]telegraf.TrackingID, 0, tt.loops)
+			for i := 0; i < tt.loops; i++ {
+				// Process expected metrics and compare with resulting metrics
+				input, tid := metric.WithTracking(testutil.TestMetric(i), notify)
+				expected = append(expected, tid)
+				require.NoError(t, plugin.Add(input, acc))
+			}
+			plugin.Stop()
+			expected = expected[:tt.delivery]
+
+			// Simulate output acknowledging delivery of metrics and check delivery
+			actual := acc.GetTelegrafMetrics()
+			// Ensure we get back the correct number of metrics
+			require.Lenf(t, actual, tt.results, "expected %d metrics but got %d", tt.results, len(actual))
+			for _, m := range actual {
+				m.Accept()
+			}
+
+			require.Eventuallyf(t, func() bool {
+				mu.Lock()
+				defer mu.Unlock()
+				return len(delivered) >= tt.delivery
+			}, 1*time.Second, 100*time.Millisecond, "original metric(s) not delivered")
+
+			mu.Lock()
+			defer mu.Unlock()
+			require.ElementsMatch(t, expected, delivered, "mismatch in delivered metrics")
 		})
 	}
 }
