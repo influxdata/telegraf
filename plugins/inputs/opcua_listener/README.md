@@ -48,6 +48,12 @@ to use them.
   ## Maximum time allowed to establish a connect to the endpoint.
   # connect_timeout = "10s"
   #
+  ## Behavior when we fail to connect to the endpoint on initialization. Valid options are:
+  ##     "error": throw an error and exits Telegraf
+  ##     "ignore": ignore this plugin if errors are encountered
+  #      "retry": retry connecting at each interval
+  # connect_fail_behavior = "error"
+  #
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
   #

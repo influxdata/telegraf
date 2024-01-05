@@ -37,6 +37,96 @@ func MapOPCTag(tags OPCTags) (out input.NodeSettings) {
 	return out
 }
 
+func TestInitPluginWithBadConnectFailBehaviorValue(t *testing.T) {
+	plugin := OpcUaListener{
+		SubscribeClientConfig: SubscribeClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       "opc.tcp://notarealserver:4840",
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					ConnectTimeout: config.Duration(5 * time.Second),
+					RequestTimeout: config.Duration(10 * time.Second),
+				},
+				MetricName: "opcua",
+				Timestamp:  input.TimestampSourceTelegraf,
+				RootNodes:  make([]input.NodeSettings, 0),
+			},
+			ConnectFailBehavior:  "notanoption",
+			SubscriptionInterval: config.Duration(100 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	err := plugin.Init()
+	require.ErrorContains(t, err, "unknown setting \"notanoption\" for 'connect_fail_behavior'")
+}
+
+func TestStartPlugin(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	acc := &testutil.Accumulator{}
+
+	plugin := OpcUaListener{
+		SubscribeClientConfig: SubscribeClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       "opc.tcp://notarealserver:4840",
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					ConnectTimeout: config.Duration(5 * time.Second),
+					RequestTimeout: config.Duration(10 * time.Second),
+				},
+				MetricName: "opcua",
+				Timestamp:  input.TimestampSourceTelegraf,
+				RootNodes:  make([]input.NodeSettings, 0),
+			},
+			SubscriptionInterval: config.Duration(100 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	testopctags := []OPCTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+	}
+	for _, tags := range testopctags {
+		plugin.SubscribeClientConfig.RootNodes = append(plugin.SubscribeClientConfig.RootNodes, MapOPCTag(tags))
+	}
+	require.NoError(t, plugin.Init())
+	err := plugin.Start(acc)
+	require.ErrorContains(t, err, "could not resolve address")
+
+	plugin.SubscribeClientConfig.ConnectFailBehavior = "ignore"
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(acc))
+	require.Equal(t, opcua.Disconnected, plugin.client.OpcUAClient.State())
+	plugin.Stop()
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	plugin.SubscribeClientConfig.ConnectFailBehavior = "retry"
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(acc))
+	require.Equal(t, opcua.Disconnected, plugin.client.OpcUAClient.State())
+
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+
+	defer container.Terminate()
+	newEndpoint := fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort])
+	plugin.client.Config.Endpoint = newEndpoint
+	plugin.client.OpcUAClient.Config.Endpoint = newEndpoint
+	err = plugin.Gather(acc)
+	require.NoError(t, err)
+	require.Equal(t, opcua.Connected, plugin.client.OpcUAClient.State())
+}
+
 func TestSubscribeClientIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -104,6 +194,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	res, err := o.StartStreamValues(ctx)
+	require.Equal(t, opcua.Connected, o.State())
 	require.NoError(t, err)
 
 	for {
@@ -299,6 +390,7 @@ endpoint = "opc.tcp://localhost:4840"
 connect_timeout = "10s"
 request_timeout = "5s"
 subscription_interval = "200ms"
+connect_fail_behavior = "error"
 security_policy = "auto"
 security_mode = "auto"
 certificate = "/etc/telegraf/cert.pem"
@@ -347,6 +439,7 @@ additional_valid_status_codes = ["0xC0"]
 	require.Equal(t, config.Duration(10*time.Second), o.SubscribeClientConfig.ConnectTimeout)
 	require.Equal(t, config.Duration(5*time.Second), o.SubscribeClientConfig.RequestTimeout)
 	require.Equal(t, config.Duration(200*time.Millisecond), o.SubscribeClientConfig.SubscriptionInterval)
+	require.Equal(t, "error", o.SubscribeClientConfig.ConnectFailBehavior)
 	require.Equal(t, "auto", o.SubscribeClientConfig.SecurityPolicy)
 	require.Equal(t, "auto", o.SubscribeClientConfig.SecurityMode)
 	require.Equal(t, "/etc/telegraf/cert.pem", o.SubscribeClientConfig.Certificate)
