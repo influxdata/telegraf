@@ -102,4 +102,3 @@ The metrics produced by this plugin depends on the content and data
 format of the file.
 
 [internal]: /plugins/inputs/internal
-
