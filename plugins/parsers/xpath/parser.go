@@ -271,7 +271,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	}
 
 	// By default take the time the parser was invoked and override the value
-	// with the queried timestamp if an expresion was specified.
+	// with the queried timestamp if an expression was specified.
 	timestamp = starttime
 	if len(config.Timestamp) > 0 {
 		v, err := p.executeQuery(doc, selected, config.Timestamp)
@@ -550,7 +550,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 func splitLastPathElement(query string) []string {
 	// This is a rudimentary xpath-parser that splits the path
 	// into the last path element and the remaining path-part.
-	// The last path element is then further splitted into
+	// The last path element is then further split into
 	// parts such as attributes or selectors. Each returned
 	// element is a full path!
 

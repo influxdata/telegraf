@@ -71,7 +71,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Override metric type by metric name
   ## Metric names matching the values here, globbing supported, will have the
-  ## metric type set to the cooresponding type.
+  ## metric type set to the corresponding type.
   # metric_counter = []
   # metric_gauge = []
   # metric_histogram = []

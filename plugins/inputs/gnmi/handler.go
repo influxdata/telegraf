@@ -132,7 +132,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 		switch ext.GetRegisteredExt().Id {
 		case eidJuniperTelemetryHeader:
-			// Juniper Header extention
+			// Juniper Header extension
 			// Decode it only if user requested it
 			if choice.Contains("juniper_header", h.vendorExt) {
 				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}

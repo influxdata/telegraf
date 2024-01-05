@@ -282,7 +282,7 @@ func TestParseLine(t *testing.T) {
 		require.NoError(t, err)
 
 		if m.Name() != test.measurement {
-			t.Fatalf("name parse failer.  expected %v, got %v",
+			t.Fatalf("name parse failed.  expected %v, got %v",
 				test.measurement, m.Name())
 		}
 		if len(m.Tags()) != len(test.tags) {
@@ -394,7 +394,7 @@ func TestParse(t *testing.T) {
 		require.NoError(t, err)
 
 		if metrics[0].Name() != test.measurement {
-			t.Fatalf("name parse failer.  expected %v, got %v",
+			t.Fatalf("name parse failed.  expected %v, got %v",
 				test.measurement, metrics[0].Name())
 		}
 		if len(metrics[0].Tags()) != len(test.tags) {

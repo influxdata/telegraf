@@ -88,7 +88,7 @@ result.
 
 ## Measurements
 
-Measurement names are passed trough this aggregator.
+Measurement names are passed through this aggregator.
 
 ### Fields
 

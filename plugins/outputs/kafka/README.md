@@ -53,7 +53,7 @@ to use them.
 
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
-  ## send the message to.  This tag is prefered over the routing_key option.
+  ## send the message to.  This tag is preferred over the routing_key option.
   routing_tag = "host"
 
   ## The routing key is set as the message key and used to determine which

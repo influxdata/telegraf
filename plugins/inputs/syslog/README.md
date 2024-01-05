@@ -224,7 +224,7 @@ Add the following lines to the rsyslog configuration file
 
 ```s
 # This makes rsyslog listen on 127.0.0.1:514 to receive RFC3164 udp
-# messages which can them be forwared to telegraf as RFC5424
+# messages which can them be forwarded to telegraf as RFC5424
 $ModLoad imudp #loads the udp module
 $UDPServerAddress 127.0.0.1
 $UDPServerRun 514

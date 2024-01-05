@@ -24,7 +24,7 @@ Output of this format is MessagePack binary representation of metrics that have 
 }
 ```
 
-MessagePack has it's own timestamp representation. You can find additional informations from [MessagePack specification](https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type).
+MessagePack has it's own timestamp representation. You can find additional information from [MessagePack specification](https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type).
 
 ## MessagePack Configuration
 

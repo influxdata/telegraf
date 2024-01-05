@@ -213,7 +213,7 @@ brevity, plugin takes only the first line. You can set
 
 `TimeCreated` field is a string in RFC3339Nano format. By default Telegraf
 parses it as an event timestamp. If there is a field parse error or
-`timestamp_from_event` configration parameter is set to `false`, then event
+`timestamp_from_event` configuration parameter is set to `false`, then event
 timestamp will be set to the exact time when Telegraf has parsed this event, so
 it will be rounded to the nearest minute.
 
