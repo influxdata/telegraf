@@ -28,7 +28,9 @@ func GetTagsFromLabels(m *dto.Metric, defaultTags map[string]string) map[string]
 	}
 
 	for _, label := range m.Label {
-		result[label.GetName()] = label.GetValue()
+		if v := label.GetValue(); v != "" {
+			result[label.GetName()] = v
+		}
 	}
 
 	return result

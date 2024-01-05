@@ -1,0 +1,1 @@
+http_request_duration_microseconds,_type=summary,handler=prometheus 0.5=552048.506,0.9=5876804.288,0.99=5876804.288,count=9,sum=18909097.205

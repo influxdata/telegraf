@@ -1,0 +1,6 @@
+prometheus,_type=gauge,host=omsk swap_used_percent=1.5378778193395661
+prometheus,_type=gauge,host=omsk swap_free=977911808
+prometheus,_type=counter,host=omsk swap_in=2031616
+prometheus,_type=counter,host=omsk swap_out=15790080
+prometheus,_type=gauge,host=omsk swap_total=993185792
+prometheus,_type=gauge,host=omsk swap_used=15273984

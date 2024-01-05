@@ -241,6 +241,10 @@ func (m *metric) SetTime(t time.Time) {
 	m.tm = t
 }
 
+func (m *metric) SetType(t telegraf.ValueType) {
+	m.tp = t
+}
+
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
 		name:   m.name,

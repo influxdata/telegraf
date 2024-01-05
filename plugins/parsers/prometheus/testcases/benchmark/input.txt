@@ -1,0 +1,7 @@
+# HELP benchmark_a Test metric for benchmarking
+# TYPE benchmark_a gauge
+benchmark_a{source="myhost",tags_platform="python",tags_sdkver="3.11.5"} 5 1653643420000
+
+# HELP benchmark_b Test metric for benchmarking
+# TYPE benchmark_b gauge
+benchmark_b{source="myhost",tags_platform="python",tags_sdkver="3.11.4"} 4 1653643420000

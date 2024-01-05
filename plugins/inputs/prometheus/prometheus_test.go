@@ -80,7 +80,6 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 func TestPrometheusCustomHeader(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.Header.Get("accept"))
 		switch r.Header.Get("accept") {
 		case "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3":
 			_, err := fmt.Fprintln(w, "proto 15 1490802540000")
