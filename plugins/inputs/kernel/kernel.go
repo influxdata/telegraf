@@ -159,7 +159,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 	if k.optCollect["psi"] {
 		if err := k.gatherPressure(acc); err != nil {
-			return fmt.Errorf("gathering pressure failed: %w", err)
+			return err
 		}
 	}
 
