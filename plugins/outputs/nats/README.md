@@ -58,21 +58,16 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
-  ## If the value is non-empty, enable jetstream based publishing.
-  ## Name of the stream where nats jetstream will publish the messages.
-  ## If the stream already exists, it will Update it using the fields specified in the jetstream section.
-  ## Else it will create it.
-  # jetstream_stream = "telegraf-metrics-stream"
-
-  ## Jetstream specific configuration
-  ## If this section is empty, and jetstream_stream is specified, the stream_create config would have
-  ## just the two fields- Name(jetstream_stream) and Subjects([]string{subject})
+  ## Jetstream specific configuration. If not nil, it will assume Jetstream context.
   ## Since this is a table, it should be present at the end of the plugin section. Else you can use inline table format.
   # [outputs.nats.jetstream]
     ## Full jetstream create stream config, refer: https://docs.nats.io/nats-concepts/jetstream/streams
-    ## The `name` and `subjects` fields from configuration will be ignored, and the values will be determined as follows:
-    ## The stream name (`name`) will be taken from the `jetstream_stream` field in the `outputs.nats` section of the Telegraf configuration.
-    ## The subjects (`Subjects`) for the stream will be derived from the `subject` field in the `outputs.nats` section of the Telegraf configuration.
+    ## Telegraf will use the subject present in the outer nats configuration.
+    ## If the subjects field is not present, subjects will be set to subject
+    ## If the subjects field is present, subject will be appended to this list, only if subject is not present to avoid duplicates.
+    ## name of the stream. Required
+    # name = "" 
+    # subjects = []
     # retention = "limits"
     # max_consumers = -1
     # max_msgs_per_subject = -1

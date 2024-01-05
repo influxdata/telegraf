@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -30,7 +32,6 @@ type NATS struct {
 	Password    config.Secret           `toml:"password"`
 	Credentials string                  `toml:"credentials"`
 	Subject     string                  `toml:"subject"`
-	Stream      string                  `toml:"jetstream_stream"`
 	Jetstream   *JetstreamConfigWrapper `toml:"jetstream"`
 	tls.ClientConfig
 
@@ -141,27 +142,35 @@ func (n *NATS) Connect() error {
 	if err != nil {
 		return err
 	}
-	if n.Stream != "" {
-		n.Log.Info("Jetstream enabled for this plugin")
-		// connect to jetstream
+
+	if n.Jetstream != nil {
 		n.jetstreamClient, err = jetstream.New(n.conn)
 		if err != nil {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
-		_, err := n.jetstreamClient.Stream(context.Background(), n.Stream)
-		if err == nil {
-			return nil
+
+		if len(n.Jetstream.Subjects) == 0 {
+			n.Jetstream.Subjects = []string{n.Subject}
 		}
-		n.Log.Infof("stream %s does not exist. creating stream", n.Stream)
-		if n.Jetstream == nil {
-			n.Jetstream = &JetstreamConfigWrapper{}
+		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
+			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
 		}
-		n.Jetstream.StreamConfig.Name = n.Stream
-		n.Jetstream.StreamConfig.Subjects = []string{n.Subject}
-		_, err = n.jetstreamClient.CreateStream(context.Background(), n.Jetstream.StreamConfig)
+		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), n.Jetstream.StreamConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create stream: %w", err)
+			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
+		n.Log.Infof("stream (%s) successfully created or updated", n.Jetstream.Name)
+	}
+	return nil
+}
+
+func (n *NATS) Init() error {
+	// validation currently only for jetstream
+	if n.Jetstream == nil {
+		return nil
+	}
+	if strings.TrimSpace(n.Jetstream.Name) == "" {
+		return errors.New("stream cannot be empty")
 	}
 	return nil
 }
@@ -181,11 +190,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
-		if n.Jetstream != nil {
-			_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf)
-		} else {
-			err = n.conn.Publish(n.Subject, buf)
-		}
+		// use the same Publish API for nats core and jetstream
+		err = n.conn.Publish(n.Subject, buf)
 		if err != nil {
 			return fmt.Errorf("FAILED to send NATS message: %w", err)
 		}

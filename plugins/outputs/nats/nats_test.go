@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -49,7 +48,7 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "valid with jetstream(stream created)",
+			name: "valid with jetstream",
 			container: testutil.Container{
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
@@ -59,10 +58,9 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			nats: &NATS{
 				Name:    "telegraf",
 				Subject: "telegraf",
-				Stream:  "telegraf-stream",
 				Jetstream: &JetstreamConfigWrapper{
 					StreamConfig: jetstream.StreamConfig{
-						Name: "this will be ignored",
+						Name: "my-telegraf-stream",
 					},
 				},
 				serializer: &influx.Serializer{},
@@ -80,10 +78,11 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-tel-sub",
-				Stream:  "telegraf-stream-with-cfg",
+				Subject: "my-tel-sub2",
 				Jetstream: &JetstreamConfigWrapper{
 					StreamConfig: jetstream.StreamConfig{
+						Name:              "telegraf-stream-with-cfg",
+						Subjects:          []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2"},
 						Retention:         jetstream.WorkQueuePolicy,
 						MaxConsumers:      10,
 						Discard:           jetstream.DiscardOld,
@@ -133,12 +132,11 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			if tc.nats.Stream != "" {
-				stream, err := tc.nats.jetstreamClient.Stream(context.Background(), tc.nats.Stream)
+			if tc.nats.Jetstream != nil {
+				stream, err := tc.nats.jetstreamClient.Stream(context.Background(), tc.nats.Jetstream.Name)
 				require.NoError(t, err)
 				si, err := stream.Info(context.Background())
 				require.NoError(t, err)
-				require.Equal(t, tc.nats.Stream, tc.nats.Jetstream.Name)
 				// compare only relevant fields, since defaults for fields like max_bytes is not 0
 				fieldsEqualHelper(t, tc.nats.Jetstream.StreamConfig, si.Config, tc.streamConfigCompareFields...)
 			}
@@ -224,22 +222,39 @@ func TestConfigParsing(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Get all testcase directories
-	folders, err := os.ReadDir("testcases")
-	require.NoError(t, err)
+	// Define test cases
+	testCases := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{name: "Valid Default", path: filepath.Join("testcases", "no-js.conf")},
+		{name: "Valid JS", path: filepath.Join("testcases", "js-default.conf")},
+		{name: "Valid JS Config", path: filepath.Join("testcases", "js-config.conf")},
+		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
+		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
+	}
 
 	// Register the plugin
 	outputs.Add("nats", func() telegraf.Output {
 		return &NATS{}
 	})
+	srl := &influx.Serializer{}
+	require.NoError(t, srl.Init())
 
-	for _, f := range folders {
-		t.Run(f.Name(), func(t *testing.T) {
-			testcasePath := filepath.Join("testcases", f.Name())
+	// Run tests using the table-driven approach
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			// Configure the plugin
 			cfg := config.NewConfig()
-			require.NoError(t, cfg.LoadConfig(testcasePath))
+			require.NoError(t, cfg.LoadConfig(tc.path))
 			require.Len(t, cfg.Outputs, 1)
+			err := cfg.Outputs[0].Init()
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
