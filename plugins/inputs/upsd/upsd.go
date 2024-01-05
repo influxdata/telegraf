@@ -9,6 +9,7 @@ import (
 	nut "github.com/robbiet480/go.nut"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -17,23 +18,70 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-//See: https://networkupstools.org/docs/developer-guide.chunked/index.html
-
+// see: https://networkupstools.org/docs/developer-guide.chunked/index.html
 const defaultAddress = "127.0.0.1"
 const defaultPort = 3493
 
-type Upsd struct {
-	Server     string `toml:"server"`
-	Port       int    `toml:"port"`
-	Username   string `toml:"username"`
-	Password   string `toml:"password"`
-	ForceFloat bool   `toml:"force_float"`
+// Define the set of variables _always_ included in a metric
+var mandatoryVariableSet = map[string]bool{
+	"battery.date":     true,
+	"battery.mfr.date": true,
+	"battery.runtime":  true,
+	"device.model":     true,
+	"device.serial":    true,
+	"ups.firmware":     true,
+	"ups.status":       true,
+}
 
-	Log telegraf.Logger `toml:"-"`
+// Define the default field set to add if existing
+var defaultFieldSet = map[string]string{
+	"battery.charge":          "battery_charge_percent",
+	"battery.runtime.low":     "battery_runtime_low",
+	"battery.voltage":         "battery_voltage",
+	"input.frequency":         "input_frequency",
+	"input.transfer.high":     "input_transfer_high",
+	"input.transfer.low":      "input_transfer_low",
+	"input.voltage":           "input_voltage",
+	"ups.temperature":         "internal_temp",
+	"ups.load":                "load_percent",
+	"battery.voltage.nominal": "nominal_battery_voltage",
+	"input.voltage.nominal":   "nominal_input_voltage",
+	"ups.realpower.nominal":   "nominal_power",
+	"output.voltage":          "output_voltage",
+	"ups.realpower":           "real_power",
+	"ups.delay.shutdown":      "ups_delay_shutdown",
+	"ups.delay.start":         "ups_delay_start",
+}
+
+type Upsd struct {
+	Server     string          `toml:"server"`
+	Port       int             `toml:"port"`
+	Username   string          `toml:"username"`
+	Password   string          `toml:"password"`
+	ForceFloat bool            `toml:"force_float"`
+	Additional []string        `toml:"additional_fields"`
+	DumpRaw    bool            `toml:"dump_raw_variables"`
+	Log        telegraf.Logger `toml:"-"`
+
+	filter filter.Filter
+	dumped map[string]bool
 }
 
 func (*Upsd) SampleConfig() string {
 	return sampleConfig
+}
+
+func (u *Upsd) Init() error {
+	// Compile the additional fields filter
+	f, err := filter.Compile(u.Additional)
+	if err != nil {
+		return fmt.Errorf("compiling additional_fields filter failed: %w", err)
+	}
+	u.filter = f
+
+	u.dumped = make(map[string]bool)
+
+	return nil
 }
 
 func (u *Upsd) Gather(acc telegraf.Accumulator) error {
@@ -41,13 +89,28 @@ func (u *Upsd) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	if u.DumpRaw {
+		for name, variables := range upsList {
+			// Only dump the information once per UPS
+			if u.dumped[name] {
+				continue
+			}
+			values := make([]string, 0, len(variables))
+			types := make([]string, 0, len(variables))
+			for _, v := range variables {
+				values = append(values, fmt.Sprintf("%s: %v", v.Name, v.Value))
+				types = append(types, fmt.Sprintf("%s: %v", v.Name, v.OriginalType))
+			}
+			u.Log.Debugf("Variables dump for UPS %q:\n%s\n-----\n%s", name, strings.Join(values, "\n"), strings.Join(types, "\n"))
+		}
+	}
 	for name, variables := range upsList {
 		u.gatherUps(acc, name, variables)
 	}
 	return nil
 }
 
-func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.Variable) {
+func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []nut.Variable) {
 	metrics := make(map[string]interface{})
 	for _, variable := range variables {
 		name := variable.Name
@@ -57,7 +120,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 
 	tags := map[string]string{
 		"serial":   fmt.Sprintf("%v", metrics["device.serial"]),
-		"ups_name": name,
+		"ups_name": upsname,
 		//"variables": variables.Status not sure if it's a good idea to provide this
 		"model": fmt.Sprintf("%v", metrics["device.model"]),
 	}
@@ -75,59 +138,53 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		u.Log.Warnf("Converting 'battery.runtime' to 'time_left_ns' failed: %v", err)
 	}
 
+	// Add the mandatory information
 	fields := map[string]interface{}{
 		"battery_date":     metrics["battery.date"],
 		"battery_mfr_date": metrics["battery.mfr.date"],
 		"status_flags":     status,
 		"ups_status":       metrics["ups.status"],
 
-		//Compatibility with apcupsd metrics format
+		// for compatibility with apcupsd metrics format
 		"time_left_ns": timeLeftNS,
 	}
 
-	floatValues := map[string]string{
-		"battery_charge_percent":  "battery.charge",
-		"battery_runtime_low":     "battery.runtime.low",
-		"battery_voltage":         "battery.voltage",
-		"input_frequency":         "input.frequency",
-		"input_transfer_high":     "input.transfer.high",
-		"input_transfer_low":      "input.transfer.low",
-		"input_voltage":           "input.voltage",
-		"internal_temp":           "ups.temperature",
-		"load_percent":            "ups.load",
-		"nominal_battery_voltage": "battery.voltage.nominal",
-		"nominal_input_voltage":   "input.voltage.nominal",
-		"nominal_power":           "ups.realpower.nominal",
-		"output_voltage":          "output.voltage",
-		"real_power":              "ups.realpower",
-		"ups_delay_shutdown":      "ups.delay.shutdown",
-		"ups_delay_start":         "ups.delay.start",
-	}
-
-	for key, rawValue := range floatValues {
-		if metrics[rawValue] == nil {
-			continue
-		}
-
-		if !u.ForceFloat {
-			fields[key] = metrics[rawValue]
-			continue
-		}
-
-		// Force expected float values to actually being float (e.g. if delivered as int)
-		float, err := internal.ToFloat64(metrics[rawValue])
-		if err != nil {
-			acc.AddError(fmt.Errorf("converting %s=%v failed: %w", rawValue, metrics[rawValue], err))
-			continue
-		}
-		fields[key] = float
-	}
-
+	// Define the set of mandatory string fields
 	val, err := internal.ToString(metrics["ups.firmware"])
 	if err != nil {
 		acc.AddError(fmt.Errorf("converting ups.firmware=%q failed: %w", metrics["ups.firmware"], err))
 	} else {
 		fields["firmware"] = val
+	}
+
+	// Try to gather all default fields and optional field
+	for varname, v := range metrics {
+		// Skip all empty fields and all fields contained in the mandatory set
+		// of fields added above.
+		if v == nil || mandatoryVariableSet[varname] {
+			continue
+		}
+
+		// Use the name of the default field-set if present and otherwise check
+		// the additional field-set. If none of them contains the variable, we
+		// skip over it
+		var key string
+		if k, found := defaultFieldSet[varname]; found {
+			key = k
+		} else if u.filter != nil && u.filter.Match(varname) {
+			key = strings.ReplaceAll(varname, ".", "_")
+		} else {
+			continue
+		}
+
+		// Force expected float values to actually being float (e.g. if delivered as int)
+		if u.ForceFloat {
+			float, err := internal.ToFloat64(v)
+			if err == nil {
+				v = float
+			}
+		}
+		fields[key] = v
 	}
 
 	acc.AddFields("upsd", fields, tags)
