@@ -3,6 +3,7 @@ package ublox
 
 import (
 	_ "embed"
+	"fmt"
 	"sync"
 	"time"
 
@@ -78,15 +79,40 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 	defer s.mut.Unlock()
 
 	if s.lastPos != nil {
-		metrics := make(map[string]interface{})
+		metrics := make(map[string]interface{}, 12)
+		sensors := make(map[string]interface{}, 4)
+		sensorsTags := make(map[string]string, 1)
+
 		metrics["active"] = s.lastPos.Active
 		metrics["lon"] = s.lastPos.Lon
 		metrics["lat"] = s.lastPos.Lat
+		metrics["horizontal_acc"] = s.lastPos.HorizontalAcc
+
 		metrics["heading"] = s.lastPos.Heading
+		metrics["heading_of_motion"] = s.lastPos.HeadingOfMotion
+		metrics["heading_acc"] = s.lastPos.HeadingAcc
+		metrics["heading_is_valid"] = s.lastPos.HeadingIsValid
+
+		metrics["speed"] = s.lastPos.Speed
+		metrics["speed_acc"] = s.lastPos.SpeedAcc
+
 		metrics["pdop"] = s.lastPos.Pdop
+		metrics["sat_num"] = s.lastPos.SatNum
+		metrics["fix_type"] = s.lastPos.FixType
 
 		if s.lastPos.FusionMode != None {
 			metrics["fusion_mode"] = s.lastPos.FusionMode
+		}
+
+		for i := 0; i*4 < len(s.lastPos.Sensors); i++ {
+			sensorsTags["name"] = fmt.Sprintf("Sensor %d", i)
+
+			sensors["s_status1"] = s.lastPos.Sensors[i*4+0]
+			sensors["s_status2"] = s.lastPos.Sensors[i*4+1]
+			sensors["s_freq"] = s.lastPos.Sensors[i*4+2]
+			sensors["s_faults"] = s.lastPos.Sensors[i*4+3]
+
+			acc.AddFields("ublox-data-sensors", sensors, sensorsTags)
 		}
 
 		s.lastPos = nil

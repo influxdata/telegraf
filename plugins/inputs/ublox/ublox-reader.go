@@ -2,13 +2,7 @@ package ublox
 
 /*
 #cgo LDFLAGS: -L./ublox-utils/build -lublox-utils
-#include <stdlib.h>
-#include <stdbool.h>
-void *ublox_reader_new();
-void ublox_reader_free(void *reader);
-bool ublox_reader_init(void *reader, const char *device, char **err);
-void ublox_reader_close(void *reader);
-int ublox_reader_read(void *reader, bool *is_active, double *lat, double *lon, double *heading, unsigned int *pdop, unsigned int *fusion_mode, long long *sec, long long *nsec, bool wait_for_data, char **err);
+#include "ublox-reader.h"
 */
 import "C"
 import (
@@ -18,7 +12,7 @@ import (
 )
 
 const (
-	// XXX match original ubx values
+	// XXX match original FusionMode values
 	InitializationMode  uint8 = 0
 	FusionMode          uint8 = 1
 	SuspendedFusionMode uint8 = 2
@@ -27,14 +21,36 @@ const (
 	None uint8 = 255
 )
 
+const (
+	// XXX match original FixType values
+	NoFix                      uint8 = 0
+	DeadReckoningOnly          uint8 = 1
+	Fix2d                      uint8 = 2
+	Fix3d                      uint8 = 3
+	GNSS_deadReckoningCombined uint8 = 4
+	TimeOnlyFix                uint8 = 5
+)
+
 type GPSPos struct {
-	Active  bool
-	Lat     float64
-	Lon     float64
-	Heading float64
+	Active        bool
+	Lat           float64
+	Lon           float64
+	HorizontalAcc float64
+
+	Heading         float64
+	HeadingOfMotion float64
+	HeadingAcc      float64
+	HeadingIsValid  bool
+
+	Speed    float64
+	SpeedAcc float64
+
 	Pdop    uint16
+	SatNum  uint8
+	FixType uint8
 
 	FusionMode uint8
+	Sensors    []byte
 
 	Ts time.Time
 }
@@ -78,15 +94,32 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	var is_active C.bool
 	var lat C.double
 	var lon C.double
+	var horizontal_acc C.double
+
 	var heading C.double
+	var headingOfMot C.double
+	var headingAcc C.double
+	var headingIsValid C.bool
+
+	var speed C.double
+	var speedAcc C.double
+
 	var pdop C.uint
+	var satNum C.uint
+	var fixType C.uint
+
 	var fusion_mode C.uint
+
+	var sensorsLen C.uint
+	sensors := C.CString(string(make([]byte, 4*16)))
+	defer C.free(unsafe.Pointer(sensors))
+
 	var sec C.longlong
 	var nsec C.longlong
 
 	fusion_mode = C.uint(None)
 
-	status := C.ublox_reader_read(unsafe.Pointer(reader.reader), &is_active, &lat, &lon, &heading, &pdop, &fusion_mode, &sec, &nsec, C.bool(wait_for_data), &c_err)
+	status := C.ublox_reader_read(unsafe.Pointer(reader.reader), &is_active, &lat, &lon, &horizontal_acc, &heading, &headingOfMot, &headingAcc, &headingIsValid, &speed, &speedAcc, &pdop, &satNum, &fixType, &fusion_mode, sensors, &sensorsLen, &sec, &nsec, C.bool(wait_for_data), &c_err)
 	if status == -1 {
 		err := C.GoString(c_err)
 		C.free(unsafe.Pointer(c_err))
@@ -100,9 +133,22 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	data.Active = bool(is_active)
 	data.Lat = float64(lat)
 	data.Lon = float64(lon)
+	data.HorizontalAcc = float64(horizontal_acc)
+
 	data.Heading = float64(heading)
+	data.HeadingOfMotion = float64(headingOfMot)
+	data.HeadingAcc = float64(headingAcc)
+	data.HeadingIsValid = bool(headingIsValid)
+
+	data.Speed = float64(speed)
+	data.SpeedAcc = float64(speedAcc)
+
 	data.Pdop = uint16(pdop)
+	data.SatNum = uint8(satNum)
+	data.FixType = uint8(fixType)
+
 	data.FusionMode = uint8(fusion_mode)
+	data.Sensors = C.GoBytes(unsafe.Pointer(sensors), C.int(sensorsLen)*4)
 
 	data.Ts = time.Unix(int64(sec), int64(nsec))
 
