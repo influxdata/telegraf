@@ -103,10 +103,7 @@ func (l *Lookup) Init() (err error) {
 		return fmt.Errorf("invalid translator %q", l.Translator)
 	}
 
-	return l.initTable()
-}
-
-func (l *Lookup) initTable() error {
+	// Initialize the table
 	l.table.Name = "lookup"
 	l.table.IndexAsTag = true
 	l.table.Fields = make([]si.Field, len(l.Tags))
