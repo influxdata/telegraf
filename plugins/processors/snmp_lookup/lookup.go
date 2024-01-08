@@ -131,7 +131,7 @@ func (l *Lookup) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 }
 
 func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
-	if _, ok := metric.GetTag(l.AgentTag); !ok {
+	if !metric.HasTag(l.AgentTag) {
 		l.Log.Warn("Agent tag missing")
 		return []telegraf.Metric{metric}
 	}
