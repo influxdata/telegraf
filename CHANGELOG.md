@@ -1,6 +1,41 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.29.2 [2024-01-08]
+
+### Bugfixes
+
+- [#14522](https://github.com/influxdata/telegraf/pull/14522) `common.kafka` Correctly set gssapi username/password
+- [#14462](https://github.com/influxdata/telegraf/pull/14462) `inputs.phpfpm` Add pid field to differentiate metrics
+- [#14489](https://github.com/influxdata/telegraf/pull/14489) `inputs.phpfpm` Use logger without causing panic
+- [#14493](https://github.com/influxdata/telegraf/pull/14493) `inputs.procstat` Correctly set tags on procstat_lookup
+- [#14447](https://github.com/influxdata/telegraf/pull/14447) `inputs.upsd` Add additional fields to upsd from NUT
+- [#14463](https://github.com/influxdata/telegraf/pull/14463) `inputs.vsphere` Resolve occasional serverFault
+- [#14458](https://github.com/influxdata/telegraf/pull/14458) `outputs.bigquery` Ignore fields containing NaN or infinity
+- [#14481](https://github.com/influxdata/telegraf/pull/14481) `outputs.influxdb` Support setting Host header
+- [#14481](https://github.com/influxdata/telegraf/pull/14481) `outputs.influxdb_v2` Support setting Host header
+- [#14471](https://github.com/influxdata/telegraf/pull/14471) `outputs.prometheus_client` Always default to TCP
+- [#14460](https://github.com/influxdata/telegraf/pull/14460) `processors.filter` Rename processors.Filter -> processors.filter
+- [#14523](https://github.com/influxdata/telegraf/pull/14523) `processors.starlark` Use tracking ID to identify tracking metrics
+- [#14517](https://github.com/influxdata/telegraf/pull/14517) `systemd` Allow notify access from all
+
+### Dependency Updates
+
+- [#14525](https://github.com/influxdata/telegraf/pull/14525) `deps` Bump collectd.org from v0.5.0 to v0.6.0
+- [#14506](https://github.com/influxdata/telegraf/pull/14506) `deps` Bump github.com/Azure/azure-kusto-go from 0.13.1 to 0.15.0
+- [#14483](https://github.com/influxdata/telegraf/pull/14483) `deps` Bump github.com/containerd/containerd from 1.7.7 to 1.7.11
+- [#14476](https://github.com/influxdata/telegraf/pull/14476) `deps` Bump github.com/djherbis/times from 1.5.0 to 1.6.0
+- [#14496](https://github.com/influxdata/telegraf/pull/14496) `deps` Bump github.com/dvsekhvalnov/jose2go from v1.5.0 to v1.5.1-0.20231206184617-48ba0b76bc88
+- [#14478](https://github.com/influxdata/telegraf/pull/14478) `deps` Bump github.com/google/uuid from 1.4.0 to 1.5.0
+- [#14477](https://github.com/influxdata/telegraf/pull/14477) `deps` Bump github.com/jhump/protoreflect from 1.15.3 to 1.15.4
+- [#14504](https://github.com/influxdata/telegraf/pull/14504) `deps` Bump github.com/pion/dtls/v2 from 2.2.7 to 2.2.8
+- [#14503](https://github.com/influxdata/telegraf/pull/14503) `deps` Bump github.com/prometheus/prometheus from 0.48.0 to 0.48.1
+- [#14515](https://github.com/influxdata/telegraf/pull/14515) `deps` Bump github.com/sijms/go-ora/v2 from 2.7.18 to 2.8.4
+- [#14475](https://github.com/influxdata/telegraf/pull/14475) `deps` Bump go.mongodb.org/mongo-driver from 1.12.1 to 1.13.1
+- [#14480](https://github.com/influxdata/telegraf/pull/14480) `deps` Bump golang.org/x/crypto from 0.16.0 to 0.17.0
+- [#14479](https://github.com/influxdata/telegraf/pull/14479) `deps` Bump golang.org/x/net from 0.17.0 to 0.19.0
+- [#14505](https://github.com/influxdata/telegraf/pull/14505) `deps` Bump google.golang.org/protobuf from 1.31.1-0.20231027082548-f4a6c1f6e5c1 to 1.32.0
+
 ## v1.29.1 [2023-12-13]
 
 ### Bugfixes
