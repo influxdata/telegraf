@@ -274,7 +274,7 @@ func (s *IoTDB) validateTag(tag string) (string, error) {
 	// from version 1.x.x IoTDB changed the allowed keys in nodes
 	case "1.0", "1.1", "1.2", "1.3":
 		matchUnsopportedCharacter, _ := regexp.Compile("[^0-9a-zA-Z_\x60]")
-		matchNumericString, _ := regexp.Compile("^\\d+$")
+		matchNumericString, _ := regexp.Compile(`^\d+$`)
 
 		regex := []*regexp.Regexp{matchUnsopportedCharacter, matchNumericString}
 		regexArray = append(regexArray, regex...)
@@ -307,13 +307,13 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 		for index, tags := range rwt.TagsList { // for each record
 			topic := []string{rwt.DeviceIDList[index]}
 			for _, tag := range tags { // for each tag, append it's Value
-				tag_value, err := s.validateTag(tag.Value) // validates tag
+				tagValue, err := s.validateTag(tag.Value) // validates tag
 
 				if err != nil {
 					return err
 				}
 
-				topic = append(topic, tag_value)
+				topic = append(topic, tagValue)
 			}
 			rwt.DeviceIDList[index] = strings.Join(topic, ".")
 		}
