@@ -157,7 +157,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/client_model v0.5.0
-	github.com/prometheus/common v0.44.0
+	github.com/prometheus/common v0.45.0
 	github.com/prometheus/procfs v0.11.1
 	github.com/prometheus/prometheus v0.48.1
 	github.com/rabbitmq/amqp091-go v1.9.0
@@ -221,6 +221,8 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.24.0
 )
+
+require github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 
 require (
 	cloud.google.com/go v0.110.8 // indirect
