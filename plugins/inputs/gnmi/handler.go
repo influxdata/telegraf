@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -231,30 +230,33 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				h.emptyNameWarnShown = true
 			}
 		}
+		aliasInfo := newInfoFromString(aliasPath)
 
 		// Group metrics
-		fieldPath := field.path.String()
-		key := strings.ReplaceAll(fieldPath, "-", "_")
+		var key string
 		if h.canonicalFieldNames {
 			// Strip the origin is any for the field names
-			if parts := strings.SplitN(key, ":", 2); len(parts) == 2 {
+			if parts := strings.SplitN(strings.ReplaceAll(field.path.String(), "-", "_"), ":", 2); len(parts) == 2 {
 				key = parts[1]
 			}
 		} else {
-			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
-				// This may not be an exact prefix, due to naming style
-				// conversion on the key.
-				key = key[len(aliasPath)+1:]
-			} else if len(aliasPath) >= len(key) {
+			// If the origis are the same and the alias is shorter than the
+			// full path to avoid an empty key, then strip the common part if
+			// the field is prefixed with the alias path.
+			if aliasInfo.origin == field.path.origin && aliasInfo.isSubPathOf(field.path) && len(aliasInfo.segments) < len(field.path.segments) {
+				relative := field.path.segments[len(aliasInfo.segments):len(field.path.segments)]
+				key = strings.Join(relative, "/")
+			} else {
 				// Otherwise use the last path element as the field key.
-				key = path.Base(key)
+				key = field.path.segments[len(field.path.segments)-1]
 			}
+			key = strings.ReplaceAll(key, "-", "_")
 		}
 		if h.trimSlash {
 			key = strings.TrimLeft(key, "/.")
 		}
 		if key == "" {
-			h.log.Errorf("Invalid empty path %q with alias %q", fieldPath, aliasPath)
+			h.log.Errorf("Invalid empty path %q with alias %q", field.path.String(), aliasPath)
 			continue
 		}
 		grouper.Add(name, tags, timestamp, key, field.value)
