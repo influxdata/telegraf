@@ -218,9 +218,6 @@ func Test_extractNestedTable(t *testing.T) {
 }
 
 func TestConfigParsing(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
 
 	// Define test cases
 	testCases := []struct {
