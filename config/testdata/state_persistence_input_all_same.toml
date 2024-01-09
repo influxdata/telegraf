@@ -11,7 +11,7 @@
     b = "bar"
 
 [[inputs.statetest]]
-  ## What a wounderful world...
+  ## What a wonderful world...
   servers = ["myserver.org", "myserver.com"]
   port = 80
   method = "strange"

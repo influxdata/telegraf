@@ -1,6 +1,41 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.29.2 [2024-01-08]
+
+### Bugfixes
+
+- [#14522](https://github.com/influxdata/telegraf/pull/14522) `common.kafka` Correctly set gssapi username/password
+- [#14462](https://github.com/influxdata/telegraf/pull/14462) `inputs.phpfpm` Add pid field to differentiate metrics
+- [#14489](https://github.com/influxdata/telegraf/pull/14489) `inputs.phpfpm` Use logger without causing panic
+- [#14493](https://github.com/influxdata/telegraf/pull/14493) `inputs.procstat` Correctly set tags on procstat_lookup
+- [#14447](https://github.com/influxdata/telegraf/pull/14447) `inputs.upsd` Add additional fields to upsd from NUT
+- [#14463](https://github.com/influxdata/telegraf/pull/14463) `inputs.vsphere` Resolve occasional serverFault
+- [#14458](https://github.com/influxdata/telegraf/pull/14458) `outputs.bigquery` Ignore fields containing NaN or infinity
+- [#14481](https://github.com/influxdata/telegraf/pull/14481) `outputs.influxdb` Support setting Host header
+- [#14481](https://github.com/influxdata/telegraf/pull/14481) `outputs.influxdb_v2` Support setting Host header
+- [#14471](https://github.com/influxdata/telegraf/pull/14471) `outputs.prometheus_client` Always default to TCP
+- [#14460](https://github.com/influxdata/telegraf/pull/14460) `processors.filter` Rename processors.Filter -> processors.filter
+- [#14523](https://github.com/influxdata/telegraf/pull/14523) `processors.starlark` Use tracking ID to identify tracking metrics
+- [#14517](https://github.com/influxdata/telegraf/pull/14517) `systemd` Allow notify access from all
+
+### Dependency Updates
+
+- [#14525](https://github.com/influxdata/telegraf/pull/14525) `deps` Bump collectd.org from v0.5.0 to v0.6.0
+- [#14506](https://github.com/influxdata/telegraf/pull/14506) `deps` Bump github.com/Azure/azure-kusto-go from 0.13.1 to 0.15.0
+- [#14483](https://github.com/influxdata/telegraf/pull/14483) `deps` Bump github.com/containerd/containerd from 1.7.7 to 1.7.11
+- [#14476](https://github.com/influxdata/telegraf/pull/14476) `deps` Bump github.com/djherbis/times from 1.5.0 to 1.6.0
+- [#14496](https://github.com/influxdata/telegraf/pull/14496) `deps` Bump github.com/dvsekhvalnov/jose2go from v1.5.0 to v1.5.1-0.20231206184617-48ba0b76bc88
+- [#14478](https://github.com/influxdata/telegraf/pull/14478) `deps` Bump github.com/google/uuid from 1.4.0 to 1.5.0
+- [#14477](https://github.com/influxdata/telegraf/pull/14477) `deps` Bump github.com/jhump/protoreflect from 1.15.3 to 1.15.4
+- [#14504](https://github.com/influxdata/telegraf/pull/14504) `deps` Bump github.com/pion/dtls/v2 from 2.2.7 to 2.2.8
+- [#14503](https://github.com/influxdata/telegraf/pull/14503) `deps` Bump github.com/prometheus/prometheus from 0.48.0 to 0.48.1
+- [#14515](https://github.com/influxdata/telegraf/pull/14515) `deps` Bump github.com/sijms/go-ora/v2 from 2.7.18 to 2.8.4
+- [#14475](https://github.com/influxdata/telegraf/pull/14475) `deps` Bump go.mongodb.org/mongo-driver from 1.12.1 to 1.13.1
+- [#14480](https://github.com/influxdata/telegraf/pull/14480) `deps` Bump golang.org/x/crypto from 0.16.0 to 0.17.0
+- [#14479](https://github.com/influxdata/telegraf/pull/14479) `deps` Bump golang.org/x/net from 0.17.0 to 0.19.0
+- [#14505](https://github.com/influxdata/telegraf/pull/14505) `deps` Bump google.golang.org/protobuf from 1.31.1-0.20231027082548-f4a6c1f6e5c1 to 1.32.0
+
 ## v1.29.1 [2023-12-13]
 
 ### Bugfixes
@@ -1854,7 +1889,7 @@ Thank you to @zak-pawel for lots of linter fixes!
 - [#10007](https://github.com/influxdata/telegraf/pull/10007) `processors.ifname` Parallelism fix for ifname processor
 - [#10208](https://github.com/influxdata/telegraf/pull/10208) `inputs.mqtt_consumer` Mqtt topic extracting no longer requires all three fields
 - [#9616](https://github.com/influxdata/telegraf/pull/9616) Windows Service - graceful shutdown of telegraf
-- [#10203](https://github.com/influxdata/telegraf/pull/10203) Revert unintented corruption of the Makefile
+- [#10203](https://github.com/influxdata/telegraf/pull/10203) Revert unintended corruption of the Makefile
 - [#10112](https://github.com/influxdata/telegraf/pull/10112) `inputs.cloudwatch` Cloudwatch metrics collection
 - [#10178](https://github.com/influxdata/telegraf/pull/10178) `outputs.all` Register bigquery to output plugins
 - [#10165](https://github.com/influxdata/telegraf/pull/10165) `inputs.sysstat` Sysstat to use unique temp file vs hard-coded
@@ -1963,7 +1998,7 @@ Thank you to @zak-pawel for lots of linter fixes!
 - [#9585](https://github.com/influxdata/telegraf/pull/9585) `inputs.kube_inventory` Fix segfault in ingress, persistentvolumeclaim, statefulset in kube_inventory
 - [#9901](https://github.com/influxdata/telegraf/pull/9901) `inputs.ethtool` Add normalization of tags for ethtool input plugin
 - [#9957](https://github.com/influxdata/telegraf/pull/9957) `inputs.internet_speed` Resolve missing latency field
-- [#9662](https://github.com/influxdata/telegraf/pull/9662) `inputs.prometheus` Decode Prometheus scrape path from Kuberentes labels
+- [#9662](https://github.com/influxdata/telegraf/pull/9662) `inputs.prometheus` Decode Prometheus scrape path from Kubernetes labels
 - [#9933](https://github.com/influxdata/telegraf/pull/9933) `inputs.procstat` Correct conversion of int with specific bit size
 - [#9940](https://github.com/influxdata/telegraf/pull/9940) `inputs.webhooks` Provide more fields for papertrail event webhook
 - [#9892](https://github.com/influxdata/telegraf/pull/9892) `inputs.mongodb` Solve compatibility issue for mongodb inputs when using 5.x relicaset
@@ -2301,7 +2336,7 @@ Thank you to @zak-pawel for lots of linter fixes!
 - [#9067](https://github.com/influxdata/telegraf/pull/9067) `inputs.nfsclient` Fix integer overflow in fields from mountstat
 - [#9050](https://github.com/influxdata/telegraf/pull/9050) `inputs.snmp` Fix init when no mibs are installed
 - [#9072](https://github.com/influxdata/telegraf/pull/9072) `inputs.ping` Always call SetPrivileged(true) in native mode
-- [#9043](https://github.com/influxdata/telegraf/pull/9043) `processors.ifname` Get interface name more effeciently
+- [#9043](https://github.com/influxdata/telegraf/pull/9043) `processors.ifname` Get interface name more efficiently
 - [#9056](https://github.com/influxdata/telegraf/pull/9056) `outputs.yandex_cloud_monitoring` Use correct compute metadata URL to get folder-id
 - [#9048](https://github.com/influxdata/telegraf/pull/9048) `outputs.azure_monitor` Handle error when initializing the auth object
 - [#8549](https://github.com/influxdata/telegraf/pull/8549) `inputs.sqlserver` Fix sqlserver_process_cpu calculation
@@ -2451,7 +2486,7 @@ Included a few more changes that add configuration options to plugins as it's be
 - [#8715](https://github.com/influxdata/telegraf/pull/8715) Bump github.com/Shopify/sarama from 1.27.1 to 1.27.2
 - [#8712](https://github.com/influxdata/telegraf/pull/8712) Bump github.com/newrelic/newrelic-telemetry-sdk-go from 0.2.0 to 0.5.1
 - [#8659](https://github.com/influxdata/telegraf/pull/8659) `inputs.gnmi` GNMI plugin should not take off the first character of field keys when no 'alias path' exists.
-- [#8609](https://github.com/influxdata/telegraf/pull/8609) `inputs.webhooks` Use the 'measurement' json field from the particle webhook as the measurment name, or if it's blank, use the 'name' field of the event's json.
+- [#8609](https://github.com/influxdata/telegraf/pull/8609) `inputs.webhooks` Use the 'measurement' json field from the particle webhook as the measurement name, or if it's blank, use the 'name' field of the event's json.
 - [#8658](https://github.com/influxdata/telegraf/pull/8658) `inputs.procstat` Procstat input plugin should use the same timestamp in all metrics in the same Gather() cycle.
 - [#8391](https://github.com/influxdata/telegraf/pull/8391) `aggregators.merge` Optimize SeriesGrouper & aggregators.merge
 - [#8545](https://github.com/influxdata/telegraf/pull/8545) `inputs.prometheus` Using mime-type in prometheus parser to handle protocol-buffer responses
@@ -2602,7 +2637,7 @@ Included a few more changes that add configuration options to plugins as it's be
 - [#7953](https://github.com/influxdata/telegraf/pull/7953) Add details to connect to InfluxDB OSS 2 and Cloud 2
 - [#8054](https://github.com/influxdata/telegraf/pull/8054) add guidelines run to external plugins with execd
 - [#8198](https://github.com/influxdata/telegraf/pull/8198) `inputs.influxdb_v2_listener` change default influxdb port from 9999 to 8086 to match OSS 2.0 release
-- [starlark](https://github.com/influxdata/telegraf/tree/release-1.16/plugins/processors/starlark/testdata) `processors.starlark` add various code exampels for the Starlark processor
+- [starlark](https://github.com/influxdata/telegraf/tree/release-1.16/plugins/processors/starlark/testdata) `processors.starlark` add various code examples for the Starlark processor
 
 ### Features
 

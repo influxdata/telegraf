@@ -103,7 +103,7 @@ func (w *WinEventLog) SetState(state interface{}) error {
 
 	ptr, err := syscall.UTF16PtrFromString(bookmarkXML)
 	if err != nil {
-		return fmt.Errorf("convertion to pointer failed: %w", err)
+		return fmt.Errorf("conversion to pointer failed: %w", err)
 	}
 
 	bookmark, err := _EvtCreateBookmark(ptr)

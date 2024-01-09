@@ -127,7 +127,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 		}
 	}
 	// Use source tag because host is reserved tag key in Telegraf.
-	// In datadog the host tag and `h:` are interchangable, so we have to chech for the host tag.
+	// In datadog the host tag and `h:` are interchangeable, so we have to check for the host tag.
 	if host, ok := tags["host"]; ok {
 		delete(tags, "host")
 		tags["source"] = host

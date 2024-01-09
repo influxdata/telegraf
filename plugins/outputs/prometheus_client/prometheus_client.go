@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -217,12 +216,13 @@ func (p *PrometheusClient) listen() (net.Listener, error) {
 		return p.listenTCP(p.Listen)
 	}
 	switch strings.ToLower(u.Scheme) {
-	case "tcp", "http":
+	case "", "tcp", "http":
 		return p.listenTCP(u.Host)
 	case "vsock":
 		return p.listenVsock(u.Host)
+	default:
+		return p.listenTCP(u.Host)
 	}
-	return nil, errors.New("Unknown scheme")
 }
 
 func (p *PrometheusClient) Connect() error {

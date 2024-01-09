@@ -95,7 +95,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	case "freely":
 		renegotiationMethod = tls.RenegotiateFreelyAsClient
 	default:
-		return nil, fmt.Errorf("unrecognized renegotation method %q, choose from: 'never', 'once', 'freely'", c.RenegotiationMethod)
+		return nil, fmt.Errorf("unrecognized renegotiation method %q, choose from: 'never', 'once', 'freely'", c.RenegotiationMethod)
 	}
 
 	tlsConfig := &tls.Config{

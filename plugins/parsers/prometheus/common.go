@@ -1,4 +1,4 @@
-package common
+package prometheus
 
 import (
 	"github.com/influxdata/telegraf"
@@ -20,16 +20,17 @@ func ValueType(mt dto.MetricType) telegraf.ValueType {
 	}
 }
 
-// Get labels from metric
-func MakeLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
+func GetTagsFromLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
 	result := map[string]string{}
 
 	for key, value := range defaultTags {
 		result[key] = value
 	}
 
-	for _, lp := range m.Label {
-		result[lp.GetName()] = lp.GetValue()
+	for _, label := range m.Label {
+		if v := label.GetValue(); v != "" {
+			result[label.GetName()] = v
+		}
 	}
 
 	return result

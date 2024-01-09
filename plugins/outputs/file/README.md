@@ -42,7 +42,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
-  ## Compress output data with the specifed algorithm.
+  ## Compress output data with the specified algorithm.
   ## If empty, compression will be disabled and files will be plain text.
   ## Supported algorithms are "zstd", "gzip" and "zlib".
   # compression_algorithm = ""

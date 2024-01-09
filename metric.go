@@ -106,6 +106,9 @@ type Metric interface {
 	// SetTime sets the timestamp of the Metric.
 	SetTime(t time.Time)
 
+	// SetType sets the value-type of the Metric.
+	SetType(t ValueType)
+
 	// HashID returns an unique identifier for the series.
 	HashID() uint64
 

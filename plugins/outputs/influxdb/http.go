@@ -392,7 +392,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return nil
 	}
 
-	// This error handles if there is an invaild or missing retention policy
+	// This error handles if there is an invalid or missing retention policy
 	if strings.Contains(desc, errStringRetentionPolicyNotFound) {
 		c.log.Errorf("When writing to [%s]: received error %v", c.URL(), desc)
 		return nil
@@ -480,7 +480,7 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 	return req, nil
 }
 
-// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
 // side of the connection in case of error
 func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.config.Serializer)

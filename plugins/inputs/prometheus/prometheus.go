@@ -27,7 +27,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	parser "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 //go:embed sample.conf
@@ -210,6 +210,10 @@ func (p *Prometheus) Init() error {
 
 	if p.ContentLengthLimit < 0 {
 		return fmt.Errorf("content length limit must zero or larger: %d", p.ContentLengthLimit)
+  }
+
+	if p.MetricVersion == 0 {
+		p.MetricVersion = 1
 	}
 
 	ctx := context.Background()
@@ -362,14 +366,14 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
 	var req *http.Request
-	var err error
 	var uClient *http.Client
-	var metrics []telegraf.Metric
 	if u.URL.Scheme == "unix" {
 		path := u.URL.Query().Get("path")
 		if path == "" {
 			path = "/metrics"
 		}
+
+		var err error
 		addr := "http://localhost" + path
 		req, err = http.NewRequest("GET", addr, nil)
 		if err != nil {
@@ -395,6 +399,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		if u.URL.Path == "" {
 			u.URL.Path = "/metrics"
 		}
+		var err error
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 		if err != nil {
 			return fmt.Errorf("unable to create new request %q: %w", u.URL.String(), err)
@@ -419,6 +424,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set(key, value)
 	}
 
+	var err error
 	var resp *http.Response
 	if u.URL.Scheme != "unix" {
 		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
@@ -436,7 +442,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.
+  (resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading body: %w", err)
 	}
@@ -445,16 +452,13 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return nil
 	}
 
-	if p.MetricVersion == 2 {
-		parser := parserV2.Parser{
-			Header:          resp.Header,
-			IgnoreTimestamp: p.IgnoreTimestamp,
-		}
-		metrics, err = parser.Parse(body)
-	} else {
-		metrics, err = Parse(body, resp.Header, p.IgnoreTimestamp)
+	// Parse the metrics
+	metricParser := parser.Parser{
+		Header:          resp.Header,
+		MetricVersion:   p.MetricVersion,
+		IgnoreTimestamp: p.IgnoreTimestamp,
 	}
-
+	metrics, err := metricParser.Parse(body)
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}

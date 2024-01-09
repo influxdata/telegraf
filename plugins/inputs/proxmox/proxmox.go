@@ -137,7 +137,7 @@ func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 		tags := getTags(px, vmStat.Name, vmConfig, rt)
 		currentVMStatus, err := getCurrentVMStatus(px, rt, vmStat.ID)
 		if err != nil {
-			px.Log.Errorf("Error getting VM curent VM status: %v", err)
+			px.Log.Errorf("Error getting VM current VM status: %v", err)
 			return
 		}
 

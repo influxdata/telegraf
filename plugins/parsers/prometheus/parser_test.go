@@ -1,707 +1,176 @@
 package prometheus
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
-	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
-	"time"
 
-	dto "github.com/prometheus/client_model/go"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
+	test "github.com/influxdata/telegraf/testutil/plugin_input"
 )
 
-const (
-	//nolint:lll // conditionally long lines allowed
-	validUniqueGauge = `# HELP cadvisor_version_info A metric with a constant '1' value labeled by kernel version, OS version, docker version, cadvisor version & cadvisor revision.
-# TYPE cadvisor_version_info gauge
-cadvisor_version_info{cadvisorRevision="",cadvisorVersion="",dockerVersion="1.8.2",kernelVersion="3.10.0-229.20.1.el7.x86_64",osVersion="CentOS Linux 7 (Core)"} 1
-`
-	validUniqueCounter = `# HELP get_token_fail_count Counter of failed Token() requests to the alternate token source
-# TYPE get_token_fail_count counter
-get_token_fail_count 0
-`
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+	// Make sure testdata contains data
+	require.NotEmpty(t, folders)
 
-	validUniqueSummary = `# HELP http_request_duration_microseconds The HTTP request latencies in microseconds.
-# TYPE http_request_duration_microseconds summary
-http_request_duration_microseconds{handler="prometheus",quantile="0.5"} 552048.506
-http_request_duration_microseconds{handler="prometheus",quantile="0.9"} 5.876804288e+06
-http_request_duration_microseconds{handler="prometheus",quantile="0.99"} 5.876804288e+06
-http_request_duration_microseconds_sum{handler="prometheus"} 1.8909097205e+07
-http_request_duration_microseconds_count{handler="prometheus"} 9
-`
+	for _, f := range folders {
+		fname := f.Name()
+		testdataPath := filepath.Join("testcases", fname)
+		configFilename := filepath.Join(testdataPath, "telegraf.conf")
 
-	validUniqueHistogram = `# HELP apiserver_request_latencies Response latency distribution in microseconds for each verb, resource and client.
-# TYPE apiserver_request_latencies histogram
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="125000"} 1994
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="250000"} 1997
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="500000"} 2000
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="1e+06"} 2005
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="2e+06"} 2012
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="4e+06"} 2017
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="8e+06"} 2024
-apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="+Inf"} 2025
-apiserver_request_latencies_sum{resource="bindings",verb="POST"} 1.02726334e+08
-apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
-`
-	validUniqueHistogramJSON = `{
-		"name": "apiserver_request_latencies",
-		"help": "Response latency distribution in microseconds for each verb, resource and client.",
-		"type": "HISTOGRAM",
-		"metric": [
-			{
-				"label": [
-					{"name": "resource", "value": "bindings"},
-					{"name": "verb", "value": "POST"}
-				],
-				"histogram": {
-					"sample_count": 2025,
-					"sample_sum": 1.02726334e+08,
-					"bucket": [
-						{"cumulative_count": 1994,"upper_bound": 125000},
-						{"cumulative_count": 1997,"upper_bound": 250000},
-						{"cumulative_count": 2000,"upper_bound": 500000},
-						{"cumulative_count": 2005,"upper_bound": 1e+06},
-						{"cumulative_count": 2012,"upper_bound": 2e+06},
-						{"cumulative_count": 2017,"upper_bound": 4e+06},
-						{"cumulative_count": 2024,"upper_bound": 8e+06}
-					]
+		// Run tests as metric version 1
+		t.Run(fname+"_v1", func(t *testing.T) {
+			// Load the configuration
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Tune plugin
+			plugin := cfg.Inputs[0].Input.(*test.Plugin)
+			plugin.Path = testdataPath
+			plugin.UseTypeTag = "_type"
+			plugin.ExpectedFilename = "expected_v1.out"
+
+			parser := plugin.Parser.(*models.RunningParser).Parser.(*Parser)
+			parser.MetricVersion = 1
+			if raw, found := plugin.AdditionalParams["headers"]; found {
+				headers, ok := raw.(map[string]interface{})
+				require.Truef(t, ok, "unknown header type %T", raw)
+				parser.Header = make(http.Header)
+				for k, rv := range headers {
+					v, ok := rv.(string)
+					require.Truef(t, ok, "unknown header value type %T for %q", raw, k)
+					parser.Header.Add(k, v)
 				}
 			}
-		]
-	}`
-)
+			require.NoError(t, plugin.Init())
 
-func TestParsingValidGauge(t *testing.T) {
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"osVersion":        "CentOS Linux 7 (Core)",
-				"cadvisorRevision": "",
-				"cadvisorVersion":  "",
-				"dockerVersion":    "1.8.2",
-				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
-			},
-			map[string]interface{}{
-				"cadvisor_version_info": float64(1),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
+			// Gather data and check errors
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			switch len(plugin.ExpectedErrors) {
+			case 0:
+				require.NoError(t, err)
+			case 1:
+				require.ErrorContains(t, err, plugin.ExpectedErrors[0])
+			default:
+				require.Contains(t, plugin.ExpectedErrors, err.Error())
+			}
+
+			// Determine checking options
+			options := []cmp.Option{
+				testutil.SortMetrics(),
+			}
+			if plugin.ShouldIgnoreTimestamp || parser.IgnoreTimestamp {
+				options = append(options, testutil.IgnoreTime())
+			}
+
+			// Check the resulting metrics
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, plugin.Expected, actual, options...)
+
+			// Special checks
+			if parser.IgnoreTimestamp {
+				t.Log("testing ignore-timestamp case")
+				for i, m := range actual {
+					expected := plugin.Expected[i]
+					require.Greaterf(t, m.Time(), expected.Time(), "metric time not after prometheus value in %d", i)
+				}
+			}
+		})
+
+		// Run tests as metric version 2
+		t.Run(fname+"_v2", func(t *testing.T) {
+			// Load the configuration
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Tune plugin
+			plugin := cfg.Inputs[0].Input.(*test.Plugin)
+			plugin.Path = testdataPath
+			plugin.UseTypeTag = "_type"
+			plugin.ExpectedFilename = "expected_v2.out"
+
+			parser := plugin.Parser.(*models.RunningParser).Parser.(*Parser)
+			parser.MetricVersion = 2
+			if raw, found := plugin.AdditionalParams["headers"]; found {
+				headers, ok := raw.(map[string]interface{})
+				require.Truef(t, ok, "unknown header type %T", raw)
+				parser.Header = make(http.Header)
+				for k, rv := range headers {
+					v, ok := rv.(string)
+					require.Truef(t, ok, "unknown header value type %T for %q", raw, k)
+					parser.Header.Add(k, v)
+				}
+			}
+			require.NoError(t, plugin.Init())
+
+			// Gather data and check errors
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			switch len(plugin.ExpectedErrors) {
+			case 0:
+				require.NoError(t, err)
+			case 1:
+				require.ErrorContains(t, err, plugin.ExpectedErrors[0])
+			default:
+				require.Contains(t, plugin.ExpectedErrors, err.Error())
+			}
+
+			// Determine checking options
+			options := []cmp.Option{
+				testutil.SortMetrics(),
+			}
+			if plugin.ShouldIgnoreTimestamp || parser.IgnoreTimestamp {
+				options = append(options, testutil.IgnoreTime())
+			}
+
+			// Check the resulting metrics
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, plugin.Expected, actual, options...)
+
+			// Special checks
+			if parser.IgnoreTimestamp {
+				t.Log("testing ignore-timestamp case")
+				for i, m := range actual {
+					expected := plugin.Expected[i]
+					require.Greaterf(t, m.Time(), expected.Time(), "metric time not after prometheus value in %d", i)
+				}
+			}
+		})
 	}
-
-	metrics, err := parse([]byte(validUniqueGauge))
-
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestParsingValidCounter(t *testing.T) {
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{},
-			map[string]interface{}{
-				"get_token_fail_count": float64(0),
-			},
-			time.Unix(0, 0),
-			telegraf.Counter,
-		),
-	}
+func BenchmarkParsingMetricVersion1(b *testing.B) {
+	plugin := &Parser{MetricVersion: 1}
 
-	metrics, err := parse([]byte(validUniqueCounter))
-
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestParsingValidSummary(t *testing.T) {
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"handler": "prometheus",
-			},
-			map[string]interface{}{
-				"http_request_duration_microseconds_sum":   float64(1.8909097205e+07),
-				"http_request_duration_microseconds_count": float64(9.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Summary,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"handler":  "prometheus",
-				"quantile": "0.5",
-			},
-			map[string]interface{}{
-				"http_request_duration_microseconds": float64(552048.506),
-			},
-			time.Unix(0, 0),
-			telegraf.Summary,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"handler":  "prometheus",
-				"quantile": "0.9",
-			},
-			map[string]interface{}{
-				"http_request_duration_microseconds": float64(5.876804288e+06),
-			},
-			time.Unix(0, 0),
-			telegraf.Summary,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"handler":  "prometheus",
-				"quantile": "0.99",
-			},
-			map[string]interface{}{
-				"http_request_duration_microseconds": float64(5.876804288e+6),
-			},
-			time.Unix(0, 0),
-			telegraf.Summary,
-		),
-	}
-
-	metrics, err := parse([]byte(validUniqueSummary))
-
-	require.NoError(t, err)
-	require.Len(t, metrics, 4)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestParsingValidHistogram(t *testing.T) {
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_count": float64(2025.0),
-				"apiserver_request_latencies_sum":   float64(1.02726334e+08),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "125000",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(1994.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "250000",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(1997.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "500000",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2000.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "1e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2005.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "2e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2012.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "4e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2017.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "8e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2024.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "+Inf",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2025.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-	}
-
-	metrics, err := parse([]byte(validUniqueHistogram))
-
-	require.NoError(t, err)
-	require.Len(t, metrics, 9)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestDefautTags(t *testing.T) {
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"osVersion":        "CentOS Linux 7 (Core)",
-				"cadvisorRevision": "",
-				"cadvisorVersion":  "",
-				"dockerVersion":    "1.8.2",
-				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
-				"defaultTag":       "defaultTagValue",
-			},
-			map[string]interface{}{
-				"cadvisor_version_info": float64(1),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-
-	parser := Parser{
-		DefaultTags: map[string]string{
-			"defaultTag":    "defaultTagValue",
-			"dockerVersion": "to_be_overridden",
-		},
-	}
-	metrics, err := parser.Parse([]byte(validUniqueGauge))
-
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestMetricsWithTimestamp(t *testing.T) {
-	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
-	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
-	metricsWithTimestamps := fmt.Sprintf(`
-# TYPE test_counter counter
-test_counter{label="test"} 1 %d
-`, testTimeUnix)
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"label": "test",
-			},
-			map[string]interface{}{
-				"test_counter": float64(1.0),
-			},
-			testTime,
-			telegraf.Counter,
-		),
-	}
-
-	metrics, _ := parse([]byte(metricsWithTimestamps))
-
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
-}
-
-func TestMetricsWithoutIgnoreTimestamp(t *testing.T) {
-	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
-	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
-	metricsWithTimestamps := fmt.Sprintf(`
-# TYPE test_counter counter
-test_counter{label="test"} 1 %d
-`, testTimeUnix)
-	expected := testutil.MustMetric(
-		"prometheus",
-		map[string]string{
-			"label": "test",
-		},
-		map[string]interface{}{
-			"test_counter": float64(1.0),
-		},
-		testTime,
-		telegraf.Counter,
-	)
-
-	parser := Parser{IgnoreTimestamp: true}
-	m, _ := parser.ParseLine(metricsWithTimestamps)
-
-	testutil.RequireMetricEqual(t, expected, m, testutil.IgnoreTime(), testutil.SortMetrics())
-	require.WithinDuration(t, time.Now(), m.Time(), 5*time.Second)
-}
-
-func parse(buf []byte) ([]telegraf.Metric, error) {
-	parser := Parser{}
-	return parser.Parse(buf)
-}
-
-func TestParserProtobufHeader(t *testing.T) {
-	var uClient = &http.Client{
-		Transport: &http.Transport{
-			DisableKeepAlives: true,
-		},
-	}
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"host": "omsk",
-			},
-			map[string]interface{}{
-				"swap_free": 9.77911808e+08,
-			},
-			time.Unix(0, 0),
-			2,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"host": "omsk",
-			},
-			map[string]interface{}{
-				"swap_in": 2.031616e+06,
-			},
-			time.Unix(0, 0),
-			1,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"host": "omsk",
-			},
-			map[string]interface{}{
-				"swap_out": 1.579008e+07,
-			},
-			time.Unix(0, 0),
-			1,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"host": "omsk",
-			},
-			map[string]interface{}{
-				"swap_total": 9.93185792e+08,
-			},
-			time.Unix(0, 0),
-			2,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"host": "omsk",
-			},
-			map[string]interface{}{
-				"swap_used": 1.5273984e+07,
-			},
-			time.Unix(0, 0),
-			2,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"host": "omsk",
-			},
-			map[string]interface{}{
-				"swap_used_percent": 1.5378778193395661,
-			},
-			time.Unix(0, 0),
-			2,
-		),
-	}
-	sampleProtoBufData := []uint8{67, 10, 9, 115, 119, 97, 112, 95, 102, 114, 101, 101, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108,
-		101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 0, 0,
-		0, 0, 224, 36, 205, 65, 65, 10, 7, 115, 119, 97, 112, 95, 105, 110, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116,
-		101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 0, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 26, 9, 9, 0, 0, 0, 0, 0, 0,
-		63, 65, 66, 10, 8, 115, 119, 97, 112, 95, 111, 117, 116, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101, 100,
-		32, 109, 101, 116, 114, 105, 99, 24, 0, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 26, 9, 9, 0, 0, 0, 0, 0, 30, 110, 65,
-		68, 10, 10, 115, 119, 97, 112, 95, 116, 111, 116, 97, 108, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116, 101,
-		100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 0, 0, 0, 0, 104, 153,
-		205, 65, 67, 10, 9, 115, 119, 97, 112, 95, 117, 115, 101, 100, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102, 32, 99, 111, 108, 108, 101, 99, 116,
-		101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109, 115, 107, 18, 9, 9, 0, 0, 0, 0, 0, 34,
-		109, 65, 75, 10, 17, 115, 119, 97, 112, 95, 117, 115, 101, 100, 95, 112, 101, 114, 99, 101, 110, 116, 18, 25, 84, 101, 108, 101, 103, 114, 97, 102,
-		32, 99, 111, 108, 108, 101, 99, 116, 101, 100, 32, 109, 101, 116, 114, 105, 99, 24, 1, 34, 25, 10, 12, 10, 4, 104, 111, 115, 116, 18, 4, 111, 109,
-		115, 107, 18, 9, 9, 109, 234, 180, 197, 37, 155, 248, 63}
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily; encoding=delimited")
-		_, err := w.Write(sampleProtoBufData)
-		require.NoError(t, err)
-	}))
-	defer ts.Close()
-	req, err := http.NewRequest("GET", ts.URL, nil)
-	if err != nil {
-		t.Fatalf("unable to create new request %q: %s", ts.URL, err)
-	}
-	var resp *http.Response
-	resp, err = uClient.Do(req)
-	if err != nil {
-		t.Fatalf("error making HTTP request to %q: %s", ts.URL, err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("error reading body: %s", err)
-	}
-	parser := Parser{Header: resp.Header}
-	metrics, err := parser.Parse(body)
-	if err != nil {
-		t.Fatalf("error reading metrics for %q: %s", ts.URL, err)
-	}
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestHistogramInfBucketPresence(t *testing.T) {
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_count": float64(2025.0),
-				"apiserver_request_latencies_sum":   float64(1.02726334e+08),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "125000",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(1994.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "250000",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(1997.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "500000",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2000.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "1e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2005.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "2e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2012.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "4e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2017.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "8e+06",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2024.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"verb":     "POST",
-				"resource": "bindings",
-				"le":       "+Inf",
-			},
-			map[string]interface{}{
-				"apiserver_request_latencies_bucket": float64(2025.0),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-	}
-
-	var metricFamily dto.MetricFamily
-	err := json.Unmarshal([]byte(validUniqueHistogramJSON), &metricFamily)
-	require.NoError(t, err)
-
-	m := metricFamily.Metric[0]
-	tags := common.MakeLabels(m, map[string]string{})
-	metrics := makeBuckets(m, tags, *metricFamily.Name, metricFamily.GetType(), time.Now())
-
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-const benchmarkData = `
-# HELP benchmark_a Test metric for benchmarking
-# TYPE benchmark_a gauge
-benchmark_a{source="myhost",tags_platform="python",tags_sdkver="3.11.5"} 5 1653643420000
-
-# HELP benchmark_b Test metric for benchmarking
-# TYPE benchmark_b gauge
-benchmark_b{source="myhost",tags_platform="python",tags_sdkver="3.11.4"} 4 1653643420000
-`
-
-func TestBenchmarkData(t *testing.T) {
-	plugin := &Parser{
-		IgnoreTimestamp: false,
-	}
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"prometheus",
-			map[string]string{
-				"source":        "myhost",
-				"tags_platform": "python",
-				"tags_sdkver":   "3.11.5",
-			},
-			map[string]interface{}{
-				"benchmark_a": 5.0,
-			},
-			time.Unix(1653643420, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"prometheus",
-			map[string]string{
-				"source":        "myhost",
-				"tags_platform": "python",
-				"tags_sdkver":   "3.11.4",
-			},
-			map[string]interface{}{
-				"benchmark_b": 4.0,
-			},
-			time.Unix(1653643420, 0),
-			telegraf.Gauge,
-		),
-	}
-
-	actual, err := plugin.Parse([]byte(benchmarkData))
-	require.NoError(t, err)
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
-}
-
-func BenchmarkParsing(b *testing.B) {
-	plugin := &Parser{}
+	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.txt"))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		_, _ = plugin.Parse(benchmarkData)
+	}
+}
+
+func BenchmarkParsingMetricVersion2(b *testing.B) {
+	plugin := &Parser{MetricVersion: 2}
+
+	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.txt"))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse(benchmarkData)
 	}
 }

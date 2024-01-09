@@ -183,7 +183,7 @@ An example configuration of a file based output is:
 Splunk supports only numeric field values, so serializer would silently drop metrics with the string values. For some cases it is possible to workaround using ENUM processor. Example, provided below doing this for the `docker_container_health.health_status` metric:
 
 ```toml
-# splunkmetric does not support sting values
+# splunkmetric does not support string values
 [[processors.enum]]
   namepass = ["docker_container_health"]
   [[processors.enum.mapping]]

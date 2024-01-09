@@ -30,7 +30,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The directory to monitor and read files from (including sub-directories if "recursive" is true).
   directory = ""
   #
-  ## The directory to move finished files to (maintaining directory hierachy from source).
+  ## The directory to move finished files to (maintaining directory hierarchy from source).
   finished_directory = ""
   #
   ## Setting recursive to true will make the plugin recursively walk the directory and process all sub-directories.
@@ -46,7 +46,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # directory_duration_threshold = "50ms"
   #
   ## A list of the only file names to monitor, if necessary. Supports regex. If left blank, all files are ingested.
-  # files_to_monitor = ["^.*\.csv"]
+  # files_to_monitor = ["^.*\\.csv"]
   #
   ## A list of files to ignore, if necessary. Supports regex.
   # files_to_ignore = [".DS_Store"]

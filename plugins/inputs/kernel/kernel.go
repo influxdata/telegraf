@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/prometheus/procfs"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -34,6 +36,8 @@ type Kernel struct {
 	statFile        string
 	entropyStatFile string
 	ksmStatsDir     string
+	psiDir          string
+	procfs          procfs.FS
 }
 
 func (k *Kernel) Init() error {
@@ -45,7 +49,15 @@ func (k *Kernel) Init() error {
 	if k.optCollect["ksm"] {
 		if _, err := os.Stat(k.ksmStatsDir); os.IsNotExist(err) {
 			// ksm probably not enabled in the kernel, bail out early
-			return fmt.Errorf("directory %q does not exist. Is KSM enabled in this kernel?", k.ksmStatsDir)
+			return fmt.Errorf("directory %q does not exist. KSM is not enabled in this kernel", k.ksmStatsDir)
+		}
+	}
+	if k.optCollect["psi"] {
+		procdir := filepath.Dir(k.psiDir)
+		var err error
+		if k.procfs, err = procfs.NewFS(procdir); err != nil {
+			// psi probably not supported in the kernel, bail out early
+			return fmt.Errorf("failed to initialize procfs on %s: %w", procdir, err)
 		}
 	}
 	return nil
@@ -145,12 +157,18 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	}
 	acc.AddCounter("kernel", fields, map[string]string{})
 
+	if k.optCollect["psi"] {
+		if err := k.gatherPressure(acc); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Path %q does not exist", path)
+		return nil, fmt.Errorf("path %q does not exist", path)
 	} else if err != nil {
 		return nil, err
 	}
@@ -183,6 +201,7 @@ func init() {
 			statFile:        "/proc/stat",
 			entropyStatFile: "/proc/sys/kernel/random/entropy_avail",
 			ksmStatsDir:     "/sys/kernel/mm/ksm",
+			psiDir:          "/proc/pressure",
 		}
 	})
 }

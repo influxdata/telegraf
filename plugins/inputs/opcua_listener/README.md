@@ -252,7 +252,7 @@ An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
 To gather data from this node enter the following line into the 'nodes' property above:
 
 ```text
-{field_name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
+{name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
 ```
 
 This node configuration produces a metric like this:

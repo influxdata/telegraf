@@ -1,0 +1,2 @@
+benchmark_a,_type=gauge,source=myhost,tags_platform=python,tags_sdkver=3.11.5 gauge=5 1653643420000000000
+benchmark_b,_type=gauge,source=myhost,tags_platform=python,tags_sdkver=3.11.4 gauge=4 1653643420000000000

@@ -1,0 +1,7 @@
+# HELP http_request_duration_microseconds The HTTP request latencies in microseconds.
+# TYPE http_request_duration_microseconds summary
+http_request_duration_microseconds{handler="prometheus",quantile="0.5"} 552048.506
+http_request_duration_microseconds{handler="prometheus",quantile="0.9"} 5.876804288e+06
+http_request_duration_microseconds{handler="prometheus",quantile="0.99"} 5.876804288e+06
+http_request_duration_microseconds_sum{handler="prometheus"} 1.8909097205e+07
+http_request_duration_microseconds_count{handler="prometheus"} 9
