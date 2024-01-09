@@ -7,6 +7,7 @@ following works:
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
 - collectd.org [ISC License](https://github.com/collectd/go-collectd/blob/master/LICENSE)
 - dario.cat/mergo [BSD 3-Clause "New" or "Revised" License](https://github.com/imdario/mergo/blob/master/LICENSE)
+- github.com/99designs/go-keychain [MIT License](https://github.com/99designs/go-keychain/blob/master/LICENSE)
 - github.com/99designs/keyring [MIT License](https://github.com/99designs/keyring/blob/master/LICENSE)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
 - github.com/Azure/azure-event-hubs-go [MIT License](https://github.com/Azure/azure-event-hubs-go/blob/master/LICENSE)
