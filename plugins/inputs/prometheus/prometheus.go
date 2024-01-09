@@ -441,9 +441,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
-
-	body, err := io.
-  (resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading body: %w", err)
 	}
