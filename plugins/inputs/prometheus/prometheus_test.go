@@ -358,8 +358,7 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(p.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(p.Gather))
 	require.Empty(t, acc.Metrics)
 }
 
