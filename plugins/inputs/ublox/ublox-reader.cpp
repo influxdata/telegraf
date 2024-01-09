@@ -26,7 +26,7 @@ bool ublox_reader_init(void *reader, const char *device, char **err) {
   std::string  serr;
   bool         retval = ublox_reader->init(device, &serr);
   if (retval == false && err) {
-    *err = (char *)malloc(serr.size());
+    *err = (char *)malloc(serr.size() + 1 /*\0*/);
     strcpy(*err, serr.c_str());
   }
   return retval;
@@ -117,7 +117,7 @@ int ublox_reader_read(void         *reader,
       break;
     case UbloxReader::Error:
       if (err) {
-        *err = (char *)malloc(serr.size());
+        *err = (char *)malloc(serr.size() + 1 /*\0*/);
         strcpy(*err, serr.c_str());
       }
       return -1;
