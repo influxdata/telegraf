@@ -167,10 +167,9 @@ func (n *NATS) Connect() error {
 func (n *NATS) Init() error {
 	if n.Jetstream != nil {
 		if strings.TrimSpace(n.Jetstream.Name) == "" {
-		    return errors.New("stream cannot be empty")
-	    }
+			return errors.New("stream cannot be empty")
+		}
 	}
-
 	return nil
 }
 
