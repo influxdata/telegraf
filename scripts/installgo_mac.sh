@@ -23,17 +23,17 @@ sudo mkdir -p ${path}
 # it is slow to update and we can't pull specific minor versions.)
 setup_go () {
     echo "installing go"
-    curl -L https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz --output go${GO_VERSION}.${GO_ARCH}.tar.gz
+    curl -L "https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz" --output "go${GO_VERSION}.${GO_ARCH}.tar.gz"
     if ! echo "${GO_VERSION_SHA}  go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum --algorithm 256 --check -; then
         echo "Checksum failed" >&2
         exit 1
     fi
 
-    sudo rm -rf ${path}/go
-    sudo tar -C $path -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
+    sudo rm -rf "${path}/go"
+    sudo tar -C "$path" -xzf "go${GO_VERSION}.${GO_ARCH}.tar.gz"
     sudo mkdir -p /usr/local/bin
-    sudo ln -sf ${path}/go/bin/go /usr/local/bin/go
-    sudo ln -sf ${path}/go/bin/gofmt /usr/local/bin/gofmt
+    sudo ln -sf "${path}/go/bin/go" /usr/local/bin/go
+    sudo ln -sf "${path}/go/bin/gofmt" /usr/local/bin/gofmt
 }
 
 if command -v go >/dev/null 2>&1; then
