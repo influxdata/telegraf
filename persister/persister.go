@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 )
@@ -12,7 +13,8 @@ import (
 type Persister struct {
 	Filename string
 
-	register map[string]telegraf.StatefulPlugin
+	register   map[string]telegraf.StatefulPlugin
+	stateMutex sync.Mutex
 }
 
 func (p *Persister) Init() error {
@@ -31,16 +33,9 @@ func (p *Persister) Register(id string, plugin telegraf.StatefulPlugin) error {
 }
 
 func (p *Persister) Load() error {
-	// Read the states from disk
-	in, err := os.ReadFile(p.Filename)
+	states, err := p.loadFile(p.Filename)
 	if err != nil {
-		return fmt.Errorf("reading states file failed: %w", err)
-	}
-
-	// Unmarshal the id to serialized states map
-	var states map[string][]byte
-	if err := json.Unmarshal(in, &states); err != nil {
-		return fmt.Errorf("unmarshalling states failed: %w", err)
+		return err
 	}
 
 	// Get the initialized state as blueprint for unmarshalling
@@ -88,8 +83,64 @@ func (p *Persister) Store() error {
 		return fmt.Errorf("marshalling states failed: %w", err)
 	}
 
+	err = p.writeFile(p.Filename, serialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Persister) StoreOnce(id string) error {
+	p.stateMutex.Lock()
+	defer p.stateMutex.Unlock()
+
+	states, err := p.loadFile(p.Filename)
+	if err != nil {
+		return err
+	}
+
+	plugin := p.register[id]
+	state, err := json.Marshal(plugin.GetState())
+	if err != nil {
+		return fmt.Errorf("marshalling state for id %q failed: %w", id, err)
+	}
+
+	states[id] = state
+
+	// Serialize the states
+	serialized, err := json.Marshal(states)
+	if err != nil {
+		return fmt.Errorf("marshalling states failed: %w", err)
+	}
+
+	err = p.writeFile(p.Filename, serialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Persister) loadFile(filename string) (map[string][]byte, error) {
+	// Read the states from disk
+	in, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("reading states file failed: %w", err)
+	}
+
+	// Unmarshal the id to serialized states map
+	var states map[string][]byte
+	if err := json.Unmarshal(in, &states); err != nil {
+		return nil, fmt.Errorf("unmarshalling states failed: %w", err)
+	}
+
+	return states, nil
+}
+
+func (p *Persister) writeFile(filename string, serialized []byte) error {
 	// Write the states to disk
-	f, err := os.Create(p.Filename)
+	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("creating states file %q failed: %w", p.Filename, err)
 	}
