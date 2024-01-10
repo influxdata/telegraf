@@ -1,19 +1,33 @@
-$tempCertFile = New-TemporaryFile
-
-# Retrieve environment variables for cert/password.
-$certText = $env:windowsCert
-$CertPass = $env:windowsCertPassword
-
-# Create a Cert object by converting the cert string to bytes.
-$finalFileName = $tempCertFile.FullName
-$certBytes = [Convert]::FromBase64String($certText)
-[System.IO.File]::WriteAllBytes($finalFileName, $certBytes)
-$CertPath = $finalFileName
-$Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath, $CertPass)
+# Fail on first error.
+$ErrorActionPreference = "Stop"
 
 # Update the version of Compress-Archive to support zipping correctly.
 Install-Module Microsoft.PowerShell.Archive -MinimumVersion 1.2.3.0 -Repository PSGallery -Force
 Import-Module Microsoft.PowerShell.Archive
+
+# Save the certfile locally.
+if (Test-Path C:\CERT_FILE.p12.b64) {
+    Remove-Item -Force -Path C:\CERT_FILE.p12.b64
+  }
+
+if (Test-Path C:\Certificate_pkcs12.p12) {
+    Remove-Item -Force -Path C:\Certificate_pkcs12.p12
+}
+
+Write-Output "Saving certificate locally"
+New-Item C:\CERT_FILE.p12.b64
+Set-Content -Path C:\CERT_FILE.p12.b64 -Value $env:SM_CLIENT_CERT_FILE_B64
+certutil -decode C:\CERT_FILE.p12.b64 C:\Certificate_pkcs12.p12
+
+# Download and install signing tools.
+if (!(Test-Path "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe")) {
+    Write-Output "Installing smctl"
+    curl.exe -X GET https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:$env:SM_API_KEY" -o smtools-windows-x64.msi
+    msiexec.exe /i smtools-windows-x64.msi /quiet /qn
+}
+
+certutil.exe -csp "DigiCert Software Trust Manager KSP" -key -user
+& "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" windows certsync
 
 # Go through the artifacts directory and sign the 'windows' artifacts.
 $artifactDirectory = "./build/dist"
@@ -25,7 +39,10 @@ foreach ($file in get-ChildItem $artifactDirectory | where {$_.name -like "*wind
 
     $subDirectoryPath = $extractDirectory + "/" + (Get-ChildItem -Path $extractDirectory | Select-Object -First 1).Name
     $telegrafExePath = $subDirectoryPath + "/" + "telegraf.exe"
-    Set-AuthenticodeSignature -Certificate $Cert -FilePath  $telegrafExePath -TimestampServer http://timestamp.digicert.com
+
+    & "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" sign --input "$telegrafExePath" --fingerprint $env:SM_FINGERPRINT --verbose
+    & "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools\smctl.exe" sign verify --input "$telegrafExePath"
+
     Compress-Archive -Path $subDirectoryPath -DestinationPath $artifact -Force
     Remove-Item $extractDirectory -Force -Recurse
 }
