@@ -112,7 +112,7 @@ require (
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/intel/iaevents v1.1.0
-	github.com/intel/powertelemetry v1.0.0
+	github.com/intel/powertelemetry v1.0.1
 	github.com/jackc/pgconn v1.14.1
 	github.com/jackc/pgio v1.0.0
 	github.com/jackc/pgtype v1.14.0
@@ -168,7 +168,7 @@ require (
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
-	github.com/shirou/gopsutil/v3 v3.23.10
+	github.com/shirou/gopsutil/v3 v3.23.11
 	github.com/showwin/speedtest-go v1.6.7
 	github.com/signalfx/golib/v3 v3.3.53
 	github.com/sirupsen/logrus v1.9.3
