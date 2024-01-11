@@ -7,8 +7,6 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - attach_workspace:
-          at: '/build'
       - run:
           name: "Get Windows zip file"
           command: |
