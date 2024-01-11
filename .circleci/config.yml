@@ -1,24 +1,837 @@
 version: 2.1
+orbs:
+  win: circleci/windows@5.0.0
+  aws-cli: circleci/aws-cli@3.1.1
 
+executors:
+  telegraf-ci:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    resource_class: large
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.21.5'
+    environment:
+      GOFLAGS: -p=4
+  mac:
+    working_directory: '~/go/src/github.com/influxdata/telegraf'
+    resource_class: macos.m1.medium.gen1
+    macos:
+      xcode: 14.2.0
+    environment:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      GOFLAGS: -p=4
+
+commands:
+  check-changed-files-or-halt:
+    steps:
+      - run: ./scripts/check-file-changes.sh
+  test-go:
+    parameters:
+      os:
+        type: string
+        default: "linux"
+      arch:
+        type: string
+        default: "amd64"
+      gotestsum:
+        type: string
+        default: "gotestsum"
+    steps:
+      - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      - unless:
+          condition:
+            equal: [ "386", << parameters.arch >> ]
+          steps:
+            - run: echo 'export RACE="-race"' >> $BASH_ENV
+      - run: |
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
+  package-build:
+    parameters:
+      type:
+        type: string
+        default: ""
+      nightly:
+        type: boolean
+        default: false
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - attach_workspace:
+          at: '/go'
+      - when:
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
+      - when:
+          condition: << parameters.nightly >>
+          steps:
+            - run:
+                command: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
+      - unless:
+          condition:
+            or:
+              - << parameters.nightly >>
+          steps:
+            - run:
+                command: 'make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
 jobs:
-  package-sign-windows:
+  lint-linux:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: ./scripts/make_docs.sh
+      - run: 'make deps'
+      - run: 'make tidy'
+      - run: 'make check'
+      - run: 'make check-deps'
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - run:
+          name: "Linux"
+          command: GOGC=20 /go/bin/golangci-lint run --verbose
+  lint-macos:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - run:
+          name: "macOS"
+          command: GOGC=20 GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
+          no_output_timeout: 30m
+  lint-windows:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+      - run:
+          name: "Windows"
+          command: GOGC=20 GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
+          no_output_timeout: 30m
+  test-go-linux:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - test-go
+  test-go-linux-386:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'GOARCH=386 make deps'
+      - run: 'GOARCH=386 make tidy'
+      - run: 'GOARCH=386 make check'
+      - test-go:
+          arch: "386"
+  test-integration:
     machine:
       image: ubuntu-2204:current
     resource_class: large
     steps:
       - checkout
+      - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_linux.sh'
+      - run: 'make deps'
+      - run: 'make test-integration'
+  test-go-mac:
+    executor: mac
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_mac.sh'
+      - test-go:
+          os: darwin
+          arch: arm64
+  test-go-windows:
+    executor:
+        name: win/default
+        shell: bash.exe
+        size: large
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: git config --system core.longpaths true
+      - run: choco feature enable -n allowGlobalConfirmation
+      - run: 'sh ./scripts/installgo_windows.sh'
+      - run: choco install mingw --version=12.2.0.03042023
+      - test-go:
+          os: windows
+          gotestsum: "gotestsum.exe"
+  test-licenses:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'make build_tools'
+      - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
+  windows-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: windows
+          nightly: << parameters.nightly >>
+  darwin-amd64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: darwin-amd64
+          nightly: << parameters.nightly >>
+  darwin-arm64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: darwin-arm64
+          nightly: << parameters.nightly >>
+  i386-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: i386
+          nightly: << parameters.nightly >>
+  ppc64le-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: ppc64le
+          nightly: << parameters.nightly >>
+  riscv64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: riscv64
+          nightly: << parameters.nightly >>
+  s390x-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: s390x
+          nightly: << parameters.nightly >>
+  armel-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: armel
+          nightly: << parameters.nightly >>
+  amd64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: amd64
+          nightly: << parameters.nightly >>
+  arm64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: arm64
+          nightly: << parameters.nightly >>
+  mipsel-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: mipsel
+          nightly: << parameters.nightly >>
+  mips-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: mips
+          nightly: << parameters.nightly >>
+  armhf-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: armhf
+          nightly: << parameters.nightly >>
+  nightly:
+    executor: telegraf-ci
+    steps:
+      - attach_workspace:
+          at: '/build'
       - run:
-          name: "Get Windows zip file"
           command: |
-            mkdir -p ./build/dist
-            wget https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip -O ./build/dist/telegraf-nightly_windows_amd64.zip
+            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/nightlies/ \
+              --exclude "*" \
+              --include "*.tar.gz" \
+              --include "*.deb" \
+              --include "*.rpm" \
+              --include "*.zip" \
+              --acl public-read
+  release:
+    executor: telegraf-ci
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - run:
+          command: |
+            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/releases/ \
+              --exclude "*" \
+              --include "telegraf*.DIGESTS" \
+              --include "telegraf*.digests" \
+              --include "telegraf*.asc" \
+              --include "telegraf*.deb" \
+              --include "telegraf*.dmg" \
+              --include "telegraf*.rpm" \
+              --include "telegraf*.tar.gz" \
+              --include "telegraf*.zip" \
+              --acl public-read
+  docker-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - run:
+          name: login to quay.io
+          command: docker login --username="${QUAY_USER}" --password="${QUAY_PASS}" quay.io
+      - run:
+          name: clone influxdata/influxdata-docker
+          command: git clone https://github.com/influxdata/influxdata-docker
+      - run:
+          name: build and push telegraf:nightly
+          command: |
+            cd influxdata-docker/telegraf/nightly
+            docker build -t telegraf .
+            docker tag telegraf quay.io/influxdb/telegraf-nightly:latest
+            docker image ls
+            docker push quay.io/influxdb/telegraf-nightly:latest
+      - run:
+          name: build and push telegraf:nightly-alpine
+          command: |
+            cd influxdata-docker/telegraf/nightly/alpine
+            docker build -t telegraf-alpine .
+            docker tag telegraf-alpine quay.io/influxdb/telegraf-nightly:alpine
+            docker image ls
+            docker push quay.io/influxdb/telegraf-nightly:alpine
+  amd64-package-test-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run: sudo apt update && sudo apt install -y snapd
+      - run: sudo snap install lxd
+      - run: sudo lxd init --auto
+      - run: sudo usermod -a -G lxd $(whoami)
+      - run: cd tools/package_lxd_test && go build
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
+      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
+  package-sign-windows:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - attach_workspace:
+          at: '/build'
       - run:
           name: "Sign Windows Executables"
+          command: ./scripts/sign-windows.sh
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
+  package-sign-mac:
+    executor: mac
+    working_directory: /Users/distiller/project
+    environment:
+      FL_OUTPUT_DIR: output
+      FASTLANE_LANE: test
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - attach_workspace:
+          at: '.'
+      - run:
           command: |
-            ./scripts/sign-windows.sh
+            sh ./scripts/mac-signing.sh
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
+  package-consolidate:
+    docker:
+     - image: alpine
+    steps:
+      - attach_workspace:
+          at: '.'
+      - run:
+          command: |
+            cd dist && find . -type f -name '._*' -delete
+      - store_artifacts:
+          path: './dist'
+          destination: 'build/dist'
+      - run:
+          command: |
+            echo "This job contains all the final artifacts."
+  share-artifacts:
+    executor: aws-cli/default
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run:
+          command: |
+            PR=${CIRCLE_PULL_REQUEST##*/}
+            printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
+            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
+  package-sign:
+    circleci_ip_ranges: true
+    docker:
+      - image: quay.io/influxdb/rsign:latest
+        auth:
+          username: $QUAY_RSIGN_USERNAME
+          password: $QUAY_RSIGN_PASSWORD
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - 3b:c0:fe:a0:8a:93:33:69:de:22:ac:20:a6:ed:6b:e5
+      - attach_workspace:
+          at: .
+      - run: |
+          cd dist
+
+          # Generate the *.DIGESTS files. This must be done before the signing
+          # step so that the *.DIGEST files are also signed.
+          for target in *
+          do
+            sha256sum "${target}" > "${target}.DIGESTS"
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              # rsign is shipped on Alpine Linux which uses "busybox ash" instead
+              # of bash. ash is somewhat more posix compliant and is missing some
+              # extensions and niceties from bash.
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip|*.DIGESTS)
+                rsign "${target}"
+              ;;
+            esac
+          done
+
+          for target in *
+          do
+            case "${target}"
+            in
+              *.deb|*.dmg|*.rpm|*.tar.gz|*.zip)
+                # Print sha256 hash and target for artifacts all in one file
+                # for use later during the release.
+                cat "${target}.DIGESTS" >> "telegraf-${CIRCLE_TAG}.DIGESTS"
+              ;;
+            esac
+          done
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - dist
+      - store_artifacts:
+          path: ./dist
 
 workflows:
   version: 2
-  ci:
+  check:
+    when:
+      not:
+        equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
-      - 'package-sign-windows'
+      - 'lint-linux':
+          filters:
+            tags:
+              only: /.*/
+      - 'lint-macos':
+          filters:
+            tags:
+              only: /.*/
+      - 'lint-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-linux':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-linux-386':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-mac':
+          filters:
+            tags: # only runs on tags if you specify this filter
+              only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-integration':
+          filters:
+            tags:
+              only: /.*/
+      - 'windows-package':
+          requires:
+            - 'test-go-windows'
+          filters:
+            tags:
+              only: /.*/
+      - 'darwin-amd64-package':
+          requires:
+            - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
+      - 'darwin-arm64-package':
+          requires:
+            - 'test-go-mac'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'i386-package':
+          requires:
+            - 'test-go-linux-386'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'ppc64le-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'riscv64-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 's390x-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'armel-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'amd64-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
+      - 'arm64-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'armhf-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'mipsel-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'mips-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              only: /.*/
+      - 'share-artifacts':
+          requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 'riscv64-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+            - 'windows-package'
+            - 'arm64-package'
+            - 'armhf-package'
+          filters:
+            branches:
+              ignore:
+                - master
+                - release.*
+            tags:
+              ignore: /.*/
+      - 'package-sign-windows':
+          requires:
+            - 'windows-package'
+          filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+           filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
+      - 'package-sign':
+          requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 'riscv64-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'arm64-package'
+            - 'armhf-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+      - 'package-consolidate':
+           requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'arm64-package'
+            - 'armhf-package'
+            - 'riscv64-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
+            - 'package-sign'
+           filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+      - 'release':
+          requires:
+            - 'package-consolidate'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+  nightly:
+    when:
+      equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
+    jobs:
+      - 'lint-linux'
+      - 'lint-macos'
+      - 'lint-windows'
+      - 'test-go-linux'
+      - 'test-go-linux-386'
+      - 'test-go-mac'
+      - 'test-go-windows'
+      - 'test-licenses'
+      - 'windows-package':
+          name: 'windows-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-windows'
+      - 'darwin-amd64-package':
+          name: 'darwin-amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'darwin-arm64-package':
+          name: 'darwin-arm64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'i386-package':
+          name: 'i386-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux-386'
+      - 'ppc64le-package':
+          name: 'ppc64le-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'riscv64-package':
+          name: 'riscv64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 's390x-package':
+          name: 's390x-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'armel-package':
+          name: 'armel-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'amd64-package':
+          name: 'amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'arm64-package':
+          name: 'arm64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'armhf-package':
+          name: 'armhf-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'mipsel-package':
+          name: 'mipsel-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'mips-package':
+          name: 'mips-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'package-sign-windows':
+          requires:
+            - 'windows-package-nightly'
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
+      - nightly:
+          requires:
+            - 'amd64-package-test-nightly'
+            - 'arm64-package-nightly'
+            - 'armel-package-nightly'
+            - 'armhf-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
+            - 'i386-package-nightly'
+            - 'mips-package-nightly'
+            - 'mipsel-package-nightly'
+            - 'ppc64le-package-nightly'
+            - 'riscv64-package-nightly'
+            - 's390x-package-nightly'
+            - 'windows-package-nightly'
+      - docker-nightly:
+          requires:
+            - 'nightly'
+      - amd64-package-test-nightly:
+          requires:
+            - 'amd64-package-nightly'
