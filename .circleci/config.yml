@@ -1,24 +1,23 @@
 version: 2.1
-orbs:
-  win: circleci/windows@5.0.0
-  aws-cli: circleci/aws-cli@3.1.1
 
 jobs:
   package-sign-windows:
-    executor:
-        name: win/default
-        shell: powershell.exe
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
     steps:
       - checkout
       - attach_workspace:
           at: '/build'
       - run:
-          name: "Sign Windows Executables"
-          shell: powershell.exe
+          name: "Get Windows zip file"
           command: |
-            New-Item -Path . -Name "build/dist" -Type Directory
-            Invoke-WebRequest -Uri https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip -OutFile ./build/dist/telegraf-nightly_windows_amd64.zip
-            ./scripts/windows-signing.ps1
+            mkdir -p ./build/dist
+            wget https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip -O ./build/dist/telegraf-nightly_windows_amd64.zip
+      - run:
+          name: "Sign Windows Executables"
+          command: |
+            ./scripts/sign-windows.sh
 
 workflows:
   version: 2
