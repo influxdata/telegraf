@@ -93,54 +93,81 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+			
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Kernel = append(influx.Kernel, &m)
 		case "linux_sysctl_fs":
 			m := LinuxSysctlFs{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.LinuxSysctlFs = append(influx.LinuxSysctlFs, &m)
 		case "system":
 			m := System{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.System = append(influx.System, &m)
 		case "net":
 			m := Net{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Net = append(influx.Net, &m)
 		case "netstat":
 			m := Netstat{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Netstat = append(influx.Netstat, &m)
 		case "interrupts":
 			m := Interrupts{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Interrupts = append(influx.Interrupts, &m)
 		case "processes":
 			m := Processes{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Processes = append(influx.Processes, &m)
 		case "disk":
 			m := Disk{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Disk = append(influx.Disk, &m)
 		case "diskio":
 			m := Diskio{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Diskio = append(influx.Diskio, &m)
 		case "docker":
 			m := DockerStats{
@@ -160,48 +187,72 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.DockerStats = append(influx.DockerStats, &m)
 		case "docker_container_mem":
 			m := DockerMem{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.DockerMem = append(influx.DockerMem, &m)
 		case "docker_container_cpu":
 			m := DockerCpu{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.DockerCpu = append(influx.DockerCpu, &m)
 		case "docker_container_net":
 			m := DockerNet{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.DockerNet = append(influx.DockerNet, &m)
 		case "docker_container_blkio":
 			m := DockerBlkio{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.DockerBlkio = append(influx.DockerBlkio, &m)
 		case "mem":
 			m := Mem{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Mem = append(influx.Mem, &m)
 		case "cpu":
 			m := CPU{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Cpu = append(influx.Cpu, &m)
 		case "swap":
 			m := Swap{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Swap = append(influx.Swap, &m)
 		case "tegrastats":
 			m := Tegrastats{}
@@ -209,6 +260,9 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build tegrastats")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 
 			// Workaround for largest_free_block_size which is string representation of size eg. 4MB, 5kB
 			blockSizeStr := gjson.Get(string(b), "fields.largest_free_block_size")
@@ -227,18 +281,27 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build smart_device")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Smart = append(influx.Smart, &m)
 		case "smart_attribute":
 			m := SMARTAttribute{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build smart_attribute")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.SmartAttribute = append(influx.SmartAttribute, &m)
 		case "lte":
 			m := LTE{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build lte")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Lte = append(influx.Lte, &m)
 		case "gps":
 			m := GPS{
@@ -249,19 +312,25 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build gps")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Gps = append(influx.Gps, &m)
 		case "ublox-data":
 			m := GPS{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build gps")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Gps = append(influx.Gps, &m)
 		case "pp_correction_metrics":
 			m := PPCorrection{
 				FieldsMap: map[string]string{},
 				Tags:      &PPCorrection_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -275,7 +344,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				FieldsMap: map[string]string{},
 				Tags:      &Able_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -289,13 +358,16 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build AbleStats")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.AbleStats = append(influx.AbleStats, &m)
 		case "camera_control_metrics":
 			m := CameraControl{
 				FieldsMap: map[string]string{},
 				Tags:      &CameraControl_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -309,7 +381,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				FieldsMap: map[string]string{},
 				Tags:      &Uploader_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -323,13 +395,16 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build UploaderStats")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.UploaderStats = append(influx.UploaderStats, &m)
 		case "segnet_metrics":
 			m := SegNet{
 				FieldsMap: map[string]string{},
 				Tags:      &SegNet_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -343,7 +418,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				FieldsMap: map[string]string{},
 				Tags:      &DetectNet_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -357,7 +432,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				FieldsMap: map[string]string{},
 				Tags:      &Recorder_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -371,7 +446,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				FieldsMap: map[string]string{},
 				Tags:      &EventDataCutter_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -385,7 +460,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				FieldsMap: map[string]int64{},
 				Tags:      &EventDataCutterStats_Tags{},
 				Name:      metric.Name(),
-				Timestamp: float64(metric.Time().UTC().UnixNano()),
+				Timestamp: timestamp(metric),
 			}
 
 			for k, v := range metric.Fields() {
@@ -404,6 +479,9 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build glog")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Glog = append(influx.Glog, &m)
 		case "power_mode":
 			m := PowerMode{}
@@ -429,6 +507,9 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build wireless")
 			}
+
+			m.Name = metric.Name()
+			m.Timestamp = timestamp(metric)
 			influx.Wireless = append(influx.Wireless, &m)
 		}
 
@@ -438,6 +519,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return errors.Wrapf(err, "[outputs.proto] unable to get access token")
 	}
+
 	b, err := protobuf.Marshal(&influx)
 	if err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
@@ -448,6 +530,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 	if _, err := g.Write(b); err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
 	}
+
 	if err := g.Close(); err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
 	}
@@ -456,19 +539,28 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
 	}
+
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *accessToken))
 	if f.VerifyTLS == false {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
 	}
+
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrap(err, "[outputs.proto] failed to send metrics")
 	}
+
 	return err
+}
+
+// timestamp returns a timestamp in nanoseconds for the given metric.
+func timestamp(m telegraf.Metric) float64 {
+	return float64(m.Time().UTC().UnixNano())
 }
 
 func init() {
