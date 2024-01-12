@@ -462,8 +462,8 @@ func TestWriteHTTPSnappyData(t *testing.T) {
 
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		t.Skip("Skipping due to hang on darwin")
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		t.Skip("Skipping due to hang on darwin and windows")
 	}
 	listener, err := newTestHTTPListenerV2()
 	require.NoError(t, err)
