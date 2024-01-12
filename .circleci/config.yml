@@ -602,7 +602,7 @@ workflows:
           filters:
             branches:
               ignore:
-                - master
+                - /.*/
             tags:
               only: /.*/
       - 's390x-package':
