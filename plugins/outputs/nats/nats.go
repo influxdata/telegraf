@@ -4,12 +4,12 @@ package nats
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
+	"time"
 
-	"github.com/influxdata/toml"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
@@ -25,14 +25,14 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string                `toml:"servers"`
-	Secure      bool                    `toml:"secure"`
-	Name        string                  `toml:"name"`
-	Username    config.Secret           `toml:"username"`
-	Password    config.Secret           `toml:"password"`
-	Credentials string                  `toml:"credentials"`
-	Subject     string                  `toml:"subject"`
-	Jetstream   *JetstreamConfigWrapper `toml:"jetstream"`
+	Servers     []string      `toml:"servers"`
+	Secure      bool          `toml:"secure"`
+	Name        string        `toml:"name"`
+	Username    config.Secret `toml:"username"`
+	Password    config.Secret `toml:"password"`
+	Credentials string        `toml:"credentials"`
+	Subject     string        `toml:"subject"`
+	Jetstream   *StreamConfig `toml:"jetstream"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -42,51 +42,44 @@ type NATS struct {
 	serializer      serializers.Serializer
 }
 
-type JetstreamConfigWrapper struct {
-	jetstream.StreamConfig
-}
-
-func (jw *JetstreamConfigWrapper) UnmarshalTOML(data []byte) error {
-	var tomlMap map[string]interface{}
-
-	if err := toml.Unmarshal(data, &tomlMap); err != nil {
-		return err
-	}
-
-	// Extract the deeply nested table by specifying the keys(in order)
-	keys := []string{"outputs", "nats", "jetstream"}
-
-	nestedTable, err := extractNestedTable(tomlMap, keys...)
-	if err != nil {
-		return err
-	}
-	jsonBytes, err := json.Marshal(nestedTable)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(jsonBytes, &jw.StreamConfig)
-}
-
-// recursive function to extract a nested table
-func extractNestedTable(tomlMap map[string]interface{}, keys ...string) (map[string]interface{}, error) {
-	if len(keys) == 0 {
-		return tomlMap, nil
-	}
-
-	key := keys[0]
-	remainingKeys := keys[1:]
-
-	value, ok := tomlMap[key]
-	if !ok {
-		return nil, fmt.Errorf("key '%s' not found in TOML data", key)
-	}
-
-	innerMap, ok := value.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("value of key '%s' is not a table", key)
-	}
-
-	return extractNestedTable(innerMap, remainingKeys...)
+// StreamConfig is the configuration for creating stream
+// Almost a mirror of https://pkg.go.dev/github.com/nats-io/nats.go/jetstream#StreamConfig but with
+// TOML tags.
+//
+// Some custom types such as RetentionPolicy still point to the source to reuse Stringer interface.
+type StreamConfig struct {
+	Name                 string                            `toml:"name"`
+	Description          string                            `toml:"description,omitempty"`
+	Subjects             []string                          `toml:"subjects,omitempty"`
+	Retention            jetstream.RetentionPolicy         `toml:"retention"`
+	MaxConsumers         int                               `toml:"max_consumers"`
+	MaxMsgs              int64                             `toml:"max_msgs"`
+	MaxBytes             int64                             `toml:"max_bytes"`
+	Discard              jetstream.DiscardPolicy           `toml:"discard"`
+	DiscardNewPerSubject bool                              `toml:"discard_new_per_subject,omitempty"`
+	MaxAge               time.Duration                     `toml:"max_age"`
+	MaxMsgsPerSubject    int64                             `toml:"max_msgs_per_subject"`
+	MaxMsgSize           int32                             `toml:"max_msg_size,omitempty"`
+	Storage              jetstream.StorageType             `toml:"storage"`
+	Replicas             int                               `toml:"num_replicas"`
+	NoAck                bool                              `toml:"no_ack,omitempty"`
+	Template             string                            `toml:"template_owner,omitempty"`
+	Duplicates           time.Duration                     `toml:"duplicate_window,omitempty"`
+	Placement            *jetstream.Placement              `toml:"placement,omitempty"`
+	Mirror               *jetstream.StreamSource           `toml:"mirror,omitempty"`
+	Sources              []*jetstream.StreamSource         `toml:"sources,omitempty"`
+	Sealed               bool                              `toml:"sealed,omitempty"`
+	DenyDelete           bool                              `toml:"deny_delete,omitempty"`
+	DenyPurge            bool                              `toml:"deny_purge,omitempty"`
+	AllowRollup          bool                              `toml:"allow_rollup_hdrs,omitempty"`
+	Compression          jetstream.StoreCompression        `toml:"compression"`
+	FirstSeq             uint64                            `toml:"first_seq,omitempty"`
+	SubjectTransform     *jetstream.SubjectTransformConfig `toml:"subject_transform,omitempty"`
+	RePublish            *jetstream.RePublish              `toml:"republish,omitempty"`
+	AllowDirect          bool                              `toml:"allow_direct"`
+	MirrorDirect         bool                              `toml:"mirror_direct"`
+	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits,omitempty"`
+	Metadata             map[string]string                 `toml:"metadata,omitempty"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -155,13 +148,26 @@ func (n *NATS) Connect() error {
 		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
 			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
 		}
-		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), n.Jetstream.StreamConfig)
+		var streamConfig jetstream.StreamConfig
+		n.convertToJetstreamConfig(&streamConfig)
+		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), streamConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
 		n.Log.Infof("stream (%s) successfully created or updated", n.Jetstream.Name)
 	}
 	return nil
+}
+
+func (n *NATS) convertToJetstreamConfig(streamConfig *jetstream.StreamConfig) {
+	telegrafStreamConfig := reflect.ValueOf(n.Jetstream).Elem()
+	natsStreamConfig := reflect.ValueOf(streamConfig).Elem()
+	for i := 0; i < telegrafStreamConfig.NumField(); i++ {
+		destField := natsStreamConfig.FieldByName(telegrafStreamConfig.Type().Field(i).Name)
+		if destField.IsValid() && destField.CanSet() {
+			destField.Set(telegrafStreamConfig.Field(i))
+		}
+	}
 }
 
 func (n *NATS) Init() error {

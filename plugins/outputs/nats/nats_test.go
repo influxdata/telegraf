@@ -58,10 +58,8 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			nats: &NATS{
 				Name:    "telegraf",
 				Subject: "telegraf",
-				Jetstream: &JetstreamConfigWrapper{
-					StreamConfig: jetstream.StreamConfig{
-						Name: "my-telegraf-stream",
-					},
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
@@ -79,22 +77,20 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			nats: &NATS{
 				Name:    "telegraf",
 				Subject: "my-tel-sub2",
-				Jetstream: &JetstreamConfigWrapper{
-					StreamConfig: jetstream.StreamConfig{
-						Name:              "telegraf-stream-with-cfg",
-						Subjects:          []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2"},
-						Retention:         jetstream.WorkQueuePolicy,
-						MaxConsumers:      10,
-						Discard:           jetstream.DiscardOld,
-						Storage:           jetstream.FileStorage,
-						MaxMsgs:           100000,
-						MaxBytes:          104857600,
-						MaxAge:            86400000000000,
-						Replicas:          1,
-						Duplicates:        180000000000,
-						MaxMsgSize:        120,
-						MaxMsgsPerSubject: 500,
-					},
+				Jetstream: &StreamConfig{
+					Name:              "telegraf-stream-with-cfg",
+					Subjects:          []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2"},
+					Retention:         jetstream.WorkQueuePolicy,
+					MaxConsumers:      10,
+					Discard:           jetstream.DiscardOld,
+					Storage:           jetstream.FileStorage,
+					MaxMsgs:           100000,
+					MaxBytes:          104857600,
+					MaxAge:            86400000000000,
+					Replicas:          1,
+					Duplicates:        180000000000,
+					MaxMsgSize:        120,
+					MaxMsgsPerSubject: 500,
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
@@ -138,7 +134,7 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 				si, err := stream.Info(context.Background())
 				require.NoError(t, err)
 				// compare only relevant fields, since defaults for fields like max_bytes is not 0
-				fieldsEqualHelper(t, tc.nats.Jetstream.StreamConfig, si.Config, tc.streamConfigCompareFields...)
+				fieldsEqualHelper(t, *tc.nats.Jetstream, si.Config, tc.streamConfigCompareFields...)
 			}
 			// Verify that we can successfully write data to the NATS daemon
 			err = tc.nats.Write(testutil.MockMetrics())
@@ -156,64 +152,11 @@ func fieldsEqualHelper(t *testing.T, a, b interface{}, fieldNames ...string) {
 		return
 	}
 
-	if valA.Type() != valB.Type() {
-		t.Error("Both parameters must be of the same type")
-		return
-	}
-
 	for _, fieldName := range fieldNames {
 		fieldA := valA.FieldByName(fieldName)
 		fieldB := valB.FieldByName(fieldName)
 
 		require.Equal(t, fieldA.Interface(), fieldB.Interface(), "Field %s should be equal", fieldName)
-	}
-}
-
-func Test_extractNestedTable(t *testing.T) {
-	tests := []struct {
-		name    string
-		tomlMap map[string]interface{}
-		keys    []string
-		want    map[string]interface{}
-		wantErr bool
-	}{
-		{
-			name: "Valid Nested Table",
-			tomlMap: map[string]interface{}{
-				"outer": map[string]interface{}{
-					"name": "outer",
-					"inner": map[string]interface{}{
-						"field1": "abc",
-						"field2": "pqr",
-					},
-				},
-			},
-			keys: []string{"outer", "inner"},
-			want: map[string]interface{}{"field1": "abc", "field2": "pqr"},
-		},
-		{
-			name:    "Invalid Key",
-			tomlMap: map[string]interface{}{"key": "value"},
-			keys:    []string{"nonexistent"},
-			wantErr: true,
-		},
-		{
-			name:    "Non-Table Value",
-			tomlMap: map[string]interface{}{"key": "value"},
-			keys:    []string{"key"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual, err := extractNestedTable(tt.tomlMap, tt.keys...)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.want, actual)
-		})
 	}
 }
 
