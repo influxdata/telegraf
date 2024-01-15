@@ -4,7 +4,6 @@
 package temp
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -180,17 +179,56 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 	return stats, nil
 }
 
-func (t *Temperature) gatherThermalZone(path string) ([]TemperatureStat, error) {
-	return nil, errors.New("not implemented")
+func (t *Temperature) gatherThermalZone(syspath string) ([]TemperatureStat, error) {
+	// For file layout see https://www.kernel.org/doc/Documentation/thermal/sysfs-api.txt
+	zones, err := filepath.Glob(filepath.Join(syspath, "class", "thermal", "thermal_zone*"))
+	if err != nil {
+		return nil, fmt.Errorf("getting thermal zones failed: %w", err)
+	}
+
+	// Exit early if we cannot find any zone
+	if len(zones) == 0 {
+		return nil, nil
+	}
+
+	// Collect the sensor information
+	stats := make([]TemperatureStat, 0, len(zones))
+	for _, path := range zones {
+		// Type of the zone corresponding to the sensor name in our nomenclature
+		buf, err := os.ReadFile(filepath.Join(path, "type"))
+		if err != nil {
+			t.Log.Errorf("Cannot read name of zone %q", path)
+			continue
+		}
+		name := strings.TrimSpace(string(buf))
+
+		// Actual temperature
+		buf, err = os.ReadFile(filepath.Join(path, "temp"))
+		if err != nil {
+			t.Log.Errorf("Cannot read temperature of zone %q", path)
+			continue
+		}
+		v, err := strconv.ParseFloat(strings.TrimSpace(string(buf)), 64)
+		if err != nil {
+			continue
+		}
+
+		temp := TemperatureStat{Name: name, Temperature: v / scalingFactor}
+		stats = append(stats, temp)
+	}
+
+	return stats, nil
 }
 
 func (t *Temperature) getTagsForTemperature(temp TemperatureStat, suffix string) map[string]string {
-	var sensor string
-	switch t.MetricFormat {
-	case "v1":
-		sensor = temp.Name + "_" + strings.ReplaceAll(temp.Label, " ", "") + suffix
-	case "v2":
-		sensor = temp.Name + "_" + strings.ReplaceAll(temp.Label, " ", "_") + suffix
+	sensor := temp.Name
+	if temp.Label != "" && suffix != "" {
+		switch t.MetricFormat {
+		case "v1":
+			sensor += "_" + strings.ReplaceAll(temp.Label, " ", "") + suffix
+		case "v2":
+			sensor += "_" + strings.ReplaceAll(temp.Label, " ", "_") + suffix
+		}
 	}
 
 	tags := map[string]string{"sensor": sensor}
