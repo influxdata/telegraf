@@ -384,9 +384,9 @@ jobs:
       - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
       - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
-    executor:
-        name: win/default
-        shell: powershell.exe
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -394,9 +394,7 @@ jobs:
           at: '/build'
       - run:
           name: "Sign Windows Executables"
-          shell: powershell.exe
-          command: |
-            ./scripts/windows-signing.ps1
+          command: ./scripts/sign-windows.sh
       - persist_to_workspace:
           root: './build'
           paths:
