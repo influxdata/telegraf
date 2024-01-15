@@ -8,7 +8,6 @@ import (
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
@@ -26,7 +25,6 @@ type PS interface {
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
 	NetConntrack(perCPU bool) ([]net.ConntrackStat, error)
-	Temperature() ([]host.TemperatureStat, error)
 }
 
 type PSDiskDeps interface {
@@ -212,17 +210,6 @@ func (s *SystemPS) VMStat() (*mem.VirtualMemoryStat, error) {
 
 func (s *SystemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return mem.SwapMemory()
-}
-
-func (s *SystemPS) Temperature() ([]host.TemperatureStat, error) {
-	temp, err := host.SensorsTemperatures()
-	if err != nil {
-		var hostWarnings *host.Warnings
-		if !errors.As(err, &hostWarnings) {
-			return temp, err
-		}
-	}
-	return temp, nil
 }
 
 func (s *SystemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
