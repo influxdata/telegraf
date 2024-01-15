@@ -106,8 +106,18 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 		path := filepath.Dir(s)
 		prefix := strings.SplitN(filepath.Base(s), "_", 2)[0]
 
-		// Read the device name and fallback to the device name if we cannot get a sensible name.
-		name, deviceName := getNameForPath(path)
+		// Read the sensor and device name
+		deviceName, err := os.Readlink(filepath.Join(path, "device"))
+		if err == nil {
+			deviceName = filepath.Base(deviceName)
+		}
+
+		// Read the sensor name and use the device name as fallback
+		name := deviceName
+		n, err := os.ReadFile(filepath.Join(path, "name"))
+		if err == nil {
+			name = strings.TrimSpace(string(n))
+		}
 
 		// Get the sensor label
 		var label string
@@ -236,20 +246,4 @@ func (t *Temperature) getTagsForTemperature(temp TemperatureStat, suffix string)
 		tags["device"] = temp.Device
 	}
 	return tags
-}
-
-func getNameForPath(path string) (string, string) {
-	// Try to read the device link for fallback
-	deviceName, err := os.Readlink(filepath.Join(path, "device"))
-	if err == nil {
-		deviceName = filepath.Base(deviceName)
-	}
-
-	// Read the device name and fallback to the device name if we cannot
-	// get a sensible name.
-	n, err := os.ReadFile(filepath.Join(path, "name"))
-	if err != nil {
-		return "", deviceName
-	}
-	return strings.TrimSpace(string(n)), deviceName
 }
