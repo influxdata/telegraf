@@ -457,7 +457,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			start := time.Now()
 			err := m.gatherComputerCounters(hostInfo, acc)
 			m.Log.Debugf("Gathering from %s finished in %v", hostInfo.computer, time.Since(start))
-			if err != nil {
+			if err != nil && m.checkError(err) != nil {
 				acc.AddError(fmt.Errorf("error during collecting data on host %q: %w", hostInfo.computer, err))
 			}
 			wg.Done()
