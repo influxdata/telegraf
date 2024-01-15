@@ -241,6 +241,16 @@ jobs:
       - package-build:
           type: riscv64
           nightly: << parameters.nightly >>
+  loong64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: loong64
+          nightly: << parameters.nightly >>
   s390x-package:
     parameters:
       nightly:
@@ -586,6 +596,15 @@ workflows:
                 - master
             tags:
               only: /.*/
+      - 'loong64-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - /.*/
+            tags:
+              only: /.*/
       - 's390x-package':
           requires:
             - 'test-go-linux'
@@ -656,6 +675,7 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
+            - 'loong64-package'
             - 'darwin-amd64-package'
             - 'darwin-arm64-package'
             - 'windows-package'
@@ -695,6 +715,7 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
+            - 'loong64-package'
             - 'arm64-package'
             - 'armhf-package'
             - 'package-sign-mac'
@@ -716,6 +737,7 @@ workflows:
             - 'arm64-package'
             - 'armhf-package'
             - 'riscv64-package'
+            - 'loong64-package'
             - 'package-sign-mac'
             - 'package-sign-windows'
             - 'package-sign'
@@ -774,6 +796,11 @@ workflows:
           nightly: true
           requires:
             - 'test-go-linux'
+      - 'loong64-package':
+          name: 'loong64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
       - 's390x-package':
           name: 's390x-package-nightly'
           nightly: true
@@ -827,6 +854,7 @@ workflows:
             - 'i386-package-nightly'
             - 'mips-package-nightly'
             - 'mipsel-package-nightly'
+            - 'loong64-package-nightly'
             - 'ppc64le-package-nightly'
             - 'riscv64-package-nightly'
             - 's390x-package-nightly'
