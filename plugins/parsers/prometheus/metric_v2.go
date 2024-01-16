@@ -1,60 +1,18 @@
 package prometheus
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"math"
-	"mime"
 	"time"
 
-	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/prometheus/common/expfmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
-func (p *Parser) parseV2(buf []byte) ([]telegraf.Metric, error) {
-	var parser expfmt.TextParser
+func (p *Parser) extractMetricsV2(metricFamilies map[string]*dto.MetricFamily) []telegraf.Metric {
 	var metrics []telegraf.Metric
-	var err error
-
-	// Make sure we have a finishing newline but no trailing one
-	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	if !bytes.HasSuffix(buf, []byte("\n")) {
-		buf = append(buf, []byte("\n")...)
-	}
-
-	// Read raw data
-	buffer := bytes.NewBuffer(buf)
-	reader := bufio.NewReader(buffer)
-
-	// Prepare output
-	metricFamilies := make(map[string]*dto.MetricFamily)
-	mediatype, params, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
-	if err == nil && mediatype == "application/vnd.google.protobuf" &&
-		params["encoding"] == "delimited" &&
-		params["proto"] == "io.prometheus.client.MetricFamily" {
-		for {
-			mf := &dto.MetricFamily{}
-			if _, ierr := pbutil.ReadDelimited(reader, mf); ierr != nil {
-				if errors.Is(ierr, io.EOF) {
-					break
-				}
-				return nil, fmt.Errorf("reading metric family protocol buffer failed: %w", ierr)
-			}
-			metricFamilies[mf.GetName()] = mf
-		}
-	} else {
-		metricFamilies, err = parser.TextToMetricFamilies(reader)
-		if err != nil {
-			return nil, fmt.Errorf("reading text format failed: %w", err)
-		}
-	}
 
 	now := time.Now()
 
@@ -86,7 +44,7 @@ func (p *Parser) parseV2(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 
-	return metrics, err
+	return metrics
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
