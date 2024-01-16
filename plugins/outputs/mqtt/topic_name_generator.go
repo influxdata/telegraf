@@ -43,8 +43,11 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	if err != nil {
 		return "", err
 	}
+
+	s := b.String()
+
 	var ts []string
-	for _, p := range strings.Split(b.String(), "/") {
+	for _, p := range strings.Split(s, "/") {
 		if p != "" {
 			ts = append(ts, p)
 		}
@@ -53,6 +56,9 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	// This is to keep backward compatibility with previous behaviour where the plugin name was always present
 	if topic == "" {
 		return m.Name(), nil
+	}
+	if strings.HasPrefix(s, "/") {
+		topic = fmt.Sprintf("/%s", topic)
 	}
 	return topic, nil
 }
