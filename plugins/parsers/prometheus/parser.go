@@ -88,6 +88,23 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	return nil, fmt.Errorf("unknown prometheus metric version %d", p.MetricVersion)
 }
 
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+	metrics, err := p.Parse([]byte(line))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(metrics) < 1 {
+		return nil, fmt.Errorf("no metrics in line")
+	}
+
+	if len(metrics) > 1 {
+		return nil, fmt.Errorf("more than one metric in line")
+	}
+
+	return metrics[0], nil
+}
+
 func init() {
 	parsers.Add("prometheus",
 		func(defaultMetricName string) telegraf.Parser {

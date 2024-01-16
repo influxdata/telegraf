@@ -47,23 +47,6 @@ func (p *Parser) extractMetricsV2(metricFamilies map[string]*dto.MetricFamily) [
 	return metrics
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	metrics, err := p.Parse([]byte(line))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(metrics) < 1 {
-		return nil, fmt.Errorf("no metrics in line")
-	}
-
-	if len(metrics) > 1 {
-		return nil, fmt.Errorf("more than one metric in line")
-	}
-
-	return metrics[0], nil
-}
-
 // Get Quantiles for summary metric & Buckets for histogram
 func makeQuantilesV2(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
 	metrics := make([]telegraf.Metric, 0, len(m.GetSummary().Quantile)+1)
