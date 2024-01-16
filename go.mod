@@ -95,7 +95,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/gopcua/opcua v0.4.0
 	github.com/gophercloud/gophercloud v1.7.0
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/gosnmp/gosnmp v1.36.1
 	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
