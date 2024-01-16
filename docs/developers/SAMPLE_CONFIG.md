@@ -28,7 +28,7 @@ Documentation is double commented, full sentences, and ends with a period.
   # exchange_type = "topic"
 ```
 
-Try to give every parameter a default value whenever possible.  If an
+Try to give every parameter a default value whenever possible.  If a
 parameter does not have a default or must frequently be changed then have it
 uncommented.
 
