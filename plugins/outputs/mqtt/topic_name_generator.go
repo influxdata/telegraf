@@ -43,11 +43,8 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	if err != nil {
 		return "", err
 	}
-
-	s := b.String()
-
 	var ts []string
-	for _, p := range strings.Split(s, "/") {
+	for _, p := range strings.Split(b.String(), "/") {
 		if p != "" {
 			ts = append(ts, p)
 		}
@@ -57,7 +54,7 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	if topic == "" {
 		return m.Name(), nil
 	}
-	if strings.HasPrefix(s, "/") {
+	if strings.HasPrefix(b.String(), "/") {
 		topic = fmt.Sprintf("/%s", topic)
 	}
 	return topic, nil
