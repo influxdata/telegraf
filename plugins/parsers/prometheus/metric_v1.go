@@ -20,7 +20,7 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 	// multiple fields for "complex" types like Summary or Histogram.
 	var metrics []telegraf.Metric
 	metricName := prommetrics.GetName()
-	mtype := prommetrics.GetType()
+	metricType := prommetrics.GetType()
 	for _, pm := range prommetrics.Metric {
 		// Extract the timestamp of the metric if it exists and should
 		// not be ignored.
@@ -33,7 +33,7 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 		tags := getTagsFromLabels(pm, p.DefaultTags)
 
 		// Construct the metrics
-		switch mtype {
+		switch metricType {
 		case dto.MetricType_SUMMARY:
 			summary := pm.GetSummary()
 
@@ -75,7 +75,7 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 			}
 			if fname != "" && !math.IsNaN(v) {
 				fields := map[string]interface{}{fname: v}
-				vtype := mapValueType(mtype)
+				vtype := mapValueType(metricType)
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, vtype))
 			}
 		}

@@ -19,7 +19,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 	// the corresponding metrics.
 	var metrics []telegraf.Metric
 	metricName := prommetrics.GetName()
-	mtype := prommetrics.GetType()
+	metricType := prommetrics.GetType()
 	for _, pm := range prommetrics.Metric {
 		// Extract the timestamp of the metric if it exists and should
 		// not be ignored.
@@ -32,7 +32,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 		tags := getTagsFromLabels(pm, p.DefaultTags)
 
 		// Construct the metrics
-		switch mtype {
+		switch metricType {
 		case dto.MetricType_SUMMARY:
 			summary := pm.GetSummary()
 
@@ -97,7 +97,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			}
 			if !math.IsNaN(v) {
 				fields := map[string]interface{}{metricName: v}
-				vtype := mapValueType(mtype)
+				vtype := mapValueType(metricType)
 				metrics = append(metrics, metric.New("prometheus", tags, fields, t, vtype))
 			}
 		}
