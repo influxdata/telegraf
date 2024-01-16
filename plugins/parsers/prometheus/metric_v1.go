@@ -14,9 +14,6 @@ import (
 func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metric {
 	now := time.Now()
 
-	// var parser expfmt.TextParser
-	// var err error
-
 	// Convert each prometheus metrics to the corresponding telegraf metrics.
 	// You will get one telegraf metric with one field per prometheus metric
 	// for "simple" types like Gauge and Counter but a telegraf metric with
