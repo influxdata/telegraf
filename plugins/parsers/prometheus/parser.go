@@ -42,7 +42,7 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	decoder := expfmt.NewDecoder(buf, format)
 
 	// Decode the input data into prometheus metrics
-	metricFamilies := make(map[string]*dto.MetricFamily)
+	var metrics []telegraf.Metric
 	for {
 		var mf dto.MetricFamily
 		if err := decoder.Decode(&mf); err != nil {
@@ -51,16 +51,17 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 			}
 			return nil, fmt.Errorf("decoding response failed: %w", err)
 		}
-		metricFamilies[mf.GetName()] = &mf
-	}
 
-	switch p.MetricVersion {
-	case 0, 2:
-		return p.extractMetricsV2(metricFamilies), nil
-	case 1:
-		return p.extractMetricsV1(metricFamilies), nil
+		switch p.MetricVersion {
+		case 0, 2:
+			metrics = append(metrics, p.extractMetricsV2(&mf)...)
+		case 1:
+			metrics = append(metrics, p.extractMetricsV1(&mf)...)
+		default:
+			return nil, fmt.Errorf("unknown prometheus metric version %d", p.MetricVersion)
+		}
 	}
-	return nil, fmt.Errorf("unknown prometheus metric version %d", p.MetricVersion)
+	return metrics, nil
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
