@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 )
@@ -20,6 +18,7 @@ type Parser struct {
 	MetricVersion   int               `toml:"prometheus_metric_version"`
 	Header          http.Header       `toml:"-"` // set by the prometheus input
 	DefaultTags     map[string]string `toml:"-"`
+	Log             telegraf.Logger   `toml:"-"`
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
@@ -27,20 +26,6 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
-	// Determine the metric transport-type derived from the response header.
-	// If no content-type is given, fallback to the text-format.
-	mediatype := "text/plain"
-	params := map[string]string{}
-	if contentType := p.Header.Get("Content-Type"); contentType != "" {
-		var err error
-		mediatype, params, err = mime.ParseMediaType(contentType)
-		if err != nil {
-			if !errors.Is(err, mime.ErrInvalidMediaParameter) {
-				return nil, fmt.Errorf("detecting media-type failed: %w", err)
-			}
-		}
-	}
-
 	// Make sure we have a finishing newline but no trailing one
 	data = bytes.TrimPrefix(data, []byte("\n"))
 	if !bytes.HasSuffix(data, []byte("\n")) {
@@ -48,35 +33,25 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	}
 	buf := bytes.NewBuffer(data)
 
+	// Determine the metric transport-type derived from the response header and
+	// create a matching decoder.
+	format := expfmt.ResponseFormat(p.Header)
+	if format == expfmt.FmtUnknown {
+		p.Log.Warnf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
+	}
+	decoder := expfmt.NewDecoder(buf, format)
+
 	// Decode the input data into prometheus metrics
-	var metricFamilies map[string]*dto.MetricFamily
-	switch mediatype {
-	case "application/vnd.google.protobuf":
-		encoding := params["encoding"]
-		proto := params["proto"]
-		if encoding != "delimited" || proto != "io.prometheus.client.MetricFamily" {
-			return nil, fmt.Errorf("unable to decode protobuf with encoding %q and proto %q", encoding, proto)
-		}
-		metricFamilies = make(map[string]*dto.MetricFamily)
-		for {
-			mf := &dto.MetricFamily{}
-			if _, err := pbutil.ReadDelimited(buf, mf); err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				return nil, fmt.Errorf("reading protocol-buffer format failed: %w", err)
+	metricFamilies := make(map[string]*dto.MetricFamily)
+	for {
+		var mf dto.MetricFamily
+		if err := decoder.Decode(&mf); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
 			}
-			metricFamilies[mf.GetName()] = mf
+			return nil, fmt.Errorf("decoding response failed: %w", err)
 		}
-	case "text/plain":
-		var parser expfmt.TextParser
-		var err error
-		metricFamilies, err = parser.TextToMetricFamilies(buf)
-		if err != nil {
-			return nil, fmt.Errorf("reading text format failed: %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("unsupported prometheus format %q", mediatype)
+		metricFamilies[mf.GetName()] = &mf
 	}
 
 	switch p.MetricVersion {
