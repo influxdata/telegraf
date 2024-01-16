@@ -14,13 +14,15 @@ import (
 )
 
 func (t *Temperature) Init() error {
-	if MetricFormat != "" {
+	if t.MetricFormat != "" {
 		t.Log.Warn("Ignoring 'metric_format' on non-Linux platforms!")
 	}
 
 	if t.DeviceTag {
 		t.Log.Warn("Ignoring 'add_device_tag' on non-Linux platforms!")
 	}
+
+	return nil
 }
 
 func (t *Temperature) Gather(acc telegraf.Accumulator) error {
