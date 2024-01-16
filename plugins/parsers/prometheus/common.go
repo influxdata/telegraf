@@ -5,7 +5,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 )
 
-func ValueType(mt dto.MetricType) telegraf.ValueType {
+func mapValueType(mt dto.MetricType) telegraf.ValueType {
 	switch mt {
 	case dto.MetricType_COUNTER:
 		return telegraf.Counter
@@ -20,7 +20,7 @@ func ValueType(mt dto.MetricType) telegraf.ValueType {
 	}
 }
 
-func GetTagsFromLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
+func getTagsFromLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
 	result := map[string]string{}
 
 	for key, value := range defaultTags {

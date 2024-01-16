@@ -29,7 +29,7 @@ func (p *Parser) extractMetricsV2(metricFamilies map[string]*dto.MetricFamily) [
 			}
 
 			// Convert the labels to tags
-			tags := GetTagsFromLabels(pm, p.DefaultTags)
+			tags := getTagsFromLabels(pm, p.DefaultTags)
 
 			// Construct the metrics
 			switch mtype {
@@ -97,7 +97,7 @@ func (p *Parser) extractMetricsV2(metricFamilies map[string]*dto.MetricFamily) [
 				}
 				if !math.IsNaN(v) {
 					fields := map[string]interface{}{metricName: v}
-					vtype := ValueType(mtype)
+					vtype := mapValueType(mtype)
 					metrics = append(metrics, metric.New("prometheus", tags, fields, t, vtype))
 				}
 			}

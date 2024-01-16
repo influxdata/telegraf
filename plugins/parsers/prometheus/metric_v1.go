@@ -33,7 +33,7 @@ func (p *Parser) extractMetricsV1(metricFamilies map[string]*dto.MetricFamily) [
 			}
 
 			// Convert the labels to tags
-			tags := GetTagsFromLabels(pm, p.DefaultTags)
+			tags := getTagsFromLabels(pm, p.DefaultTags)
 
 			// Construct the metrics
 			switch mtype {
@@ -78,7 +78,7 @@ func (p *Parser) extractMetricsV1(metricFamilies map[string]*dto.MetricFamily) [
 				}
 				if fname != "" && !math.IsNaN(v) {
 					fields := map[string]interface{}{fname: v}
-					vtype := ValueType(mtype)
+					vtype := mapValueType(mtype)
 					metrics = append(metrics, metric.New(metricName, tags, fields, t, vtype))
 				}
 			}
