@@ -1,8 +1,8 @@
 package prometheus
 
 import (
-	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	dto "github.com/prometheus/client_model/go"
@@ -12,89 +12,77 @@ import (
 )
 
 func (p *Parser) extractMetricsV1(metricFamilies map[string]*dto.MetricFamily) []telegraf.Metric {
-	var metrics []telegraf.Metric
-
 	now := time.Now()
-	// read metrics
+
+	// var parser expfmt.TextParser
+	// var err error
+
+	// Convert each prometheus metrics to the corresponding telegraf metrics.
+	// You will get one telegraf metric with one field per prometheus metric
+	// for "simple" types like Gauge and Counter but a telegraf metric with
+	// multiple fields for "complex" types like Summary or Histogram.
+	var metrics []telegraf.Metric
 	for metricName, mf := range metricFamilies {
-		for _, m := range mf.Metric {
-			// reading tags
-			tags := GetTagsFromLabels(m, p.DefaultTags)
-
-			// reading fields
-			var fields map[string]interface{}
-			if mf.GetType() == dto.MetricType_SUMMARY {
-				// summary metric
-				fields = makeQuantilesV1(m)
-				fields["count"] = float64(m.GetSummary().GetSampleCount())
-				//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-				fields["sum"] = float64(m.GetSummary().GetSampleSum())
-			} else if mf.GetType() == dto.MetricType_HISTOGRAM {
-				// histogram metric
-				fields = makeBucketsV1(m)
-				fields["count"] = float64(m.GetHistogram().GetSampleCount())
-				//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-				fields["sum"] = float64(m.GetHistogram().GetSampleSum())
-			} else {
-				// standard metric
-				fields = getNameAndValueV1(m)
+		mtype := mf.GetType()
+		for _, pm := range mf.Metric {
+			// Extract the timestamp of the metric if it exists and should
+			// not be ignored.
+			t := now
+			if ts := pm.GetTimestampMs(); !p.IgnoreTimestamp && ts > 0 {
+				t = time.UnixMilli(ts)
 			}
-			// converting to telegraf metric
-			if len(fields) > 0 {
-				var t time.Time
-				if !p.IgnoreTimestamp && m.TimestampMs != nil && *m.TimestampMs > 0 {
-					t = time.Unix(0, *m.TimestampMs*1000000)
-				} else {
-					t = now
+
+			// Convert the labels to tags
+			tags := GetTagsFromLabels(pm, p.DefaultTags)
+
+			// Construct the metrics
+			switch mtype {
+			case dto.MetricType_SUMMARY:
+				summary := pm.GetSummary()
+
+				// Collect the fields
+				fields := make(map[string]interface{}, len(summary.Quantile)+2)
+				fields["count"] = float64(summary.GetSampleCount())
+				fields["sum"] = summary.GetSampleSum()
+				for _, q := range summary.Quantile {
+					if v := q.GetValue(); !math.IsNaN(v) {
+						fname := strconv.FormatFloat(q.GetQuantile(), 'g', -1, 64)
+						fields[fname] = v
+					}
 				}
-				m := metric.New(metricName, tags, fields, t, ValueType(mf.GetType()))
-				metrics = append(metrics, m)
+				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Summary))
+			case dto.MetricType_HISTOGRAM:
+				histogram := pm.GetHistogram()
+
+				// Collect the fields
+				fields := make(map[string]interface{}, len(histogram.Bucket)+2)
+				fields["count"] = float64(pm.GetHistogram().GetSampleCount())
+				fields["sum"] = pm.GetHistogram().GetSampleSum()
+				for _, b := range histogram.Bucket {
+					fname := strconv.FormatFloat(b.GetUpperBound(), 'g', -1, 64)
+					fields[fname] = float64(b.GetCumulativeCount())
+				}
+				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Histogram))
+			default:
+				var fname string
+				var v float64
+				if gauge := pm.GetGauge(); gauge != nil {
+					fname = "gauge"
+					v = gauge.GetValue()
+				} else if counter := pm.GetCounter(); counter != nil {
+					fname = "counter"
+					v = counter.GetValue()
+				} else if untyped := pm.GetUntyped(); untyped != nil {
+					fname = "value"
+					v = untyped.GetValue()
+				}
+				if fname != "" && !math.IsNaN(v) {
+					fields := map[string]interface{}{fname: v}
+					vtype := ValueType(mtype)
+					metrics = append(metrics, metric.New(metricName, tags, fields, t, vtype))
+				}
 			}
 		}
 	}
-
 	return metrics
-}
-
-// Get Quantiles from summary metric
-func makeQuantilesV1(m *dto.Metric) map[string]interface{} {
-	fields := make(map[string]interface{})
-	for _, q := range m.GetSummary().Quantile {
-		if !math.IsNaN(q.GetValue()) {
-			//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-			fields[fmt.Sprint(q.GetQuantile())] = float64(q.GetValue())
-		}
-	}
-	return fields
-}
-
-// Get Buckets  from histogram metric
-func makeBucketsV1(m *dto.Metric) map[string]interface{} {
-	fields := make(map[string]interface{})
-	for _, b := range m.GetHistogram().Bucket {
-		fields[fmt.Sprint(b.GetUpperBound())] = float64(b.GetCumulativeCount())
-	}
-	return fields
-}
-
-// Get name and value from metric
-func getNameAndValueV1(m *dto.Metric) map[string]interface{} {
-	fields := make(map[string]interface{})
-	if m.Gauge != nil {
-		if !math.IsNaN(m.GetGauge().GetValue()) {
-			//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-			fields["gauge"] = float64(m.GetGauge().GetValue())
-		}
-	} else if m.Counter != nil {
-		if !math.IsNaN(m.GetCounter().GetValue()) {
-			//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-			fields["counter"] = float64(m.GetCounter().GetValue())
-		}
-	} else if m.Untyped != nil {
-		if !math.IsNaN(m.GetUntyped().GetValue()) {
-			//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-			fields["value"] = float64(m.GetUntyped().GetValue())
-		}
-	}
-	return fields
 }
