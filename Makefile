@@ -235,8 +235,8 @@ clean:
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/readme_linter/readme_linter
 	rm -rf tools/readme_linter/readme_linter.exe
-	rm -rf tools/package_lxd_test/package_lxd_test
-	rm -rf tools/package_lxd_test/package_lxd_test.exe
+	rm -rf tools/package_incus_test/package_incus_test
+	rm -rf tools/package_incus_test/package_incus_test.exe
 	rm -rf tools/license_checker/license_checker
 	rm -rf tools/license_checker/license_checker.exe
 
