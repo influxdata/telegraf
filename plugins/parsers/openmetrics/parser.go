@@ -3,7 +3,11 @@ package openmetrics
 import (
 	"bytes"
 	"fmt"
+	"mime"
 	"net/http"
+
+	"github.com/prometheus/common/expfmt"
+	"google.golang.org/protobuf/encoding/protodelim"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -12,7 +16,7 @@ import (
 type Parser struct {
 	IgnoreTimestamp bool              `toml:"openmetrics_ignore_timestamp"`
 	MetricVersion   int               `toml:"openmetrics_metric_version"`
-	Header          http.Header       `toml:"-"` // set by the openmetrics input
+	Header          http.Header       `toml:"-"` // set by the input plugin
 	DefaultTags     map[string]string `toml:"-"`
 	Log             telegraf.Logger   `toml:"-"`
 }
@@ -28,30 +32,45 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 		data = append(data, []byte("\n")...)
 	}
 
-	// // Determine the metric transport-type derived from the response header and
-	// // create a matching decoder.
-	// format := expfmt.ResponseFormat(p.Header)
-	// if format == expfmt.FmtUnknown {
-	// 	p.Log.Warnf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
-	// }
-	// decoder := expfmt.NewDecoder(buf, format)
-
-	metricFamilies, err := TextToMetricFamilies(data)
-	if err != nil {
-		return nil, err
+	// Determine the metric transport-type derived from the response header
+	contentType := p.Header.Get("Content-Type")
+	var mediaType string
+	var params map[string]string
+	if contentType == "" {
+		// Fallback to text type if no content-type is given
+		mediaType = expfmt.OpenMetricsType
+	} else {
+		var err error
+		mediaType, params, err = mime.ParseMediaType(contentType)
+		if err != nil {
+			return nil, fmt.Errorf("unknown media-type in %q", contentType)
+		}
 	}
 
-	// // Decode the input data into prometheus metrics
-	var metrics []telegraf.Metric
-	// for {
-	// 	var mf dto.MetricFamily
-	// 	if err := decoder.Decode(&mf); err != nil {
-	// 		if errors.Is(err, io.EOF) {
-	// 			break
-	// 		}
-	// 		return nil, fmt.Errorf("decoding response failed: %w", err)
-	// 	}
+	// Parse the raw data into OpenMetrics metrics
+	var metricFamilies []*MetricFamily
+	switch mediaType {
+	case expfmt.OpenMetricsType:
+		var err error
+		metricFamilies, err = TextToMetricFamilies(data)
+		if err != nil {
+			return nil, fmt.Errorf("parsing text format failed: %w", err)
+		}
+	case "application/openmetrics-protobuf":
+		if version := params["version"]; version != "1.0.0" {
+			return nil, fmt.Errorf("unsupported binary version %q", version)
+		}
+		buf := bytes.NewBuffer(data)
+		opts := protodelim.UnmarshalOptions{MaxSize: -1}
+		var metricSet MetricSet
+		if err := opts.UnmarshalFrom(buf, &metricSet); err != nil {
+			return nil, fmt.Errorf("parsing binary format failed: %w", err)
+		}
+		metricFamilies = metricSet.GetMetricFamilies()
+	}
 
+	// Convert the OpenMetrics metrics into Telegraf metrics
+	var metrics []telegraf.Metric
 	for _, mf := range metricFamilies {
 		switch p.MetricVersion {
 		case 0, 2:
@@ -59,7 +78,7 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 		case 1:
 			metrics = append(metrics, p.extractMetricsV1(mf)...)
 		default:
-			return nil, fmt.Errorf("unknown prometheus metric version %d", p.MetricVersion)
+			return nil, fmt.Errorf("unknown metric version %d", p.MetricVersion)
 		}
 	}
 	return metrics, nil
