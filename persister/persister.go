@@ -92,6 +92,11 @@ func (p *Persister) Store() error {
 }
 
 func (p *Persister) StoreOnce(id string) error {
+	plugin, found := p.register[id]
+	if !found {
+		return nil
+	}
+
 	p.stateMutex.Lock()
 	defer p.stateMutex.Unlock()
 
@@ -100,7 +105,6 @@ func (p *Persister) StoreOnce(id string) error {
 		return err
 	}
 
-	plugin := p.register[id]
 	state, err := json.Marshal(plugin.GetState())
 	if err != nil {
 		return fmt.Errorf("marshalling state for id %q failed: %w", id, err)
