@@ -37,7 +37,15 @@ func (*UbloxDataCollector) SampleConfig() string {
 func (s *UbloxDataCollector) Init() error {
 	go func() {
 		reader := NewUbloxReader(s.UbloxPTY)
+
+		var lastHDOP uint16
 		lastFusionMode := None
+		lastSWVersion := ""
+		lastHWVersion := ""
+		lastFWVersion := ""
+		var sensors []byte
+
+		var lastVersionUpdate time.Time
 		for {
 			pos, err := reader.Pop(true)
 			if err != nil {
@@ -57,6 +65,37 @@ func (s *UbloxDataCollector) Init() error {
 				lastFusionMode = pos.FusionMode
 			}
 
+			// aggregate sensors
+			if len(pos.Sensors) == 0 {
+				pos.Sensors = sensors
+			} else {
+				sensors = pos.Sensors
+			}
+
+			// aggregate version info
+			if len(pos.SWVersion) == 0 {
+				pos.SWVersion = lastSWVersion
+			} else {
+				lastSWVersion = pos.SWVersion
+			}
+			if len(pos.HWVersion) == 0 {
+				pos.HWVersion = lastHWVersion
+			} else {
+				lastHWVersion = pos.HWVersion
+			}
+			if len(pos.FWVersion) == 0 {
+				pos.FWVersion = lastFWVersion
+			} else {
+				lastFWVersion = pos.FWVersion
+			}
+
+			// aggregate hdop
+			if pos.Hdop == 0 {
+				pos.Hdop = lastHDOP
+			} else {
+				lastHDOP = pos.Hdop
+			}
+
 			if pos.Active {
 				now := time.Now()
 				td := now.Sub(pos.Ts).Milliseconds()
@@ -69,6 +108,22 @@ func (s *UbloxDataCollector) Init() error {
 			s.mut.Lock()
 			s.lastPos = pos
 			s.mut.Unlock()
+
+			now := time.Now()
+			if now.Sub(lastVersionUpdate) > time.Minute*10 {
+				lastVersionUpdate = now
+
+				err = reader.UpdateVersionInfo()
+				if err != nil {
+					s.mut.Lock()
+					s.err = err
+					s.mut.Unlock()
+
+					lastSWVersion = ""
+					lastHWVersion = ""
+					lastFWVersion = ""
+				}
+			}
 		}
 	}()
 	return nil
@@ -97,6 +152,7 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 		metrics["speed_acc"] = s.lastPos.SpeedAcc
 
 		metrics["pdop"] = s.lastPos.Pdop
+		metrics["hdop"] = s.lastPos.Hdop
 		metrics["sat_num"] = s.lastPos.SatNum
 		metrics["fix_type"] = s.lastPos.FixType
 
@@ -113,6 +169,16 @@ func (s *UbloxDataCollector) Gather(acc telegraf.Accumulator) error {
 			sensors["s_faults"] = s.lastPos.Sensors[i*4+3]
 
 			acc.AddFields("ublox-data-sensors", sensors, sensorsTags)
+		}
+
+		if len(s.lastPos.SWVersion) != 0 {
+			metrics["sw_version"] = s.lastPos.SWVersion
+		}
+		if len(s.lastPos.HWVersion) != 0 {
+			metrics["hw_version"] = s.lastPos.HWVersion
+		}
+		if len(s.lastPos.FWVersion) != 0 {
+			metrics["fw_version"] = s.lastPos.FWVersion
 		}
 
 		s.lastPos = nil

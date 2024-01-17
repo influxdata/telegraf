@@ -1,8 +1,13 @@
+#include "ublox-utils/include/ublox_config_protocol.h"
 #include "ublox-utils/include/ublox_reader.h"
 #include "ublox-utils/include/ubx.h"
 #include <cstdlib>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
+
+
+#define FW_PREFIX "FWVER="
 
 
 #define TRY_SET(ptr, val) \
@@ -54,6 +59,10 @@ int ublox_reader_read(void         *reader,
                       unsigned int *fusion_mode,
                       char          sensor_arr[4 * 16],
                       unsigned int *sensors_count,
+                      char          sw_version[30],
+                      char          hw_version[30],
+                      char          fw_version[30],
+                      unsigned int *hdop,
                       long long    *sec,
                       long long    *nsec,
                       bool          wait_for_data,
@@ -64,7 +73,8 @@ int ublox_reader_read(void         *reader,
   size_t      len = 0;
   std::string serr;
   for (;;) {
-    switch (ublox_reader->get(&msg, &len, wait_for_data, &serr)) {
+    // return only at NAV-PVT message
+    switch (ublox_reader->pop(&msg, &len, wait_for_data, &serr)) {
     case UbloxReader::Status::None:
       return 0;
     case UbloxReader::Closed:
@@ -74,7 +84,8 @@ int ublox_reader_read(void         *reader,
       // do nothing
       break;
     case UbloxReader::UBXMessage:
-      if (ubx::messageCId(msg, len) == ubx::NAV_PVT) {
+      switch (ubx::messageCId(msg, len)) {
+      case ubx::NAV_PVT: {
         const ubx::NavPvt *nav_pvt = (const ubx::NavPvt *)msg;
         TRY_SET(is_active, nav_pvt->payload.flags & ubx::GNSSFixOk);
 
@@ -100,7 +111,8 @@ int ublox_reader_read(void         *reader,
         TRY_SET(nsec, nav_pvt->payload.nano);
 
         return 1;
-      } else if (ubx::messageCId(msg, len) == ubx::ESF_STATUS) {
+      }
+      case ubx::ESF_STATUS: {
         const ubx::EsfStatus *esf_status = (const ubx::EsfStatus *)msg;
 
         TRY_SET(fusion_mode, esf_status->payload.fusionMode);
@@ -111,8 +123,29 @@ int ublox_reader_read(void         *reader,
                  esf_status->payload.sensors,
                  4 * esf_status->payload.numSens);
         }
-
-        // do not return here, wait for NAV_PVT message
+      } break;
+      case ubx::MON_VER: {
+        const ubx::MonVer *mon_ver = (const ubx::MonVer *)msg;
+        strcpy(sw_version, mon_ver->payload.swVersion);
+        strcpy(hw_version, mon_ver->payload.hwVersion);
+        for (int i = 0;
+             mon_ver->header.len >
+             sizeof(ubx::MonVerPayload) + i * sizeof(ubx::MonVerRepeatedGroup);
+             ++i) {
+          if (strncmp(mon_ver->payload.extensions[i].extension,
+                      FW_PREFIX,
+                      strlen(FW_PREFIX)) == 0) {
+            strcpy(fw_version,
+                   mon_ver->payload.extensions[i].extension +
+                       strlen(FW_PREFIX));
+            break;
+          }
+        }
+      } break;
+      case ubx::NAV_DOP: {
+        const ubx::NavDop *nav_dop = (const ubx::NavDop *)msg;
+        TRY_SET(hdop, nav_dop->payload.hDOP);
+      } break;
       }
       break;
     case UbloxReader::Error:
@@ -123,5 +156,28 @@ int ublox_reader_read(void         *reader,
       return -1;
     }
   }
+}
+
+
+/**\brief try to update sw, hw and fw versions
+ */
+int ublox_reader_update_version_info(void *reader, char **err) {
+  // FIXME currently we can not write anything with using UbloxReader
+  UbloxReader *ublox_reader = (UbloxReader *)reader;
+
+  uint8_t buf[256];
+  size_t  len = makeConfigRequest(-1, buf);
+
+
+  std::string serr;
+  if (ublox_reader->push(buf, len, &serr) == false) {
+    if (err) {
+      *err = (char *)malloc(serr.size() + 1 /*\0*/);
+      strcpy(*err, serr.c_str());
+    }
+    return -1;
+  }
+
+  return 0;
 }
 }

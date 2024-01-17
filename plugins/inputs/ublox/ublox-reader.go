@@ -1,7 +1,7 @@
 package ublox
 
 /*
-#cgo LDFLAGS: -L./ublox-utils/build -lublox-utils
+#cgo LDFLAGS: -L./ublox-utils/build/lib -lublox-utils
 #include "ublox-reader.h"
 */
 import "C"
@@ -46,11 +46,16 @@ type GPSPos struct {
 	SpeedAcc float64
 
 	Pdop    uint16
+	Hdop    uint16
 	SatNum  uint8
 	FixType uint8
 
 	FusionMode uint8
 	Sensors    []byte
+
+	SWVersion string
+	HWVersion string
+	FWVersion string
 
 	Ts time.Time
 }
@@ -117,9 +122,18 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	var sec C.longlong
 	var nsec C.longlong
 
+	swVersion := C.CString(string(make([]byte, 30)))
+	hwVersion := C.CString(string(make([]byte, 30)))
+	fwVersion := C.CString(string(make([]byte, 30)))
+	defer C.free(unsafe.Pointer(swVersion))
+	defer C.free(unsafe.Pointer(hwVersion))
+	defer C.free(unsafe.Pointer(fwVersion))
+
+	var hdop C.uint
+
 	fusion_mode = C.uint(None)
 
-	status := C.ublox_reader_read(unsafe.Pointer(reader.reader), &is_active, &lat, &lon, &horizontal_acc, &heading, &headingOfMot, &headingAcc, &headingIsValid, &speed, &speedAcc, &pdop, &satNum, &fixType, &fusion_mode, sensors, &sensorsLen, &sec, &nsec, C.bool(wait_for_data), &c_err)
+	status := C.ublox_reader_read(unsafe.Pointer(reader.reader), &is_active, &lat, &lon, &horizontal_acc, &heading, &headingOfMot, &headingAcc, &headingIsValid, &speed, &speedAcc, &pdop, &satNum, &fixType, &fusion_mode, sensors, &sensorsLen, swVersion, hwVersion, fwVersion, &hdop, &sec, &nsec, C.bool(wait_for_data), &c_err)
 	if status == -1 {
 		err := C.GoString(c_err)
 		C.free(unsafe.Pointer(c_err))
@@ -144,11 +158,16 @@ func (reader *UbloxReader) Pop(wait_for_data bool) (*GPSPos, error) {
 	data.SpeedAcc = float64(speedAcc)
 
 	data.Pdop = uint16(pdop)
+	data.Hdop = uint16(hdop)
 	data.SatNum = uint8(satNum)
 	data.FixType = uint8(fixType)
 
 	data.FusionMode = uint8(fusion_mode)
 	data.Sensors = C.GoBytes(unsafe.Pointer(sensors), C.int(sensorsLen)*4)
+
+	data.SWVersion = C.GoString(swVersion)
+	data.HWVersion = C.GoString(hwVersion)
+	data.FWVersion = C.GoString(fwVersion)
 
 	data.Ts = time.Unix(int64(sec), int64(nsec))
 
@@ -164,4 +183,16 @@ func (reader *UbloxReader) Close() {
 
 func (reader *UbloxReader) Free() {
 	C.ublox_reader_free(unsafe.Pointer(reader.reader))
+}
+
+func (reader *UbloxReader) UpdateVersionInfo() error {
+	var c_err *C.char
+
+	if C.ublox_reader_update_version_info(unsafe.Pointer(reader.reader), &c_err) == -1 {
+		err := C.GoString(c_err)
+		C.free(unsafe.Pointer(c_err))
+		return errors.New(err)
+	}
+
+	return nil
 }
