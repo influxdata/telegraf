@@ -161,7 +161,6 @@ func fieldsEqualHelper(t *testing.T, a, b interface{}, fieldNames ...string) {
 }
 
 func TestConfigParsing(t *testing.T) {
-
 	// Define test cases
 	testCases := []struct {
 		name    string
