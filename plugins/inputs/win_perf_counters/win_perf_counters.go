@@ -576,6 +576,7 @@ func isKnownCounterDataError(err error) bool {
 		pdhErr.ErrorCode == PdhCalcNegativeDenominator ||
 		pdhErr.ErrorCode == PdhCalcNegativeValue ||
 		pdhErr.ErrorCode == PdhCstatusInvalidData ||
+		pdhErr.ErrorCode == PdhCstatusNoInstance ||
 		pdhErr.ErrorCode == PdhNoData) {
 		return true
 	}
