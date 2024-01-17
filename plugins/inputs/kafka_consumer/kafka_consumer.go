@@ -483,6 +483,7 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 
 	metrics, err := h.parser.Parse(msg.Value)
 	if err != nil {
+		session.MarkMessage(msg, "")
 		h.release()
 		return err
 	}
