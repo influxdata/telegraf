@@ -371,18 +371,15 @@ jobs:
             docker push quay.io/influxdb/telegraf-nightly:alpine
   amd64-package-test-nightly:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     steps:
       - checkout
       - attach_workspace:
           at: '.'
-      - run: sudo apt update && sudo apt install -y snapd
-      - run: sudo snap install lxd
-      - run: sudo lxd init --auto
-      - run: sudo usermod -a -G lxd $(whoami)
-      - run: cd tools/package_lxd_test && go build
-      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
-      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
+      - run: ./scripts/install_incus.sh
+      - run: cd tools/package_incus_test && go build
+      - run: ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*_amd64.deb")
+      - run: ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
     machine:
       image: ubuntu-2204:current
