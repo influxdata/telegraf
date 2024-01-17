@@ -401,7 +401,7 @@ jobs:
       - checkout
       - check-changed-files-or-halt
       - attach_workspace:
-          at: '/build'
+          at: '.'
       - run:
           name: "Sign Windows Executables"
           command: ./scripts/sign-windows.sh
