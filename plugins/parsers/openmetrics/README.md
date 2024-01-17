@@ -6,7 +6,7 @@ but can also be used by e.g.
 [http_listener_v2](/plugins/inputs/http_listener_v2) to simulate a Pushgateway.
 
 The plugin allows to output different metric formats as described in the
-[Metric Formats section][#metric-formats].
+[Metric Formats section](#metric-formats).
 
 [OpenMetrics Text Format]: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md
 
@@ -135,11 +135,15 @@ metric_version = 2 uses the same histogram format as the histogram aggregator
 Download the latest version of the protocol-buffer definition
 
 ```text
-$ wget https://raw.githubusercontent.com/OpenObservability/OpenMetrics/main/proto/openmetrics_data_model.proto
+wget https://raw.githubusercontent.com/OpenObservability/OpenMetrics/main/proto/openmetrics_data_model.proto
 ```
 
 and generate the go-code for the definition using
 
 ```text
-$ protoc --proto_path=. --go_out=. --go_opt=paths=source_relative --go_opt=Mopenmetrics_data_model.proto=github.com/influxdata/telegraf/plugins/parsers/openmetrics  openmetrics_data_model.proto
+protoc --proto_path=. \
+       --go_out=. \
+       --go_opt=paths=source_relative \
+       --go_opt=Mopenmetrics_data_model.proto=github.com/influxdata/telegraf/plugins/parsers/openmetrics \
+       openmetrics_data_model.proto
 ```
