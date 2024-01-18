@@ -194,7 +194,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.runInputs(ctx, startTime, iu)
 	}()
 
-	if a.Config.Persister != nil && a.Config.Agent.EnablePersistInterval {
+	if a.Config.Persister != nil && time.Duration(a.Config.Agent.PersistInterval) > 0 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

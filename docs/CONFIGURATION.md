@@ -332,12 +332,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
   stateful plugins on termination of Telegraf. If the file exists on start,
   the state in the file will be restored for the plugins.
 
-- **enable_statefile_persist_interval**:
-  If set to true, the agent will persist it's state at a regular interval set
-  by statefile_persist_interval.
-
 - **statefile_persist_interval**:
-  The interval of time at which the state is peristed into the statefile.
+  The interval of time at which the state is peristed into the statefile. When
+  set to 0, persist interval is disabled.
 
 - **round_statefile_persist_interval**:
   Rounds persist interval to 'interval'
