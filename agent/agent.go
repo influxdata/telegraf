@@ -564,17 +564,7 @@ func (a *Agent) gatherLoop(
 			err := a.gatherOnce(acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
-			} else {
-				if a.Config.Persister != nil {
-					id := input.ID()
-					log.Printf("D! [agent] Persisting plugin state for id %q", id)
-
-					if err := a.Config.Persister.StoreOnce(id); err != nil {
-						log.Printf("E! [agent] Error persisting plugin state: %v", err)
-					}
-				}
 			}
-
 		case <-ctx.Done():
 			return
 		}
