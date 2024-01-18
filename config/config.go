@@ -264,8 +264,8 @@ type AgentConfig struct {
 	// statefile. When set to 0, persist interval is disabled.
 	PersistInterval Duration `toml:"statefile_persist_interval"`
 
-	// RoundPersistInterval rounds persist interval to 'interval'.
-	//     ie, if Interval=10s then always persist state on :00, :10, :20, etc.
+	// RoundPersistInterval rounds persist interval to 'PersistInterval'.
+	//     ie, if PersistInterval=10m then always persist state on :00, :10, :20, etc.
 	RoundPersistInterval bool `toml:"round_statefile_persist_interval"`
 
 	// Flag to always keep tags explicitly defined in the plugin itself and

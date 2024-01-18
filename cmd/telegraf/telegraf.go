@@ -279,7 +279,7 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	if int64(c.Agent.PersistInterval) < 0 {
-		return fmt.Errorf("agent statefile_persist_interval must be positive or zero; found %v", c.Agent.Interval)
+		return fmt.Errorf("agent statefile_persist_interval must be positive or zero; found %v", c.Agent.PersistInterval)
 	}
 
 	// Setup logging as configured.
