@@ -16,4 +16,4 @@ EOF'
 sudo apt-get update && sudo apt-get install --yes incus
 
 sudo incus admin init --auto
-sudo usermod -a -G incus "$(whoami)"
+sudo usermod -a -G incus-admin "$(whoami)"
