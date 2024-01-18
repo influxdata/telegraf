@@ -122,7 +122,7 @@ jobs:
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
       - run:
           name: "Windows"
-          command: GOGC=15 GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
+          command: GOGC=10 GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
           no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci
