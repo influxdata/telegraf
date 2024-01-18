@@ -297,7 +297,6 @@ func TestTagSanitization(t *testing.T) {
 			expected: []string{"", ""},
 			input:    []string{"root", "wo`rd"},
 		},
-
 		{
 			name:     "Don't Sanitize Tags",
 			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "0.13"; return s }(),

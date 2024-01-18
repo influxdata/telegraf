@@ -255,9 +255,9 @@ func (s *IoTDB) validateTag(tag string) (string, error) {
 
 	// IoTDB uses "root" as a keyword and can be called only at the start of the path
 	if tag == "root" {
-		return "", fmt.Errorf("can't append keyword \"root\" to IoTDB base path")
+		return "", errors.New("cannot use \"root\" as tag")
 	} else if forbiddenBacktick.MatchString(tag) { // returns an error if the backsticks are used in an inappropriate way
-		return "", fmt.Errorf("can't use ` in IoTDB base path")
+		return "", errors.New("cannot use ` in tag names")
 	} else if allowedBacktick.MatchString(tag) { // if the tag in already enclosed in tags returns the tag
 		return tag, nil
 	}
@@ -308,11 +308,9 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 			topic := []string{rwt.DeviceIDList[index]}
 			for _, tag := range tags { // for each tag, append it's Value
 				tagValue, err := s.validateTag(tag.Value) // validates tag
-
 				if err != nil {
 					return err
 				}
-
 				topic = append(topic, tagValue)
 			}
 			rwt.DeviceIDList[index] = strings.Join(topic, ".")
