@@ -908,6 +908,11 @@ func TestGenerateTopicName(t *testing.T) {
 			pattern: "double//slashes//are//ignored",
 			want:    "double/slashes/are/ignored",
 		},
+		{
+			name:    "preserve leading forward slash",
+			pattern: "/this/is/a/topic",
+			want:    "/this/is/a/topic",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
