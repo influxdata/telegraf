@@ -119,6 +119,9 @@ func NewConfig() *Config {
 			FlushInterval:              Duration(10 * time.Second),
 			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
+			PersistInterval:            Duration(10 * time.Minute),
+			EnablePersistInterval:      false,
+			RoundPersistInterval:       true,
 		},
 
 		Tags:               make(map[string]string),
@@ -257,6 +260,18 @@ type AgentConfig struct {
 	// stateful plugins on termination of Telegraf. If the file exists on start,
 	// the state in the file will be restored for the plugins.
 	Statefile string `toml:"statefile"`
+
+	// EnablePersistInterval enables the statefile to be persisted to at the
+	// interval specified in PersistInterval
+	EnablePersistInterval bool `toml:"enable_statefile_persist_interval"`
+
+	// RoundPersistInterval rounds persist interval to 'interval'.
+	//     ie, if Interval=10s then always persist state on :00, :10, :20, etc.
+	RoundPersistInterval bool `toml:"round_statefile_persist_interval"`
+
+	// PersistInterval The interval in which the state will be stored into the
+	// statefile
+	PersistInterval Duration `toml:"statefile_persist_interval"`
 
 	// Flag to always keep tags explicitly defined in the plugin itself and
 	// ensure those tags always pass filtering.

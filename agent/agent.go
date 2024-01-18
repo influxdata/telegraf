@@ -194,6 +194,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.runInputs(ctx, startTime, iu)
 	}()
 
+	if a.Config.Persister != nil && a.Config.Agent.EnablePersistInterval {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			a.runPersistLoop(ctx, startTime)
+		}()
+	}
+
 	wg.Wait()
 
 	if a.Config.Persister != nil {
@@ -326,6 +334,43 @@ func (a *Agent) initPersister() error {
 	}
 
 	return nil
+}
+
+func (a *Agent) runPersistLoop(
+	ctx context.Context,
+	startTime time.Time,
+) {
+	log.Printf("D! [agent] Starting persist loop")
+
+	interval := time.Duration(a.Config.Agent.PersistInterval)
+
+	var ticker Ticker
+	if a.Config.Agent.RoundPersistInterval {
+		ticker = NewAlignedTicker(startTime, interval, 0, 0)
+	} else {
+		ticker = NewUnalignedTicker(interval, 0, 0)
+	}
+
+	a.persistLoop(ctx, ticker)
+
+	log.Printf("D! [agent] Stopping the persist loop)")
+}
+
+func (a *Agent) persistLoop(
+	ctx context.Context,
+	ticker Ticker,
+) {
+	for {
+		select {
+		case <-ticker.Elapsed():
+			err := a.Config.Persister.Store()
+			if err != nil {
+				log.Printf("E! [agent] Error writing state on persist loop: %v", err)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (a *Agent) startInputs(
