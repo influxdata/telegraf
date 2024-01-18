@@ -19,7 +19,7 @@ set -x
 base64 -d "$SM_CLIENT_CERT_FILE.b64" > "$SM_CLIENT_CERT_FILE"
 
 # Loop through and sign + verify the binaries
-artifactDirectory="./build/dist"
+artifactDirectory="./dist"
 extractDirectory="$artifactDirectory/extracted"
 for file in "$artifactDirectory"/*windows*; do
     7zz x "$file" -o$extractDirectory
