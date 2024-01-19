@@ -19,7 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Configuration for OpenSearch to send metrics to.
-[[outputs.OpenSearch]]
+[[outputs.opensearch]]
   ## URLs
   ## The full HTTP endpoint URL for your OpenSearch instance. Multiple URLs can
   ## be specified as part of the same cluster, but only one URLs is used to
@@ -33,7 +33,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## metric name (`{{.Name}}`), tag value (`{{.Tag "tag_name"}}`), field value (`{{.Field "field_name"}}`)
   ## If the tag does not exist, the default tag value will be empty string "".
   ## the timestamp (`{{.Time.Format "xxxxxxxxx"}}`).
-  ## For example: "telegraf-{{.Time.Format "2006-01-02"}}-{{.Tag "host"}}" would set it to telegraf-2023-07-27-HostName
+  ## For example: "telegraf-{{.Time.Format \"2006-01-02\"}}-{{.Tag \"host\"}}" would set it to telegraf-2023-07-27-HostName
   index_name = ""
 
   ## Timeout
@@ -127,9 +127,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   OpenSearch instance.
 * `index_name`: The target index for metrics. You can use the date format
 
-For example: "telegraf-{{.Time.Format "2006-01-02"}}" would set it to
+For example: "telegraf-{{.Time.Format \"2006-01-02\"}}" would set it to
 "telegraf-2023-07-27". You can also specify metric name (`{{ .Name }}`), tag
-value (`{{ .Tag "tag_name" }}`), and field value (`{{ .Field "field_name" }}`).
+value (`{{ .Tag \"tag_name\" }}`), and field value
+(`{{ .Field \"field_name\" }}`).
 
 If the tag does not exist, the default tag value will be empty string ""
 

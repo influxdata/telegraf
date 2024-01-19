@@ -15,5 +15,5 @@ jobs:
       - name: Scan for Vulnerabilities in Code
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: 1.21.5
+          go-version-input: 1.21.6
           go-package: ./...
