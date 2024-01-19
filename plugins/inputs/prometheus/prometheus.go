@@ -210,7 +210,7 @@ func (p *Prometheus) Init() error {
 
 	if p.ContentLengthLimit < 0 {
 		return fmt.Errorf("content length limit must zero or larger: %d", p.ContentLengthLimit)
-  	}
+	}
 
 	if p.MetricVersion == 0 {
 		p.MetricVersion = 1
@@ -446,8 +446,10 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	if err != nil {
 		return fmt.Errorf("error reading body: %w", err)
 	}
-	if p.ContentLengthLimit != 0 && len(body) > p.ContentLengthLimit {
-		p.Log.Debugf("skipping %s: content length (%d) exceeded maximum body size (%d)", u.URL, resp.ContentLength, p.ContentLengthLimit)
+
+	bodyLength := len(body)
+	if p.ContentLengthLimit != 0 && bodyLength > p.ContentLengthLimit {
+		p.Log.Debugf("skipping %s: content length (%d) exceeded maximum body size (%d)", u.URL, bodyLength, p.ContentLengthLimit)
 		return nil
 	}
 
