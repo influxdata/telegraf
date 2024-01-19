@@ -44,6 +44,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # password = ""
 
   ## Optional TLS Config
+  ## Check tls/config.go ClientConfig for more options
+  # tls_enable = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
