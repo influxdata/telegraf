@@ -250,8 +250,8 @@ func (s *IoTDB) validateTag(tag string) (string, error) {
 	// matches any word that has a non valid backtick
 	// `word`  							 <- dosen't match
 	// ``word , `wo`rd` , `word , word`  <- match
-	forbiddenBacktick, _ := regexp.Compile("^[^\x60].*?[\x60]+.*?[^\x60]$|^[\x60].*[\x60]+.*[\x60]$|^[\x60]+.*[^\x60]$|^[^\x60].*[\x60]+$")
-	allowedBacktick, _ := regexp.Compile("^[\x60].*[\x60]$")
+	forbiddenBacktick := regexp.MustCompile("^[^\x60].*?[\x60]+.*?[^\x60]$|^[\x60].*[\x60]+.*[\x60]$|^[\x60]+.*[^\x60]$|^[^\x60].*[\x60]+$")
+	allowedBacktick := regexp.MustCompile("^[\x60].*[\x60]$")
 
 	// IoTDB uses "root" as a keyword and can be called only at the start of the path
 	if tag == "root" {
@@ -266,15 +266,15 @@ func (s *IoTDB) validateTag(tag string) (string, error) {
 
 	switch s.SanitizeTags {
 	case "0.13":
-		matchUnsopportedCharacter, _ := regexp.Compile("[^0-9a-zA-Z_:@#${}\x60]")
+		matchUnsopportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_:@#${}\x60]")
 
 		regex := []*regexp.Regexp{matchUnsopportedCharacter}
 		regexArray = append(regexArray, regex...)
 
 	// from version 1.x.x IoTDB changed the allowed keys in nodes
 	case "1.0", "1.1", "1.2", "1.3":
-		matchUnsopportedCharacter, _ := regexp.Compile("[^0-9a-zA-Z_\x60]")
-		matchNumericString, _ := regexp.Compile(`^\d+$`)
+		matchUnsopportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_\x60]")
+		matchNumericString := regexp.MustCompile(`^\d+$`)
 
 		regex := []*regexp.Regexp{matchUnsopportedCharacter, matchNumericString}
 		regexArray = append(regexArray, regex...)
