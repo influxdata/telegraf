@@ -378,8 +378,8 @@ jobs:
           at: '.'
       - run: ./scripts/install_incus.sh
       - run: cd tools/package_incus_test && go build
-      - run: ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*_amd64.deb")
-      - run: ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*.x86_64.rpm")
+      - run: sudo ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*_amd64.deb")
+      - run: sudo ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
     machine:
       image: ubuntu-2204:current
@@ -393,7 +393,7 @@ jobs:
           name: "Sign Windows Executables"
           command: ./scripts/sign-windows.sh
       - persist_to_workspace:
-          root: './build'
+          root: '.'
           paths:
             - 'dist'
   package-sign-mac:
