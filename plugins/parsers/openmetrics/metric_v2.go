@@ -3,6 +3,7 @@ package openmetrics
 import (
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -92,15 +93,21 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 
 				// Add one metric per state
 				for _, state := range stateset.GetStates() {
-					fields := map[string]interface{}{metricName + "_" + state.Name: state.GetEnabled()}
+					sn := strings.ReplaceAll(state.GetName(), " ", "_")
+					fields := map[string]interface{}{metricName + "_" + sn: state.GetEnabled()}
 					metrics = append(metrics, metric.New("prometheus", tags, fields, t, telegraf.Untyped))
 				}
 			case MetricType_INFO:
-				infos := omp.GetInfoValue().GetInfo()
-				for _, info := range infos {
-					fields := map[string]interface{}{metricName + "_" + info.Name: info.GetValue()}
-					metrics = append(metrics, metric.New("prometheus", tags, fields, t, telegraf.Untyped))
+				info := omp.GetInfoValue().GetInfo()
+				mptags := make(map[string]string, len(tags)+len(info))
+				for k, v := range tags {
+					mptags[k] = v
 				}
+				for _, itag := range info {
+					mptags[itag.Name] = itag.Value
+				}
+				fields := map[string]interface{}{metricName: uint64(1)}
+				metrics = append(metrics, metric.New("prometheus", mptags, fields, t, telegraf.Untyped))
 			case MetricType_HISTOGRAM, MetricType_GAUGE_HISTOGRAM:
 				histogram := omp.GetHistogramValue()
 

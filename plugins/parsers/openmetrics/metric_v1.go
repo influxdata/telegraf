@@ -3,6 +3,7 @@ package openmetrics
 import (
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -91,16 +92,16 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Counter))
 			case MetricType_STATE_SET:
 				stateset := omp.GetStateSetValue()
-
 				// Collect the fields
 				fields := make(map[string]interface{}, len(stateset.States))
 				for _, state := range stateset.GetStates() {
-					fields[state.GetName()] = state.GetEnabled()
+					fname := strings.ReplaceAll(state.GetName(), " ", "_")
+					fields[fname] = state.GetEnabled()
 				}
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Untyped))
 			case MetricType_INFO:
 				info := omp.GetInfoValue().GetInfo()
-				fields := map[string]interface{}{"value": uint64(1)}
+				fields := map[string]interface{}{"info": uint64(1)}
 				mptags := make(map[string]string, len(tags)+len(info))
 				for k, v := range tags {
 					mptags[k] = v

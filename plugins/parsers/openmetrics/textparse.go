@@ -237,7 +237,7 @@ func extractSampleType(raw, name string, mtype MetricType, metricLabels *labels.
 		// filter out special labels
 		switch {
 		case l.Name == "__name__":
-		case mtype == MetricType_STATE_SET && l.Name == "name":
+		case mtype == MetricType_STATE_SET && l.Name == name:
 		case mtype == MetricType_HISTOGRAM && l.Name == "le":
 		case mtype == MetricType_GAUGE_HISTOGRAM && l.Name == "le":
 		case mtype == MetricType_SUMMARY && l.Name == "quantile":
@@ -333,7 +333,7 @@ func (mp *MetricPoint) set(mname string, mtype MetricType, stype string, value f
 			}
 			var bound float64
 			if boundLabel == "+Inf" {
-				bound = math.MaxFloat64
+				bound = math.Inf(1)
 			} else {
 				var err error
 				if bound, err = strconv.ParseFloat(boundLabel, 64); err != nil {
