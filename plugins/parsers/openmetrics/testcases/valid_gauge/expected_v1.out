@@ -1,0 +1,3 @@
+go_memstats_gc_cpu_fraction,_type=gauge gauge=-0.00014404354379774563
+go_memstats_gc_sys_bytes,_type=gauge gauge=60936192
+go_memstats_heap_alloc_bytes,_type=gauge gauge=1581062048

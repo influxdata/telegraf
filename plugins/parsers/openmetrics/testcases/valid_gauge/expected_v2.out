@@ -1,0 +1,3 @@
+prometheus,_type=gauge go_memstats_gc_cpu_fraction=-0.00014404354379774563
+prometheus,_type=gauge go_memstats_gc_sys_bytes=60936192
+prometheus,_type=gauge go_memstats_heap_alloc_bytes=1581062048
