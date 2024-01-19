@@ -255,7 +255,7 @@ func (s *IoTDB) validateTag(tag string) (string, error) {
 
 	// IoTDB uses "root" as a keyword and can be called only at the start of the path
 	if tag == "root" {
-		return "", errors.New("cannot use \"root\" as tag")
+		return "", errors.New("cannot use 'root' as tag")
 	} else if forbiddenBacktick.MatchString(tag) { // returns an error if the backsticks are used in an inappropriate way
 		return "", errors.New("cannot use ` in tag names")
 	} else if allowedBacktick.MatchString(tag) { // if the tag in already enclosed in tags returns the tag

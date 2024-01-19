@@ -142,7 +142,7 @@ to use them.
   ##   - "device_id"  --  root.sg.device.private.working, s1=100, s2="hello"
   # convert_tags_to = "device_id"
 
-  ## Handling of Unsupported Characters
+  ## Handling of unsupported characters
   ## Some characters in different versions of IoTDB are not supported in path name
   ## A guide with suggetions on valid paths can be found here:
   ## for iotdb 0.13.x           -> https://iotdb.apache.org/UserGuide/V0.13.x/Reference/Syntax-Conventions.html#identifiers
