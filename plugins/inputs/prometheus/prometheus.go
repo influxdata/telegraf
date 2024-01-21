@@ -209,7 +209,7 @@ func (p *Prometheus) Init() error {
 	}
 
 	if p.ContentLengthLimit < 0 {
-		return fmt.Errorf("content length limit must zero or larger: %d", p.ContentLengthLimit)
+		return fmt.Errorf("content length limit must be zero or larger: %d", p.ContentLengthLimit)
 	}
 
 	if p.MetricVersion == 0 {
