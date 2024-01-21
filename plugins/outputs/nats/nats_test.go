@@ -5,8 +5,8 @@ import (
 	_ "embed"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"testing"
+	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/nats-io/nats.go/jetstream"
@@ -26,11 +26,11 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 	}
 	natsServicePort := "4222"
 	type testConfig struct {
-		name                      string
-		container                 testutil.Container
-		nats                      *NATS
-		streamConfigCompareFields []string
-		wantErr                   bool
+		name                    string
+		container               testutil.Container
+		nats                    *NATS
+		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
+		wantErr                 bool
 	}
 	testCases := []testConfig{
 		{
@@ -64,7 +64,10 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
 			},
-			streamConfigCompareFields: []string{"Name", "Subjects"},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, si.Config.Name, "my-telegraf-stream")
+				require.Equal(t, si.Config.Subjects, []string{"telegraf"})
+			},
 		},
 		{
 			name: "create stream with config",
@@ -76,39 +79,38 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-tel-sub2",
+				Subject: "my-tel-sub-outer",
 				Jetstream: &StreamConfig{
 					Name:              "telegraf-stream-with-cfg",
 					Subjects:          []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2"},
-					Retention:         jetstream.WorkQueuePolicy,
+					Retention:         "workqueue",
 					MaxConsumers:      10,
-					Discard:           jetstream.DiscardOld,
-					Storage:           jetstream.FileStorage,
-					MaxMsgs:           100000,
-					MaxBytes:          104857600,
-					MaxAge:            86400000000000,
-					Replicas:          1,
-					Duplicates:        180000000000,
+					Discard:           "new",
+					Storage:           "memory",
+					MaxMsgs:           100_000,
+					MaxBytes:          104_857_600,
+					MaxAge:            config.Duration(10 * time.Minute),
+					Duplicates:        config.Duration(5 * time.Minute),
 					MaxMsgSize:        120,
 					MaxMsgsPerSubject: 500,
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
 			},
-			streamConfigCompareFields: []string{
-				"Name",
-				"Subjects",
-				"Retention",
-				"MaxConsumers",
-				"Discard",
-				"Storage",
-				"MaxMsgs",
-				"MaxBytes",
-				"MaxAge",
-				"Replicas",
-				"Duplicates",
-				"MaxMsgSize",
-				"MaxMsgsPerSubject"},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, si.Config.Name, "telegraf-stream-with-cfg")
+				require.Equal(t, si.Config.Subjects, []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2", "my-tel-sub-outer"})
+				require.Equal(t, si.Config.Retention, jetstream.WorkQueuePolicy)
+				require.Equal(t, si.Config.MaxConsumers, 10)
+				require.Equal(t, si.Config.Discard, jetstream.DiscardNew)
+				require.Equal(t, si.Config.Storage, jetstream.MemoryStorage)
+				require.Equal(t, si.Config.MaxMsgs, int64(100_000))
+				require.Equal(t, si.Config.MaxBytes, int64(104_857_600))
+				require.Equal(t, si.Config.MaxAge, time.Duration(10*time.Minute))
+				require.Equal(t, si.Config.Duplicates, time.Duration(5*time.Minute))
+				require.Equal(t, si.Config.MaxMsgSize, int32(120))
+				require.Equal(t, si.Config.MaxMsgsPerSubject, int64(500))
+			},
 		},
 	}
 
@@ -133,30 +135,13 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 				require.NoError(t, err)
 				si, err := stream.Info(context.Background())
 				require.NoError(t, err)
-				// compare only relevant fields, since defaults for fields like max_bytes is not 0
-				fieldsEqualHelper(t, *tc.nats.Jetstream, si.Config, tc.streamConfigCompareFields...)
+
+				tc.streamConfigCompareFunc(t, si)
 			}
 			// Verify that we can successfully write data to the NATS daemon
 			err = tc.nats.Write(testutil.MockMetrics())
 			require.NoError(t, err)
 		})
-	}
-}
-
-func fieldsEqualHelper(t *testing.T, a, b interface{}, fieldNames ...string) {
-	valA := reflect.ValueOf(a)
-	valB := reflect.ValueOf(b)
-
-	if valA.Kind() != reflect.Struct || valB.Kind() != reflect.Struct {
-		t.Error("Both parameters must be structs")
-		return
-	}
-
-	for _, fieldName := range fieldNames {
-		fieldA := valA.FieldByName(fieldName)
-		fieldB := valB.FieldByName(fieldName)
-
-		require.Equal(t, fieldA.Interface(), fieldB.Interface(), "Field %s should be equal", fieldName)
 	}
 }
 

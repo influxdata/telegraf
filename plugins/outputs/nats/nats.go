@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -43,28 +42,25 @@ type NATS struct {
 }
 
 // StreamConfig is the configuration for creating stream
-// Almost a mirror of https://pkg.go.dev/github.com/nats-io/nats.go/jetstream#StreamConfig but with
-// TOML tags.
-//
-// Some custom types such as RetentionPolicy still point to the source to reuse Stringer interface.
+// Almost a mirror of https://pkg.go.dev/github.com/nats-io/nats.go/jetstream#StreamConfig but with TOML tags
 type StreamConfig struct {
 	Name                 string                            `toml:"name"`
 	Description          string                            `toml:"description,omitempty"`
 	Subjects             []string                          `toml:"subjects,omitempty"`
-	Retention            jetstream.RetentionPolicy         `toml:"retention"`
+	Retention            string                            `toml:"retention"`
 	MaxConsumers         int                               `toml:"max_consumers"`
 	MaxMsgs              int64                             `toml:"max_msgs"`
 	MaxBytes             int64                             `toml:"max_bytes"`
-	Discard              jetstream.DiscardPolicy           `toml:"discard"`
+	Discard              string                            `toml:"discard"`
 	DiscardNewPerSubject bool                              `toml:"discard_new_per_subject,omitempty"`
-	MaxAge               time.Duration                     `toml:"max_age"`
+	MaxAge               config.Duration                   `toml:"max_age"`
 	MaxMsgsPerSubject    int64                             `toml:"max_msgs_per_subject"`
 	MaxMsgSize           int32                             `toml:"max_msg_size,omitempty"`
-	Storage              jetstream.StorageType             `toml:"storage"`
+	Storage              string                            `toml:"storage"`
 	Replicas             int                               `toml:"num_replicas"`
 	NoAck                bool                              `toml:"no_ack,omitempty"`
 	Template             string                            `toml:"template_owner,omitempty"`
-	Duplicates           time.Duration                     `toml:"duplicate_window,omitempty"`
+	Duplicates           config.Duration                   `toml:"duplicate_window,omitempty"`
 	Placement            *jetstream.Placement              `toml:"placement,omitempty"`
 	Mirror               *jetstream.StreamSource           `toml:"mirror,omitempty"`
 	Sources              []*jetstream.StreamSource         `toml:"sources,omitempty"`
@@ -72,7 +68,7 @@ type StreamConfig struct {
 	DenyDelete           bool                              `toml:"deny_delete,omitempty"`
 	DenyPurge            bool                              `toml:"deny_purge,omitempty"`
 	AllowRollup          bool                              `toml:"allow_rollup_hdrs,omitempty"`
-	Compression          jetstream.StoreCompression        `toml:"compression"`
+	Compression          string                            `toml:"compression"`
 	FirstSeq             uint64                            `toml:"first_seq,omitempty"`
 	SubjectTransform     *jetstream.SubjectTransformConfig `toml:"subject_transform,omitempty"`
 	RePublish            *jetstream.RePublish              `toml:"republish,omitempty"`
@@ -148,26 +144,95 @@ func (n *NATS) Connect() error {
 		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
 			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
 		}
-		var streamConfig jetstream.StreamConfig
-		n.convertToJetstreamConfig(&streamConfig)
-		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), streamConfig)
+		streamConfig, err := n.getJetstreamConfig()
+		if err != nil {
+			return fmt.Errorf("failed to parse jetstream config: %w", err)
+		}
+		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), *streamConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
-		n.Log.Infof("stream (%s) successfully created or updated", n.Jetstream.Name)
+		n.Log.Infof("Stream (%s) successfully created or updated", n.Jetstream.Name)
 	}
 	return nil
 }
 
-func (n *NATS) convertToJetstreamConfig(streamConfig *jetstream.StreamConfig) {
-	telegrafStreamConfig := reflect.ValueOf(n.Jetstream).Elem()
-	natsStreamConfig := reflect.ValueOf(streamConfig).Elem()
-	for i := 0; i < telegrafStreamConfig.NumField(); i++ {
-		destField := natsStreamConfig.FieldByName(telegrafStreamConfig.Type().Field(i).Name)
-		if destField.IsValid() && destField.CanSet() {
-			destField.Set(telegrafStreamConfig.Field(i))
-		}
+func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
+	var err error
+
+	var retention jetstream.RetentionPolicy
+	// set the default in case nothing is passed
+	if strings.TrimSpace(n.Jetstream.Retention) == "" {
+		n.Jetstream.Retention = "limits"
 	}
+	// quoting because UnmarshalJSON expects a string literal(ex: "limtis")
+	err = retention.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Retention)))
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(n.Jetstream.Discard) == "" {
+		n.Jetstream.Discard = "old"
+	}
+	var discard jetstream.DiscardPolicy
+	err = discard.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Discard)))
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(n.Jetstream.Storage) == "" {
+		n.Jetstream.Storage = "file"
+	}
+	var storage jetstream.StorageType
+	err = storage.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Storage)))
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(n.Jetstream.Compression) == "" {
+		n.Jetstream.Compression = "none"
+	}
+	var compression jetstream.StoreCompression
+	err = compression.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Compression)))
+	if err != nil {
+		return nil, err
+	}
+
+	streamConfig := &jetstream.StreamConfig{
+		Name:                 n.Jetstream.Name,
+		Description:          n.Jetstream.Description,
+		Subjects:             n.Jetstream.Subjects,
+		Retention:            retention,
+		MaxConsumers:         n.Jetstream.MaxConsumers,
+		MaxMsgs:              n.Jetstream.MaxMsgs,
+		MaxBytes:             n.Jetstream.MaxBytes,
+		Discard:              discard,
+		DiscardNewPerSubject: n.Jetstream.DiscardNewPerSubject,
+		MaxAge:               time.Duration(n.Jetstream.MaxAge),
+		MaxMsgsPerSubject:    n.Jetstream.MaxMsgsPerSubject,
+		MaxMsgSize:           n.Jetstream.MaxMsgSize,
+		Storage:              storage,
+		Replicas:             n.Jetstream.Replicas,
+		NoAck:                n.Jetstream.NoAck,
+		Template:             n.Jetstream.Template,
+		Duplicates:           time.Duration(n.Jetstream.Duplicates),
+		Placement:            n.Jetstream.Placement,
+		Mirror:               n.Jetstream.Mirror,
+		Sources:              n.Jetstream.Sources,
+		Sealed:               n.Jetstream.Sealed,
+		DenyDelete:           n.Jetstream.DenyDelete,
+		DenyPurge:            n.Jetstream.DenyPurge,
+		AllowRollup:          n.Jetstream.AllowRollup,
+		Compression:          compression,
+		FirstSeq:             n.Jetstream.FirstSeq,
+		SubjectTransform:     n.Jetstream.SubjectTransform,
+		RePublish:            n.Jetstream.RePublish,
+		AllowDirect:          n.Jetstream.AllowDirect,
+		MirrorDirect:         n.Jetstream.MirrorDirect,
+		ConsumerLimits:       n.Jetstream.ConsumerLimits,
+		Metadata:             n.Jetstream.Metadata,
+	}
+	return streamConfig, nil
 }
 
 func (n *NATS) Init() error {
