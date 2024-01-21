@@ -65,8 +65,8 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 				Log:        testutil.Logger{},
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
-				require.Equal(t, si.Config.Name, "my-telegraf-stream")
-				require.Equal(t, si.Config.Subjects, []string{"telegraf"})
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"telegraf"}, si.Config.Subjects)
 			},
 		},
 		{
@@ -98,18 +98,18 @@ func TestConnectAndWriteNATSIntegration(t *testing.T) {
 				Log:        testutil.Logger{},
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
-				require.Equal(t, si.Config.Name, "telegraf-stream-with-cfg")
-				require.Equal(t, si.Config.Subjects, []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2", "my-tel-sub-outer"})
-				require.Equal(t, si.Config.Retention, jetstream.WorkQueuePolicy)
-				require.Equal(t, si.Config.MaxConsumers, 10)
-				require.Equal(t, si.Config.Discard, jetstream.DiscardNew)
-				require.Equal(t, si.Config.Storage, jetstream.MemoryStorage)
-				require.Equal(t, si.Config.MaxMsgs, int64(100_000))
-				require.Equal(t, si.Config.MaxBytes, int64(104_857_600))
-				require.Equal(t, si.Config.MaxAge, time.Duration(10*time.Minute))
-				require.Equal(t, si.Config.Duplicates, time.Duration(5*time.Minute))
-				require.Equal(t, si.Config.MaxMsgSize, int32(120))
-				require.Equal(t, si.Config.MaxMsgsPerSubject, int64(500))
+				require.Equal(t, "telegraf-stream-with-cfg", si.Config.Name)
+				require.Equal(t, []string{"my-tel-sub0", "my-tel-sub1", "my-tel-sub2", "my-tel-sub-outer"}, si.Config.Subjects)
+				require.Equal(t, jetstream.WorkQueuePolicy, si.Config.Retention)
+				require.Equal(t, 10, si.Config.MaxConsumers)
+				require.Equal(t, jetstream.DiscardNew, si.Config.Discard)
+				require.Equal(t, jetstream.MemoryStorage, si.Config.Storage)
+				require.Equal(t, int64(100_000), si.Config.MaxMsgs)
+				require.Equal(t, int64(104_857_600), si.Config.MaxBytes)
+				require.Equal(t, 10*time.Minute, si.Config.MaxAge)
+				require.Equal(t, 5*time.Minute, si.Config.Duplicates)
+				require.Equal(t, int32(120), si.Config.MaxMsgSize)
+				require.Equal(t, int64(500), si.Config.MaxMsgsPerSubject)
 			},
 		},
 	}
