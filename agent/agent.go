@@ -353,7 +353,7 @@ func (a *Agent) runPersistLoop(
 
 	a.persistLoop(ctx, ticker)
 
-	log.Printf("D! [agent] Stopping the persist loop)")
+	log.Printf("D! [agent] Stopping the persist loop")
 }
 
 func (a *Agent) persistLoop(
@@ -363,6 +363,7 @@ func (a *Agent) persistLoop(
 	for {
 		select {
 		case <-ticker.Elapsed():
+			log.Printf("D! [agent] Persisting state")
 			err := a.Config.Persister.Store()
 			if err != nil {
 				log.Printf("E! [agent] Error writing state on persist loop: %v", err)

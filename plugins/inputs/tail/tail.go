@@ -51,11 +51,12 @@ type Tail struct {
 	Filters      []string `toml:"filters"`
 	filterColors bool
 
-	Log        telegraf.Logger `toml:"-"`
-	tailers    map[string]*tail.Tail
-	offsets    map[string]int64
-	parserFunc telegraf.ParserFunc
-	wg         sync.WaitGroup
+	Log          telegraf.Logger `toml:"-"`
+	tailers      map[string]*tail.Tail
+	offsets      map[string]int64
+	offsetsMutex sync.Mutex
+	parserFunc   telegraf.ParserFunc
+	wg           sync.WaitGroup
 
 	acc telegraf.TrackingAccumulator
 
@@ -108,13 +109,28 @@ func (t *Tail) Init() error {
 }
 
 func (t *Tail) GetState() interface{} {
+	t.offsetsMutex.Lock()
+	defer t.offsetsMutex.Unlock()
+
 	if !t.Pipe && !t.FromBeginning {
 		for _, tailer := range t.tailers {
-			t.storeOffsets(tailer)
+			offset, err := tailer.Tell()
+			if err == nil {
+				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
+				t.offsets[tailer.Filename] = offset
+			} else {
+				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
+			}
 		}
 	}
 
-	return t.offsets
+	offsetsCopy := make(map[string]int64, len(t.offsets))
+
+	for k, v := range t.offsets {
+		offsetsCopy[k] = v
+	}
+
+	return offsetsCopy
 }
 
 func (t *Tail) SetState(state interface{}) error {
@@ -122,9 +138,14 @@ func (t *Tail) SetState(state interface{}) error {
 	if !ok {
 		return errors.New("state has to be of type 'map[string]int64'")
 	}
+
+	t.offsetsMutex.Lock()
+	defer t.offsetsMutex.Unlock()
+
 	for k, v := range offsetsState {
 		t.offsets[k] = v
 	}
+
 	return nil
 }
 
@@ -189,6 +210,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 			var seek *tail.SeekInfo
 			if !t.Pipe && !fromBeginning {
+				t.offsetsMutex.Lock()
 				if offset, ok := t.offsets[file]; ok {
 					t.Log.Debugf("Using offset %d for %q", offset, file)
 					seek = &tail.SeekInfo{
@@ -201,6 +223,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 						Offset: 0,
 					}
 				}
+				t.offsetsMutex.Unlock()
 			}
 
 			tailer, err := tail.TailFile(file,
@@ -376,9 +399,18 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 }
 
 func (t *Tail) Stop() {
+	t.offsetsMutex.Lock()
+	defer t.offsetsMutex.Unlock()
+
 	for _, tailer := range t.tailers {
 		if !t.Pipe && !t.FromBeginning {
-			t.storeOffsets(tailer)
+			offset, err := tailer.Tell()
+			if err == nil {
+				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
+				t.offsets[tailer.Filename] = offset
+			} else {
+				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
+			}
 		}
 		err := tailer.Stop()
 		if err != nil {
@@ -395,16 +427,9 @@ func (t *Tail) Stop() {
 		offsets[k] = v
 	}
 	offsetsMutex.Unlock()
-}
 
-func (t *Tail) storeOffsets(tailer *tail.Tail) {
-	offset, err := tailer.Tell()
-	if err == nil {
-		t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
-		t.offsets[tailer.Filename] = offset
-	} else {
-		t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
-	}
+	// Clear out tailers or state offsets will always be zero
+	t.tailers = make(map[string]*tail.Tail)
 }
 
 func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {

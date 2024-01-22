@@ -261,7 +261,8 @@ type AgentConfig struct {
 	Statefile string `toml:"statefile"`
 
 	// PersistInterval The interval in which the state will be stored into the
-	// statefile. When set to 0, persist interval is disabled.
+	// statefile. When set to 0, persist interval is disabled. Note: This state may not
+	// be consistent across all plugins.
 	PersistInterval Duration `toml:"statefile_persist_interval"`
 
 	// RoundPersistInterval rounds persist interval to 'PersistInterval'.

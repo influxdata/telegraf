@@ -334,7 +334,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **statefile_persist_interval**:
   The interval of time at which the state is peristed into the statefile. When
-  set to 0, persist interval is disabled.
+  set to 0, persist interval is disabled. Note: This state may not be consistent across all plugins.
 
 - **round_statefile_persist_interval**:
   Rounds persist interval to 'statefile_persist_interval'
