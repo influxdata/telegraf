@@ -142,7 +142,7 @@ jobs:
           arch: "386"
   test-integration:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2004:current
     resource_class: large
     steps:
       - checkout
