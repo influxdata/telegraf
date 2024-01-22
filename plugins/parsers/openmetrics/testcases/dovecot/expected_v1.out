@@ -1,5 +1,5 @@
 process_start_time_seconds,_type=gauge gauge=1606393397
-dovecot_build,revision=38ecc424a,version=2.4.devel value=1u
+dovecot_build,revision=38ecc424a,version=2.4.devel info=1u
 dovecot_auth_success,_type=counter counter=892
 dovecot_auth_success_duration_seconds,_type=counter counter=0.085479
 dovecot_imap_command,_type=counter,cmd_name=LIST counter=423
@@ -38,9 +38,9 @@ dovecot_imap_command_duration_seconds,_type=counter,cmd_name=STORE counter=0.368
 dovecot_imap_command_duration_seconds,_type=counter,cmd_name=STORE,tagged_reply_state=OK counter=0.368621
 dovecot_imap_command_duration_seconds,_type=counter,cmd_name=EXPUNGE counter=0.247657
 dovecot_imap_command_duration_seconds,_type=counter,cmd_name=EXPUNGE,tagged_reply_state=OK counter=0.247657
-dovecot_smtp_command,_type=histogram,cmd_name=LHLO,status_code=250 1.7976931348623157e+308=1,10=0,100=1,1000=1,10000=1,100000=1,count=1,sum=0.00002
-dovecot_smtp_command,_type=histogram,cmd_name=MAIL,status_code=250 1.7976931348623157e+308=1,10=0,100=1,1000=1,10000=1,100000=1,count=1,sum=0.000021
-dovecot_smtp_command,_type=histogram,cmd_name=RCPT,status_code=250 1.7976931348623157e+308=1,10=0,100=0,1000=1,10000=1,100000=1,count=1,sum=0.000195
-dovecot_smtp_command,_type=histogram,cmd_name=DATA,status_code=250 1.7976931348623157e+308=1,10=0,100=0,1000=0,10000=1,100000=1,count=1,sum=0.001249
-dovecot_smtp_command,_type=histogram,cmd_name=QUIT,status_code=221 1.7976931348623157e+308=1,10=1,100=1,1000=1,10000=1,100000=1,count=1,sum=0.00001
-dovecot_mail_delivery,_type=histogram 1.7976931348623157e+308=1,10=0,100=0,1000=1,10000=1,100000=1,count=1,sum=0.000656
+dovecot_smtp_command,_type=histogram,cmd_name=LHLO,status_code=250 +Inf=1,10=0,100=1,1000=1,10000=1,100000=1,count=1,sum=0.00002
+dovecot_smtp_command,_type=histogram,cmd_name=MAIL,status_code=250 +Inf=1,10=0,100=1,1000=1,10000=1,100000=1,count=1,sum=0.000021
+dovecot_smtp_command,_type=histogram,cmd_name=RCPT,status_code=250 +Inf=1,10=0,100=0,1000=1,10000=1,100000=1,count=1,sum=0.000195
+dovecot_smtp_command,_type=histogram,cmd_name=DATA,status_code=250 +Inf=1,10=0,100=0,1000=0,10000=1,100000=1,count=1,sum=0.001249
+dovecot_smtp_command,_type=histogram,cmd_name=QUIT,status_code=221 +Inf=1,10=1,100=1,1000=1,10000=1,100000=1,count=1,sum=0.00001
+dovecot_mail_delivery,_type=histogram +Inf=1,10=0,100=0,1000=1,10000=1,100000=1,count=1,sum=0.000656

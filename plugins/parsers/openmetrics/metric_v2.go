@@ -106,7 +106,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				for _, itag := range info {
 					mptags[itag.Name] = itag.Value
 				}
-				fields := map[string]interface{}{metricName: uint64(1)}
+				fields := map[string]interface{}{metricName + "_info": uint64(1)}
 				metrics = append(metrics, metric.New("prometheus", mptags, fields, t, telegraf.Untyped))
 			case MetricType_HISTOGRAM, MetricType_GAUGE_HISTOGRAM:
 				histogram := omp.GetHistogramValue()

@@ -1,4 +1,5 @@
 prometheus,_type=gauge process_start_time_seconds=1606393397
+prometheus,_type=untyped,version=2.4.devel,revision=38ecc424a dovecot_build_info=1u
 prometheus,_type=counter dovecot_auth_success=892
 prometheus,_type=counter dovecot_auth_success_duration_seconds=0.085479
 prometheus,_type=counter,cmd_name=LIST dovecot_imap_command=423
@@ -43,7 +44,6 @@ prometheus,_type=histogram,cmd_name=LHLO,le=100,status_code=250 dovecot_smtp_com
 prometheus,_type=histogram,cmd_name=LHLO,le=1000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=LHLO,le=10000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=LHLO,le=100000,status_code=250 dovecot_smtp_command_bucket=1
-prometheus,_type=histogram,cmd_name=LHLO,le=1.7976931348623157e+308,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=LHLO,le=+Inf,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=MAIL,status_code=250 dovecot_smtp_command_count=1,dovecot_smtp_command_sum=0.000021
 prometheus,_type=histogram,cmd_name=MAIL,le=10,status_code=250 dovecot_smtp_command_bucket=0
@@ -51,7 +51,6 @@ prometheus,_type=histogram,cmd_name=MAIL,le=100,status_code=250 dovecot_smtp_com
 prometheus,_type=histogram,cmd_name=MAIL,le=1000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=MAIL,le=10000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=MAIL,le=100000,status_code=250 dovecot_smtp_command_bucket=1
-prometheus,_type=histogram,cmd_name=MAIL,le=1.7976931348623157e+308,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=MAIL,le=+Inf,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=RCPT,status_code=250 dovecot_smtp_command_count=1,dovecot_smtp_command_sum=0.000195
 prometheus,_type=histogram,cmd_name=RCPT,le=10,status_code=250 dovecot_smtp_command_bucket=0
@@ -59,7 +58,6 @@ prometheus,_type=histogram,cmd_name=RCPT,le=100,status_code=250 dovecot_smtp_com
 prometheus,_type=histogram,cmd_name=RCPT,le=1000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=RCPT,le=10000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=RCPT,le=100000,status_code=250 dovecot_smtp_command_bucket=1
-prometheus,_type=histogram,cmd_name=RCPT,le=1.7976931348623157e+308,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=RCPT,le=+Inf,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=DATA,status_code=250 dovecot_smtp_command_count=1,dovecot_smtp_command_sum=0.001249
 prometheus,_type=histogram,cmd_name=DATA,le=10,status_code=250 dovecot_smtp_command_bucket=0
@@ -67,7 +65,6 @@ prometheus,_type=histogram,cmd_name=DATA,le=100,status_code=250 dovecot_smtp_com
 prometheus,_type=histogram,cmd_name=DATA,le=1000,status_code=250 dovecot_smtp_command_bucket=0
 prometheus,_type=histogram,cmd_name=DATA,le=10000,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=DATA,le=100000,status_code=250 dovecot_smtp_command_bucket=1
-prometheus,_type=histogram,cmd_name=DATA,le=1.7976931348623157e+308,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=DATA,le=+Inf,status_code=250 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=QUIT,status_code=221 dovecot_smtp_command_count=1,dovecot_smtp_command_sum=0.00001
 prometheus,_type=histogram,cmd_name=QUIT,le=10,status_code=221 dovecot_smtp_command_bucket=1
@@ -75,7 +72,6 @@ prometheus,_type=histogram,cmd_name=QUIT,le=100,status_code=221 dovecot_smtp_com
 prometheus,_type=histogram,cmd_name=QUIT,le=1000,status_code=221 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=QUIT,le=10000,status_code=221 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=QUIT,le=100000,status_code=221 dovecot_smtp_command_bucket=1
-prometheus,_type=histogram,cmd_name=QUIT,le=1.7976931348623157e+308,status_code=221 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram,cmd_name=QUIT,le=+Inf,status_code=221 dovecot_smtp_command_bucket=1
 prometheus,_type=histogram dovecot_mail_delivery_count=1,dovecot_mail_delivery_sum=0.000656
 prometheus,_type=histogram,le=10 dovecot_mail_delivery_bucket=0
@@ -83,5 +79,4 @@ prometheus,_type=histogram,le=100 dovecot_mail_delivery_bucket=0
 prometheus,_type=histogram,le=1000 dovecot_mail_delivery_bucket=1
 prometheus,_type=histogram,le=10000 dovecot_mail_delivery_bucket=1
 prometheus,_type=histogram,le=100000 dovecot_mail_delivery_bucket=1
-prometheus,_type=histogram,le=1.7976931348623157e+308 dovecot_mail_delivery_bucket=1
 prometheus,_type=histogram,le=+Inf dovecot_mail_delivery_bucket=1

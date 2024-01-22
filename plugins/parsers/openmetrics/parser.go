@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/common/expfmt"
-	"google.golang.org/protobuf/encoding/protodelim"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -26,12 +26,6 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
-	// Make sure we have a finishing newline but no trailing one
-	data = bytes.TrimPrefix(data, []byte("\n"))
-	if !bytes.HasSuffix(data, []byte("\n")) {
-		data = append(data, []byte("\n")...)
-	}
-
 	// Determine the metric transport-type derived from the response header
 	contentType := p.Header.Get("Content-Type")
 	var mediaType string
@@ -51,6 +45,12 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	var metricFamilies []*MetricFamily
 	switch mediaType {
 	case expfmt.OpenMetricsType:
+		// Make sure we have a finishing newline but no trailing one
+		data = bytes.TrimPrefix(data, []byte("\n"))
+		if !bytes.HasSuffix(data, []byte("\n")) {
+			data = append(data, []byte("\n")...)
+		}
+
 		var err error
 		metricFamilies, err = TextToMetricFamilies(data)
 		if err != nil {
@@ -60,10 +60,8 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 		if version := params["version"]; version != "1.0.0" {
 			return nil, fmt.Errorf("unsupported binary version %q", version)
 		}
-		buf := bytes.NewBuffer(data)
-		opts := protodelim.UnmarshalOptions{MaxSize: -1}
 		var metricSet MetricSet
-		if err := opts.UnmarshalFrom(buf, &metricSet); err != nil {
+		if err := proto.Unmarshal(data, &metricSet); err != nil {
 			return nil, fmt.Errorf("parsing binary format failed: %w", err)
 		}
 		metricFamilies = metricSet.GetMetricFamilies()
