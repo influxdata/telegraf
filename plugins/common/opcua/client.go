@@ -3,11 +3,13 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"log" //nolint:depguard // just for debug
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/debug"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -44,6 +46,7 @@ type OpcUAClientConfig struct {
 	AuthMethod     string          `toml:"auth_method"`
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
+	ClientTrace    bool            `toml:"client_trace"`
 
 	OptionalFields []string         `toml:"optional_fields"`
 	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
@@ -87,15 +90,20 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	return nil
 }
 
-func (o *OpcUAClientConfig) CreateClient(log telegraf.Logger) (*OpcUAClient, error) {
+func (o *OpcUAClientConfig) CreateClient(telegrafLogger telegraf.Logger) (*OpcUAClient, error) {
 	err := o.Validate()
 	if err != nil {
 		return nil, err
 	}
 
+	if o.ClientTrace {
+		debug.Enable = true
+		debug.Logger = log.New(&DebugLogger{Log: telegrafLogger}, "", 0)
+	}
+
 	c := &OpcUAClient{
 		Config: o,
-		Log:    log,
+		Log:    telegrafLogger,
 	}
 	c.Log.Debug("Initialising OpcUAClient")
 

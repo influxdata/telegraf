@@ -97,6 +97,13 @@ to use them.
   # e.g.: json_timestamp_format = "2006-01-02T15:04:05Z07:00"
   #timestamp_format = ""
   #
+  #
+  ## Client trace messages
+  ## When set to true, and debug mode enabled in the agent settings, the OPCUA
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
+  # client_trace = false
+  #
   ## Include additional Fields in each metric
   ## Available options are:
   ##   DataType -- OPC-UA Data Type (string)
