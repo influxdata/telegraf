@@ -161,41 +161,44 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 	var err error
 
 	var retention jetstream.RetentionPolicy
-	// set the default in case nothing is passed
-	if strings.TrimSpace(n.Jetstream.Retention) == "" {
-		n.Jetstream.Retention = "limits"
-	}
-	// quoting because UnmarshalJSON expects a string literal(ex: "limtis")
-	err = retention.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Retention)))
-	if err != nil {
-		return nil, err
+	switch n.Jetstream.Retention {
+	case "","limits":
+		retention = jetstream.LimitsPolicy
+	case "interest":
+		retention = jetstream.InterestPolicy
+	case "workqueue":
+		retention = jetstream.WorkQueuePolicy
+	default:
+		return nil, fmt.Errorf("invalid 'retention' setting %q", n.Jetstream.Retention)
 	}
 
-	if strings.TrimSpace(n.Jetstream.Discard) == "" {
-		n.Jetstream.Discard = "old"
-	}
 	var discard jetstream.DiscardPolicy
-	err = discard.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Discard)))
-	if err != nil {
-		return nil, err
+	switch  n.Jetstream.Discard {
+	case "", "old":
+		discard = jetstream.DiscardOld
+	case "new":
+		discard = jetstream.DiscardNew
+	default:
+		return nil, fmt.Errorf("invalid 'discard' setting %q", n.Jetstream.Discard)
 	}
 
-	if strings.TrimSpace(n.Jetstream.Storage) == "" {
-		n.Jetstream.Storage = "file"
-	}
-	var storage jetstream.StorageType
-	err = storage.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Storage)))
-	if err != nil {
-		return nil, err
+	switch n.Jetstream.Storage {
+	case "memory":
+		 storage = jetstream.MemoryStorage
+	case "", "file":
+		 storage = jetstream.FileStorage
+	default:
+		return nil, fmt.Errorf("invalid 'storage' setting %q", n.Jetstream.Storage)
 	}
 
-	if strings.TrimSpace(n.Jetstream.Compression) == "" {
-		n.Jetstream.Compression = "none"
-	}
 	var compression jetstream.StoreCompression
-	err = compression.UnmarshalJSON([]byte(fmt.Sprintf("%q", n.Jetstream.Compression)))
-	if err != nil {
-		return nil, err
+	switch n.Jetstream.Compression {
+	case "s2":
+		compression = jetstream.S2Compression 
+	case "","none":
+		compression = jetstream.NoCompression
+	default:
+		return nil, fmt.Errorf("invalid 'compression' setting %q", n.Jetstream.Compression)
 	}
 
 	streamConfig := &jetstream.StreamConfig{
