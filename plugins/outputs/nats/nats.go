@@ -45,37 +45,37 @@ type NATS struct {
 // Almost a mirror of https://pkg.go.dev/github.com/nats-io/nats.go/jetstream#StreamConfig but with TOML tags
 type StreamConfig struct {
 	Name                 string                            `toml:"name"`
-	Description          string                            `toml:"description,omitempty"`
-	Subjects             []string                          `toml:"subjects,omitempty"`
+	Description          string                            `toml:"description"`
+	Subjects             []string                          `toml:"subjects"`
 	Retention            string                            `toml:"retention"`
 	MaxConsumers         int                               `toml:"max_consumers"`
 	MaxMsgs              int64                             `toml:"max_msgs"`
 	MaxBytes             int64                             `toml:"max_bytes"`
 	Discard              string                            `toml:"discard"`
-	DiscardNewPerSubject bool                              `toml:"discard_new_per_subject,omitempty"`
+	DiscardNewPerSubject bool                              `toml:"discard_new_per_subject"`
 	MaxAge               config.Duration                   `toml:"max_age"`
 	MaxMsgsPerSubject    int64                             `toml:"max_msgs_per_subject"`
-	MaxMsgSize           int32                             `toml:"max_msg_size,omitempty"`
+	MaxMsgSize           int32                             `toml:"max_msg_size"`
 	Storage              string                            `toml:"storage"`
 	Replicas             int                               `toml:"num_replicas"`
-	NoAck                bool                              `toml:"no_ack,omitempty"`
-	Template             string                            `toml:"template_owner,omitempty"`
-	Duplicates           config.Duration                   `toml:"duplicate_window,omitempty"`
-	Placement            *jetstream.Placement              `toml:"placement,omitempty"`
-	Mirror               *jetstream.StreamSource           `toml:"mirror,omitempty"`
-	Sources              []*jetstream.StreamSource         `toml:"sources,omitempty"`
-	Sealed               bool                              `toml:"sealed,omitempty"`
-	DenyDelete           bool                              `toml:"deny_delete,omitempty"`
-	DenyPurge            bool                              `toml:"deny_purge,omitempty"`
-	AllowRollup          bool                              `toml:"allow_rollup_hdrs,omitempty"`
+	NoAck                bool                              `toml:"no_ack"`
+	Template             string                            `toml:"template_owner"`
+	Duplicates           config.Duration                   `toml:"duplicate_window"`
+	Placement            *jetstream.Placement              `toml:"placement"`
+	Mirror               *jetstream.StreamSource           `toml:"mirror"`
+	Sources              []*jetstream.StreamSource         `toml:"sources"`
+	Sealed               bool                              `toml:"sealed"`
+	DenyDelete           bool                              `toml:"deny_delete"`
+	DenyPurge            bool                              `toml:"deny_purge"`
+	AllowRollup          bool                              `toml:"allow_rollup_hdrs"`
 	Compression          string                            `toml:"compression"`
-	FirstSeq             uint64                            `toml:"first_seq,omitempty"`
-	SubjectTransform     *jetstream.SubjectTransformConfig `toml:"subject_transform,omitempty"`
-	RePublish            *jetstream.RePublish              `toml:"republish,omitempty"`
+	FirstSeq             uint64                            `toml:"first_seq"`
+	SubjectTransform     *jetstream.SubjectTransformConfig `toml:"subject_transform"`
+	RePublish            *jetstream.RePublish              `toml:"republish"`
 	AllowDirect          bool                              `toml:"allow_direct"`
 	MirrorDirect         bool                              `toml:"mirror_direct"`
-	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits,omitempty"`
-	Metadata             map[string]string                 `toml:"metadata,omitempty"`
+	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
+	Metadata             map[string]string                 `toml:"metadata"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -141,6 +141,8 @@ func (n *NATS) Connect() error {
 		if len(n.Jetstream.Subjects) == 0 {
 			n.Jetstream.Subjects = []string{n.Subject}
 		}
+		// If the overall-subject is already present anywhere in the Jetstream subject we go from there,
+		// otherwise we should append the overall-subject as the last element.
 		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
 			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
 		}
@@ -158,11 +160,9 @@ func (n *NATS) Connect() error {
 }
 
 func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
-	var err error
-
 	var retention jetstream.RetentionPolicy
 	switch n.Jetstream.Retention {
-	case "","limits":
+	case "", "limits":
 		retention = jetstream.LimitsPolicy
 	case "interest":
 		retention = jetstream.InterestPolicy
@@ -173,7 +173,7 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 	}
 
 	var discard jetstream.DiscardPolicy
-	switch  n.Jetstream.Discard {
+	switch n.Jetstream.Discard {
 	case "", "old":
 		discard = jetstream.DiscardOld
 	case "new":
@@ -182,11 +182,12 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 		return nil, fmt.Errorf("invalid 'discard' setting %q", n.Jetstream.Discard)
 	}
 
+	var storage jetstream.StorageType
 	switch n.Jetstream.Storage {
 	case "memory":
-		 storage = jetstream.MemoryStorage
+		storage = jetstream.MemoryStorage
 	case "", "file":
-		 storage = jetstream.FileStorage
+		storage = jetstream.FileStorage
 	default:
 		return nil, fmt.Errorf("invalid 'storage' setting %q", n.Jetstream.Storage)
 	}
@@ -194,8 +195,8 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 	var compression jetstream.StoreCompression
 	switch n.Jetstream.Compression {
 	case "s2":
-		compression = jetstream.S2Compression 
-	case "","none":
+		compression = jetstream.S2Compression
+	case "", "none":
 		compression = jetstream.NoCompression
 	default:
 		return nil, fmt.Errorf("invalid 'compression' setting %q", n.Jetstream.Compression)

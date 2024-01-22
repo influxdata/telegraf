@@ -20,7 +20,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestConnectAndWriteNATSIntegration(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
