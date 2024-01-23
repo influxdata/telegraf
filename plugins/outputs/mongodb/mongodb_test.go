@@ -56,15 +56,15 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	initdb, err := filepath.Abs("testdata/auth_scram")
+	initdb, err := filepath.Abs("testdata/auth_scram/setup.js")
 	require.NoError(t, err)
 
 	servicePort := "27017"
 	container := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": initdb,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
@@ -146,7 +146,7 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 	pki := testutil.NewPKI("../../../testutil/pki")
 
 	// bind mount files
-	initdb, err := filepath.Abs("testdata/auth_x509")
+	initdb, err := filepath.Abs("testdata/auth_x509/setup.js")
 	require.NoError(t, err)
 	cacert, err := filepath.Abs(pki.CACertPath())
 	require.NoError(t, err)
@@ -157,10 +157,10 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 	container := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": initdb,
-			"/cacert.pem":                 cacert,
-			"/server.pem":                 serverpem,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/setup.js": initdb,
+			"/cacert.pem":                          cacert,
+			"/server.pem":                          serverpem,
 		},
 		Entrypoint: []string{
 			"docker-entrypoint.sh",

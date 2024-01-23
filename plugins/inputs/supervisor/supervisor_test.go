@@ -140,7 +140,7 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	ctr := testutil.Container{
 		Image:        "niasar/supervisor:stretch-3.3",
 		ExposedPorts: []string{supervisorPort},
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/etc/supervisor/supervisord.conf": supervisorConfig,
 		},
 		WaitingFor: wait.ForAll(

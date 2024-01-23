@@ -30,7 +30,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -146,7 +146,7 @@ func TestIntegrationMQTTv3(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -298,7 +298,7 @@ func TestIntegrationMQTTLayoutNonBatch(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -385,7 +385,7 @@ func TestIntegrationMQTTLayoutBatch(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -475,7 +475,7 @@ func TestIntegrationMQTTLayoutField(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -590,7 +590,7 @@ func TestIntegrationMQTTLayoutHomieV4(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
