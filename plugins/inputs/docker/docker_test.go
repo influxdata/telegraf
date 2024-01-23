@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	typeContainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/system"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -20,8 +22,8 @@ import (
 )
 
 type MockClient struct {
-	InfoF             func(ctx context.Context) (types.Info, error)
-	ContainerListF    func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	InfoF             func(ctx context.Context) (system.Info, error)
+	ContainerListF    func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error)
 	ContainerStatsF   func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
 	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
@@ -32,13 +34,13 @@ type MockClient struct {
 	CloseF            func() error
 }
 
-func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
+func (c *MockClient) Info(ctx context.Context) (system.Info, error) {
 	return c.InfoF(ctx)
 }
 
 func (c *MockClient) ContainerList(
 	ctx context.Context,
-	options types.ContainerListOptions,
+	options typeContainer.ListOptions,
 ) ([]types.Container, error) {
 	return c.ContainerListF(ctx, options)
 }
@@ -95,10 +97,10 @@ func (c *MockClient) Close() error {
 }
 
 var baseClient = MockClient{
-	InfoF: func(context.Context) (types.Info, error) {
+	InfoF: func(context.Context) (system.Info, error) {
 		return info, nil
 	},
-	ContainerListF: func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+	ContainerListF: func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 		return containerList, nil
 	},
 	ContainerStatsF: func(c context.Context, s string, b bool) (types.ContainerStats, error) {
@@ -443,10 +445,10 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 		Log: testutil.Logger{},
 		newClient: func(string, *tls.Config) (Client, error) {
 			return &MockClient{
-				InfoF: func(ctx context.Context) (types.Info, error) {
+				InfoF: func(ctx context.Context) (system.Info, error) {
 					return info, nil
 				},
-				ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				ContainerListF: func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				},
 				ContainerStatsF: func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
@@ -581,7 +583,7 @@ func TestContainerLabels(t *testing.T) {
 
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					return []types.Container{tt.container}, nil
 				}
 				return &client, nil
@@ -701,7 +703,7 @@ func TestContainerNames(t *testing.T) {
 
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				}
 				client.ContainerStatsF = func(c context.Context, s string, b bool) (types.ContainerStats, error) {
@@ -911,7 +913,7 @@ func TestContainerStatus(t *testing.T) {
 				acc           testutil.Accumulator
 				newClientFunc = func(string, *tls.Config) (Client, error) {
 					client := baseClient
-					client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+					client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 						return containerList[:1], nil
 					}
 					client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
@@ -1196,7 +1198,7 @@ func TestContainerStateFilter(t *testing.T) {
 
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
 					for k, v := range tt.expected {
 						actual := options.Filters.Get(k)
 						sort.Strings(actual)
@@ -1232,7 +1234,7 @@ func TestContainerName(t *testing.T) {
 			name: "container stats name is preferred",
 			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout/foo"},
@@ -1252,7 +1254,7 @@ func TestContainerName(t *testing.T) {
 			name: "container stats without name uses container list name",
 			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout"},
