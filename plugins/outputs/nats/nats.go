@@ -36,9 +36,10 @@ type NATS struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	conn            *nats.Conn
-	jetstreamClient jetstream.JetStream
-	serializer      serializers.Serializer
+	conn                  *nats.Conn
+	jetstreamClient       jetstream.JetStream
+	jetstreamStreamConfig *jetstream.StreamConfig
+	serializer            serializers.Serializer
 }
 
 // StreamConfig is the configuration for creating stream
@@ -137,20 +138,7 @@ func (n *NATS) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
-
-		if len(n.Jetstream.Subjects) == 0 {
-			n.Jetstream.Subjects = []string{n.Subject}
-		}
-		// If the overall-subject is already present anywhere in the Jetstream subject we go from there,
-		// otherwise we should append the overall-subject as the last element.
-		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
-			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
-		}
-		streamConfig, err := n.getJetstreamConfig()
-		if err != nil {
-			return fmt.Errorf("failed to parse jetstream config: %w", err)
-		}
-		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), *streamConfig)
+		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), *n.jetstreamStreamConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
@@ -243,6 +231,20 @@ func (n *NATS) Init() error {
 	if n.Jetstream != nil {
 		if strings.TrimSpace(n.Jetstream.Name) == "" {
 			return errors.New("stream cannot be empty")
+		}
+
+		if len(n.Jetstream.Subjects) == 0 {
+			n.Jetstream.Subjects = []string{n.Subject}
+		}
+		// If the overall-subject is already present anywhere in the Jetstream subject we go from there,
+		// otherwise we should append the overall-subject as the last element.
+		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
+			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
+		}
+		var err error
+		n.jetstreamStreamConfig, err = n.getJetstreamConfig()
+		if err != nil {
+			return fmt.Errorf("failed to parse jetstream config: %w", err)
 		}
 	}
 	return nil

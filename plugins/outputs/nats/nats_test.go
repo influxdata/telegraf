@@ -123,6 +123,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
 			tc.nats.Servers = server
 			// Verify that we can connect to the NATS daemon
+			require.NoError(t, tc.nats.Init())
 			err = tc.nats.Connect()
 			if tc.wantErr {
 				require.Error(t, err)
