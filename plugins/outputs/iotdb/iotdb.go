@@ -40,7 +40,7 @@ type IoTDB struct {
 	SanitizeTags    string          `toml:"sanitize_tag"`
 	Log             telegraf.Logger `toml:"-"`
 
-	SanityRegex []*regexp.Regexp
+	sanityRegex []*regexp.Regexp
 	session     *client.Session
 }
 
@@ -85,18 +85,18 @@ func (s *IoTDB) Init() error {
 
 	switch s.SanitizeTags {
 	case "0.13":
-		matchUnsopportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_:@#${}\x60]")
+		matchUnsupportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_:@#${}\x60]")
 
-		regex := []*regexp.Regexp{matchUnsopportedCharacter}
-		s.SanityRegex = append(s.SanityRegex, regex...)
+		regex := []*regexp.Regexp{matchUnsupportedCharacter}
+		s.sanityRegex = append(s.sanityRegex, regex...)
 
 	// from version 1.x.x IoTDB changed the allowed keys in nodes
 	case "1.0", "1.1", "1.2", "1.3":
-		matchUnsopportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_\x60]")
+		matchUnsupportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_\x60]")
 		matchNumericString := regexp.MustCompile(`^\d+$`)
 
-		regex := []*regexp.Regexp{matchUnsopportedCharacter, matchNumericString}
-		s.SanityRegex = append(s.SanityRegex, regex...)
+		regex := []*regexp.Regexp{matchUnsupportedCharacter, matchNumericString}
+		s.sanityRegex = append(s.sanityRegex, regex...)
 	}
 
 	s.Log.Info("Initialization completed.")
@@ -267,7 +267,7 @@ func (s *IoTDB) validateTag(tag string) (string, error) {
 
 	// loops through all the regex patterns and if one
 	// pattern matches returns the tag between `
-	for _, regex := range s.SanityRegex {
+	for _, regex := range s.sanityRegex {
 		if regex.MatchString(tag) {
 			return "`" + tag + "`", nil
 		}
