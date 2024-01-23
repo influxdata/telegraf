@@ -192,7 +192,7 @@ func TestDovecotContainerIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "dovecot/dovecot",
 		ExposedPorts: []string{servicePort},
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/etc/dovecot/dovecot.conf": testdata,
 		},
 		WaitingFor: wait.ForAll(
