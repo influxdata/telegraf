@@ -13,6 +13,24 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+func AcceptsContent(header http.Header) bool {
+	contentType := header.Get("Content-Type")
+	if contentType == "" {
+		return false
+	}
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	switch mediaType {
+	case expfmt.OpenMetricsType:
+		return true
+	case "application/openmetrics-protobuf":
+		return params["version"] == "1.0.0"
+	}
+	return false
+}
+
 type Parser struct {
 	IgnoreTimestamp bool              `toml:"openmetrics_ignore_timestamp"`
 	MetricVersion   int               `toml:"openmetrics_metric_version"`

@@ -26,6 +26,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/openmetrics"
 	parser "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
@@ -494,11 +495,21 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 	requestFields["content_length"] = len(body)
 	// Parse the metrics
-	metricParser := parser.Parser{
-		Header:          resp.Header,
-		MetricVersion:   p.MetricVersion,
-		IgnoreTimestamp: p.IgnoreTimestamp,
-		Log:             p.Log,
+	var metricParser telegraf.Parser
+	if openmetrics.AcceptsContent(resp.Header) {
+		metricParser = &openmetrics.Parser{
+			Header:          resp.Header,
+			MetricVersion:   p.MetricVersion,
+			IgnoreTimestamp: p.IgnoreTimestamp,
+			Log:             p.Log,
+		}
+	} else {
+		metricParser = &parser.Parser{
+			Header:          resp.Header,
+			MetricVersion:   p.MetricVersion,
+			IgnoreTimestamp: p.IgnoreTimestamp,
+			Log:             p.Log,
+		}
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {

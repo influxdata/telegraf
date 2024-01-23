@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -705,4 +707,109 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 
 	require.Error(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
+}
+
+func TestOpenmetricsText(t *testing.T) {
+	const data = `
+# HELP go_memstats_gc_cpu_fraction The fraction of this program's available CPU time used by the GC since the program started.
+# TYPE go_memstats_gc_cpu_fraction gauge
+go_memstats_gc_cpu_fraction -0.00014404354379774563
+# HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata.
+# TYPE go_memstats_gc_sys_bytes gauge
+go_memstats_gc_sys_bytes 6.0936192e+07
+# HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and still in use.
+# TYPE go_memstats_heap_alloc_bytes gauge
+go_memstats_heap_alloc_bytes 1.581062048e+09
+# EOF
+`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/openmetrics-text;version=1.0.0")
+		w.Write([]byte(data))
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:           &testutil.Logger{},
+		URLs:          []string{ts.URL},
+		URLTag:        "",
+		MetricVersion: 2,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestOpenmetricsProtobuf(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "openmetric-proto.bin"))
+	require.NoError(t, err)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/openmetrics-protobuf;version=1.0.0")
+		w.Write([]byte(data))
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:           &testutil.Logger{},
+		URLs:          []string{ts.URL},
+		URLTag:        "",
+		MetricVersion: 2,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
