@@ -73,7 +73,7 @@ require (
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
 	github.com/eclipse/paho.golang v0.11.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
-	github.com/fatih/color v1.15.0
+	github.com/fatih/color v1.16.0
 	github.com/go-ldap/ldap/v3 v3.4.6
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/go-ole/go-ole v1.3.0
