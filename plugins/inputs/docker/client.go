@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/system"
 	dockerClient "github.com/docker/docker/client"
 )
 
@@ -15,8 +17,8 @@ var (
 )
 
 type Client interface {
-	Info(ctx context.Context) (types.Info, error)
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	Info(ctx context.Context) (system.Info, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
 	ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
@@ -57,10 +59,10 @@ type SocketClient struct {
 	client *dockerClient.Client
 }
 
-func (c *SocketClient) Info(ctx context.Context) (types.Info, error) {
+func (c *SocketClient) Info(ctx context.Context) (system.Info, error) {
 	return c.client.Info(ctx)
 }
-func (c *SocketClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+func (c *SocketClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 	return c.client.ContainerList(ctx, options)
 }
 func (c *SocketClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
