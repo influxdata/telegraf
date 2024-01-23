@@ -240,10 +240,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				key = parts[1]
 			}
 		} else {
-			// If the origis are the same and the alias is shorter than the
-			// full path to avoid an empty key, then strip the common part if
-			// the field is prefixed with the alias path.
-			if aliasInfo.origin == field.path.origin && aliasInfo.isSubPathOf(field.path) && len(aliasInfo.segments) < len(field.path.segments) {
+			// If the alias is a subpath of the field path and the alias is
+			// shorter than the full path to avoid an empty key, then strip the
+			// common part of the field is prefixed with the alias path. Note
+			// the origins can match or be empty and be considered equal.
+			if aliasInfo.isSubPathOf(field.path) && len(aliasInfo.segments) < len(field.path.segments) {
 				relative := field.path.segments[len(aliasInfo.segments):len(field.path.segments)]
 				key = strings.Join(relative, "/")
 			} else {
