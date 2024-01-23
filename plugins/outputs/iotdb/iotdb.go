@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// matches any word that has a non valid backtick
+// `word`  							 <- dosen't match
+// “word , `wo`rd` , `word , word`   <- match
+var forbiddenBacktick = regexp.MustCompile("^[^\x60].*?[\x60]+.*?[^\x60]$|^[\x60].*[\x60]+.*[\x60]$|^[\x60]+.*[^\x60]$|^[^\x60].*[\x60]+$")
+var allowedBacktick = regexp.MustCompile("^[\x60].*[\x60]$")
+
 type IoTDB struct {
 	Host            string          `toml:"host"`
 	Port            string          `toml:"port"`
@@ -30,9 +37,11 @@ type IoTDB struct {
 	ConvertUint64To string          `toml:"uint64_conversion"`
 	TimeStampUnit   string          `toml:"timestamp_precision"`
 	TreatTagsAs     string          `toml:"convert_tags_to"`
+	SanitizeTags    string          `toml:"sanitize_tag"`
 	Log             telegraf.Logger `toml:"-"`
 
-	session *client.Session
+	sanityRegex []*regexp.Regexp
+	session     *client.Session
 }
 
 type recordsWithTags struct {
@@ -72,6 +81,22 @@ func (s *IoTDB) Init() error {
 	if s.Password.Empty() {
 		s.Password.Destroy()
 		s.Password = config.NewSecret([]byte("root"))
+	}
+
+	switch s.SanitizeTags {
+	case "0.13":
+		matchUnsupportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_:@#${}\x60]")
+
+		regex := []*regexp.Regexp{matchUnsupportedCharacter}
+		s.sanityRegex = append(s.sanityRegex, regex...)
+
+	// from version 1.x.x IoTDB changed the allowed keys in nodes
+	case "1.0", "1.1", "1.2", "1.3":
+		matchUnsupportedCharacter := regexp.MustCompile("[^0-9a-zA-Z_\x60]")
+		matchNumericString := regexp.MustCompile(`^\d+$`)
+
+		regex := []*regexp.Regexp{matchUnsupportedCharacter, matchNumericString}
+		s.sanityRegex = append(s.sanityRegex, regex...)
 	}
 
 	s.Log.Info("Initialization completed.")
@@ -229,6 +254,28 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 	return rwt, nil
 }
 
+// checks is the tag contains any IoTDB invalid character
+func (s *IoTDB) validateTag(tag string) (string, error) {
+	// IoTDB uses "root" as a keyword and can be called only at the start of the path
+	if tag == "root" {
+		return "", errors.New("cannot use 'root' as tag")
+	} else if forbiddenBacktick.MatchString(tag) { // returns an error if the backsticks are used in an inappropriate way
+		return "", errors.New("cannot use ` in tag names")
+	} else if allowedBacktick.MatchString(tag) { // if the tag in already enclosed in tags returns the tag
+		return tag, nil
+	}
+
+	// loops through all the regex patterns and if one
+	// pattern matches returns the tag between `
+	for _, regex := range s.sanityRegex {
+		if regex.MatchString(tag) {
+			return "`" + tag + "`", nil
+		}
+	}
+
+	return tag, nil
+}
+
 // modify recordsWithTags according to 'TreatTagsAs' Configuration
 func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 	switch s.TreatTagsAs {
@@ -251,7 +298,11 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 		for index, tags := range rwt.TagsList { // for each record
 			topic := []string{rwt.DeviceIDList[index]}
 			for _, tag := range tags { // for each tag, append it's Value
-				topic = append(topic, tag.Value)
+				tagValue, err := s.validateTag(tag.Value) // validates tag
+				if err != nil {
+					return err
+				}
+				topic = append(topic, tagValue)
 			}
 			rwt.DeviceIDList[index] = strings.Join(topic, ".")
 		}
