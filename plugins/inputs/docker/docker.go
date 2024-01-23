@@ -17,6 +17,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/api/types"
+	typeContainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 
@@ -217,7 +218,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// List containers
-	opts := types.ContainerListOptions{
+	opts := typeContainer.ListOptions{
 		Filters: filterArgs,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))

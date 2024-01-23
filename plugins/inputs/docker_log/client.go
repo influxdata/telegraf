@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	docker "github.com/docker/docker/client"
 )
 
@@ -17,8 +18,8 @@ var (
 )
 
 type Client interface {
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
-	ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerLogs(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error)
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 }
 
@@ -51,11 +52,11 @@ type SocketClient struct {
 	client *docker.Client
 }
 
-func (c *SocketClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+func (c *SocketClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 	return c.client.ContainerList(ctx, options)
 }
 
-func (c *SocketClient) ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+func (c *SocketClient) ContainerLogs(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error) {
 	return c.client.ContainerLogs(ctx, containerID, options)
 }
 func (c *SocketClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {

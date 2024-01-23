@@ -18,14 +18,14 @@ import (
 )
 
 type MockClient struct {
-	ContainerListF    func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	ContainerListF    func(ctx context.Context, options container.ListOptions) ([]types.Container, error)
 	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
-	ContainerLogsF    func(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerLogsF    func(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error)
 }
 
 func (c *MockClient) ContainerList(
 	ctx context.Context,
-	options types.ContainerListOptions,
+	options container.ListOptions,
 ) ([]types.Container, error) {
 	return c.ContainerListF(ctx, options)
 }
@@ -40,7 +40,7 @@ func (c *MockClient) ContainerInspect(
 func (c *MockClient) ContainerLogs(
 	ctx context.Context,
 	containerID string,
-	options types.ContainerLogsOptions,
+	options container.LogsOptions,
 ) (io.ReadCloser, error) {
 	return c.ContainerLogsF(ctx, containerID, options)
 }
@@ -70,7 +70,7 @@ func Test(t *testing.T) {
 		{
 			name: "no containers",
 			client: &MockClient{
-				ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				ContainerListF: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 					return nil, nil
 				},
 			},
@@ -78,7 +78,7 @@ func Test(t *testing.T) {
 		{
 			name: "one container tty",
 			client: &MockClient{
-				ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				ContainerListF: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 					return []types.Container{
 						{
 							ID:    "deadbeef",
@@ -94,7 +94,7 @@ func Test(t *testing.T) {
 						},
 					}, nil
 				},
-				ContainerLogsF: func(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+				ContainerLogsF: func(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error) {
 					return &Response{Reader: bytes.NewBuffer([]byte("2020-04-28T18:43:16.432691200Z hello\n"))}, nil
 				},
 			},
@@ -119,7 +119,7 @@ func Test(t *testing.T) {
 		{
 			name: "one container multiplex",
 			client: &MockClient{
-				ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				ContainerListF: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 					return []types.Container{
 						{
 							ID:    "deadbeef",
@@ -135,7 +135,7 @@ func Test(t *testing.T) {
 						},
 					}, nil
 				},
-				ContainerLogsF: func(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+				ContainerLogsF: func(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error) {
 					var buf bytes.Buffer
 					w := stdcopy.NewStdWriter(&buf, stdcopy.Stdout)
 					_, err := w.Write([]byte("2020-04-28T18:42:16.432691200Z hello from stdout"))
