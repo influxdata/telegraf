@@ -69,7 +69,7 @@ type Lookup struct {
 	lock     sync.Mutex
 	table    si.Table
 
-	getConnection getConnectionFunc
+	getConnectionFunc getConnectionFunc
 
 	translator si.Translator
 }
@@ -88,7 +88,7 @@ func (*Lookup) SampleConfig() string {
 
 func (l *Lookup) Init() (err error) {
 	l.sigs = make(signalMap)
-	l.getConnection = l.getConnectionNoMock
+	l.getConnectionFunc = l.getConnection
 
 	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
@@ -142,7 +142,7 @@ func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
 		return []telegraf.Metric{metric}
 	}
 
-	gs, err := l.getConnection(metric)
+	gs, err := l.getConnectionFunc(metric)
 	if err != nil {
 		l.Log.Errorf("Could not prepare connection: %v", err)
 		return []telegraf.Metric{metric}
@@ -216,8 +216,8 @@ func (l *Lookup) signalAgentReady(agent string) {
 	l.lock.Unlock()
 }
 
-// getConnectionNoMock prepares a snmpConnection from the given metric tags (if present)
-func (l *Lookup) getConnectionNoMock(metric telegraf.Metric) (snmpConnection, error) {
+// getConnection prepares a snmpConnection from the given metric tags (if present)
+func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
 	clientConfig := l.ClientConfig
 
 	if version, ok := metric.GetTag(l.VersionTag); ok {

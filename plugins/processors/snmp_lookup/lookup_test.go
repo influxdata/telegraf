@@ -437,7 +437,7 @@ func TestAdd(t *testing.T) {
 	require.NoError(t, p.Start(acc))
 	defer p.Stop()
 
-	p.getConnection = func(metric telegraf.Metric) (snmpConnection, error) {
+	p.getConnectionFunc = func(metric telegraf.Metric) (snmpConnection, error) {
 		return tsc, nil
 	}
 
