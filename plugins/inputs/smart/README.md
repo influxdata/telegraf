@@ -110,7 +110,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Sudo must be configured to allow the telegraf user to run smartctl or nvme-cli
     ## without a password.
     # use_sudo = false
-    
+
     ## Adds an extra tag "device_type", which can be used to differentiate
     ## multiple disks behind the same controller (e.g., MegaRAID).
     # tag_with_device_type = false
