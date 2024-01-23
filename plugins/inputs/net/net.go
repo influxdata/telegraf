@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -104,6 +106,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"err_out":      io.Errout,
 			"drop_in":      io.Dropin,
 			"drop_out":     io.Dropout,
+			"speed":        getInterfaceSpeed(io.Name),
 		}
 		acc.AddCounter("net", fields, tags)
 	}
@@ -127,6 +130,29 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func getInterfaceSpeed(ioName string) uint64 {
+	sysPath := os.Getenv("HOST_SYS")
+	if sysPath == "" {
+		sysPath = "/sys"
+	}
+
+	raw, err := os.ReadFile(fmt.Sprintf("%s/class/net/%s/speed", sysPath, ioName))
+	if err != nil {
+		return 0
+	}
+	speedStr := string(raw)
+
+	if speedStr == "-1" {
+		return 0
+	}
+
+	speed, err := strconv.ParseUint(speedStr, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return speed
 }
 
 func init() {
