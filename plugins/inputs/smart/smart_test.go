@@ -316,9 +316,10 @@ func TestGatherSSDRaid(t *testing.T) {
 
 func TestGatherDeviceTypeTag(t *testing.T) {
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		if args[0] == "--scan" {
+		switch args[0] {
+		case "--scan":
 			return nil, errors.New("scan command should not be run, since devices are provided in config")
-		} else if args[0] == "--info" {
+		case "--info":
 			switch args[len(args)-1] {
 			case "megaraid,0":
 				return []byte(smartctlMegaraidInfo1), nil
@@ -327,7 +328,7 @@ func TestGatherDeviceTypeTag(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unexpected device type %q", args[len(args)-1])
 			}
-		} else {
+		default:
 			return nil, fmt.Errorf("unexpected command %q", args[0])
 		}
 	}
