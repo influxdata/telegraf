@@ -46,10 +46,9 @@ type Container struct {
 func (c *Container) Start() error {
 	c.ctx = context.Background()
 
-	containerMounts := make([]testcontainers.ContainerFile, 0, len(c.Files))
+	files := make([]testcontainers.ContainerFile, 0, len(c.Files))
 	for k, v := range c.Files {
-		fmt.Println("mounting:", v, "->", k)
-		containerMounts = append(containerMounts, testcontainers.ContainerFile{
+		files = append(files, testcontainers.ContainerFile{
 			ContainerFilePath: k,
 			HostFilePath:      v,
 			FileMode:          0o755,
@@ -61,7 +60,7 @@ func (c *Container) Start() error {
 			Entrypoint:         c.Entrypoint,
 			Env:                c.Env,
 			ExposedPorts:       c.ExposedPorts,
-			Files:              containerMounts,
+			Files:              files,
 			HostConfigModifier: c.HostConfigModifier,
 			Cmd:                c.Cmd,
 			Image:              c.Image,
