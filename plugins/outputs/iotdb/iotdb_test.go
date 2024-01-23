@@ -271,6 +271,69 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 	}
 }
 
+// Test tag sanitize
+func TestTagSanitization(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *IoTDB
+		expected []string
+		input    []string
+	}{
+		{ //don't sanitize tags containing UnsopportedCharacter on IoTDB V1.3
+			name:     "Don't Sanitize Tags",
+			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "1.3"; return s }(),
+			expected: []string{"word", "`word`", "word_"},
+			input:    []string{"word", "`word`", "word_"},
+		},
+		{ //sanitize tags containing UnsopportedCharacter on IoTDB V1.3 enclosing them in backticks
+			name:     "Sanitize Tags",
+			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "1.3"; return s }(),
+			expected: []string{"`wo rd`", "`@`", "`$`", "`#`", "`:`", "`{`", "`}`", "`1`", "`1234`"},
+			input:    []string{"wo rd", "@", "$", "#", ":", "{", "}", "1", "1234"},
+		},
+		{ //test on forbidden word and forbidden syntax
+			name:     "Errors",
+			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "1.3"; return s }(),
+			expected: []string{"", ""},
+			input:    []string{"root", "wo`rd"},
+		},
+		{
+			name:     "Don't Sanitize Tags",
+			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "0.13"; return s }(),
+			expected: []string{"word", "`word`", "word_", "@", "$", "#", ":", "{", "}"},
+			input:    []string{"word", "`word`", "word_", "@", "$", "#", ":", "{", "}"},
+		},
+		{ //sanitize tags containing UnsopportedCharacter on IoTDB V0.13 enclosing them in backticks
+			name:     "Sanitize Tags",
+			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "0.13"; return s }(),
+			expected: []string{"`wo rd`", "`\\`"},
+			input:    []string{"wo rd", "\\"},
+		},
+		{ //test on forbidden word and forbidden syntax on IoTDB V0.13
+			name:     "Errors",
+			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "0.13"; return s }(),
+			expected: []string{"", ""},
+			input:    []string{"root", "wo`rd"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Log = &testutil.Logger{}
+			actuals := []string{}
+
+			require.NoError(t, tt.plugin.Init())
+
+			for _, input := range tt.input {
+				actual, _ := tt.plugin.validateTag(input)
+				actuals = append(actuals, actual)
+			}
+
+			require.EqualValues(t, tt.expected, actuals)
+		})
+	}
+}
+
 // Test tags handling, which means testing function `modifyRecordsWithTags`
 func TestTagsHandling(t *testing.T) {
 	var testTimestamp = time.Date(2022, time.July, 20, 12, 25, 33, 44, time.UTC)
