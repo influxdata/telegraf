@@ -293,7 +293,7 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 			"LDAP_TLS_CERT_FILE":  "server.crt",
 			"LDAP_TLS_KEY_FILE":   "server.key",
 		},
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/server.pem": pkiPaths.ServerPem,
 			"/server.crt": pkiPaths.ServerCert,
 			"/server.key": pkiPaths.ServerKey,
@@ -401,7 +401,7 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 			"LDAP_TLS_CERT_FILE":  "server.crt",
 			"LDAP_TLS_KEY_FILE":   "server.key",
 		},
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/server.pem": pkiPaths.ServerPem,
 			"/server.crt": pkiPaths.ServerCert,
 			"/server.key": pkiPaths.ServerKey,
