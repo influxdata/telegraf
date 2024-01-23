@@ -381,7 +381,7 @@ jobs:
             docker push quay.io/influxdb/telegraf-nightly:alpine
   amd64-package-test-nightly:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2004:current
     steps:
       - checkout
       - attach_workspace:
