@@ -1,9 +1,13 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"strconv"
 )
+
+var ErrOutOfRange = errors.New("value out of data range")
 
 func ToString(value interface{}) (string, error) {
 	switch v := value.(type) {
@@ -112,6 +116,9 @@ func ToInt64(value interface{}) (int64, error) {
 	case int64:
 		return v, nil
 	case uint:
+		if v > math.MaxInt64 {
+			return int64(v), ErrOutOfRange
+		}
 		return int64(v), nil
 	case uint8:
 		return int64(v), nil
@@ -120,10 +127,19 @@ func ToInt64(value interface{}) (int64, error) {
 	case uint32:
 		return int64(v), nil
 	case uint64:
+		if v > math.MaxInt64 {
+			return int64(v), ErrOutOfRange
+		}
 		return int64(v), nil
 	case float32:
+		if v < math.MinInt64 || v > math.MaxInt64 {
+			return int64(v), ErrOutOfRange
+		}
 		return int64(v), nil
 	case float64:
+		if v < math.MinInt64 || v > math.MaxInt64 {
+			return int64(v), ErrOutOfRange
+		}
 		return int64(v), nil
 	case nil:
 		return 0, nil
@@ -165,8 +181,14 @@ func ToUint64(value interface{}) (uint64, error) {
 	case uint64:
 		return v, nil
 	case float32:
+		if v < 0 || v > math.MaxUint64 {
+			return uint64(v), ErrOutOfRange
+		}
 		return uint64(v), nil
 	case float64:
+		if v < 0 || v > math.MaxUint64 {
+			return uint64(v), ErrOutOfRange
+		}
 		return uint64(v), nil
 	case nil:
 		return 0, nil
