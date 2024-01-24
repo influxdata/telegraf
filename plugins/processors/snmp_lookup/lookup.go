@@ -4,7 +4,6 @@ package snmp_lookup
 import (
 	_ "embed"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -45,16 +44,6 @@ type Lookup struct {
 	Tags     []si.Field `toml:"tag"`
 
 	snmp.ClientConfig
-
-	VersionTag      string `toml:"version_tag"`
-	CommunityTag    string `toml:"community_tag"`
-	SecNameTag      string `toml:"sec_name_tag"`
-	SecLevelTag     string `toml:"sec_level_tag"`
-	AuthProtocolTag string `toml:"auth_protocol_tag"`
-	AuthPasswordTag string `toml:"auth_password_tag"`
-	PrivProtocolTag string `toml:"priv_protocol_tag"`
-	PrivPasswordTag string `toml:"priv_password_tag"`
-	ContextNameTag  string `toml:"context_name_tag"`
 
 	CacheSize       int             `toml:"max_cache_entries"`
 	ParallelLookups int             `toml:"max_parallel_lookups"`
@@ -218,54 +207,7 @@ func (l *Lookup) signalAgentReady(agent string) {
 
 // getConnection prepares a snmpConnection from the given metric tags (if present)
 func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
-	clientConfig := l.ClientConfig
-
-	if version, ok := metric.GetTag(l.VersionTag); ok {
-		// inputs.snmp_trap reports like this
-		if version == "2c" {
-			version = "2"
-		}
-
-		v, err := strconv.ParseUint(version, 10, 8)
-		if err != nil {
-			return nil, fmt.Errorf("parsing version: %w", err)
-		}
-		clientConfig.Version = uint8(v)
-	}
-
-	if community, ok := metric.GetTag(l.CommunityTag); ok {
-		clientConfig.Community = community
-	}
-
-	if secName, ok := metric.GetTag(l.SecNameTag); ok {
-		clientConfig.SecName = secName
-	}
-
-	if secLevel, ok := metric.GetTag(l.SecLevelTag); ok {
-		clientConfig.SecLevel = secLevel
-	}
-
-	if authProtocol, ok := metric.GetTag(l.AuthProtocolTag); ok {
-		clientConfig.AuthProtocol = authProtocol
-	}
-
-	if authPassword, ok := metric.GetTag(l.AuthPasswordTag); ok {
-		clientConfig.AuthPassword = authPassword
-	}
-
-	if privProtocol, ok := metric.GetTag(l.PrivProtocolTag); ok {
-		clientConfig.PrivProtocol = privProtocol
-	}
-
-	if privPassword, ok := metric.GetTag(l.PrivPasswordTag); ok {
-		clientConfig.PrivPassword = privPassword
-	}
-
-	if contextName, ok := metric.GetTag(l.ContextNameTag); ok {
-		clientConfig.ContextName = contextName
-	}
-
-	gs, err := snmp.NewWrapper(clientConfig)
+	gs, err := snmp.NewWrapper(l.ClientConfig)
 	if err != nil {
 		return gs, fmt.Errorf("parsing SNMP client config: %w", err)
 	}
@@ -321,15 +263,6 @@ func init() {
 			AgentTag:        "source",
 			IndexTag:        "index",
 			ClientConfig:    *snmp.DefaultClientConfig(),
-			VersionTag:      "version",
-			CommunityTag:    "community",
-			SecNameTag:      "sec_name",
-			SecLevelTag:     "sec_level",
-			AuthProtocolTag: "auth_protocol",
-			AuthPasswordTag: "auth_password",
-			PrivProtocolTag: "priv_protocol",
-			PrivPasswordTag: "priv_password",
-			ContextNameTag:  "context_name",
 			CacheSize:       defaultCacheSize,
 			CacheTTL:        defaultCacheTTL,
 			ParallelLookups: defaultParallelLookups,
