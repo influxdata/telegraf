@@ -58,6 +58,12 @@ them with `${}`.  Replacement occurs before file parsing. For strings
 the variable must be within quotes, e.g., `"${STR_VAR}"`, for numbers and booleans
 they should be unquoted, e.g., `${INT_VAR}`, `${BOOL_VAR}`.
 
+Users need to keep in mind that when using double quotes the user needs to
+escape any backslashes (e.g. `"C:\\Program Files"`) or other special characters.
+If using an environment variable with a single backslash, then enclose the
+variable in single quotes which signifies a string literal (e.g.
+`'C:\Program Files'`).
+
 In addition to this, Telegraf also supports Shell parameter expansion for environment variables
 which allows syntax such as:
 
