@@ -30,7 +30,7 @@ func (s *Serializer) Init() error {
 	}
 
 	for i, entry := range s.Entries {
-		if err := entry.FillDefaults(); err != nil {
+		if err := entry.fillDefaults(); err != nil {
 			return fmt.Errorf("entry %d check failed: %w", i, err)
 		}
 	}
@@ -49,7 +49,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 				return nil, fmt.Errorf("field %s not found", entry.Name)
 			}
 
-			entryBytes, err := entry.SerializeValue(field, s.converter)
+			entryBytes, err := entry.serializeValue(field, s.converter)
 			if err != nil {
 				return nil, err
 			}
@@ -60,19 +60,19 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 				return nil, fmt.Errorf("tag %s not found", entry.Name)
 			}
 
-			entryBytes, err := entry.SerializeValue(tag, s.converter)
+			entryBytes, err := entry.serializeValue(tag, s.converter)
 			if err != nil {
 				return nil, err
 			}
 			serialized = append(serialized, entryBytes...)
 		case "time":
-			entryBytes, err := entry.SerializeValue(metric.Time(), s.converter)
+			entryBytes, err := entry.serializeValue(metric.Time(), s.converter)
 			if err != nil {
 				return nil, err
 			}
 			serialized = append(serialized, entryBytes...)
 		case "name":
-			entryBytes, err := entry.SerializeValue(metric.Name(), s.converter)
+			entryBytes, err := entry.serializeValue(metric.Name(), s.converter)
 			if err != nil {
 				return nil, err
 			}

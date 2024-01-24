@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,6 +15,7 @@ func TestSerialization(t *testing.T) {
 		entry    *Entry
 		input    interface{}
 		expected map[binary.ByteOrder][]byte
+		overflow bool
 	}{
 		{
 			name:  "positive int serialization",
@@ -41,6 +43,7 @@ func TestSerialization(t *testing.T) {
 				binary.BigEndian:    {0xff, 0xff, 0xff, 0xff},
 				binary.LittleEndian: {0xff, 0xff, 0xff, 0xff},
 			},
+			overflow: true,
 		},
 		{
 			name:  "uint to int serialization",
@@ -189,14 +192,15 @@ func TestSerialization(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			errCheck := tc.entry.FillDefaults()
-
-			require.NoError(t, errCheck)
+			require.NoError(t, tc.entry.fillDefaults())
 
 			for endianness, expected := range tc.expected {
-				value, errSerialize := tc.entry.SerializeValue(tc.input, endianness)
-
-				require.NoError(t, errSerialize)
+				value, err := tc.entry.serializeValue(tc.input, endianness)
+				if tc.overflow {
+					require.ErrorIs(t, err, internal.ErrOutOfRange)
+				} else {
+					require.NoError(t, err)
+				}
 				require.Equal(t, expected, value)
 			}
 		})
@@ -205,5 +209,5 @@ func TestSerialization(t *testing.T) {
 
 func TestNoNameSerialization(t *testing.T) {
 	e := &Entry{}
-	require.ErrorContains(t, e.FillDefaults(), "missing name")
+	require.ErrorContains(t, e.fillDefaults(), "missing name")
 }
