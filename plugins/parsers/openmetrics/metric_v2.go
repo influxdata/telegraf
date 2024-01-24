@@ -13,7 +13,7 @@ import (
 func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 	now := time.Now()
 
-	// Convert each prometheus metric to a corresponding telegraf metric
+	// Convert each openmetric metric to a corresponding telegraf metric
 	// with one field each. The process will filter NaNs in values and skip
 	// the corresponding metrics.
 	var metrics []telegraf.Metric
@@ -53,7 +53,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 					continue
 				}
 				fields := map[string]interface{}{metricName: value}
-				metrics = append(metrics, metric.New("prometheus", tags, fields, t, telegraf.Untyped))
+				metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Untyped))
 			case MetricType_GAUGE:
 				x := omp.GetGaugeValue().GetValue()
 				if x == nil {
@@ -70,7 +70,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 					continue
 				}
 				fields := map[string]interface{}{metricName: value}
-				metrics = append(metrics, metric.New("prometheus", tags, fields, t, telegraf.Gauge))
+				metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Gauge))
 			case MetricType_COUNTER:
 				x := omp.GetCounterValue().GetTotal()
 				if x == nil {
@@ -87,7 +87,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 					continue
 				}
 				fields := map[string]interface{}{metricName: value}
-				metrics = append(metrics, metric.New("prometheus", tags, fields, t, telegraf.Counter))
+				metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Counter))
 			case MetricType_STATE_SET:
 				stateset := omp.GetStateSetValue()
 
@@ -95,7 +95,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				for _, state := range stateset.GetStates() {
 					sn := strings.ReplaceAll(state.GetName(), " ", "_")
 					fields := map[string]interface{}{metricName + "_" + sn: state.GetEnabled()}
-					metrics = append(metrics, metric.New("prometheus", tags, fields, t, telegraf.Untyped))
+					metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Untyped))
 				}
 			case MetricType_INFO:
 				info := omp.GetInfoValue().GetInfo()
@@ -107,7 +107,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 					mptags[itag.Name] = itag.Value
 				}
 				fields := map[string]interface{}{metricName + "_info": uint64(1)}
-				metrics = append(metrics, metric.New("prometheus", mptags, fields, t, telegraf.Untyped))
+				metrics = append(metrics, metric.New("openmetric", mptags, fields, t, telegraf.Untyped))
 			case MetricType_HISTOGRAM, MetricType_GAUGE_HISTOGRAM:
 				histogram := omp.GetHistogramValue()
 
@@ -125,7 +125,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				if ts := histogram.GetCreated(); ts != nil {
 					histFields[metricName+"_created"] = float64(ts.Seconds) + float64(ts.Nanos)/float64(time.Nanosecond)
 				}
-				metrics = append(metrics, metric.New("prometheus", tags, histFields, t, telegraf.Histogram))
+				metrics = append(metrics, metric.New("openmetric", tags, histFields, t, telegraf.Histogram))
 
 				// Add one metric per histogram bucket
 				var infSeen bool
@@ -135,21 +135,21 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 					bucketFields := map[string]interface{}{
 						metricName + "_bucket": float64(b.GetCount()),
 					}
-					m := metric.New("prometheus", bucketTags, bucketFields, t, telegraf.Histogram)
+					m := metric.New("openmetric", bucketTags, bucketFields, t, telegraf.Histogram)
 					metrics = append(metrics, m)
 
 					// Record if any of the buckets marks an infinite upper bound
 					infSeen = infSeen || math.IsInf(b.GetUpperBound(), +1)
 				}
 
-				// Infinity bucket is required for proper function of histogram in prometheus
+				// Infinity bucket is required for proper function of histogram in openmetric
 				if !infSeen {
 					infTags := tags
 					infTags["le"] = "+Inf"
 					infFields := map[string]interface{}{
 						metricName + "_bucket": float64(histogram.GetCount()),
 					}
-					m := metric.New("prometheus", infTags, infFields, t, telegraf.Histogram)
+					m := metric.New("openmetric", infTags, infFields, t, telegraf.Histogram)
 					metrics = append(metrics, m)
 				}
 			case MetricType_SUMMARY:
@@ -170,7 +170,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				if ts := summary.GetCreated(); ts != nil {
 					summaryFields[metricName+"_created"] = float64(ts.Seconds) + float64(ts.Nanos)/float64(time.Nanosecond)
 				}
-				metrics = append(metrics, metric.New("prometheus", tags, summaryFields, t, telegraf.Summary))
+				metrics = append(metrics, metric.New("openmetric", tags, summaryFields, t, telegraf.Summary))
 
 				// Add one metric per quantile
 				for _, q := range summary.Quantile {
@@ -179,7 +179,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 					quantileFields := map[string]interface{}{
 						metricName: q.GetValue(),
 					}
-					m := metric.New("prometheus", quantileTags, quantileFields, t, telegraf.Summary)
+					m := metric.New("openmetric", quantileTags, quantileFields, t, telegraf.Summary)
 					metrics = append(metrics, m)
 				}
 			}

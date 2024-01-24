@@ -1,1 +1,1 @@
-prometheus,_type=untyped,location=office,device=machine,version=1.29.2,environment=production,build=42 device_versioning_info=1u
+openmetric,_type=untyped,location=office,device=machine,version=1.29.2,environment=production,build=42 device_versioning_info=1u
