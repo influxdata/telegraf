@@ -37,7 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # agent_active = false
 
   ## Add prefix to all keys sent to Zabbix.
-  # prefix = "telegraf."
+  # key_prefix = "telegraf."
 
   ## Name of the tag that contains the host name. Used to set the host in Zabbix.
   ## If the tag is not found, use the hostname of the system running Telegraf.
@@ -78,13 +78,13 @@ agent items.
 [zabbixtrapper]: https://www.zabbix.com/documentation/6.4/en/manual/config/items/itemtypes/trapper?hl=Trapper
 [zabbixagentactive]: https://www.zabbix.com/documentation/6.4/en/manual/config/items/itemtypes/zabbix_agent
 
-### prefix
+### key_prefix
 
 We can set a prefix that should be added to all Zabbix keys.
 
-This is configurable with the option `prefix`, set by default to `telegraf.`.
+This is configurable with the option `key_prefix`, set by default to `telegraf.`.
 
-Example how the configuration `prefix = "telegraf."` will generate the Zabbix
+Example how the configuration `key_prefix = "telegraf."` will generate the Zabbix
 keys given a Telegraf metric:
 
 ```diff

@@ -43,7 +43,7 @@ func TestZabbix(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := map[string]struct {
-		Prefix                string
+		KeyPrefix             string
 		AgentActive           bool
 		SkipMeasurementPrefix bool
 		telegrafMetrics       []telegraf.Metric
@@ -318,8 +318,8 @@ func TestZabbix(t *testing.T) {
 				},
 			},
 		},
-		"if prefix is configured, zabbix metrics should have that prefix in the key": {
-			Prefix: "telegraf.",
+		"if key_prefix is configured, zabbix metrics should have that prefix in the key": {
+			KeyPrefix: "telegraf.",
 			telegrafMetrics: []telegraf.Metric{
 				testutil.MustMetric("name",
 					map[string]string{
@@ -461,7 +461,7 @@ func TestZabbix(t *testing.T) {
 
 			z := &Zabbix{
 				Address:               listener.Addr().String(),
-				Prefix:                test.Prefix,
+				KeyPrefix:             test.KeyPrefix,
 				HostTag:               "host",
 				SkipMeasurementPrefix: test.SkipMeasurementPrefix,
 				AgentActive:           test.AgentActive,
@@ -562,7 +562,7 @@ func TestLLD(t *testing.T) {
 
 	z := &Zabbix{
 		Address:          listener.Addr().String(),
-		Prefix:           "telegraf.",
+		KeyPrefix:        "telegraf.",
 		HostTag:          "host",
 		LLDSendInterval:  config.Duration(10 * time.Minute),
 		LLDClearInterval: config.Duration(1 * time.Hour),
@@ -675,7 +675,7 @@ func TestAutoregister(t *testing.T) {
 
 	z := &Zabbix{
 		Address:                    listener.Addr().String(),
-		Prefix:                     "telegraf.",
+		KeyPrefix:                  "telegraf.",
 		HostTag:                    "host",
 		SkipMeasurementPrefix:      false,
 		AgentActive:                false,
@@ -842,12 +842,12 @@ func listenForZabbixMetric(t *testing.T, listener net.Listener, ignoreAcceptErro
 }
 
 func TestBuildZabbixMetric(t *testing.T) {
-	prefix := "prefix."
+	keyPrefix := "prefix."
 	hostTag := "host"
 
 	z := &Zabbix{
-		Prefix:  prefix,
-		HostTag: hostTag,
+		KeyPrefix: keyPrefix,
+		HostTag:   hostTag,
 	}
 
 	zm, err := z.buildZabbixMetric(testutil.MustMetric(
@@ -859,7 +859,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 		1,
 	)
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%sname.value[b,bar]", prefix), zm.Key)
+	require.Equal(t, fmt.Sprintf("%sname.value[b,bar]", keyPrefix), zm.Key)
 
 	zm, err = z.buildZabbixMetric(testutil.MustMetric(
 		"name",
@@ -870,7 +870,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 		1,
 	)
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%sname.value", prefix), zm.Key)
+	require.Equal(t, fmt.Sprintf("%sname.value", keyPrefix), zm.Key)
 }
 
 func TestGetHostname(t *testing.T) {

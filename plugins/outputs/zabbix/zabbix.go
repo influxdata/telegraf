@@ -31,7 +31,7 @@ type zabbixSender interface {
 type Zabbix struct {
 	Address                    string          `toml:"address"`
 	AgentActive                bool            `toml:"agent_active"`
-	Prefix                     string          `toml:"prefix"`
+	KeyPrefix                  string          `toml:"key_prefix"`
 	HostTag                    string          `toml:"host_tag"`
 	SkipMeasurementPrefix      bool            `toml:"skip_measurement_prefix"`
 	LLDSendInterval            config.Duration `toml:"lld_send_interval"`
@@ -191,9 +191,9 @@ func (z Zabbix) buildZabbixMetric(metric telegraf.Metric, fieldName string, valu
 		return nil, fmt.Errorf("error converting value: %w", err)
 	}
 
-	key := z.Prefix + metric.Name() + "." + fieldName
+	key := z.KeyPrefix + metric.Name() + "." + fieldName
 	if z.SkipMeasurementPrefix {
-		key = z.Prefix + fieldName
+		key = z.KeyPrefix + fieldName
 	}
 
 	// Ignore host tag.
@@ -221,7 +221,7 @@ func (z Zabbix) buildZabbixMetric(metric telegraf.Metric, fieldName string, valu
 func init() {
 	outputs.Add("zabbix", func() telegraf.Output {
 		return &Zabbix{
-			Prefix:                     "telegraf.",
+			KeyPrefix:                  "telegraf.",
 			HostTag:                    "host",
 			AutoregisterResendInterval: config.Duration(time.Minute * 30),
 			LLDSendInterval:            config.Duration(time.Minute * 10),
