@@ -82,10 +82,11 @@ agent items.
 
 We can set a prefix that should be added to all Zabbix keys.
 
-This is configurable with the option `key_prefix`, set by default to `telegraf.`.
+This is configurable with the option `key_prefix`, set by default to
+`telegraf.`.
 
-Example how the configuration `key_prefix = "telegraf."` will generate the Zabbix
-keys given a Telegraf metric:
+Example how the configuration `key_prefix = "telegraf."` will generate the
+Zabbix keys given a Telegraf metric:
 
 ```diff
 - measurement,host=hostname valueA=0,valueB=1
@@ -211,13 +212,13 @@ Will generate this Zabbix metric:
 {"host": "hostname", "key": "telegraf.measurement.value[999,111]", "value": "0"}
 ```
 
-## Zabbix low level discovery
+## Zabbix low-level discovery
 
 Zabbix needs an `item` created before receiving any metric. In some cases we do
 not know in advance what are we going to send, for example, the name of a
 container to send its cpu and memory consumption.
 
-For this case Zabbix provides [low level discovery][lld] that allow to create
+For this case Zabbix provides [low-level discovery][lld] that allow to create
 new items dinamically based on the parameters sent by the trap.
 
 As explained previously, this output plugin will format the Zabbix key using
@@ -227,6 +228,11 @@ To create those _discovered items_ this plugin uses the same mechanism as the
 Zabbix agent, collecting information about which tags has been seen for each
 measurement and periodically sending a request to a discovery rule with the
 collected data.
+
+Keep in mind that, for metrics in this category, Zabbix will discard them until
+the low-level discovery (LLD) data is sent.
+Sending LLD to Zabbix is a heavy-weight process and is only done at the interval
+per the lld_send_interval setting.
 
 [lld]: https://www.zabbix.com/documentation/current/manual/discovery/low_level_discovery
 
