@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -138,7 +139,7 @@ func getInterfaceSpeed(ioName string) uint64 {
 		sysPath = "/sys"
 	}
 
-	raw, err := os.ReadFile(fmt.Sprintf("%s/class/net/%s/speed", sysPath, ioName))
+	raw, err := os.ReadFile(filepath.Join(sysPath, "class", "net", ioName, "speed"))
 	if err != nil {
 		return 0
 	}
