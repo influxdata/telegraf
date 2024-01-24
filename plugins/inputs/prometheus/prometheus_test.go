@@ -741,21 +741,21 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
-			"prometheus",
+			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		testutil.MustMetric(
-			"prometheus",
+			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		testutil.MustMetric(
-			"prometheus",
+			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
 			time.Unix(0, 0),
@@ -789,21 +789,21 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
-			"prometheus",
+			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		testutil.MustMetric(
-			"prometheus",
+			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		testutil.MustMetric(
-			"prometheus",
+			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
 			time.Unix(0, 0),
