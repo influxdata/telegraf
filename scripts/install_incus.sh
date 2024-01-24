@@ -1,6 +1,7 @@
 #!/bin/bash
 set -eux
 
+sudo mkdir -p /etc/apt/keyrings
 sudo curl -fsSL https://pkgs.zabbly.com/key.asc -o /etc/apt/keyrings/zabbly.asc
 sudo sh -c 'cat <<EOF > /etc/apt/sources.list.d/zabbly-incus-stable.sources
 Enabled: yes
