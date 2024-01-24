@@ -57,7 +57,7 @@ following demonstrates how this can cause confusion:
   [inputs.cpu.tags]
     tag1 = "foo"
     tag2 = "bar"
-  percpu = false  // this is treated as a tag to add, not a config option
+  percpu = false  # this is treated as a tag to add, not a config option
 ```
 
 Note TOML does not care about how a user indents the config or whitespace, so
@@ -85,7 +85,7 @@ For example the following invalid TOML, includes a Windows path with
 unescaped backslashes:
 
 ```toml
-path = "C:\Program Files\" // this is invalid TOML
+path = "C:\Program Files\"  # this is invalid TOML
 
 User's can either escape the backslashes or use a literal string, which is
 signified by single-quotes:
