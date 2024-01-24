@@ -136,6 +136,28 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # insecure_skip_verify = false
 ```
 
+### String Data
+
+Some fields may return string data. This is unhelpful for some outputs where
+numeric data is required (e.g. Prometheus). In these cases, users can make use
+of the enum processor to convert string values to numeric values. Below is an
+example using the `slave_slave_io_running` field, which can have a variety of
+string values:
+
+```toml
+[[processors.enum]]
+  namepass = "mysql"
+  [[processors.enum.mapping]]
+    field = "slave_slave_io_running"
+    dest = "slave_slave_io_running_int"
+    default = 4
+    [processors.enum.mapping.value_mappings]
+      Yes = 0
+      No = 1
+      Preparing = 2
+      Connecting = 3
+```
+
 ### Metric Version
 
 When `metric_version = 2`, a variety of field type issues are corrected as well
