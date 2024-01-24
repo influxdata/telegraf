@@ -55,7 +55,7 @@ type Query struct {
 	fieldFilterString filter.Filter
 }
 
-func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (int, error) {
+func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, logger telegraf.Logger) (int, error) {
 	columnNames, err := rows.Columns()
 	if err != nil {
 		return 0, err
@@ -140,7 +140,12 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterInt.Match(name) {
 				v, err := internal.ToInt64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to int failed: %w", name, err)
+					if err != nil {
+						if !errors.Is(err, internal.ErrOutOfRange) {
+							return 0, fmt.Errorf("converting field column %q to int failed: %w", name, err)
+						}
+						logger.Warnf("field column %q: %v", name, err)
+					}
 				}
 				fields[name] = v
 				continue
@@ -149,7 +154,10 @@ func (q *Query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (
 			if q.fieldFilterUint.Match(name) {
 				v, err := internal.ToUint64(columnData[i])
 				if err != nil {
-					return 0, fmt.Errorf("converting field column %q to uint failed: %w", name, err)
+					if !errors.Is(err, internal.ErrOutOfRange) {
+						return 0, fmt.Errorf("converting field column %q to uint failed: %w", name, err)
+					}
+					logger.Warnf("field column %q: %v", name, err)
 				}
 				fields[name] = v
 				continue
@@ -526,7 +534,7 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 	if err != nil {
 		return err
 	}
-	rowCount, err := q.parse(acc, rows, tquery)
+	rowCount, err := q.parse(acc, rows, tquery, s.Log)
 	s.Log.Debugf("Received %d rows and %d columns for query %q", rowCount, len(columnNames), q.Query)
 
 	return err
