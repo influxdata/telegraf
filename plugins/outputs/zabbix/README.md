@@ -39,7 +39,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Add prefix to all keys sent to Zabbix.
   # prefix = "telegraf."
 
-  ## Name of the tag that contains the host name
+  ## Name of the tag that contains the host name. Used to set the host in Zabbix.
+  ## If the tag is not found, use the hostname of the system running Telegraf.
   # host_tag = "host"
 
   ## Skip measurement prefix to all keys sent to Zabbix.
