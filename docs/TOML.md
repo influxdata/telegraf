@@ -86,6 +86,7 @@ unescaped backslashes:
 
 ```toml
 path = "C:\Program Files\"  # this is invalid TOML
+```
 
 User's can either escape the backslashes or use a literal string, which is
 signified by single-quotes:
