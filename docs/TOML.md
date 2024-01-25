@@ -15,7 +15,7 @@ using a TOML validator. In VSCode the [Even Better TOML][] extension or use the
 
 ## Multiple TOML Files
 
-TOML technically does not support multiple files, this is done as a convince for
+TOML technically does not support multiple files, this is done as a convenience for
 users.
 
 Users should be aware that when Telegraf reads a user's config, if multiple
