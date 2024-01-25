@@ -5,26 +5,31 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"os/exec"
+	"net"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	fbchrony "github.com/facebook/time/ntp/chrony"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-var (
-	execCommand = exec.Command // execCommand is used to mock commands in tests.
-)
-
 type Chrony struct {
-	DNSLookup bool `toml:"dns_lookup"`
-	path      string
+	Server    string          `toml:"server"`
+	Timeout   config.Duration `toml:"timeout"`
+	DNSLookup bool            `toml:"dns_lookup"`
+	Log       telegraf.Logger `toml:"-"`
+
+	conn   net.Conn
+	client *fbchrony.Client
 }
 
 func (*Chrony) SampleConfig() string {
@@ -32,98 +37,147 @@ func (*Chrony) SampleConfig() string {
 }
 
 func (c *Chrony) Init() error {
-	var err error
-	c.path, err = exec.LookPath("chronyc")
-	if err != nil {
-		return errors.New("chronyc not found: verify that chrony is installed and that chronyc is in your PATH")
+	if c.Server != "" {
+		// Check the specified server address
+		u, err := url.Parse(c.Server)
+		if err != nil {
+			return fmt.Errorf("parsing server address failed: %w", err)
+		}
+		switch u.Scheme {
+		case "unix":
+			// Keep the server unmodified
+		case "udp":
+			// Check if we do have a port and add the default port if we don't
+			if u.Port() == "" {
+				u.Host += ":323"
+			}
+			// We cannot have path elements in an UDP address
+			if u.Path != "" {
+				return fmt.Errorf("path detected in UDP address %q", c.Server)
+			}
+			u = &url.URL{Scheme: "udp", Host: u.Host}
+		case "":
+			// Do some auto-detection foo to guess if we got a socket, an IP or
+			// a hostname.
+			if net.ParseIP(u.Path) == nil {
+				// IP address
+				u = &url.URL{Scheme: "udp", Host: u.Path}
+			} else if _, err := os.Stat(u.Path); errors.Is(err, os.ErrNotExist) {
+				// Hostname
+				u = &url.URL{Scheme: "udp", Host: u.Path}
+			} else {
+				// Socket
+				u = &url.URL{Scheme: "unix", Path: u.Path}
+			}
+		default:
+			return fmt.Errorf("unknown address scheme %q", u.Scheme)
+		}
+		c.Server = u.String()
 	}
+
 	return nil
+}
+
+func (c *Chrony) Start(_ telegraf.Accumulator) error {
+	if c.Server != "" {
+		// Create a connection
+		u, err := url.Parse(c.Server)
+		if err != nil {
+			return fmt.Errorf("parsing server address failed: %w", err)
+		}
+		switch u.Scheme {
+		case "unix":
+			conn, err := net.DialTimeout("unix", u.Path, time.Duration(c.Timeout))
+			if err != nil {
+				return fmt.Errorf("dialing %q failed: %w", c.Server, err)
+			}
+			c.conn = conn
+		case "udp":
+			conn, err := net.DialTimeout("udp", u.Host, time.Duration(c.Timeout))
+			if err != nil {
+				return fmt.Errorf("dialing %q failed: %w", c.Server, err)
+			}
+			c.conn = conn
+		}
+	} else {
+		// If no server is given, reproduce chronyc's behavior
+		if conn, err := net.DialTimeout("unix", "/run/chrony/chronyd.sock", time.Duration(c.Timeout)); err == nil {
+			c.Server = "unix:///run/chrony/chronyd.sock"
+			c.conn = conn
+		} else if conn, err := net.DialTimeout("udp", "127.0.0.1:323", time.Duration(c.Timeout)); err == nil {
+			c.Server = "udp://127.0.0.1:323"
+			c.conn = conn
+		} else {
+			conn, err := net.DialTimeout("udp", "[::1]:323", time.Duration(c.Timeout))
+			if err != nil {
+				return fmt.Errorf("dialing server failed: %w", err)
+			}
+			c.Server = "udp://[::1]:323"
+			c.conn = conn
+		}
+	}
+	c.Log.Debugf("Connected to %q...", c.Server)
+
+	// Initialize the client
+	c.client = &fbchrony.Client{Connection: c.conn}
+
+	return nil
+}
+
+func (c *Chrony) Stop() {
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil {
+			c.Log.Errorf("Closing connection to %q failed: %v", c.Server, err)
+		}
+	}
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
-	flags := []string{}
-	if !c.DNSLookup {
-		flags = append(flags, "-n")
+	req := fbchrony.NewTrackingPacket()
+	resp, err := c.client.Communicate(req)
+	if err != nil {
+		return fmt.Errorf("querying tracking data failed: %w", err)
 	}
-	flags = append(flags, "tracking")
+	tracking, ok := resp.(*fbchrony.ReplyTracking)
+	if !ok {
+		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
+	}
 
-	cmd := execCommand(c.path, flags...)
-	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
-	if err != nil {
-		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
+	// according to https://github.com/mlichvar/chrony/blob/e11b518a1ffa704986fb1f1835c425844ba248ef/ntp.h#L70
+	var leapStatus string
+	switch tracking.LeapStatus {
+	case 0:
+		leapStatus = "normal"
+	case 1:
+		leapStatus = "insert second"
+	case 2:
+		leapStatus = "delete second"
+	case 3:
+		leapStatus = "not synchronized"
 	}
-	fields, tags, err := processChronycOutput(string(out))
-	if err != nil {
-		return err
+
+	tags := map[string]string{
+		"leap_status":  leapStatus,
+		"reference_id": strings.ToUpper(strconv.FormatUint(uint64(tracking.RefID), 16)),
+		"stratum":      strconv.FormatUint(uint64(tracking.Stratum), 10),
+	}
+	fields := map[string]interface{}{
+		"frequency":       tracking.FreqPPM,
+		"system_time":     tracking.CurrentCorrection,
+		"last_offset":     tracking.LastOffset,
+		"residual_freq":   tracking.ResidFreqPPM,
+		"rms_offset":      tracking.RMSOffset,
+		"root_delay":      tracking.RootDelay,
+		"root_dispersion": tracking.RootDispersion,
+		"skew":            tracking.SkewPPM,
+		"update_interval": tracking.LastUpdateInterval,
 	}
 	acc.AddFields("chrony", fields, tags)
+
 	return nil
 }
-
-// processChronycOutput takes in a string output from the chronyc command, like:
-//
-//	Reference ID    : 192.168.1.22 (ntp.example.com)
-//	Stratum         : 3
-//	Ref time (UTC)  : Thu May 12 14:27:07 2016
-//	System time     : 0.000020390 seconds fast of NTP time
-//	Last offset     : +0.000012651 seconds
-//	RMS offset      : 0.000025577 seconds
-//	Frequency       : 16.001 ppm slow
-//	Residual freq   : -0.000 ppm
-//	Skew            : 0.006 ppm
-//	Root delay      : 0.001655 seconds
-//	Root dispersion : 0.003307 seconds
-//	Update interval : 507.2 seconds
-//	Leap status     : Normal
-//
-// The value on the left side of the colon is used as field name, if the first field on
-// the right side is a float. If it cannot be parsed as float, it is a tag name.
-//
-// Ref time is ignored and all names are converted to snake case.
-//
-// It returns (<fields>, <tags>)
-func processChronycOutput(out string) (map[string]interface{}, map[string]string, error) {
-	tags := map[string]string{}
-	fields := map[string]interface{}{}
-	lines := strings.Split(strings.TrimSpace(out), "\n")
-	for _, line := range lines {
-		stats := strings.Split(line, ":")
-		if len(stats) < 2 {
-			return nil, nil, fmt.Errorf("unexpected output from chronyc, expected ':' in %s", out)
-		}
-		name := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(stats[0]), " ", "_"))
-		// ignore reference time
-		if strings.Contains(name, "ref_time") {
-			continue
-		}
-		valueFields := strings.Fields(stats[1])
-		if len(valueFields) == 0 {
-			return nil, nil, fmt.Errorf("unexpected output from chronyc: %s", out)
-		}
-		if strings.Contains(strings.ToLower(name), "stratum") {
-			tags["stratum"] = valueFields[0]
-			continue
-		}
-		if strings.Contains(strings.ToLower(name), "reference_id") {
-			tags["reference_id"] = valueFields[0]
-			continue
-		}
-		value, err := strconv.ParseFloat(valueFields[0], 64)
-		if err != nil {
-			tags[name] = strings.ToLower(strings.Join(valueFields, " "))
-			continue
-		}
-		if strings.Contains(stats[1], "slow") {
-			value = -value
-		}
-		fields[name] = value
-	}
-
-	return fields, tags, nil
-}
-
 func init() {
 	inputs.Add("chrony", func() telegraf.Input {
-		return &Chrony{}
+		return &Chrony{Timeout: config.Duration(3 * time.Second)}
 	})
 }
