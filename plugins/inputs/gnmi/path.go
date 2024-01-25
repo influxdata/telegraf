@@ -187,6 +187,11 @@ func (pi *pathInfo) normalize() {
 	if len(groups) == 2 {
 		pi.origin = groups[1]
 		pi.segments[0] = pi.segments[0][len(groups[1])+1:]
+
+		// if we get empty string back, remove the segment
+		if pi.segments[0] == "" {
+			pi.segments = pi.segments[1:]
+		}
 	}
 }
 
