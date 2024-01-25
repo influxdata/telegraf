@@ -133,7 +133,8 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func getInterfaceSpeed(ioName string) uint64 {
+// Get the interface speed from /sys/class/net/*/speed file. returns -1 if unsupported
+func getInterfaceSpeed(ioName string) int64 {
 	sysPath := os.Getenv("HOST_SYS")
 	if sysPath == "" {
 		sysPath = "/sys"
@@ -141,17 +142,13 @@ func getInterfaceSpeed(ioName string) uint64 {
 
 	raw, err := os.ReadFile(filepath.Join(sysPath, "class", "net", ioName, "speed"))
 	if err != nil {
-		return 0
+		return -1
 	}
 	speedStr := string(raw)
 
-	if speedStr == "-1" {
-		return 0
-	}
-
-	speed, err := strconv.ParseUint(speedStr, 10, 64)
+	speed, err := strconv.ParseInt(speedStr, 10, 64)
 	if err != nil {
-		return 0
+		return -1
 	}
 	return speed
 }
