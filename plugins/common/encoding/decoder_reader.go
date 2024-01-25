@@ -78,14 +78,6 @@ type Reader struct {
 }
 
 var (
-	// ErrShortDst means that the destination buffer was too short to
-	// receive all of the transformed bytes.
-	ErrShortDst = errors.New("transform: short destination buffer")
-
-	// ErrShortSrc means that the source buffer has insufficient data to
-	// complete the transformation.
-	ErrShortSrc = errors.New("transform: short source buffer")
-
 	// errInconsistentByteCount means that Transform returned success (nil
 	// error) but also returned nSrc inconsistent with the src argument.
 	errInconsistentByteCount = errors.New("transform: inconsistent byte count returned")
@@ -145,10 +137,10 @@ func (r *Reader) Read(p []byte) (int, error) {
 				// cannot read more bytes into src.
 				r.transformComplete = r.err != nil
 				continue
-			case errors.Is(err, ErrShortDst) && (r.dst1 != 0 || n != 0):
+			case errors.Is(err, transform.ErrShortDst) && (r.dst1 != 0 || n != 0):
 				// Make room in dst by copying out, and try again.
 				continue
-			case errors.Is(err, ErrShortSrc) && r.src1-r.src0 != len(r.src) && r.err == nil:
+			case errors.Is(err, transform.ErrShortSrc) && r.src1-r.src0 != len(r.src) && r.err == nil:
 				// Read more bytes into src via the code below, and try again.
 			default:
 				r.transformComplete = true
