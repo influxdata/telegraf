@@ -144,9 +144,8 @@ func getInterfaceSpeed(ioName string) int64 {
 	if err != nil {
 		return -1
 	}
-	speedStr := string(raw)
 
-	speed, err := strconv.ParseInt(speedStr, 10, 64)
+	speed, err := strconv.ParseInt(strings.TrimSuffix(string(raw), "\n"), 10, 64)
 	if err != nil {
 		return -1
 	}
