@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -56,21 +55,8 @@ func (c *Chrony) Init() error {
 				return fmt.Errorf("path detected in UDP address %q", c.Server)
 			}
 			u = &url.URL{Scheme: "udp", Host: u.Host}
-		case "":
-			// Do some auto-detection foo to guess if we got a socket, an IP or
-			// a hostname.
-			if net.ParseIP(u.Path) == nil {
-				// IP address
-				u = &url.URL{Scheme: "udp", Host: u.Path}
-			} else if _, err := os.Stat(u.Path); errors.Is(err, os.ErrNotExist) {
-				// Hostname
-				u = &url.URL{Scheme: "udp", Host: u.Path}
-			} else {
-				// Socket
-				u = &url.URL{Scheme: "unix", Path: u.Path}
-			}
 		default:
-			return fmt.Errorf("unknown address scheme %q", u.Scheme)
+			return errors.New("unknown or missing address scheme")
 		}
 		c.Server = u.String()
 	}

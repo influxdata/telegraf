@@ -19,9 +19,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Get standard chrony metrics, requires chronyc executable.
 [[inputs.chrony]]
-  ## Server address of chronyd
+  ## Server address of chronyd with address scheme
   ## If empty or not set, the plugin will mimic the behavior of chronyc and
-  ## check "/run/chrony/chronyd.sock", "127.0.0.1:323" and "[::1]:323".
+  ## check "unix:///run/chrony/chronyd.sock", "udp://127.0.0.1:323"
+  ## and "udp://[::1]:323".
   # server = ""
 
   ## Timeout for establishing the connection
