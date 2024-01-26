@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/IBM/sarama"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 )
 
 type SASLAuth struct {
@@ -25,10 +27,14 @@ type SASLAuth struct {
 
 	// OAUTHBEARER config
 	SASLAccessToken config.Secret `toml:"sasl_access_token"`
+
+	log telegraf.Logger
 }
 
 // SetSASLConfig configures SASL for kafka (sarama)
 func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
+	k.log = models.NewLogger("common", "kafka", "sasl_auth")
+
 	username, err := k.SASLUsername.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
@@ -85,11 +91,14 @@ func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
 
 // Token does nothing smart, it just grabs a hard-coded token from config.
 func (k *SASLAuth) Token() (*sarama.AccessToken, error) {
+	k.log.Debug("Token() called")
 	token, err := k.SASLAccessToken.Get()
 	if err != nil {
+		k.log.Debug("Token() errored")
 		return nil, fmt.Errorf("getting token failed: %w", err)
 	}
 	defer token.Destroy()
+	k.log.Debug("Token() returning")
 	return &sarama.AccessToken{
 		Token:      token.String(),
 		Extensions: k.SASLExtentions,

@@ -218,7 +218,9 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		msgs = append(msgs, m)
 	}
 
+	k.Log.Debugf("Sending %d metrics to kafka", len(msgs))
 	err := k.producer.SendMessages(msgs)
+	k.Log.Debugf("Sent %d metrics to kafka", len(msgs))
 	if err != nil {
 		// We could have many errors, return only the first encountered.
 		var errs sarama.ProducerErrors
