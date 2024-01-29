@@ -3,6 +3,7 @@ package snmp_lookup
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,12 +11,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
 
 	"github.com/gosnmp/gosnmp"
-	"github.com/hashicorp/golang-lru/v2/expirable"
 )
 
 //go:embed sample.conf
@@ -30,8 +29,6 @@ type snmpConnection interface {
 	Reconnect() error
 }
 
-type getConnectionFunc func(metric telegraf.Metric) (snmpConnection, error)
-type signalMap map[string]chan struct{}
 type tagMapRows map[string]map[string]string
 type tagMap struct {
 	created time.Time
@@ -52,22 +49,22 @@ type Lookup struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	cache    *expirable.LRU[string, tagMap]
-	parallel parallel.Parallel
-	sigs     signalMap
-	lock     sync.Mutex
-	table    si.Table
-
-	getConnectionFunc getConnectionFunc
-
 	translator si.Translator
+	table      si.Table
+
+	acc               telegraf.Accumulator
+	cache             *store
+	backlog           *backlog
+	getConnectionFunc func(string) (snmpConnection, error)
+
+	sync.Mutex
 }
 
 const (
 	defaultCacheSize       = 100
 	defaultCacheTTL        = config.Duration(8 * time.Hour)
 	defaultParallelLookups = 100
-	minRetry               = 5 * time.Minute
+	minTimeBetweenUpdates  = 5 * time.Minute
 	orderedQueueSize       = 10_000
 )
 
@@ -75,22 +72,18 @@ func (*Lookup) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *Lookup) Init() (err error) {
-	l.sigs = make(signalMap)
-	l.getConnectionFunc = l.getConnection
-
-	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
+func (l *Lookup) Init() error {
+	// Check the SNMP configuration
+	if _, err := snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
-	switch l.Translator {
-	case "", "gosmi":
-		if l.translator, err = si.NewGosmiTranslator(l.Path, l.Log); err != nil {
-			return fmt.Errorf("loading translator: %w", err)
-		}
-	default:
-		return fmt.Errorf("invalid translator %q", l.Translator)
+	// Setup the GOSMI translator
+	translator, err := si.NewGosmiTranslator(l.Path, l.Log)
+	if err != nil {
+		return fmt.Errorf("loading translator: %w", err)
 	}
+	l.translator = translator
 
 	// Initialize the table
 	l.table.Name = "lookup"
@@ -101,160 +94,135 @@ func (l *Lookup) Init() (err error) {
 		l.table.Fields[i] = tag
 	}
 
+	// Preparing connection-builder function
+	l.getConnectionFunc = l.getConnection
+
 	return l.table.Init(l.translator)
 }
 
 func (l *Lookup) Start(acc telegraf.Accumulator) error {
-	l.cache = expirable.NewLRU[string, tagMap](l.CacheSize, nil, time.Duration(l.CacheTTL))
-	if l.Ordered {
-		l.parallel = parallel.NewOrdered(acc, l.addAsync, orderedQueueSize, l.ParallelLookups)
-	} else {
-		l.parallel = parallel.NewUnordered(acc, l.addAsync, l.ParallelLookups)
-	}
-	return nil
-}
+	l.acc = acc
+	l.backlog = newBacklog(acc, l.Log, l.Ordered)
 
-func (l *Lookup) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
-	l.parallel.Enqueue(metric)
-	return nil
-}
-
-func (l *Lookup) addAsync(metric telegraf.Metric) []telegraf.Metric {
-	if !metric.HasTag(l.AgentTag) {
-		l.Log.Warn("Agent tag missing")
-		return []telegraf.Metric{metric}
-	}
-
-	index, ok := metric.GetTag(l.IndexTag)
-	if !ok {
-		l.Log.Warn("Index tag missing")
-		return []telegraf.Metric{metric}
-	}
-
-	gs, err := l.getConnectionFunc(metric)
-	if err != nil {
-		l.Log.Errorf("Could not prepare connection: %v", err)
-		return []telegraf.Metric{metric}
-	}
-
-	// Prepare cache
-	if err := l.prepareCache(gs, index); err != nil {
-		l.Log.Warnf("Could not prepare cache for %q: %v", gs.Host(), err)
-		return []telegraf.Metric{metric}
-	}
-
-	// Load from cache
-	tagMap, inCache := l.cache.Get(gs.Host())
-	tags, indexExists := tagMap.rows[index]
-	if inCache && indexExists {
-		for key, value := range tags {
-			metric.AddTag(key, value)
-		}
-	} else {
-		l.Log.Warnf("Could not find index %q on agent %q", index, gs.Host())
-	}
-
-	return []telegraf.Metric{metric}
-}
-
-// prepareCache prepares the cache if needed (index does not exist yet, or agent not yet cached)
-func (l *Lookup) prepareCache(gs snmpConnection, index string) error {
-	agent := gs.Host()
-
-	// Check cache
-	l.lock.Lock()
-	tagMap, inCache := l.cache.Peek(agent)
-	_, indexExists := tagMap.rows[index]
-
-	// Cache miss or non existing index and not recently refreshed the table
-	if !inCache || (!indexExists && time.Since(tagMap.created) > minRetry) {
-		// Check if another process is alreay loading the table, wait until done if so
-		if done, busy := l.sigs[agent]; busy {
-			l.lock.Unlock()
-			<-done
-		} else {
-			// No other process is already loading the table, let others know by creating a channel
-			l.sigs[agent] = make(chan struct{})
-			l.lock.Unlock()
-
-			if err := gs.Reconnect(); err != nil {
-				l.signalAgentReady(agent)
-				return fmt.Errorf("could not connect: %w", err)
-			}
-
-			// build the table for the configured tags
-			if err := l.loadTagMap(gs); err != nil {
-				l.signalAgentReady(agent)
-				return fmt.Errorf("could not load table: %w", err)
-			}
-
-			// Done loading, inform other processes
-			l.signalAgentReady(agent)
-		}
-	} else {
-		l.lock.Unlock()
-	}
-
-	return nil
-}
-
-func (l *Lookup) signalAgentReady(agent string) {
-	l.lock.Lock()
-	close(l.sigs[agent])
-	delete(l.sigs, agent)
-	l.lock.Unlock()
-}
-
-// getConnection prepares a snmpConnection from the given metric tags (if present)
-func (l *Lookup) getConnection(metric telegraf.Metric) (snmpConnection, error) {
-	gs, err := snmp.NewWrapper(l.ClientConfig)
-	if err != nil {
-		return gs, fmt.Errorf("parsing SNMP client config: %w", err)
-	}
-
-	if agent, ok := metric.GetTag(l.AgentTag); ok {
-		if err = gs.SetAgent(agent); err != nil {
-			return gs, fmt.Errorf("parsing agent tag: %w", err)
-		}
-	}
-
-	if err := gs.Connect(); err != nil {
-		return gs, fmt.Errorf("connecting failed: %w", err)
-	}
-
-	return gs, nil
-}
-
-// loadTagMap gathers the configured table from the snmp agent and
-// stores all tags into the cache
-func (l *Lookup) loadTagMap(gs snmpConnection) error {
-	agent := gs.Host()
-	l.Log.Debugf("Building lookup table for %q", agent)
-	table, err := l.table.Build(gs, true, l.translator)
-	if err != nil {
-		return err
-	}
-
-	tagMap := tagMap{
-		created: table.Time,
-		rows:    make(tagMapRows, len(table.Rows)),
-	}
-
-	// Copy tags for all rows in the tagMap
-	for _, row := range table.Rows {
-		index := row.Tags["index"]
-		delete(row.Tags, "index")
-		tagMap.rows[index] = row.Tags
-	}
-
-	// Add the found tags for all indexes on this agent to the cache
-	l.cache.Add(agent, tagMap)
+	l.cache = newStore(l.CacheSize, time.Duration(l.CacheTTL), l.ParallelLookups)
+	l.cache.update = l.updateAgent
+	l.cache.notify = l.backlog.resolve
 
 	return nil
 }
 
 func (l *Lookup) Stop() {
-	l.parallel.Stop()
+	// Stop resolving
+	l.cache.destroy()
+	l.cache.purge()
+
+	// Adding unresolved metrics to avoid data loss
+	if n := l.backlog.destroy(); n > 0 {
+		l.Log.Warnf("Added %d unresolved metrics due to processor stop!", n)
+	}
+}
+
+func (l *Lookup) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
+	agent, found := m.GetTag(l.AgentTag)
+	if !found {
+		l.Log.Warn("Agent tag missing")
+		l.acc.AddMetric(m)
+		return nil
+	}
+
+	index, found := m.GetTag(l.IndexTag)
+	if !found {
+		l.Log.Warn("Index tag missing")
+		l.acc.AddMetric(m)
+		return nil
+	}
+
+	// Try to lookup the information from cache. An error ErrNotYetAvailable
+	// indicates that the information is not yet cached, but the case will take
+	// care to give back the information later via the `notify` callback.
+	tags, err := l.cache.lookup(agent, index)
+	if err != nil {
+		if errors.Is(err, ErrNotYetAvailable) {
+			l.Log.Debugf("Adding metric to backlog as data not yet available...")
+			l.backlog.push(agent, index, m)
+			return nil
+		}
+		l.Log.Errorf("Looking up %q (%s) failed: %v", agent, index, err)
+		l.acc.AddMetric(m)
+		return nil
+	}
+
+	// If resolving the metric from cache succeeded and we are good to directly
+	// release the metrics, we will do so. For ordered cases it might be
+	// necessary to add the metric to the backlog despite success...
+	if l.Ordered && !l.backlog.empty() {
+		// Add metric to backlog for later resolving
+		l.Log.Debugf("Adding metric to backlog due to ordering constraints...")
+		l.backlog.push(agent, index, m)
+		return nil
+	}
+
+	l.Log.Debugf("Directly adding metric...")
+	for key, value := range tags {
+		m.AddTag(key, value)
+	}
+	l.acc.AddMetric(m)
+
+	return nil
+}
+
+// Default update function
+func (l *Lookup) updateAgent(agent string) *tagMap {
+	// Initialize connection to agent
+	l.Log.Debugf("Connecting to %q", agent)
+	conn, err := l.getConnectionFunc(agent)
+	if err != nil {
+		l.Log.Errorf("Getting connection for %q failed: %v", agent, err)
+		return nil
+	}
+	if err := conn.Reconnect(); err != nil {
+		l.Log.Errorf("Connecting to %q failed:%v", agent, err)
+		return nil
+	}
+
+	// Query table including translation
+	l.Log.Debugf("Building lookup table for %q", agent)
+	table, err := l.table.Build(conn, true, l.translator)
+	if err != nil {
+		l.Log.Errorf("Building table for %q failed: %v", agent, err)
+		return nil
+	}
+
+	// Copy tags for all rows
+	l.Log.Debugf("Got table for %q: %v", agent, table.Rows)
+	tm := &tagMap{
+		created: table.Time,
+		rows:    make(tagMapRows, len(table.Rows)),
+	}
+	for _, row := range table.Rows {
+		index := row.Tags["index"]
+		delete(row.Tags, "index")
+		tm.rows[index] = row.Tags
+	}
+
+	return tm
+}
+
+func (l *Lookup) getConnection(agent string) (snmpConnection, error) {
+	conn, err := snmp.NewWrapper(l.ClientConfig)
+	if err != nil {
+		return conn, fmt.Errorf("parsing SNMP client config: %w", err)
+	}
+
+	if err := conn.SetAgent(agent); err != nil {
+		return conn, fmt.Errorf("parsing agent tag: %w", err)
+	}
+
+	if err := conn.Connect(); err != nil {
+		return conn, fmt.Errorf("connecting failed: %w", err)
+	}
+
+	return conn, nil
 }
 
 func init() {

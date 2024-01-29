@@ -2,6 +2,7 @@ package snmp_lookup
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	"github.com/influxdata/telegraf/plugins/common/parallel"
+	"github.com/influxdata/telegraf/metric"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
@@ -116,19 +117,12 @@ func TestInit(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	acc := &testutil.NopAccumulator{}
-	p := Lookup{}
-	require.NoError(t, p.Init())
-	defer p.Stop()
+	plugin := Lookup{}
+	require.NoError(t, plugin.Init())
 
-	p.Ordered = true
-	require.NoError(t, p.Start(acc))
-	require.IsType(t, &parallel.Ordered{}, p.parallel)
-	p.Stop()
-
-	p.Ordered = false
-	require.NoError(t, p.Start(acc))
-	require.IsType(t, &parallel.Unordered{}, p.parallel)
+	var acc testutil.NopAccumulator
+	require.NoError(t, plugin.Start(&acc))
+	plugin.Stop()
 }
 
 func TestGetConnection(t *testing.T) {
@@ -174,7 +168,9 @@ func TestGetConnection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := p.getConnection(tt.input)
+			agent, found := tt.input.GetTag(p.AgentTag)
+			require.True(t, found)
+			_, err := p.getConnection(agent)
 
 			if tt.expected == "" {
 				require.NoError(t, err)
@@ -186,7 +182,6 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestLoadTagMap(t *testing.T) {
-	acc := &testutil.NopAccumulator{}
 	p := Lookup{
 		ClientConfig: *snmp.DefaultClientConfig(),
 		CacheSize:    defaultCacheSize,
@@ -199,6 +194,7 @@ func TestLoadTagMap(t *testing.T) {
 			},
 		},
 	}
+	require.NoError(t, p.Init())
 
 	tsc := &testSNMPConnection{
 		values: map[string]string{
@@ -206,19 +202,19 @@ func TestLoadTagMap(t *testing.T) {
 			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
 		},
 	}
+	p.getConnectionFunc = func(string) (snmpConnection, error) {
+		return tsc, nil
+	}
 
-	require.NoError(t, p.Init())
-	require.NoError(t, p.Start(acc))
+	var acc testutil.NopAccumulator
+	require.NoError(t, p.Start(&acc))
 	defer p.Stop()
 
-	require.NoError(t, p.loadTagMap(tsc))
-
-	tagMap, ok := p.cache.Get("127.0.0.1")
-	require.True(t, ok)
+	tm := p.updateAgent("foo")
 	require.Equal(t, tagMapRows{
 		"0": {"ifName": "eth0"},
 		"1": {"ifName": "eth1"},
-	}, tagMap.rows)
+	}, tm.rows)
 	require.Equal(t, 1, tsc.calls)
 }
 
@@ -240,7 +236,7 @@ func TestAddAsync(t *testing.T) {
 				map[string]string{
 					"source": "127.0.0.1",
 				},
-				map[string]interface{}{},
+				map[string]interface{}{"value": 42},
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
@@ -249,7 +245,7 @@ func TestAddAsync(t *testing.T) {
 					map[string]string{
 						"source": "127.0.0.1",
 					},
-					map[string]interface{}{},
+					map[string]interface{}{"value": 42},
 					time.Unix(0, 0),
 				),
 			},
@@ -262,7 +258,7 @@ func TestAddAsync(t *testing.T) {
 					"source": "127.0.0.1",
 					"index":  "123",
 				},
-				map[string]interface{}{},
+				map[string]interface{}{"value": 42},
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
@@ -273,7 +269,7 @@ func TestAddAsync(t *testing.T) {
 						"index":  "123",
 						"ifName": "eth123",
 					},
-					map[string]interface{}{},
+					map[string]interface{}{"value": 42},
 					time.Unix(0, 0),
 				),
 			},
@@ -286,7 +282,7 @@ func TestAddAsync(t *testing.T) {
 					"source": "127.0.0.1",
 					"index":  "999",
 				},
-				map[string]interface{}{},
+				map[string]interface{}{"value": 42},
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
@@ -296,40 +292,47 @@ func TestAddAsync(t *testing.T) {
 						"source": "127.0.0.1",
 						"index":  "999",
 					},
-					map[string]interface{}{},
+					map[string]interface{}{"value": 42},
 					time.Unix(0, 0),
 				),
 			},
 		},
 	}
 
-	acc := &testutil.NopAccumulator{}
-	p := Lookup{
-		AgentTag:        "source",
-		IndexTag:        "index",
-		ClientConfig:    *snmp.DefaultClientConfig(),
-		CacheSize:       defaultCacheSize,
-		CacheTTL:        defaultCacheTTL,
-		ParallelLookups: defaultParallelLookups,
-		Log:             testutil.Logger{},
-	}
-
-	require.NoError(t, p.Init())
-	require.NoError(t, p.Start(acc))
-	defer p.Stop()
-
-	// Add sample data
-	p.cache.Add("127.0.0.1", tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testutil.RequireMetricsEqual(t, tt.expected, p.addAsync(tt.input))
+			plugin := Lookup{
+				AgentTag:        "source",
+				IndexTag:        "index",
+				ClientConfig:    *snmp.DefaultClientConfig(),
+				CacheSize:       defaultCacheSize,
+				CacheTTL:        defaultCacheTTL,
+				ParallelLookups: defaultParallelLookups,
+				Log:             testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Sneak in cached  data
+			plugin.cache.cache.Add("127.0.0.1", &tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
+
+			// Do the testing
+			require.NoError(t, plugin.Add(tt.input, nil))
+			require.Eventually(t, func() bool {
+				return int(acc.NMetrics()) >= len(tt.expected)
+			}, 3*time.Second, 100*time.Millisecond)
+			plugin.Stop()
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
 	}
 }
 
 func TestAdd(t *testing.T) {
-	acc := &testutil.Accumulator{}
 	p := Lookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
@@ -358,53 +361,87 @@ func TestAdd(t *testing.T) {
 	)
 
 	require.NoError(t, p.Init())
-	require.NoError(t, p.Start(acc))
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
 	defer p.Stop()
 
-	p.getConnectionFunc = func(metric telegraf.Metric) (snmpConnection, error) {
+	p.getConnectionFunc = func(string) (snmpConnection, error) {
 		return tsc, nil
 	}
 
 	// Add different metrics
 	m.AddTag("index", "0")
-	require.NoError(t, p.Add(m.Copy(), acc))
+	require.NoError(t, p.Add(m.Copy(), nil))
 	m.AddTag("index", "1")
-	require.NoError(t, p.Add(m.Copy(), acc))
+	require.NoError(t, p.Add(m.Copy(), nil))
 	m.AddTag("index", "123")
-	require.NoError(t, p.Add(m.Copy(), acc))
+	require.NoError(t, p.Add(m.Copy(), nil))
 
-	require.Eventually(t, func() bool {
-		return acc.HasPoint(m.Name(), map[string]string{
-			"source": "127.0.0.1",
-			"index":  "0",
-			"ifName": "eth0",
-		}, "value", 1.0) &&
-			acc.HasPoint(m.Name(), map[string]string{
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "0",
+				"ifName": "eth0",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test",
+			map[string]string{
 				"source": "127.0.0.1",
 				"index":  "1",
 				"ifName": "eth1",
-			}, "value", 1.0) &&
-			acc.HasPoint(m.Name(), map[string]string{
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test",
+			map[string]string{
 				"source": "127.0.0.1",
 				"index":  "123",
-			}, "value", 1.0)
-	}, time.Second, time.Millisecond)
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+	}
+
+	require.Eventually(t, func() bool {
+		fmt.Println("metric:", acc.NMetrics())
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
 	require.Equal(t, 1, tsc.calls)
 
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+
 	// clear cache to simulate expiry
-	p.cache.Purge()
+	p.cache.purge()
 	acc.ClearMetrics()
 
 	// Add new metric
 	m.AddTag("index", "0")
-	require.NoError(t, p.Add(m, acc))
+	require.NoError(t, p.Add(m, nil))
+
+	expected = []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "0",
+				"ifName": "eth0",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+	}
 
 	require.Eventually(t, func() bool {
-		return acc.HasPoint(m.Name(), map[string]string{
-			"source": "127.0.0.1",
-			"index":  "0",
-			"ifName": "eth0",
-		}, "value", 1.0)
-	}, time.Second, time.Millisecond)
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
 	require.Equal(t, 2, tsc.calls)
 }
