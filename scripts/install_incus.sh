@@ -16,5 +16,14 @@ EOF'
 
 sudo apt-get update && sudo apt-get install --yes incus
 
-sudo incus admin init --auto
+# On CircleCI instances do not have IPv6 enabled, force IPv4 usage only.
+cat <<EOF | sudo incus admin init --preseed
+networks:
+- name: incusbr0
+  type: bridge
+  config:
+    ipv4.address: auto
+    ipv6.address: none
+EOF
+
 sudo usermod -a -G incus-admin "$(whoami)"
