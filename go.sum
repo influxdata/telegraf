@@ -1410,8 +1410,8 @@ github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/z
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
-github.com/gosnmp/gosnmp v1.36.1 h1:LaTyGWIM8Z91NmCUELJi45d+BtOafI8U82nVUGI1P+w=
-github.com/gosnmp/gosnmp v1.36.1/go.mod h1:iLcZxN2MxKhH0jPQDVMZaSNypw1ykqVi27O79koQj6w=
+github.com/gosnmp/gosnmp v1.37.0 h1:/Tf8D3b9wrnNuf/SfbvO+44mPrjVphBhRtcGg22V07Y=
+github.com/gosnmp/gosnmp v1.37.0/go.mod h1:GDH9vNqpsD7f2HvZhKs5dlqSEcAS6s6Qp099oZRCR+M=
 github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9 h1:Q7e9kXS3sRbTjsNDKazbcbDSGAKjFdk096M3qYbwNpE=
 github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9/go.mod h1:qVX2WhsI5xyAoM6I/MV1bXSKBPdLAjp7pCvieO/S0AY=
 github.com/grid-x/serial v0.0.0-20191104121038-e24bc9bf6f08/go.mod h1:kdOd86/VGFWRrtkNwf1MPk0u1gIjc4Y7R2j7nhwc7Rk=
