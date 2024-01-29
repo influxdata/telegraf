@@ -105,7 +105,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - run: 'make check'
+      - run: 'GOOS=darwin make check'
       - run:
           name: "Install golangci-lint"
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
@@ -118,7 +118,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - run: 'make check'
+      - run: 'GOOS=windows make check'
       - run:
           name: "Install golangci-lint"
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
