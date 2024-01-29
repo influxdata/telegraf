@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	fbchrony "github.com/facebook/time/ntp/chrony"
@@ -144,7 +143,7 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 
 	tags := map[string]string{
 		"leap_status":  leapStatus,
-		"reference_id": strings.ToUpper(strconv.FormatUint(uint64(tracking.RefID), 16)),
+		"reference_id": fbchrony.RefidAsHEX(tracking.RefID),
 		"stratum":      strconv.FormatUint(uint64(tracking.Stratum), 10),
 	}
 	fields := map[string]interface{}{
