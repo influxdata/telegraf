@@ -445,3 +445,149 @@ func TestAdd(t *testing.T) {
 	}, 3*time.Second, 100*time.Millisecond)
 	require.Equal(t, 2, tsc.calls)
 }
+
+func TestOrdered(t *testing.T) {
+	plugin := Lookup{
+		AgentTag:        "source",
+		IndexTag:        "index",
+		CacheSize:       defaultCacheSize,
+		CacheTTL:        defaultCacheTTL,
+		ParallelLookups: defaultParallelLookups,
+		Ordered:         true,
+		Log:             testutil.Logger{},
+		Tags: []si.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the connection factory
+	tsc := &testSNMPConnection{
+		values: map[string]string{
+			".1.3.6.1.2.1.31.1.1.1.1.0": "eth0",
+			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
+		},
+	}
+	plugin.getConnectionFunc = func(agent string) (snmpConnection, error) {
+		switch agent {
+		case "127.0.0.1":
+		case "a.mycompany.com":
+			time.Sleep(50 * time.Millisecond)
+		case "b.yourcompany.com":
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		return tsc, nil
+	}
+
+	// Setup the input data
+	input := []telegraf.Metric{
+		metric.New(
+			"test1",
+			map[string]string{"source": "b.yourcompany.com"},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test2",
+			map[string]string{"source": "a.mycompany.com"},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test3",
+			map[string]string{"source": "127.0.0.1"},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Start the processor and feed data
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Add different metrics
+	for _, m := range input {
+		m.AddTag("index", "0")
+		require.NoError(t, plugin.Add(m.Copy(), nil))
+		m.AddTag("index", "1")
+		require.NoError(t, plugin.Add(m.Copy(), nil))
+	}
+
+	// Setup expectations
+	expected := []telegraf.Metric{
+		metric.New(
+			"test1",
+			map[string]string{
+				"source": "b.yourcompany.com",
+				"index":  "0",
+				"ifName": "eth0",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test1",
+			map[string]string{
+				"source": "b.yourcompany.com",
+				"index":  "1",
+				"ifName": "eth1",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test2",
+			map[string]string{
+				"source": "a.mycompany.com",
+				"index":  "0",
+				"ifName": "eth0",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test2",
+			map[string]string{
+				"source": "a.mycompany.com",
+				"index":  "1",
+				"ifName": "eth1",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test3",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "0",
+				"ifName": "eth0",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test3",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "1",
+				"ifName": "eth1",
+			},
+			map[string]interface{}{"value": 1.0},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Check the result
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+	require.Equal(t, len(input), tsc.calls)
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
