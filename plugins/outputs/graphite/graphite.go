@@ -119,7 +119,7 @@ func (g *Graphite) Connect() error {
 
 			var port int
 			if sPort != "" {
-				p, err := strconv.ParseInt(sPort, 10, 16)
+				p, err := strconv.ParseUint(sPort, 10, 16)
 				if err != nil {
 					return fmt.Errorf("invalid port: %w", err)
 				}
