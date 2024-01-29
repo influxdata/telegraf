@@ -840,6 +840,9 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		// Sometimes Config is unknown and returns a nil pointer
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
+			if r.Guest.GuestId != "" {
+				guest = cleanGuestID(r.Guest.GuestId)
+			}
 			uuid = r.Config.Uuid
 		}
 		cvs := make(map[string]string)
