@@ -215,6 +215,11 @@ func TestRegression(t *testing.T) {
 				require.NoError(t, err)
 			}
 
+			// Remove potential device-tags
+			for i := range actual {
+				actual[i].RemoveTag("device")
+			}
+
 			// Prepare the environment
 			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
 
@@ -233,7 +238,6 @@ func TestRegression(t *testing.T) {
 			}
 
 			expected := acc.GetTelegrafMetrics()
-			testutil.PrintMetrics(acc.GetTelegrafMetrics())
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
