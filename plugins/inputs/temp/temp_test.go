@@ -44,7 +44,7 @@ func TestNameCollisions(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
-	require.Len(t, acc.GetTelegrafMetrics(), 24)
+	require.Len(t, acc.GetTelegrafMetrics(), 8)
 }
 
 func TestCases(t *testing.T) {
