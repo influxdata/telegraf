@@ -96,10 +96,10 @@ jobs:
       - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
       - run:
-          name: "Linux"
-          command: GOGC=20 /go/bin/golangci-lint run --verbose
+          name: "golangci-lint/Linux"
+          command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
   lint-macos:
     executor: telegraf-ci
     steps:
@@ -107,10 +107,10 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
       - run:
-          name: "macOS"
-          command: GOGC=15 GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
+          name: "golangci-lint/macOS"
+          command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
           no_output_timeout: 30m
   lint-windows:
     executor: telegraf-ci
@@ -119,10 +119,10 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
       - run:
-          name: "Windows"
-          command: GOGC=1 GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
+          name: "golangci-lint/Windows"
+          command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
           no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci
