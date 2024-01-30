@@ -319,6 +319,11 @@ func TestReceiveTrap(t *testing.T) {
 						Type:  gosnmp.OctetString,
 						Value: "payload",
 					},
+					{
+						Name:  ".1.2.3.4.6",
+						Type:  gosnmp.OctetString,
+						Value: []byte{0x7, 0xe8, 0x1, 0x4, 0xe, 0x2, 0x19, 0x0, 0x0, 0xe, 0x2},
+					},
 				},
 				Enterprise:   ".1.2.3",
 				AgentAddress: "10.20.30.40",
@@ -332,6 +337,13 @@ func TestReceiveTrap(t *testing.T) {
 					snmp.MibEntry{
 						MibName: "valueMIB",
 						OidText: "valueOID",
+					},
+				},
+				{
+					".1.2.3.4.6",
+					snmp.MibEntry{
+						MibName: "valueMIB",
+						OidText: "valueHexOID",
 					},
 				},
 				{
@@ -357,6 +369,7 @@ func TestReceiveTrap(t *testing.T) {
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
 						"valueOID":          "payload",
+						"valueHexOID":       "07e801040e021900000e02",
 					},
 					fakeTime,
 				),
