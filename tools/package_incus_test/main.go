@@ -13,9 +13,7 @@ var imagesRPM = []string{
 	"fedora/39",
 	"fedora/38",
 	"centos/9-Stream",
-	//"opensuse/15.3", 			// shadow-utils dependency bug see #3833
-	//"opensuse/tumbleweed", 	// shadow-utils dependency bug see #3833
-	//"opensuse/15.5",			// shadow-utils dependency bug see #3833
+	"opensuse/tumbleweed",
 }
 
 var imagesDEB = []string{
