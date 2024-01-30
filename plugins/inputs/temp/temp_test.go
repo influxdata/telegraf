@@ -110,7 +110,7 @@ func TestTemperatureMetricV1(t *testing.T) {
 		),
 	}
 
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys")))
+	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testcases", "general", "sys")))
 
 	plugin := &Temperature{
 		MetricFormat: "v1",
@@ -211,7 +211,7 @@ func TestTemperature(t *testing.T) {
 		),
 	}
 
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys")))
+	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testcases", "general", "sys")))
 	plugin := &Temperature{Log: &testutil.Logger{}}
 	require.NoError(t, plugin.Init())
 
@@ -222,7 +222,7 @@ func TestTemperature(t *testing.T) {
 }
 
 func TestTemperatureNameCollisions(t *testing.T) {
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "with_name", "sys")))
+	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testcases", "with_name", "sys")))
 	plugin := &Temperature{Log: &testutil.Logger{}}
 	require.NoError(t, plugin.Init())
 
@@ -459,7 +459,7 @@ func TestTemperatureWithDeviceTag(t *testing.T) {
 		),
 	}
 
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "with_name", "sys")))
+	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testcases", "with_name", "sys")))
 	plugin := &Temperature{
 		DeviceTag: true,
 		Log:       &testutil.Logger{},
