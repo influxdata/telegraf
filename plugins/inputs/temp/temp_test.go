@@ -17,7 +17,15 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestTemperatureInvaldiMetricFormat(t *testing.T) {
+func TestDefaultMetricFormat(t *testing.T) {
+	plugin := &Temperature{
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.Equal(t, "v2", plugin.MetricFormat)
+}
+
+func TestTemperatureInvalidMetricFormat(t *testing.T) {
 	plugin := &Temperature{
 		MetricFormat: "foo",
 		Log:          &testutil.Logger{},
@@ -123,7 +131,6 @@ func TestCases(t *testing.T) {
 
 			// Check the metric nevertheless as we might get some metrics despite errors.
 			actual := acc.GetTelegrafMetrics()
-			testutil.PrintMetrics(acc.GetTelegrafMetrics())
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
