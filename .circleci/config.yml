@@ -142,7 +142,7 @@ jobs:
           arch: "386"
   test-integration:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     resource_class: large
     steps:
       - checkout
@@ -345,7 +345,7 @@ jobs:
               --acl public-read
   docker-nightly:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     steps:
       - run:
           name: login to quay.io
@@ -371,7 +371,7 @@ jobs:
             docker push quay.io/influxdb/telegraf-nightly:alpine
   amd64-package-test-nightly:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     steps:
       - checkout
       - attach_workspace:
