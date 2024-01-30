@@ -1,0 +1,8 @@
+temp,sensor=nvme_composite temp=32.85
+temp,sensor=nvme_sensor_1 temp=32.85
+temp,sensor=nvme_sensor_2 temp=36.85
+temp,sensor=nvme_composite temp=35.85
+temp,sensor=nvme_sensor_1 temp=35.85
+temp,sensor=nvme_sensor_2 temp=37.85
+temp,sensor=k10temp_tctl temp=31.875
+temp,sensor=k10temp_tccd1 temp=30.75
