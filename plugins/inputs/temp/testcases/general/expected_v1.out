@@ -1,5 +1,5 @@
 temp,sensor=nvme_composite_input temp=35.85
-temp,sensor=nvme_composite_alarm active=false
+temp,sensor=nvme_composite_alarm temp=0
 temp,sensor=nvme_composite_crit temp=84.85
 temp,sensor=nvme_composite_max temp=81.85
 temp,sensor=nvme_composite_min temp=-273.15

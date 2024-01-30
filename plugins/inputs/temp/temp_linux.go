@@ -64,13 +64,9 @@ func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 		)
 
 		for measurement, value := range temp.Additional {
-			fieldname := "temp"
-			if measurement == "alarm" {
-				fieldname = "active"
-			}
 			acc.AddFields(
 				"temp",
-				map[string]interface{}{fieldname: value},
+				map[string]interface{}{"temp": value},
 				t.getTagsForTemperature(temp, "_"+measurement),
 			)
 		}
@@ -144,15 +140,6 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 			temp.Temperature = v / scalingFactor
 		}
 
-		// Alarm (optional)
-		fn = filepath.Join(path, prefix+"_alarm")
-		buf, err = os.ReadFile(fn)
-		if err == nil {
-			if a, err := strconv.ParseBool(strings.TrimSpace(string(buf))); err == nil {
-				temp.Additional["alarm"] = a
-			}
-		}
-
 		// Read all possible values of the sensor
 		matches, err := filepath.Glob(filepath.Join(path, prefix+"_*"))
 		if err != nil {
@@ -172,7 +159,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 
 			// Skip already added values
 			switch measurement {
-			case "label", "input", "alarm":
+			case "label", "input":
 				continue
 			}
 
