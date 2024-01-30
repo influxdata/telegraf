@@ -244,25 +244,26 @@ func TestRegression(t *testing.T) {
 }
 
 func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
-	var temperatures []host.TemperatureStat
 	files, err := filepath.Glob(syspath + "/class/hwmon/hwmon*/temp*_*")
 	if err != nil {
-		return temperatures, err
+		return nil, err
 	}
 	if len(files) == 0 {
 		// CentOS has an intermediate /device directory:
 		// https://github.com/giampaolo/psutil/issues/971
 		files, err = filepath.Glob(syspath + "/class/hwmon/hwmon*/device/temp*_*")
 		if err != nil {
-			return temperatures, err
+			return nil, err
 		}
 	}
 
 	if len(files) == 0 { // handle distributions without hwmon, like raspbian #391, parse legacy thermal_zone files
 		files, err = filepath.Glob(syspath + "/class/thermal/thermal_zone*/")
 		if err != nil {
-			return temperatures, err
+			return nil, err
 		}
+
+		temperatures := make([]host.TemperatureStat, 0, len(files))
 		for _, file := range files {
 			// Get the name of the temperature you are reading
 			name, err := os.ReadFile(filepath.Join(file, "type"))
@@ -296,6 +297,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 	// power/            temp1_label       temp2_label       temp3_label       temp4_label       temp5_label       temp6_label       temp7_label
 	// subsystem/        temp1_max         temp2_max         temp3_max         temp4_max         temp5_max         temp6_max         temp7_max
 	// temp1_crit        temp2_crit        temp3_crit        temp4_crit        temp5_crit        temp6_crit        temp7_crit        uevent
+	temperatures := make([]host.TemperatureStat, 0, len(files))
 	for _, file := range files {
 		filename := strings.Split(filepath.Base(file), "_")
 		if filename[1] == "label" {
@@ -330,7 +332,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 			continue
 		}
 
-		tempName := strings.TrimSpace(strings.ToLower(string(strings.Join(filename[1:], ""))))
+		tempName := strings.TrimSpace(strings.ToLower(strings.Join(filename[1:], "")))
 		temperatures = append(temperatures, host.TemperatureStat{
 			SensorKey:   fmt.Sprintf("%s_%s%s", strings.TrimSpace(string(name)), label, tempName),
 			Temperature: temperature / 1000.0,
