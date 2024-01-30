@@ -211,3 +211,94 @@ func TestNoNameSerialization(t *testing.T) {
 	e := &Entry{}
 	require.ErrorContains(t, e.fillDefaults(), "missing name")
 }
+
+func BenchmarkSerialization(b *testing.B) {
+	entries := []struct {
+		entry *Entry
+		input interface{}
+	}{
+		{
+			entry: &Entry{Name: "test", DataFormat: "int32"},
+			input: 1,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "int32"},
+			input: -1,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "uint8"},
+			input: uint(1),
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "string", StringLength: 4},
+			input: "test",
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "string", StringLength: 5, StringTerminator: "null"},
+			input: "test",
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "string", StringLength: 5, StringTerminator: "0x01"},
+			input: "test",
+		},
+		{
+			entry: &Entry{ReadFrom: "time", DataFormat: "uint64"},
+			input: time.Date(2024, time.January, 6, 19, 44, 10, 0, time.UTC),
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float32"},
+			input: float32(3.1415),
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float64"},
+			input: float32(3.1415),
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float64"},
+			input: 3.1415,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float32"},
+			input: 3.1415,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "int64"},
+			input: 3.1415,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "uint8"},
+			input: 3.1415,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float32"},
+			input: uint(1),
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float64"},
+			input: uint(1),
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float32"},
+			input: -101,
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "float32"},
+			input: "-101.25",
+		},
+		{
+			entry: &Entry{Name: "test", DataFormat: "int32"},
+			input: "1",
+		},
+	}
+
+	for _, tc := range entries {
+		require.NoError(b, tc.entry.fillDefaults())
+	}
+
+	for i := 0; i < b.N; i++ {
+		for _, tc := range entries {
+			_, err := tc.entry.serializeValue(tc.input, binary.BigEndian)
+			require.NoError(b, err)
+		}
+	}
+}
