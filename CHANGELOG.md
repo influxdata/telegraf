@@ -1,6 +1,38 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.29.3 [2024-01-29]
+
+### Bugfixes
+
+- [#14627](https://github.com/influxdata/telegraf/pull/14627) `common.encoding` Remove locally-defined errors and use upstream ones
+- [#14553](https://github.com/influxdata/telegraf/pull/14553) `inputs.gnmi` Refactor alias handling to prevent clipping
+- [#14575](https://github.com/influxdata/telegraf/pull/14575) `inputs.temp` Recover pre-v1.22.4 temperature sensor readings
+- [#14526](https://github.com/influxdata/telegraf/pull/14526) `inputs.win_perf_counters` Check errors post-collection for skip
+- [#14570](https://github.com/influxdata/telegraf/pull/14570) `inputs.win_perf_counters` Ignore PdhCstatusNoInstance as well
+- [#14519](https://github.com/influxdata/telegraf/pull/14519) `outputs.iotdb` Handle paths that contain illegal characters
+- [#14604](https://github.com/influxdata/telegraf/pull/14604) `outputs.loki` Do not close body before reading it
+- [#14582](https://github.com/influxdata/telegraf/pull/14582) `outputs.mqtt` Preserve leading slash in topic
+
+### Dependency Updates
+
+- [#14578](https://github.com/influxdata/telegraf/pull/14578) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.29.5 to 1.31.0
+- [#14576](https://github.com/influxdata/telegraf/pull/14576) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.26.5 to 1.26.7
+- [#14577](https://github.com/influxdata/telegraf/pull/14577) `deps` Bump github.com/clarify/clarify-go from 0.2.4 to 0.3.1
+- [#14607](https://github.com/influxdata/telegraf/pull/14607) `deps` Bump github.com/docker/docker from 24.0.7+incompatible to 25.0.0+incompatible
+- [#14545](https://github.com/influxdata/telegraf/pull/14545) `deps` Bump github.com/docker/go-connections from 0.4.0 to 0.5.0
+- [#14609](https://github.com/influxdata/telegraf/pull/14609) `deps` Bump github.com/fatih/color from 1.15.0 to 1.16.0
+- [#14546](https://github.com/influxdata/telegraf/pull/14546) `deps` Bump github.com/gorilla/mux from 1.8.0 to 1.8.1
+- [#14562](https://github.com/influxdata/telegraf/pull/14562) `deps` Bump github.com/intel/powertelemetry from 1.0.0 to 1.0.1
+- [#14611](https://github.com/influxdata/telegraf/pull/14611) `deps` Bump github.com/nats-io/nats.go from 1.31.0 to 1.32.0
+- [#14544](https://github.com/influxdata/telegraf/pull/14544) `deps` Bump github.com/prometheus/common from 0.44.0 to 0.45.0
+- [#14608](https://github.com/influxdata/telegraf/pull/14608) `deps` Bump github.com/testcontainers/testcontainers-go from 0.26.0 to 0.27.0
+- [#14573](https://github.com/influxdata/telegraf/pull/14573) `deps` Bump github.com/vapourismo/knx-go from v0.0.0-20220829185957-fb5458a5389d to 20240107135439-816b70397a00
+- [#14574](https://github.com/influxdata/telegraf/pull/14574) `deps` Bump go.opentelemetry.io/collector/pdata from 1.0.0-rcv0016 to 1.0.1
+- [#14541](https://github.com/influxdata/telegraf/pull/14541) `deps` Bump go.starlark.net from go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd to v0.0.0-20231121155337-90ade8b19d09
+- [#14543](https://github.com/influxdata/telegraf/pull/14543) `deps` Bump k8s.io/client-go from 0.28.3 to 0.29.0
+- [#14610](https://github.com/influxdata/telegraf/pull/14610) `deps` Bump modernc.org/sqlite from 1.24.0 to 1.28.0
+
 ## v1.29.2 [2024-01-08]
 
 ### Bugfixes
