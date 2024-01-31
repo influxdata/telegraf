@@ -104,7 +104,7 @@ func TestInit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.plugin.Log = testutil.Logger{}
+			tt.plugin.Log = testutil.Logger{Name: "processors.snmp_lookup"}
 
 			if tt.expected == "" {
 				require.NoError(t, tt.plugin.Init())
@@ -160,7 +160,7 @@ func TestGetConnection(t *testing.T) {
 	p := Lookup{
 		AgentTag:     "source",
 		ClientConfig: *snmp.DefaultClientConfig(),
-		Log:          testutil.Logger{},
+		Log:          testutil.Logger{Name: "processors.snmp_lookup"},
 	}
 
 	require.NoError(t, p.Init())
@@ -185,7 +185,7 @@ func TestUpdateAgent(t *testing.T) {
 		ClientConfig: *snmp.DefaultClientConfig(),
 		CacheSize:    defaultCacheSize,
 		CacheTTL:     defaultCacheTTL,
-		Log:          testutil.Logger{},
+		Log:          testutil.Logger{Name: "processors.snmp_lookup"},
 		Tags: []si.Field{
 			{
 				Name: "ifName",
@@ -307,7 +307,7 @@ func TestAdd(t *testing.T) {
 				CacheSize:       defaultCacheSize,
 				CacheTTL:        defaultCacheTTL,
 				ParallelLookups: defaultParallelLookups,
-				Log:             testutil.Logger{},
+				Log:             testutil.Logger{Name: "processors.snmp_lookup"},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -338,7 +338,7 @@ func TestExpiry(t *testing.T) {
 		CacheSize:       defaultCacheSize,
 		CacheTTL:        defaultCacheTTL,
 		ParallelLookups: defaultParallelLookups,
-		Log:             testutil.Logger{},
+		Log:             testutil.Logger{Name: "processors.snmp_lookup"},
 		Tags: []si.Field{
 			{
 				Name: "ifName",
@@ -451,7 +451,7 @@ func TestOrdered(t *testing.T) {
 		CacheTTL:        defaultCacheTTL,
 		ParallelLookups: defaultParallelLookups,
 		Ordered:         true,
-		Log:             testutil.Logger{},
+		Log:             testutil.Logger{Name: "processors.snmp_lookup"},
 		Tags: []si.Field{
 			{
 				Name: "ifName",
