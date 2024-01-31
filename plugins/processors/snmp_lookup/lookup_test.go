@@ -584,5 +584,5 @@ func TestOrdered(t *testing.T) {
 		return acc.NMetrics() >= uint64(len(expected))
 	}, time.Second, time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-	require.Len(t, input, tsc.calls)
+	require.Equal(t, 3, tsc.calls)
 }
