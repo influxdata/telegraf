@@ -52,7 +52,7 @@ func (b *backlog) destroy() int {
 	return count
 }
 
-func (b *backlog) empty() bool {
+func (b *backlog) isEmpty() bool {
 	b.Lock()
 	defer b.Unlock()
 	return b.elements.Len() == 0

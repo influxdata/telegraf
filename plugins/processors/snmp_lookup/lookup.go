@@ -152,7 +152,7 @@ func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	// If resolving the metric from cache succeeded and we are good to directly
 	// release the metrics, we will do so. For ordered cases it might be
 	// necessary to add the metric to the backlog despite success...
-	if l.Ordered && !l.backlog.empty() {
+	if l.Ordered && !l.backlog.isEmpty() {
 		// Add metric to backlog for later resolving
 		l.Log.Debugf("Adding metric to backlog due to ordering constraints...")
 		l.backlog.push(agent, index, m)
