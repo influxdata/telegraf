@@ -410,7 +410,7 @@ func TestExpiry(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= uint64(len(expected))
+		return int(acc.NMetrics()) >= len(expected)
 	}, time.Second, time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.Equal(t, 1, tsc.calls)
@@ -437,7 +437,7 @@ func TestExpiry(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= uint64(len(expected))
+		return int(acc.NMetrics()) >= len(expected)
 	}, time.Second, time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.Equal(t, 2, tsc.calls)
@@ -581,7 +581,7 @@ func TestOrdered(t *testing.T) {
 
 	// Check the result
 	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= uint64(len(expected))
+		return int(acc.NMetrics()) >= len(expected)
 	}, time.Second, time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.Equal(t, 3, tsc.calls)
