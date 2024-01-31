@@ -30,7 +30,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -146,7 +146,7 @@ func TestIntegrationMQTTv3(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -298,7 +298,7 @@ func TestIntegrationMQTTLayoutNonBatch(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -385,7 +385,7 @@ func TestIntegrationMQTTLayoutBatch(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -475,7 +475,7 @@ func TestIntegrationMQTTLayoutField(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -590,7 +590,7 @@ func TestIntegrationMQTTLayoutHomieV4(t *testing.T) {
 		Image:        "eclipse-mosquitto:2",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForListeningPort(servicePort),
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/mosquitto/config/mosquitto.conf": conf,
 		},
 	}
@@ -907,6 +907,11 @@ func TestGenerateTopicName(t *testing.T) {
 			name:    "ignores empty forward slashes",
 			pattern: "double//slashes//are//ignored",
 			want:    "double/slashes/are/ignored",
+		},
+		{
+			name:    "preserve leading forward slash",
+			pattern: "/this/is/a/topic",
+			want:    "/this/is/a/topic",
 		},
 	}
 	for _, tt := range tests {

@@ -8,8 +8,8 @@ import (
 	"go.starlark.net/lib/json"
 	"go.starlark.net/lib/math"
 	"go.starlark.net/lib/time"
-	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.starlark.net/syntax"
 
 	"github.com/influxdata/telegraf"
 )
@@ -121,7 +121,17 @@ func (s *Common) sourceProgram(builtins starlark.StringDict) (*starlark.Program,
 	if s.Source != "" {
 		src = s.Source
 	}
-	_, program, err := starlark.SourceProgram(s.Script, src, builtins.Has)
+
+	// AllowFloat - obsolete, no effect
+	// AllowNestedDef - always on https://github.com/google/starlark-go/pull/328
+	// AllowLambda - always on https://github.com/google/starlark-go/pull/328
+	options := syntax.FileOptions{
+		Recursion:      true,
+		GlobalReassign: true,
+		Set:            true,
+	}
+
+	_, program, err := starlark.SourceProgramOptions(&options, s.Script, src, builtins.Has)
 	return program, err
 }
 
@@ -170,14 +180,4 @@ func LoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error
 	default:
 		return nil, errors.New("module " + module + " is not available")
 	}
-}
-
-func init() {
-	// https://github.com/bazelbuild/starlark/issues/20
-	resolve.AllowNestedDef = true
-	resolve.AllowLambda = true
-	resolve.AllowFloat = true
-	resolve.AllowSet = true
-	resolve.AllowGlobalReassign = true
-	resolve.AllowRecursion = true
 }

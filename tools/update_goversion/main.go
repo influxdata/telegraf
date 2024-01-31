@@ -150,11 +150,6 @@ func main() {
 			Replace:  fmt.Sprintf("$1:%s", version),
 		},
 		{
-			FileName: ".circleci/config.yml",
-			Regex:    `(default): (\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1: %s", version),
-		},
-		{
 			FileName: ".github/workflows/govulncheck.yml",
 			Regex:    `(go-version-input).*`,
 			Replace:  fmt.Sprintf("$1: %s", version),

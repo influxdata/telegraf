@@ -98,7 +98,7 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 		return responses, nil
 	}
 
-	return nil, fmt.Errorf("resouce group was not found")
+	return nil, fmt.Errorf("resource group was not found")
 }
 
 func (mamdc *mockAzureMetricDefinitionsClient) List(

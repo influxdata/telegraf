@@ -16,9 +16,9 @@
 #  - Deletes the host, type, topic, name and alias tags
 #
 # TODO:
-#   The requirment that a DBIRTH message has to be received before DDATA messages
+#   The requirement that a DBIRTH message has to be received before DDATA messages
 #   can be used creates a significant reliability issue and a debugging mess.
-#   I have to go into the Groov EPIC controller and restart the MQTT client everytime
+#   I have to go into the Groov EPIC controller and restart the MQTT client every time
 #   I restart the telegraf loader.  This has caused many hours of needless frustration.
 #   
 #   I see two possible solutions:

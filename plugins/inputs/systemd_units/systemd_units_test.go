@@ -2,99 +2,83 @@ package systemd_units
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestSystemdUnits(t *testing.T) {
-	tests := []struct {
-		name   string
-		line   string
-		tags   map[string]string
-		fields map[string]interface{}
-		status int
-		err    error
-	}{
-		{
-			name: "example loaded active running",
-			line: "example.service                loaded active running example service description",
-			tags: map[string]string{"name": "example.service", "load": "loaded", "active": "active", "sub": "running"},
-			fields: map[string]interface{}{
-				"load_code":   0,
-				"active_code": 0,
-				"sub_code":    0,
-			},
-		},
-		{
-			name: "example loaded active exited",
-			line: "example.service                loaded active exited  example service description",
-			tags: map[string]string{"name": "example.service", "load": "loaded", "active": "active", "sub": "exited"},
-			fields: map[string]interface{}{
-				"load_code":   0,
-				"active_code": 0,
-				"sub_code":    4,
-			},
-		},
-		{
-			name: "example loaded failed failed",
-			line: "example.service                loaded failed failed  example service description",
-			tags: map[string]string{"name": "example.service", "load": "loaded", "active": "failed", "sub": "failed"},
-			fields: map[string]interface{}{
-				"load_code":   0,
-				"active_code": 3,
-				"sub_code":    12,
-			},
-		},
-		{
-			name: "example not-found inactive dead",
-			line: "example.service                not-found inactive dead  example service description",
-			tags: map[string]string{"name": "example.service", "load": "not-found", "active": "inactive", "sub": "dead"},
-			fields: map[string]interface{}{
-				"load_code":   2,
-				"active_code": 2,
-				"sub_code":    1,
-			},
-		},
-		{
-			name: "example unknown unknown unknown",
-			line: "example.service                unknown unknown unknown  example service description",
-			err:  fmt.Errorf("Error parsing field 'load', value not in map: %s", "unknown"),
-		},
-		{
-			name: "example too few fields",
-			line: "example.service                loaded fai",
-			err:  fmt.Errorf("Error parsing line (expected at least 4 fields): %s", "example.service                loaded fai"),
-		},
-	}
+// Global test definitions and structure.
+// Tests are located within `subcommand_list_test.go` and
+// `subcommand_show_test.go`.
 
+type TestDef struct {
+	Name   string
+	Line   string
+	Lines  []string
+	Tags   map[string]string
+	Fields map[string]interface{}
+	Status int
+	Err    error
+}
+
+func runParserTests(t *testing.T, tests []TestDef, dut *subCommandInfo) {
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			systemdUnits := &SystemdUnits{
-				systemctl: func(timeout config.Duration, unitType string, pattern string) (*bytes.Buffer, error) {
-					return bytes.NewBufferString(tt.line), nil
-				},
-			}
+		t.Run(tt.Name, func(t *testing.T) {
 			acc := new(testutil.Accumulator)
-			err := acc.GatherError(systemdUnits.Gather)
-			if !reflect.DeepEqual(tt.err, err) {
-				t.Errorf("%s: expected error '%#v' got '%#v'", tt.name, tt.err, err)
+
+			var line string
+			if len(tt.Lines) > 0 && len(tt.Line) == 0 {
+				line = strings.Join(tt.Lines, "\n")
+			} else if len(tt.Lines) == 0 && len(tt.Line) > 0 {
+				line = tt.Line
+			} else {
+				t.Error("property Line and Lines set in test definition")
+			}
+
+			dut.parseResult(acc, bytes.NewBufferString(line))
+			err := acc.FirstError()
+
+			if !reflect.DeepEqual(tt.Err, err) {
+				t.Errorf("%s: expected error '%#v' got '%#v'", tt.Name, tt.Err, err)
 			}
 			if len(acc.Metrics) > 0 {
 				m := acc.Metrics[0]
 				if !reflect.DeepEqual(m.Measurement, measurement) {
-					t.Errorf("%s: expected measurement '%#v' got '%#v'\n", tt.name, measurement, m.Measurement)
+					t.Errorf("%s: expected measurement '%#v' got '%#v'\n", tt.Name, measurement, m.Measurement)
 				}
-				if !reflect.DeepEqual(m.Tags, tt.tags) {
-					t.Errorf("%s: expected tags\n%#v got\n%#v\n", tt.name, tt.tags, m.Tags)
+				if !reflect.DeepEqual(m.Tags, tt.Tags) {
+					t.Errorf("%s: expected tags\n%#v got\n%#v\n", tt.Name, tt.Tags, m.Tags)
 				}
-				if !reflect.DeepEqual(m.Fields, tt.fields) {
-					t.Errorf("%s: expected fields\n%#v got\n%#v\n", tt.name, tt.fields, m.Fields)
+				if !reflect.DeepEqual(m.Fields, tt.Fields) {
+					t.Errorf("%s: expected fields\n%#v got\n%#v\n", tt.Name, tt.Fields, m.Fields)
 				}
 			}
 		})
+	}
+}
+
+func runCommandLineTest(t *testing.T, paramsTemplate []string, dut *subCommandInfo, systemdUnits *SystemdUnits) {
+	params := *dut.getParameters(systemdUnits)
+
+	// Because we sort the params and the template array before comparison
+	// we have to compare the positional parameters first.
+	for i, v := range paramsTemplate {
+		if strings.HasPrefix(v, "--") {
+			break
+		}
+
+		if v != params[i] {
+			t.Errorf("Positional parameter %d is '%s'. Expected '%s'.", i, params[i], v)
+		}
+	}
+	// Because the maps do not lead to a stable order of the "--property"
+	// arguments sort all the command line arguments and compare them.
+	sort.Strings(params)
+	sort.Strings(paramsTemplate)
+	if !reflect.DeepEqual(params, paramsTemplate) {
+		t.Errorf("Generated list of command line arguments '%#v' do not match expected list command line arguments '%#v'", params, paramsTemplate)
 	}
 }

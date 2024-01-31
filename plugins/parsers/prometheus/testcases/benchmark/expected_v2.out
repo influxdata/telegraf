@@ -1,0 +1,2 @@
+prometheus,_type=gauge,source=myhost,tags_platform=python,tags_sdkver=3.11.5 benchmark_a=5 1653643420000000000
+prometheus,_type=gauge,source=myhost,tags_platform=python,tags_sdkver=3.11.4 benchmark_b=4 1653643420000000000

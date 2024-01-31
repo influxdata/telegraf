@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
+	ws "github.com/gorilla/websocket"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-
-	ws "github.com/gorilla/websocket"
-	"github.com/stretchr/testify/require"
 )
 
 // testSerializer serializes to a number of metrics to simplify tests here.
@@ -151,9 +151,10 @@ func TestWebSocket_Write_OK(t *testing.T) {
 	w := initWebSocket(s)
 	connect(t, w)
 
-	var metrics []telegraf.Metric
-	metrics = append(metrics, testutil.TestMetric(0.4, "test"))
-	metrics = append(metrics, testutil.TestMetric(0.5, "test"))
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(0.4, "test"),
+		testutil.TestMetric(0.5, "test"),
+	}
 	err := w.Write(metrics)
 	require.NoError(t, err)
 

@@ -11,12 +11,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	opcuaclient "github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 )
 
 type SubscribeClientConfig struct {
 	input.InputClientConfig
 	SubscriptionInterval config.Duration `toml:"subscription_interval"`
+	ConnectFailBehavior  string          `toml:"connect_fail_behavior"`
 }
 
 type SubscribeClient struct {
@@ -133,6 +135,9 @@ func (o *SubscribeClient) Connect() error {
 
 func (o *SubscribeClient) Stop(ctx context.Context) <-chan struct{} {
 	o.Log.Debugf("Stopping OPC subscription...")
+	if o.State() != opcuaclient.Connected {
+		return nil
+	}
 	if o.sub != nil {
 		if err := o.sub.Cancel(ctx); err != nil {
 			o.Log.Warn("Cancelling OPC UA subscription failed with error ", err)
@@ -150,6 +155,14 @@ func (o *SubscribeClient) CurrentValues() ([]telegraf.Metric, error) {
 func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegraf.Metric, error) {
 	err := o.Connect()
 	if err != nil {
+		switch o.Config.ConnectFailBehavior {
+		case "retry":
+			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.Config.Endpoint, err)
+			return nil, nil
+		case "ignore":
+			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.Config.Endpoint, err)
+			return nil, nil
+		}
 		return nil, err
 	}
 

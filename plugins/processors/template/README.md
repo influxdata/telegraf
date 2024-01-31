@@ -86,7 +86,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Add all fields as a tag
 
-Sometimes it is usefull to pass all fields with their values into a single
+Sometimes it is useful to pass all fields with their values into a single
 message for sending it to a monitoring system (e.g. Syslog, GroundWork), then
 you can use `.Fields` or `.Tags`:
 

@@ -44,7 +44,7 @@ func (c *Clarify) Init() error {
 	if c.Timeout <= 0 {
 		c.Timeout = defaultTimeout
 	}
-	// Not blocking as it doesn't do any http requests, just sets up the necessarry Oauth2 client.
+	// Not blocking as it doesn't do any http requests, just sets up the necessary Oauth2 client.
 	ctx := context.Background()
 	switch {
 	case c.CredentialsFile != "":

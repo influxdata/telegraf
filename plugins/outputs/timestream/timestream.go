@@ -353,8 +353,8 @@ func (t *Timestream) createTable(tableName *string) error {
 		DatabaseName: aws.String(t.DatabaseName),
 		TableName:    aws.String(*tableName),
 		RetentionProperties: &types.RetentionProperties{
-			MagneticStoreRetentionPeriodInDays: t.CreateTableMagneticStoreRetentionPeriodInDays,
-			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
+			MagneticStoreRetentionPeriodInDays: &t.CreateTableMagneticStoreRetentionPeriodInDays,
+			MemoryStoreRetentionPeriodInHours:  &t.CreateTableMemoryStoreRetentionPeriodInHours,
 		},
 	}
 	tags := make([]types.Tag, 0, len(t.CreateTableTags))

@@ -39,11 +39,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Specify username and password for ACL auth (Redis 6.0+). You can add this
   ## to the server URI above or specify it here. The values here take
-  ## precidence.
+  ## precedence.
   # username = ""
   # password = ""
 
   ## Optional TLS Config
+  ## Check tls/config.go ClientConfig for more options
+  # tls_enable = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"

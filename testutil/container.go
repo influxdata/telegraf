@@ -23,9 +23,9 @@ func (g *TestLogConsumer) Accept(l testcontainers.Log) {
 }
 
 type Container struct {
-	BindMounts         map[string]string
 	Entrypoint         []string
 	Env                map[string]string
+	Files              map[string]string
 	HostConfigModifier func(*dockercontainer.HostConfig)
 	ExposedPorts       []string
 	Cmd                []string
@@ -46,17 +46,21 @@ type Container struct {
 func (c *Container) Start() error {
 	c.ctx = context.Background()
 
-	containerMounts := make([]testcontainers.ContainerMount, 0, len(c.BindMounts))
-	for k, v := range c.BindMounts {
-		containerMounts = append(containerMounts, testcontainers.BindMount(v, testcontainers.ContainerMountTarget(k)))
+	files := make([]testcontainers.ContainerFile, 0, len(c.Files))
+	for k, v := range c.Files {
+		files = append(files, testcontainers.ContainerFile{
+			ContainerFilePath: k,
+			HostFilePath:      v,
+			FileMode:          0o755,
+		})
 	}
 
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Mounts:             testcontainers.Mounts(containerMounts...),
 			Entrypoint:         c.Entrypoint,
 			Env:                c.Env,
 			ExposedPorts:       c.ExposedPorts,
+			Files:              files,
 			HostConfigModifier: c.HostConfigModifier,
 			Cmd:                c.Cmd,
 			Image:              c.Image,

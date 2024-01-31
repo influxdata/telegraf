@@ -79,7 +79,7 @@ to use them.
     # measurement_column = ""
 
     ## Column name containing the time of the measurement
-    ## If ommited, the time of the query will be used.
+    ## If omitted, the time of the query will be used.
     # time_column = ""
 
     ## Format of the time contained in 'time_col'

@@ -180,7 +180,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	}
 	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %w", err)
+		return fmt.Errorf("failed to estimate number of uncore events file descriptors: %w", err)
 	}
 	if coreFd > math.MaxUint64-uncoreFd {
 		return fmt.Errorf("requested number of file descriptors exceeds uint64")

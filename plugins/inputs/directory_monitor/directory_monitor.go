@@ -334,7 +334,7 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 	dstPath := filepath.Join(dstBaseDir, basePath)
 	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
 	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierachy for " + srcPath + ". Error: " + err.Error())
+		monitor.Log.Errorf("Error creating directory hierarchy for " + srcPath + ". Error: " + err.Error())
 	}
 
 	inputFile, err := os.Open(srcPath)

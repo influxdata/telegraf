@@ -106,7 +106,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 		if addr.User != nil {
 			pwd, set := addr.User.Password()
 			if set && pwd != "" {
-				if _, err := c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd))); err != nil {
+				if _, err := fmt.Fprintf(c, "AUTH %s\r\n", pwd); err != nil {
 					return err
 				}
 

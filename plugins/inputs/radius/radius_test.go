@@ -98,7 +98,7 @@ func TestRadiusIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "freeradius/freeradius-server",
 		ExposedPorts: []string{"1812/udp"},
-		BindMounts: map[string]string{
+		Files: map[string]string{
 			"/etc/raddb/clients.conf":                testdata,
 			"/etc/raddb/mods-config/files/authorize": testdataa,
 			"/etc/raddb/radiusd.conf":                testdataaa,

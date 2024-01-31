@@ -112,7 +112,7 @@ func (s *Snmp) Init() error {
 	if s.AgentHostTag != "source" {
 		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
 			Since:  "1.29.0",
-			Notice: `should be set to "source" for consistent usage across plugins`,
+			Notice: `set to "source" for consistent usage across plugins or safely ignore this message and continue to use the current value`,
 		})
 	}
 
@@ -223,7 +223,7 @@ type Field struct {
 	// Conversion controls any type conversion that is done on the value.
 	//  "float"/"float(0)" will convert the value into a float.
 	//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
-	//  "int" will conver the value into an integer.
+	//  "int" will convert the value into an integer.
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	//  "enum"/"enum(1)" will convert the value according to its syntax. (Only supported with gosmi translator)
@@ -238,7 +238,7 @@ type Field struct {
 	SecondaryIndexUse bool
 	// Controls if entries from secondary table should be added or not if joining
 	//  index is present or not. I set to true, means that join is outer, and
-	//  index is prepended with "Secondary." for missing values to avoid overlaping
+	//  index is prepended with "Secondary." for missing values to avoid overlapping
 	//  indexes from both tables.
 	// Can be set per field or globally with SecondaryIndexTable, global true overrides
 	//  per field false.

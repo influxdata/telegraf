@@ -19,7 +19,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics about temperature
 [[inputs.temp]]
-  # no configuration
+  ## Desired output format (Linux only)
+  ## Available values are
+  ##   v1 -- use pre-v1.22.4 sensor naming, e.g. coretemp_core0_input
+  ##   v2 -- use v1.22.4+ sensor naming, e.g. coretemp_core_0_input
+  # metric_format = "v2"
+
+  ## Add device tag to distinguish devices with the same name (Linux only)
+  # add_device_tag = false
 ```
 
 ## Metrics

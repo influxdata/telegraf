@@ -22,7 +22,7 @@ The metric name will be set according the following priority:
      in the schema definition.
 
 In case if the metric name could not be determined according to these steps
-the error will be rised and the message will not be parsed.
+the error will be raised and the message will not be parsed.
 
 ## Configuration
 

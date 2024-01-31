@@ -159,7 +159,7 @@ to get
 }
 ```
 
-It is also possible to do arithmetics or renaming
+It is also possible to do arithmetic or renaming
 
 ```json
 {
@@ -183,7 +183,7 @@ will result in
 
 ### Batch mode
 
-When an output plugin emits multiple metrics in a batch fashion it might be usefull
+When an output plugin emits multiple metrics in a batch fashion it might be useful
 to restructure and/or combine the metric elements. We will use the following input
 example in this section
 

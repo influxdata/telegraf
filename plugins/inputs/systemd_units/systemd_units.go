@@ -2,7 +2,6 @@
 package systemd_units
 
 import (
-	"bufio"
 	"bytes"
 	_ "embed"
 	"fmt"
@@ -19,21 +18,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// SystemdUnits is a telegraf plugin to gather systemd unit status
-type SystemdUnits struct {
-	Timeout   config.Duration
-	UnitType  string `toml:"unittype"`
-	Pattern   string `toml:"pattern"`
-	systemctl systemctl
-}
-
-type systemctl func(timeout config.Duration, unitType string, pattern string) (*bytes.Buffer, error)
-
 const measurement = "systemd_units"
 
 // Below are mappings of systemd state tables as defined in
 // https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c
 // Duplicate strings are removed from this list.
+// This map is used by `subcommand_show` and `subcommand_list`. Changes must be
+// compatible with both subcommands.
 var loadMap = map[string]int{
 	"loaded":      0,
 	"stub":        1,
@@ -128,107 +119,82 @@ var subMap = map[string]int{
 	"elapsed": 0x00a0,
 }
 
+// SystemdUnits is a telegraf plugin to gather systemd unit status
+type SystemdUnits struct {
+	Timeout       config.Duration `toml:"timeout"`
+	SubCommand    string          `toml:"subcommand"`
+	UnitType      string          `toml:"unittype"`
+	Pattern       string          `toml:"pattern"`
+	resultParser  parseResultFunc
+	commandParams *[]string
+}
+
+type getParametersFunc func(*SystemdUnits) *[]string
+type parseResultFunc func(telegraf.Accumulator, *bytes.Buffer)
+
+type subCommandInfo struct {
+	getParameters getParametersFunc
+	parseResult   parseResultFunc
+}
+
 var (
-	defaultTimeout  = config.Duration(time.Second)
-	defaultUnitType = "service"
-	defaultPattern  = ""
+	defaultSubCommand = "list-units"
+	defaultTimeout    = config.Duration(time.Second)
+	defaultUnitType   = "service"
+	defaultPattern    = ""
 )
 
 func (*SystemdUnits) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather parses systemctl outputs and adds counters to the Accumulator
-func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
-	out, err := s.systemctl(s.Timeout, s.UnitType, s.Pattern)
-	if err != nil {
-		return err
+func (s *SystemdUnits) Init() error {
+	var subCommandInfo *subCommandInfo
+
+	switch s.SubCommand {
+	case "show":
+		subCommandInfo = initSubcommandShow()
+	case "list-units":
+		subCommandInfo = initSubcommandListUnits()
+	default:
+		return fmt.Errorf("invalid value for 'subcommand': %s", s.SubCommand)
 	}
 
-	scanner := bufio.NewScanner(out)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		data := strings.Fields(line)
-		if len(data) < 4 {
-			acc.AddError(fmt.Errorf("Error parsing line (expected at least 4 fields): %s", line))
-			continue
-		}
-		name := data[0]
-		load := data[1]
-		active := data[2]
-		sub := data[3]
-		tags := map[string]string{
-			"name":   name,
-			"load":   load,
-			"active": active,
-			"sub":    sub,
-		}
-
-		var (
-			loadCode   int
-			activeCode int
-			subCode    int
-			ok         bool
-		)
-		if loadCode, ok = loadMap[load]; !ok {
-			acc.AddError(fmt.Errorf("Error parsing field 'load', value not in map: %s", load))
-			continue
-		}
-		if activeCode, ok = activeMap[active]; !ok {
-			acc.AddError(fmt.Errorf("Error parsing field 'active', value not in map: %s", active))
-			continue
-		}
-		if subCode, ok = subMap[sub]; !ok {
-			acc.AddError(fmt.Errorf("Error parsing field 'sub', value not in map: %s", sub))
-			continue
-		}
-		fields := map[string]interface{}{
-			"load_code":   loadCode,
-			"active_code": activeCode,
-			"sub_code":    subCode,
-		}
-
-		acc.AddFields(measurement, fields, tags)
-	}
+	// Save the parsing function for later and pre-compute the
+	// command line because it will not change.
+	s.resultParser = subCommandInfo.parseResult
+	s.commandParams = subCommandInfo.getParameters(s)
 
 	return nil
 }
 
-func setSystemctl(timeout config.Duration, unitType string, pattern string) (*bytes.Buffer, error) {
+func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	// build parameters for systemctl call
-	params := []string{"list-units"}
-	// create patterns parameters if provided in config
-	if pattern != "" {
-		psplit := strings.SplitN(pattern, " ", -1)
-		params = append(params, psplit...)
-	}
-	params = append(params, "--all", "--plain")
-	// add type as configured in config
-	params = append(params, fmt.Sprintf("--type=%s", unitType))
-	params = append(params, "--no-legend")
-	cmd := exec.Command(systemctlPath, params...)
+
+	cmd := exec.Command(systemctlPath, *s.commandParams...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, time.Duration(timeout))
+	err = internal.RunTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl %q: %w", strings.Join(params, " "), err)
+		return fmt.Errorf("error running systemctl %q: %w", strings.Join(*s.commandParams, " "), err)
 	}
-	return &out, nil
+
+	s.resultParser(acc, &out)
+
+	return nil
 }
 
 func init() {
 	inputs.Add("systemd_units", func() telegraf.Input {
 		return &SystemdUnits{
-			systemctl: setSystemctl,
-			Timeout:   defaultTimeout,
-			UnitType:  defaultUnitType,
-			Pattern:   defaultPattern,
+			Timeout:    defaultTimeout,
+			UnitType:   defaultUnitType,
+			Pattern:    defaultPattern,
+			SubCommand: defaultSubCommand,
 		}
 	})
 }

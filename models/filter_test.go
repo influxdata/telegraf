@@ -607,12 +607,7 @@ func TestFilter_MetricPass(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "arithmetics",
-			expression: `fields.count + fields.errors < fields.total`,
-			expected:   true,
-		},
-		{
-			name:       "arithmetics",
+			name:       "arithmetic",
 			expression: `fields.count + fields.errors < fields.total`,
 			expected:   true,
 		},
@@ -622,7 +617,7 @@ func TestFilter_MetricPass(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "time arithmetics",
+			name:       "time arithmetic",
 			expression: `time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
 			expected:   true,
 		},

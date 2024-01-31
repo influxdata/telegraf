@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -46,7 +47,7 @@ func (s *Serializer) Init() error {
 
 	// Initialize the writer
 	s.writer = csv.NewWriter(&s.buffer)
-	s.writer.Comma = []rune(s.Separator)[0]
+	s.writer.Comma, _ = utf8.DecodeRuneInString(s.Separator)
 	s.writer.UseCRLF = runtime.GOOS == "windows"
 
 	return nil
