@@ -52,7 +52,6 @@ type Lookup struct {
 	translator si.Translator
 	table      si.Table
 
-	acc               telegraf.Accumulator
 	cache             *store
 	backlog           *backlog
 	getConnectionFunc func(string) (snmpConnection, error)
@@ -72,18 +71,17 @@ func (*Lookup) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *Lookup) Init() error {
+func (l *Lookup) Init() (err error) {
 	// Check the SNMP configuration
-	if _, err := snmp.NewWrapper(l.ClientConfig); err != nil {
+	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
 	// Setup the GOSMI translator
-	translator, err := si.NewGosmiTranslator(l.Path, l.Log)
+	l.translator, err = si.NewGosmiTranslator(l.Path, l.Log)
 	if err != nil {
 		return fmt.Errorf("loading translator: %w", err)
 	}
-	l.translator = translator
 
 	// Initialize the table
 	l.table.Name = "lookup"
@@ -101,7 +99,6 @@ func (l *Lookup) Init() error {
 }
 
 func (l *Lookup) Start(acc telegraf.Accumulator) error {
-	l.acc = acc
 	l.backlog = newBacklog(acc, l.Log, l.Ordered)
 
 	l.cache = newStore(l.CacheSize, time.Duration(l.CacheTTL), l.ParallelLookups)
@@ -122,18 +119,18 @@ func (l *Lookup) Stop() {
 	}
 }
 
-func (l *Lookup) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
+func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	agent, found := m.GetTag(l.AgentTag)
 	if !found {
 		l.Log.Warn("Agent tag missing")
-		l.acc.AddMetric(m)
+		acc.AddMetric(m)
 		return nil
 	}
 
 	index, found := m.GetTag(l.IndexTag)
 	if !found {
 		l.Log.Warn("Index tag missing")
-		l.acc.AddMetric(m)
+		acc.AddMetric(m)
 		return nil
 	}
 
@@ -148,7 +145,7 @@ func (l *Lookup) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 			return nil
 		}
 		l.Log.Errorf("Looking up %q (%s) failed: %v", agent, index, err)
-		l.acc.AddMetric(m)
+		acc.AddMetric(m)
 		return nil
 	}
 
@@ -166,7 +163,7 @@ func (l *Lookup) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	for key, value := range tags {
 		m.AddTag(key, value)
 	}
-	l.acc.AddMetric(m)
+	acc.AddMetric(m)
 
 	return nil
 }

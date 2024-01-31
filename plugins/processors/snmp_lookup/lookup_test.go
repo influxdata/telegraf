@@ -2,7 +2,6 @@ package snmp_lookup
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -181,7 +180,7 @@ func TestGetConnection(t *testing.T) {
 	}
 }
 
-func TestLoadTagMap(t *testing.T) {
+func TestUpdateAgent(t *testing.T) {
 	p := Lookup{
 		ClientConfig: *snmp.DefaultClientConfig(),
 		CacheSize:    defaultCacheSize,
@@ -210,7 +209,7 @@ func TestLoadTagMap(t *testing.T) {
 	require.NoError(t, p.Start(&acc))
 	defer p.Stop()
 
-	tm := p.updateAgent("foo")
+	tm := p.updateAgent("127.0.0.1")
 	require.Equal(t, tagMapRows{
 		"0": {"ifName": "eth0"},
 		"1": {"ifName": "eth1"},
@@ -218,7 +217,7 @@ func TestLoadTagMap(t *testing.T) {
 	require.Equal(t, 1, tsc.calls)
 }
 
-func TestAddAsync(t *testing.T) {
+func TestAdd(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    telegraf.Metric
@@ -320,10 +319,10 @@ func TestAddAsync(t *testing.T) {
 			plugin.cache.cache.Add("127.0.0.1", &tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
 
 			// Do the testing
-			require.NoError(t, plugin.Add(tt.input, nil))
+			require.NoError(t, plugin.Add(tt.input, &acc))
 			require.Eventually(t, func() bool {
 				return int(acc.NMetrics()) >= len(tt.expected)
-			}, 3*time.Second, 100*time.Millisecond)
+			}, time.Second, time.Millisecond)
 			plugin.Stop()
 
 			actual := acc.GetTelegrafMetrics()
@@ -332,7 +331,7 @@ func TestAddAsync(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestExpiry(t *testing.T) {
 	p := Lookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
@@ -372,11 +371,11 @@ func TestAdd(t *testing.T) {
 
 	// Add different metrics
 	m.AddTag("index", "0")
-	require.NoError(t, p.Add(m.Copy(), nil))
+	require.NoError(t, p.Add(m.Copy(), &acc))
 	m.AddTag("index", "1")
-	require.NoError(t, p.Add(m.Copy(), nil))
+	require.NoError(t, p.Add(m.Copy(), &acc))
 	m.AddTag("index", "123")
-	require.NoError(t, p.Add(m.Copy(), nil))
+	require.NoError(t, p.Add(m.Copy(), &acc))
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -411,13 +410,10 @@ func TestAdd(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
-		fmt.Println("metric:", acc.NMetrics())
 		return acc.NMetrics() >= uint64(len(expected))
-	}, 3*time.Second, 100*time.Millisecond)
+	}, time.Second, time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.Equal(t, 1, tsc.calls)
-
-	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual)
 
 	// clear cache to simulate expiry
 	p.cache.purge()
@@ -425,7 +421,7 @@ func TestAdd(t *testing.T) {
 
 	// Add new metric
 	m.AddTag("index", "0")
-	require.NoError(t, p.Add(m, nil))
+	require.NoError(t, p.Add(m, &acc))
 
 	expected = []telegraf.Metric{
 		metric.New(
@@ -442,7 +438,8 @@ func TestAdd(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= uint64(len(expected))
-	}, 3*time.Second, 100*time.Millisecond)
+	}, time.Second, time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.Equal(t, 2, tsc.calls)
 }
 
@@ -513,9 +510,9 @@ func TestOrdered(t *testing.T) {
 	// Add different metrics
 	for _, m := range input {
 		m.AddTag("index", "0")
-		require.NoError(t, plugin.Add(m.Copy(), nil))
+		require.NoError(t, plugin.Add(m.Copy(), &acc))
 		m.AddTag("index", "1")
-		require.NoError(t, plugin.Add(m.Copy(), nil))
+		require.NoError(t, plugin.Add(m.Copy(), &acc))
 	}
 
 	// Setup expectations
@@ -585,9 +582,7 @@ func TestOrdered(t *testing.T) {
 	// Check the result
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= uint64(len(expected))
-	}, 3*time.Second, 100*time.Millisecond)
-	require.Equal(t, len(input), tsc.calls)
-
-	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual)
+	}, time.Second, time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+	require.Len(t, input, tsc.calls)
 }
