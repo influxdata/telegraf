@@ -166,7 +166,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 		fn := filepath.Join(path, prefix+"_input")
 		buf, err := os.ReadFile(fn)
 		if err != nil {
-			t.Log.Warnf("Couldn't read temperature from %q: %v", fn, err)
+			t.Log.Debugf("Couldn't read temperature from %q: %v", fn, err)
 			continue
 		}
 		if v, err := strconv.ParseFloat(strings.TrimSpace(string(buf)), 64); err == nil {
