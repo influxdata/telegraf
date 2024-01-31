@@ -48,6 +48,8 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		newMetrics := []telegraf.Metric{}
 		if !p.DropOriginal {
 			newMetrics = append(newMetrics, metric)
+		} else {
+			metric.Drop()
 		}
 
 		// parse fields
