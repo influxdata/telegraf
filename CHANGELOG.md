@@ -1,6 +1,23 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.29.4 [2024-01-31]
+
+### Bugfixes
+
+- [#14619](https://github.com/influxdata/telegraf/pull/14619) `inputs.snmp_trap` Handle octet strings
+- [#14649](https://github.com/influxdata/telegraf/pull/14649) `inputs.temp` Fix regression in metric formats
+- [#14655](https://github.com/influxdata/telegraf/pull/14655) `processors.parser` Drop tracking metrics when not carried forward
+
+### Dependency Updates
+
+- [#14651](https://github.com/influxdata/telegraf/pull/14651) `deps` Bump all AWS dependencies
+- [#14642](https://github.com/influxdata/telegraf/pull/14642) `deps` Bump github.com/compose-spec/compose-go from 1.20.0 to 1.20.2
+- [#14641](https://github.com/influxdata/telegraf/pull/14641) `deps` Bump github.com/gosnmp/gosnmp from 1.36.1 to 1.37.0
+- [#14643](https://github.com/influxdata/telegraf/pull/14643) `deps` Bump github.com/microsoft/go-mssqldb from 1.5.0 to 1.6.0
+- [#14644](https://github.com/influxdata/telegraf/pull/14644) `deps` Bump github.com/nats-io/nats-server/v2 from 2.10.6 to 2.10.9
+- [#14640](https://github.com/influxdata/telegraf/pull/14640) `deps` Bump github.com/yuin/goldmark from 1.5.6 to 1.6.0
+
 ## v1.29.3 [2024-01-29]
 
 ### Bugfixes
