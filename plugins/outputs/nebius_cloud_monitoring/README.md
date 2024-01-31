@@ -22,6 +22,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Nebius.Cloud monitoring API endpoint. Normally should not be changed
   # endpoint = "https://monitoring.api.il.nebius.cloud/monitoring/v2/data/write"
+
+  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
+  # service = "custom"
 ```
 
 ### Authentication
