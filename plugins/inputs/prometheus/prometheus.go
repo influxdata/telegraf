@@ -76,7 +76,7 @@ type Prometheus struct {
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
 	ResponseTimeout    config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
-	ContentLengthLimit int             `toml:"content_length_limit"`
+	ContentLengthLimit int64           `toml:"content_length_limit"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -442,15 +442,23 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("error reading body: %w", err)
-	}
+	var body []byte
+	if p.ContentLengthLimit != 0 {
+		lr := io.LimitReader(resp.Body, p.ContentLengthLimit+1)
 
-	bodyLength := len(body)
-	if p.ContentLengthLimit != 0 && bodyLength > p.ContentLengthLimit {
-		p.Log.Debugf("skipping %s: content length (%d) exceeded maximum body size (%d)", u.URL, bodyLength, p.ContentLengthLimit)
-		return nil
+		body, err = io.ReadAll(lr)
+		if err != nil {
+			return fmt.Errorf("error reading body: %w", err)
+		}
+		if int64(len(body)) > p.ContentLengthLimit {
+			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, p.ContentLengthLimit)
+			return nil
+		}
+	} else {
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error reading body: %w", err)
+		}
 	}
 
 	// Parse the metrics
