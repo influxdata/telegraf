@@ -70,7 +70,7 @@ func (c *Chrony) Init() error {
 	}
 	for _, m := range c.Metrics {
 		switch m {
-		case "activity", "tracking":
+		case "activity", "tracking", "serverstats":
 			// Do nothing as those are valid
 		default:
 			return fmt.Errorf("invalid metric setting %q", m)
@@ -143,6 +143,8 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(c.gatherActivity(acc))
 		case "tracking":
 			acc.AddError(c.gatherTracking(acc))
+		case "serverstats":
+			acc.AddError(c.gatherServerStats(acc))
 		default:
 			return fmt.Errorf("invalid metric setting %q", m)
 		}
@@ -224,6 +226,62 @@ func (c *Chrony) gatherTracking(acc telegraf.Accumulator) error {
 		"update_interval": resp.LastUpdateInterval,
 	}
 	acc.AddFields("chrony", fields, tags)
+
+	return nil
+}
+
+func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
+	req := fbchrony.NewServerStatsPacket()
+	r, err := c.client.Communicate(req)
+	if err != nil {
+		return fmt.Errorf("querying activity data failed: %w", err)
+	}
+
+	tags := map[string]string{}
+	if c.source != "" {
+		tags["source"] = c.source
+	}
+
+	var fields map[string]interface{}
+	switch resp := r.(type) {
+	case *fbchrony.ReplyServerStats:
+		fields = map[string]interface{}{
+			"ntp_hits":  resp.NTPHits,
+			"ntp_drops": resp.NTPDrops,
+			"cmd_hits":  resp.CMDHits,
+			"cmd_drops": resp.CMDDrops,
+			"log_drops": resp.LogDrops,
+		}
+	case *fbchrony.ReplyServerStats2:
+		fields = map[string]interface{}{
+			"ntp_hits":      resp.NTPHits,
+			"ntp_drops":     resp.NTPDrops,
+			"ntp_auth_hits": resp.NTPAuthHits,
+			"cmd_hits":      resp.CMDHits,
+			"cmd_drops":     resp.CMDDrops,
+			"log_drops":     resp.LogDrops,
+			"nke_hits":      resp.NKEHits,
+			"nke_drops":     resp.NKEDrops,
+		}
+	case *fbchrony.ReplyServerStats3:
+		fields = map[string]interface{}{
+			"ntp_hits":             resp.NTPHits,
+			"ntp_drops":            resp.NTPDrops,
+			"ntp_auth_hits":        resp.NTPAuthHits,
+			"ntp_interleaved_hits": resp.NTPInterleavedHits,
+			"ntp_timestamps":       resp.NTPTimestamps,
+			"ntp_span_seconds":     resp.NTPSpanSeconds,
+			"cmd_hits":             resp.CMDHits,
+			"cmd_drops":            resp.CMDDrops,
+			"log_drops":            resp.LogDrops,
+			"nke_hits":             resp.NKEHits,
+			"nke_drops":            resp.NKEDrops,
+		}
+	default:
+		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
+	}
+
+	acc.AddFields("chrony_serverstats", fields, tags)
 
 	return nil
 }

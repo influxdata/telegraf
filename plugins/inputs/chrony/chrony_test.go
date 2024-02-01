@@ -104,8 +104,9 @@ func TestGatherTracking(t *testing.T) {
 
 	// Setup the plugin
 	plugin := &Chrony{
-		Server: "udp://" + addr,
-		Log:    testutil.Logger{},
+		Server:  "udp://" + addr,
+		Metrics: []string{"tracking"},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -137,6 +138,198 @@ func TestGatherTracking(t *testing.T) {
 				"root_delay":      0.001655,
 				"root_dispersion": 0.003307,
 				"update_interval": 507.2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	options := []cmp.Option{
+		// tests on linux with go1.20 will add a warning about code coverage, ignore that tag
+		testutil.IgnoreTags("warning"),
+		testutil.IgnoreTime(),
+		cmpopts.EquateApprox(0.001, 0),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherServerStats(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		ServerStatInfo: &fbchrony.ServerStats{
+			NTPHits:  2542,
+			CMDHits:  112,
+			NTPDrops: 42,
+			CMDDrops: 8,
+			LogDrops: 0,
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"serverstats"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin, do a gather and stop everything
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Shutdown()
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"chrony_serverstats",
+			map[string]string{"source": addr},
+			map[string]interface{}{
+				"ntp_hits":  uint64(2542),
+				"ntp_drops": uint64(42),
+				"cmd_hits":  uint64(112),
+				"cmd_drops": uint64(8),
+				"log_drops": uint64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	options := []cmp.Option{
+		// tests on linux with go1.20 will add a warning about code coverage, ignore that tag
+		testutil.IgnoreTags("warning"),
+		testutil.IgnoreTime(),
+		cmpopts.EquateApprox(0.001, 0),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherServerStats2(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		ServerStatInfo: &fbchrony.ServerStats2{
+			NTPHits:     2542,
+			NKEHits:     5,
+			CMDHits:     112,
+			NTPDrops:    42,
+			NKEDrops:    1,
+			CMDDrops:    8,
+			LogDrops:    0,
+			NTPAuthHits: 9,
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"serverstats"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin, do a gather and stop everything
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Shutdown()
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"chrony_serverstats",
+			map[string]string{"source": addr},
+			map[string]interface{}{
+				"ntp_hits":      uint64(2542),
+				"ntp_drops":     uint64(42),
+				"ntp_auth_hits": uint64(9),
+				"cmd_hits":      uint64(112),
+				"cmd_drops":     uint64(8),
+				"log_drops":     uint64(0),
+				"nke_hits":      uint64(5),
+				"nke_drops":     uint64(1),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	options := []cmp.Option{
+		// tests on linux with go1.20 will add a warning about code coverage, ignore that tag
+		testutil.IgnoreTags("warning"),
+		testutil.IgnoreTime(),
+		cmpopts.EquateApprox(0.001, 0),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherServerStats3(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		ServerStatInfo: &fbchrony.ServerStats3{
+			NTPHits:            2542,
+			NKEHits:            5,
+			CMDHits:            112,
+			NTPDrops:           42,
+			NKEDrops:           1,
+			CMDDrops:           8,
+			LogDrops:           0,
+			NTPAuthHits:        9,
+			NTPInterleavedHits: 28,
+			NTPTimestamps:      69527,
+			NTPSpanSeconds:     33,
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"serverstats"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin, do a gather and stop everything
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Shutdown()
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"chrony_serverstats",
+			map[string]string{"source": addr},
+			map[string]interface{}{
+				"ntp_hits":             uint64(2542),
+				"ntp_drops":            uint64(42),
+				"ntp_auth_hits":        uint64(9),
+				"ntp_interleaved_hits": uint64(28),
+				"ntp_timestamps":       uint64(69527),
+				"ntp_span_seconds":     uint64(33),
+				"cmd_hits":             uint64(112),
+				"cmd_drops":            uint64(8),
+				"log_drops":            uint64(0),
+				"nke_hits":             uint64(5),
+				"nke_drops":            uint64(1),
 			},
 			time.Unix(0, 0),
 		),
@@ -221,8 +414,9 @@ func TestIntegration(t *testing.T) {
 }
 
 type Server struct {
-	ActivityInfo *fbchrony.Activity
-	TrackingInfo *fbchrony.Tracking
+	ActivityInfo   *fbchrony.Activity
+	TrackingInfo   *fbchrony.Tracking
+	ServerStatInfo interface{}
 
 	conn net.PacketConn
 }
@@ -265,6 +459,7 @@ func (s *Server) serve(t *testing.T) {
 		}
 		seqno := header.Sequence + 1
 
+		t.Logf("mock server: received request %d", header.Command)
 		switch header.Command {
 		case 33: // tracking
 			_, err := s.conn.WriteTo(s.encodeTrackingReply(seqno), addr)
@@ -280,6 +475,13 @@ func (s *Server) serve(t *testing.T) {
 			} else {
 				t.Log("mock server [activity]: successfully wrote reply")
 			}
+		case 54: // server stats
+			_, err := s.conn.WriteTo(s.encodeServerStatsReply(seqno), addr)
+			if err != nil {
+				t.Logf("mock server [serverstats]: writing reply failed: %v", err)
+			} else {
+				t.Log("mock server [serverstats]: successfully wrote reply")
+			}
 		default:
 			t.Logf("mock server: unhandled command %v", header.Command)
 		}
@@ -288,20 +490,7 @@ func (s *Server) serve(t *testing.T) {
 
 func (s *Server) encodeActivityReply(sequence uint32) []byte {
 	// Encode the header
-	buf := []byte{
-		0x06,       // version 6
-		0x02,       // packet type 2: reply
-		0x00,       // res1
-		0x00,       // res2
-		0x00, 0x2C, // command 44: activity request
-		0x00, 0x0C, // reply 12: activity reply
-		0x00, 0x00, // status 0: success
-		0x00, 0x00, // pad1
-		0x00, 0x00, // pad2
-		0x00, 0x00, // pad3
-	}
-	buf = binary.BigEndian.AppendUint32(buf, sequence)                // sequence number
-	buf = append(buf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) // pad 4 & 5
+	buf := encodeHeader(44, 12, sequence) // activity request
 
 	// Encode data
 	b := bytes.NewBuffer(buf)
@@ -314,20 +503,7 @@ func (s *Server) encodeTrackingReply(sequence uint32) []byte {
 	t := s.TrackingInfo
 
 	// Encode the header
-	buf := []byte{
-		0x06,       // version 6
-		0x02,       // packet type 2: tracking
-		0x00,       // res1
-		0x00,       // res2
-		0x00, 0x21, // command 33: tracking request
-		0x00, 0x05, // reply 5: tracking reply
-		0x00, 0x00, // status 0: success
-		0x00, 0x00, // pad1
-		0x00, 0x00, // pad2
-		0x00, 0x00, // pad3
-	}
-	buf = binary.BigEndian.AppendUint32(buf, sequence)                // sequence number
-	buf = append(buf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) // pad 4 & 5
+	buf := encodeHeader(33, 5, sequence) // tracking request
 
 	// Encode data
 	buf = binary.BigEndian.AppendUint32(buf, t.RefID)
@@ -354,6 +530,56 @@ func (s *Server) encodeTrackingReply(sequence uint32) []byte {
 	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(t.RootDelay))
 	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(t.RootDispersion))
 	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(t.LastUpdateInterval))
+
+	return buf
+}
+
+func (s *Server) encodeServerStatsReply(sequence uint32) []byte {
+	var b *bytes.Buffer
+	switch info := s.ServerStatInfo.(type) {
+	case *fbchrony.ServerStats:
+		// Encode the header
+		buf := encodeHeader(54, 14, sequence) // activity request
+
+		// Encode data
+		b = bytes.NewBuffer(buf)
+		binary.Write(b, binary.BigEndian, info)
+	case *fbchrony.ServerStats2:
+		// Encode the header
+		buf := encodeHeader(54, 22, sequence) // activity request
+
+		// Encode data
+		b = bytes.NewBuffer(buf)
+		binary.Write(b, binary.BigEndian, info)
+	case *fbchrony.ServerStats3:
+		// Encode the header
+		buf := encodeHeader(54, 24, sequence) // activity request
+
+		// Encode data
+		b = bytes.NewBuffer(buf)
+		binary.Write(b, binary.BigEndian, info)
+	}
+
+	return b.Bytes()
+}
+
+func encodeHeader(command, replyType uint16, seqnr uint32) []byte {
+	buf := []byte{
+		0x06, // version 6
+		0x02, // packet type 2: reply
+		0x00, // res1
+		0x00, // res2
+	}
+	buf = binary.BigEndian.AppendUint16(buf, command)   // command
+	buf = binary.BigEndian.AppendUint16(buf, replyType) // reply type
+	buf = append(buf, []byte{
+		0x00, 0x00, // status 0: success
+		0x00, 0x00, // pad1
+		0x00, 0x00, // pad2
+		0x00, 0x00, // pad3
+	}...)
+	buf = binary.BigEndian.AppendUint32(buf, seqnr)                   // sequence number
+	buf = append(buf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) // pad 4 & 5
 
 	return buf
 }
