@@ -346,6 +346,158 @@ func TestGatherServerStats3(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }
 
+func TestGatherSources(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		SourcesInfo: []source{
+			{
+				name: "ntp1.my.org",
+				data: &fbchrony.SourceData{
+					IPAddr:         net.IPv4(192, 168, 0, 1),
+					Poll:           64,
+					Stratum:        16,
+					State:          fbchrony.SourceStateSync,
+					Mode:           fbchrony.SourceModePeer,
+					Flags:          0,
+					Reachability:   0,
+					SinceSample:    0,
+					OrigLatestMeas: 1.22354,
+					LatestMeas:     1.22354,
+					LatestMeasErr:  0.00423,
+				},
+			},
+			{
+				name: "ntp2.my.org",
+				data: &fbchrony.SourceData{
+					IPAddr:         net.IPv4(192, 168, 0, 2),
+					Poll:           64,
+					Stratum:        16,
+					State:          fbchrony.SourceStateSync,
+					Mode:           fbchrony.SourceModePeer,
+					Flags:          0,
+					Reachability:   0,
+					SinceSample:    0,
+					OrigLatestMeas: 0.17791,
+					LatestMeas:     0.35445,
+					LatestMeasErr:  0.01196,
+				},
+			},
+			{
+				name: "ntp3.my.org",
+				data: &fbchrony.SourceData{
+					IPAddr:         net.IPv4(192, 168, 0, 3),
+					Poll:           512,
+					Stratum:        1,
+					State:          fbchrony.SourceStateOutlier,
+					Mode:           fbchrony.SourceModePeer,
+					Flags:          0,
+					Reachability:   512,
+					SinceSample:    377,
+					OrigLatestMeas: 7.21158,
+					LatestMeas:     7.21158,
+					LatestMeasErr:  2.15453,
+				},
+			},
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"sources"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin, do a gather and stop everything
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Shutdown()
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"chrony_sources",
+			map[string]string{
+				"source": addr,
+				"peer":   "ntp1.my.org",
+			},
+			map[string]interface{}{
+				"index":                    0,
+				"ip":                       "192.168.0.1",
+				"poll":                     64,
+				"stratum":                  uint64(16),
+				"state":                    "sync",
+				"mode":                     "peer",
+				"flags":                    uint64(0),
+				"reachability":             uint64(0),
+				"sample":                   uint64(0),
+				"latest_measurement":       1.22354,
+				"latest_measurement_error": 0.00423,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"chrony_sources",
+			map[string]string{
+				"source": addr,
+				"peer":   "ntp2.my.org",
+			},
+			map[string]interface{}{
+				"index":                    1,
+				"ip":                       "192.168.0.2",
+				"poll":                     64,
+				"stratum":                  uint64(16),
+				"state":                    "sync",
+				"mode":                     "peer",
+				"flags":                    uint64(0),
+				"reachability":             uint64(0),
+				"sample":                   uint64(0),
+				"latest_measurement":       0.35445,
+				"latest_measurement_error": 0.01196,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"chrony_sources",
+			map[string]string{
+				"source": addr,
+				"peer":   "ntp3.my.org",
+			},
+			map[string]interface{}{
+				"index":                    2,
+				"ip":                       "192.168.0.3",
+				"poll":                     512,
+				"stratum":                  uint64(1),
+				"state":                    "outlier",
+				"mode":                     "peer",
+				"flags":                    uint64(0),
+				"reachability":             uint64(512),
+				"sample":                   uint64(377),
+				"latest_measurement":       7.21158,
+				"latest_measurement_error": 2.15453,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	options := []cmp.Option{
+		// tests on linux with go1.20 will add a warning about code coverage, ignore that tag
+		testutil.IgnoreTags("warning"),
+		testutil.IgnoreTime(),
+		cmpopts.EquateApprox(0.001, 0),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -413,10 +565,17 @@ func TestIntegration(t *testing.T) {
 	testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
 }
 
+type source struct {
+	name  string
+	data  *fbchrony.SourceData
+	stats *fbchrony.SourceStats
+}
+
 type Server struct {
 	ActivityInfo   *fbchrony.Activity
 	TrackingInfo   *fbchrony.Tracking
 	ServerStatInfo interface{}
+	SourcesInfo    []source
 
 	conn net.PacketConn
 }
@@ -461,6 +620,22 @@ func (s *Server) serve(t *testing.T) {
 
 		t.Logf("mock server: received request %d", header.Command)
 		switch header.Command {
+		case 14: // sources
+			_, err := s.conn.WriteTo(s.encodeSourcesReply(seqno), addr)
+			if err != nil {
+				t.Logf("mock server [sources]: writing reply failed: %v", err)
+			} else {
+				t.Log("mock server [sources]: successfully wrote reply")
+			}
+		case 15: // source data
+			var idx int32
+			require.NoError(t, binary.Read(data, binary.BigEndian, &idx))
+			_, err = s.conn.WriteTo(s.encodeSourceDataReply(seqno, idx), addr)
+			if err != nil {
+				t.Logf("mock server [source data]: writing reply failed: %v", err)
+			} else {
+				t.Log("mock server [source data]: successfully wrote reply")
+			}
 		case 33: // tracking
 			_, err := s.conn.WriteTo(s.encodeTrackingReply(seqno), addr)
 			if err != nil {
@@ -482,6 +657,18 @@ func (s *Server) serve(t *testing.T) {
 			} else {
 				t.Log("mock server [serverstats]: successfully wrote reply")
 			}
+		case 65: // source name
+			buf := make([]byte, 20)
+			_, err := data.Read(buf)
+			require.NoError(t, err)
+			ip := decodeIP(buf)
+			t.Logf("mock server [source name]: resolving %v", ip)
+			_, err = s.conn.WriteTo(s.encodeSourceNameReply(seqno, ip), addr)
+			if err != nil {
+				t.Logf("mock server [source name]: writing reply failed: %v", err)
+			} else {
+				t.Log("mock server [source name]: successfully wrote reply")
+			}
 		default:
 			t.Logf("mock server: unhandled command %v", header.Command)
 		}
@@ -490,7 +677,7 @@ func (s *Server) serve(t *testing.T) {
 
 func (s *Server) encodeActivityReply(sequence uint32) []byte {
 	// Encode the header
-	buf := encodeHeader(44, 12, sequence) // activity request
+	buf := encodeHeader(44, 12, 0, sequence) // activity request
 
 	// Encode data
 	b := bytes.NewBuffer(buf)
@@ -503,17 +690,11 @@ func (s *Server) encodeTrackingReply(sequence uint32) []byte {
 	t := s.TrackingInfo
 
 	// Encode the header
-	buf := encodeHeader(33, 5, sequence) // tracking request
+	buf := encodeHeader(33, 5, 0, sequence) // tracking request
 
 	// Encode data
 	buf = binary.BigEndian.AppendUint32(buf, t.RefID)
-	buf = append(buf, t.IPAddr.To16()...)
-	if len(t.IPAddr) == 4 {
-		buf = append(buf, 0x00, 0x01) // IPv4 address family
-	} else {
-		buf = append(buf, 0x00, 0x02) // IPv6 address family
-	}
-	buf = append(buf, 0x00, 0x00) // padding
+	buf = append(buf, encodeIP(t.IPAddr)...)
 	buf = binary.BigEndian.AppendUint16(buf, t.Stratum)
 	buf = binary.BigEndian.AppendUint16(buf, t.LeapStatus)
 	sec := uint64(t.RefTime.Unix())
@@ -539,21 +720,21 @@ func (s *Server) encodeServerStatsReply(sequence uint32) []byte {
 	switch info := s.ServerStatInfo.(type) {
 	case *fbchrony.ServerStats:
 		// Encode the header
-		buf := encodeHeader(54, 14, sequence) // activity request
+		buf := encodeHeader(54, 14, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
 		binary.Write(b, binary.BigEndian, info)
 	case *fbchrony.ServerStats2:
 		// Encode the header
-		buf := encodeHeader(54, 22, sequence) // activity request
+		buf := encodeHeader(54, 22, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
 		binary.Write(b, binary.BigEndian, info)
 	case *fbchrony.ServerStats3:
 		// Encode the header
-		buf := encodeHeader(54, 24, sequence) // activity request
+		buf := encodeHeader(54, 24, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
@@ -563,7 +744,66 @@ func (s *Server) encodeServerStatsReply(sequence uint32) []byte {
 	return b.Bytes()
 }
 
-func encodeHeader(command, replyType uint16, seqnr uint32) []byte {
+func (s *Server) encodeSourcesReply(sequence uint32) []byte {
+	// Encode the header
+	buf := encodeHeader(14, 2, 0, sequence) // sources request
+
+	// Encode data
+	buf = binary.BigEndian.AppendUint32(buf, uint32(len(s.SourcesInfo))) // NSources
+
+	return buf
+}
+
+func (s *Server) encodeSourceDataReply(sequence uint32, idx int32) []byte {
+	if len(s.SourcesInfo) <= int(idx) {
+		return encodeHeader(15, 3, 3, sequence) // status invalid
+	}
+	src := s.SourcesInfo[idx].data
+
+	// Encode the header
+	buf := encodeHeader(15, 3, 0, sequence) // source data request
+
+	// Encode data
+	buf = append(buf, encodeIP(src.IPAddr)...)
+	buf = binary.BigEndian.AppendUint16(buf, uint16(src.Poll))
+	buf = binary.BigEndian.AppendUint16(buf, src.Stratum)
+	buf = binary.BigEndian.AppendUint16(buf, uint16(src.State))
+	buf = binary.BigEndian.AppendUint16(buf, uint16(src.Mode))
+	buf = binary.BigEndian.AppendUint16(buf, src.Flags)
+	buf = binary.BigEndian.AppendUint16(buf, src.Reachability)
+	buf = binary.BigEndian.AppendUint32(buf, src.SinceSample)
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.OrigLatestMeas))
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.LatestMeas))
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.LatestMeasErr))
+
+	return buf
+}
+
+func (s *Server) encodeSourceNameReply(sequence uint32, ip net.IP) []byte {
+	// Encode the header
+	buf := encodeHeader(65, 19, 0, sequence) // source name request
+
+	// Find the correct source
+	var name []byte
+	for _, src := range s.SourcesInfo {
+		if src.data.IPAddr.Equal(ip) {
+			name = []byte(src.name)
+			break
+		}
+	}
+
+	// Encode data
+	if len(name) > 256 {
+		buf = append(buf, name[:256]...)
+	} else {
+		buf = append(buf, name...)
+		buf = append(buf, make([]byte, 256-len(name))...)
+	}
+
+	return buf
+}
+
+func encodeHeader(command, replyType, status uint16, seqnr uint32) []byte {
 	buf := []byte{
 		0x06, // version 6
 		0x02, // packet type 2: reply
@@ -572,8 +812,8 @@ func encodeHeader(command, replyType uint16, seqnr uint32) []byte {
 	}
 	buf = binary.BigEndian.AppendUint16(buf, command)   // command
 	buf = binary.BigEndian.AppendUint16(buf, replyType) // reply type
+	buf = binary.BigEndian.AppendUint16(buf, status)    // status 0: success
 	buf = append(buf, []byte{
-		0x00, 0x00, // status 0: success
 		0x00, 0x00, // pad1
 		0x00, 0x00, // pad2
 		0x00, 0x00, // pad3
@@ -582,6 +822,34 @@ func encodeHeader(command, replyType uint16, seqnr uint32) []byte {
 	buf = append(buf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) // pad 4 & 5
 
 	return buf
+}
+
+func encodeIP(addr net.IP) []byte {
+	var buf []byte
+
+	buf = append(buf, addr.To16()...)
+	if len(addr) == 4 {
+		buf = append(buf, 0x00, 0x01) // IPv4 address family
+	} else {
+		buf = append(buf, 0x00, 0x02) // IPv6 address family
+	}
+	buf = append(buf, 0x00, 0x00) // padding
+
+	return buf
+}
+
+func decodeIP(buf []byte) net.IP {
+	if len(buf) != 20 {
+		panic("invalid length for IP")
+	}
+
+	addr := net.IP(buf[0:16])
+	family := binary.BigEndian.Uint16(buf[16:18])
+	if family == 1 {
+		return addr.To4()
+	}
+
+	return addr
 }
 
 // Modified based on https://github.com/mlichvar/chrony/blob/master/util.c

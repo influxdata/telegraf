@@ -2,6 +2,7 @@
 package chrony
 
 import (
+	"bytes"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -70,7 +71,7 @@ func (c *Chrony) Init() error {
 	}
 	for _, m := range c.Metrics {
 		switch m {
-		case "activity", "tracking", "serverstats":
+		case "activity", "tracking", "serverstats", "sources":
 			// Do nothing as those are valid
 		default:
 			return fmt.Errorf("invalid metric setting %q", m)
@@ -145,6 +146,8 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(c.gatherTracking(acc))
 		case "serverstats":
 			acc.AddError(c.gatherServerStats(acc))
+		case "sources":
+			acc.AddError(c.gatherSources(acc))
 		default:
 			return fmt.Errorf("invalid metric setting %q", m)
 		}
@@ -161,7 +164,7 @@ func (c *Chrony) gatherActivity(acc telegraf.Accumulator) error {
 	}
 	resp, ok := r.(*fbchrony.ReplyActivity)
 	if !ok {
-		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
+		return fmt.Errorf("got unexpected response type %T while waiting for activity data", r)
 	}
 
 	tags := map[string]string{}
@@ -189,7 +192,7 @@ func (c *Chrony) gatherTracking(acc telegraf.Accumulator) error {
 	}
 	resp, ok := r.(*fbchrony.ReplyTracking)
 	if !ok {
-		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
+		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", r)
 	}
 
 	// according to https://github.com/mlichvar/chrony/blob/e11b518a1ffa704986fb1f1835c425844ba248ef/ntp.h#L70
@@ -234,7 +237,7 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 	req := fbchrony.NewServerStatsPacket()
 	r, err := c.client.Communicate(req)
 	if err != nil {
-		return fmt.Errorf("querying activity data failed: %w", err)
+		return fmt.Errorf("querying server statistics failed: %w", err)
 	}
 
 	tags := map[string]string{}
@@ -278,11 +281,83 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 			"nke_drops":            resp.NKEDrops,
 		}
 	default:
-		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
+		return fmt.Errorf("got unexpected response type %T while waiting for server statistics", r)
 	}
 
 	acc.AddFields("chrony_serverstats", fields, tags)
 
+	return nil
+}
+
+func (c *Chrony) gatherSources(acc telegraf.Accumulator) error {
+	sourcesReq := fbchrony.NewSourcesPacket()
+	sourcesRaw, err := c.client.Communicate(sourcesReq)
+	if err != nil {
+		return fmt.Errorf("querying sources failed: %w", err)
+	}
+
+	sourcesResp, ok := sourcesRaw.(*fbchrony.ReplySources)
+	if !ok {
+		return fmt.Errorf("got unexpected response type %T while waiting for sources", sourcesRaw)
+	}
+
+	for idx := int32(0); int(idx) < sourcesResp.NSources; idx++ {
+		// Getting the source data
+		sourceDataReq := fbchrony.NewSourceDataPacket(idx)
+		sourceDataRaw, err := c.client.Communicate(sourceDataReq)
+		if err != nil {
+			return fmt.Errorf("querying data for source %d failed: %w", idx, err)
+		}
+		sourceData, ok := sourceDataRaw.(*fbchrony.ReplySourceData)
+		if !ok {
+			return fmt.Errorf("got unexpected response type %T while waiting for source data", sourceDataRaw)
+		}
+
+		// Trying to resolve the source name
+		sourceNameReq := fbchrony.NewNTPSourceNamePacket(sourceData.IPAddr)
+		sourceNameRaw, err := c.client.Communicate(sourceNameReq)
+		if err != nil {
+			return fmt.Errorf("querying name of source %d failed: %w", idx, err)
+		}
+		sourceName, ok := sourceNameRaw.(*fbchrony.ReplyNTPSourceName)
+		if !ok {
+			return fmt.Errorf("got unexpected response type %T while waiting for source name", sourceNameRaw)
+		}
+
+		// Cut the string at null termination
+		var peer string
+		if termidx := bytes.Index(sourceName.Name[:], []byte{0}); termidx >= 0 {
+			peer = string(sourceName.Name[:termidx])
+		} else {
+			peer = string(sourceName.Name[:])
+		}
+
+		if peer == "" {
+			peer = sourceData.IPAddr.String()
+		}
+
+		tags := map[string]string{
+			"peer": peer,
+		}
+		if c.source != "" {
+			tags["source"] = c.source
+		}
+
+		fields := map[string]interface{}{
+			"index":                    idx,
+			"ip":                       sourceData.IPAddr.String(),
+			"poll":                     sourceData.Poll,
+			"stratum":                  sourceData.Stratum,
+			"state":                    sourceData.State.String(),
+			"mode":                     sourceData.Mode.String(),
+			"flags":                    sourceData.Flags,
+			"reachability":             sourceData.Reachability,
+			"sample":                   sourceData.SinceSample,
+			"latest_measurement":       sourceData.LatestMeas,
+			"latest_measurement_error": sourceData.LatestMeasErr,
+		}
+		acc.AddFields("chrony_sources", fields, tags)
+	}
 	return nil
 }
 
