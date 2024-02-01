@@ -440,6 +440,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	var body []byte
 	if p.ContentLengthLimit != 0 {
+		// To determine whether io.ReadAll() ended due to EOF or reached the specified limit,
+		// read up to the specified limit plus one extra byte, and then make a decision based
+		// on the length of the result.
 		lr := io.LimitReader(resp.Body, p.ContentLengthLimit+1)
 
 		body, err = io.ReadAll(lr)
