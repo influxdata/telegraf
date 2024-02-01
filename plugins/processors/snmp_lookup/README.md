@@ -69,6 +69,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## elapses if tags are needed they will be retrieved again.
   # cache_ttl = "8h"
 
+  ## Minimum time between requests to an agent in case an index could not be
+  ## resolved. If set to zero no request on missing indices will be triggered.
+  # min_time_between_updates = "5m"
+
   ## List of tags to be looked up.
   [[processors.snmp_lookup.tag]]
     ## Object identifier of the variable as a numeric or textual OID.
