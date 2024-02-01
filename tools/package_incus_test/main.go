@@ -13,7 +13,6 @@ var imagesRPM = []string{
 	"fedora/39",
 	"fedora/38",
 	"centos/9-Stream",
-	"opensuse/tumbleweed",
 }
 
 var imagesDEB = []string{
