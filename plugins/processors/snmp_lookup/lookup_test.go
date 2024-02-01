@@ -326,8 +326,7 @@ func TestAdd(t *testing.T) {
 			}, 3*time.Second, 100*time.Millisecond)
 			plugin.Stop()
 
-			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }

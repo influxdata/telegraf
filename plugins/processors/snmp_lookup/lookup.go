@@ -4,7 +4,6 @@ package snmp_lookup
 import (
 	_ "embed"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -55,15 +54,13 @@ type Lookup struct {
 	cache             *store
 	backlog           *backlog
 	getConnectionFunc func(string) (snmpConnection, error)
-
-	sync.Mutex
 }
 
 const (
 	defaultCacheSize             = 100
 	defaultCacheTTL              = config.Duration(8 * time.Hour)
 	defaultParallelLookups       = 100
-	defaultMinTimeBetweenUpdates = 5 * time.Minute
+	defaultMinTimeBetweenUpdates = config.Duration(5 * time.Minute)
 	orderedQueueSize             = 10_000
 )
 
@@ -71,18 +68,20 @@ func (*Lookup) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *Lookup) Init() error {
+func (l *Lookup) Init() (err error) {
 	// Check the SNMP configuration
-	if _, err := snmp.NewWrapper(l.ClientConfig); err != nil {
+	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
 	// Setup the GOSMI translator
-	translator, err := si.NewGosmiTranslator(l.Path, l.Log)
+	l.translator, err = si.NewGosmiTranslator(l.Path, l.Log)
 	if err != nil {
 		return fmt.Errorf("loading translator: %w", err)
 	}
-	l.translator = translator
+
+	// Preparing connection-builder function
+	l.getConnectionFunc = l.getConnection
 
 	// Initialize the table
 	l.table.Name = "lookup"
@@ -92,9 +91,6 @@ func (l *Lookup) Init() error {
 		tag.IsTag = true
 		l.table.Fields[i] = tag
 	}
-
-	// Preparing connection-builder function
-	l.getConnectionFunc = l.getConnection
 
 	return l.table.Init(l.translator)
 }
@@ -138,12 +134,9 @@ func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	}
 
 	// Add the metric to the backlog before trying to resolve it
-	//l.Log.Debugf("Adding metric to backlog...")
 	l.backlog.push(agent, index, m)
 
-	// Try to lookup the information from cache. An error ErrNotYetAvailable
-	// indicates that the information is not yet cached, but the case will take
-	// care to give back the information later via the `notify` callback.
+	// Try to lookup the information from cache.
 	l.cache.lookup(agent, index)
 
 	return nil
@@ -208,7 +201,7 @@ func init() {
 			ClientConfig:          *snmp.DefaultClientConfig(),
 			CacheSize:             defaultCacheSize,
 			CacheTTL:              defaultCacheTTL,
-			MinTimeBetweenUpdates: config.Duration(defaultMinTimeBetweenUpdates),
+			MinTimeBetweenUpdates: defaultMinTimeBetweenUpdates,
 			ParallelLookups:       defaultParallelLookups,
 		}
 	})
