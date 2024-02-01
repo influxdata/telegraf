@@ -20,7 +20,65 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestGather(t *testing.T) {
+func TestGatherActivity(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		ActivityInfo: &fbchrony.Activity{
+			Online:       34,
+			Offline:      6,
+			BurstOnline:  2,
+			BurstOffline: 0,
+			Unresolved:   5,
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"activity"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin, do a gather and stop everything
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Shutdown()
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"chrony_activity",
+			map[string]string{"source": addr},
+			map[string]interface{}{
+				"online":        34,
+				"offline":       6,
+				"burst_online":  2,
+				"burst_offline": 0,
+				"unresolved":    5,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	options := []cmp.Option{
+		// tests on linux with go1.20 will add a warning about code coverage, ignore that tag
+		testutil.IgnoreTags("warning"),
+		testutil.IgnoreTime(),
+		cmpopts.EquateApprox(0.001, 0),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherTracking(t *testing.T) {
 	// Setup a mock server
 	server := Server{
 		TrackingInfo: &fbchrony.Tracking{
@@ -64,6 +122,7 @@ func TestGather(t *testing.T) {
 		metric.New(
 			"chrony",
 			map[string]string{
+				"source":       addr,
 				"reference_id": "A29FC87B",
 				"leap_status":  "not synchronized",
 				"stratum":      "3",
@@ -112,10 +171,11 @@ func TestIntegration(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
+	addr := container.Address + ":" + container.Ports["323"]
 
 	// Setup the plugin
 	plugin := &Chrony{
-		Server: "udp://" + container.Address + ":" + container.Ports["323"],
+		Server: "udp://" + addr,
 		Log:    testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
@@ -131,6 +191,7 @@ func TestIntegration(t *testing.T) {
 		metric.New(
 			"chrony",
 			map[string]string{
+				"source":       addr,
 				"leap_status":  "normal",
 				"reference_id": "A29FC87B",
 				"stratum":      "4",
@@ -160,6 +221,7 @@ func TestIntegration(t *testing.T) {
 }
 
 type Server struct {
+	ActivityInfo *fbchrony.Activity
 	TrackingInfo *fbchrony.Tracking
 
 	conn net.PacketConn
@@ -211,10 +273,41 @@ func (s *Server) serve(t *testing.T) {
 			} else {
 				t.Log("mock server [tracking]: successfully wrote reply")
 			}
+		case 44: // activity
+			_, err := s.conn.WriteTo(s.encodeActivityReply(seqno), addr)
+			if err != nil {
+				t.Logf("mock server [activity]: writing reply failed: %v", err)
+			} else {
+				t.Log("mock server [activity]: successfully wrote reply")
+			}
 		default:
 			t.Logf("mock server: unhandled command %v", header.Command)
 		}
 	}
+}
+
+func (s *Server) encodeActivityReply(sequence uint32) []byte {
+	// Encode the header
+	buf := []byte{
+		0x06,       // version 6
+		0x02,       // packet type 2: reply
+		0x00,       // res1
+		0x00,       // res2
+		0x00, 0x2C, // command 44: activity request
+		0x00, 0x0C, // reply 12: activity reply
+		0x00, 0x00, // status 0: success
+		0x00, 0x00, // pad1
+		0x00, 0x00, // pad2
+		0x00, 0x00, // pad3
+	}
+	buf = binary.BigEndian.AppendUint32(buf, sequence)                // sequence number
+	buf = append(buf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) // pad 4 & 5
+
+	// Encode data
+	b := bytes.NewBuffer(buf)
+	binary.Write(b, binary.BigEndian, s.ActivityInfo)
+
+	return b.Bytes()
 }
 
 func (s *Server) encodeTrackingReply(sequence uint32) []byte {

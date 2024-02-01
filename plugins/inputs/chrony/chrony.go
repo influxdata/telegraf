@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"syscall"
 	"time"
 
 	fbchrony "github.com/facebook/time/ntp/chrony"
@@ -24,10 +25,12 @@ type Chrony struct {
 	Server    string          `toml:"server"`
 	Timeout   config.Duration `toml:"timeout"`
 	DNSLookup bool            `toml:"dns_lookup"`
+	Metrics   []string        `toml:"metrics"`
 	Log       telegraf.Logger `toml:"-"`
 
 	conn   net.Conn
 	client *fbchrony.Client
+	source string
 }
 
 func (*Chrony) SampleConfig() string {
@@ -35,6 +38,7 @@ func (*Chrony) SampleConfig() string {
 }
 
 func (c *Chrony) Init() error {
+	// Use the configured server, if none set, we try to guess it in Start()
 	if c.Server != "" {
 		// Check the specified server address
 		u, err := url.Parse(c.Server)
@@ -60,6 +64,19 @@ func (c *Chrony) Init() error {
 		c.Server = u.String()
 	}
 
+	// Check the given metrics
+	if len(c.Metrics) == 0 {
+		c.Metrics = append(c.Metrics, "tracking")
+	}
+	for _, m := range c.Metrics {
+		switch m {
+		case "activity", "tracking":
+			// Do nothing as those are valid
+		default:
+			return fmt.Errorf("invalid metric setting %q", m)
+		}
+	}
+
 	return nil
 }
 
@@ -77,12 +94,14 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 				return fmt.Errorf("dialing %q failed: %w", c.Server, err)
 			}
 			c.conn = conn
+			c.source = u.Path
 		case "udp":
 			conn, err := net.DialTimeout("udp", u.Host, time.Duration(c.Timeout))
 			if err != nil {
 				return fmt.Errorf("dialing %q failed: %w", c.Server, err)
 			}
 			c.conn = conn
+			c.source = u.Host
 		}
 	} else {
 		// If no server is given, reproduce chronyc's behavior
@@ -111,26 +130,69 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 
 func (c *Chrony) Stop() {
 	if c.conn != nil {
-		if err := c.conn.Close(); err != nil {
+		if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
 			c.Log.Errorf("Closing connection to %q failed: %v", c.Server, err)
 		}
 	}
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
+	for _, m := range c.Metrics {
+		switch m {
+		case "activity":
+			acc.AddError(c.gatherActivity(acc))
+		case "tracking":
+			acc.AddError(c.gatherTracking(acc))
+		default:
+			return fmt.Errorf("invalid metric setting %q", m)
+		}
+	}
+
+	return nil
+}
+
+func (c *Chrony) gatherActivity(acc telegraf.Accumulator) error {
+	req := fbchrony.NewActivityPacket()
+	r, err := c.client.Communicate(req)
+	if err != nil {
+		return fmt.Errorf("querying activity data failed: %w", err)
+	}
+	resp, ok := r.(*fbchrony.ReplyActivity)
+	if !ok {
+		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
+	}
+
+	tags := map[string]string{}
+	if c.source != "" {
+		tags["source"] = c.source
+	}
+
+	fields := map[string]interface{}{
+		"online":        resp.Online,
+		"offline":       resp.Offline,
+		"burst_online":  resp.BurstOnline,
+		"burst_offline": resp.BurstOffline,
+		"unresolved":    resp.Unresolved,
+	}
+	acc.AddFields("chrony_activity", fields, tags)
+
+	return nil
+}
+
+func (c *Chrony) gatherTracking(acc telegraf.Accumulator) error {
 	req := fbchrony.NewTrackingPacket()
-	resp, err := c.client.Communicate(req)
+	r, err := c.client.Communicate(req)
 	if err != nil {
 		return fmt.Errorf("querying tracking data failed: %w", err)
 	}
-	tracking, ok := resp.(*fbchrony.ReplyTracking)
+	resp, ok := r.(*fbchrony.ReplyTracking)
 	if !ok {
 		return fmt.Errorf("got unexpected response type %T while waiting for tracking data", resp)
 	}
 
 	// according to https://github.com/mlichvar/chrony/blob/e11b518a1ffa704986fb1f1835c425844ba248ef/ntp.h#L70
 	var leapStatus string
-	switch tracking.LeapStatus {
+	switch resp.LeapStatus {
 	case 0:
 		leapStatus = "normal"
 	case 1:
@@ -143,24 +205,29 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 
 	tags := map[string]string{
 		"leap_status":  leapStatus,
-		"reference_id": fbchrony.RefidAsHEX(tracking.RefID),
-		"stratum":      strconv.FormatUint(uint64(tracking.Stratum), 10),
+		"reference_id": fbchrony.RefidAsHEX(resp.RefID),
+		"stratum":      strconv.FormatUint(uint64(resp.Stratum), 10),
 	}
+	if c.source != "" {
+		tags["source"] = c.source
+	}
+
 	fields := map[string]interface{}{
-		"frequency":       tracking.FreqPPM,
-		"system_time":     tracking.CurrentCorrection,
-		"last_offset":     tracking.LastOffset,
-		"residual_freq":   tracking.ResidFreqPPM,
-		"rms_offset":      tracking.RMSOffset,
-		"root_delay":      tracking.RootDelay,
-		"root_dispersion": tracking.RootDispersion,
-		"skew":            tracking.SkewPPM,
-		"update_interval": tracking.LastUpdateInterval,
+		"frequency":       resp.FreqPPM,
+		"system_time":     resp.CurrentCorrection,
+		"last_offset":     resp.LastOffset,
+		"residual_freq":   resp.ResidFreqPPM,
+		"rms_offset":      resp.RMSOffset,
+		"root_delay":      resp.RootDelay,
+		"root_dispersion": resp.RootDispersion,
+		"skew":            resp.SkewPPM,
+		"update_interval": resp.LastUpdateInterval,
 	}
 	acc.AddFields("chrony", fields, tags)
 
 	return nil
 }
+
 func init() {
 	inputs.Add("chrony", func() telegraf.Input {
 		return &Chrony{Timeout: config.Duration(3 * time.Second)}
