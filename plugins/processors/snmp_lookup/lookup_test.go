@@ -2,6 +2,7 @@ package snmp_lookup
 
 import (
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 
 type testSNMPConnection struct {
 	values map[string]string
-	calls  int
+	calls  atomic.Uint64
 }
 
 func (tsc *testSNMPConnection) Host() string {
@@ -30,7 +31,7 @@ func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
 }
 
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
-	tsc.calls++
+	tsc.calls.Add(1)
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
 			if err := wf(gosnmp.SnmpPDU{
@@ -214,7 +215,7 @@ func TestUpdateAgent(t *testing.T) {
 		"0": {"ifName": "eth0"},
 		"1": {"ifName": "eth1"},
 	}, tm.rows)
-	require.Equal(t, 1, tsc.calls)
+	require.EqualValues(t, 1, tsc.calls.Load())
 }
 
 func TestAdd(t *testing.T) {
@@ -413,7 +414,7 @@ func TestExpiry(t *testing.T) {
 		return int(acc.NMetrics()) >= len(expected)
 	}, 3*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-	require.Equal(t, 1, tsc.calls)
+	require.EqualValues(t, 1, tsc.calls.Load())
 
 	// clear cache to simulate expiry
 	p.cache.purge()
@@ -440,7 +441,7 @@ func TestExpiry(t *testing.T) {
 		return int(acc.NMetrics()) >= len(expected)
 	}, 3*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-	require.Equal(t, 2, tsc.calls)
+	require.EqualValues(t, 2, tsc.calls.Load())
 }
 
 func TestOrdered(t *testing.T) {
@@ -584,5 +585,5 @@ func TestOrdered(t *testing.T) {
 		return int(acc.NMetrics()) >= len(expected)
 	}, 3*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-	require.Equal(t, 3, tsc.calls)
+	require.EqualValues(t, len(input), tsc.calls.Load())
 }

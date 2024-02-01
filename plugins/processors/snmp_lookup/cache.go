@@ -2,7 +2,6 @@ package snmp_lookup
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -13,31 +12,32 @@ import (
 var ErrNotYetAvailable = errors.New("data not yet available")
 
 type store struct {
-	cache        *expirable.LRU[string, *tagMap]
-	pool         *pond.WorkerPool
-	inflight     sync.Map
-	backlog      map[string]time.Time
-	backlogTimer *time.Timer
-	notify       func(string, *tagMap)
-	update       func(string) *tagMap
+	cache                *expirable.LRU[string, *tagMap]
+	pool                 *pond.WorkerPool
+	minUpdateInterval    time.Duration
+	inflight             sync.Map
+	deferredUpdates      map[string]time.Time
+	deferredUpdatesTimer *time.Timer
+	notify               func(string, *tagMap)
+	update               func(string) *tagMap
+
 	sync.Mutex
 }
 
-func newStore(size int, ttl time.Duration, workers int) *store {
+func newStore(size int, ttl time.Duration, workers int, minUpdateInterval time.Duration) *store {
 	return &store{
-		cache:   expirable.NewLRU[string, *tagMap](size, nil, ttl),
-		pool:    pond.New(workers, 0, pond.MinWorkers(workers/2+1)),
-		backlog: make(map[string]time.Time),
+		cache:           expirable.NewLRU[string, *tagMap](size, nil, ttl),
+		pool:            pond.New(workers, 0, pond.MinWorkers(workers/2+1)),
+		deferredUpdates: make(map[string]time.Time),
 	}
 }
 
 func (s *store) addBacklog(agent string, earliest time.Time) {
 	s.Lock()
 	defer s.Unlock()
-	fmt.Printf("  - adding backlog for agent %s\n", agent)
-	t, found := s.backlog[agent]
+	t, found := s.deferredUpdates[agent]
 	if !found || t.After(earliest) {
-		s.backlog[agent] = earliest
+		s.deferredUpdates[agent] = earliest
 		s.refreshTimer()
 	}
 }
@@ -45,81 +45,69 @@ func (s *store) addBacklog(agent string, earliest time.Time) {
 func (s *store) removeBacklog(agent string) {
 	s.Lock()
 	defer s.Unlock()
-	fmt.Printf("  - removing backlog for agent %s\n", agent)
-	delete(s.backlog, agent)
+	delete(s.deferredUpdates, agent)
 	s.refreshTimer()
 }
 
 func (s *store) refreshTimer() {
-	fmt.Println("  - refreshing timer")
-
-	if s.backlogTimer != nil {
-		s.backlogTimer.Stop()
+	if s.deferredUpdatesTimer != nil {
+		s.deferredUpdatesTimer.Stop()
 	}
-	if len(s.backlog) == 0 {
+	if len(s.deferredUpdates) == 0 {
 		return
 	}
 	var agent string
 	var earliest time.Time
-	for k, t := range s.backlog {
+	for k, t := range s.deferredUpdates {
 		if agent == "" || t.Before(earliest) {
 			agent = k
 			earliest = t
 		}
 	}
-	s.backlogTimer = time.AfterFunc(time.Until(earliest), func() { s.enqueue(agent) })
+	s.deferredUpdatesTimer = time.AfterFunc(time.Until(earliest), func() { s.enqueue(agent) })
 }
 
 func (s *store) enqueue(agent string) {
-	fmt.Printf("  - enqueuing agent %s\n", agent)
+	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight {
+		return
+	}
 	s.pool.Submit(func() {
-		if _, inflight := s.inflight.LoadOrStore(agent, true); inflight {
-			fmt.Println("  -> already in-flight...")
-			return
-		}
-		tags := s.update(agent)
-		fmt.Printf("  - received update for agent %s: %v\n", agent, tags)
-		s.cache.Add(agent, tags)
+		entry := s.update(agent)
+		s.cache.Add(agent, entry)
 		s.removeBacklog(agent)
-		if s.notify != nil {
-			fmt.Printf("  - sending notification %s\n", agent)
-			s.notify(agent, tags)
-		}
+		s.notify(agent, entry)
 		s.inflight.Delete(agent)
 	})
 }
 
-func (s *store) lookup(agent string, index string) (map[string]string, error) {
-	fmt.Println("looking up ", agent, " index", index)
-	entry, cached := s.cache.Peek(agent)
+func (s *store) lookup(agent string, index string) {
+	entry, cached := s.cache.Get(agent)
 	if !cached {
-		fmt.Println("  * not cached")
 		// There is no cache at all, so we need to enqueue an update.
 		s.enqueue(agent)
-		return nil, ErrNotYetAvailable
+		return
 	}
 
-	value, found := entry.rows[index]
-	if !found {
-		// The index does not exist, therefore we need to update the
-		// agent as it maybe appeared in the meantime
-		if time.Since(entry.created) > minTimeBetweenUpdates {
-			fmt.Println("  * not cached pause passed")
-			// The minimum time between updates has passed so we are good to
-			// directly update the cache.
-			s.enqueue(agent)
-			return nil, ErrNotYetAvailable
+	// In case the index does not exist, we need to update the agent as this
+	// new index might have been added in the meantime (e.g. after hot-plugging
+	// hardware). In any way, we release the metric unresolved to not block
+	// ordered operations for long time.
+	if _, found := entry.rows[index]; !found {
+		// Only update the agent if the user wants to
+		if s.minUpdateInterval > 0 {
+			if time.Since(entry.created) > s.minUpdateInterval {
+				// The minimum time between updates has passed so we are good to
+				// directly update the cache.
+				s.enqueue(agent)
+			} else {
+				// The minimum time between updates has not yet passed so we
+				// need to defer the agent update to later.
+				s.addBacklog(agent, entry.created.Add(s.minUpdateInterval))
+			}
 		}
-
-		fmt.Println("  * not cached deferring")
-		// The minimum time between updates has not yet passed so we
-		// need to defer the agent update to later.
-		s.addBacklog(agent, entry.created.Add(minTimeBetweenUpdates))
-		return nil, ErrNotYetAvailable
 	}
-	fmt.Println("  => found", value)
 
-	return value, nil
+	s.notify(agent, entry)
 }
 
 func (s *store) destroy() {

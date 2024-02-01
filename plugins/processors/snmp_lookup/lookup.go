@@ -3,7 +3,6 @@ package snmp_lookup
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -42,10 +41,11 @@ type Lookup struct {
 
 	snmp.ClientConfig
 
-	CacheSize       int             `toml:"max_cache_entries"`
-	ParallelLookups int             `toml:"max_parallel_lookups"`
-	Ordered         bool            `toml:"ordered"`
-	CacheTTL        config.Duration `toml:"cache_ttl"`
+	CacheSize             int             `toml:"max_cache_entries"`
+	ParallelLookups       int             `toml:"max_parallel_lookups"`
+	Ordered               bool            `toml:"ordered"`
+	CacheTTL              config.Duration `toml:"cache_ttl"`
+	MinTimeBetweenUpdates config.Duration `toml:"min_time_between_updates"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -60,28 +60,29 @@ type Lookup struct {
 }
 
 const (
-	defaultCacheSize       = 100
-	defaultCacheTTL        = config.Duration(8 * time.Hour)
-	defaultParallelLookups = 100
-	minTimeBetweenUpdates  = 5 * time.Minute
-	orderedQueueSize       = 10_000
+	defaultCacheSize             = 100
+	defaultCacheTTL              = config.Duration(8 * time.Hour)
+	defaultParallelLookups       = 100
+	defaultMinTimeBetweenUpdates = 5 * time.Minute
+	orderedQueueSize             = 10_000
 )
 
 func (*Lookup) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *Lookup) Init() (err error) {
+func (l *Lookup) Init() error {
 	// Check the SNMP configuration
-	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
+	if _, err := snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
 	// Setup the GOSMI translator
-	l.translator, err = si.NewGosmiTranslator(l.Path, l.Log)
+	translator, err := si.NewGosmiTranslator(l.Path, l.Log)
 	if err != nil {
 		return fmt.Errorf("loading translator: %w", err)
 	}
+	l.translator = translator
 
 	// Initialize the table
 	l.table.Name = "lookup"
@@ -101,7 +102,9 @@ func (l *Lookup) Init() (err error) {
 func (l *Lookup) Start(acc telegraf.Accumulator) error {
 	l.backlog = newBacklog(acc, l.Log, l.Ordered)
 
-	l.cache = newStore(l.CacheSize, time.Duration(l.CacheTTL), l.ParallelLookups)
+	cacheTTL := time.Duration(l.CacheTTL)
+	minUpdateInterval := time.Duration(l.MinTimeBetweenUpdates)
+	l.cache = newStore(l.CacheSize, cacheTTL, l.ParallelLookups, minUpdateInterval)
 	l.cache.update = l.updateAgent
 	l.cache.notify = l.backlog.resolve
 
@@ -134,36 +137,14 @@ func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 		return nil
 	}
 
+	// Add the metric to the backlog before trying to resolve it
+	//l.Log.Debugf("Adding metric to backlog...")
+	l.backlog.push(agent, index, m)
+
 	// Try to lookup the information from cache. An error ErrNotYetAvailable
 	// indicates that the information is not yet cached, but the case will take
 	// care to give back the information later via the `notify` callback.
-	tags, err := l.cache.lookup(agent, index)
-	if err != nil {
-		if errors.Is(err, ErrNotYetAvailable) {
-			l.Log.Debugf("Adding metric to backlog as data not yet available...")
-			l.backlog.push(agent, index, m)
-			return nil
-		}
-		l.Log.Errorf("Looking up %q (%s) failed: %v", agent, index, err)
-		acc.AddMetric(m)
-		return nil
-	}
-
-	// If resolving the metric from cache succeeded and we are good to directly
-	// release the metrics, we will do so. For ordered cases it might be
-	// necessary to add the metric to the backlog despite success...
-	if l.Ordered && !l.backlog.isEmpty() {
-		// Add metric to backlog for later resolving
-		l.Log.Debugf("Adding metric to backlog due to ordering constraints...")
-		l.backlog.push(agent, index, m)
-		return nil
-	}
-
-	l.Log.Debugf("Directly adding metric...")
-	for key, value := range tags {
-		m.AddTag(key, value)
-	}
-	acc.AddMetric(m)
+	l.cache.lookup(agent, index)
 
 	return nil
 }
@@ -171,7 +152,6 @@ func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 // Default update function
 func (l *Lookup) updateAgent(agent string) *tagMap {
 	// Initialize connection to agent
-	l.Log.Debugf("Connecting to %q", agent)
 	conn, err := l.getConnectionFunc(agent)
 	if err != nil {
 		l.Log.Errorf("Getting connection for %q failed: %v", agent, err)
@@ -183,7 +163,6 @@ func (l *Lookup) updateAgent(agent string) *tagMap {
 	}
 
 	// Query table including translation
-	l.Log.Debugf("Building lookup table for %q", agent)
 	table, err := l.table.Build(conn, true, l.translator)
 	if err != nil {
 		l.Log.Errorf("Building table for %q failed: %v", agent, err)
@@ -191,7 +170,6 @@ func (l *Lookup) updateAgent(agent string) *tagMap {
 	}
 
 	// Copy tags for all rows
-	l.Log.Debugf("Got table for %q: %v", agent, table.Rows)
 	tm := &tagMap{
 		created: table.Time,
 		rows:    make(tagMapRows, len(table.Rows)),
@@ -225,12 +203,13 @@ func (l *Lookup) getConnection(agent string) (snmpConnection, error) {
 func init() {
 	processors.AddStreaming("snmp_lookup", func() telegraf.StreamingProcessor {
 		return &Lookup{
-			AgentTag:        "source",
-			IndexTag:        "index",
-			ClientConfig:    *snmp.DefaultClientConfig(),
-			CacheSize:       defaultCacheSize,
-			CacheTTL:        defaultCacheTTL,
-			ParallelLookups: defaultParallelLookups,
+			AgentTag:              "source",
+			IndexTag:              "index",
+			ClientConfig:          *snmp.DefaultClientConfig(),
+			CacheSize:             defaultCacheSize,
+			CacheTTL:              defaultCacheTTL,
+			MinTimeBetweenUpdates: config.Duration(defaultMinTimeBetweenUpdates),
+			ParallelLookups:       defaultParallelLookups,
 		}
 	})
 }
