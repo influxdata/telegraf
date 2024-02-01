@@ -128,6 +128,7 @@ following works:
 - github.com/eclipse/paho.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.golang/blob/master/LICENSE)
 - github.com/eclipse/paho.mqtt.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE)
 - github.com/emicklei/go-restful [MIT License](https://github.com/emicklei/go-restful/blob/v3/LICENSE)
+- github.com/facebook/time [Apache License 2.0](https://github.com/facebook/time/blob/main/LICENSE)
 - github.com/fatih/color [MIT License](https://github.com/fatih/color/blob/master/LICENSE.md)
 - github.com/felixge/httpsnoop [MIT License](https://github.com/felixge/httpsnoop/blob/master/LICENSE.txt)
 - github.com/form3tech-oss/jwt-go [MIT License](https://github.com/form3tech-oss/jwt-go/blob/master/LICENSE)
