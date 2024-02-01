@@ -299,6 +299,8 @@ func TestAdd(t *testing.T) {
 		},
 	}
 
+	tsc := &testSNMPConnection{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := Lookup{
@@ -316,6 +318,10 @@ func TestAdd(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
+			plugin.getConnectionFunc = func(string) (snmpConnection, error) {
+				return tsc, nil
+			}
+
 			// Sneak in cached  data
 			plugin.cache.cache.Add("127.0.0.1", &tagMap{rows: map[string]map[string]string{"123": {"ifName": "eth123"}}})
 
@@ -329,6 +335,8 @@ func TestAdd(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
+
+	require.EqualValues(t, 0, tsc.calls.Load())
 }
 
 func TestExpiry(t *testing.T) {
