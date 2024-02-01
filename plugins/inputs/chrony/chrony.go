@@ -71,7 +71,7 @@ func (c *Chrony) Init() error {
 	}
 	for _, m := range c.Metrics {
 		switch m {
-		case "activity", "tracking", "serverstats", "sources":
+		case "activity", "tracking", "serverstats", "sources", "sourcestats":
 			// Do nothing as those are valid
 		default:
 			return fmt.Errorf("invalid metric setting %q", m)
@@ -148,6 +148,8 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(c.gatherServerStats(acc))
 		case "sources":
 			acc.AddError(c.gatherSources(acc))
+		case "sourcestats":
+			acc.AddError(c.gatherSourceStats(acc))
 		default:
 			return fmt.Errorf("invalid metric setting %q", m)
 		}
@@ -357,6 +359,78 @@ func (c *Chrony) gatherSources(acc telegraf.Accumulator) error {
 			"latest_measurement_error": sourceData.LatestMeasErr,
 		}
 		acc.AddFields("chrony_sources", fields, tags)
+	}
+	return nil
+}
+
+func (c *Chrony) gatherSourceStats(acc telegraf.Accumulator) error {
+	sourcesReq := fbchrony.NewSourcesPacket()
+	sourcesRaw, err := c.client.Communicate(sourcesReq)
+	if err != nil {
+		return fmt.Errorf("querying sources failed: %w", err)
+	}
+
+	sourcesResp, ok := sourcesRaw.(*fbchrony.ReplySources)
+	if !ok {
+		return fmt.Errorf("got unexpected response type %T while waiting for sources", sourcesRaw)
+	}
+
+	for idx := int32(0); int(idx) < sourcesResp.NSources; idx++ {
+		// Getting the source data
+		sourceStatsReq := fbchrony.NewSourceStatsPacket(idx)
+		sourceStatsRaw, err := c.client.Communicate(sourceStatsReq)
+		if err != nil {
+			return fmt.Errorf("querying data for source %d failed: %w", idx, err)
+		}
+		sourceStats, ok := sourceStatsRaw.(*fbchrony.ReplySourceStats)
+		if !ok {
+			return fmt.Errorf("got unexpected response type %T while waiting for source data", sourceStatsRaw)
+		}
+
+		// Trying to resolve the source name
+		sourceNameReq := fbchrony.NewNTPSourceNamePacket(sourceStats.IPAddr)
+		sourceNameRaw, err := c.client.Communicate(sourceNameReq)
+		if err != nil {
+			return fmt.Errorf("querying name of source %d failed: %w", idx, err)
+		}
+		sourceName, ok := sourceNameRaw.(*fbchrony.ReplyNTPSourceName)
+		if !ok {
+			return fmt.Errorf("got unexpected response type %T while waiting for source name", sourceNameRaw)
+		}
+
+		// Cut the string at null termination
+		var peer string
+		if termidx := bytes.Index(sourceName.Name[:], []byte{0}); termidx >= 0 {
+			peer = string(sourceName.Name[:termidx])
+		} else {
+			peer = string(sourceName.Name[:])
+		}
+
+		if peer == "" {
+			peer = sourceStats.IPAddr.String()
+		}
+
+		tags := map[string]string{
+			"reference_id": fbchrony.RefidAsHEX(sourceStats.RefID),
+			"peer":         peer,
+		}
+		if c.source != "" {
+			tags["source"] = c.source
+		}
+
+		fields := map[string]interface{}{
+			"index":              idx,
+			"ip":                 sourceStats.IPAddr.String(),
+			"samples":            sourceStats.NSamples,
+			"runs":               sourceStats.NRuns,
+			"span_seconds":       sourceStats.SpanSeconds,
+			"stddev":             sourceStats.StandardDeviation,
+			"residual_frequency": sourceStats.ResidFreqPPM,
+			"skew":               sourceStats.SkewPPM,
+			"offset":             sourceStats.EstimatedOffset,
+			"offset_error":       sourceStats.EstimatedOffsetErr,
+		}
+		acc.AddFields("chrony_sourcestats", fields, tags)
 	}
 	return nil
 }

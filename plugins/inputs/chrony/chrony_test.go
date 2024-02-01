@@ -498,6 +498,155 @@ func TestGatherSources(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }
 
+func TestGatherSourceStats(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		SourcesInfo: []source{
+			{
+				name: "ntp1.my.org",
+				stats: &fbchrony.SourceStats{
+					RefID:              434354566,
+					IPAddr:             net.IPv4(192, 168, 0, 1),
+					NSamples:           1254,
+					NRuns:              16,
+					SpanSeconds:        32,
+					StandardDeviation:  0.0244,
+					ResidFreqPPM:       0.0015,
+					SkewPPM:            0.0001,
+					EstimatedOffset:    0.0039,
+					EstimatedOffsetErr: 0.0007,
+				},
+			},
+			{
+				name: "ntp2.my.org",
+				stats: &fbchrony.SourceStats{
+					RefID:              70349595,
+					IPAddr:             net.IPv4(192, 168, 0, 2),
+					NSamples:           23135,
+					NRuns:              24,
+					SpanSeconds:        3,
+					StandardDeviation:  0.0099,
+					ResidFreqPPM:       0.0188,
+					SkewPPM:            0.0002,
+					EstimatedOffset:    0.0104,
+					EstimatedOffsetErr: 0.0021,
+				},
+			},
+			{
+				name: "ntp3.my.org",
+				stats: &fbchrony.SourceStats{
+					RefID:              983490438,
+					IPAddr:             net.IPv4(192, 168, 0, 3),
+					NSamples:           23,
+					NRuns:              4,
+					SpanSeconds:        193,
+					StandardDeviation:  7.0586,
+					ResidFreqPPM:       0.8320,
+					SkewPPM:            0.0332,
+					EstimatedOffset:    5.3345,
+					EstimatedOffsetErr: 1.5437,
+				},
+			},
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"sourcestats"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin, do a gather and stop everything
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Shutdown()
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"chrony_sourcestats",
+			map[string]string{
+				"source":       addr,
+				"peer":         "ntp1.my.org",
+				"reference_id": "19E3B986",
+			},
+			map[string]interface{}{
+				"index":              0,
+				"ip":                 "192.168.0.1",
+				"samples":            uint64(1254),
+				"runs":               uint64(16),
+				"span_seconds":       uint64(32),
+				"stddev":             0.0244,
+				"residual_frequency": 0.0015,
+				"skew":               0.0001,
+				"offset":             0.0039,
+				"offset_error":       0.0007,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"chrony_sourcestats",
+			map[string]string{
+				"source":       addr,
+				"peer":         "ntp2.my.org",
+				"reference_id": "0431731B",
+			},
+			map[string]interface{}{
+				"index":              1,
+				"ip":                 "192.168.0.2",
+				"samples":            uint64(23135),
+				"runs":               uint64(24),
+				"span_seconds":       uint64(3),
+				"stddev":             0.0099,
+				"residual_frequency": 0.0188,
+				"skew":               0.0002,
+				"offset":             0.0104,
+				"offset_error":       0.0021,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"chrony_sourcestats",
+			map[string]string{
+				"source":       addr,
+				"peer":         "ntp3.my.org",
+				"reference_id": "3A9EDF86",
+			},
+			map[string]interface{}{
+				"index":              2,
+				"ip":                 "192.168.0.3",
+				"samples":            uint64(23),
+				"runs":               uint64(4),
+				"span_seconds":       uint64(193),
+				"stddev":             7.0586,
+				"residual_frequency": 0.8320,
+				"skew":               0.0332,
+				"offset":             5.3345,
+				"offset_error":       1.5437,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	options := []cmp.Option{
+		// tests on linux with go1.20 will add a warning about code coverage, ignore that tag
+		testutil.IgnoreTags("warning"),
+		testutil.IgnoreTime(),
+		cmpopts.EquateApprox(0.001, 0),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -643,6 +792,15 @@ func (s *Server) serve(t *testing.T) {
 			} else {
 				t.Log("mock server [tracking]: successfully wrote reply")
 			}
+		case 34: // source stats
+			var idx int32
+			require.NoError(t, binary.Read(data, binary.BigEndian, &idx))
+			_, err = s.conn.WriteTo(s.encodeSourceStatsReply(seqno, idx), addr)
+			if err != nil {
+				t.Logf("mock server [source stats]: writing reply failed: %v", err)
+			} else {
+				t.Log("mock server [source stats]: successfully wrote reply")
+			}
 		case 44: // activity
 			_, err := s.conn.WriteTo(s.encodeActivityReply(seqno), addr)
 			if err != nil {
@@ -779,6 +937,30 @@ func (s *Server) encodeSourceDataReply(sequence uint32, idx int32) []byte {
 	return buf
 }
 
+func (s *Server) encodeSourceStatsReply(sequence uint32, idx int32) []byte {
+	if len(s.SourcesInfo) <= int(idx) {
+		return encodeHeader(34, 6, 3, sequence) // status invalid
+	}
+	src := s.SourcesInfo[idx].stats
+
+	// Encode the header
+	buf := encodeHeader(15, 6, 0, sequence) // source data request
+
+	// Encode data
+	buf = binary.BigEndian.AppendUint32(buf, src.RefID)
+	buf = append(buf, encodeIP(src.IPAddr)...)
+	buf = binary.BigEndian.AppendUint32(buf, src.NSamples)
+	buf = binary.BigEndian.AppendUint32(buf, src.NRuns)
+	buf = binary.BigEndian.AppendUint32(buf, src.SpanSeconds)
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.StandardDeviation))
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.ResidFreqPPM))
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.SkewPPM))
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.EstimatedOffset))
+	buf = binary.BigEndian.AppendUint32(buf, encodeFloat(src.EstimatedOffsetErr))
+
+	return buf
+}
+
 func (s *Server) encodeSourceNameReply(sequence uint32, ip net.IP) []byte {
 	// Encode the header
 	buf := encodeHeader(65, 19, 0, sequence) // source name request
@@ -786,7 +968,7 @@ func (s *Server) encodeSourceNameReply(sequence uint32, ip net.IP) []byte {
 	// Find the correct source
 	var name []byte
 	for _, src := range s.SourcesInfo {
-		if src.data.IPAddr.Equal(ip) {
+		if src.data != nil && src.data.IPAddr.Equal(ip) || src.stats != nil && src.stats.IPAddr.Equal(ip) {
 			name = []byte(src.name)
 			break
 		}
