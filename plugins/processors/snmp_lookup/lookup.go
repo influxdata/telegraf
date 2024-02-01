@@ -98,9 +98,7 @@ func (l *Lookup) Init() (err error) {
 func (l *Lookup) Start(acc telegraf.Accumulator) error {
 	l.backlog = newBacklog(acc, l.Log, l.Ordered)
 
-	cacheTTL := time.Duration(l.CacheTTL)
-	minUpdateInterval := time.Duration(l.MinTimeBetweenUpdates)
-	l.cache = newStore(l.CacheSize, cacheTTL, l.ParallelLookups, minUpdateInterval)
+	l.cache = newStore(l.CacheSize, l.CacheTTL, l.ParallelLookups, l.MinTimeBetweenUpdates)
 	l.cache.update = l.updateAgent
 	l.cache.notify = l.backlog.resolve
 

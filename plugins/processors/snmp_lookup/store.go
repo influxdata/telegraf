@@ -7,6 +7,7 @@ import (
 
 	"github.com/alitto/pond"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/influxdata/telegraf/config"
 )
 
 var ErrNotYetAvailable = errors.New("data not yet available")
@@ -24,11 +25,12 @@ type store struct {
 	sync.Mutex
 }
 
-func newStore(size int, ttl time.Duration, workers int, minUpdateInterval time.Duration) *store {
+func newStore(size int, ttl config.Duration, workers int, minUpdateInterval config.Duration) *store {
 	return &store{
-		cache:           expirable.NewLRU[string, *tagMap](size, nil, ttl),
-		pool:            pond.New(workers, 0, pond.MinWorkers(workers/2+1)),
-		deferredUpdates: make(map[string]time.Time),
+		cache:             expirable.NewLRU[string, *tagMap](size, nil, time.Duration(ttl)),
+		pool:              pond.New(workers, 0, pond.MinWorkers(workers/2+1)),
+		deferredUpdates:   make(map[string]time.Time),
+		minUpdateInterval: time.Duration(minUpdateInterval),
 	}
 }
 
