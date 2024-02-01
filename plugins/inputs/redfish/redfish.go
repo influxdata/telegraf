@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -28,6 +30,7 @@ type Redfish struct {
 	ComputerSystemID string          `toml:"computer_system_id"`
 	IncludeMetrics   []string        `toml:"include_metrics"`
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
+	Workarounds      []string        `toml:"workarounds"`
 	Timeout          config.Duration `toml:"timeout"`
 
 	tagSet map[string]bool
@@ -111,6 +114,8 @@ type Thermal struct {
 	Fans []struct {
 		Name                   string
 		MemberID               string
+		FanName                string
+		CurrentReading         *int64
 		Reading                *int64
 		ReadingUnits           *string
 		UpperThresholdCritical *int64
@@ -175,6 +180,13 @@ func (r *Redfish) Init() error {
 		}
 	}
 
+	for _, workaround := range r.Workarounds {
+		switch workaround {
+		case "ilo4-thermal":
+		default:
+			return fmt.Errorf("unknown workaround requested: %s", workaround)
+		}
+	}
 	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
 	for _, setLabel := range r.IncludeTagSets {
 		r.tagSet[setLabel] = true
@@ -212,6 +224,12 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("OData-Version", "4.0")
+
+	// workaround for iLO4 thermal data
+	if slices.Contains(r.Workarounds, "ilo4-thermal") && strings.Contains(address, "/Thermal") {
+		req.Header.Del("OData-Version")
+	}
+
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
@@ -364,6 +382,9 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
+		if j.FanName != "" {
+			tags["name"] = j.FanName
+		}
 		tags["source"] = system.Hostname
 		tags["state"] = j.Status.State
 		tags["health"] = j.Status.Health
@@ -383,6 +404,8 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 			fields["lower_threshold_critical"] = j.LowerThresholdCritical
 			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 			fields["reading_rpm"] = j.Reading
+		} else if j.CurrentReading != nil {
+			fields["reading_percent"] = j.CurrentReading
 		} else {
 			fields["reading_percent"] = j.Reading
 		}

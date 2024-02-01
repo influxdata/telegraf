@@ -42,6 +42,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Available sets are: "chassis.location" and "chassis"
   # include_tag_sets = ["chassis.location"]
 
+  ## Workarounds
+  ## Defines workarounds for certain hardware vendors. Choose from:
+  ## * ilo4-thermal - Do not pass 0Data-Version header to Thermal endpoint
+  # workarounds = []
+
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
 
