@@ -839,7 +839,7 @@ func (s *Server) encodeActivityReply(sequence uint32) []byte {
 
 	// Encode data
 	b := bytes.NewBuffer(buf)
-	binary.Write(b, binary.BigEndian, s.ActivityInfo)
+	_ = binary.Write(b, binary.BigEndian, s.ActivityInfo)
 
 	return b.Bytes()
 }
@@ -882,21 +882,21 @@ func (s *Server) encodeServerStatsReply(sequence uint32) []byte {
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		binary.Write(b, binary.BigEndian, info)
+		_ = binary.Write(b, binary.BigEndian, info)
 	case *fbchrony.ServerStats2:
 		// Encode the header
 		buf := encodeHeader(54, 22, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		binary.Write(b, binary.BigEndian, info)
+		_ = binary.Write(b, binary.BigEndian, info)
 	case *fbchrony.ServerStats3:
 		// Encode the header
 		buf := encodeHeader(54, 24, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		binary.Write(b, binary.BigEndian, info)
+		_ = binary.Write(b, binary.BigEndian, info)
 	}
 
 	return b.Bytes()

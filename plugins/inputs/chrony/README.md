@@ -34,8 +34,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Metrics to query named according to chronyc commands
   ## Available settings are:
-  ##   activity  -- number of peers online or offline
-  ##   tracking  -- information about system's clock performance
+  ##   activity    -- number of peers online or offline
+  ##   tracking    -- information about system's clock performance
+  ##   serverstats -- chronyd server statistics
+  ##   sources     -- extended information about peers
+  ##   sourcestats -- statistics on peers
   # metrics = ["tracking"]
 ```
 
