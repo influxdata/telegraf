@@ -65,7 +65,7 @@ details.
   ## Deprecated in 1.20.0; no longer running snmptranslate
   ## Timeout running snmptranslate command
   # timeout = "5s"
-  ## Snmp version
+  ## Snmp version; one of "1", "2c" or "3".
   # version = "2c"
   ## SNMPv3 authentication and encryption options.
   ##
