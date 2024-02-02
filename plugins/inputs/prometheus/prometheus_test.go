@@ -355,8 +355,7 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 		URLTag:             "url",
 		ContentLengthLimit: 1,
 	}
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
