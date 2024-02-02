@@ -368,13 +368,15 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 
 func setResult(resultString string, requestFields map[string]interface{}, tags map[string]string) {
 	resultCodes := map[string]int{
-		"success":           0,
-		"unable_to_decode":  1,
-		"body_read_error":   2,
-		"connection_failed": 3,
-		"timeout":           4,
-		"dns_error":         5,
-		"http_code_not_ok":  6,
+		"success":                 0,
+		"unable_to_decode":        1,
+		"body_read_error":         2,
+		"connection_failed":       3,
+		"timeout":                 4,
+		"dns_error":               5,
+		"http_code_not_ok":        6,
+		"error_reading_body":      7,
+		"content_length_exceeded": 8,
 	}
 
 	tags["result"] = resultString
@@ -524,15 +526,18 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
+			setResult("error_reading_body", requestFields, tags)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
+			setResult("content_length_exceeded", requestFields, tags)
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, limit)
 			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
+			setResult("error_reading_body", requestFields, tags)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}

@@ -359,7 +359,21 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
-	require.Empty(t, acc.Metrics)
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus_request",
+			map[string]string{
+				"url":    ts.URL,
+				"result": "content_length_exceeded"},
+			map[string]interface{}{
+				"http_response_code": int64(200),
+				"result_code":        int64(8)},
+			time.UnixMilli(0),
+			telegraf.Untyped,
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(), testutil.SortMetrics(), testutil.IgnoreFields("response_time"))
 }
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {

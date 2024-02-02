@@ -384,6 +384,8 @@ a successful connection.
 |timeout                       | 4                       |The plugin timed out while awaiting the HTTP connection to complete|
 |dns_error                     | 5                       |There was a DNS error while attempting to connect to the host|
 |http_code_not_ok              | 6                       |Http return code not 200|
+|error_reading_body            | 7                       |Error while reading data|
+|content_length_exceeded       | 8                       |Data exceeded max size|
 
 ## Example Output
 
