@@ -47,7 +47,7 @@ func TestLookup(t *testing.T) {
 	require.Equal(t, 0, s.cache.Len())
 
 	// Initial lookup should cache entries
-	s.lookup("127.0.0.1", "0")
+	s.lookup("127.0.0.1", "999")
 	require.Eventually(t, func() bool {
 		return s.cache.Contains("127.0.0.1")
 	}, time.Second, time.Millisecond)
@@ -72,9 +72,9 @@ func TestLookup(t *testing.T) {
 
 	// Third lookup should directly update
 	s.lookup("127.0.0.1", "999")
-	require.EqualValues(t, 4, notifyCount.Load())
-	// TODO: How to test if s.enqueue was called without s.addBacklog?
+	_, inflight := s.inflight.Load("127.0.0.1")
+	require.True(t, inflight)
 	require.Eventually(t, func() bool {
-		return notifyCount.Load() == 5
+		return notifyCount.Load() == 4
 	}, time.Second, time.Millisecond)
 }

@@ -101,6 +101,7 @@ func (s *store) lookup(agent string, index string) {
 				// The minimum time between updates has passed so we are good to
 				// directly update the cache.
 				s.enqueue(agent)
+				return
 			} else {
 				// The minimum time between updates has not yet passed so we
 				// need to defer the agent update to later.
