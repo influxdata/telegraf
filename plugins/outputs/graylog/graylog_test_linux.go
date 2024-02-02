@@ -266,12 +266,12 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 
 		// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-		fmt.Println("server: receving packet 1")
+		fmt.Println("server: receiving packet 1")
 		err = recv(conn)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("server: receving packet 2")
+		fmt.Println("server: receiving packet 2")
 		err = recv(conn)
 		if err != nil {
 			fmt.Println(err)
@@ -295,7 +295,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		}
 		defer conn.Close()
 
-		fmt.Println("server: receving packet 4")
+		fmt.Println("server: receiving packet 4")
 		err = recv(conn)
 		if err != nil {
 			fmt.Println(err)

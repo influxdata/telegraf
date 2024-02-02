@@ -103,7 +103,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 	}
 	port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
 	if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-		return fmt.Errorf("Port numner %d is out of range", port)
+		return fmt.Errorf("Port number %d is out of range", port)
 	}
 
 	l.listener, err = vsock.Listen(uint32(port), nil)

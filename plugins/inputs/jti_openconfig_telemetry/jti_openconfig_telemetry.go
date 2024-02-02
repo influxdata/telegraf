@@ -293,7 +293,7 @@ func (m *OpenConfigTelemetry) collectData(
 					return
 				}
 
-				m.Log.Debugf("Sucessfully subscribed to %s on %s", sensor.measurementName, grpcServer)
+				m.Log.Debugf("Successfully subscribed to %s on %s", sensor.measurementName, grpcServer)
 
 				for {
 					r, err := stream.Recv()

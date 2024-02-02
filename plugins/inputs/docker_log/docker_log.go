@@ -16,6 +16,7 @@ import (
 	"unicode"
 
 	"github.com/docker/docker/api/types"
+	typeContainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -61,7 +62,7 @@ type DockerLogs struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	opts            types.ContainerListOptions
+	opts            typeContainer.ListOptions
 	wg              sync.WaitGroup
 	mu              sync.Mutex
 	containerList   map[string]context.CancelFunc
@@ -116,7 +117,7 @@ func (d *DockerLogs) Init() error {
 	}
 
 	if filterArgs.Len() != 0 {
-		d.opts = types.ContainerListOptions{
+		d.opts = typeContainer.ListOptions{
 			Filters: filterArgs,
 		}
 	}
@@ -279,7 +280,7 @@ func (d *DockerLogs) tailContainerLogs(
 		d.lastRecordMtx.Unlock()
 	}
 
-	logOptions := types.ContainerLogsOptions{
+	logOptions := typeContainer.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,

@@ -2,11 +2,10 @@
 
 set -eux
 
-GO_VERSION="1.21.5"
+GO_VERSION="1.21.6"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --force --version=${GO_VERSION}
-    git config --system core.longpaths true
+    choco upgrade golang --allow-downgrade --version=${GO_VERSION}
 }
 
 if command -v go >/dev/null 2>&1; then

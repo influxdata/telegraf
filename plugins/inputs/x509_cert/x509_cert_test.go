@@ -44,7 +44,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 
 	defer os.Remove(tmpfile.Name())
 
-	_, err = tmpfile.Write([]byte(pki.ReadServerCert()))
+	_, err = tmpfile.WriteString(pki.ReadServerCert())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -160,7 +160,7 @@ func TestGatherLocal(t *testing.T) {
 			f, err := os.CreateTemp("", "x509_cert")
 			require.NoError(t, err)
 
-			_, err = f.Write([]byte(test.content))
+			_, err = f.WriteString(test.content)
 			require.NoError(t, err)
 
 			if runtime.GOOS != "windows" {
@@ -193,7 +193,7 @@ func TestTags(t *testing.T) {
 	f, err := os.CreateTemp("", "x509_cert")
 	require.NoError(t, err)
 
-	_, err = f.Write([]byte(cert))
+	_, err = f.WriteString(cert)
 	require.NoError(t, err)
 
 	require.NoError(t, f.Close())
@@ -242,7 +242,7 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	f, err := os.CreateTemp("", "x509_cert")
 	require.NoError(t, err)
 
-	_, err = f.Write([]byte(cert))
+	_, err = f.WriteString(cert)
 	require.NoError(t, err)
 
 	require.NoError(t, f.Close())
@@ -279,7 +279,7 @@ func TestGatherChain(t *testing.T) {
 			f, err := os.CreateTemp("", "x509_cert")
 			require.NoError(t, err)
 
-			_, err = f.Write([]byte(test.content))
+			_, err = f.WriteString(test.content)
 			require.NoError(t, err)
 
 			require.NoError(t, f.Close())

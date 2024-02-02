@@ -205,7 +205,7 @@ func (p *Postgresql) registerUint8(_ context.Context, conn *pgx.Conn) error {
 		}
 		row := conn.QueryRow(p.dbContext, "SELECT oid FROM pg_type WHERE typname=$1", dt.Name)
 		if err := row.Scan(&dt.OID); err != nil {
-			return fmt.Errorf("retreiving OID for uint8 data type: %w", err)
+			return fmt.Errorf("retrieving OID for uint8 data type: %w", err)
 		}
 		p.pguint8 = &dt
 	}

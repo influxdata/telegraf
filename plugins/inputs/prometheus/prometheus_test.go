@@ -80,7 +80,6 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 func TestPrometheusCustomHeader(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.Header.Get("accept"))
 		switch r.Header.Get("accept") {
 		case "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3":
 			_, err := fmt.Fprintln(w, "proto 15 1490802540000")
@@ -343,6 +342,26 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	require.ErrorContains(t, err, "error making HTTP request to \""+ts.URL+"/metrics\"")
 }
 
+func TestPrometheusContentLengthLimit(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		URLs:               []string{ts.URL},
+		URLTag:             "url",
+		ContentLengthLimit: 1,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
+	require.Empty(t, acc.Metrics)
+}
+
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)
@@ -486,15 +505,14 @@ func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 		URLTag:          "url",
 		IgnoreTimestamp: true,
 	}
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
 
-	err = acc.GatherError(p.Gather)
-	require.NoError(t, err)
-
-	m, _ := acc.Get("test_metric")
+	m, found := acc.Get("test_metric")
+	require.True(t, found)
+	require.NotNil(t, m)
 	require.WithinDuration(t, time.Now(), m.Time, 5*time.Second)
 }
 

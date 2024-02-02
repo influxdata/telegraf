@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -396,7 +397,7 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 	return req, nil
 }
 
-// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
 // side of the connection in case of error
 func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.serializer)
@@ -410,7 +411,11 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser 
 
 func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.Headers {
-		req.Header.Set(header, value)
+		if strings.EqualFold(header, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(header, value)
+		}
 	}
 }
 

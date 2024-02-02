@@ -490,7 +490,7 @@ func badRequest(res http.ResponseWriter, errString string) error {
 	}
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	_, err := res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	_, err := fmt.Fprintf(res, `{"error":%q}`, errString)
 	return err
 }
 
@@ -499,7 +499,7 @@ func partialWrite(res http.ResponseWriter, errString string) error {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	_, err := res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	_, err := fmt.Fprintf(res, `{"error":%q}`, errString)
 	return err
 }
 

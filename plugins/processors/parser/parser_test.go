@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -807,6 +808,78 @@ func TestBadApply(t *testing.T) {
 
 			output := plugin.Apply(tt.input)
 			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestTracking(t *testing.T) {
+	var testCases = []struct {
+		name       string
+		numMetrics int
+		parser     Parser
+		payload    string
+	}{
+		{
+			name:       "keep all",
+			numMetrics: 2,
+			parser: Parser{
+				DropOriginal: false,
+				ParseFields:  []string{"payload"},
+				parser:       &json.Parser{},
+			},
+			payload: `{"value": 1}`,
+		},
+		{
+			name:       "drop original",
+			numMetrics: 1,
+			parser: Parser{
+				DropOriginal: true,
+				ParseFields:  []string{"payload"},
+				parser:       &json.Parser{},
+			},
+			payload: `{"value": 1}`,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a tracking metric and tap the delivery information
+			var mu sync.Mutex
+			delivered := make([]telegraf.DeliveryInfo, 0, 1)
+			notify := func(di telegraf.DeliveryInfo) {
+				mu.Lock()
+				defer mu.Unlock()
+				delivered = append(delivered, di)
+			}
+
+			// Configure the plugin
+			plugin := tt.parser
+			require.NoError(t, plugin.Init())
+
+			// Process expected metrics and compare with resulting metrics
+			testMetric := metric.New(
+				"test",
+				map[string]string{},
+				map[string]interface{}{
+					"payload": tt.payload,
+				},
+				time.Unix(0, 0),
+			)
+
+			input, _ := metric.WithTracking(testMetric, notify)
+			result := plugin.Apply(input)
+
+			// Ensure we get back the correct number of metrics
+			require.Len(t, result, tt.numMetrics)
+			for _, m := range result {
+				m.Accept()
+			}
+
+			// Simulate output acknowledging delivery of metrics and check delivery
+			require.Eventuallyf(t, func() bool {
+				mu.Lock()
+				defer mu.Unlock()
+				return len(delivered) == 1
+			}, 1*time.Second, 100*time.Millisecond, "original metric not delivered")
 		})
 	}
 }

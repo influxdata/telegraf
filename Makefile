@@ -174,7 +174,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -235,8 +235,8 @@ clean:
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/readme_linter/readme_linter
 	rm -rf tools/readme_linter/readme_linter.exe
-	rm -rf tools/package_lxd_test/package_lxd_test
-	rm -rf tools/package_lxd_test/package_lxd_test.exe
+	rm -rf tools/package_incus_test/package_incus_test
+	rm -rf tools/package_incus_test/package_incus_test.exe
 	rm -rf tools/license_checker/license_checker
 	rm -rf tools/license_checker/license_checker.exe
 
@@ -249,8 +249,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.21.5 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.21.5
+	docker build -t quay.io/influxdb/telegraf-ci:1.21.6 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.21.6
 
 .PHONY: install
 install: $(buildbin)
@@ -286,6 +286,10 @@ mipsel += mipsel.deb linux_mipsel.tar.gz
 .PHONY: mipsel
 mipsel:
 	@ echo $(mipsel)
+loong64 += linux_loong64.tar.gz loong64.deb loong64.rpm
+.PHONY: loong64
+loong64:
+	@ echo $(loong64)
 arm64 += linux_arm64.tar.gz arm64.deb aarch64.rpm
 .PHONY: arm64
 arm64:
@@ -332,7 +336,7 @@ darwin-arm64 += darwin_arm64.tar.gz
 darwin-arm64:
 	@ echo $(darwin-arm64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(loong64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: docs config $(include_packages)
@@ -364,10 +368,10 @@ $(include_packages):
 			--after-remove scripts/rpm/post-remove.sh \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
-			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--rpm-os ${GOOS} \
+			--rpm-tag "Requires(pre): /usr/sbin/useradd" \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
@@ -427,6 +431,9 @@ mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64
+
+loong64.deb loong64.rpm linux_loong64.tar.gz: export GOOS := linux
+loong64.deb loong64.rpm linux_loong64.tar.gz: export GOARCH := loong64
 
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x

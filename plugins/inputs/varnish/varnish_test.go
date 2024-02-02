@@ -92,7 +92,7 @@ func flatten(metrics []*testutil.Metric) map[string]interface{} {
 	for _, m := range metrics {
 		buf := &bytes.Buffer{}
 		for k, v := range m.Tags {
-			buf.WriteString(fmt.Sprintf("%s=%s", k, v))
+			fmt.Fprintf(buf, "%s=%s", k, v)
 		}
 		for k, v := range m.Fields {
 			flat[fmt.Sprintf("%s %s", buf.String(), k)] = v

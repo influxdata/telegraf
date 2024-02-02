@@ -884,7 +884,7 @@ func Test_rasReader(t *testing.T) {
 		// Remove the temporary file after this test
 		defer os.Remove(fileobj.Name())
 
-		_, err = fileobj.Write([]byte(testFileContent))
+		_, err = fileobj.WriteString(testFileContent)
 		require.NoError(t, err)
 		err = fileobj.Close()
 		require.NoError(t, err)
@@ -950,7 +950,7 @@ func simulateSocketResponseForGather(socket net.Listener, t *testing.T) {
 
 	require.NoError(t, err)
 	eventdevListWithSecondIndex := []string{"/eventdev/port_list", "/eventdev/queue_list"}
-	_, err = conn.Write([]byte(fmt.Sprintf(`{%q: [0, 1]}`, eventdevListWithSecondIndex[0])))
+	_, err = fmt.Fprintf(conn, `{%q: [0, 1]}`, eventdevListWithSecondIndex[0])
 	require.NoError(t, err)
 }
 

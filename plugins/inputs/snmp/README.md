@@ -69,6 +69,10 @@ details.
 
   ## Agent host tag; should be set to "source" for consistent usage across plugins
   ##   example: agent_host_tag = "source"
+  ## The default value is inconsistent with other plugins. Users will get a
+  ## warning that can be ignored if this is not changed. However, to have a
+  ## consistent experience, set this to "source" in your config to align with
+  ## other plugins.
   # agent_host_tag = "agent_host"
 
   ## Number of retries to attempt.
@@ -248,7 +252,7 @@ One [metric][] is created for each row of the SNMP table.
       ## Controls if entries from secondary table should be added or not
       ## if joining index is present or not. I set to true, means that join
       ## is outer, and index is prepended with "Secondary." for missing values
-      ## to avoid overlaping indexes from both tables. Can be set per field or
+      ## to avoid overlapping indexes from both tables. Can be set per field or
       ## globally with SecondaryIndexTable, global true overrides per field false.
       # secondary_outer_join = false
 ```

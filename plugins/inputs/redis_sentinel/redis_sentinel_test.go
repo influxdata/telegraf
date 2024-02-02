@@ -11,7 +11,7 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
@@ -19,7 +19,6 @@ import (
 )
 
 const masterName = "mymaster"
-const networkName = "telegraf-test-redis-sentinel"
 const sentinelServicePort = "26379"
 
 func TestRedisSentinelConnectIntegration(t *testing.T) {
@@ -28,24 +27,18 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-		NetworkRequest: testcontainers.NetworkRequest{
-			Name:           networkName,
-			Attachable:     true,
-			CheckDuplicate: true,
-		},
-	})
+	net, err := network.New(ctx, network.WithCheckDuplicate())
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, net.Remove(ctx), "terminating network failed")
 	}()
 
-	redis := createRedisContainer()
+	redis := createRedisContainer(net.Name)
 	err = redis.Start()
 	require.NoError(t, err, "failed to start container")
 	defer redis.Terminate()
 
-	firstSentinel := createSentinelContainer(redis.Name, wait.ForAll(
+	firstSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+monitor master"),
 		wait.ForListeningPort(nat.Port(sentinelServicePort)),
 	))
@@ -53,7 +46,7 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start container")
 	defer firstSentinel.Terminate()
 
-	secondSentinel := createSentinelContainer(redis.Name, wait.ForAll(
+	secondSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+sentinel sentinel"),
 		wait.ForListeningPort(nat.Port(sentinelServicePort)),
 	))
@@ -356,7 +349,7 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
 }
 
-func createRedisContainer() testutil.Container {
+func createRedisContainer(networkName string) testutil.Container {
 	return testutil.Container{
 		Image:        "redis:7.0-alpine",
 		Name:         "telegraf-test-redis-sentinel-redis",
@@ -369,7 +362,7 @@ func createRedisContainer() testutil.Container {
 	}
 }
 
-func createSentinelContainer(redisAddress string, waitingFor wait.Strategy) testutil.Container {
+func createSentinelContainer(redisAddress string, networkName string, waitingFor wait.Strategy) testutil.Container {
 	return testutil.Container{
 		Image:        "bitnami/redis-sentinel:7.0",
 		ExposedPorts: []string{sentinelServicePort},

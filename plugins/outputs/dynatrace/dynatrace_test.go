@@ -166,8 +166,10 @@ func TestSendMetrics(t *testing.T) {
 	// Init metrics
 
 	// Simple metrics are exported as a gauge unless in additional_counters
-	expected = append(expected, "simple_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000")
-	expected = append(expected, "simple_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000")
+	expected = append(expected,
+		"simple_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+		"simple_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
+	)
 	d.AddCounterMetrics = append(d.AddCounterMetrics, "simple_metric.counter")
 	m1 := metric.New(
 		"simple_metric",
@@ -177,8 +179,10 @@ func TestSendMetrics(t *testing.T) {
 	)
 
 	// Even if Type() returns counter, all metrics are treated as a gauge unless explicitly added to additional_counters
-	expected = append(expected, "counter_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000")
-	expected = append(expected, "counter_type.counter,dt.metrics.source=telegraf count,delta=5 1289430000000")
+	expected = append(expected,
+		"counter_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+		"counter_type.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
+	)
 	d.AddCounterMetrics = append(d.AddCounterMetrics, "counter_type.counter")
 	m2 := metric.New(
 		"counter_type",
@@ -188,12 +192,14 @@ func TestSendMetrics(t *testing.T) {
 		telegraf.Counter,
 	)
 
-	expected = append(expected, "complex_metric.int,dt.metrics.source=telegraf gauge,1 1289430000000")
-	expected = append(expected, "complex_metric.int64,dt.metrics.source=telegraf gauge,2 1289430000000")
-	expected = append(expected, "complex_metric.float,dt.metrics.source=telegraf gauge,3 1289430000000")
-	expected = append(expected, "complex_metric.float64,dt.metrics.source=telegraf gauge,4 1289430000000")
-	expected = append(expected, "complex_metric.true,dt.metrics.source=telegraf gauge,1 1289430000000")
-	expected = append(expected, "complex_metric.false,dt.metrics.source=telegraf gauge,0 1289430000000")
+	expected = append(expected,
+		"complex_metric.int,dt.metrics.source=telegraf gauge,1 1289430000000",
+		"complex_metric.int64,dt.metrics.source=telegraf gauge,2 1289430000000",
+		"complex_metric.float,dt.metrics.source=telegraf gauge,3 1289430000000",
+		"complex_metric.float64,dt.metrics.source=telegraf gauge,4 1289430000000",
+		"complex_metric.true,dt.metrics.source=telegraf gauge,1 1289430000000",
+		"complex_metric.false,dt.metrics.source=telegraf gauge,0 1289430000000",
+	)
 	m3 := metric.New(
 		"complex_metric",
 		map[string]string{},

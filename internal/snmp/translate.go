@@ -224,7 +224,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		}
 
 		if oidNum = out.RenderNumeric(); oidNum == "" {
-			return oid, oid, oid, oid, out, fmt.Errorf("cannot make %v numeric, please ensure all imported mibs are in the path", oid)
+			return oid, oid, oid, oid, out, fmt.Errorf("cannot translate %v into a numeric OID, please ensure all imported MIBs are in the path", oid)
 		}
 
 		oidNum = "." + oidNum + end

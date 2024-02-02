@@ -11,7 +11,7 @@ access the metric name via `{{.Name}}`, the tag values via `{{.Tag "mytag"}}`,
 with `mytag` being the tag-name and field-values via `{{.Field "myfield"}}`,
 with `myfield` being the field-name. Non-existing tags and field will result
 in an empty string or `nil` respectively. In case the key cannot be found, the
-metric is passed-trough unchanged. By default all matching tags are added and
+metric is passed-through unchanged. By default all matching tags are added and
 existing tag-values are overwritten.
 
 Please note: The plugin only supports the addition of tags and thus all mapped

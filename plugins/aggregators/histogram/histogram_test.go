@@ -187,9 +187,10 @@ func TestHistogramWithReset(t *testing.T) {
 
 // TestHistogramWithAllFields tests two metrics for one period and for all fields
 func TestHistogramWithAllFields(t *testing.T) {
-	var cfg []config
-	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}})
-	cfg = append(cfg, config{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}})
+	cfg := []config{
+		{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}},
+		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
+	}
 	histogram := NewTestHistogram(cfg, false, true, false)
 
 	acc := &testutil.Accumulator{}
@@ -265,9 +266,10 @@ func TestHistogramWithAllFields(t *testing.T) {
 
 // TestHistogramWithAllFieldsNonCumulative tests two metrics for one period and for all fields
 func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
-	var cfg []config
-	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}})
-	cfg = append(cfg, config{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}})
+	cfg := []config{
+		{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}},
+		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
+	}
 	histogram := NewTestHistogram(cfg, false, false, false)
 
 	acc := &testutil.Accumulator{}
@@ -429,9 +431,10 @@ func TestHistogramMetricExpiration(t *testing.T) {
 		timeNow = time.Now
 	}()
 
-	var cfg []config
-	cfg = append(cfg, config{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	cfg = append(cfg, config{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}})
+	cfg := []config{
+		{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}},
+		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
+	}
 	histogram := NewTestHistogramWithExpirationInterval(cfg, false, true, false, telegrafConfig.Duration(30))
 
 	acc := &testutil.Accumulator{}

@@ -44,7 +44,7 @@ type ConsulQuery struct {
 	serviceURLTemplate       *template.Template
 	serviceExtraTagsTemplate map[string]*template.Template
 
-	// Store last error status and change log level depending on repeated occurence
+	// Store last error status and change log level depending on repeated occurrence
 	lastQueryFailed bool
 }
 

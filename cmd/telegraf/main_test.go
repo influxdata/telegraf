@@ -133,7 +133,7 @@ func (m *MockConfig) CollectDeprecationInfos(_, _, _, _ []string) map[string][]c
 
 func (m *MockConfig) PrintDeprecationList(plugins []config.PluginDeprecationInfo) {
 	for _, p := range plugins {
-		_, _ = m.Buffer.Write([]byte(fmt.Sprintf("plugin name: %s\n", p.Name)))
+		fmt.Fprintf(m.Buffer, "plugin name: %s\n", p.Name)
 	}
 }
 
@@ -168,7 +168,14 @@ func TestUsageFlag(t *testing.T) {
 			ExpectedOutput: `
 # Read metrics about temperature
 [[inputs.temp]]
-  # no configuration
+  ## Desired output format (Linux only)
+  ## Available values are
+  ##   v1 -- use pre-v1.22.4 sensor naming, e.g. coretemp_core0_input
+  ##   v2 -- use v1.22.4+ sensor naming, e.g. coretemp_core_0_input
+  # metric_format = "v2"
+
+  ## Add device tag to distinguish devices with the same name (Linux only)
+  # add_device_tag = false
 
 `,
 		},

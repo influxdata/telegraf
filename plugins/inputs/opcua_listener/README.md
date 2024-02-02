@@ -48,6 +48,12 @@ to use them.
   ## Maximum time allowed to establish a connect to the endpoint.
   # connect_timeout = "10s"
   #
+  ## Behavior when we fail to connect to the endpoint on initialization. Valid options are:
+  ##     "error": throw an error and exits Telegraf
+  ##     "ignore": ignore this plugin if errors are encountered
+  #      "retry": retry connecting at each interval
+  # connect_fail_behavior = "error"
+  #
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
   #
@@ -90,6 +96,13 @@ to use them.
   # layout specification from https://golang.org/pkg/time/#Time.Format
   # e.g.: json_timestamp_format = "2006-01-02T15:04:05Z07:00"
   #timestamp_format = ""
+  #
+  #
+  ## Client trace messages
+  ## When set to true, and debug mode enabled in the agent settings, the OPCUA
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
+  # client_trace = false
   #
   ## Include additional Fields in each metric
   ## Available options are:
@@ -252,7 +265,7 @@ An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
 To gather data from this node enter the following line into the 'nodes' property above:
 
 ```text
-{field_name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
+{name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
 ```
 
 This node configuration produces a metric like this:

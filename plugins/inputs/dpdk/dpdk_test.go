@@ -58,8 +58,7 @@ func Test_Init(t *testing.T) {
 	})
 
 	t.Run("when commands are in invalid format (doesn't start with '/') then error should be returned", func(t *testing.T) {
-		pathToSocket, socket := createSocketForTest(t, "")
-		defer socket.Close()
+		pathToSocket, _ := createSocketForTest(t, "")
 		dpdk := dpdk{
 			Log:                testutil.Logger{},
 			SocketPath:         pathToSocket,
@@ -84,8 +83,7 @@ func Test_Init(t *testing.T) {
 	})
 
 	t.Run("when device_types and additional_commands are empty, then error should be returned", func(t *testing.T) {
-		pathToSocket, socket := createSocketForTest(t, "")
-		defer socket.Close()
+		pathToSocket, _ := createSocketForTest(t, "")
 		dpdk := dpdk{
 			SocketPath:         pathToSocket,
 			DeviceTypes:        []string{},
@@ -141,7 +139,6 @@ func Test_Start(t *testing.T) {
 
 	t.Run("when all values are valid, then no error should be returned", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		defer socket.Close()
 		dpdk := dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
@@ -193,7 +190,6 @@ func TestMaintainConnections(t *testing.T) {
 
 	t.Run("maintainConnections shouldn't return error with 1 socket", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		defer socket.Close()
 		dpdk := dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
@@ -214,11 +210,6 @@ func TestMaintainConnections(t *testing.T) {
 		numSockets := rand.Intn(5) + 1
 
 		pathToSockets, sockets := createMultipleSocketsForTest(t, numSockets, "")
-		defer func() {
-			for _, socket := range sockets {
-				socket.Close()
-			}
-		}()
 
 		dpdk := dpdk{
 			SocketPath:    pathToSockets[0],
@@ -244,7 +235,6 @@ func TestMaintainConnections(t *testing.T) {
 
 	t.Run("Test maintainConnections without dpdkPluginOptionInMemory option", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		defer socket.Close()
 		dpdk := dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
@@ -264,7 +254,6 @@ func TestMaintainConnections(t *testing.T) {
 
 	t.Run("Test maintainConnections with dpdkPluginOptionInMemory option", func(t *testing.T) {
 		pathToSocket1, socket1 := createSocketForTest(t, "")
-		defer socket1.Close()
 		go simulateSocketResponse(socket1, t)
 		dpdk := dpdk{
 			SocketPath:    pathToSocket1,
@@ -307,7 +296,6 @@ func TestMaintainConnections(t *testing.T) {
 func TestClose(t *testing.T) {
 	t.Run("Num of connections should be 0 after Stop func", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		defer socket.Close()
 		dpdk := dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
@@ -577,8 +565,7 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	})
 
 	t.Run("Should return one socket from socket path", func(t *testing.T) {
-		socketPath, socket := createSocketForTest(t, "")
-		defer socket.Close()
+		socketPath, _ := createSocketForTest(t, "")
 
 		dpdk := dpdk{
 			SocketPath: socketPath,
@@ -593,12 +580,7 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	})
 
 	t.Run("Should return 2 sockets from socket path", func(t *testing.T) {
-		socketPaths, sockets := createMultipleSocketsForTest(t, 2, "")
-		defer func() {
-			for _, socket := range sockets {
-				socket.Close()
-			}
-		}()
+		socketPaths, _ := createMultipleSocketsForTest(t, 2, "")
 
 		dpdk := dpdk{
 			SocketPath: socketPaths[0],
@@ -875,35 +857,41 @@ func simulateResponse(mockConn *mocks.Conn, response string, readErr error) {
 func createSocketForTest(t *testing.T, dirPath string) (string, net.Listener) {
 	var err error
 	var pathToSocket string
+
 	if len(dirPath) == 0 {
 		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
 		require.NoError(t, err)
 		pathToSocket = filepath.Join(dirPath, dpdkSocketTemplateName)
 	} else {
-		pathToSocket = fmt.Sprintf("%s:%d", filepath.Join(dirPath, dpdkSocketTemplateName), rand.Intn(100)+1)
+		// Create a socket in provided dirPath without duplication (similar to os.CreateTemp without creating a file)
+		try := 1
+		for {
+			pathToSocket = fmt.Sprintf("%s:%d", filepath.Join(dirPath, dpdkSocketTemplateName), try)
+			if _, err = os.Stat(pathToSocket); err == nil {
+				if try++; try < 1000 {
+					continue
+				}
+				t.Fatalf("Can't create a temporary file for socket")
+			}
+			require.ErrorIs(t, err, os.ErrNotExist)
+			break
+		}
 	}
 
 	socket, err := net.Listen("unixpacket", pathToSocket)
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		socket.Close()
+		os.RemoveAll(dirPath)
+	})
+
 	return pathToSocket, socket
 }
 
 func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) (socketsPaths []string, sockets []net.Listener) {
-	var err error
-	if len(dirPath) == 0 {
-		dirPath, err = os.MkdirTemp("", "dpdk-test-socket")
-	}
-	require.NoError(t, err)
-
 	for i := 0; i < numSockets; i++ {
-		var pathToSocket string
-		if i == 0 {
-			pathToSocket = filepath.Join(dirPath, dpdkSocketTemplateName)
-		} else {
-			pathToSocket = filepath.Join(dirPath, fmt.Sprintf("%s:%d", dpdkSocketTemplateName, 1000+i))
-		}
-		socket, err := net.Listen("unixpacket", pathToSocket)
-		require.NoError(t, err)
+		pathToSocket, socket := createSocketForTest(t, dirPath)
+		dirPath = filepath.Dir(pathToSocket)
 		socketsPaths = append(socketsPaths, pathToSocket)
 		sockets = append(sockets, socket)
 	}

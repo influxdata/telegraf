@@ -5,7 +5,7 @@ Explain here the why, the rationale and motivation, for the changes.
 
 ## Checklist
 <!-- Mandatory
-Please confirm the following by placing an "x" between the []:
+Please confirm the following by replacing the space with an "x" between the []:
 -->
 
 - [ ] No AI generated code was used in this PR
