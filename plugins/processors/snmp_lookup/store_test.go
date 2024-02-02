@@ -1,6 +1,7 @@
 package snmp_lookup
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -9,9 +10,10 @@ import (
 )
 
 func TestAddBacklog(t *testing.T) {
+	var notifyCount atomic.Uint64
 	s := newStore(0, 0, 0, 0)
 	s.update = func(agent string) *tagMap { return nil }
-	s.notify = func(agent string, tm *tagMap) {}
+	s.notify = func(agent string, tm *tagMap) { notifyCount.Add(1) }
 	defer s.destroy()
 
 	require.Empty(t, s.deferredUpdates)
@@ -19,8 +21,9 @@ func TestAddBacklog(t *testing.T) {
 	s.addBacklog("127.0.0.1", time.Now().Add(10*time.Millisecond))
 	require.Contains(t, s.deferredUpdates, "127.0.0.1")
 	require.Eventually(t, func() bool {
-		return len(s.deferredUpdates) == 0
+		return notifyCount.Load() == 1
 	}, time.Second, time.Millisecond)
+	require.Empty(t, s.deferredUpdates)
 }
 
 func TestLookup(t *testing.T) {
@@ -30,6 +33,7 @@ func TestLookup(t *testing.T) {
 	}
 	minUpdateInterval := 50 * time.Millisecond
 	cacheTTL := config.Duration(2 * minUpdateInterval)
+	var notifyCount atomic.Uint64
 	s := newStore(defaultCacheSize, cacheTTL, defaultParallelLookups, config.Duration(minUpdateInterval))
 	s.update = func(agent string) *tagMap {
 		return &tagMap{
@@ -37,7 +41,7 @@ func TestLookup(t *testing.T) {
 			rows:    tmr,
 		}
 	}
-	s.notify = func(agent string, tm *tagMap) {}
+	s.notify = func(agent string, tm *tagMap) { notifyCount.Add(1) }
 	defer s.destroy()
 
 	require.Equal(t, 0, s.cache.Len())
@@ -47,6 +51,7 @@ func TestLookup(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return s.cache.Contains("127.0.0.1")
 	}, time.Second, time.Millisecond)
+	require.EqualValues(t, 1, notifyCount.Load())
 
 	entries, _ := s.cache.Get("127.0.0.1")
 	require.Equal(t, tmr, entries.rows)
@@ -54,16 +59,22 @@ func TestLookup(t *testing.T) {
 	// Second lookup should be deferred minUpdateInterval
 	require.Empty(t, s.deferredUpdates)
 	s.lookup("127.0.0.1", "999")
+	require.EqualValues(t, 2, notifyCount.Load())
 	require.Contains(t, s.deferredUpdates, "127.0.0.1")
 	require.WithinDuration(t, time.Now(), s.deferredUpdates["127.0.0.1"], minUpdateInterval)
 
 	// Wait until resolved
 	require.Eventually(t, func() bool {
-		return len(s.deferredUpdates) == 0
+		return notifyCount.Load() == 3
 	}, time.Second, time.Millisecond)
+	require.Empty(t, s.deferredUpdates)
 	time.Sleep(minUpdateInterval)
 
 	// Third lookup should directly update
 	s.lookup("127.0.0.1", "999")
-	// TODO: How to test this?
+	require.EqualValues(t, 4, notifyCount.Load())
+	// TODO: How to test if s.enqueue was called without s.addBacklog?
+	require.Eventually(t, func() bool {
+		return notifyCount.Load() == 5
+	}, time.Second, time.Millisecond)
 }
