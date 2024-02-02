@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/influxdb-observability/otel2influx"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
@@ -24,8 +25,10 @@ import (
 var sampleConfig string
 
 type OpenTelemetry struct {
-	ServiceAddress string `toml:"service_address"`
-	MetricsSchema  string `toml:"metrics_schema"`
+	ServiceAddress      string   `toml:"service_address"`
+	SpanDimensions      []string `toml:"span_dimensions"`
+	LogRecordDimensions []string `toml:"log_record_dimensions"`
+	MetricsSchema       string   `toml:"metrics_schema"`
 
 	tls.ServerConfig
 	Timeout config.Duration `toml:"timeout"`
@@ -61,17 +64,21 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	influxWriter := &writeToAccumulator{accumulator}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
-	traceService, err := newTraceService(logger, influxWriter)
+	traceSvc, err := newTraceService(logger, influxWriter, o.SpanDimensions)
 	if err != nil {
 		return err
 	}
-	ptraceotlp.RegisterGRPCServer(o.grpcServer, traceService)
-	ms, err := newMetricsService(logger, influxWriter, o.MetricsSchema)
+	ptraceotlp.RegisterGRPCServer(o.grpcServer, traceSvc)
+	metricsSvc, err := newMetricsService(logger, influxWriter, o.MetricsSchema)
 	if err != nil {
 		return err
 	}
-	pmetricotlp.RegisterGRPCServer(o.grpcServer, ms)
-	plogotlp.RegisterGRPCServer(o.grpcServer, newLogsService(logger, influxWriter))
+	pmetricotlp.RegisterGRPCServer(o.grpcServer, metricsSvc)
+	logsSvc, err := newLogsService(logger, influxWriter, o.LogRecordDimensions)
+	if err != nil {
+		return err
+	}
+	plogotlp.RegisterGRPCServer(o.grpcServer, logsSvc)
 
 	if o.listener == nil {
 		o.listener, err = net.Listen("tcp", o.ServiceAddress)
@@ -102,9 +109,11 @@ func (o *OpenTelemetry) Stop() {
 func init() {
 	inputs.Add("opentelemetry", func() telegraf.Input {
 		return &OpenTelemetry{
-			ServiceAddress: "0.0.0.0:4317",
-			MetricsSchema:  "prometheus-v1",
-			Timeout:        config.Duration(5 * time.Second),
+			ServiceAddress:      "0.0.0.0:4317",
+			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
+			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
+			MetricsSchema:       "prometheus-v1",
+			Timeout:             config.Duration(5 * time.Second),
 		}
 	})
 }

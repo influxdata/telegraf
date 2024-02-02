@@ -1,0 +1,17 @@
+cpu,cpu=cpu0,host=Hugin usage_softirq=0,usage_steal=0,usage_guest=0,usage_user=0,usage_idle=100,usage_nice=0,usage_iowait=0,usage_system=0,usage_irq=0,usage_guest_nice=0 1682613051000000000
+cpu,cpu=cpu1,host=Hugin usage_user=0,usage_idle=100,usage_softirq=0,usage_steal=0,usage_guest_nice=0,usage_system=0,usage_nice=0,usage_iowait=0,usage_irq=0,usage_guest=0 1682613051000000001
+cpu,cpu=cpu2,host=Hugin usage_system=0,usage_idle=100,usage_softirq=0,usage_steal=0,usage_guest=0,usage_guest_nice=0,usage_user=0,usage_nice=0,usage_iowait=0,usage_irq=0 1682613051000000002
+cpu,cpu=cpu3,host=Hugin usage_idle=100,usage_nice=0,usage_iowait=0,usage_irq=0,usage_user=0,usage_system=0,usage_softirq=0,usage_steal=0,usage_guest=0,usage_guest_nice=0 1682613051000000003
+cpu,cpu=cpu4,host=Hugin usage_user=0,usage_steal=0,usage_system=0,usage_idle=100,usage_nice=0,usage_iowait=0,usage_irq=0,usage_softirq=0,usage_guest=0,usage_guest_nice=0 1682613051000000004
+cpu,cpu=cpu5,host=Hugin usage_user=0,usage_nice=0,usage_irq=0,usage_softirq=0,usage_guest_nice=0,usage_system=0,usage_idle=100,usage_iowait=0,usage_steal=0,usage_guest=0 1682613051000000005
+cpu,cpu=cpu6,host=Hugin usage_user=0,usage_system=0,usage_iowait=0,usage_softirq=0,usage_steal=0,usage_guest=0,usage_guest_nice=0,usage_idle=100,usage_nice=0,usage_irq=0 1682613051000000006
+cpu,cpu=cpu7,host=Hugin usage_system=0,usage_iowait=0,usage_softirq=0,usage_user=0,usage_nice=0,usage_irq=0,usage_steal=0,usage_guest=0,usage_guest_nice=0,usage_idle=100 1682613051000000007
+cpu,cpu=cpu8,host=Hugin usage_guest_nice=0,usage_user=0,usage_iowait=0,usage_irq=0,usage_softirq=0,usage_guest=0,usage_system=0,usage_idle=100,usage_nice=0,usage_steal=0 1682613051000000008
+cpu,cpu=cpu9,host=Hugin usage_user=0,usage_idle=100,usage_iowait=0,usage_irq=0,usage_guest_nice=0,usage_system=0,usage_nice=0,usage_softirq=0,usage_steal=0,usage_guest=0 1682613051000000009
+cpu,cpu=cpu10,host=Hugin usage_softirq=0,usage_steal=0,usage_guest=0,usage_nice=0,usage_system=0,usage_idle=100,usage_iowait=0,usage_irq=0,usage_guest_nice=0,usage_user=0 1682613051000000010
+cpu,cpu=cpu11,host=Hugin usage_guest=0,usage_guest_nice=0,usage_user=0,usage_idle=100,usage_nice=0,usage_iowait=0,usage_softirq=0,usage_steal=0,usage_system=0,usage_irq=0 1682613051000000011
+cpu,cpu=cpu12,host=Hugin usage_softirq=0,usage_steal=0,usage_guest_nice=0,usage_user=0,usage_system=0,usage_nice=0,usage_irq=0,usage_idle=100,usage_iowait=0,usage_guest=0 1682613051000000012
+cpu,cpu=cpu13,host=Hugin usage_iowait=0,usage_guest=0,usage_guest_nice=0,usage_steal=0,usage_user=0,usage_system=0,usage_idle=100,usage_nice=0,usage_irq=0,usage_softirq=0 1682613051000000013
+cpu,cpu=cpu14,host=Hugin usage_system=0,usage_idle=100,usage_softirq=0,usage_steal=0,usage_guest=0,usage_user=0,usage_nice=0,usage_iowait=0,usage_irq=0,usage_guest_nice=0 1682613051000000014
+cpu,cpu=cpu15,host=Hugin usage_user=0,usage_idle=100,usage_steal=0,usage_irq=0,usage_softirq=0,usage_guest=0,usage_guest_nice=0,usage_system=0,usage_nice=0,usage_iowait=0 1682613051000000015
+cpu,cpu=cpu-total,host=Hugin usage_idle=99.62546816517232,usage_irq=0.12484394506911513,usage_softirq=0,usage_guest_nice=0,usage_steal=0,usage_guest=0,usage_user=0.12484394507124409,usage_system=0.12484394506840547,usage_nice=0,usage_iowait=0 1682613051000000999

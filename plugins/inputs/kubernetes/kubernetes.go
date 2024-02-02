@@ -127,8 +127,10 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 	}
 
 	nodeUrls := make([]string, 0, len(nodes.Items))
-	for _, n := range nodes.Items {
-		address := getNodeAddress(n)
+	for i := range nodes.Items {
+		n := &nodes.Items[i]
+
+		address := getNodeAddress(n.Status.Addresses)
 		if address == "" {
 			log.Warnf("Unable to node addresses for Node %q", n.Name)
 			continue
@@ -140,10 +142,9 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 }
 
 // Prefer internal addresses, if none found, use ExternalIP
-func getNodeAddress(node v1.Node) string {
+func getNodeAddress(addresses []v1.NodeAddress) string {
 	extAddresses := make([]string, 0)
-
-	for _, addr := range node.Status.Addresses {
+	for _, addr := range addresses {
 		if addr.Type == v1.NodeInternalIP {
 			return addr.Address
 		}
@@ -221,16 +222,14 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	acc.AddFields("kubernetes_node", fields, tags)
 }
 
-func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
+func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Item, error) {
 	var podAPI Pods
 	err := k.LoadJSON(fmt.Sprintf("%s/pods", baseURL), &podAPI)
 	if err != nil {
 		return nil, err
 	}
-	podInfos := make([]Metadata, 0, len(podAPI.Items))
-	for _, podMetadata := range podAPI.Items {
-		podInfos = append(podInfos, podMetadata.Metadata)
-	}
+	podInfos := make([]Item, 0, len(podAPI.Items))
+	podInfos = append(podInfos, podAPI.Items...)
 	return podInfos, nil
 }
 
@@ -286,12 +285,16 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Item, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		podLabels := make(map[string]string)
+		containerImages := make(map[string]string)
 		for _, info := range podInfo {
-			if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
-				for k, v := range info.Labels {
+			if info.Metadata.Name == pod.PodRef.Name && info.Metadata.Namespace == pod.PodRef.Namespace {
+				for _, v := range info.Spec.Containers {
+					containerImages[v.Name] = v.Image
+				}
+				for k, v := range info.Metadata.Labels {
 					if labelFilter.Match(k) {
 						podLabels[k] = v
 					}
@@ -305,6 +308,15 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFi
 				"namespace":      pod.PodRef.Namespace,
 				"container_name": container.Name,
 				"pod_name":       pod.PodRef.Name,
+			}
+			for k, v := range containerImages {
+				if k == container.Name {
+					tags["image"] = v
+					tok := strings.Split(v, ":")
+					if len(tok) == 2 {
+						tags["version"] = tok[1]
+					}
+				}
 			}
 			for k, v := range podLabels {
 				tags[k] = v

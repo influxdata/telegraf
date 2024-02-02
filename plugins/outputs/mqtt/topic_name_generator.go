@@ -54,5 +54,8 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	if topic == "" {
 		return m.Name(), nil
 	}
+	if strings.HasPrefix(b.String(), "/") {
+		topic = "/" + topic
+	}
 	return topic, nil
 }

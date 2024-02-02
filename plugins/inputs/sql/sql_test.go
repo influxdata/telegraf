@@ -40,7 +40,7 @@ func TestMariaDBIntegration(t *testing.T) {
 	database := "foo"
 
 	// Determine the test-data mountpoint
-	testdata, err := filepath.Abs("testdata/mariadb")
+	testdata, err := filepath.Abs("testdata/mariadb/expected.sql")
 	require.NoError(t, err, "determining absolute path of test-data failed")
 
 	container := testutil.Container{
@@ -50,8 +50,8 @@ func TestMariaDBIntegration(t *testing.T) {
 			"MYSQL_ROOT_PASSWORD": passwd,
 			"MYSQL_DATABASE":      database,
 		},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": testdata,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/expected.sql": testdata,
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
@@ -116,7 +116,7 @@ func TestMariaDBIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			// Stopping the plugin
 			plugin.Stop()
@@ -139,7 +139,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 	database := "foo"
 
 	// Determine the test-data mountpoint
-	testdata, err := filepath.Abs("testdata/postgres")
+	testdata, err := filepath.Abs("testdata/postgres/expected.sql")
 	require.NoError(t, err, "determining absolute path of test-data failed")
 
 	container := testutil.Container{
@@ -149,8 +149,8 @@ func TestPostgreSQLIntegration(t *testing.T) {
 			"POSTGRES_PASSWORD": passwd,
 			"POSTGRES_DB":       database,
 		},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": testdata,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/expected.sql": testdata,
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
@@ -215,7 +215,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			// Stopping the plugin
 			plugin.Stop()
@@ -237,14 +237,14 @@ func TestClickHouseIntegration(t *testing.T) {
 	user := "default"
 
 	// Determine the test-data mountpoint
-	testdata, err := filepath.Abs("testdata/clickhouse")
+	testdata, err := filepath.Abs("testdata/clickhouse/expected.sql")
 	require.NoError(t, err, "determining absolute path of test-data failed")
 
 	container := testutil.Container{
 		Image:        "yandex/clickhouse-server",
 		ExposedPorts: []string{port, "8123"},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": testdata,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/expected.sql": testdata,
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
@@ -310,7 +310,7 @@ func TestClickHouseIntegration(t *testing.T) {
 
 			// Gather
 			require.NoError(t, plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0)
+			require.Empty(t, acc.Errors)
 
 			// Stopping the plugin
 			plugin.Stop()

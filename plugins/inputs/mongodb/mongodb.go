@@ -139,7 +139,7 @@ func (m *MongoDB) setupConnection(connURL string) error {
 			return fmt.Errorf("unable to ping MongoDB: %w", err)
 		}
 
-		m.Log.Errorf("unable to ping MongoDB: %s", err)
+		m.Log.Errorf("Unable to ping MongoDB: %s", err)
 	}
 
 	server := &Server{
@@ -156,7 +156,7 @@ func (m *MongoDB) Stop() {
 	for _, server := range m.clients {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		if err := server.client.Disconnect(ctx); err != nil {
-			m.Log.Errorf("disconnecting from %q failed: %s", server, err)
+			m.Log.Errorf("Disconnecting from %q failed: %v", server.hostname, err)
 		}
 		cancel()
 	}
@@ -172,14 +172,14 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			if m.DisconnectedServersBehavior == "skip" {
 				if err := srv.ping(); err != nil {
-					m.Log.Debugf("failed to ping server: %s", err)
+					m.Log.Debugf("Failed to ping server: %s", err)
 					return
 				}
 			}
 
 			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
 			if err != nil {
-				m.Log.Errorf("failed to gather data: %s", err)
+				m.Log.Errorf("Failed to gather data: %s", err)
 			}
 		}(client)
 	}

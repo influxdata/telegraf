@@ -27,14 +27,14 @@ func TestRefreshFilePaths(t *testing.T) {
 	require.NoError(t, err)
 
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/**.log")},
+		Files: []string{filepath.Join(wd, "dev", "testfiles", "**.log")},
 	}
 	err = r.Init()
 	require.NoError(t, err)
 
 	err = r.refreshFilePaths()
 	require.NoError(t, err)
-	require.Equal(t, 2, len(r.filenames))
+	require.Len(t, r.filenames, 2)
 }
 
 func TestFileTag(t *testing.T) {
@@ -42,7 +42,7 @@ func TestFileTag(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 	r := File{
-		Files:   []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
+		Files:   []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
 		FileTag: "filename",
 	}
 	require.NoError(t, r.Init())
@@ -67,7 +67,7 @@ func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
 	wd, _ := os.Getwd()
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
+		Files: []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
 	}
 	require.NoError(t, r.Init())
 
@@ -79,14 +79,14 @@ func TestJSONParserCompile(t *testing.T) {
 
 	require.NoError(t, r.Gather(&acc))
 	require.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
-	require.Equal(t, 5, len(acc.Metrics[0].Fields))
+	require.Len(t, acc.Metrics[0].Fields, 5)
 }
 
 func TestGrokParser(t *testing.T) {
 	wd, _ := os.Getwd()
 	var acc testutil.Accumulator
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/grok_a.log")},
+		Files: []string{filepath.Join(wd, "dev", "testfiles", "grok_a.log")},
 	}
 	err := r.Init()
 	require.NoError(t, err)

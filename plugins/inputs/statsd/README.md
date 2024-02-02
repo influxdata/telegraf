@@ -56,6 +56,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
+  ## Enable aggregation temporality adds temporality=delta or temporality=commulative tag, and
+  ## start_time field, which adds the start time of the metric accumulation.
+  ## You should use this when using OpenTelemetry output.
+  # enable_aggregation_temporality = false
+
   ## Percentiles to calculate for timing & histogram stats.
   percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 
@@ -105,9 +110,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## By default, telegraf will pass names directly as they are received.
   ## However, upstream statsd now does sanitization of names which can be
   ## enabled by using the "upstream" method option. This option will a) replace
-  ## white space with '_', replace '/' with '-', and remove charachters not
+  ## white space with '_', replace '/' with '-', and remove characters not
   ## matching 'a-zA-Z_\-0-9\.;='.
   #sanitize_name_method = ""
+
+  ## Replace dots (.) with underscore (_) and dashes (-) with
+  ## double underscore (__) in metric names.
+  # convert_names = false
 ```
 
 ## Description

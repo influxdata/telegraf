@@ -106,7 +106,6 @@ func TestLibvirt_Gather(t *testing.T) {
 
 		err := l.Gather(&acc)
 		require.NoError(t, err)
-		// require.Contains(t, err.Error(), "couldn't find any domains on system")
 		mockLibvirtUtils.AssertExpectations(t)
 	})
 
@@ -300,7 +299,7 @@ func TestLibvirt_calculateMetricNumber(t *testing.T) {
 		}
 		err := l.calculateMetricNumber()
 		require.NoError(t, err)
-		require.Equal(t, l.metricNumber, domainStatsAll)
+		require.Equal(t, domainStatsAll, l.metricNumber)
 	})
 }
 

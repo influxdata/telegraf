@@ -99,7 +99,7 @@ func (h *Health) Init() error {
 
 // Connect starts the HTTP server.
 func (h *Health) Connect() error {
-	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "health", onAuthError)
+	authHandler := internal.BasicAuthHandler(h.BasicUsername, h.BasicPassword, "health", onAuthError)
 
 	h.server = &http.Server{
 		Addr:         h.ServiceAddress,

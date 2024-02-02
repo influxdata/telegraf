@@ -11,6 +11,14 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func NewCPUStats(ps system.PS) *CPUStats {
+	return &CPUStats{
+		ps:             ps,
+		CollectCPUTime: true,
+		ReportActive:   true,
+	}
+}
+
 func TestCPUStats(t *testing.T) {
 	var mps system.MockPS
 	defer mps.AssertExpectations(t)

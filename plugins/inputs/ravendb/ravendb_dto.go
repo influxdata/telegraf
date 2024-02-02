@@ -143,12 +143,17 @@ type databaseIndexesMetrics struct {
 }
 
 type databaseStorageMetrics struct {
-	DocumentsAllocatedDataFileInMb int64 `json:"DocumentsAllocatedDataFileInMb"`
-	DocumentsUsedDataFileInMb      int64 `json:"DocumentsUsedDataFileInMb"`
-	IndexesAllocatedDataFileInMb   int64 `json:"IndexesAllocatedDataFileInMb"`
-	IndexesUsedDataFileInMb        int64 `json:"IndexesUsedDataFileInMb"`
-	TotalAllocatedStorageFileInMb  int64 `json:"TotalAllocatedStorageFileInMb"`
-	TotalFreeSpaceInMb             int64 `json:"TotalFreeSpaceInMb"`
+	DocumentsAllocatedDataFileInMb int64    `json:"DocumentsAllocatedDataFileInMb"`
+	DocumentsUsedDataFileInMb      int64    `json:"DocumentsUsedDataFileInMb"`
+	IndexesAllocatedDataFileInMb   int64    `json:"IndexesAllocatedDataFileInMb"`
+	IndexesUsedDataFileInMb        int64    `json:"IndexesUsedDataFileInMb"`
+	TotalAllocatedStorageFileInMb  int64    `json:"TotalAllocatedStorageFileInMb"`
+	TotalFreeSpaceInMb             int64    `json:"TotalFreeSpaceInMb"`
+	IoReadOperations               *float64 `json:"IoReadOperations"`
+	IoWriteOperations              *float64 `json:"IoWriteOperations"`
+	ReadThroughputInKb             *int64   `json:"ReadThroughputInKb"`
+	WriteThroughputInKb            *int64   `json:"WriteThroughputInKb"`
+	QueueLength                    *int64   `json:"QueueLength"`
 }
 
 type indexesMetricResponse struct {

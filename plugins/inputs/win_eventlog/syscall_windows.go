@@ -34,9 +34,8 @@ type EvtRenderFlag uint32
 // EVT_RENDER_FLAGS enumeration
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385563(v=vs.85).aspx
 const (
-	// Render the event as an XML string. For details on the contents of the
-	// XML string, see the Event schema.
-	EvtRenderEventXml EvtRenderFlag = 1
+	// Render the event as an XML string. For details on the contents of the XML string, see the Event schema.
+	EvtRenderEventXML EvtRenderFlag = 1
 	// Render bookmark
 	EvtRenderBookmark EvtRenderFlag = 2
 )

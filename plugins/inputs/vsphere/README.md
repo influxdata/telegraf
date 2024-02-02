@@ -40,7 +40,7 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
--# Read metrics from one or many vCenters
+# Read metrics from one or many vCenters
 [[inputs.vsphere]]
   ## List of vCenter URLs to be monitored. These three lines must be uncommented
   ## and edited for the plugin to work.
@@ -158,11 +158,11 @@ to use them.
   # cluster_instances = false ## false by default
 
   ## Resource Pools
-  # datastore_include = [ "/*/host/**"] # Inventory path to datastores to collect (by default all are collected)
-  # datastore_exclude = [] # Inventory paths to exclude
-  # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
-  # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default
+  # resource_pool_include = [ "/*/host/**"] # Inventory path to resource pools to collect (by default all are collected)
+  # resource_pool_exclude = [] # Inventory paths to exclude
+  # resource_pool_metric_include = [] ## if omitted or empty, all metrics are collected
+  # resource_pool_metric_exclude = [] ## Nothing excluded by default
+  # resource_pool_instances = false ## false by default
 
   ## Datastores
   # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
@@ -183,6 +183,10 @@ to use them.
   # vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
   ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
   # vsan_metric_skip_verify = false ## false by default.
+
+  ## Interval for sampling vSAN performance metrics, can be reduced down to
+  ## 30 seconds for vSAN 8 U1.
+  # vsan_interval = "5m"
 
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
@@ -245,8 +249,12 @@ to use them.
   ## Specifies plugin behavior regarding disconnected servers
   ## Available choices :
   ##   - error: telegraf will return an error on startup if one the servers is unreachable
-  ##   - skip: telegraf will skip unreachable servers on both startup and gather
+  ##   - ignore: telegraf will ignore unreachable servers on both startup and gather
   # disconnected_servers_behavior = "error"
+
+  ## HTTP Proxy support
+  # use_system_proxy = true
+  # http_proxy_url = ""
 ```
 
 NOTE: To disable collection of a specific resource type, simply exclude all
@@ -422,7 +430,7 @@ instance. For example:
   datastore_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
   datacenter_metric_exclude = ["*"]
-  resourcepool_metric_exclude = ["*"]
+  resource_pool_metric_exclude = ["*"]
   vsan_metric_exclude = ["*"]
 
   collect_concurrency = 5

@@ -416,14 +416,14 @@ func TestWithPathDoesNotModify(t *testing.T) {
 	u, err := url.Parse("http://localhost:5051")
 	require.NoError(t, err)
 	v := withPath(u, "/xyzzy")
-	require.Equal(t, u.String(), "http://localhost:5051")
-	require.Equal(t, v.String(), "http://localhost:5051/xyzzy")
+	require.Equal(t, "http://localhost:5051", u.String())
+	require.Equal(t, "http://localhost:5051/xyzzy", v.String())
 }
 
 func TestURLTagDoesNotModify(t *testing.T) {
 	u, err := url.Parse("http://a:b@localhost:5051?timeout=1ms")
 	require.NoError(t, err)
 	v := urlTag(u)
-	require.Equal(t, u.String(), "http://a:b@localhost:5051?timeout=1ms")
-	require.Equal(t, v, "http://localhost:5051")
+	require.Equal(t, "http://a:b@localhost:5051?timeout=1ms", u.String())
+	require.Equal(t, "http://localhost:5051", v)
 }

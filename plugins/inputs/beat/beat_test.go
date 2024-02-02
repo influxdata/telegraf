@@ -9,8 +9,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func Test_BeatStats(t *testing.T) {
@@ -44,7 +45,7 @@ func Test_BeatStats(t *testing.T) {
 	fakeServer.Start()
 	defer fakeServer.Close()
 
-	require.NoError(t, err, beatTest.Gather(&beat6StatsAccumulator))
+	require.NoError(t, beatTest.Gather(&beat6StatsAccumulator))
 
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
@@ -177,10 +178,10 @@ func Test_BeatRequest(t *testing.T) {
 
 		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
-		require.Equal(t, request.Host, "beat.test.local")
-		require.Equal(t, request.Method, "POST")
-		require.Equal(t, request.Header.Get("Authorization"), "Basic YWRtaW46UFdE")
-		require.Equal(t, request.Header.Get("X-Test"), "test-value")
+		require.Equal(t, "beat.test.local", request.Host)
+		require.Equal(t, "POST", request.Method)
+		require.Equal(t, "Basic YWRtaW46UFdE", request.Header.Get("Authorization"))
+		require.Equal(t, "test-value", request.Header.Get("X-Test"))
 
 		_, err = w.Write(data)
 		require.NoError(t, err, "could not write data")

@@ -117,6 +117,7 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to create tmp file: %w", err)
 	}
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 
 	ts := time.Now().Add(time.Duration(s.interval) * time.Second)
 	if err := s.collect(tmpfile.Name()); err != nil {

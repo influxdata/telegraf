@@ -4,7 +4,6 @@ package dpdk
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"testing"
@@ -20,8 +19,8 @@ func Test_isSocket(t *testing.T) {
 		require.Contains(t, err.Error(), "provided path does not exist")
 	})
 
-	t.Run("should pass if path points to socket", func(t *testing.T) {
-		pathToSocket, socket := createSocketForTest(t)
+	t.Run("Should pass if path points to socket", func(t *testing.T) {
+		pathToSocket, socket := createSocketForTest(t, "")
 		defer socket.Close()
 
 		err := isSocket(pathToSocket)
@@ -95,7 +94,7 @@ func Test_jsonToArray(t *testing.T) {
 	t.Run("when got numeric array then string array should be returned", func(t *testing.T) {
 		firstValue := int64(0)
 		secondValue := int64(1)
-		jsonString := fmt.Sprintf(`{"%s": [%d, %d]}`, key, firstValue, secondValue)
+		jsonString := fmt.Sprintf(`{%q: [%d, %d]}`, key, firstValue, secondValue)
 
 		arr, err := jsonToArray([]byte(jsonString), key)
 
@@ -120,18 +119,11 @@ func Test_jsonToArray(t *testing.T) {
 	})
 
 	t.Run("when valid json with json-object is supplied as input then error should be returned", func(t *testing.T) {
-		jsonString := fmt.Sprintf(`{"%s": {"testKey": "testValue"}}`, key)
+		jsonString := fmt.Sprintf(`{%q: {"testKey": "testValue"}}`, key)
 
 		_, err := jsonToArray([]byte(jsonString), key)
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to unmarshall json response")
+		require.Contains(t, err.Error(), "failed to unmarshal json response")
 	})
-}
-
-func createSocketForTest(t *testing.T) (string, net.Listener) {
-	pathToSocket := "/tmp/dpdk-test-socket"
-	socket, err := net.Listen("unixpacket", pathToSocket)
-	require.NoError(t, err)
-	return pathToSocket, socket
 }

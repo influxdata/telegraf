@@ -2,14 +2,26 @@
 
 Collects stats from Netfilter's conntrack-tools.
 
-The conntrack-tools provide a mechanism for tracking various aspects of
-network connections as they are processed by netfilter. At runtime,
-conntrack exposes many of those connection statistics within `/proc/sys/net`.
-Depending on your kernel version, these files can be found in either
-`/proc/sys/net/ipv4/netfilter` or `/proc/sys/net/netfilter` and will be
+There are two collection mechanisms for this plugin:
+
+## /proc/net/stat/nf_conntrack
+
+When a user specifies the `collect` config option with valid options, then the
+plugin will loop through the files in `/proc/net/stat/nf_conntrack` to find
+CPU specific values.
+
+## Specific files and dirs
+
+The second mechanism is for the user to specify a set of directories and files
+to search through
+
+At runtime, conntrack exposes many of those connection statistics within
+`/proc/sys/net`. Depending on your kernel version, these files can be found in
+either `/proc/sys/net/ipv4/netfilter` or `/proc/sys/net/netfilter` and will be
 prefixed with either `ip` or `nf`.  This plugin reads the files specified
 in its configuration and publishes each one as a field, with the prefix
 normalized to ip_.
+
 conntrack exposes many of those connection statistics within `/proc/sys/net`.
 Depending on your kernel version, these files can be found in either
 `/proc/sys/net/ipv4/netfilter` or `/proc/sys/net/netfilter` and will be
@@ -18,8 +30,8 @@ in its configuration and publishes each one as a field, with the prefix
 normalized to `ip_`.
 
 In order to simplify configuration in a heterogeneous environment, a superset
-of directory and filenames can be specified.  Any locations that don't exist
-will be ignored.
+of directory and filenames can be specified.  Any locations that does nt exist
+are ignored.
 
 For more information on conntrack-tools, see the
 [Netfilter Documentation](http://conntrack-tools.netfilter.org/).
@@ -43,17 +55,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
   ## kernel versions, as are the directory locations.
 
+  ## Look through /proc/net/stat/nf_conntrack for these metrics
+  ## all - aggregated statistics
+  ## percpu - include detailed statistics with cpu tag
+  collect = ["all", "percpu"]
+
+  ## User-specified directories and files to look through
+  ## Directories to search within for the conntrack files above.
+  ## Missing directories will be ignored.
+  dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
+
   ## Superset of filenames to look for within the conntrack dirs.
   ## Missing files will be ignored.
   files = ["ip_conntrack_count","ip_conntrack_max",
           "nf_conntrack_count","nf_conntrack_max"]
-
-  ## Directories to search within for the conntrack files above.
-  ## Missing directories will be ignored.
-  dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
-  ## all - aggregated statistics
-  ## percpu - include detailed statistics with cpu tag
-  collect = ["all", "percpu"]
 ```
 
 ## Metrics

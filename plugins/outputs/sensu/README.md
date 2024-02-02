@@ -68,6 +68,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## Sensu Event details
   ##
   ## Below are the event details to be sent to Sensu.  The main portions of the

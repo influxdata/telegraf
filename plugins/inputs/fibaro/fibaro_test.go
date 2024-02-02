@@ -4,130 +4,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
-
-const sectionsJSON = `
-    [
-        {
-            "id": 1,
-            "name": "Section 1",
-            "sortOrder": 1
-        },
-        {
-            "id": 2,
-            "name": "Section 2",
-            "sortOrder": 2
-        },
-        {
-            "id": 3,
-            "name": "Section 3",
-            "sortOrder": 3
-        }
-    ]`
-
-const roomsJSON = `
-    [
-        {
-            "id": 1,
-            "name": "Room 1",
-            "sectionID": 1,
-            "icon": "room_1",
-            "sortOrder": 1
-        },
-        {
-            "id": 2,
-            "name": "Room 2",
-            "sectionID": 2,
-            "icon": "room_2",
-            "sortOrder": 2
-        },
-        {
-            "id": 3,
-            "name": "Room 3",
-            "sectionID": 3,
-            "icon": "room_3",
-            "sortOrder": 3
-        },
-        {
-            "id": 4,
-            "name": "Room 4",
-            "sectionID": 3,
-            "icon": "room_4",
-            "sortOrder": 4
-        }
-    ]`
-
-const devicesJSON = `
-    [
-        {
-            "id": 1,
-            "name": "Device 1",
-            "roomID": 1,
-            "type": "com.fibaro.binarySwitch",
-            "enabled": true,
-            "properties": {
-                "dead": "false",
-                "value": "false"
-            },
-            "sortOrder": 1
-        },
-        {
-            "id": 2,
-            "name": "Device 2",
-            "roomID": 2,
-            "type": "com.fibaro.binarySwitch",
-            "enabled": true,
-            "properties": {
-                "dead": "false",
-                "value": "true"
-            },
-            "sortOrder": 2
-        },
-        {
-            "id": 3,
-            "name": "Device 3",
-            "roomID": 3,
-            "type": "com.fibaro.multilevelSwitch",
-            "enabled": true,
-            "properties": {
-                "dead": "false",
-                "value": "67"
-            },
-            "sortOrder": 3
-        },
-        {
-            "id": 4,
-            "name": "Device 4",
-            "roomID": 4,
-            "type": "com.fibaro.temperatureSensor",
-            "enabled": true,
-            "properties": {
-                "batteryLevel": "100",
-                "dead": "false",
-                "value": "22.80"
-            },
-            "sortOrder": 4
-        },
-        {
-            "id": 5,
-            "name": "Device 5",
-            "roomID": 4,
-            "type": "com.fibaro.FGRM222",
-            "enabled": true,
-            "properties": {
-                "energy": "4.33",
-                "power": "0.7",
-                "dead": "false",
-                "value": "50",
-                "value2": "75"
-            },
-            "sortOrder": 5
-        }
-    ]`
 
 // TestUnauthorized validates that 401 (wrong credentials) is managed properly
 func TestUnauthorized(t *testing.T) {
@@ -142,6 +27,7 @@ func TestUnauthorized(t *testing.T) {
 		Password: "pass",
 		client:   &http.Client{},
 	}
+	require.NoError(t, a.Init())
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(a.Gather)
@@ -154,11 +40,17 @@ func TestJSONSuccess(t *testing.T) {
 		payload := ""
 		switch r.URL.Path {
 		case "/api/sections":
-			payload = sectionsJSON
+			content, err := os.ReadFile(path.Join("testdata", "sections.json"))
+			require.NoError(t, err)
+			payload = string(content)
 		case "/api/rooms":
-			payload = roomsJSON
+			content, err := os.ReadFile(path.Join("testdata", "rooms.json"))
+			require.NoError(t, err)
+			payload = string(content)
 		case "/api/devices":
-			payload = devicesJSON
+			content, err := os.ReadFile(path.Join("testdata", "device_hc2.json"))
+			require.NoError(t, err)
+			payload = string(content)
 		}
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintln(w, payload)
@@ -172,36 +64,212 @@ func TestJSONSuccess(t *testing.T) {
 		Password: "pass",
 		client:   &http.Client{},
 	}
+	require.NoError(t, a.Init())
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
-
-	// Gather should add 5 metrics
 	require.Equal(t, uint64(5), acc.NMetrics())
 
-	// Ensure fields / values are correct - Device 1
-	tags := map[string]string{"deviceId": "1", "section": "Section 1", "room": "Room 1", "name": "Device 1", "type": "com.fibaro.binarySwitch"}
-	fields := map[string]interface{}{"value": float64(0)}
-	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "1",
+				"section":  "Section 1",
+				"room":     "Room 1",
+				"name":     "Device 1",
+				"type":     "com.fibaro.binarySwitch",
+			},
+			map[string]interface{}{
+				"value": float64(0),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "2",
+				"section":  "Section 2",
+				"room":     "Room 2",
+				"name":     "Device 2",
+				"type":     "com.fibaro.binarySwitch",
+			},
+			map[string]interface{}{
+				"value": float64(1),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "3",
+				"section":  "Section 3",
+				"room":     "Room 3",
+				"name":     "Device 3",
+				"type":     "com.fibaro.multilevelSwitch",
+			},
+			map[string]interface{}{
+				"value": float64(67),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "4",
+				"section":  "Section 3",
+				"room":     "Room 4",
+				"name":     "Device 4",
+				"type":     "com.fibaro.temperatureSensor",
+			},
+			map[string]interface{}{
+				"batteryLevel": float64(100),
+				"value":        float64(22.8),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "5",
+				"section":  "Section 3",
+				"room":     "Room 4",
+				"name":     "Device 5",
+				"type":     "com.fibaro.FGRM222",
+			},
+			map[string]interface{}{
+				"energy": float64(4.33),
+				"power":  float64(0.7),
+				"value":  float64(50),
+				"value2": float64(75),
+			},
+			time.Unix(0, 0),
+		),
+	}
 
-	// Ensure fields / values are correct - Device 2
-	tags = map[string]string{"deviceId": "2", "section": "Section 2", "room": "Room 2", "name": "Device 2", "type": "com.fibaro.binarySwitch"}
-	fields = map[string]interface{}{"value": float64(1)}
-	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
 
-	// Ensure fields / values are correct - Device 3
-	tags = map[string]string{"deviceId": "3", "section": "Section 3", "room": "Room 3", "name": "Device 3", "type": "com.fibaro.multilevelSwitch"}
-	fields = map[string]interface{}{"value": float64(67)}
-	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
+func TestHC3JSON(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		payload := ""
+		switch r.URL.Path {
+		case "/api/sections":
+			content, err := os.ReadFile(path.Join("testdata", "sections.json"))
+			require.NoError(t, err)
+			payload = string(content)
+		case "/api/rooms":
+			content, err := os.ReadFile(path.Join("testdata", "rooms.json"))
+			require.NoError(t, err)
+			payload = string(content)
+		case "/api/devices":
+			content, err := os.ReadFile(path.Join("testdata", "device_hc3.json"))
+			require.NoError(t, err)
+			payload = string(content)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, err := fmt.Fprintln(w, payload)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
 
-	// Ensure fields / values are correct - Device 4
-	tags = map[string]string{"deviceId": "4", "section": "Section 3", "room": "Room 4", "name": "Device 4", "type": "com.fibaro.temperatureSensor"}
-	fields = map[string]interface{}{"batteryLevel": float64(100), "value": float64(22.8)}
-	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
+	a := Fibaro{
+		URL:        ts.URL,
+		Username:   "user",
+		Password:   "pass",
+		DeviceType: "HC3",
+		client:     &http.Client{},
+	}
+	require.NoError(t, a.Init())
 
-	// Ensure fields / values are correct - Device 5
-	tags = map[string]string{"deviceId": "5", "section": "Section 3", "room": "Room 4", "name": "Device 5", "type": "com.fibaro.FGRM222"}
-	fields = map[string]interface{}{"energy": float64(4.33), "power": float64(0.7), "value": float64(50), "value2": float64(75)}
-	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
+	var acc testutil.Accumulator
+	err := acc.GatherError(a.Gather)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), acc.NMetrics())
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "1",
+				"section":  "Section 1",
+				"room":     "Room 1",
+				"name":     "Device 1",
+				"type":     "com.fibaro.binarySwitch",
+			},
+			map[string]interface{}{
+				"value": float64(0),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "2",
+				"section":  "Section 2",
+				"room":     "Room 2",
+				"name":     "Device 2",
+				"type":     "com.fibaro.binarySwitch",
+			},
+			map[string]interface{}{
+				"value": float64(1),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "3",
+				"section":  "Section 3",
+				"room":     "Room 3",
+				"name":     "Device 3",
+				"type":     "com.fibaro.multilevelSwitch",
+			},
+			map[string]interface{}{
+				"value": float64(67),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "4",
+				"section":  "Section 3",
+				"room":     "Room 4",
+				"name":     "Device 4",
+				"type":     "com.fibaro.temperatureSensor",
+			},
+			map[string]interface{}{
+				"batteryLevel": float64(100),
+				"value":        float64(22.8),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"fibaro",
+			map[string]string{
+				"deviceId": "5",
+				"section":  "Section 3",
+				"room":     "Room 4",
+				"name":     "Device 5",
+				"type":     "com.fibaro.FGRM222",
+			},
+			map[string]interface{}{
+				"energy": float64(4.33),
+				"power":  float64(0.7),
+				"value":  float64(34),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestInvalidDeviceType(t *testing.T) {
+	a := Fibaro{
+		DeviceType: "foobar",
+	}
+	require.Error(t, a.Init())
 }

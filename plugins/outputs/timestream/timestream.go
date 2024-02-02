@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"sync"
@@ -200,7 +201,7 @@ func (t *Timestream) Connect() error {
 			t.Log.Errorf("Couldn't describe database %q. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
 			return err
 		}
-		t.Log.Infof("Describe database %q returned %q.", t.DatabaseName, describeDatabaseOutput)
+		t.Log.Infof("Describe database %q returned %v", t.DatabaseName, describeDatabaseOutput)
 	}
 
 	t.svc = svc
@@ -352,8 +353,8 @@ func (t *Timestream) createTable(tableName *string) error {
 		DatabaseName: aws.String(t.DatabaseName),
 		TableName:    aws.String(*tableName),
 		RetentionProperties: &types.RetentionProperties{
-			MagneticStoreRetentionPeriodInDays: t.CreateTableMagneticStoreRetentionPeriodInDays,
-			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
+			MagneticStoreRetentionPeriodInDays: &t.CreateTableMagneticStoreRetentionPeriodInDays,
+			MemoryStoreRetentionPeriodInHours:  &t.CreateTableMemoryStoreRetentionPeriodInHours,
 		},
 	}
 	tags := make([]types.Tag, 0, len(t.CreateTableTags))
@@ -609,7 +610,11 @@ func convertValue(v interface{}) (value string, valueType types.MeasureValueType
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint64:
 		valueType = types.MeasureValueTypeBigint
-		value = strconv.FormatUint(t, 10)
+		if t <= uint64(math.MaxInt64) {
+			value = strconv.FormatUint(t, 10)
+		} else {
+			value = strconv.FormatUint(math.MaxInt64, 10)
+		}
 	case float32:
 		valueType = types.MeasureValueTypeDouble
 		value = strconv.FormatFloat(float64(t), 'f', -1, 32)

@@ -208,6 +208,7 @@ func (c *httpClient) Database() string {
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context, database string) error {
+	//nolint:gocritic // sprintfQuotedString - "%s" used by purpose, string escaping is done by special function
 	query := fmt.Sprintf(`CREATE DATABASE "%s"`, escapeIdentifier.Replace(database))
 
 	req, err := c.makeQueryRequest(query)
@@ -391,7 +392,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return nil
 	}
 
-	// This error handles if there is an invaild or missing retention policy
+	// This error handles if there is an invalid or missing retention policy
 	if strings.Contains(desc, errStringRetentionPolicyNotFound) {
 		c.log.Errorf("When writing to [%s]: received error %v", c.URL(), desc)
 		return nil
@@ -479,7 +480,7 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 	return req, nil
 }
 
-// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
 // side of the connection in case of error
 func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.config.Serializer)
@@ -499,16 +500,20 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 		}
 		password, err := c.config.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		req.SetBasicAuth(string(username), string(password))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	for header, value := range c.config.Headers {
-		req.Header.Set(header, value)
+		if strings.EqualFold(header, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(header, value)
+		}
 	}
 
 	return nil

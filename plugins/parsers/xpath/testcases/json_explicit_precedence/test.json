@@ -1,0 +1,13 @@
+{
+   "a": "a string",
+   "b": 3.1415,
+   "c": true,
+   "d": {
+     "d1": 1,
+     "d2": "foo",
+     "d3": true,
+     "d4": null
+   },
+   "e": ["master", 42, true],
+   "timestamp": 1690193829
+ }

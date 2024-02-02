@@ -98,7 +98,7 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
-	require.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
+	require.Equal(t, 8, acc.NFields(), "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
@@ -125,7 +125,7 @@ func TestExecMalformed(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
 }
 
 func TestCommandError(t *testing.T) {
@@ -140,7 +140,7 @@ func TestCommandError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
@@ -232,14 +232,12 @@ func TestTruncate(t *testing.T) {
 			name: "should not truncate",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world")
-				require.NoError(t, err)
+				b.WriteString("hello world")
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world")
-				require.NoError(t, err)
+				b.WriteString("hello world")
 				return &b
 			},
 		},
@@ -247,14 +245,12 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate up to the new line",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world\nand all the people")
-				require.NoError(t, err)
+				b.WriteString("hello world\nand all the people")
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world...")
-				require.NoError(t, err)
+				b.WriteString("hello world...")
 				return &b
 			},
 		},
@@ -263,17 +259,16 @@ func TestTruncate(t *testing.T) {
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < 2*MaxStderrBytes; i++ {
-					require.NoError(t, b.WriteByte('b'))
+					b.WriteByte('b')
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < MaxStderrBytes; i++ {
-					require.NoError(t, b.WriteByte('b'))
+					b.WriteByte('b')
 				}
-				_, err := b.WriteString("...")
-				require.NoError(t, err)
+				b.WriteString("...")
 				return &b
 			},
 		},

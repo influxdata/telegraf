@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -107,6 +108,12 @@ func (s *Snmp) Init() error {
 
 	if len(s.AgentHostTag) == 0 {
 		s.AgentHostTag = "agent_host"
+	}
+	if s.AgentHostTag != "source" {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
+			Since:  "1.29.0",
+			Notice: `set to "source" for consistent usage across plugins or safely ignore this message and continue to use the current value`,
+		})
 	}
 
 	return nil
@@ -216,7 +223,7 @@ type Field struct {
 	// Conversion controls any type conversion that is done on the value.
 	//  "float"/"float(0)" will convert the value into a float.
 	//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
-	//  "int" will conver the value into an integer.
+	//  "int" will convert the value into an integer.
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	//  "enum"/"enum(1)" will convert the value according to its syntax. (Only supported with gosmi translator)
@@ -231,7 +238,7 @@ type Field struct {
 	SecondaryIndexUse bool
 	// Controls if entries from secondary table should be added or not if joining
 	//  index is present or not. I set to true, means that join is outer, and
-	//  index is prepended with "Secondary." for missing values to avoid overlaping
+	//  index is prepended with "Secondary." for missing values to avoid overlapping
 	//  indexes from both tables.
 	// Can be set per field or globally with SecondaryIndexTable, global true overrides
 	//  per field false.
@@ -425,9 +432,8 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
 				} else if errors.Is(err, gosnmp.ErrDecryption) {
 					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
-				} else {
-					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 				}
+				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(tr, f.Conversion, ent)

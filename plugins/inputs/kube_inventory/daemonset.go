@@ -14,12 +14,12 @@ func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ki *Kubern
 		acc.AddError(err)
 		return
 	}
-	for _, d := range list.Items {
-		ki.gatherDaemonSet(d, acc)
+	for i := range list.Items {
+		ki.gatherDaemonSet(&list.Items[i], acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherDaemonSet(d *v1.DaemonSet, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{
 		"generation":               d.Generation,
 		"current_number_scheduled": d.Status.CurrentNumberScheduled,

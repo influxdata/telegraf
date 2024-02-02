@@ -1,0 +1,66 @@
+[
+    {
+        "id": 1,
+        "name": "Device 1",
+        "roomID": 1,
+        "type": "com.fibaro.binarySwitch",
+        "enabled": true,
+        "properties": {
+            "dead": "false",
+            "value": "false"
+        },
+        "sortOrder": 1
+    },
+    {
+        "id": 2,
+        "name": "Device 2",
+        "roomID": 2,
+        "type": "com.fibaro.binarySwitch",
+        "enabled": true,
+        "properties": {
+            "dead": "false",
+            "value": "true"
+        },
+        "sortOrder": 2
+    },
+    {
+        "id": 3,
+        "name": "Device 3",
+        "roomID": 3,
+        "type": "com.fibaro.multilevelSwitch",
+        "enabled": true,
+        "properties": {
+            "dead": "false",
+            "value": "67"
+        },
+        "sortOrder": 3
+    },
+    {
+        "id": 4,
+        "name": "Device 4",
+        "roomID": 4,
+        "type": "com.fibaro.temperatureSensor",
+        "enabled": true,
+        "properties": {
+            "batteryLevel": "100",
+            "dead": "false",
+            "value": "22.80"
+        },
+        "sortOrder": 4
+    },
+    {
+        "id": 5,
+        "name": "Device 5",
+        "roomID": 4,
+        "type": "com.fibaro.FGRM222",
+        "enabled": true,
+        "properties": {
+            "energy": "4.33",
+            "power": "0.7",
+            "dead": "false",
+            "value": "50",
+            "value2": "75"
+        },
+        "sortOrder": 5
+    }
+]

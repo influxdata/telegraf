@@ -34,6 +34,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -72,6 +81,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## If true, queue will be passively declared.
   # queue_passive = false
+
+  ## Additional arguments when consuming from Queue
+  # queue_consume_arguments = { }
+  # queue_consume_arguments = {"x-stream-offset" = "first"}
 
   ## A binding between the exchange and queue using this binding key is
   ## created.  If unset, no binding is created.

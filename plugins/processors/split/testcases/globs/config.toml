@@ -1,0 +1,9 @@
+[[processors.split]]
+  [[processors.split.template]]
+    name = "sensor1"
+    fields = ["sensor1*"]
+    tags = ["sensor1*", "host"]
+  [[processors.split.template]]
+    name = "sensor2"
+    fields = ["sensor2*"]
+    tags = ["sensor2*", "host"]

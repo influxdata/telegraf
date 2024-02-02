@@ -16,10 +16,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWriteUDP(t *testing.T) {
@@ -170,14 +171,14 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 		if err != nil {
 			return err
 		}
-		require.Equal(t, obj["short_message"], "telegraf")
+		require.Equal(t, "telegraf", obj["short_message"])
 		if namefieldnoprefix {
-			require.Equal(t, obj["name"], "test1")
+			require.Equal(t, "test1", obj["name"])
 		} else {
-			require.Equal(t, obj["_name"], "test1")
+			require.Equal(t, "test1", obj["_name"])
 		}
-		require.Equal(t, obj["_tag1"], "value1")
-		require.Equal(t, obj["_value"], float64(1))
+		require.Equal(t, "value1", obj["_tag1"])
+		require.Equal(t, float64(1), obj["_value"])
 
 		return nil
 	}
@@ -237,20 +238,17 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 				if bufR[0] == 0 { // message delimiter found
 					break
 				}
-				_, err = bufW.Write(bufR)
-				if err != nil {
-					return err
-				}
+				bufW.Write(bufR)
 			}
 		}
 
 		var obj GelfObject
 		err = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
-		require.Equal(t, obj["short_message"], "telegraf")
-		require.Equal(t, obj["_name"], "test1")
-		require.Equal(t, obj["_tag1"], "value1")
-		require.Equal(t, obj["_value"], float64(1))
+		require.Equal(t, "telegraf", obj["short_message"])
+		require.Equal(t, "test1", obj["_name"])
+		require.Equal(t, "value1", obj["_tag1"])
+		require.Equal(t, float64(1), obj["_value"])
 		return nil
 	}
 
@@ -268,12 +266,12 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 
 		// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-		fmt.Println("server: receving packet 1")
+		fmt.Println("server: receiving packet 1")
 		err = recv(conn)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("server: receving packet 2")
+		fmt.Println("server: receiving packet 2")
 		err = recv(conn)
 		if err != nil {
 			fmt.Println(err)
@@ -297,7 +295,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		}
 		defer conn.Close()
 
-		fmt.Println("server: receving packet 4")
+		fmt.Println("server: receiving packet 4")
 		err = recv(conn)
 		if err != nil {
 			fmt.Println(err)

@@ -44,7 +44,7 @@ type ConsulQuery struct {
 	serviceURLTemplate       *template.Template
 	serviceExtraTagsTemplate map[string]*template.Template
 
-	// Store last error status and change log level depending on repeated occurence
+	// Store last error status and change log level depending on repeated occurrence
 	lastQueryFailed bool
 }
 
@@ -94,13 +94,13 @@ func (p *Prometheus) startConsul(ctx context.Context) error {
 
 	p.wg.Add(1)
 	go func() {
-		// Store last error status and change log level depending on repeated occurence
+		// Store last error status and change log level depending on repeated occurrence
 		var refreshFailed = false
 		defer p.wg.Done()
 		err := p.refreshConsulServices(catalog)
 		if err != nil {
 			refreshFailed = true
-			p.Log.Errorf("Unable to refreh Consul services: %v", err)
+			p.Log.Errorf("Unable to refresh Consul services: %v", err)
 		}
 		for {
 			select {
@@ -109,7 +109,7 @@ func (p *Prometheus) startConsul(ctx context.Context) error {
 			case <-time.After(time.Duration(p.ConsulConfig.QueryInterval)):
 				err := p.refreshConsulServices(catalog)
 				if err != nil {
-					message := fmt.Sprintf("Unable to refreh Consul services: %v", err)
+					message := fmt.Sprintf("Unable to refresh Consul services: %v", err)
 					if refreshFailed {
 						p.Log.Debug(message)
 					} else {

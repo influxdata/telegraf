@@ -8,6 +8,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 type Entry struct {
@@ -244,7 +246,7 @@ func (e *Entry) convertTimeType(in []byte, order binary.ByteOrder) (time.Time, e
 	}
 	// We have a format specification (hopefully)
 	v := convertStringType(in)
-	return time.ParseInLocation(e.Type, v, e.location)
+	return internal.ParseTimestamp(e.Type, v, e.location)
 }
 
 func convertStringType(in []byte) string {

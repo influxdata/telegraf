@@ -221,10 +221,7 @@ func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 			q.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
-		_, err = buf.Write(octets)
-		if err != nil {
-			return nil, err
-		}
+		buf.Write(octets)
 	}
 	body := buf.Bytes()
 	return body, nil
@@ -294,23 +291,23 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	clientConfig.dialer = dialer
 
 	var auth []amqp.Authentication
-	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
+	if strings.EqualFold(q.AuthMethod, "EXTERNAL") {
 		auth = []amqp.Authentication{&externalAuth{}}
 	} else if !q.Username.Empty() || !q.Password.Empty() {
 		username, err := q.Username.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
+		defer username.Destroy()
 		password, err := q.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
+		defer password.Destroy()
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: string(username),
-				Password: string(password),
+				Username: username.String(),
+				Password: password.String(),
 			},
 		}
 	}

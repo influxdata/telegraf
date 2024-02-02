@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package http
 
@@ -27,18 +28,18 @@ type HTTP struct {
 	Body            string   `toml:"body"`
 	ContentEncoding string   `toml:"content_encoding"`
 
-	Headers map[string]string `toml:"headers"`
-
-	// HTTP Basic Auth Credentials
+	// Basic authentication
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
-	// Absolute path to file with Bearer token
-	BearerToken string `toml:"bearer_token"`
+	// Bearer authentication
+	BearerToken string        `toml:"bearer_token" deprecated:"1.28.0;use 'token_file' instead"`
+	Token       config.Secret `toml:"token"`
+	TokenFile   string        `toml:"token_file"`
 
-	SuccessStatusCodes []int `toml:"success_status_codes"`
-
-	Log telegraf.Logger `toml:"-"`
+	Headers            map[string]string `toml:"headers"`
+	SuccessStatusCodes []int             `toml:"success_status_codes"`
+	Log                telegraf.Logger   `toml:"-"`
 
 	httpconfig.HTTPClientConfig
 
@@ -51,12 +52,24 @@ func (*HTTP) SampleConfig() string {
 }
 
 func (h *HTTP) Init() error {
+	// For backward compatibility
+	if h.TokenFile != "" && h.BearerToken != "" && h.TokenFile != h.BearerToken {
+		return fmt.Errorf("conflicting settings for 'bearer_token' and 'token_file'")
+	} else if h.TokenFile == "" && h.BearerToken != "" {
+		h.TokenFile = h.BearerToken
+	}
+
+	// We cannot use multiple sources for tokens
+	if h.TokenFile != "" && !h.Token.Empty() {
+		return fmt.Errorf("either use 'token_file' or 'token' not both")
+	}
+
+	// Create the client
 	ctx := context.Background()
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
 	}
-
 	h.client = client
 
 	// Set default as [200]
@@ -99,18 +112,23 @@ func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
 // Returns:
 //
 //	error: Any error that may have occurred
-func (h *HTTP) gatherURL(
-	acc telegraf.Accumulator,
-	url string,
-) error {
+func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	body := makeRequestBodyReader(h.ContentEncoding, h.Body)
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
 	}
 
-	if h.BearerToken != "" {
-		token, err := os.ReadFile(h.BearerToken)
+	if !h.Token.Empty() {
+		token, err := h.Token.Get()
+		if err != nil {
+			return err
+		}
+		bearer := "Bearer " + strings.TrimSpace(token.String())
+		token.Destroy()
+		request.Header.Set("Authorization", bearer)
+	} else if h.TokenFile != "" {
+		token, err := os.ReadFile(h.TokenFile)
 		if err != nil {
 			return err
 		}
@@ -123,7 +141,7 @@ func (h *HTTP) gatherURL(
 	}
 
 	for k, v := range h.Headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			request.Host = v
 		} else {
 			request.Header.Add(k, v)
@@ -189,15 +207,15 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := h.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
-	request.SetBasicAuth(string(username), string(password))
+	request.SetBasicAuth(username.String(), password.String())
 
 	return nil
 }

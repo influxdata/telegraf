@@ -1284,7 +1284,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 
 	cachedtiming, ok := sSingle.timings["metric_type=timingvalid_multiple"]
 	require.Truef(t, ok, "Expected cached measurement with hash 'metric_type=timingvalid_multiple' not found")
-	require.Equalf(t, cachedtiming.name, "valid_multiple", "Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
+	require.Equalf(t, "valid_multiple", cachedtiming.name, "Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
 
 	// A 0 at samplerate 0.1 will add 10 values of 0,
 	// A 0 with invalid samplerate will add a single 0,
@@ -1564,7 +1564,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 
 	require.NoError(t, s.Gather(fakeacc))
 
-	require.Lenf(t, s.timings, 0, "All timings should have been deleted, found %d", len(s.timings))
+	require.Emptyf(t, s.timings, "All timings should have been deleted, found %d", len(s.timings))
 }
 
 // Tests the delete_gauges option
@@ -1617,12 +1617,12 @@ func TestParse_Counters_Delete(t *testing.T) {
 
 func TestParseKeyValue(t *testing.T) {
 	k, v := parseKeyValue("foo=bar")
-	require.Equalf(t, k, "foo", "Expected %s, got %s", "foo", k)
-	require.Equalf(t, v, "bar", "Expected %s, got %s", "bar", v)
+	require.Equalf(t, "foo", k, "Expected %s, got %s", "foo", k)
+	require.Equalf(t, "bar", v, "Expected %s, got %s", "bar", v)
 
 	k2, v2 := parseKeyValue("baz")
-	require.Equalf(t, k2, "", "Expected %s, got %s", "", k2)
-	require.Equalf(t, v2, "baz", "Expected %s, got %s", "baz", v2)
+	require.Equalf(t, "", k2, "Expected %s, got %s", "", k2)
+	require.Equalf(t, "baz", v2, "Expected %s, got %s", "baz", v2)
 }
 
 // Test utility functions
@@ -1840,7 +1840,7 @@ func TestUdpFillQueue(t *testing.T) {
 	defer plugin.Stop()
 
 	errs := logger.Errors()
-	require.Lenf(t, errs, 0, "got errors: %v", errs)
+	require.Emptyf(t, errs, "got errors: %v", errs)
 }
 
 func TestParse_Ints(t *testing.T) {
@@ -1849,7 +1849,7 @@ func TestParse_Ints(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, s.Gather(acc))
-	require.Equal(t, s.Percentiles, []Number{90.0})
+	require.Equal(t, []Number{90.0}, s.Percentiles)
 }
 
 func TestParse_KeyValue(t *testing.T) {
@@ -1992,6 +1992,66 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 		),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	require.NoError(t, conn.Close())
+}
+
+func TestParse_DeltaCounter(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		TCPKeepAlive:           true,
+		NumberWorkerThreads:    5,
+		// Delete Counters causes Delta temporality to be added
+		DeleteCounters:               true,
+		lastGatherTime:               time.Now(),
+		EnableAggregationTemporality: true,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+
+	require.Eventuallyf(t, func() bool {
+		require.NoError(t, statsd.Gather(acc))
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond, "Expected 1 metric found %d", acc.NMetrics())
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu_time_idle",
+			map[string]string{
+				"metric_type": "counter",
+				"temporality": "delta",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+	got := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, got, testutil.IgnoreTime(), testutil.IgnoreFields("start_time"))
+
+	startTime, ok := got[0].GetField("start_time")
+	require.True(t, ok, "expected start_time field")
+
+	startTimeStr, ok := startTime.(string)
+	require.True(t, ok, "expected start_time field to be a string")
+
+	_, err = time.Parse(time.RFC3339, startTimeStr)
+	require.NoError(t, err, "execpted start_time field to be in RFC3339 format")
 
 	require.NoError(t, conn.Close())
 }

@@ -50,7 +50,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # role_session_name = ""
   # profile = ""
   # shared_credential_file = ""
-
+  
+  ## If you are using CloudWatch cross-account observability, you can 
+  ## set IncludeLinkedAccounts to true in a monitoring account 
+  ## and collect metrics from the linked source accounts
+  # include_linked_accounts = false
+  
   ## Endpoint to make request against, the correct endpoint is automatically
   ## determined and this option should only be set if you wish to override the
   ## default.
@@ -154,7 +159,7 @@ pattern to allow monitoring of any CloudWatch Metric.
 Omitting or specifying a value of `'*'` for a dimension value configures all
 available metrics that contain a dimension with the specified name to be
 retrieved. If specifying >1 dimension, then the metric must contain *all* the
-configured dimensions where the the value of the wildcard dimension is ignored.
+configured dimensions where the value of the wildcard dimension is ignored.
 
 Example:
 
@@ -226,6 +231,8 @@ case](https://en.wikipedia.org/wiki/Snake_case)
 - All measurements have the following tags:
   - region           (CloudWatch Region)
   - {dimension-name} (Cloudwatch Dimension value - one per metric dimension)
+- If `include_linked_accounts` is set to true then below tag is also provided:
+  - account           (The ID of the account where the metrics are located.)
 
 ## Troubleshooting
 

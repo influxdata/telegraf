@@ -2,9 +2,10 @@ package netflow
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
-	"strconv"
+	"regexp"
 	"sync"
 	"time"
 
@@ -14,9 +15,13 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+var regexpIPFIXPENMapping = regexp.MustCompile(`\d+\.\d+`)
+
+type decoderFunc func([]byte) (interface{}, error)
+
 type fieldMapping struct {
 	name    string
-	decoder func([]byte) interface{}
+	decoder decoderFunc
 }
 
 // Default field mappings common for Netflow version 9 and IPFIX
@@ -57,8 +62,8 @@ var fieldMappingsNetflowCommon = map[uint16][]fieldMapping{
 	30: {{"dst_mask", decodeUint}},          // IPV6_DST_MASK / destinationIPv6PrefixLength
 	31: {{"flow_label", decodeHex}},         // IPV6_FLOW_LABEL / flowLabelIPv6
 	32: {
-		{"icmp_type", func(b []byte) interface{} { return b[0] }}, // ICMP_TYPE / icmpTypeCodeIPv4
-		{"icmp_code", func(b []byte) interface{} { return b[1] }},
+		{"icmp_type", decodeByteFunc(0)}, // ICMP_TYPE / icmpTypeCodeIPv4
+		{"icmp_code", decodeByteFunc(1)},
 	},
 	33: {{"igmp_type", decodeUint}},               // MUL_IGMP_TYPE / igmpType
 	34: {{"sampling_interval", decodeUint}},       // SAMPLING_INTERVAL / samplingInterval (deprecated)
@@ -83,8 +88,8 @@ var fieldMappingsNetflowCommon = map[uint16][]fieldMapping{
 	53: {{"max_ttl", decodeUint}},         // MAX_TTL / maximumTTL
 	54: {{"fragment_id", decodeHex}},      // IPV4_IDENT / fragmentIdentification
 	55: {{"dst_tos", decodeHex}},          // DST_TOS / postIpClassOfService
-	56: {{"in_src_mac", decodeHex}},       // IN_SRC_MAC / sourceMacAddress
-	57: {{"out_dst_mac", decodeHex}},      // OUT_DST_MAC / postDestinationMacAddress
+	56: {{"in_src_mac", decodeMAC}},       // IN_SRC_MAC / sourceMacAddress
+	57: {{"out_dst_mac", decodeMAC}},      // OUT_DST_MAC / postDestinationMacAddress
 	58: {{"vlan_src", decodeUint}},        // SRC_VLAN / vlanId
 	59: {{"vlan_dst", decodeUint}},        // DST_VLAN / postVlanId
 	60: {{"ip_version", decodeIPVersion}}, // IP_PROTOCOL_VERSION / ipVersion
@@ -103,8 +108,8 @@ var fieldMappingsNetflowCommon = map[uint16][]fieldMapping{
 	77: {{"mpls_label_8", decodeHex}},      // MPLS_LABEL_8 / mplsLabelStackSection8
 	78: {{"mpls_label_9", decodeHex}},      // MPLS_LABEL_9 / mplsLabelStackSection9
 	79: {{"mpls_label_10", decodeHex}},     // MPLS_LABEL_10 / mplsLabelStackSection10
-	80: {{"in_dst_mac", decodeHex}},        // IN_DST_MAC / destinationMacAddress
-	81: {{"out_src_mac", decodeHex}},       // OUT_SRC_MAC / postSourceMacAddress
+	80: {{"in_dst_mac", decodeMAC}},        // IN_DST_MAC / destinationMacAddress
+	81: {{"out_src_mac", decodeMAC}},       // OUT_SRC_MAC / postSourceMacAddress
 	82: {{"interface", decodeString}},      // IF_NAME / interfaceName
 	83: {{"interface_desc", decodeString}}, // IF_DESC / interfaceDescription
 	84: {{"sampler_name", decodeString}},   // SAMPLER_NAME / samplerName
@@ -182,8 +187,8 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	137: {{"common_properties_id", decodeUint}},     // commonPropertiesId
 	138: {{"observation_point_id", decodeUint}},     // observationPointId
 	139: {
-		{"icmp_type", func(b []byte) interface{} { return b[0] }}, // icmpTypeCodeIPv6
-		{"icmp_code", func(b []byte) interface{} { return b[1] }},
+		{"icmp_type", decodeByteFunc(0)}, // icmpTypeCodeIPv6
+		{"icmp_code", decodeByteFunc(1)},
 	},
 	140: {{"mpls_top_label_ip", decodeIP}}, // mplsTopLabelIPv6Address
 	141: {{"linecard_id", decodeUint}},     // lineCardId
@@ -196,8 +201,8 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	// 148: common
 	149: {{"observation_domain_id", decodeUint}}, // observationDomainId
 	150: {{"flow_start", decodeUint}},            // flowStartSeconds
-	// 151 - 152: common
-	153: {{"flow_end_ms", decodeUint}},              // flowEndMilliseconds
+	151: {{"flow_end", decodeUint}},              // flowEndSeconds
+	// 152 - 153: common
 	154: {{"flow_start_us", decodeUint}},            // flowStartMicroseconds
 	155: {{"flow_end_us", decodeUint}},              // flowEndMicroseconds
 	156: {{"flow_start_ns", decodeUint}},            // flowStartNanoseconds
@@ -238,7 +243,7 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	194: {{"mpls_payload_len", decodeUint}},         // mplsPayloadLength
 	195: {{"dscp", decodeUint}},                     // ipDiffServCodePoint
 	196: {{"precedence", decodeUint}},               // ipPrecedence
-	197: {{"fragement_flags", decodeFragmentFlags}}, // fragmentFlags
+	197: {{"fragment_flags", decodeFragmentFlags}},  // fragmentFlags
 	198: {{"bytes_sqr_sum", decodeUint}},            // octetDeltaSumOfSquares
 	199: {{"bytes_sqr_sum_total", decodeUint}},      // octetTotalSumOfSquares
 	200: {{"mpls_top_label_ttl", decodeUint}},       // mplsTopLabelTTL
@@ -255,10 +260,10 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	211: {{"collector", decodeIP}},                  // collectorIPv4Address
 	212: {{"collector", decodeIP}},                  // collectorIPv6Address
 	213: {{"export_interface", decodeUint}},         // exportInterface
-	214: {{"export_proto_version", decodeUint}},     //exportProtocolVersion
-	215: {{"export_transport_proto", decodeUint}},   //exportTransportProtocol
-	216: {{"collector_transport_port", decodeUint}}, //collectorTransportPort
-	217: {{"exporter_transport_port", decodeUint}},  //exporterTransportPort
+	214: {{"export_proto_version", decodeUint}},     // exportProtocolVersion
+	215: {{"export_transport_proto", decodeUint}},   // exportTransportProtocol
+	216: {{"collector_transport_port", decodeUint}}, // collectorTransportPort
+	217: {{"exporter_transport_port", decodeUint}},  // exporterTransportPort
 	218: {{"tcp_syn_total", decodeUint}},            // tcpSynTotalCount
 	219: {{"tcp_fin_total", decodeUint}},            // tcpFinTotalCount
 	220: {{"tcp_rst_total", decodeUint}},            // tcpRstTotalCount
@@ -394,9 +399,9 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	362: {{"port_range_end", decodeUint}},                   // portRangeEnd
 	363: {{"port_range_step_size", decodeUint}},             // portRangeStepSize
 	364: {{"port_range_ports", decodeUint}},                 // portRangeNumPorts
-	365: {{"station_mac", decodeHex}},                       // staMacAddress
+	365: {{"station_mac", decodeMAC}},                       // staMacAddress
 	366: {{"station", decodeIP}},                            // staIPv4Address
-	367: {{"wtp_mac", decodeHex}},                           // wtpMacAddress
+	367: {{"wtp_mac", decodeMAC}},                           // wtpMacAddress
 	368: {{"in_interface_type", decodeUint}},                // ingressInterfaceType
 	369: {{"out_interface_type", decodeUint}},               // egressInterfaceType
 	370: {{"rtp_seq_number", decodeUint}},                   // rtpSequenceNumber
@@ -463,7 +468,7 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 	431: {{"layer2_frames_total", decodeUint}},                        // layer2FrameTotalCount
 	432: {{"pseudo_wire_dst", decodeIP}},                              // pseudoWireDestinationIPv4Address
 	433: {{"ignored_layer2_frames_total", decodeUint}},                // ignoredLayer2FrameTotalCount
-	434: {{"mib_obj_value_int", decodeInt32}},                         // mibObjectValueInteger
+	434: {{"mib_obj_value_int", decodeInt}},                           // mibObjectValueInteger
 	435: {{"mib_obj_value_str", decodeString}},                        // mibObjectValueOctetString
 	436: {{"mib_obj_value_oid", decodeHex}},                           // mibObjectValueOID
 	437: {{"mib_obj_value_bits", decodeHex}},                          // mibObjectValueBits
@@ -525,12 +530,15 @@ var fieldMappingsIPFIX = map[uint16][]fieldMapping{
 
 // Decoder structure
 type netflowDecoder struct {
-	Log telegraf.Logger
+	PENFiles []string
+	Log      telegraf.Logger
 
 	templates     map[string]*netflow.BasicTemplateSystem
 	mappingsV9    map[uint16]fieldMapping
 	mappingsIPFIX map[uint16]fieldMapping
+	mappingsPEN   map[string]fieldMapping
 
+	logged map[string]bool
 	sync.Mutex
 }
 
@@ -552,7 +560,12 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	buf := bytes.NewBuffer(payload)
 	packet, err := netflow.DecodeMessage(buf, templates)
 	if err != nil {
-		return nil, err
+		var terr *netflow.ErrorTemplateNotFound
+		if errors.As(err, &terr) {
+			d.Log.Warnf("%v; skipping packet", err)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("decoding message failed: %w", err)
 	}
 
 	// Extract metrics
@@ -571,7 +584,12 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					}
 					fields := make(map[string]interface{})
 					for _, value := range record.Values {
-						for _, field := range d.decodeValueV9(value) {
+						decodedFields, err := d.decodeValueV9(value)
+						if err != nil {
+							d.Log.Errorf("decoding record %+v failed: %v", record, err)
+							continue
+						}
+						for _, field := range decodedFields {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -594,7 +612,12 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 					fields := make(map[string]interface{})
 					t := time.Now()
 					for _, value := range record.Values {
-						for _, field := range d.decodeValueIPFIX(value) {
+						decodedFields, err := d.decodeValueIPFIX(value)
+						if err != nil {
+							d.Log.Errorf("decoding value %+v failed: %v", value, err)
+							continue
+						}
+						for _, field := range decodedFields {
 							fields[field.Key] = field.Value
 						}
 					}
@@ -620,49 +643,83 @@ func (d *netflowDecoder) Init() error {
 	d.templates = make(map[string]*netflow.BasicTemplateSystem)
 	d.mappingsV9 = make(map[uint16]fieldMapping)
 	d.mappingsIPFIX = make(map[uint16]fieldMapping)
+	d.mappingsPEN = make(map[string]fieldMapping)
+	for _, fn := range d.PENFiles {
+		d.Log.Debugf("Loading PEN mapping file %q...", fn)
+		mappings, err := loadMapping(fn)
+		if err != nil {
+			return err
+		}
+		for k, v := range mappings {
+			if !regexpIPFIXPENMapping.MatchString(k) {
+				return fmt.Errorf("key %q in file %q does not match pattern <PEN>.<element-id>; maybe wrong file", k, fn)
+			}
+			if _, found := d.mappingsPEN[k]; found {
+				return fmt.Errorf("duplicate entries for ID %q", k)
+			}
+			d.mappingsPEN[k] = v
+		}
+	}
+	d.Log.Infof("Loaded %d PEN mappings...", len(d.mappingsPEN))
+
+	d.logged = make(map[string]bool)
 
 	return nil
 }
 
-func (d *netflowDecoder) decodeValueV9(field netflow.DataField) []telegraf.Field {
+func (d *netflowDecoder) decodeValueV9(field netflow.DataField) ([]telegraf.Field, error) {
 	raw := field.Value.([]byte)
+	elementID := field.Type
 
 	// Check the user-specified mapping
-	if m, found := d.mappingsV9[field.Type]; found {
-		return []telegraf.Field{{Key: m.name, Value: m.decoder(raw)}}
+	if m, found := d.mappingsV9[elementID]; found {
+		v, err := m.decoder(raw)
+		if err != nil {
+			return nil, err
+		}
+		return []telegraf.Field{{Key: m.name, Value: v}}, nil
 	}
 
 	// Check the version specific default field mappings
-	if mappings, found := fieldMappingsNetflowV9[field.Type]; found {
+	if mappings, found := fieldMappingsNetflowV9[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
-			fields = append(fields, telegraf.Field{
-				Key:   m.name,
-				Value: m.decoder(raw),
-			})
+			v, err := m.decoder(raw)
+			if err != nil {
+				return nil, err
+			}
+			fields = append(fields, telegraf.Field{Key: m.name, Value: v})
 		}
-		return fields
+		return fields, nil
 	}
 
 	// Check the common default field mappings
-	if mappings, found := fieldMappingsNetflowCommon[field.Type]; found {
+	if mappings, found := fieldMappingsNetflowCommon[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
-			fields = append(fields, telegraf.Field{
-				Key:   m.name,
-				Value: m.decoder(raw),
-			})
+			v, err := m.decoder(raw)
+			if err != nil {
+				return nil, err
+			}
+			fields = append(fields, telegraf.Field{Key: m.name, Value: v})
 		}
-		return fields
+		return fields, nil
 	}
 
 	// Return the raw data if no mapping was found
-	d.Log.Debugf("unknown data field %v", field)
-	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
-	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
+	key := fmt.Sprintf("type_%d", elementID)
+	if !d.logged[key] {
+		d.Log.Debugf("unknown Netflow v9 data field %v", field)
+	}
+	v, err := decodeHex(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	return []telegraf.Field{{Key: key, Value: v}}, nil
 }
 
-func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Field {
+func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) ([]telegraf.Field, error) {
 	raw := field.Value.([]byte)
 
 	// Checking for reverse elements according to RFC5103
@@ -673,37 +730,71 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) []telegraf.Fi
 		elementID = field.Type & (0x4000 ^ 0xffff)
 	}
 
+	// Handle messages with Private Enterprise Numbers (PENs)
+	if field.PenProvided {
+		key := fmt.Sprintf("%d.%d", field.Pen, elementID)
+		if m, found := d.mappingsPEN[key]; found {
+			name := prefix + m.name
+			v, err := m.decoder(raw)
+			if err != nil {
+				return nil, err
+			}
+			return []telegraf.Field{{Key: name, Value: v}}, nil
+		}
+		if !d.logged[key] {
+			d.Log.Debugf("unknown IPFIX PEN data field %v", field)
+		}
+		name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
+		v, err := decodeHex(raw)
+		if err != nil {
+			return nil, err
+		}
+		return []telegraf.Field{{Key: name, Value: v}}, nil
+	}
+
 	// Check the user-specified mapping
 	if m, found := d.mappingsIPFIX[elementID]; found {
-		return []telegraf.Field{{Key: prefix + m.name, Value: m.decoder(raw)}}
+		v, err := m.decoder(raw)
+		if err != nil {
+			return nil, err
+		}
+		return []telegraf.Field{{Key: prefix + m.name, Value: v}}, nil
 	}
 
 	// Check the version specific default field mappings
 	if mappings, found := fieldMappingsIPFIX[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
-			fields = append(fields, telegraf.Field{
-				Key:   prefix + m.name,
-				Value: m.decoder(raw),
-			})
+			v, err := m.decoder(raw)
+			if err != nil {
+				return nil, err
+			}
+			fields = append(fields, telegraf.Field{Key: prefix + m.name, Value: v})
 		}
-		return fields
+		return fields, nil
 	}
 
 	// Check the common default field mappings
 	if mappings, found := fieldMappingsNetflowCommon[elementID]; found {
 		var fields []telegraf.Field
 		for _, m := range mappings {
-			fields = append(fields, telegraf.Field{
-				Key:   prefix + m.name,
-				Value: m.decoder(raw),
-			})
+			v, err := m.decoder(raw)
+			if err != nil {
+				return nil, err
+			}
+			fields = append(fields, telegraf.Field{Key: prefix + m.name, Value: v})
 		}
-		return fields
+		return fields, nil
 	}
 
 	// Return the raw data if no mapping was found
-	d.Log.Debugf("unknown data field %v", field)
-	name := "type_" + strconv.FormatUint(uint64(field.Type), 10)
-	return []telegraf.Field{{Key: name, Value: decodeHex(raw)}}
+	key := fmt.Sprintf("type_%d", elementID)
+	if !d.logged[key] {
+		d.Log.Debugf("unknown IPFIX data field %v", field)
+	}
+	v, err := decodeHex(raw)
+	if err != nil {
+		return nil, err
+	}
+	return []telegraf.Field{{Key: key, Value: v}}, nil
 }

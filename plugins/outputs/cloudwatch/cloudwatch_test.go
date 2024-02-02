@@ -31,7 +31,7 @@ func TestBuildDimensions(t *testing.T) {
 	sort.Strings(tagKeys)
 
 	if len(testPoint.Tags()) >= maxDimensions {
-		require.Equal(t, maxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
+		require.Len(t, dimensions, maxDimensions, "Number of dimensions should be less than MaxDimensions")
 	} else {
 		require.Equal(t, len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
 	}
@@ -68,11 +68,11 @@ func TestBuildMetricDatums(t *testing.T) {
 	}
 	for _, point := range validMetrics {
 		datums := BuildMetricDatum(false, false, point)
-		require.Equal(t, 1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", point))
+		require.Len(t, datums, 1, fmt.Sprintf("Valid point should create a Datum {value: %v}", point))
 	}
 	for _, point := range invalidMetrics {
 		datums := BuildMetricDatum(false, false, point)
-		require.Equal(t, 0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
+		require.Empty(t, datums, fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
 
 	statisticMetric := metric.New(
@@ -82,7 +82,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	datums := BuildMetricDatum(true, false, statisticMetric)
-	require.Equal(t, 1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
+	require.Len(t, datums, 1, fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
 
 	multiFieldsMetric := metric.New(
 		"test1",
@@ -91,7 +91,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	datums = BuildMetricDatum(true, false, multiFieldsMetric)
-	require.Equal(t, 4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
+	require.Len(t, datums, 4, fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
 
 	multiStatisticMetric := metric.New(
 		"test1",
@@ -105,7 +105,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	datums = BuildMetricDatum(true, false, multiStatisticMetric)
-	require.Equal(t, 7, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", multiStatisticMetric))
+	require.Len(t, datums, 7, fmt.Sprintf("Valid point should create a Datum {value: %v}", multiStatisticMetric))
 }
 
 func TestMetricDatumResolution(t *testing.T) {

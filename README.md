@@ -22,12 +22,12 @@ incorporate as many pull requests as possible. Consider looking at the
 
 Telegraf shares the same [minimum requirements][] as Go:
 
-- Linux kernel version 2.6.23 or later
-- Windows 7 or later
-- FreeBSD 11.2 or later
-- MacOS 10.11 El Capitan or later
+- Linux kernel version 2.6.32 or later
+- Windows 10 or later
+- FreeBSD 12 or later
+- macOS 10.15 Catalina or later
 
-[minimum requirements]: https://github.com/golang/go/wiki/MinimumRequirements#minimum-requirements
+[minimum requirements]: https://go.dev/wiki/MinimumRequirements
 
 ## Obtaining Telegraf
 
@@ -73,7 +73,7 @@ sudo yum install telegraf
 
 ### Build From Source
 
-Telegraf requires Go version 1.20 or newer and the Makefile requires GNU make.
+Telegraf requires Go version 1.21 or newer and the Makefile requires GNU make.
 
 On Windows, the makefile requires the use of a bash terminal to support all makefile targets.
 An easy option to get bash for windows is using the version that comes with [git for windows](https://gitforwindows.org/).

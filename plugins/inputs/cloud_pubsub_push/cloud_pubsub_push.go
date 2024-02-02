@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -41,7 +40,7 @@ type PubSubPush struct {
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
 	tlsint.ServerConfig
-	parsers.Parser
+	telegraf.Parser
 
 	server *http.Server
 	acc    telegraf.TrackingAccumulator
@@ -74,7 +73,7 @@ func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PubSubPush) SetParser(parser parsers.Parser) {
+func (p *PubSubPush) SetParser(parser telegraf.Parser) {
 	p.Parser = parser
 }
 

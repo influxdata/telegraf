@@ -387,7 +387,7 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 			conn.Close()
 			require.NoError(t, err)
 
-			// Wait that the the number of data points is accumulated
+			// Wait that the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantStrict != nil {
 				acc.Wait(len(tc.wantStrict))
@@ -443,7 +443,7 @@ func testBestEffortOctetCounting(t *testing.T, protocol string, address string, 
 			require.NoError(t, err)
 			conn.Close()
 
-			// Wait that the the number of data points is accumulated
+			// Wait that the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantBestEffort != nil {
 				acc.Wait(len(tc.wantBestEffort))

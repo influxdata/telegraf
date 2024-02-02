@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -280,5 +281,58 @@ func TestTags(t *testing.T) {
 			}
 			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
 		})
+	}
+}
+
+const benchmarkData = `tags_host=myhost tags_platform=python tags_sdkver=3.11.5 value=5
+tags_host=myhost tags_platform=python tags_sdkver=3.11.4 value=4
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		TagKeys: []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		TagKeys: []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
 	}
 }

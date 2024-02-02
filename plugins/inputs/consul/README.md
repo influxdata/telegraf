@@ -56,7 +56,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Consul checks' tag splitting
   # When tags are formatted like "key:value" with ":" as a delimiter then
-  # they will be splitted and reported as proper key:value in Telegraf
+  # they will be split and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
 ```
 
@@ -93,7 +93,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - warning (integer)
 
 `passing`, `critical`, and `warning` are integer representations of the health
-check state. A value of `1` represents that the status was the state of the the
+check state. A value of `1` represents that the status was the state of the
 health check at this sample. `status` is string representation of the same
 state.
 

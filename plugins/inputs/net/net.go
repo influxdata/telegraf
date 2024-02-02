@@ -5,10 +5,14 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
@@ -27,6 +31,20 @@ type NetIOStats struct {
 
 func (*NetIOStats) SampleConfig() string {
 	return sampleConfig
+}
+
+func (n *NetIOStats) Init() error {
+	if !n.IgnoreProtocolStats {
+		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.net", "ignore_protocol_stats", "false",
+			telegraf.DeprecationInfo{
+				Since:     "1.27.3",
+				RemovalIn: "1.36.0",
+				Notice:    "use the 'inputs.nstat' plugin instead",
+			},
+		)
+	}
+
+	return nil
 }
 
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
@@ -89,6 +107,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"err_out":      io.Errout,
 			"drop_in":      io.Dropin,
 			"drop_out":     io.Dropout,
+			"speed":        getInterfaceSpeed(io.Name),
 		}
 		acc.AddCounter("net", fields, tags)
 	}
@@ -112,6 +131,25 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// Get the interface speed from /sys/class/net/*/speed file. returns -1 if unsupported
+func getInterfaceSpeed(ioName string) int64 {
+	sysPath := os.Getenv("HOST_SYS")
+	if sysPath == "" {
+		sysPath = "/sys"
+	}
+
+	raw, err := os.ReadFile(filepath.Join(sysPath, "class", "net", ioName, "speed"))
+	if err != nil {
+		return -1
+	}
+
+	speed, err := strconv.ParseInt(strings.TrimSuffix(string(raw), "\n"), 10, 64)
+	if err != nil {
+		return -1
+	}
+	return speed
 }
 
 func init() {

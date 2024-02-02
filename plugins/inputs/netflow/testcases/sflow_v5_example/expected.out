@@ -1,0 +1,1 @@
+netflow,source=127.0.0.1,version=sFlowV5 sys_uptime=12414u,agent_ip="192.168.119.184",agent_subid=100000u,seq_number=2u,in_snmp=3u,port_name="eno1",ip_version="IPv4" 12414000000

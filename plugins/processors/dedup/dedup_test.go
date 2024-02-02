@@ -34,7 +34,7 @@ func assertCacheRefresh(t *testing.T, proc *Dedup, item telegraf.Metric) {
 	id := item.HashID()
 	name := item.Name()
 	// cache is not empty
-	require.NotEqual(t, 0, len(proc.Cache))
+	require.NotEmpty(t, proc.Cache)
 	// cache has metric with proper id
 	cache, present := proc.Cache[id]
 	require.True(t, present)
@@ -53,7 +53,7 @@ func assertCacheHit(t *testing.T, proc *Dedup, item telegraf.Metric) {
 	id := item.HashID()
 	name := item.Name()
 	// cache is not empty
-	require.NotEqual(t, 0, len(proc.Cache))
+	require.NotEmpty(t, proc.Cache)
 	// cache has metric with proper id
 	cache, present := proc.Cache[id]
 	require.True(t, present)
@@ -70,7 +70,7 @@ func assertCacheHit(t *testing.T, proc *Dedup, item telegraf.Metric) {
 
 func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.Metric) {
 	// target is not empty
-	require.NotEqual(t, 0, len(target))
+	require.NotEmpty(t, target)
 	// target has metric with proper name
 	require.Equal(t, metricName, target[0].Name())
 	// target metric has proper field
@@ -85,7 +85,7 @@ func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.
 
 func assertMetricSuppressed(t *testing.T, target []telegraf.Metric) {
 	// target is empty
-	require.Equal(t, 0, len(target))
+	require.Empty(t, target)
 }
 
 func TestProcRetainsMetric(t *testing.T) {
@@ -156,7 +156,7 @@ func TestCacheShrink(t *testing.T) {
 	source := createMetric(1, time.Now().Add(-1*time.Hour))
 	deduplicate.Apply(source)
 
-	require.Equal(t, 0, len(deduplicate.Cache))
+	require.Empty(t, deduplicate.Cache)
 }
 
 func TestSameTimestamp(t *testing.T) {

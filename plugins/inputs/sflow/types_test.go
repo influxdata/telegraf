@@ -21,7 +21,7 @@ func TestRawPacketHeaderFlowData(t *testing.T) {
 	require.NotNil(t, fields)
 	require.NotNil(t, tags)
 	require.Contains(t, tags, "header_protocol")
-	require.Equal(t, 1, len(tags))
+	require.Len(t, tags, 1)
 }
 
 // process a raw ethernet packet without any encapsulated protocol

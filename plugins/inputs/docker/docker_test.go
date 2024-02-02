@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	typeContainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/system"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -20,23 +22,25 @@ import (
 )
 
 type MockClient struct {
-	InfoF             func(ctx context.Context) (types.Info, error)
-	ContainerListF    func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	InfoF             func(ctx context.Context) (system.Info, error)
+	ContainerListF    func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error)
 	ContainerStatsF   func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
 	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	DiskUsageF        func(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
+	ClientVersionF    func() string
 	CloseF            func() error
 }
 
-func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
+func (c *MockClient) Info(ctx context.Context) (system.Info, error) {
 	return c.InfoF(ctx)
 }
 
 func (c *MockClient) ContainerList(
 	ctx context.Context,
-	options types.ContainerListOptions,
+	options typeContainer.ListOptions,
 ) ([]types.Container, error) {
 	return c.ContainerListF(ctx, options)
 }
@@ -77,15 +81,26 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
+func (c *MockClient) DiskUsage(
+	ctx context.Context,
+	options types.DiskUsageOptions,
+) (types.DiskUsage, error) {
+	return c.DiskUsageF(ctx, options)
+}
+
+func (c *MockClient) ClientVersion() string {
+	return c.ClientVersionF()
+}
+
 func (c *MockClient) Close() error {
 	return c.CloseF()
 }
 
 var baseClient = MockClient{
-	InfoF: func(context.Context) (types.Info, error) {
+	InfoF: func(context.Context) (system.Info, error) {
 		return info, nil
 	},
-	ContainerListF: func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+	ContainerListF: func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 		return containerList, nil
 	},
 	ContainerStatsF: func(c context.Context, s string, b bool) (types.ContainerStats, error) {
@@ -102,6 +117,12 @@ var baseClient = MockClient{
 	},
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
+	},
+	DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+		return diskUsage, nil
+	},
+	ClientVersionF: func() string {
+		return version
 	},
 	CloseF: func() error {
 		return nil
@@ -424,10 +445,10 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 		Log: testutil.Logger{},
 		newClient: func(string, *tls.Config) (Client, error) {
 			return &MockClient{
-				InfoF: func(ctx context.Context) (types.Info, error) {
+				InfoF: func(ctx context.Context) (system.Info, error) {
 					return info, nil
 				},
-				ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				ContainerListF: func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				},
 				ContainerStatsF: func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
@@ -444,6 +465,12 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 					return NodeList, nil
+				},
+				DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+					return diskUsage, nil
+				},
+				ClientVersionF: func() string {
+					return version
 				},
 				CloseF: func() error {
 					return nil
@@ -556,7 +583,7 @@ func TestContainerLabels(t *testing.T) {
 
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					return []types.Container{tt.container}, nil
 				}
 				return &client, nil
@@ -676,7 +703,7 @@ func TestContainerNames(t *testing.T) {
 
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				}
 				client.ContainerStatsF = func(c context.Context, s string, b bool) (types.ContainerStats, error) {
@@ -753,12 +780,13 @@ func TestContainerStatus(t *testing.T) {
 						"source":            "e2173b9478a6",
 					},
 					map[string]interface{}{
-						"oomkilled":    false,
-						"pid":          1234,
-						"exitcode":     0,
-						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-						"started_at":   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC).UnixNano(),
-						"uptime_ns":    int64(3 * time.Minute),
+						"oomkilled":     false,
+						"pid":           1234,
+						"restart_count": 0,
+						"exitcode":      0,
+						"container_id":  "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":    time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC).UnixNano(),
+						"uptime_ns":     int64(3 * time.Minute),
 					},
 					time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 				),
@@ -789,13 +817,14 @@ func TestContainerStatus(t *testing.T) {
 						"source":            "e2173b9478a6",
 					},
 					map[string]interface{}{
-						"oomkilled":    false,
-						"pid":          1234,
-						"exitcode":     0,
-						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-						"started_at":   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC).UnixNano(),
-						"finished_at":  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC).UnixNano(),
-						"uptime_ns":    int64(5 * time.Minute),
+						"oomkilled":     false,
+						"pid":           1234,
+						"exitcode":      0,
+						"restart_count": 0,
+						"container_id":  "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":    time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC).UnixNano(),
+						"finished_at":   time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC).UnixNano(),
+						"uptime_ns":     int64(5 * time.Minute),
 					},
 					time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 				),
@@ -827,11 +856,12 @@ func TestContainerStatus(t *testing.T) {
 						"source":            "e2173b9478a6",
 					},
 					map[string]interface{}{
-						"oomkilled":    false,
-						"pid":          1234,
-						"exitcode":     0,
-						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-						"finished_at":  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC).UnixNano(),
+						"oomkilled":     false,
+						"pid":           1234,
+						"exitcode":      0,
+						"restart_count": 0,
+						"container_id":  "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"finished_at":   time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC).UnixNano(),
 					},
 					time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 				),
@@ -863,13 +893,14 @@ func TestContainerStatus(t *testing.T) {
 						"source":            "e2173b9478a6",
 					},
 					map[string]interface{}{
-						"oomkilled":    false,
-						"pid":          1234,
-						"exitcode":     0,
-						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-						"started_at":   time.Date(2019, 1, 1, 0, 0, 2, 0, time.UTC).UnixNano(),
-						"finished_at":  time.Date(2019, 1, 1, 0, 0, 1, 0, time.UTC).UnixNano(),
-						"uptime_ns":    int64(1 * time.Second),
+						"oomkilled":     false,
+						"pid":           1234,
+						"exitcode":      0,
+						"restart_count": 0,
+						"container_id":  "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":    time.Date(2019, 1, 1, 0, 0, 2, 0, time.UTC).UnixNano(),
+						"finished_at":   time.Date(2019, 1, 1, 0, 0, 1, 0, time.UTC).UnixNano(),
+						"uptime_ns":     int64(1 * time.Second),
 					},
 					time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC),
 				),
@@ -882,7 +913,7 @@ func TestContainerStatus(t *testing.T) {
 				acc           testutil.Accumulator
 				newClientFunc = func(string, *tls.Config) (Client, error) {
 					client := baseClient
-					client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+					client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 						return containerList[:1], nil
 					}
 					client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
@@ -1167,7 +1198,7 @@ func TestContainerStateFilter(t *testing.T) {
 
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
 					for k, v := range tt.expected {
 						actual := options.Filters.Get(k)
 						sort.Strings(actual)
@@ -1203,7 +1234,7 @@ func TestContainerName(t *testing.T) {
 			name: "container stats name is preferred",
 			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout/foo"},
@@ -1223,7 +1254,7 @@ func TestContainerName(t *testing.T) {
 			name: "container stats without name uses container list name",
 			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout"},
@@ -1532,4 +1563,82 @@ func TestDocker_Init(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDockerGatherDiskUsage(t *testing.T) {
+	var acc testutil.Accumulator
+	d := Docker{
+		Log:       testutil.Logger{},
+		newClient: func(string, *tls.Config) (Client, error) { return &baseClient, nil },
+	}
+
+	require.NoError(t, acc.GatherError(d.Gather))
+
+	duOpts := types.DiskUsageOptions{Types: []types.DiskUsageObject{}}
+	d.gatherDiskUsage(&acc, duOpts)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"layers_size": int64(1e10),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size_root_fs": int64(123456789),
+			"size_rw":      int64(0)},
+		map[string]string{
+			"container_image":   "some_image",
+			"container_version": "1.0.0-alpine",
+			"engine_host":       "absol",
+			"server_version":    "17.09.0-ce",
+			"container_name":    "some_container",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size":        int64(123456789),
+			"shared_size": int64(0)},
+		map[string]string{
+			"image_id":       "some_imageid",
+			"image_name":     "some_image_tag",
+			"image_version":  "1.0.0-alpine",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size":        int64(425484494),
+			"shared_size": int64(0)},
+		map[string]string{
+			"image_id":       "7f4a1cc74046",
+			"image_name":     "telegraf",
+			"image_version":  "latest",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_disk_usage",
+		map[string]interface{}{
+			"size": int64(123456789),
+		},
+		map[string]string{
+			"volume_name":    "some_volume",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
 }

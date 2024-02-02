@@ -1,9 +1,10 @@
-//go:build linux && freebsd && (!mips || !mips64)
+//go:build !mips && !mipsle && !mips64 && !ppc64 && !riscv64 && !loong64 && !mips64le && !(windows && (386 || arm))
 
 package sql
 
 import (
 	gosql "database/sql"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,9 +15,8 @@ import (
 )
 
 func TestSqlite(t *testing.T) {
-	outDir := t.TempDir()
-
-	dbfile := filepath.Join(outDir, "db")
+	dbfile := filepath.Join(os.TempDir(), "db")
+	defer os.Remove(dbfile)
 
 	// Use the plugin to write to the database address :=
 	// fmt.Sprintf("file:%v", dbfile)
@@ -49,11 +49,13 @@ func TestSqlite(t *testing.T) {
 	// Check that tables were created as expected
 	rows, err = db.Query("select sql from sqlite_master")
 	require.NoError(t, err)
+	defer rows.Close()
 	var sql string
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Scan(&sql))
 	require.Equal(t,
-		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,"int64_two" INT)`,
+		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
+			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE)`,
 		sql,
 	)
 	require.True(t, rows.Next())
@@ -69,7 +71,6 @@ func TestSqlite(t *testing.T) {
 		sql,
 	)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
 
 	// sqlite stores dates as strings. They may be in the local
 	// timezone. The test needs to parse them back into a time.Time to
@@ -79,15 +80,16 @@ func TestSqlite(t *testing.T) {
 	var actualTime time.Time
 
 	// Check contents of tables
-	rows, err = db.Query("select timestamp, tag_one, tag_two, int64_one, int64_two from metric_one")
+	rows2, err := db.Query("select timestamp, tag_one, tag_two, int64_one, int64_two from metric_one")
 	require.NoError(t, err)
-	require.True(t, rows.Next())
+	defer rows2.Close()
+	require.True(t, rows2.Next())
 	var (
 		a    string
 		b, c string
 		d, e int64
 	)
-	require.NoError(t, rows.Scan(&a, &b, &c, &d, &e))
+	require.NoError(t, rows2.Scan(&a, &b, &c, &d, &e))
 	actualTime, err = time.Parse(timeLayout, a)
 	require.NoError(t, err)
 	require.Equal(t, ts, actualTime.UTC())
@@ -95,36 +97,35 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, "tag2", c)
 	require.Equal(t, int64(1234), d)
 	require.Equal(t, int64(2345), e)
-	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
+	require.False(t, rows2.Next())
 
-	rows, err = db.Query("select timestamp, tag_three, string_one from metric_two")
+	rows3, err := db.Query("select timestamp, tag_three, string_one from metric_two")
 	require.NoError(t, err)
-	require.True(t, rows.Next())
+	defer rows3.Close()
+	require.True(t, rows3.Next())
 	var (
 		f, g, h string
 	)
-	require.NoError(t, rows.Scan(&f, &g, &h))
+	require.NoError(t, rows3.Scan(&f, &g, &h))
 	actualTime, err = time.Parse(timeLayout, f)
 	require.NoError(t, err)
 	require.Equal(t, ts, actualTime.UTC())
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
-	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
+	require.False(t, rows3.Next())
 
-	rows, err = db.Query(`select timestamp, "tag four", "string two" from "metric three"`)
+	rows4, err := db.Query(`select timestamp, "tag four", "string two" from "metric three"`)
 	require.NoError(t, err)
-	require.True(t, rows.Next())
+	defer rows4.Close()
+	require.True(t, rows4.Next())
 	var (
 		i, j, k string
 	)
-	require.NoError(t, rows.Scan(&i, &j, &k))
+	require.NoError(t, rows4.Scan(&i, &j, &k))
 	actualTime, err = time.Parse(timeLayout, i)
 	require.NoError(t, err)
 	require.Equal(t, ts, actualTime.UTC())
 	require.Equal(t, "tag4", j)
 	require.Equal(t, "string2", k)
-	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
+	require.False(t, rows4.Next())
 }

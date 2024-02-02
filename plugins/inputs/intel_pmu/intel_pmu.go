@@ -180,7 +180,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	}
 	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %w", err)
+		return fmt.Errorf("failed to estimate number of uncore events file descriptors: %w", err)
 	}
 	if coreFd > math.MaxUint64-uncoreFd {
 		return fmt.Errorf("requested number of file descriptors exceeds uint64")
@@ -190,7 +190,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	// maximum file descriptors enforced on a kernel level
 	maxFd, err := readMaxFD(i.fileInfo)
 	if err != nil {
-		i.Log.Warnf("cannot obtain number of available file descriptors: %v", err)
+		i.Log.Warnf("Cannot obtain number of available file descriptors: %v", err)
 	} else if allFd > maxFd {
 		return fmt.Errorf("required file descriptors number `%d` exceeds maximum number of available file descriptors `%d`"+
 			": consider increasing the maximum number", allFd, maxFd)
@@ -199,7 +199,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	// soft limit for current process
 	limit, err := i.fileInfo.fileLimit()
 	if err != nil {
-		i.Log.Warnf("cannot obtain limit value of open files: %v", err)
+		i.Log.Warnf("Cannot obtain limit value of open files: %v", err)
 	} else if allFd > limit {
 		return fmt.Errorf("required file descriptors number `%d` exceeds soft limit of open files `%d`"+
 			": consider increasing the limit", allFd, limit)
@@ -249,7 +249,7 @@ func (i *IntelPMU) Stop() {
 			}
 			err := event.Deactivate()
 			if err != nil {
-				i.Log.Warnf("failed to deactivate core event %q: %w", event, err)
+				i.Log.Warnf("Failed to deactivate core event %q: %v", event, err)
 			}
 		}
 	}
@@ -264,7 +264,7 @@ func (i *IntelPMU) Stop() {
 				}
 				err := event.Deactivate()
 				if err != nil {
-					i.Log.Warnf("failed to deactivate uncore event %q: %w", event, err)
+					i.Log.Warnf("Failed to deactivate uncore event %q: %v", event, err)
 				}
 			}
 		}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimchansky/utfbom"
@@ -14,19 +15,18 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/temporary/json_v2"
 )
 
 // Parser adheres to the parser interface, contains the parser configuration, and data required to parse JSON
 type Parser struct {
-	Configs           []json_v2.Config  `toml:"json_v2"`
+	Configs           []Config          `toml:"json_v2"`
 	DefaultMetricName string            `toml:"-"`
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
 
-	// **** The struct fields bellow this comment are used for processing indvidual configs ****
+	// **** The struct fields below this comment are used for processing individual configs ****
 
-	// measurementName is the the name of the current config used in each line protocol
+	// measurementName is the name of the current config used in each line protocol
 	measurementName string
 
 	// **** Specific for object configuration ****
@@ -35,13 +35,52 @@ type Parser struct {
 	// iterateObjects dictates if ExpandArray function will handle objects
 	iterateObjects bool
 	// objectConfig contains the config for an object, some info is needed while iterating over the gjson results
-	objectConfig json_v2.Object
+	objectConfig Object
+	// parseMutex is here because Parse() is not threadsafe.  If it is made threadsafe at some point, then we won't need it anymore.
+	parseMutex sync.Mutex
+}
+
+type Config struct {
+	MeasurementName     string `toml:"measurement_name"`      // OPTIONAL
+	MeasurementNamePath string `toml:"measurement_name_path"` // OPTIONAL
+	TimestampPath       string `toml:"timestamp_path"`        // OPTIONAL
+	TimestampFormat     string `toml:"timestamp_format"`      // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone   string `toml:"timestamp_timezone"`    // OPTIONAL, but REQUIRES timestamp_path
+
+	Fields      []DataSet `toml:"field"`
+	Tags        []DataSet `toml:"tag"`
+	JSONObjects []Object  `toml:"object"`
+
+	Location *time.Location
+}
+
+type DataSet struct {
+	Path     string `toml:"path"` // REQUIRED
+	Type     string `toml:"type"` // OPTIONAL, can't be set for tags they will always be a string
+	Rename   string `toml:"rename"`
+	Optional bool   `toml:"optional"` // Will suppress errors if there isn't a match with Path
+}
+
+type Object struct {
+	Path               string            `toml:"path"`     // REQUIRED
+	Optional           bool              `toml:"optional"` // Will suppress errors if there isn't a match with Path
+	TimestampKey       string            `toml:"timestamp_key"`
+	TimestampFormat    string            `toml:"timestamp_format"`   // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone  string            `toml:"timestamp_timezone"` // OPTIONAL, but REQUIRES timestamp_path
+	Renames            map[string]string `toml:"renames"`
+	Fields             map[string]string `toml:"fields"`
+	Tags               []string          `toml:"tags"`
+	IncludedKeys       []string          `toml:"included_keys"`
+	ExcludedKeys       []string          `toml:"excluded_keys"`
+	DisablePrependKeys bool              `toml:"disable_prepend_keys"`
+	FieldPaths         []DataSet         `toml:"field"`
+	TagPaths           []DataSet         `toml:"tag"`
 }
 
 type PathResult struct {
 	result gjson.Result
 	tag    bool
-	json_v2.DataSet
+	DataSet
 }
 
 type MetricNode struct {
@@ -78,6 +117,23 @@ func (p *Parser) Init() error {
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	// What we've done here is to put the entire former contents of Parse()
+	// into parseCriticalPath().
+	//
+	// As we determine what bits of parseCriticalPath() are and are not
+	// threadsafe, we can lift the safe pieces back up into Parse(), and
+	// shrink the scope (or scopes, if the critical sections are disjoint)
+	// of those pieces that need to be protected with a mutex.
+	return p.parseCriticalPath(input)
+}
+
+func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
+	p.parseMutex.Lock()
+	defer p.parseMutex.Unlock()
+
+	// Clear intermediate results if left by previous call
+	p.subPathResults = nil
+
 	reader := strings.NewReader(string(input))
 	body, _ := utfbom.Skip(reader)
 	input, err := io.ReadAll(body)
@@ -109,11 +165,11 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 			if result.Type == gjson.Null {
 				p.Log.Debugf("Message: %s", input)
-				return nil, fmt.Errorf("the timestamp path %s returned NULL", c.TimestampPath)
+				return nil, fmt.Errorf("the timestamp path %q returned NULL", c.TimestampPath)
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
-					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+					err := fmt.Errorf("use of 'timestamp_path' requires 'timestamp_format'")
 					return nil, err
 				}
 
@@ -162,7 +218,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 // processMetric will iterate over all 'field' or 'tag' configs and create metrics for each
 // A field/tag can either be a single value or an array of values, each resulting in its own metric
 // For multiple configs, a set of metrics is created from the cartesian product of each separate config
-func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp time.Time) ([]telegraf.Metric, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -174,15 +230,15 @@ func (p *Parser) processMetric(input []byte, data []json_v2.DataSet, tag bool, t
 			return nil, fmt.Errorf("GJSON path is required")
 		}
 		result := gjson.GetBytes(input, c.Path)
-		if skip, err := p.checkResult(result, c.Path, c.Optional); err != nil {
-			if skip {
+		if err := p.checkResult(result, c.Path); err != nil {
+			if c.Optional {
 				continue
 			}
 			return nil, err
 		}
 
 		if result.IsObject() {
-			p.Log.Debugf("Found object in the path: %s, ignoring it please use 'object' to gather metrics from objects", c.Path)
+			p.Log.Debugf("Found object in the path %q, ignoring it please use 'object' to gather metrics from objects", c.Path)
 			continue
 		}
 
@@ -294,6 +350,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 				n.ParentIndex = n.Index + result.ParentIndex
 				r, err := p.combineObject(n, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 
@@ -314,6 +371,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 			n.ParentIndex = n.Index + result.ParentIndex
 			r, err := p.expandArray(n, timestamp)
 			if err != nil {
+				p.Log.Error(err)
 				return false
 			}
 			results = append(results, r...)
@@ -325,7 +383,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 	} else {
 		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
-				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+				err := fmt.Errorf("use of 'timestamp_key' requires 'timestamp_format'")
 				return nil, err
 			}
 			var loc *time.Location
@@ -409,7 +467,7 @@ func (p *Parser) existsInpathResults(index int) *PathResult {
 }
 
 // processObjects will iterate over all 'object' configs and create metrics for each
-func (p *Parser) processObjects(input []byte, objects []json_v2.Object, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.Time) ([]telegraf.Metric, error) {
 	p.iterateObjects = true
 	var t []telegraf.Metric
 	for _, c := range objects {
@@ -420,8 +478,8 @@ func (p *Parser) processObjects(input []byte, objects []json_v2.Object, timestam
 		}
 
 		result := gjson.GetBytes(input, c.Path)
-		if skip, err := p.checkResult(result, c.Path, c.Optional); err != nil {
-			if skip {
+		if err := p.checkResult(result, c.Path); err != nil {
+			if c.Optional {
 				continue
 			}
 			return nil, err
@@ -431,8 +489,8 @@ func (p *Parser) processObjects(input []byte, objects []json_v2.Object, timestam
 		for _, f := range c.FieldPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if skip, err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
-				if skip {
+			if err := p.checkResult(r.result, f.Path); err != nil {
+				if f.Optional {
 					continue
 				}
 				return nil, err
@@ -444,8 +502,8 @@ func (p *Parser) processObjects(input []byte, objects []json_v2.Object, timestam
 		for _, f := range c.TagPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if skip, err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
-				if skip {
+			if err := p.checkResult(r.result, f.Path); err != nil {
+				if f.Optional {
 					continue
 				}
 				return nil, err
@@ -534,6 +592,7 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 			if val.IsObject() {
 				results, err = p.combineObject(arrayNode, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 			} else {
@@ -541,6 +600,7 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 				arrayNode.ParentIndex -= result.Index
 				r, err := p.expandArray(arrayNode, timestamp)
 				if err != nil {
+					p.Log.Error(err)
 					return false
 				}
 				results = cartesianProduct(r, results)
@@ -664,18 +724,14 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 	return input.Value(), nil
 }
 
-func (p *Parser) checkResult(result gjson.Result, path string, optional bool) (bool, error) {
+// Check if gjson result exists and return error if it does not
+func (p *Parser) checkResult(result gjson.Result, path string) error {
 	if !result.Exists() {
-		if optional {
-			// If path is marked as optional don't error if path doesn't return a result
-			p.Log.Debugf("the path %s doesn't exist", path)
-			return true, nil
-		}
-
-		return false, fmt.Errorf("the path %s doesn't exist", path)
+		p.Log.Debugf("the path %q doesn't exist", path)
+		return fmt.Errorf("the path %q doesn't exist", path)
 	}
 
-	return false, nil
+	return nil
 }
 
 func init() {
@@ -685,18 +741,4 @@ func init() {
 			return &Parser{DefaultMetricName: defaultMetricName}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.DefaultMetricName = config.MetricName
-	p.DefaultTags = config.DefaultTags
-
-	// Convert the config formats which is a one-to-one copy
-	if len(config.JSONV2Config) > 0 {
-		p.Configs = make([]json_v2.Config, 0, len(config.JSONV2Config))
-		p.Configs = append(p.Configs, config.JSONV2Config...)
-	}
-
-	return p.Init()
 }

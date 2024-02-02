@@ -1,4 +1,4 @@
-// Command handling for secret-stores' "secret" command
+// Command handling for secret-stores' "secrets" command
 package main
 
 import (
@@ -8,10 +8,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
-
-	"github.com/influxdata/telegraf/config"
 )
 
 func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
@@ -110,7 +109,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 							}
 							sort.Strings(keys)
 
-							_, _ = fmt.Printf("Known secrets for store %q:\n", storeID)
+							fmt.Printf("Known secrets for store %q:\n", storeID)
 							for _, k := range keys {
 								var v []byte
 								if reveal {
@@ -118,8 +117,8 @@ To also reveal the actual secret, i.e. the value, you can pass the
 										return fmt.Errorf("unable to get value of secret %q from store %q: %w", k, storeID, err)
 									}
 								}
-								_, _ = fmt.Printf("    %-30s  %s\n", k, string(v))
-								config.ReleaseSecret(v)
+								fmt.Printf("    %-30s  %s\n", k, string(v))
+								memguard.WipeBytes(v)
 							}
 						}
 
@@ -179,7 +178,7 @@ with the ID 'mystore'.
 						if err != nil {
 							return fmt.Errorf("unable to get secret: %w", err)
 						}
-						_, _ = fmt.Printf("%s:%s = %s\n", storeID, key, value)
+						fmt.Printf("%s:%s = %s\n", storeID, key, value)
 
 						return nil
 					},
@@ -236,7 +235,7 @@ you will be prompted to enter the value of the secret.
 						key := args.Get(1)
 						value := args.Get(2)
 						if value == "" {
-							fmt.Printf("enter secret: ")
+							fmt.Printf("Enter secret value: ")
 							b, err := term.ReadPassword(int(os.Stdin.Fd()))
 							if err != nil {
 								return err

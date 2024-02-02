@@ -36,7 +36,7 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                       string            `toml:"url" deprecated:"0.1.9;2.0.0;use 'urls' instead"`
+	URL                       string            `toml:"url" deprecated:"0.1.9;1.30.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
 	Username                  config.Secret     `toml:"username"`
 	Password                  config.Secret     `toml:"password"`
@@ -169,7 +169,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
-	serializer := &influx.Serializer{UintSupport: true}
+	serializer := &influx.Serializer{UintSupport: i.InfluxUintSupport}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{UintSupport: true}
+	serializer := &influx.Serializer{UintSupport: i.InfluxUintSupport}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}

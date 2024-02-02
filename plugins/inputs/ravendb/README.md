@@ -157,6 +157,11 @@ cluster.
     - storage_indexes_used_data_file_in_mb
     - storage_total_allocated_storage_file_in_mb
     - storage_total_free_space_in_mb
+    - storage_io_read_operations (optional, Linux only)
+    - storage_io_write_operations (optional, Linux only)
+    - storage_read_throughput_in_kb (optional, Linux only)
+    - storage_write_throughput_in_kb (optional, Linux only)
+    - storage_queue_length (optional, Linux only)
     - time_since_last_backup_in_sec (optional)
     - uptime_in_sec
 

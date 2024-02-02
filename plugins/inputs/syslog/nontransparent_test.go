@@ -188,7 +188,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 			conn.Close()
 			require.NoError(t, err)
 
-			// Wait that the the number of data points is accumulated
+			// Wait that the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantStrict != nil {
 				acc.Wait(len(tc.wantStrict))
@@ -244,7 +244,7 @@ func testBestEffortNonTransparent(t *testing.T, protocol string, address string,
 			require.NoError(t, err)
 			conn.Close()
 
-			// Wait that the the number of data points is accumulated
+			// Wait that the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantBestEffort != nil {
 				acc.Wait(len(tc.wantBestEffort))

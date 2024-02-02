@@ -492,6 +492,48 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 	acc.AssertDoesNotContainMeasurement(t, "clickhouse_text_log")
 }
 
+func TestGatherClickhouseCloud(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type result struct {
+			Data interface{} `json:"data"`
+		}
+		enc := json.NewEncoder(w)
+		switch query := r.URL.Query().Get("query"); {
+		case strings.Contains(query, "zk_exists"):
+			err := enc.Encode(result{
+				Data: []struct {
+					ZkExists chUInt64 `json:"zk_exists"`
+				}{
+					{
+						ZkExists: 1,
+					},
+				},
+			})
+			require.NoError(t, err)
+		case strings.Contains(query, "zk_root_nodes"):
+			err := enc.Encode(result{
+				Data: []struct {
+					ZkRootNodes chUInt64 `json:"zk_root_nodes"`
+				}{
+					{
+						ZkRootNodes: 2,
+					},
+				},
+			})
+			require.NoError(t, err)
+		}
+	}))
+	defer ts.Close()
+
+	ch := &ClickHouse{
+		Servers: []string{ts.URL},
+		Variant: "managed",
+	}
+	acc := &testutil.Accumulator{}
+	require.NoError(t, ch.Gather(acc))
+	acc.AssertDoesNotContainMeasurement(t, "clickhouse_zookeeper")
+}
+
 func TestWrongJSONMarshalling(t *testing.T) {
 	var (
 		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -516,7 +558,7 @@ func TestWrongJSONMarshalling(t *testing.T) {
 	defer ts.Close()
 	require.NoError(t, ch.Gather(acc))
 
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 	allMeasurements := []string{
 		"clickhouse_events",
 		"clickhouse_metrics",
@@ -549,7 +591,7 @@ func TestOfflineServer(t *testing.T) {
 	)
 	require.NoError(t, ch.Gather(acc))
 
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 	allMeasurements := []string{
 		"clickhouse_events",
 		"clickhouse_metrics",

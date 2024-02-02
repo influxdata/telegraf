@@ -18,7 +18,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
@@ -40,7 +39,7 @@ type GCS struct {
 	Log    telegraf.Logger
 	offSet OffSet
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	client *storage.Client
 
 	ctx context.Context
@@ -66,7 +65,7 @@ func (gcs *GCS) SampleConfig() string {
 	return sampleConfig
 }
 
-func (gcs *GCS) SetParser(parser parsers.Parser) {
+func (gcs *GCS) SetParser(parser telegraf.Parser) {
 	gcs.parser = parser
 }
 
@@ -89,7 +88,7 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if err != nil {
-			gcs.Log.Errorf("Error during iteration of keys", err)
+			gcs.Log.Errorf("Error during iteration of keys: %v", err)
 			return err
 		}
 
@@ -280,6 +279,6 @@ func init() {
 
 func (gcs *GCS) closeReader(r *storage.Reader) {
 	if err := r.Close(); err != nil {
-		gcs.Log.Errorf("Could not close reader", err)
+		gcs.Log.Errorf("Could not close reader: %v", err)
 	}
 }

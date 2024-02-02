@@ -248,7 +248,12 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 				}
 				if i := strings.Index(obj, "("); i != -1 {
 					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
+					if j := strings.Index(obj, ")"); j != -1 {
+						oidNum += "." + obj[:j]
+					} else {
+						return "", "", "", "", fmt.Errorf("getting OID number from: %s", obj)
+					}
+
 				} else {
 					oidNum += "." + obj
 				}

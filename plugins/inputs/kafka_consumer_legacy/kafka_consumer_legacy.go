@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -32,7 +31,7 @@ type Kafka struct {
 	PointBuffer int
 
 	Offset string
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	Log telegraf.Logger
 
@@ -56,7 +55,7 @@ func (*Kafka) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *Kafka) SetParser(parser parsers.Parser) {
+func (k *Kafka) SetParser(parser telegraf.Parser) {
 	k.parser = parser
 }
 

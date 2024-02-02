@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/require"
 )
 
 func TestReader(t *testing.T) {
@@ -148,7 +149,7 @@ func TestReader(t *testing.T) {
 				require.NoError(t, err)
 			}
 			require.Equal(t, tt.expected, data.Bytes())
-			require.Equal(t, len(tt.expected), total)
+			require.Len(t, tt.expected, total)
 		})
 	}
 }

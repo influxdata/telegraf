@@ -2,7 +2,11 @@ package form_urlencoded
 
 import (
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,14 +39,14 @@ func TestParseLineValidFormData(t *testing.T) {
 		MetricName: "form_urlencoded_test",
 	}
 
-	metric, err := parser.ParseLine(validFormData)
+	metrics, err := parser.ParseLine(validFormData)
 	require.NoError(t, err)
-	require.Equal(t, "form_urlencoded_test", metric.Name())
-	require.Equal(t, map[string]string{}, metric.Tags())
+	require.Equal(t, "form_urlencoded_test", metrics.Name())
+	require.Equal(t, map[string]string{}, metrics.Tags())
 	require.Equal(t, map[string]interface{}{
 		"field1": float64(42),
 		"field2": float64(69),
-	}, metric.Fields())
+	}, metrics.Fields())
 }
 
 func TestParseValidFormDataWithTags(t *testing.T) {
@@ -133,7 +137,7 @@ func TestParseInvalidFormDataError(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(notEscapedProperlyFormData))
 	require.Error(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 }
 
 func TestParseInvalidFormDataEmptyKey(t *testing.T) {
@@ -168,5 +172,44 @@ func TestParseInvalidFormDataEmptyString(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(emptyFormData))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
+}
+
+const benchmarkData = `tags_host=myhost&tags_platform=python&tags_sdkver=3.11.5&value=5`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		MetricName: "benchmark",
+		TagKeys:    []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		MetricName: "benchmark",
+		TagKeys:    []string{"source", "tags_platform", "tags_sdkver"},
+	}
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
 }

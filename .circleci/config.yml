@@ -8,12 +8,12 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.20.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.21.6'
     environment:
       GOFLAGS: -p=4
   mac:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
-    resource_class: macos.x86.medium.gen2
+    resource_class: macos.m1.medium.gen1
     macos:
       xcode: 14.2.0
     environment:
@@ -35,37 +35,7 @@ commands:
       gotestsum:
         type: string
         default: "gotestsum"
-      cache_version:
-        type: string
-        default: "v3"
     steps:
-      - checkout
-      - check-changed-files-or-halt
-      - when:
-          condition:
-            equal: [ linux, << parameters.os >> ]
-          steps:
-            - restore_cache:
-                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-            - attach_workspace:
-                at: '/go'
-      - when:
-          condition:
-            equal: [ darwin, << parameters.os >> ]
-          steps:
-            - restore_cache:
-                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-            - run: 'sh ./scripts/installgo_mac.sh'
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: rm -rf /c/Go
-            - run: choco feature enable -n allowGlobalConfirmation
-            - restore_cache:
-                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-            - run: 'sh ./scripts/installgo_windows.sh'
-            - run: choco install mingw
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
           condition:
@@ -73,54 +43,7 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short -cover -coverprofile=coverage.out ./...
-      - when:
-          condition:
-            and:
-              - equal: [ "master", << pipeline.git.branch >> ]
-              - equal: [ "linux", << parameters.os >> ]
-              - equal: [ "amd64", << parameters.arch >> ]
-          steps:
-            - run:
-                name: "Installing goveralls"
-                command: go install github.com/mattn/goveralls@latest
-            - run:
-                name: "Remove plugins/parsers/influx/machine.go from coverage"
-                command: sed -i '/github.com\/influxdata\/telegraf\/plugins\/parsers\/influx\/machine.go/d' coverage.out
-            - run:
-                name: "Create report"
-                command: /go/bin/goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
-      - when:
-          condition:
-            equal: [ linux, << parameters.os >> ]
-          steps:
-            - save_cache:
-                name: 'Saving cache'
-                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-                paths:
-                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
-      - when:
-          condition:
-            equal: [ darwin, << parameters.os >> ]
-          steps:
-            - save_cache:
-                name: 'Saving cache'
-                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-                paths:
-                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
-                  - '/usr/local/Cellar/go'
-                  - '/usr/local/bin/go'
-                  - '/usr/local/bin/gofmt'
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - save_cache:
-                name: 'Saving cache'
-                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-                paths:
-                  - 'C:\Go'
-                  - 'C:\Users\circleci\project\gotestsum.exe'
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
   package-build:
     parameters:
       type:
@@ -161,34 +84,56 @@ commands:
           paths:
             - 'dist'
 jobs:
-  test-go-linux:
+  lint-linux:
     executor: telegraf-ci
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+      - run:
+          name: "golangci-lint/Linux"
+          command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
+  lint-macos:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+      - run:
+          name: "golangci-lint/macOS"
+          command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
+          no_output_timeout: 30m
+  lint-windows:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run:
+          name: "Install golangci-lint"
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+      - run:
+          name: "golangci-lint/Windows"
+          command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
+          no_output_timeout: 30m
+  test-go-linux:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
       - test-go
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-      - persist_to_workspace:
-          root: '/go'
-          paths:
-            - '*'
   test-go-linux-386:
     executor: telegraf-ci
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'GOARCH=386 make deps'
       - run: 'GOARCH=386 make tidy'
@@ -208,33 +153,34 @@ jobs:
   test-go-mac:
     executor: mac
     steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_mac.sh'
       - test-go:
           os: darwin
+          arch: arm64
   test-go-windows:
     executor:
         name: win/default
         shell: bash.exe
-        size: xlarge
+        size: large
     steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: git config --system core.longpaths true
+      - run: choco feature enable -n allowGlobalConfirmation
+      - run: 'sh ./scripts/installgo_windows.sh'
+      - run: choco install mingw --version=12.2.0.03042023
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
-
   test-licenses:
     executor: telegraf-ci
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-
   windows-package:
     parameters:
       nightly:
@@ -294,6 +240,16 @@ jobs:
     steps:
       - package-build:
           type: riscv64
+          nightly: << parameters.nightly >>
+  loong64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: telegraf-ci
+    steps:
+      - package-build:
+          type: loong64
           nightly: << parameters.nightly >>
   s390x-package:
     parameters:
@@ -396,11 +352,10 @@ jobs:
               --include "telegraf*.rpm" \
               --include "telegraf*.tar.gz" \
               --include "telegraf*.zip" \
-              --dryrun \
               --acl public-read
   docker-nightly:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     steps:
       - run:
           name: login to quay.io
@@ -426,34 +381,29 @@ jobs:
             docker push quay.io/influxdb/telegraf-nightly:alpine
   amd64-package-test-nightly:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     steps:
       - checkout
       - attach_workspace:
           at: '.'
-      - run: sudo apt update && sudo apt install -y snapd
-      - run: sudo snap install lxd
-      - run: sudo lxd init --auto
-      - run: sudo usermod -a -G lxd $(whoami)
-      - run: cd tools/package_lxd_test && go build
-      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*_amd64.deb")
-      - run: ./tools/package_lxd_test/package_lxd_test --package $(find ./dist -name "*.x86_64.rpm")
+      - run: ./scripts/install_incus.sh
+      - run: cd tools/package_incus_test && go build
+      - run: sudo ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*_amd64.deb")
+      - run: sudo ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*.x86_64.rpm")
   package-sign-windows:
-    executor:
-        name: win/default
-        shell: powershell.exe
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
     steps:
       - checkout
       - check-changed-files-or-halt
       - attach_workspace:
-          at: '/build'
+          at: '.'
       - run:
           name: "Sign Windows Executables"
-          shell: powershell.exe
-          command: |
-            ./scripts/windows-signing.ps1
+          command: ./scripts/sign-windows.sh
       - persist_to_workspace:
-          root: './build'
+          root: '.'
           paths:
             - 'dist'
   package-sign-mac:
@@ -541,10 +491,9 @@ jobs:
             case "${target}"
             in
               *.deb|*.dmg|*.rpm|*.tar.gz|*.zip)
-                # Combine the metadata from the *.DIGESTS and *.asc files into one
-                # listing. Since the gpg signature contains multiple lines which
-                # must be preserved, it is base64 encoded.
-                printf '%s %s %s\n' "${target}" "$(awk '{ print $1 }' "${target}.DIGESTS")" "$(base64 -w 0 <"${target}.asc")" >>"telegraf-${CIRCLE_TAG}-digests"
+                # Print sha256 hash and target for artifacts all in one file
+                # for use later during the release.
+                cat "${target}.DIGESTS" >> "telegraf-${CIRCLE_TAG}.DIGESTS"
               ;;
             esac
           done
@@ -562,6 +511,18 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'lint-linux':
+          filters:
+            tags:
+              only: /.*/
+      - 'lint-macos':
+          filters:
+            tags:
+              only: /.*/
+      - 'lint-windows':
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-linux':
           filters:
             tags:
@@ -628,6 +589,15 @@ workflows:
             branches:
               ignore:
                 - master
+            tags:
+              only: /.*/
+      - 'loong64-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            branches:
+              ignore:
+                - /.*/
             tags:
               only: /.*/
       - 's390x-package':
@@ -700,6 +670,7 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
+            - 'loong64-package'
             - 'darwin-amd64-package'
             - 'darwin-arm64-package'
             - 'windows-package'
@@ -739,6 +710,7 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
+            - 'loong64-package'
             - 'arm64-package'
             - 'armhf-package'
             - 'package-sign-mac'
@@ -760,6 +732,7 @@ workflows:
             - 'arm64-package'
             - 'armhf-package'
             - 'riscv64-package'
+            - 'loong64-package'
             - 'package-sign-mac'
             - 'package-sign-windows'
             - 'package-sign'
@@ -780,6 +753,9 @@ workflows:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
+      - 'lint-linux'
+      - 'lint-macos'
+      - 'lint-windows'
       - 'test-go-linux'
       - 'test-go-linux-386'
       - 'test-go-mac'
@@ -812,6 +788,11 @@ workflows:
             - 'test-go-linux'
       - 'riscv64-package':
           name: 'riscv64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'loong64-package':
+          name: 'loong64-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
@@ -868,6 +849,7 @@ workflows:
             - 'i386-package-nightly'
             - 'mips-package-nightly'
             - 'mipsel-package-nightly'
+            - 'loong64-package-nightly'
             - 'ppc64le-package-nightly'
             - 'riscv64-package-nightly'
             - 's390x-package-nightly'

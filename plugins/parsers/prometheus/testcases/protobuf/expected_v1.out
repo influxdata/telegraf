@@ -1,0 +1,6 @@
+swap_free,_type=gauge,host=omsk gauge=977911808
+swap_in,_type=counter,host=omsk counter=2031616
+swap_out,_type=counter,host=omsk counter=15790080
+swap_total,_type=gauge,host=omsk gauge=993185792
+swap_used,_type=gauge,host=omsk gauge=15273984
+swap_used_percent,_type=gauge,host=omsk gauge=1.5378778193395661

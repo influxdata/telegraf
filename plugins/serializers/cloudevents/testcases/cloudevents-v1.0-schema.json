@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "CloudEvents Specification JSON Schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "Identifies the event.",
+      "$ref": "#/definitions/iddef",
+      "examples": [
+        "A234-1234-1234"
+      ]
+    },
+    "source": {
+      "description": "Identifies the context in which an event happened.",
+      "$ref": "#/definitions/sourcedef",
+      "examples" : [
+        "https://github.com/cloudevents",
+        "mailto:cncf-wg-serverless@lists.cncf.io",
+        "urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66",
+        "cloudevents/spec/pull/123",
+        "/sensors/tn-1234567/alerts",
+        "1-555-123-4567"
+      ]
+    },
+    "specversion": {
+      "description": "The version of the CloudEvents specification which the event uses.",
+      "$ref": "#/definitions/specversiondef",
+      "examples": [
+        "1.0"
+      ]
+    },
+    "type": {
+      "description": "Describes the type of event related to the originating occurrence.",
+      "$ref": "#/definitions/typedef",
+      "examples" : [
+        "com.github.pull_request.opened",
+        "com.example.object.deleted.v2"
+      ]
+    },
+    "datacontenttype": {
+      "description": "Content type of the data value. Must adhere to RFC 2046 format.",
+      "$ref": "#/definitions/datacontenttypedef",
+      "examples": [
+        "text/xml",
+        "application/json",
+        "image/png",
+        "multipart/form-data"
+      ]
+    },
+    "dataschema": {
+      "description": "Identifies the schema that data adheres to.",
+      "$ref": "#/definitions/dataschemadef"
+    },
+    "subject": {
+      "description": "Describes the subject of the event in the context of the event producer (identified by source).",
+      "$ref": "#/definitions/subjectdef",
+      "examples": [
+        "mynewfile.jpg"
+      ]
+    },
+    "time": {
+      "description": "Timestamp of when the occurrence happened. Must adhere to RFC 3339.",
+      "$ref": "#/definitions/timedef",
+      "examples": [
+        "2018-04-05T17:31:00Z"
+      ]
+    },
+    "data": {
+      "description": "The event payload.",
+      "$ref": "#/definitions/datadef",
+      "examples": [
+        "<much wow=\"xml\"/>"
+      ]
+    },
+    "data_base64": {
+      "description": "Base64 encoded event payload. Must adhere to RFC4648.",
+      "$ref": "#/definitions/data_base64def",
+      "examples": [
+        "Zm9vYg=="
+      ]
+    }
+  },
+  "required": ["id", "source", "specversion", "type"],
+  "definitions": {
+    "iddef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourcedef": {
+      "type": "string",
+      "format": "uri-reference",
+      "minLength": 1
+    },
+    "specversiondef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "typedef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "datacontenttypedef": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "dataschemadef": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "minLength": 1
+    },
+    "subjectdef": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "timedef": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "minLength": 1
+    },
+    "datadef": {
+      "type": ["object", "string", "number", "array", "boolean", "null"]
+    },
+    "data_base64def": {
+      "type": ["string", "null"],
+      "contentEncoding": "base64"
+    }
+  }
+}

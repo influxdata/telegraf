@@ -46,7 +46,7 @@ func NewUDPClient(config UDPConfig) (*udpClient, error) {
 
 	serializer := config.Serializer
 	if serializer == nil {
-		serializer = &influx.Serializer{UintSupport: true}
+		serializer = &influx.Serializer{}
 		if err := serializer.Init(); err != nil {
 			return nil, err
 		}

@@ -338,9 +338,8 @@ func linkMode(s Service) string {
 		return "duplex"
 	} else if s.Link.Duplex == 0 {
 		return "simplex"
-	} else {
-		return "unknown"
 	}
+	return "unknown"
 }
 
 func serviceStatus(s Service) string {

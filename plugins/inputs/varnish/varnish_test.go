@@ -48,7 +48,7 @@ func TestParseFullOutput(t *testing.T) {
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	require.Len(t, acc.Metrics, 6)
-	require.Equal(t, 293, len(flat))
+	require.Len(t, flat, 293)
 }
 
 func TestFilterSomeStats(t *testing.T) {
@@ -62,7 +62,7 @@ func TestFilterSomeStats(t *testing.T) {
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	require.Len(t, acc.Metrics, 2)
-	require.Equal(t, 16, len(flat))
+	require.Len(t, flat, 16)
 }
 
 func TestFieldConfig(t *testing.T) {
@@ -83,7 +83,7 @@ func TestFieldConfig(t *testing.T) {
 
 		acc.HasMeasurement("varnish")
 		flat := flatten(acc.Metrics)
-		require.Equal(t, expected, len(flat))
+		require.Len(t, flat, expected)
 	}
 }
 
@@ -92,10 +92,7 @@ func flatten(metrics []*testutil.Metric) map[string]interface{} {
 	for _, m := range metrics {
 		buf := &bytes.Buffer{}
 		for k, v := range m.Tags {
-			_, err := buf.WriteString(fmt.Sprintf("%s=%s", k, v))
-			if err != nil {
-				return nil
-			}
+			fmt.Fprintf(buf, "%s=%s", k, v)
 		}
 		for k, v := range m.Fields {
 			flat[fmt.Sprintf("%s %s", buf.String(), k)] = v
@@ -536,7 +533,7 @@ func TestVersions(t *testing.T) {
 	require.NoError(t, server.Init())
 	acc := &testutil.Accumulator{}
 
-	require.Equal(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 
 	type testConfig struct {
 		jsonFile           string
@@ -555,10 +552,10 @@ func TestVersions(t *testing.T) {
 		require.NoError(t, err)
 		err = server.processMetricsV2(c.activeReloadPrefix, acc, bytes.NewBuffer(output))
 		require.NoError(t, err)
-		require.Equal(t, c.size, len(acc.Metrics))
+		require.Len(t, acc.Metrics, c.size)
 		for _, m := range acc.Metrics {
 			require.NotEmpty(t, m.Fields)
-			require.Equal(t, m.Measurement, "varnish")
+			require.Equal(t, "varnish", m.Measurement)
 			for field := range m.Fields {
 				require.NotContains(t, field, "reload_")
 			}
@@ -627,11 +624,11 @@ func TestVarnishAdmJson(t *testing.T) {
 	require.NoError(t, err)
 	activeVcl, err := getActiveVCLJson(bytes.NewBuffer(admJSON))
 	require.NoError(t, err)
-	require.Equal(t, activeVcl, "boot-123")
+	require.Equal(t, "boot-123", activeVcl)
 
 	admJSON, err = os.ReadFile("test_data/" + "varnishadm-reload.json")
 	require.NoError(t, err)
 	activeVcl, err = getActiveVCLJson(bytes.NewBuffer(admJSON))
 	require.NoError(t, err)
-	require.Equal(t, activeVcl, "reload_20210723_091821_2056185")
+	require.Equal(t, "reload_20210723_091821_2056185", activeVcl)
 }

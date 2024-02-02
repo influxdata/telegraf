@@ -32,52 +32,53 @@
 
 package win_perf_counters
 
-// Union specialization for double values
-type PDH_FMT_COUNTERVALUE_DOUBLE struct {
+// PdhFmtCountervalueDouble is a union specialization for double values
+type PdhFmtCountervalueDouble struct {
 	CStatus     uint32
 	padding     [4]byte
 	DoubleValue float64
 }
 
-// Union specialization for 64 bit integer values
-type PDH_FMT_COUNTERVALUE_LARGE struct {
+// PdhFmtCountervalueLarge is a union specialization for 64-bit integer values
+type PdhFmtCountervalueLarge struct {
 	CStatus    uint32
-	padding    [4]byte
+	padding    [4]byte //nolint:unused // Memory reservation
 	LargeValue int64
 }
 
-// Union specialization for long values
-type PDH_FMT_COUNTERVALUE_LONG struct {
+// PdhFmtCountervalueLong is a union specialization for long values
+type PdhFmtCountervalueLong struct {
 	CStatus   uint32
 	LongValue int32
-	padding   [4]byte
+	padding   [4]byte //nolint:unused // Memory reservation
 }
 
-type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE struct {
+type PdhFmtCountervalueItemDouble struct {
 	SzName   *uint16
-	padding  [4]byte
-	FmtValue PDH_FMT_COUNTERVALUE_DOUBLE
+	padding  [4]byte //nolint:unused // Memory reservation
+	FmtValue PdhFmtCountervalueDouble
 }
 
-// Union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
-type PDH_FMT_COUNTERVALUE_ITEM_LARGE struct {
+// PdhFmtCountervalueItemLarge is a union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
+type PdhFmtCountervalueItemLarge struct {
 	SzName   *uint16 // pointer to a string
-	padding  [4]byte
-	FmtValue PDH_FMT_COUNTERVALUE_LARGE
+	padding  [4]byte //nolint:unused // Memory reservation
+	FmtValue PdhFmtCountervalueLarge
 }
 
-// Union specialization for long values, used by PdhGetFormattedCounterArrayLong()
-type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
+// PdhFmtCountervalueItemLong is a union specialization for long values, used by PdhGetFormattedCounterArrayLong()
+type PdhFmtCountervalueItemLong struct {
 	SzName   *uint16 // pointer to a string
-	padding  [4]byte
-	FmtValue PDH_FMT_COUNTERVALUE_LONG
+	padding  [4]byte //nolint:unused // Memory reservation
+	FmtValue PdhFmtCountervalueLong
 }
 
-// PDH_COUNTER_INFO structure contains information describing the properties of a counter. This information also includes the counter path.
-type PDH_COUNTER_INFO struct {
+// PdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.
+type PdhCounterInfo struct {
 	//Size of the structure, including the appended strings, in bytes.
 	DwLength uint32
-	//Counter type. For a list of counter types, see the Counter Types section of the <a "href=http://go.microsoft.com/fwlink/p/?linkid=84422">Windows Server 2003 Deployment Kit</a>.
+	//Counter type. For a list of counter types, see the Counter Types section of the
+	//<a "href=http://go.microsoft.com/fwlink/p/?linkid=84422">Windows Server 2003 Deployment Kit</a>.
 	//The counter type constants are defined in Winperf.h.
 	DwType uint32
 	//Counter version information. Not used.
@@ -105,7 +106,8 @@ type PDH_COUNTER_INFO struct {
 	//Null-terminated string that contains the name of the object instance specified in the counter path. Is NULL, if the path does not specify an instance.
 	//The string follows this structure in memory.
 	SzInstanceName *uint16 // pointer to a string
-	//Null-terminated string that contains the name of the parent instance specified in the counter path. Is NULL, if the path does not specify a parent instance.
+	//Null-terminated string that contains the name of the parent instance specified in the counter path. Is NULL,
+	//if the path does not specify a parent instance.
 	//The string follows this structure in memory.
 	SzParentInstance *uint16 // pointer to a string
 	//Instance index specified in the counter path. Is 0, if the path does not specify an instance index.
@@ -120,13 +122,14 @@ type PDH_COUNTER_INFO struct {
 	DataBuffer [1]uint32 // pointer to an extra space
 }
 
-// The PDH_RAW_COUNTER structure returns the data as it was collected from the counter provider. No translation, formatting, or other interpretation is performed on the data
-type PDH_RAW_COUNTER struct {
-	// Counter status that indicates if the counter value is valid. Check this member before using the data in a calculation or displaying its value. For a list of possible values,
-	// see https://docs.microsoft.com/windows/desktop/PerfCtrs/checking-pdh-interface-return-values
+// The PdhRawCounter structure returns the data as it was collected from the counter provider. No translation, formatting,
+// or other interpretation is performed on the data
+type PdhRawCounter struct {
+	// Counter status that indicates if the counter value is valid. Check this member before using the data in a calculation or displaying its value.
+	// For a list of possible values, see https://docs.microsoft.com/windows/desktop/PerfCtrs/checking-pdh-interface-return-values
 	CStatus uint32
 	// Local time for when the data was collected
-	TimeStamp FILETIME
+	TimeStamp fileTime
 	// First raw counter value.
 	FirstValue int64
 	// Second raw counter value. Rate counters require two values in order to compute a displayable value.
@@ -136,9 +139,9 @@ type PDH_RAW_COUNTER struct {
 	MultiCount uint32
 }
 
-type PDH_RAW_COUNTER_ITEM struct {
+type PdhRawCounterItem struct {
 	// Pointer to a null-terminated string that specifies the instance name of the counter. The string is appended to the end of this structure.
 	SzName *uint16
-	//A PDH_RAW_COUNTER structure that contains the raw counter value of the instance
-	RawValue PDH_RAW_COUNTER
+	//A PdhRawCounter structure that contains the raw counter value of the instance
+	RawValue PdhRawCounter
 }

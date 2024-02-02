@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -159,9 +158,16 @@ func TestSocketListener(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
-			// Setup the client for submitting data
 			addr := plugin.listener.addr()
+
+			// Create a noop client
+			// Server is async, so verify no errors at the end.
 			client, err := createClient(plugin.ServiceAddress, addr, tlsCfg)
+			require.NoError(t, err)
+			require.NoError(t, client.Close())
+
+			// Setup the client for submitting data
+			client, err = createClient(plugin.ServiceAddress, addr, tlsCfg)
 			require.NoError(t, err)
 
 			// Send the data with the correct encoding
@@ -183,18 +189,61 @@ func TestSocketListener(t *testing.T) {
 			}, time.Second, 100*time.Millisecond, "did not receive metrics (%d)", acc.NMetrics())
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
-
-			plugin.Stop()
-
-			if _, ok := plugin.listener.(*streamListener); ok {
-				// Verify that plugin.Stop() closed the client's connection
-				_ = client.SetReadDeadline(time.Now().Add(time.Second))
-				buf := []byte{1}
-				_, err = client.Read(buf)
-				assert.Equal(t, err, io.EOF)
-			}
 		})
 	}
+}
+
+func TestSocketListenerStream(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+
+	plugin := &SocketListener{
+		Log:            logger,
+		ServiceAddress: "tcp://127.0.0.1:0",
+		ReadBufferSize: 1024,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Start the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := plugin.listener.addr()
+
+	// Create a noop client
+	client, err := createClient(plugin.ServiceAddress, addr, nil)
+	require.NoError(t, err)
+
+	_, err = client.Write([]byte("test value=42i\n"))
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond, "did not receive metric")
+
+	// This has to be a stream-listener...
+	listener, ok := plugin.listener.(*streamListener)
+	require.True(t, ok)
+	listener.Lock()
+	conns := len(listener.connections)
+	listener.Unlock()
+	require.NotZero(t, conns)
+
+	plugin.Stop()
+
+	// Verify that plugin.Stop() closed the client's connection
+	_ = client.SetReadDeadline(time.Now().Add(time.Second))
+	buf := []byte{1}
+	_, err = client.Read(buf)
+	require.Equal(t, err, io.EOF)
+
+	require.Empty(t, logger.Errors())
+	require.Empty(t, logger.Warnings())
 }
 
 func TestCases(t *testing.T) {

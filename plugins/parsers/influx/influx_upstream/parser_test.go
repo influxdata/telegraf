@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -765,6 +766,114 @@ func TestSeriesParser(t *testing.T) {
 	}
 }
 
+func TestParserTimestampPrecision(t *testing.T) {
+	var tests = []struct {
+		name      string
+		precision string
+		input     []byte
+		metrics   []telegraf.Metric
+		err       error
+	}{
+		{
+			name:      "default - nanosecond",
+			precision: "",
+			input:     []byte("cpu value=1 1234567890123123123"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(1),
+					},
+					time.Unix(0, 1234567890123123123),
+				),
+			},
+		},
+		{
+			name:      "nanosecond",
+			precision: "1ns",
+			input:     []byte("cpu value=2 1234567890123123999"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(2),
+					},
+					time.Unix(0, 1234567890123123999),
+				),
+			},
+		},
+		{
+			name:      "microsecond",
+			precision: "1us",
+			input:     []byte("cpu value=3 1234567890123123"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(3),
+					},
+					time.Unix(0, 1234567890123123000),
+				),
+			},
+		},
+		{
+			name:      "millisecond",
+			precision: "1ms",
+			input:     []byte("cpu value=4 1234567890123"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(4),
+					},
+					time.Unix(0, 1234567890123000000),
+				),
+			},
+		},
+		{
+			name:      "second",
+			precision: "1s",
+			input:     []byte("cpu value=5 1234567890"),
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"value": float64(5),
+					},
+					time.Unix(0, 1234567890000000000),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := config.Duration(0)
+			require.NoError(t, d.UnmarshalText([]byte(tt.precision)))
+			parser := Parser{InfluxTimestampPrecsion: d}
+			require.NoError(t, parser.Init())
+
+			metrics, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.metrics, metrics)
+		})
+	}
+}
+
+func TestParserInvalidTimestampPrecision(t *testing.T) {
+	d := config.Duration(0)
+	for _, precision := range []string{"1h", "1d", "2s", "1m", "2ns"} {
+		require.NoError(t, d.UnmarshalText([]byte(precision)))
+		parser := Parser{InfluxTimestampPrecsion: d}
+		require.ErrorContains(t, parser.Init(), "invalid time precision")
+	}
+}
+
 func TestParserErrorString(t *testing.T) {
 	var ptests = []struct {
 		name      string
@@ -908,4 +1017,54 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	// should not block on second read
 	_, err = parser.Next()
 	require.NoError(t, err)
+}
+
+const benchmarkData = `benchmark,tags_host=myhost,tags_platform=python,tags_sdkver=3.11.5 value=5 1653643421
+benchmark,tags_host=myhost,tags_platform=python,tags_sdkver=3.11.4 value=4 1653643422
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": float64(5),
+			},
+			time.Unix(1653643422, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": float64(4),
+			},
+			time.Unix(1653643422, 0),
+		),
+	}
+
+	// Do the parsing
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
 }

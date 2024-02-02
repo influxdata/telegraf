@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -51,7 +51,7 @@ func TestReadsMetricsFromKafkaIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 
 	// Sanity check
-	require.Equal(t, 0, len(acc.Metrics), "There should not be any points")
+	require.Empty(t, acc.Metrics, "There should not be any points")
 	if err := k.Start(&acc); err != nil {
 		t.Fatal(err.Error())
 	} else {

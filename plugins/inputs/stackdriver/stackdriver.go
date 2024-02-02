@@ -265,7 +265,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 		"has_substring",
 		"one_of",
 	}
-	filterString := fmt.Sprintf(`metric.type = "%s"`, metricType)
+	filterString := fmt.Sprintf(`metric.type = %q`, metricType)
 	if s.Filter == nil {
 		return filterString
 	}

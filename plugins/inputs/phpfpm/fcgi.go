@@ -120,7 +120,7 @@ type record struct {
 }
 
 func (rec *record) read(r io.Reader) (err error) {
-	if err = binary.Read(r, binary.BigEndian, &rec.h); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &rec.h); err != nil {
 		return err
 	}
 	if rec.h.Version != 1 {
@@ -146,12 +146,8 @@ func (c *conn) writeRecord(recType recType, reqID uint16, b []byte) error {
 	if err := binary.Write(&c.buf, binary.BigEndian, c.h); err != nil {
 		return err
 	}
-	if _, err := c.buf.Write(b); err != nil {
-		return err
-	}
-	if _, err := c.buf.Write(pad[:c.h.PaddingLength]); err != nil {
-		return err
-	}
+	c.buf.Write(b)
+	c.buf.Write(pad[:c.h.PaddingLength])
 	_, err := c.rwc.Write(c.buf.Bytes())
 	return err
 }

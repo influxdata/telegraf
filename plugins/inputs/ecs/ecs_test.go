@@ -20,7 +20,7 @@ var pauseStatsPreRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:39:59.933
 var nginxStatsRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:40:00.93733207Z")
 var nginxStatsPreRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:39:59.934291009Z")
 
-var validStats = map[string]types.StatsJSON{
+var validStats = map[string]*types.StatsJSON{
 	pauseStatsKey: {
 		Stats: types.Stats{
 			Read:    pauseStatsRead,
@@ -806,6 +806,19 @@ func TestResolveEndpoint(t *testing.T) {
 			exp: Ecs{
 				EndpointURL:     "v3-endpoint.local",
 				metadataVersion: 3,
+			},
+		},
+		{
+			name: "Endpoint is not set, ECS_CONTAINER_METADATA_URI_V4 is set => use v4 metadata",
+			setEnv: func(t *testing.T) {
+				t.Setenv("ECS_CONTAINER_METADATA_URI_V4", "v4-endpoint.local")
+			},
+			given: Ecs{
+				EndpointURL: "",
+			},
+			exp: Ecs{
+				EndpointURL:     "v4-endpoint.local",
+				metadataVersion: 4,
 			},
 		},
 	}

@@ -101,6 +101,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## PubSub message data before parsing. Many GCP services that
   ## output JSON to Google PubSub base64-encode the JSON payload.
   # base64_data = false
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
+  ## If content encoding is not "identity", sets the maximum allowed size, 
+  ## in bytes, for a message payload when it's decompressed. Can be increased 
+  ## for larger payloads or reduced to protect against decompression bombs.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  # max_decompression_size = "500MB"
 ```
 
 ### Multiple Subscriptions and Topics

@@ -79,7 +79,7 @@ func (g *Groundwork) Init() error {
 	}
 	password, err := g.Password.Get()
 	if err != nil {
-		config.ReleaseSecret(username)
+		username.Destroy()
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 	g.client = clients.GWClient{
@@ -87,13 +87,13 @@ func (g *Groundwork) Init() error {
 		AppType: g.DefaultAppType,
 		GWConnection: &clients.GWConnection{
 			HostName:           g.Server,
-			UserName:           string(username),
-			Password:           string(password),
+			UserName:           username.String(),
+			Password:           password.String(),
 			IsDynamicInventory: true,
 		},
 	}
-	config.ReleaseSecret(username)
-	config.ReleaseSecret(password)
+	username.Destroy()
+	password.Destroy()
 
 	logper.SetLogger(
 		func(fields interface{}, format string, a ...interface{}) {

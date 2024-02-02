@@ -105,11 +105,8 @@ func TestWrite(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-			serializer, err := telegrafJson.NewSerializer(
-				telegrafJson.FormatConfig{
-					TimestampUnits: time.Second,
-				})
-			require.NoError(t, err)
+			serializer := &telegrafJson.Serializer{}
+			require.NoError(t, serializer.Init())
 
 			ingestionType := "queued"
 			if tC.ingestionType != "" {
@@ -159,7 +156,8 @@ func TestWrite(t *testing.T) {
 }
 
 func TestCreateAzureDataExplorerTable(t *testing.T) {
-	serializer, _ := telegrafJson.NewSerializer(telegrafJson.FormatConfig{TimestampUnits: time.Second})
+	serializer := &telegrafJson.Serializer{}
+	require.NoError(t, serializer.Init())
 	plugin := AzureDataExplorer{
 		Endpoint:        "someendpoint",
 		Database:        "databasename",
@@ -253,8 +251,8 @@ func TestWriteWithType(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			serializer, err := telegrafJson.NewSerializer(telegrafJson.FormatConfig{TimestampUnits: time.Second})
-			require.NoError(t, err)
+			serializer := &telegrafJson.Serializer{}
+			require.NoError(t, serializer.Init())
 			for tableName, jsonValue := range testCase.tableNameToExpectedResult {
 				ingestionType := "queued"
 				if testCase.ingestionType != "" {
@@ -303,6 +301,17 @@ func TestInitBlankEndpointData(t *testing.T) {
 	errorInit := plugin.Init()
 	require.Error(t, errorInit)
 	require.Equal(t, "endpoint configuration cannot be empty", errorInit.Error())
+}
+
+func TestQueryConstruction(t *testing.T) {
+	const tableName = "mytable"
+	const expectedCreate = `.create-merge table ['mytable'] (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+	const expectedMapping = `` +
+		`.create-or-alter table ['mytable'] ingestion json mapping 'mytable_mapping' '[{"column":"fields", ` +
+		`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
+		`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+	require.Equal(t, expectedCreate, createTableCommand(tableName).String())
+	require.Equal(t, expectedMapping, createTableMappingCommand(tableName).String())
 }
 
 type fakeIngestor struct {

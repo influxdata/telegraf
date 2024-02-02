@@ -133,7 +133,7 @@ func (m *MockConfig) CollectDeprecationInfos(_, _, _, _ []string) map[string][]c
 
 func (m *MockConfig) PrintDeprecationList(plugins []config.PluginDeprecationInfo) {
 	for _, p := range plugins {
-		_, _ = m.Buffer.Write([]byte(fmt.Sprintf("plugin name: %s\n", p.Name)))
+		fmt.Fprintf(m.Buffer, "plugin name: %s\n", p.Name)
 	}
 }
 
@@ -168,7 +168,14 @@ func TestUsageFlag(t *testing.T) {
 			ExpectedOutput: `
 # Read metrics about temperature
 [[inputs.temp]]
-  # no configuration
+  ## Desired output format (Linux only)
+  ## Available values are
+  ##   v1 -- use pre-v1.22.4 sensor naming, e.g. coretemp_core0_input
+  ##   v2 -- use v1.22.4+ sensor naming, e.g. coretemp_core_0_input
+  # metric_format = "v2"
+
+  ## Add device tag to distinguish devices with the same name (Linux only)
+  # add_device_tag = false
 
 `,
 		},
@@ -200,7 +207,8 @@ func TestInputListFlag(t *testing.T) {
 	}
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
 	require.NoError(t, err)
-	expectedOutput := `Available Input Plugins:
+	expectedOutput := `DEPRECATED: use telegraf plugins inputs
+Available Input Plugins:
   test
 `
 	require.Equal(t, expectedOutput, buf.String())
@@ -217,7 +225,8 @@ func TestOutputListFlag(t *testing.T) {
 	}
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
 	require.NoError(t, err)
-	expectedOutput := `Available Output Plugins:
+	expectedOutput := `DEPRECATED: use telegraf plugins outputs
+Available Output Plugins:
   test
 `
 	require.Equal(t, expectedOutput, buf.String())
@@ -463,7 +472,7 @@ func TestCommandVersion(t *testing.T) {
 	}
 }
 
-// Deprecated in favor of command version
+// Users should use the version subcommand
 func TestFlagVersion(t *testing.T) {
 	tests := []struct {
 		Version        string
@@ -524,10 +533,10 @@ func TestGlobablBoolFlags(t *testing.T) {
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), m)
 	require.NoError(t, err)
 
-	require.Equal(t, true, m.debug)
-	require.Equal(t, true, m.test)
-	require.Equal(t, true, m.once)
-	require.Equal(t, true, m.quiet)
+	require.True(t, m.debug)
+	require.True(t, m.test)
+	require.True(t, m.once)
+	require.True(t, m.quiet)
 }
 
 func TestFlagsAreSet(t *testing.T) {
@@ -555,10 +564,10 @@ func TestFlagsAreSet(t *testing.T) {
 
 	require.Equal(t, []string{expectedString}, m.config)
 	require.Equal(t, []string{expectedString}, m.configDir)
-	require.Equal(t, true, m.debug)
-	require.Equal(t, true, m.test)
-	require.Equal(t, true, m.once)
-	require.Equal(t, true, m.quiet)
+	require.True(t, m.debug)
+	require.True(t, m.test)
+	require.True(t, m.once)
+	require.True(t, m.quiet)
 	require.Equal(t, expectedInt, m.testWait)
 	require.Equal(t, expectedString, m.watchConfig)
 	require.Equal(t, expectedString, m.pidFile)

@@ -4,7 +4,6 @@ package ping
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -42,26 +41,26 @@ Approximate round trip times in milli-seconds:
 `
 
 func TestHost(t *testing.T) {
-	trans, recReply, recPacket, avg, min, max, err := processPingOutput(winPLPingOutput)
+	stats, err := processPingOutput(winPLPingOutput)
 	require.NoError(t, err)
-	require.Equal(t, 4, trans, "4 packets were transmitted")
-	require.Equal(t, 4, recReply, "4 packets were reply")
-	require.Equal(t, 4, recPacket, "4 packets were received")
-	require.Equal(t, 50, avg, "Average 50")
-	require.Equal(t, 46, min, "Min 46")
-	require.Equal(t, 57, max, "max 57")
+	require.Equal(t, 4, stats.packetsTransmitted, "4 packets were transmitted")
+	require.Equal(t, 4, stats.replyReceived, "4 packets were reply")
+	require.Equal(t, 4, stats.packetsReceived, "4 packets were received")
+	require.Equal(t, 50, stats.avg, "Average 50")
+	require.Equal(t, 46, stats.min, "Min 46")
+	require.Equal(t, 57, stats.max, "max 57")
 
-	trans, recReply, recPacket, avg, min, max, err = processPingOutput(winENPingOutput)
+	stats, err = processPingOutput(winENPingOutput)
 	require.NoError(t, err)
-	require.Equal(t, 4, trans, "4 packets were transmitted")
-	require.Equal(t, 4, recReply, "4 packets were reply")
-	require.Equal(t, 4, recPacket, "4 packets were received")
-	require.Equal(t, 50, avg, "Average 50")
-	require.Equal(t, 50, min, "Min 50")
-	require.Equal(t, 52, max, "Max 52")
+	require.Equal(t, 4, stats.packetsTransmitted, "4 packets were transmitted")
+	require.Equal(t, 4, stats.replyReceived, "4 packets were reply")
+	require.Equal(t, 4, stats.packetsReceived, "4 packets were received")
+	require.Equal(t, 50, stats.avg, "Average 50")
+	require.Equal(t, 50, stats.min, "Min 50")
+	require.Equal(t, 52, stats.max, "Max 52")
 }
 
-func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return winENPingOutput, nil
 }
 
@@ -104,7 +103,7 @@ Statystyka badania ping dla 195.187.242.157:
              (100% straty),
 `
 
-func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return errorPingOutput, errors.New("No packets received")
 }
 
@@ -143,7 +142,7 @@ func TestArguments(t *testing.T) {
 	}
 
 	actual := p.args("www.google.com")
-	require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
+	require.Equal(t, actual, arguments)
 }
 
 var lossyPingOutput = `
@@ -165,7 +164,7 @@ Szacunkowy czas błądzenia pakietów w millisekundach:
     Minimum = 114 ms, Maksimum = 119 ms, Czas średni = 115 ms
 `
 
-func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -228,7 +227,7 @@ Options:
 
 `
 
-func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -273,7 +272,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockUnreachableHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockUnreachableHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return UnreachablePingOutput, errors.New("So very bad")
 }
 
@@ -324,7 +323,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockTTLExpiredPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockTTLExpiredPinger(_ string, _ float64, _ ...string) (string, error) {
 	return TTLExpiredPingOutput, errors.New("So very bad")
 }
 
@@ -369,7 +368,7 @@ func TestPingBinary(t *testing.T) {
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			require.True(t, binary == "ping6")
+			require.Equal(t, "ping6", binary)
 			return "", nil
 		},
 	}

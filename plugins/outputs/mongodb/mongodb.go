@@ -107,16 +107,16 @@ func (s *MongoDB) Init() error {
 		}
 		password, err := s.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
-			Username:      string(username),
-			Password:      string(password),
+			Username:      username.String(),
+			Password:      password.String(),
 		}
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		username.Destroy()
+		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 	case "X509":
 		//format connection string to include tls/x509 options
@@ -206,8 +206,10 @@ func marshalMetric(metric telegraf.Metric) bson.D {
 	for k, v := range metric.Tags() {
 		tags = append(tags, primitive.E{Key: k, Value: v})
 	}
-	bdoc = append(bdoc, primitive.E{Key: "tags", Value: tags})
-	bdoc = append(bdoc, primitive.E{Key: "timestamp", Value: metric.Time()})
+	bdoc = append(bdoc,
+		primitive.E{Key: "tags", Value: tags},
+		primitive.E{Key: "timestamp", Value: metric.Time()},
+	)
 	return bdoc
 }
 

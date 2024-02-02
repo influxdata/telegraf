@@ -3,250 +3,102 @@
 package zfs
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/testutil"
 )
 
-// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
-var zpool_output = []string{
-	"freenas-boot	ONLINE	30601641984	2022177280	28579464704	-	6	1.00x",
-	"red1	ONLINE	8933531975680	1126164848640	7807367127040	8%	12	1.83x",
-	"temp1	ONLINE	2989297238016	1626309320704	1362987917312	38%	54	1.28x",
-	"temp2	ONLINE	2989297238016	626958278656	2362338959360	12%	20	1.00x",
-}
-
-func mock_zpool() ([]string, error) {
-	return zpool_output, nil
-}
-
-// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
-var zpool_output_unavail = []string{
-	"temp2	UNAVAIL	-	-	-	-	-	-",
-}
-
-func mock_zpool_unavail() ([]string, error) {
-	return zpool_output_unavail, nil
-}
-
-// $ zfs list -Hp -o name,avail,used,usedsnap,usedds
-var zdataset_output = []string{
-	"zata    10741741326336  8564135526400   0       90112",
-	"zata/home       10741741326336  2498560 212992  2285568",
-	"zata/import     10741741326336  196608  81920   114688",
-	"zata/storage    10741741326336  8556084379648   3601138999296   4954945380352",
-}
-
-func mock_zdataset() ([]string, error) {
-	return zdataset_output, nil
-}
-
-// sysctl -q kstat.zfs.misc.arcstats
-
-// sysctl -q kstat.zfs.misc.vdev_cache_stats
-var kstat_vdev_cache_stats_output = []string{
-	"kstat.zfs.misc.vdev_cache_stats.misses: 87789",
-	"kstat.zfs.misc.vdev_cache_stats.hits: 465583",
-	"kstat.zfs.misc.vdev_cache_stats.delegations: 6952",
-}
-
-// sysctl -q kstat.zfs.misc.zfetchstats
-var kstat_zfetchstats_output = []string{
-	"kstat.zfs.misc.zfetchstats.max_streams: 0",
-	"kstat.zfs.misc.zfetchstats.misses: 0",
-	"kstat.zfs.misc.zfetchstats.hits: 0",
-}
-
-func mock_sysctl(metric string) ([]string, error) {
-	if metric == "vdev_cache_stats" {
-		return kstat_vdev_cache_stats_output, nil
-	}
-	if metric == "zfetchstats" {
-		return kstat_zfetchstats_output, nil
-	}
-	return []string{}, fmt.Errorf("Invalid arg")
-}
-
-func TestZfsPoolMetrics(t *testing.T) {
-	var acc testutil.Accumulator
-
-	z := &Zfs{
-		KstatMetrics: []string{"vdev_cache_stats"},
-		sysctl:       mock_sysctl,
-		zpool:        mock_zpool,
-	}
-	err := z.Gather(&acc)
+// Generate testcase-data via
+//
+//	zpool.txt:    $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
+//	zdataset.txt: $ zfs list -Hp -o name,avail,used,usedsnap,usedds
+//	sysctl.json:  $ sysctl -q kstat.zfs.misc.<kstat metrics>
+func TestCases(t *testing.T) {
+	// Get all testcase directories
+	testpath := filepath.Join("testcases", "freebsd")
+	folders, err := os.ReadDir(testpath)
 	require.NoError(t, err)
 
-	require.False(t, acc.HasMeasurement("zfs_pool"))
-	acc.Metrics = nil
+	// Register the plugin
+	inputs.Add("zfs", func() telegraf.Input { return &Zfs{} })
 
-	z = &Zfs{
-		KstatMetrics: []string{"vdev_cache_stats"},
-		PoolMetrics:  true,
-		sysctl:       mock_sysctl,
-		zpool:        mock_zpool,
-	}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
 
-	//one pool, all metrics
-	tags := map[string]string{
-		"pool":   "freenas-boot",
-		"health": "ONLINE",
-	}
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join(testpath, f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			inputSysctlFilename := filepath.Join(testcasePath, "sysctl.json")
+			inputZPoolFilename := filepath.Join(testcasePath, "zpool.txt")
+			inputZDatasetFilename := filepath.Join(testcasePath, "zdataset.txt")
+			inputUnameFilename := filepath.Join(testcasePath, "uname.txt")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
 
-	poolMetrics := getFreeNasBootPoolMetrics()
+			// Load the input data
+			buf, err := os.ReadFile(inputSysctlFilename)
+			require.NoError(t, err)
+			var sysctl map[string][]string
+			require.NoError(t, json.Unmarshal(buf, &sysctl))
 
-	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
-}
+			zpool, err := testutil.ParseLinesFromFile(inputZPoolFilename)
+			require.NoError(t, err)
 
-func TestZfsPoolMetrics_unavail(t *testing.T) {
+			zdataset, err := testutil.ParseLinesFromFile(inputZDatasetFilename)
+			require.NoError(t, err)
 
-	var acc testutil.Accumulator
+			// Try to read release from file and default to FreeBSD 13 if
+			// an error occurs.
+			uname := "13.2-STABLE"
+			if buf, err := os.ReadFile(inputUnameFilename); err == nil {
+				uname = string(buf)
+			}
 
-	z := &Zfs{
-		KstatMetrics: []string{"vdev_cache_stats"},
-		sysctl:       mock_sysctl,
-		zpool:        mock_zpool_unavail,
-	}
-	err := z.Gather(&acc)
-	require.NoError(t, err)
+			// Prepare the influx parser for expectations
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
 
-	require.False(t, acc.HasMeasurement("zfs_pool"))
-	acc.Metrics = nil
+			// Read the expected output
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
 
-	z = &Zfs{
-		KstatMetrics: []string{"vdev_cache_stats"},
-		PoolMetrics:  true,
-		sysctl:       mock_sysctl,
-		zpool:        mock_zpool_unavail,
-	}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
 
-	//one pool, UNAVAIL
-	tags := map[string]string{
-		"pool":   "temp2",
-		"health": "UNAVAIL",
-	}
+			// Setup the plugin
+			plugin := cfg.Inputs[0].Input.(*Zfs)
+			plugin.sysctl = func(metric string) ([]string, error) {
+				if r, found := sysctl[metric]; found {
+					return r, nil
+				}
+				return nil, fmt.Errorf("invalid argument")
+			}
+			plugin.zpool = func() ([]string, error) { return zpool, nil }
+			plugin.zdataset = func(_ []string) ([]string, error) { return zdataset, nil }
+			plugin.uname = func() (string, error) { return uname, nil }
+			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
 
-	poolMetrics := getTemp2PoolMetrics()
+			// Gather and test
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
-}
-
-func TestZfsDatasetMetrics(t *testing.T) {
-	var acc testutil.Accumulator
-
-	z := &Zfs{
-		KstatMetrics: []string{"vdev_cache_stats"},
-		sysctl:       mock_sysctl,
-		zdataset:     mock_zdataset,
-	}
-	err := z.Gather(&acc)
-	require.NoError(t, err)
-
-	require.False(t, acc.HasMeasurement("zfs_dataset"))
-	acc.Metrics = nil
-
-	z = &Zfs{
-		KstatMetrics:   []string{"vdev_cache_stats"},
-		DatasetMetrics: true,
-		sysctl:         mock_sysctl,
-		zdataset:       mock_zdataset,
-	}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
-
-	//one pool, all metrics
-	tags := map[string]string{
-		"dataset": "zata",
-	}
-
-	datasetMetrics := getZataDatasetMetrics()
-
-	acc.AssertContainsTaggedFields(t, "zfs_dataset", datasetMetrics, tags)
-}
-
-func TestZfsGeneratesMetrics(t *testing.T) {
-	var acc testutil.Accumulator
-
-	z := &Zfs{
-		KstatMetrics: []string{"vdev_cache_stats"},
-		sysctl:       mock_sysctl,
-		zpool:        mock_zpool,
-	}
-	err := z.Gather(&acc)
-	require.NoError(t, err)
-
-	//four pool, vdev_cache_stats metrics
-	tags := map[string]string{
-		"pools": "freenas-boot::red1::temp1::temp2",
-	}
-	intMetrics := getKstatMetricsVdevOnly()
-
-	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-
-	acc.Metrics = nil
-
-	z = &Zfs{
-		KstatMetrics: []string{"zfetchstats", "vdev_cache_stats"},
-		sysctl:       mock_sysctl,
-		zpool:        mock_zpool,
-	}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
-
-	//four pool, vdev_cache_stats and zfetchstats metrics
-	intMetrics = getKstatMetricsVdevAndZfetch()
-
-	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-}
-
-func getFreeNasBootPoolMetrics() map[string]interface{} {
-	return map[string]interface{}{
-		"allocated":     int64(2022177280),
-		"capacity":      int64(6),
-		"dedupratio":    float64(1),
-		"free":          int64(28579464704),
-		"size":          int64(30601641984),
-		"fragmentation": int64(0),
-	}
-}
-
-func getTemp2PoolMetrics() map[string]interface{} {
-	return map[string]interface{}{
-		"size": int64(0),
-	}
-}
-
-func getZataDatasetMetrics() map[string]interface{} {
-	return map[string]interface{}{
-		"avail":    int64(10741741326336),
-		"used":     int64(8564135526400),
-		"usedsnap": int64(0),
-		"usedds":   int64(90112),
-	}
-}
-
-func getKstatMetricsVdevOnly() map[string]interface{} {
-	return map[string]interface{}{
-		"vdev_cache_stats_misses":      int64(87789),
-		"vdev_cache_stats_hits":        int64(465583),
-		"vdev_cache_stats_delegations": int64(6952),
-	}
-}
-
-func getKstatMetricsVdevAndZfetch() map[string]interface{} {
-	return map[string]interface{}{
-		"vdev_cache_stats_misses":      int64(87789),
-		"vdev_cache_stats_hits":        int64(465583),
-		"vdev_cache_stats_delegations": int64(6952),
-		"zfetchstats_max_streams":      int64(0),
-		"zfetchstats_misses":           int64(0),
-		"zfetchstats_hits":             int64(0),
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+		})
 	}
 }

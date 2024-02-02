@@ -27,8 +27,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## On linux systems telegraf also collects protocol stats.
   ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
   ##
+  ## DEPRECATION NOTICE: A value of 'false' is deprecated and discouraged!
+  ##                     Please set this to `true` and use the 'inputs.nstat'
+  ##                     plugin instead.
   # ignore_protocol_stats = false
-  ##
 ```
 
 ## Metrics
@@ -45,6 +47,7 @@ Fields (all platforms):
 * err_out - The total number of transmit errors detected by the interface
 * drop_in - The total number of received packets dropped by the interface
 * drop_out - The total number of transmitted packets dropped by the interface
+* speed - The interface's latest or current speed value, in Mbits/sec. May be -1 if unsupported by the interface
 
 Different platforms gather the data above with different mechanisms. Telegraf
 uses the ([gopsutil](https://github.com/shirou/gopsutil)) package, which under

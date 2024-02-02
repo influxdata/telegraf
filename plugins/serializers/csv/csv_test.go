@@ -11,22 +11,29 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestInvalidTimestampFormat(t *testing.T) {
-	_, err := NewSerializer("garbage", "", false, false)
-	require.EqualError(t, err, `invalid timestamp format "garbage"`)
+	s := Serializer{
+		TimestampFormat: "garbage",
+	}
+	require.EqualError(t, s.Init(), `invalid timestamp format "garbage"`)
 }
 
 func TestInvalidSeparator(t *testing.T) {
-	_, err := NewSerializer("", "garbage", false, false)
-	require.EqualError(t, err, `invalid separator "garbage"`)
+	s := Serializer{
+		Separator: "garbage",
+	}
+	require.EqualError(t, s.Init(), `invalid separator "garbage"`)
 
-	serializer, err := NewSerializer("", "\n", false, false)
-	require.NoError(t, err)
+	s = Serializer{
+		Separator: "\n",
+	}
+	require.NoError(t, s.Init())
 
-	_, err = serializer.Serialize(testutil.TestMetric(42.3, "test"))
+	_, err := s.Serialize(testutil.TestMetric(42.3, "test"))
 	require.EqualError(t, err, "writing data failed: csv: invalid field or comment delimiter")
 }
 
@@ -81,8 +88,13 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			// Serialize
-			serializer, err := NewSerializer(cfg.TimestampFormat, cfg.Separator, cfg.Header, cfg.Prefix)
-			require.NoError(t, err)
+			serializer := Serializer{
+				TimestampFormat: cfg.TimestampFormat,
+				Separator:       cfg.Separator,
+				Header:          cfg.Header,
+				Prefix:          cfg.Prefix,
+			}
+			require.NoError(t, serializer.Init())
 			// expected results use LF endings
 			serializer.writer.UseCRLF = false
 			var actual bytes.Buffer
@@ -149,8 +161,13 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			// Serialize
-			serializer, err := NewSerializer(cfg.TimestampFormat, cfg.Separator, cfg.Header, cfg.Prefix)
-			require.NoError(t, err)
+			serializer := Serializer{
+				TimestampFormat: cfg.TimestampFormat,
+				Separator:       cfg.Separator,
+				Header:          cfg.Header,
+				Prefix:          cfg.Prefix,
+			}
+			require.NoError(t, serializer.Init())
 			// expected results use LF endings
 			serializer.writer.UseCRLF = false
 			actual, err := serializer.SerializeBatch(metrics)
@@ -184,4 +201,27 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 
 func loadCSV(filename string) ([]byte, error) {
 	return os.ReadFile(filename)
+}
+
+func BenchmarkSerialize(b *testing.B) {
+	s := &Serializer{}
+	require.NoError(b, s.Init())
+	metrics := serializers.BenchmarkMetrics(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.Serialize(metrics[i%len(metrics)])
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkSerializeBatch(b *testing.B) {
+	s := &Serializer{}
+	require.NoError(b, s.Init())
+	m := serializers.BenchmarkMetrics(b)
+	metrics := m[:]
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.SerializeBatch(metrics)
+		require.NoError(b, err)
+	}
 }

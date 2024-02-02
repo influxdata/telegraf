@@ -152,7 +152,7 @@ func (l *Libvirt) isThereAnythingToGather() bool {
 
 func (l *Libvirt) Gather(acc telegraf.Accumulator) error {
 	var err error
-	if err = l.utils.EnsureConnected(l.LibvirtURI); err != nil {
+	if err := l.utils.EnsureConnected(l.LibvirtURI); err != nil {
 		return err
 	}
 

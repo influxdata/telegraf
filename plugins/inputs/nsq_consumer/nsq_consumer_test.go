@@ -53,7 +53,7 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	require.NoError(t, p.Init())
 	consumer.SetParser(p)
 	var acc testutil.Accumulator
-	require.Len(t, acc.Metrics, 0, "There should not be any points")
+	require.Empty(t, acc.Metrics, "There should not be any points")
 	require.NoError(t, consumer.Start(&acc))
 
 	waitForPoint(&acc, t)
@@ -204,11 +204,7 @@ func (n *mockNSQD) handle(conn net.Conn) {
 				}
 				rdyCount--
 			}
-			buf, err := framedResponse(inst.frameType, inst.body)
-			if err != nil {
-				log.Print(err.Error())
-				goto exit
-			}
+			buf := framedResponse(inst.frameType, inst.body)
 			_, err = conn.Write(buf)
 			if err != nil {
 				log.Print(err.Error())
@@ -224,26 +220,20 @@ exit:
 	conn.Close()
 }
 
-func framedResponse(frameType int32, data []byte) ([]byte, error) {
+func framedResponse(frameType int32, data []byte) []byte {
 	var w bytes.Buffer
 
 	beBuf := make([]byte, 4)
 	size := uint32(len(data)) + 4
 
 	binary.BigEndian.PutUint32(beBuf, size)
-	_, err := w.Write(beBuf)
-	if err != nil {
-		return nil, err
-	}
+	w.Write(beBuf)
 
 	binary.BigEndian.PutUint32(beBuf, uint32(frameType))
-	_, err = w.Write(beBuf)
-	if err != nil {
-		return nil, err
-	}
+	w.Write(beBuf)
 
-	_, err = w.Write(data)
-	return w.Bytes(), err
+	w.Write(data)
+	return w.Bytes()
 }
 
 func frameMessage(m *nsq.Message) ([]byte, error) {

@@ -38,6 +38,7 @@ type HTTPResponse struct {
 	URLs            []string `toml:"urls"`
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string
+	BodyForm        map[string][]string `toml:"body_form"`
 	Method          string
 	ResponseTimeout config.Duration
 	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
@@ -193,7 +194,16 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	var body io.Reader
 	if h.Body != "" {
 		body = strings.NewReader(h.Body)
+	} else if len(h.BodyForm) != 0 {
+		values := url.Values{}
+		for k, vs := range h.BodyForm {
+			for _, v := range vs {
+				values.Add(k, v)
+			}
+		}
+		body = strings.NewReader(values.Encode())
 	}
+
 	request, err := http.NewRequest(h.Method, u, body)
 	if err != nil {
 		return nil, nil, err
@@ -407,13 +417,13 @@ func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 	password, err := h.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
-	request.SetBasicAuth(string(username), string(password))
+	defer password.Destroy()
+	request.SetBasicAuth(username.String(), password.String())
 
 	return nil
 }

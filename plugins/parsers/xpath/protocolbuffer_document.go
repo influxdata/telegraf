@@ -3,13 +3,15 @@ package xpath
 import (
 	"encoding/hex"
 	"fmt"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	path "github.com/antchfx/xpath"
-	"github.com/doclambda/protobufquery"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/srebhan/protobufquery"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -132,7 +134,18 @@ func (d *protobufDocument) GetNodePath(node, relativeTo dataNode, sep string) st
 	// Climb up the tree and collect the node names
 	n := nativeNode.Parent
 	for n != nil && n != nativeRelativeTo {
-		names = append(names, n.Name)
+		kind := reflect.Invalid
+		if n.Parent != nil && n.Parent.Value() != nil {
+			kind = reflect.TypeOf(n.Parent.Value()).Kind()
+		}
+		switch kind {
+		case reflect.Slice, reflect.Array:
+			// Determine the index for array elements
+			names = append(names, d.index(n))
+		default:
+			// Use the name if not an array
+			names = append(names, n.Name)
+		}
 		n = n.Parent
 	}
 
@@ -149,10 +162,41 @@ func (d *protobufDocument) GetNodePath(node, relativeTo dataNode, sep string) st
 	return nodepath[:len(nodepath)-1]
 }
 
+func (d *protobufDocument) GetNodeName(node dataNode, sep string, withParent bool) string {
+	// If this panics it's a programming error as we changed the document type while processing
+	nativeNode := node.(*protobufquery.Node)
+
+	name := nativeNode.Name
+
+	// Check if the node is part of an array. If so, determine the index and
+	// concatenate the parent name and the index.
+	kind := reflect.Invalid
+	if nativeNode.Parent != nil && nativeNode.Parent.Value() != nil {
+		kind = reflect.TypeOf(nativeNode.Parent.Value()).Kind()
+	}
+
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		if name == "" && nativeNode.Parent != nil && withParent {
+			name = nativeNode.Parent.Name + sep
+		}
+		return name + d.index(nativeNode)
+	}
+
+	return name
+}
+
 func (d *protobufDocument) OutputXML(node dataNode) string {
 	native := node.(*protobufquery.Node)
 	return native.OutputXML()
 }
 
-func init() {
+func (d *protobufDocument) index(node *protobufquery.Node) string {
+	idx := 0
+
+	for n := node; n.PrevSibling != nil; n = n.PrevSibling {
+		idx++
+	}
+
+	return strconv.Itoa(idx)
 }

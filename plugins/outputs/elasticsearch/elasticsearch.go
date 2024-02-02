@@ -316,8 +316,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if res.Errors {
 		for id, err := range res.Failed() {
 			a.Log.Errorf(
-				"Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s",
+				"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
 				id,
+				err.Status,
 				err.Error.Reason,
 				err.Error.CausedBy["reason"],
 				err.Error.CausedBy["type"],
@@ -472,12 +473,12 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		}
 		password, err := a.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		fns = append(fns, elastic.SetBasicAuth(string(username), string(password)))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		fns = append(fns, elastic.SetBasicAuth(username.String(), password.String()))
+		username.Destroy()
+		password.Destroy()
 	}
 
 	if !a.AuthBearerToken.Empty() {
@@ -485,9 +486,9 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting token failed: %w", err)
 		}
-		auth := []string{"Bearer " + string(token)}
+		auth := []string{"Bearer " + token.String()}
 		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
-		config.ReleaseSecret(token)
+		token.Destroy()
 	}
 	return fns, nil
 }

@@ -62,7 +62,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #]
 
   ## timeout in seconds for the write connection to graphite
-  timeout = 2
+  # timeout = "2s"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

@@ -2,10 +2,10 @@
 
 set -eux
 
-GO_VERSION="1.20.3"
+GO_VERSION="1.21.6"
 GO_ARCH="linux-amd64"
 # from https://golang.org/dl
-GO_VERSION_SHA="979694c2c25c735755bf26f4f45e19e64e4811d661dd07b8c010f7a8e18adfca"
+GO_VERSION_SHA="3f934f40ac360b9c01f616a9aa1796d227d8b0328bf64cb045c7b8c4ee9caea4"
 
 # Download Go and verify Go tarball
 setup_go () {
@@ -18,10 +18,6 @@ setup_go () {
 
     sudo rm -rfv /usr/local/go
     sudo tar -C /usr/local -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
-
-    echo "$PATH"
-    which go
-    go version
 }
 
 if command -v go >/dev/null 2>&1; then
@@ -34,3 +30,7 @@ if command -v go >/dev/null 2>&1; then
 else
     setup_go
 fi
+
+echo "$PATH"
+command -v go
+go version

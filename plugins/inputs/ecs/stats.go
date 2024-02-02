@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/docker"
 )
 
-func parseContainerStats(c Container, acc telegraf.Accumulator, tags map[string]string) {
+func parseContainerStats(c *Container, acc telegraf.Accumulator, tags map[string]string) {
 	id := c.ID
-	stats := c.Stats
+	stats := &c.Stats
 	tm := stats.Read
 
 	if tm.Before(time.Unix(0, 0)) {
@@ -26,7 +27,7 @@ func parseContainerStats(c Container, acc telegraf.Accumulator, tags map[string]
 	blkstats(id, stats, acc, tags, tm)
 }
 
-func metastats(id string, c Container, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func metastats(id string, c *Container, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	metafields := map[string]interface{}{
 		"container_id":   id,
 		"docker_name":    c.DockerName,
@@ -44,7 +45,7 @@ func metastats(id string, c Container, acc telegraf.Accumulator, tags map[string
 	acc.AddFields("ecs_container_meta", metafields, tags, tm)
 }
 
-func memstats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func memstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	memfields := map[string]interface{}{
 		"container_id": id,
 	}
@@ -101,7 +102,7 @@ func memstats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags m
 	acc.AddFields("ecs_container_mem", memfields, tags, tm)
 }
 
-func cpustats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func cpustats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	cpufields := map[string]interface{}{
 		"usage_total":                  stats.CPUStats.CPUUsage.TotalUsage,
 		"usage_in_usermode":            stats.CPUStats.CPUUsage.UsageInUsermode,
@@ -115,7 +116,7 @@ func cpustats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags m
 
 	previousCPU := stats.PreCPUStats.CPUUsage.TotalUsage
 	previousSystem := stats.PreCPUStats.SystemUsage
-	cpuPercent := docker.CalculateCPUPercentUnix(previousCPU, previousSystem, &stats)
+	cpuPercent := docker.CalculateCPUPercentUnix(previousCPU, previousSystem, stats)
 	cpufields["usage_percent"] = cpuPercent
 
 	cputags := copyTags(tags)
@@ -125,7 +126,7 @@ func cpustats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags m
 	// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
 	// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
 	var percpuusage []uint64
-	if stats.CPUStats.OnlineCPUs > 0 {
+	if stats.CPUStats.OnlineCPUs > 0 && len(stats.CPUStats.CPUUsage.PercpuUsage) > 0 {
 		percpuusage = stats.CPUStats.CPUUsage.PercpuUsage[:stats.CPUStats.OnlineCPUs]
 	} else {
 		percpuusage = stats.CPUStats.CPUUsage.PercpuUsage
@@ -142,7 +143,7 @@ func cpustats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags m
 	}
 }
 
-func netstats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func netstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	totalNetworkStatMap := make(map[string]interface{})
 	for network, netstats := range stats.Networks {
 		netfields := map[string]interface{}{
@@ -194,7 +195,7 @@ func netstats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags m
 	}
 }
 
-func blkstats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func blkstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	blkioStats := stats.BlkioStats
 	// Make a map of devices to their block io stats
 	deviceStatMap := make(map[string]map[string]interface{})

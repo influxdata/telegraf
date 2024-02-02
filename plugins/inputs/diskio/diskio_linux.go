@@ -10,8 +10,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"golang.org/x/sys/unix"
 )
+
+type DiskIO struct {
+	ps system.PS
+
+	Devices          []string
+	DeviceTags       []string
+	NameTemplates    []string
+	SkipSerialNumber bool
+
+	Log telegraf.Logger
+
+	infoCache    map[string]diskInfoCache
+	deviceFilter filter.Filter
+}
 
 type diskInfoCache struct {
 	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
@@ -115,7 +132,7 @@ func resolveName(name string) string {
 		return name
 	}
 	// Try to prepend "/dev"
-	resolved, err = filepath.EvalSymlinks(filepath.Join("/dev", name))
+	resolved, err = filepath.EvalSymlinks("/dev/" + name)
 	if err != nil {
 		return name
 	}

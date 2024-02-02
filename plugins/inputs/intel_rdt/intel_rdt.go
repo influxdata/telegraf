@@ -123,7 +123,7 @@ func (r *IntelRDT) Initialize() error {
 	if r.SamplingInterval == 0 {
 		r.SamplingInterval = defaultSamplingInterval
 	}
-	if err = validateInterval(r.SamplingInterval); err != nil {
+	if err := validateInterval(r.SamplingInterval); err != nil {
 		return err
 	}
 	r.parsedCores, err = parseCoresConfig(r.Cores)
@@ -211,7 +211,7 @@ func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[s
 	for _, availableProcess := range availableProcesses {
 		if choice.Contains(availableProcess.Name, providedProcesses) {
 			pid := availableProcess.PID
-			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + fmt.Sprintf("%d", pid) + ","
+			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + strconv.Itoa(pid) + ","
 		}
 	}
 	for key := range mapProcessPIDs {
@@ -309,8 +309,8 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 
 			pids, err := findPIDsInMeasurement(out)
 			if err != nil {
-				r.errorChan <- err
-				break
+				r.Log.Warnf("Skipping measurement: %v", err)
+				continue
 			}
 			for processName, PIDsProcess := range processesPIDsAssociation {
 				if pids == PIDsProcess {
@@ -497,7 +497,7 @@ func validateInterval(interval int32) error {
 func splitMeasurementLine(line string) ([]string, error) {
 	values := strings.Split(line, ",")
 	if len(values) < 8 {
-		return nil, fmt.Errorf(fmt.Sprintf("not valid line format from pqos: %s", values))
+		return nil, fmt.Errorf("not valid line format from pqos: %s", values)
 	}
 	return values, nil
 }

@@ -245,7 +245,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			parentTag:        "dcname",
 			enabled:          anythingEnabled(parent.VSANMetricExclude),
 			realTime:         false,
-			sampling:         300,
+			sampling:         int32(time.Duration(parent.VSANInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VSANMetricInclude, parent.VSANMetricExclude),
 			paths:            parent.VSANClusterInclude,
@@ -591,7 +591,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	if n > maxMetadataSamples {
 		// Shuffle samples into the maxMetadataSamples positions
 		for i := 0; i < maxMetadataSamples; i++ {
-			j := int(rand.Int31n(int32(i + 1)))
+			j := int(rand.Int31n(int32(i + 1))) //nolint:gosec // G404: not security critical
 			t := sampledObjects[i]
 			sampledObjects[i] = sampledObjects[j]
 			sampledObjects[j] = t
@@ -645,13 +645,15 @@ func getDatacenters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFi
 		return nil, err
 	}
 	m := make(objectMap, len(resources))
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
 			dcname:       r.Name,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
@@ -667,7 +669,9 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 	}
 	cache := make(map[string]*types.ManagedObjectReference)
 	m := make(objectMap, len(resources))
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		// Wrap in a function to make defer work correctly.
 		err := func() error {
 			// We're not interested in the immediate parent (a folder), but the data center.
@@ -697,7 +701,7 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 				name:         r.Name,
 				ref:          r.ExtensibleManagedObject.Reference(),
 				parentRef:    p,
-				customValues: e.loadCustomAttributes(&r.ManagedEntity),
+				customValues: e.loadCustomAttributes(r.ManagedEntity),
 			}
 			return nil
 		}()
@@ -716,12 +720,14 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 		return nil, err
 	}
 	m := make(objectMap)
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
@@ -745,12 +751,14 @@ func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) 
 		return nil, err
 	}
 	m := make(objectMap)
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
@@ -779,7 +787,9 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 	if err != nil {
 		return nil, err
 	}
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		if r.Runtime.PowerState != "poweredOn" {
 			continue
 		}
@@ -830,6 +840,9 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		// Sometimes Config is unknown and returns a nil pointer
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
+			if r.Guest.GuestId != "" {
+				guest = cleanGuestID(r.Guest.GuestId)
+			}
 			uuid = r.Config.Uuid
 		}
 		cvs := make(map[string]string)
@@ -856,7 +869,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			guest:        guest,
 			altID:        uuid,
 			rpname:       rpname,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 			lookup:       lookup,
 		}
 	}
@@ -872,7 +885,9 @@ func getDatastores(ctx context.Context, e *Endpoint, resourceFilter *ResourceFil
 		return nil, err
 	}
 	m := make(objectMap)
-	for _, r := range resources {
+	for i := range resources {
+		r := &resources[i]
+
 		lunID := ""
 		if r.Info != nil {
 			info := r.Info.GetDatastoreInfo()
@@ -885,13 +900,13 @@ func getDatastores(ctx context.Context, e *Endpoint, resourceFilter *ResourceFil
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
 			altID:        lunID,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			customValues: e.loadCustomAttributes(r.ManagedEntity),
 		}
 	}
 	return m, nil
 }
 
-func (e *Endpoint) loadCustomAttributes(entity *mo.ManagedEntity) map[string]string {
+func (e *Endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]string {
 	if !e.customAttrEnabled {
 		return map[string]string{}
 	}
@@ -1015,7 +1030,11 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 
 			if !start.Truncate(time.Second).Before(now.Truncate(time.Second)) {
-				e.log.Debugf("Start >= end (rounded to seconds): %s > %s", start, now)
+				// this happens when the hiwater mark was estimated using a larger estInterval than is currently used
+				// the estInterval is reset to 1m in case of some errors
+				// there are no new metrics to be expected here and querying this gets us an error, so: skip!
+				e.log.Debugf("Start >= end (rounded to seconds): %s > %s. Skipping!", start, now)
+				continue
 			}
 
 			// Create bucket if we don't already have it
@@ -1388,11 +1407,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 
 	// Fill in custom values if they exist
-	if objectRef.customValues != nil {
-		for k, v := range objectRef.customValues {
-			if v != "" {
-				t[k] = v
-			}
+	for k, v := range objectRef.customValues {
+		if v != "" {
+			t[k] = v
 		}
 	}
 }

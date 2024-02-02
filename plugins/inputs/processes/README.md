@@ -25,7 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.processes]]
   ## Use sudo to run ps command on *BSD systems. Linux systems will read
   ## /proc, so this does not apply there.
-  use_sudo = false
+  # use_sudo = false
 ```
 
 Another possible configuration is to define an alternative path for resolving

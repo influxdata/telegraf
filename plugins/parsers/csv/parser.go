@@ -199,16 +199,17 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
 	if !p.invalidDelimiter && p.Delimiter != "" {
-		csvReader.Comma = []rune(p.Delimiter)[0]
+		csvReader.Comma, _ = utf8.DecodeRuneInString(p.Delimiter)
 	}
 	// Check if delimiter is invalid
 	if p.invalidDelimiter && p.Delimiter != "" {
-		csvReader.Comma = []rune(commaByte)[0]
+		csvReader.Comma, _ = utf8.DecodeRuneInString(commaByte)
 	}
 	if p.Comment != "" {
-		csvReader.Comment = []rune(p.Comment)[0]
+		csvReader.Comment, _ = utf8.DecodeRuneInString(p.Comment)
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
+
 	return csvReader
 }
 
@@ -505,29 +506,4 @@ func init() {
 		func(defaultMetricName string) telegraf.Parser {
 			return &Parser{MetricName: defaultMetricName}
 		})
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.HeaderRowCount = config.CSVHeaderRowCount
-	p.SkipRows = config.CSVSkipRows
-	p.SkipColumns = config.CSVSkipColumns
-	p.Delimiter = config.CSVDelimiter
-	p.Comment = config.CSVComment
-	p.TrimSpace = config.CSVTrimSpace
-	p.ColumnNames = config.CSVColumnNames
-	p.ColumnTypes = config.CSVColumnTypes
-	p.TagColumns = config.CSVTagColumns
-	p.TagOverwrite = config.CSVTagOverwrite
-	p.MeasurementColumn = config.CSVMeasurementColumn
-	p.TimestampColumn = config.CSVTimestampColumn
-	p.TimestampFormat = config.CSVTimestampFormat
-	p.Timezone = config.CSVTimezone
-	p.DefaultTags = config.DefaultTags
-	p.SkipValues = config.CSVSkipValues
-	p.MetadataRows = config.CSVMetadataRows
-	p.MetadataSeparators = config.CSVMetadataSeparators
-	p.MetadataTrimSet = config.CSVMetadataTrimSet
-	p.ResetMode = "none"
-
-	return p.Init()
 }

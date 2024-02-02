@@ -7,8 +7,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type (
@@ -51,7 +52,7 @@ func TestAurora(t *testing.T) {
 			},
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
-				require.Equal(t, 1, len(acc.Metrics))
+				require.Len(t, acc.Metrics, 1)
 				acc.AssertContainsTaggedFields(t,
 					"aurora",
 					map[string]interface{}{
@@ -77,7 +78,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.NoError(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
@@ -93,7 +94,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.NoError(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
@@ -112,7 +113,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.NoError(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
@@ -132,7 +133,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
@@ -152,7 +153,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
@@ -169,7 +170,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
@@ -188,7 +189,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 	}

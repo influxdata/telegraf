@@ -106,6 +106,9 @@ type Metric interface {
 	// SetTime sets the timestamp of the Metric.
 	SetTime(t time.Time)
 
+	// SetType sets the value-type of the Metric.
+	SetType(t ValueType)
+
 	// HashID returns an unique identifier for the series.
 	HashID() uint64
 
@@ -126,9 +129,25 @@ type Metric interface {
 
 // TemplateMetric is an interface to use in templates (e.g text/template)
 // to generate complex strings from metric properties
-// e.g. '{{.Neasurement}}-{{.Tag "foo"}}-{{.Field "bar"}}'
+// e.g. '{{.Name}}-{{.Tag "foo"}}-{{.Field "bar"}}'
 type TemplateMetric interface {
 	Name() string
-	Tag(key string) string
 	Field(key string) interface{}
+	Fields() map[string]interface{}
+	Tag(key string) string
+	Tags() map[string]string
+	Time() time.Time
+	String() string
+}
+
+type UnwrappableMetric interface {
+	// Unwrap allows to access the underlying raw metric if an implementation
+	// wraps it in the first place.
+	Unwrap() Metric
+}
+
+type TrackingMetric interface {
+	// TrackingID returns the ID used for tracking the metric
+	TrackingID() TrackingID
+	UnwrappableMetric
 }

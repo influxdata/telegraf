@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -85,7 +86,7 @@ func (h *HTTP) Connect() error {
 		h.Method = http.MethodPost
 	}
 	h.Method = strings.ToUpper(h.Method)
-	if h.Method != http.MethodPost && h.Method != http.MethodPut {
+	if h.Method != http.MethodPost && h.Method != http.MethodPut && h.Method != http.MethodPatch {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
@@ -105,11 +106,8 @@ func (h *HTTP) Close() error {
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
-	var reqBody []byte
-
 	if h.UseBatchFormat {
-		var err error
-		reqBody, err = h.serializer.SerializeBatch(metrics)
+		reqBody, err := h.serializer.SerializeBatch(metrics)
 		if err != nil {
 			return err
 		}
@@ -118,8 +116,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		var err error
-		reqBody, err = h.serializer.Serialize(metric)
+		reqBody, err := h.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
@@ -154,7 +151,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		reqBodyBuffer = buf
 
 		// sha256 is hex encoded
-		hash := fmt.Sprintf("%x", sum)
+		hash := hex.EncodeToString(sum[:])
 		payloadHash = &hash
 	}
 
@@ -185,12 +182,12 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		}
 		password, err := h.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
-		req.SetBasicAuth(string(username), string(password))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	// google api auth
@@ -208,7 +205,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 	for k, v := range h.Headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			req.Host = v
 		}
 		req.Header.Set(k, v)

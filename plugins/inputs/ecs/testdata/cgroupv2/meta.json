@@ -1,0 +1,48 @@
+{
+    "Cluster": "ecs-cluster-prod",
+    "TaskARN": "arn:aws:ecs:eu-west-2:<account_id>:task/ecs-cluster-prod/a22cfc58cdb04b27ada2caa3fd526463",
+    "Family": "nginx-telegraf",
+    "Revision": "3",
+    "DesiredStatus": "RUNNING",
+    "KnownStatus": "RUNNING",
+    "Containers": [
+      {
+        "DockerId": "c69461b2c836cc3f0e3e5deb07b1f16e25f6009da2a48bb0adc7dd580befaf55",
+        "Name": "~internal~ecs~pause",
+        "DockerName": "ecs-nginx-telegraf-3-internalecspause-f0cc8fe3bfc9a8efd601",
+        "Image": "amazon/amazon-ecs-pause:0.1.0",
+        "ImageID": "",
+        "Labels": {
+          "com.amazonaws.ecs.cluster": "ecs-cluster-prod",
+          "com.amazonaws.ecs.container-name": "~internal~ecs~pause",
+          "com.amazonaws.ecs.task-arn": "arn:aws:ecs:eu-west-2:<account_id>:task/ecs-cluster-prod/a22cfc58cdb04b27ada2caa3fd526463",
+          "com.amazonaws.ecs.task-definition-family": "nginx-telegraf",
+          "com.amazonaws.ecs.task-definition-version": "3"
+        },
+        "DesiredStatus": "RESOURCES_PROVISIONED",
+        "KnownStatus": "RESOURCES_PROVISIONED",
+        "Limits": {
+          "CPU": 2,
+          "Memory": 0
+        },
+        "CreatedAt": "2023-10-26T15:57:02.520698803Z",
+        "StartedAt": "2023-10-26T15:57:02.806357646Z",
+        "Type": "CNI_PAUSE",
+        "Networks": [
+          {
+            "NetworkMode": "awsvpc",
+            "IPv4Addresses": [
+              "10.1.4.120"
+            ]
+          }
+        ]
+      }
+    ],
+    "Limits": {
+      "CPU": 0.5,
+      "Memory": 1024
+    },
+    "PullStartedAt": "2023-10-26T15:57:03.528549391Z",
+    "PullStoppedAt": "2023-10-26T15:57:18.310985676Z",
+    "AvailabilityZone": "eu-west-2b"
+  }

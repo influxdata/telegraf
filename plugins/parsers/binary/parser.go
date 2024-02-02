@@ -15,7 +15,8 @@ import (
 
 type Parser struct {
 	AllowNoMatch bool            `toml:"allow_no_match"`
-	Endianess    string          `toml:"endianess"`
+	Endianess    string          `toml:"endianess" deprecated:"1.27.4;use 'endianness' instead"`
+	Endianness   string          `toml:"endianness"`
 	Configs      []Config        `toml:"binary"`
 	HexEncoding  bool            `toml:"hex_encoding"`
 	Log          telegraf.Logger `toml:"-"`
@@ -26,15 +27,19 @@ type Parser struct {
 }
 
 func (p *Parser) Init() error {
-	switch p.Endianess {
+	if p.Endianess != "" && p.Endianness == "" {
+		p.Endianness = p.Endianess
+	}
+
+	switch p.Endianness {
 	case "le":
 		p.converter = binary.LittleEndian
 	case "be":
 		p.converter = binary.BigEndian
 	case "", "host":
-		p.converter = internal.HostEndianess
+		p.converter = internal.HostEndianness
 	default:
-		return fmt.Errorf("unknown endianess %q", p.Endianess)
+		return fmt.Errorf("unknown endianness %q", p.Endianness)
 	}
 
 	// Pre-process the configurations

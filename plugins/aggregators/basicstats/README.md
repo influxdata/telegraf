@@ -26,11 +26,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   drop_original = false
 
   ## Configures which basic stats to push as fields
-  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","stdev","s2","sum","interval"]
+  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","percent_change","stdev","s2","sum","interval"]
 ```
 
 - stats
-  - If not specified, then `count`, `min`, `max`, `mean`, `stdev`, and `s2` are aggregated and pushed as fields.  `sum`, `diff` and `non_negative_diff` are not aggregated by default to maintain backwards compatibility.
+  - If not specified, then `count`, `min`, `max`, `mean`, `stdev`, and `s2` are
+  aggregated and pushed as fields.  `sum`, `diff`, `non_negative_diff`,
+  `percent_change` are not aggregated by default to maintain backwards
+  compatibility.
   - If empty array, no stats are aggregated
 
 ## Measurements & Fields
@@ -44,6 +47,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - field1_mean
   - field1_non_negative_diff (non-negative difference)
   - field1_non_negative_rate (non-negative rate per second)
+  - field1_percent_change
   - field1_sum
   - field1_s2 (variance)
   - field1_stdev (standard deviation)

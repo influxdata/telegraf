@@ -11,12 +11,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	opcuaclient "github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 )
 
 type SubscribeClientConfig struct {
 	input.InputClientConfig
 	SubscriptionInterval config.Duration `toml:"subscription_interval"`
+	ConnectFailBehavior  string          `toml:"connect_fail_behavior"`
 }
 
 type SubscribeClient struct {
@@ -32,11 +34,62 @@ type SubscribeClient struct {
 	processingCancel context.CancelFunc
 }
 
+func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
+	switch {
+	case params.Trigger != input.Status &&
+		params.Trigger != input.StatusValue &&
+		params.Trigger != input.StatusValueTimestamp:
+		return fmt.Errorf("trigger '%s' not supported", params.Trigger)
+	case params.DeadbandType != input.Absolute &&
+		params.DeadbandType != input.Percent:
+		return fmt.Errorf("deadband_type '%s' not supported", params.DeadbandType)
+	case params.DeadbandValue == nil:
+		return fmt.Errorf("deadband_value was not set")
+	case *params.DeadbandValue < 0:
+		return fmt.Errorf("negative deadband_value not supported")
+	default:
+		return nil
+	}
+}
+
+func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *input.MonitoringParameters) error {
+	req.RequestedParameters.SamplingInterval = float64(time.Duration(monParams.SamplingInterval) / time.Millisecond)
+
+	if monParams.QueueSize != nil {
+		req.RequestedParameters.QueueSize = *monParams.QueueSize
+	}
+
+	if monParams.DiscardOldest != nil {
+		req.RequestedParameters.DiscardOldest = *monParams.DiscardOldest
+	}
+
+	if monParams.DataChangeFilter != nil {
+		if err := checkDataChangeFilterParameters(monParams.DataChangeFilter); err != nil {
+			return fmt.Errorf(err.Error()+", node '%s'", req.ItemToMonitor.NodeID)
+		}
+
+		req.RequestedParameters.Filter = ua.NewExtensionObject(
+			&ua.DataChangeFilter{
+				Trigger:       ua.DataChangeTriggerFromString(string(monParams.DataChangeFilter.Trigger)),
+				DeadbandType:  uint32(ua.DeadbandTypeFromString(string(monParams.DataChangeFilter.DeadbandType))),
+				DeadbandValue: *monParams.DataChangeFilter.DeadbandValue,
+			},
+		)
+	}
+
+	return nil
+}
+
 func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*SubscribeClient, error) {
 	client, err := sc.InputClientConfig.CreateInputClient(log)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := client.InitNodeIDs(); err != nil {
+		return nil, err
+	}
+
 	subClient := &SubscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
@@ -52,6 +105,9 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 	for i, nodeID := range client.NodeIDs {
 		// The node id index (i) is used as the handle for the monitored item
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
+		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
+			return nil, err
+		}
 		subClient.monitoredItemsReqs[i] = req
 	}
 
@@ -78,10 +134,14 @@ func (o *SubscribeClient) Connect() error {
 }
 
 func (o *SubscribeClient) Stop(ctx context.Context) <-chan struct{} {
-	o.Log.Debugf("Opc Subscribe Stopped")
-	err := o.sub.Cancel(ctx)
-	if err != nil {
-		o.Log.Warn("Cancelling OPC UA subscription failed with error ", err)
+	o.Log.Debugf("Stopping OPC subscription...")
+	if o.State() != opcuaclient.Connected {
+		return nil
+	}
+	if o.sub != nil {
+		if err := o.sub.Cancel(ctx); err != nil {
+			o.Log.Warn("Cancelling OPC UA subscription failed with error ", err)
+		}
 	}
 	closing := o.OpcUAInputClient.Stop(ctx)
 	o.processingCancel()
@@ -95,6 +155,14 @@ func (o *SubscribeClient) CurrentValues() ([]telegraf.Metric, error) {
 func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegraf.Metric, error) {
 	err := o.Connect()
 	if err != nil {
+		switch o.Config.ConnectFailBehavior {
+		case "retry":
+			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.Config.Endpoint, err)
+			return nil, nil
+		case "ignore":
+			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.Config.Endpoint, err)
+			return nil, nil
+		}
 		return nil, err
 	}
 

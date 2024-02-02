@@ -5,9 +5,17 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
+
+type PKIPaths struct {
+	ServerPem  string
+	ServerCert string
+	ServerKey  string
+	ClientCert string
+}
 
 type pki struct {
 	keyPath string
@@ -77,7 +85,15 @@ func (p *pki) ClientCertAndKeyPath() string {
 }
 
 func (p *pki) ClientEncKeyPath() string {
-	return path.Join(p.keyPath, "clientkeyenc.pem")
+	return path.Join(p.keyPath, "clientenckey.pem")
+}
+
+func (p *pki) ClientPKCS8KeyPath() string {
+	return path.Join(p.keyPath, "clientkey.pkcs8.pem")
+}
+
+func (p *pki) ClientEncPKCS8KeyPath() string {
+	return path.Join(p.keyPath, "clientenckey.pkcs8.pem")
 }
 
 func (p *pki) ClientCertAndEncKeyPath() string {
@@ -102,6 +118,32 @@ func (p *pki) ServerKeyPath() string {
 
 func (p *pki) ServerCertAndKeyPath() string {
 	return path.Join(p.keyPath, "server.pem")
+}
+
+func (p *pki) AbsolutePaths() (*PKIPaths, error) {
+	tlsPem, err := filepath.Abs(p.ServerCertAndKeyPath())
+	if err != nil {
+		return nil, err
+	}
+	tlsCert, err := filepath.Abs(p.ServerCertPath())
+	if err != nil {
+		return nil, err
+	}
+	tlsKey, err := filepath.Abs(p.ServerKeyPath())
+	if err != nil {
+		return nil, err
+	}
+	cert, err := filepath.Abs(p.ClientCertPath())
+	if err != nil {
+		return nil, err
+	}
+
+	return &PKIPaths{
+		ServerPem:  tlsPem,
+		ServerCert: tlsCert,
+		ServerKey:  tlsKey,
+		ClientCert: cert,
+	}, nil
 }
 
 func readCertificate(filename string) string {

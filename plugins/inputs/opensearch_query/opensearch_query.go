@@ -70,7 +70,7 @@ func (o *OpensearchQuery) Init() error {
 
 	err := o.newClient()
 	if err != nil {
-		o.Log.Errorf("error creating OpenSearch client: %w", err)
+		o.Log.Errorf("Error creating OpenSearch client: %v", err)
 	}
 
 	for i, agg := range o.Aggregations {
@@ -109,19 +109,19 @@ func (o *OpensearchQuery) newClient() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
+	defer username.Destroy()
+
 	password, err := o.Password.Get()
 	if err != nil {
-		config.ReleaseSecret(username)
 		return fmt.Errorf("getting password failed: %w", err)
 	}
+	defer password.Destroy()
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
-		Username:  string(username),
-		Password:  string(password),
+		Username:  username.String(),
+		Password:  password.String(),
 	}
-	config.ReleaseSecret(username)
-	config.ReleaseSecret(password)
 
 	if o.InsecureSkipVerify {
 		clientConfig.Transport = &http.Transport{

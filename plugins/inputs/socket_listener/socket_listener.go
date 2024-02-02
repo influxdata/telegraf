@@ -15,10 +15,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -55,7 +53,7 @@ type SocketListener struct {
 	tlsint.ServerConfig
 
 	wg       sync.WaitGroup
-	parser   parsers.Parser
+	parser   telegraf.Parser
 	splitter bufio.SplitFunc
 
 	listener listener
@@ -90,7 +88,7 @@ func (sl *SocketListener) Init() error {
 		case "le":
 			order = binary.LittleEndian
 		default:
-			return fmt.Errorf("invalid 'endianess' %q", sl.SplittingLengthField.Endianness)
+			return fmt.Errorf("invalid 'endianness' %q", sl.SplittingLengthField.Endianness)
 		}
 
 		switch sl.SplittingLengthField.Bytes {
@@ -161,10 +159,6 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("parsing address failed: %w", err)
 	}
 
-	if sl.MaxDecompressionSize <= 0 {
-		sl.MaxDecompressionSize = internal.DefaultMaxDecompressionSize
-	}
-
 	switch u.Scheme {
 	case "tcp", "tcp4", "tcp6":
 		ssl := &streamListener{
@@ -229,6 +223,22 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 		sl.listener = psl
+	case "vsock":
+		ssl := &streamListener{
+			ReadBufferSize:  int(sl.ReadBufferSize),
+			ReadTimeout:     sl.ReadTimeout,
+			KeepAlivePeriod: sl.KeepAlivePeriod,
+			MaxConnections:  sl.MaxConnections,
+			Encoding:        sl.ContentEncoding,
+			Splitter:        sl.splitter,
+			Parser:          sl.parser,
+			Log:             sl.Log,
+		}
+
+		if err := ssl.setupVsock(u); err != nil {
+			return err
+		}
+		sl.listener = ssl
 	default:
 		return fmt.Errorf("unknown protocol %q in %q", u.Scheme, sl.ServiceAddress)
 	}

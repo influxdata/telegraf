@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConverter(t *testing.T) {
@@ -433,7 +434,7 @@ func TestConverter(t *testing.T) {
 			},
 		},
 		{
-			name: "from string field hexidecimal",
+			name: "from string field hexadecimal",
 			converter: &Converter{
 				Fields: &Conversion{
 					Integer:  []string{"a"},
@@ -604,7 +605,7 @@ func TestConverter(t *testing.T) {
 					map[string]interface{}{
 						"a": 42.0,
 					},
-					time.Unix(1456799999, 0),
+					time.Unix(1456825199, 0),
 				),
 			},
 		},
@@ -702,7 +703,7 @@ func TestMultipleTimestamps(t *testing.T) {
 
 	result := c.Apply(input)
 	require.Len(t, result, 1)
-	require.Len(t, result[0].TagList(), 0)
+	require.Empty(t, result[0].TagList())
 	require.Len(t, result[0].FieldList(), 1)
 }
 

@@ -106,9 +106,6 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	tags := map[string]string{}
-	fields := map[string]interface{}{}
-
 	// init COM
 	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
 		var oleCode *ole.OleError
@@ -161,46 +158,65 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 			return fmt.Errorf("failed calling method ItemIndex: %w", err)
 		}
 
-		item := itemRaw.ToIDispatch()
-		defer item.Release()
-
-		for _, wmiProperty := range q.Properties {
-			prop, err := oleutil.GetProperty(item, wmiProperty)
-			if err != nil {
-				return fmt.Errorf("failed GetProperty: %w", err)
-			}
-			defer prop.Clear()
-
-			if q.tagFilter.Match(wmiProperty) {
-				valStr, err := internal.ToString(prop.Value())
-				if err != nil {
-					return fmt.Errorf("converting property %q failed: %w", wmiProperty, err)
-				}
-				tags[wmiProperty] = valStr
-			} else {
-				var fieldValue interface{}
-				switch v := prop.Value().(type) {
-				case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-					fieldValue = v
-				case string:
-					fieldValue = v
-				case bool:
-					fieldValue = v
-				case []byte:
-					fieldValue = string(v)
-				case fmt.Stringer:
-					fieldValue = v.String()
-				case nil:
-					fieldValue = nil
-				default:
-					return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
-				}
-				fields[wmiProperty] = fieldValue
-			}
+		err = q.extractProperties(itemRaw, acc)
+		if err != nil {
+			return err
 		}
-		acc.AddFields(q.ClassName, fields, tags)
 	}
 	return nil
+}
+
+func (q *Query) extractProperties(itemRaw *ole.VARIANT, acc telegraf.Accumulator) error {
+	tags, fields := map[string]string{}, map[string]interface{}{}
+
+	item := itemRaw.ToIDispatch()
+	defer item.Release()
+
+	for _, wmiProperty := range q.Properties {
+		propertyValue, err := getPropertyValue(item, wmiProperty)
+		if err != nil {
+			return err
+		}
+
+		if q.tagFilter.Match(wmiProperty) {
+			valStr, err := internal.ToString(propertyValue)
+			if err != nil {
+				return fmt.Errorf("converting property %q failed: %w", wmiProperty, err)
+			}
+			tags[wmiProperty] = valStr
+		} else {
+			var fieldValue interface{}
+			switch v := propertyValue.(type) {
+			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+				fieldValue = v
+			case string:
+				fieldValue = v
+			case bool:
+				fieldValue = v
+			case []byte:
+				fieldValue = string(v)
+			case fmt.Stringer:
+				fieldValue = v.String()
+			case nil:
+				fieldValue = nil
+			default:
+				return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
+			}
+			fields[wmiProperty] = fieldValue
+		}
+	}
+	acc.AddFields(q.ClassName, fields, tags)
+	return nil
+}
+
+func getPropertyValue(item *ole.IDispatch, wmiProperty string) (interface{}, error) {
+	prop, err := oleutil.GetProperty(item, wmiProperty)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetProperty: %w", err)
+	}
+	defer prop.Clear()
+
+	return prop.Value(), nil
 }
 
 // Gather function

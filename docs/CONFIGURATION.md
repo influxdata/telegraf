@@ -54,9 +54,24 @@ configuration files.
 ## Environment Variables
 
 Environment variables can be used anywhere in the config file, simply surround
-them with `${}`.  Replacement occurs before file parsing.   For strings
+them with `${}`.  Replacement occurs before file parsing. For strings
 the variable must be within quotes, e.g., `"${STR_VAR}"`, for numbers and booleans
 they should be unquoted, e.g., `${INT_VAR}`, `${BOOL_VAR}`.
+
+Users need to keep in mind that when using double quotes the user needs to
+escape any backslashes (e.g. `"C:\\Program Files"`) or other special characters.
+If using an environment variable with a single backslash, then enclose the
+variable in single quotes which signifies a string literal (e.g.
+`'C:\Program Files'`).
+
+In addition to this, Telegraf also supports Shell parameter expansion for environment variables
+which allows syntax such as:
+
+- `${VARIABLE:-default}` evaluates to default if VARIABLE is unset or empty in the environment.
+- `${VARIABLE-default}` evaluates to default only if VARIABLE is unset in the environment.
+Similarly, the following syntax allows you to specify mandatory variables:
+- `${VARIABLE:?err}` exits with an error message containing err if VARIABLE is unset or empty in the environment.
+- `${VARIABLE?err}` exits with an error message containing err if VARIABLE is unset in the environment.
 
 When using the `.deb` or `.rpm` packages, you can define environment variables
 in the `/etc/default/telegraf` file.
@@ -196,6 +211,17 @@ This example illustrates the use of secret-store(s) in plugins
   bucket = "replace_with_your_bucket_name"
 ```
 
+### Notes
+
+When using plugins supporting secrets, Telegraf locks the memory pages
+containing the secrets. Therefore, the locked memory limit has to be set to a
+suitable value. Telegraf will check the limit and the number of used secrets at
+startup and will warn if your limit is too low. In this case, please increase
+the limit via `ulimit -l`.
+
+If you are running Telegraf in an jail you might need to allow locked pages in
+that jail by setting `allow.mlock = 1;` in your config.
+
 ## Intervals
 
 Intervals are durations of time and can be specified for supporting settings by
@@ -211,7 +237,7 @@ combining an integer value and time unit as a string value.  Valid time units ar
 
 Global tags can be specified in the `[global_tags]` table in key="value"
 format. All metrics that are gathered will be tagged with the tags specified.
-Global tags are overriden by tags set by plugins.
+Global tags are overridden by tags set by plugins.
 
 ```toml
 [global_tags]
@@ -312,6 +338,16 @@ The agent table configures Telegraf and the defaults used across all plugins.
   stateful plugins on termination of Telegraf. If the file exists on start,
   the state in the file will be restored for the plugins.
 
+- **always_include_local_tags**:
+  Ensure tags explicitly defined in a plugin will *always* pass tag-filtering
+  via `taginclude` or `tagexclude`. This removes the need to specify local tags
+  twice.
+
+- **always_include_global_tags**:
+  Ensure tags explicitly defined in the `global_tags` section will *always* pass
+  tag-filtering   via `taginclude` or `tagexclude`. This removes the need to
+  specify those tags twice.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
@@ -345,7 +381,7 @@ Parameters that can be used with any input plugin:
   Overrides the `precision` setting of the [agent][Agent] for the plugin.
   Collected metrics are rounded to the precision specified as an [interval][].
 
-  When this value is set on a service input, multiple events occuring at the
+  When this value is set on a service input, multiple events occurring at the
   same timestamp may be merged by the output database.
 
 - **collection_jitter**:
@@ -393,7 +429,7 @@ Use the name_override parameter to emit measurements with the name `foobar`:
 Emit measurements with two additional tags: `tag1=foo` and `tag2=bar`
 
 > **NOTE**: With TOML, order matters.  Parameters belong to the last defined
-> table header, place `[inputs.cpu.tags]` table at the _end_ of the plugin
+> table header, place `[inputs.cpu.tags]` table at the *end* of the plugin
 > definition.
 
 ```toml
@@ -427,7 +463,7 @@ avoid measurement collisions when defining multiple plugins:
   percpu = true
   totalcpu = false
   name_override = "percpu_usage"
-  fielddrop = ["cpu_time*"]
+  fieldexclude = ["cpu_time*"]
 ```
 
 ### Output Plugins
@@ -552,7 +588,7 @@ the originals.
 
 ```toml
 [[inputs.system]]
-  fieldpass = ["load1"] # collects system load1 metric.
+  fieldinclude = ["load1"] # collects system load1 metric.
 
 [[aggregators.minmax]]
   period = "30s"        # send & clear the aggregate every 30s.
@@ -570,7 +606,7 @@ to the `namepass` parameter.
 [[inputs.swap]]
 
 [[inputs.system]]
-  fieldpass = ["load1"] # collects system load1 metric.
+  fieldinclude = ["load1"] # collects system load1 metric.
 
 [[aggregators.minmax]]
   period = "30s"        # send & clear the aggregate every 30s.
@@ -595,19 +631,23 @@ excluded from a Processor or Aggregator plugin, it is skips the plugin and is
 sent onwards to the next stage of processing.
 
 - **namepass**:
-An array of [glob pattern][] strings.  Only metrics whose measurement name matches
-a pattern in this list are emitted.
+An array of [glob pattern][] strings. Only metrics whose measurement name
+matches a pattern in this list are emitted. Additionally, custom list of
+separators can be specified using `namepass_separator`. These separators
+are excluded from wildcard glob pattern matching.
 
 - **namedrop**:
-The inverse of `namepass`.  If a match is found the metric is discarded. This
-is tested on metrics after they have passed the `namepass` test.
+The inverse of `namepass`. If a match is found the metric is discarded. This
+is tested on metrics after they have passed the `namepass` test. Additionally,
+custom list of separators can be specified using `namedrop_separator`. These
+separators are excluded from wildcard glob pattern matching.
 
 - **tagpass**:
 A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
-patterns is emitted. This can either use the explicit table synax (e.g.
+patterns is emitted. This can either use the explicit table syntax (e.g.
 a subsection using a `[...]` header) or inline table syntax (e.g like
-a JSON table with `{...}`.
+a JSON table with `{...}`). Please see the below notes on specifying the table.
 
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
@@ -617,22 +657,51 @@ is tested on metrics after they have passed the `tagpass` test.
 > syntax (with `[...]`) for `tagpass` and `tagdrop` parameters, they
 > must be defined at the **end** of the plugin definition, otherwise subsequent
 > plugin config options will be interpreted as part of the tagpass/tagdrop
-> tables. This limitation does not apply when using the inline table
-> syntax (`{...}`).
+> tables.
+> NOTE: When using the inline table syntax (e.g. `{...}`) the table must exist
+> in the main plugin definition and not in any sub-table (e.g.
+> `[[inputs.win_perf_counters.object]]`).
+
+- **metricpass**:
+A ["Common Expression Language"][CEL] (CEL) expression with boolean result where
+`true` will allow the metric to pass, otherwise the metric is discarded. This
+filter expression is more general compared to e.g. `namepass` and also allows
+for time-based filtering. An introduction to the CEL language can be found
+[here][CEL intro]. Further details, such as available functions and expressions,
+are provided in the [language definition][CEL lang] as well as in the
+[extension documentation][CEL ext].
+
+**NOTE:** Expressions that may be valid and compile, but fail at runtime will
+result in the expression reporting as `true`. The metrics will pass through
+as a result. An example is when reading a non-existing field. If this happens,
+the evaluation is aborted, an error is logged, and the expression is reported as
+`true`, so the metric passes.
+
+> NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
+> slower compared to `namepass`/`namedrop` and friends. So consider to use the
+> more restricted filter options where possible in case of high-throughput
+> scenarios.
+
+[CEL]:https://github.com/google/cel-go/tree/master
+[CEL intro]: https://codelabs.developers.google.com/codelabs/cel-go
+[CEL lang]: https://github.com/google/cel-spec/blob/master/doc/langdef.md
+[CEL ext]: https://github.com/google/cel-go/tree/master/ext#readme
 
 ### Modifiers
 
 Modifier filters remove tags and fields from a metric.  If all fields are
-removed the metric is removed.
+removed the metric is removed. Tags and fields are modified before a metric is
+passed to a processor, aggregator, or output plugin. When used with an input
+plugin the filter applies after the input runs.
 
-- **fieldpass**:
+- **fieldinclude**:
 An array of [glob pattern][] strings.  Only fields whose field key matches a
 pattern in this list are emitted.
 
-- **fielddrop**:
-The inverse of `fieldpass`.  Fields with a field key matching one of the
+- **fieldexclude**:
+The inverse of `fieldinclude`.  Fields with a field key matching one of the
 patterns will be discarded from the metric.  This is tested on metrics after
-they have passed the `fieldpass` test.
+they have passed the `fieldinclude` test.
 
 - **taginclude**:
 An array of [glob pattern][] strings.  Only tags with a tag key matching one of
@@ -654,7 +723,7 @@ tags and the agent `host` tag.
 [[inputs.cpu]]
   percpu = true
   totalcpu = false
-  fielddrop = ["cpu_time"]
+  fieldexclude = ["cpu_time"]
   # Don't collect CPU data for cpu6 & cpu7
   [inputs.cpu.tagdrop]
     cpu = [ "cpu6", "cpu7" ]
@@ -677,23 +746,24 @@ tags and the agent `host` tag.
       "Bytes Sent/sec"
     ]
     Measurement = "win_net"
-  # Don't send metrics where the Windows interface name (instance) begins with isatap or Local
-  # This illustrates the inline table syntax
-  tagdrop = {instance = ["isatap*", "Local*"]}
+  # Do not send metrics where the Windows interface name (instance) begins with
+  # 'isatap' or 'Local'
+  [inputs.win_perf_counters.tagdrop]
+    instance = ["isatap*", "Local*"]
 ```
 
-#### Using fieldpass and fielddrop
+#### Using fieldinclude and fieldexclude
 
 ```toml
 # Drop all metrics for guest & steal CPU usage
 [[inputs.cpu]]
   percpu = false
   totalcpu = true
-  fielddrop = ["usage_guest", "usage_steal"]
+  fieldexclude = ["usage_guest", "usage_steal"]
 
 # Only store inode related metrics for disks
 [[inputs.disk]]
-  fieldpass = ["inodes*"]
+  fieldinclude = ["inodes*"]
 ```
 
 #### Using namepass and namedrop
@@ -708,6 +778,26 @@ tags and the agent `host` tag.
 [[inputs.prometheus]]
   urls = ["http://kube-node-1:4194/metrics"]
   namepass = ["rest_client_*"]
+```
+
+#### Using namepass and namedrop with separators
+
+```toml
+# Pass all metrics of type 'A.C.B' and drop all others like 'A.C.D.B'
+[[inputs.socket_listener]]
+  data_format = "graphite"
+  templates = ["measurement*"]
+
+  namepass = ["A.*.B"]
+  namepass_separator = "."
+
+# Drop all metrics of type 'A.C.B' and pass all others like 'A.C.D.B'
+[[inputs.socket_listener]]
+  data_format = "graphite"
+  templates = ["measurement*"]
+
+  namedrop = ["A.*.B"]
+  namedrop_separator = "."
 ```
 
 #### Using taginclude and tagexclude

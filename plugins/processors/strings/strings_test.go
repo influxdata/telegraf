@@ -35,7 +35,7 @@ func newM2() telegraf.Metric {
 		map[string]interface{}{
 			"Request":      "/mixed/CASE/paTH/?from=-1D&to=now",
 			"req/sec":      5,
-			" whitespace ": "  whitespace\t",
+			" whitespace ": "  whitespace\t", //nolint:gocritic // additional whitespace on purpose for testing
 		},
 		time.Now(),
 	)

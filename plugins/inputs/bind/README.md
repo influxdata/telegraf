@@ -41,7 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - **urls** []string: List of BIND statistics channel URLs to collect from.
   Do not include a trailing slash in the URL.
-  Default is "http://localhost:8053/xml/v3".
+  Default is `http://localhost:8053/xml/v3`.
 - **gather_memory_contexts** bool: Report per-context memory statistics.
 - **gather_views** bool: Report per-view query statistics.
 - **timeout** Timeout for http requests made by bind (example: "4s").

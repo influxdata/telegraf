@@ -109,8 +109,8 @@ func (m *Mysql) Init() error {
 		if err != nil {
 			return fmt.Errorf("getting server %d failed: %w", i, err)
 		}
-		dsn := string(dsnSecret)
-		config.ReleaseSecret(dsnSecret)
+		dsn := dsnSecret.String()
+		dsnSecret.Destroy()
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
@@ -274,7 +274,7 @@ const (
         EXECUTE IMMEDIATE CONCAT("
             SELECT NAME, COUNT
             FROM information_schema.INNODB_METRICS
-            WHERE ", IF(version() REGEXP '10\.[1-4].*',"status='enabled'", "ENABLED=1"), "
+            WHERE ", IF(version() REGEXP '10\.[1-4]\\..*',"status='enabled'", "ENABLED=1"), "
         ");
 	`
 	perfTableIOWaitsQuery = `
@@ -419,8 +419,8 @@ func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) er
 	if err != nil {
 		return err
 	}
-	dsn := string(dsnSecret)
-	config.ReleaseSecret(dsnSecret)
+	dsn := dsnSecret.String()
+	dsnSecret.Destroy()
 	servtag := getDSNTag(dsn)
 
 	db, err := sql.Open("mysql", dsn)
@@ -641,7 +641,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			vals[i] = sql.RawBytes{}
 			valPtrs[i] = &vals[i]
 		}
-		if err = rows.Scan(valPtrs...); err != nil {
+		if err := rows.Scan(valPtrs...); err != nil {
 			return err
 		}
 
@@ -656,7 +656,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			colValue := vals[i]
 
 			if m.GatherAllSlaveChannels &&
-				(strings.ToLower(colName) == "channel_name" || strings.ToLower(colName) == "connection_name") {
+				(strings.EqualFold(colName, "channel_name") || strings.EqualFold(colName, "connection_name")) {
 				// Since the default channel name is empty, we need this block
 				channelName := "default"
 				if len(colValue) > 0 {
@@ -763,7 +763,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 		var key string
 		var val sql.RawBytes
 
-		if err = rows.Scan(&key, &val); err != nil {
+		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
 

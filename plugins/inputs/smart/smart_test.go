@@ -2,22 +2,23 @@ package smart
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGatherAttributes(t *testing.T) {
 	s := newSmart()
 	s.Attributes = true
 
-	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
+	require.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
@@ -38,7 +39,7 @@ func TestGatherAttributes(t *testing.T) {
 		s.PathSmartctl = "this_path_to_smartctl_does_not_exist"
 		err := s.Init()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("Smartctl presence", func(t *testing.T) {
@@ -52,7 +53,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			assert.Equal(t, 68, acc.NFields(), "Wrong number of fields gathered")
+			require.Equal(t, 68, acc.NFields(), "Wrong number of fields gathered")
 
 			for _, test := range testsAda0Attributes {
 				acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
@@ -69,7 +70,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			assert.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
+			require.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
 
 			testutil.RequireMetricsEqual(t, testSmartctlNVMeAttributes, acc.GetTelegrafMetrics(),
 				testutil.SortMetrics(), testutil.IgnoreTime())
@@ -147,7 +148,7 @@ func TestGatherNoAttributes(t *testing.T) {
 	s := newSmart()
 	s.Attributes = false
 
-	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
+	require.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
@@ -171,7 +172,7 @@ func TestGatherNoAttributes(t *testing.T) {
 		err := s.Gather(&acc)
 
 		require.NoError(t, err)
-		assert.Equal(t, 11, acc.NFields(), "Wrong number of fields gathered")
+		require.Equal(t, 11, acc.NFields(), "Wrong number of fields gathered")
 		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
 
 		for _, test := range testsAda0Device {
@@ -184,9 +185,9 @@ func TestGatherNoAttributes(t *testing.T) {
 }
 
 func TestExcludedDev(t *testing.T) {
-	assert.Equal(t, true, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
-	assert.Equal(t, false, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
-	assert.Equal(t, false, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
+	require.True(t, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
+	require.False(t, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
+	require.False(t, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
 }
 
 var (
@@ -212,8 +213,8 @@ func TestGatherSATAInfo(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 106, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
@@ -228,8 +229,8 @@ func TestGatherSATAInfo65(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 96, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 96, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHgstSAS(t *testing.T) {
@@ -244,8 +245,8 @@ func TestGatherHgstSAS(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHtSAS(t *testing.T) {
@@ -277,8 +278,8 @@ func TestGatherLongFormEnduranceAttrib(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSD(t *testing.T) {
@@ -293,8 +294,8 @@ func TestGatherSSD(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 110, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 110, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSDRaid(t *testing.T) {
@@ -309,8 +310,41 @@ func TestGatherSSDRaid(t *testing.T) {
 
 	wg.Add(1)
 	sampleSmart.gatherDisk(acc, "", wg)
-	assert.Equal(t, 77, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
+	require.Equal(t, 77, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
+func TestGatherDeviceTypeTag(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		switch args[0] {
+		case "--scan":
+			return nil, errors.New("scan command should not be run, since devices are provided in config")
+		case "--info":
+			switch args[len(args)-1] {
+			case "megaraid,0":
+				return []byte(smartctlMegaraidInfo1), nil
+			case "megaraid,1":
+				return []byte(smartctlMegaraidInfo2), nil
+			default:
+				return nil, fmt.Errorf("unexpected device type %q", args[len(args)-1])
+			}
+		default:
+			return nil, fmt.Errorf("unexpected command %q", args[0])
+		}
+	}
+
+	s := newSmart()
+	s.Devices = []string{"/dev/bus/0 -d megaraid,0", "/dev/bus/0 -d megaraid,1"}
+	s.TagWithDeviceType = true
+
+	acc := testutil.Accumulator{}
+
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	require.NoError(t, errors.Join(acc.Errors...))
+
+	result := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, testSmartctlDeviceTypeTag, result, testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherNVMe(t *testing.T) {
@@ -397,25 +431,25 @@ func TestGatherIntelNVMeDeprecatedFormatMetrics(t *testing.T) {
 func Test_findVIDFromNVMeOutput(t *testing.T) {
 	device, err := findNVMeDeviceInfo(nvmeIdentifyController)
 
-	assert.Nil(t, err)
-	assert.Equal(t, "0x8086", device.vendorID)
-	assert.Equal(t, "CVFT5123456789ABCD", device.serialNumber)
-	assert.Equal(t, "INTEL SSDPEDABCDEFG", device.model)
+	require.NoError(t, err)
+	require.Equal(t, "0x8086", device.vendorID)
+	require.Equal(t, "CVFT5123456789ABCD", device.serialNumber)
+	require.Equal(t, "INTEL SSDPEDABCDEFG", device.model)
 }
 
 func Test_checkForNVMeDevices(t *testing.T) {
 	devices := []string{"sda1", "nvme0", "sda2", "nvme2"}
 	expectedNVMeDevices := []string{"nvme0", "nvme2"}
 	resultNVMeDevices := distinguishNVMeDevices(devices, expectedNVMeDevices)
-	assert.Equal(t, expectedNVMeDevices, resultNVMeDevices)
+	require.Equal(t, expectedNVMeDevices, resultNVMeDevices)
 }
 
 func Test_contains(t *testing.T) {
 	devices := []string{"/dev/sda", "/dev/nvme1"}
 	device := "/dev/nvme1"
 	deviceNotIncluded := "/dev/nvme5"
-	assert.True(t, contains(devices, device))
-	assert.False(t, contains(devices, deviceNotIncluded))
+	require.True(t, contains(devices, device))
+	require.False(t, contains(devices, deviceNotIncluded))
 }
 
 func Test_difference(t *testing.T) {
@@ -423,7 +457,7 @@ func Test_difference(t *testing.T) {
 	secondDevices := []string{"/dev/sda", "/dev/nvme1"}
 	expected := []string{"/dev/nvme2"}
 	result := difference(devices, secondDevices)
-	assert.Equal(t, expected, result)
+	require.Equal(t, expected, result)
 }
 
 func Test_integerOverflow(t *testing.T) {
@@ -791,6 +825,45 @@ var (
 
 	mockModel  = "INTEL SSDPEDABCDEFG"
 	mockSerial = "CVFT5123456789ABCD"
+
+	testSmartctlDeviceTypeTag = []telegraf.Metric{
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"capacity":    "600000000000",
+				"device":      "0",
+				"device_type": "megaraid,0",
+				"enabled":     "Enabled",
+				"model":       "ST3450857SS",
+				"power":       "ACTIVE",
+				"serial_no":   "xxx",
+			},
+			map[string]any{
+				"exit_status": int64(0),
+				"health_ok":   true,
+				"temp_c":      int64(37),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"capacity":    "600000000000",
+				"device":      "0",
+				"device_type": "megaraid,1",
+				"enabled":     "Enabled",
+				"model":       "ST3450857SS",
+				"power":       "ACTIVE",
+				"serial_no":   "xxx",
+			},
+			map[string]any{
+				"exit_status": int64(0),
+				"health_ok":   true,
+				"temp_c":      int64(47),
+			},
+			time.Unix(0, 0),
+		),
+	}
 
 	testSmartctlNVMeAttributes = []telegraf.Metric{
 		testutil.MustMetric("smart_device",
@@ -2237,6 +2310,93 @@ Selective self-test flags (0x0):
 	After scanning selected spans, do NOT read-scan remainder of disk.
 If Selective self-test is pending on power-up, resume after 0 minute delay.
 `
+
+	smartctlMegaraidInfo1 = `smartctl 7.3 2022-02-28 r5338 [x86_64-linux-6.2.16-12-pve] (local build)
+Copyright (C) 2002-22, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Vendor:               SEAGATE
+Product:              ST3450857SS
+Revision:             ES12
+Compliance:           SPC-3
+User Capacity:        600,000,000,000 bytes [600 GB]
+Logical block size:   512 bytes
+Rotation Rate:        15000 rpm
+Form Factor:          3.5 inches
+Logical Unit id:      0x6000c60641d10397
+Serial number:        xxx
+Device type:          disk
+Transport protocol:   SAS (SPL-4)
+Local Time is:        Fri Jan 12 11:43:49 2024 CET
+SMART support is:     Available - device has SMART capability.
+SMART support is:     Enabled
+Temperature Warning:  Disabled or Not Supported
+Power mode is:        ACTIVE
+
+=== START OF READ SMART DATA SECTION ===
+SMART Health Status: OK
+
+Current Drive Temperature:     37 C
+Drive Trip Temperature:        63 C
+
+Accumulated power on time, hours:minutes 16003:18
+Elements in grown defect list: 0
+
+Vendor (Seagate Cache) information
+  Blocks sent to initiator = 3000000000
+  Blocks received from initiator = 3000000000
+  Blocks read from cache and sent to initiator = 3000000000
+  Number of read and write commands whose size <= segment size = 3000000000
+  Number of read and write commands whose size > segment size = 300
+
+Vendor (Seagate/Hitachi) factory information
+  number of hours powered up = 30000.30
+  number of minutes until next internal SMART test = 7
+`
+
+	smartctlMegaraidInfo2 = `smartctl 7.3 2022-02-28 r5338 [x86_64-linux-6.2.16-12-pve] (local build)
+Copyright (C) 2002-22, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Vendor:               SEAGATE
+Product:              ST3450857SS
+Revision:             ES12
+Compliance:           SPC-3
+User Capacity:        600,000,000,000 bytes [600 GB]
+Logical block size:   512 bytes
+Rotation Rate:        15000 rpm
+Form Factor:          3.5 inches
+Logical Unit id:      0x6000c60641d10497
+Serial number:        xxx
+Device type:          disk
+Transport protocol:   SAS (SPL-4)
+Local Time is:        Fri Jan 12 11:44:49 2024 CET
+SMART support is:     Available - device has SMART capability.
+SMART support is:     Enabled
+Temperature Warning:  Disabled or Not Supported
+Power mode is:        ACTIVE
+
+=== START OF READ SMART DATA SECTION ===
+SMART Health Status: OK
+
+Current Drive Temperature:     47 C
+Drive Trip Temperature:        64 C
+
+Accumulated power on time, hours:minutes 16004:18
+Elements in grown defect list: 0
+
+Vendor (Seagate Cache) information
+  Blocks sent to initiator = 4000000000
+  Blocks received from initiator = 4000000000
+  Blocks read from cache and sent to initiator = 4000000000
+  Number of read and write commands whose size <= segment size = 4000000000
+  Number of read and write commands whose size > segment size = 400
+
+Vendor (Seagate/Hitachi) factory information
+  number of hours powered up = 30000.30
+  number of minutes until next internal SMART test = 7
+`
+
 	smartctlNVMeInfoData = `smartctl 6.5 2016-05-07 r4318 [x86_64-linux-4.1.27-gvt-yocto-standard] (local build)
 Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
 

@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 var localhost = "localhost"
@@ -77,4 +79,19 @@ func TestMetric(value interface{}, name ...string) telegraf.Metric {
 func OnlyTags() cmp.Option {
 	f := func(p cmp.Path) bool { return p.String() != "Tags" && p.String() != "" }
 	return cmp.FilterPath(f, cmp.Ignore())
+}
+
+func PrintMetrics(m []telegraf.Metric) {
+	s := &influx.Serializer{
+		SortFields:  true,
+		UintSupport: true,
+	}
+	if err := s.Init(); err != nil {
+		panic(err)
+	}
+	buf, err := s.SerializeBatch(m)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(buf))
 }

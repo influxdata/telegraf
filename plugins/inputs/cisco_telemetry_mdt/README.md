@@ -44,7 +44,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  ## Address and port to host telemetry listener
  service_address = ":57000"
 
- ## Grpc Maximum Message Size, default is 4MB, increase the size.
+ ## Grpc Maximum Message Size, default is 4MB, increase the size. This is
+ ## stored as a uint32, and limited to 4294967295.
  max_msg_size = 4000000
 
  ## Enable TLS; grpc transport only.
@@ -58,8 +59,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
  ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
  # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 
-  ## Include the delete field in every telemetry message.
-  # include_delete_field = false
+ ## Include the delete field in every telemetry message.
+ # include_delete_field = false
+
+ ## Specify custom name for incoming MDT source field.
+ # source_field_name = "mdt_source"
 
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
@@ -154,4 +158,5 @@ multicast pim    NXAPI         show ip pim route vrf all
 multicast pim    NXAPI         show ip pim rp vrf all
 multicast pim    NXAPI         show ip pim statistics vrf all
 multicast pim    NXAPI         show ip pim vrf all
+microburst       NATIVE        path microburst
 ```

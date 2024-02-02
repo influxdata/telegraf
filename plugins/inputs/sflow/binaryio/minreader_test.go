@@ -19,7 +19,7 @@ func TestMinReader(t *testing.T) {
 	if n != 5 {
 		t.Error("Expected n to be 5, but was ", n)
 	}
-	if string(toRead) != string([]byte{1, 2, 3, 4, 5}) {
+	if !bytes.Equal(toRead, []byte{1, 2, 3, 4, 5}) {
 		t.Error("expected 5 specific bytes to be read")
 	}
 	err = mr.Close()
@@ -33,7 +33,7 @@ func TestMinReader(t *testing.T) {
 	if n != 5 {
 		t.Error("Expected n to be 5, but was ", n)
 	}
-	if string(toRead) != string([]byte{11, 12, 13, 14, 15}) {
+	if !bytes.Equal(toRead, []byte{11, 12, 13, 14, 15}) {
 		t.Error("expected the last 5 bytes to be read")
 	}
 }

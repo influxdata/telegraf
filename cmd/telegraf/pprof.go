@@ -41,7 +41,7 @@ func (p *PprofServer) Start(address string) {
 		}
 
 		if err := server.ListenAndServe(); err != nil {
-			p.err <- fmt.Errorf("E! %w", err)
+			p.err <- err
 		}
 		close(p.err)
 	}()

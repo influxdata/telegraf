@@ -105,8 +105,8 @@ func TestTimestamp(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 
 	require.NoError(t, err)
-	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
-	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
+	require.Equal(t, int64(1243094706000000000), metrics[0].Time().UnixNano())
+	require.Equal(t, int64(1257609906000000000), metrics[1].Time().UnixNano())
 }
 
 func TestTimestampYYYYMMDDHHmm(t *testing.T) {
@@ -127,8 +127,8 @@ func TestTimestampYYYYMMDDHHmm(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 
 	require.NoError(t, err)
-	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094700000000000))
-	require.Equal(t, metrics[1].Time().UnixNano(), int64(1247328300000000000))
+	require.Equal(t, int64(1243094700000000000), metrics[0].Time().UnixNano())
+	require.Equal(t, int64(1247328300000000000), metrics[1].Time().UnixNano())
 }
 func TestTimestampError(t *testing.T) {
 	p := &Parser{
@@ -163,8 +163,8 @@ func TestTimestampUnixFormat(t *testing.T) {
 1257609906,80,test_name2`
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
-	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
+	require.Equal(t, int64(1243094706000000000), metrics[0].Time().UnixNano())
+	require.Equal(t, int64(1257609906000000000), metrics[1].Time().UnixNano())
 }
 
 func TestTimestampUnixMSFormat(t *testing.T) {
@@ -183,8 +183,8 @@ func TestTimestampUnixMSFormat(t *testing.T) {
 1257609906123,80,test_name2`
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706123000000))
-	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906123000000))
+	require.Equal(t, int64(1243094706123000000), metrics[0].Time().UnixNano())
+	require.Equal(t, int64(1257609906123000000), metrics[1].Time().UnixNano())
 }
 
 func TestQuotedCharacter(t *testing.T) {
@@ -509,7 +509,7 @@ func TestParseStream(t *testing.T) {
 
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 	m, err := p.ParseLine(csvBody)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -539,7 +539,7 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
+	require.Empty(t, metrics)
 	m, err := p.ParseLine(csvOneRow)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -673,8 +673,8 @@ func TestTimestampTimezone(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 
 	require.NoError(t, err)
-	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
-	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
+	require.Equal(t, int64(1243094706000000000), metrics[0].Time().UnixNano())
+	require.Equal(t, int64(1257609906000000000), metrics[1].Time().UnixNano())
 }
 
 func TestEmptyMeasurementName(t *testing.T) {
@@ -860,8 +860,8 @@ func TestParseMetadataSeparators(t *testing.T) {
 	}
 	err = p.Init()
 	require.Error(t, err)
-	require.Equal(t, err.Error(), "initializing separators failed: "+
-		"csv_metadata_separators required when specifying csv_metadata_rows")
+	require.Equal(t, "initializing separators failed: "+
+		"csv_metadata_separators required when specifying csv_metadata_rows", err.Error())
 	p = &Parser{
 		ColumnNames:        []string{"a", "b"},
 		MetadataRows:       1,
@@ -870,8 +870,8 @@ func TestParseMetadataSeparators(t *testing.T) {
 	err = p.Init()
 	require.NoError(t, err)
 	require.Len(t, p.metadataSeparatorList, 4)
-	require.Len(t, p.MetadataTrimSet, 0)
-	require.Equal(t, p.metadataSeparatorList, metadataPattern{":=", ",", "=", ":"})
+	require.Empty(t, p.MetadataTrimSet)
+	require.Equal(t, metadataPattern{":=", ",", "=", ":"}, p.metadataSeparatorList)
 	p = &Parser{
 		ColumnNames:        []string{"a", "b"},
 		MetadataRows:       1,
@@ -882,7 +882,7 @@ func TestParseMetadataSeparators(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, p.metadataSeparatorList, 4)
 	require.Len(t, p.MetadataTrimSet, 3)
-	require.Equal(t, p.metadataSeparatorList, metadataPattern{":=", ",", ":", "="})
+	require.Equal(t, metadataPattern{":=", ",", ":", "="}, p.metadataSeparatorList)
 }
 
 func TestParseMetadataRow(t *testing.T) {
@@ -897,13 +897,13 @@ func TestParseMetadataRow(t *testing.T) {
 	m := p.parseMetadataRow("# this is a not matching string")
 	require.Nil(t, m)
 	m = p.parseMetadataRow("# key1 : value1 \r\n")
-	require.Equal(t, m, map[string]string{"# key1 ": " value1 "})
+	require.Equal(t, map[string]string{"# key1 ": " value1 "}, m)
 	m = p.parseMetadataRow("key2=1234\n")
-	require.Equal(t, m, map[string]string{"key2": "1234"})
+	require.Equal(t, map[string]string{"key2": "1234"}, m)
 	m = p.parseMetadataRow(" file created : 2021-10-08T12:34:18+10:00 \r\n")
-	require.Equal(t, m, map[string]string{" file created ": " 2021-10-08T12:34:18+10:00 "})
+	require.Equal(t, map[string]string{" file created ": " 2021-10-08T12:34:18+10:00 "}, m)
 	m = p.parseMetadataRow("file created: 2021-10-08T12:34:18\t\r\r\n")
-	require.Equal(t, m, map[string]string{"file created": " 2021-10-08T12:34:18\t"})
+	require.Equal(t, map[string]string{"file created": " 2021-10-08T12:34:18\t"}, m)
 	p = &Parser{
 		ColumnNames:        []string{"a", "b"},
 		MetadataRows:       5,
@@ -916,13 +916,13 @@ func TestParseMetadataRow(t *testing.T) {
 	m = p.parseMetadataRow("# this is a not matching string")
 	require.Nil(t, m)
 	m = p.parseMetadataRow("# key1 : value1 \r\n")
-	require.Equal(t, m, map[string]string{"key1": "value1"})
+	require.Equal(t, map[string]string{"key1": "value1"}, m)
 	m = p.parseMetadataRow("key2=1234\n")
-	require.Equal(t, m, map[string]string{"key2": "1234"})
+	require.Equal(t, map[string]string{"key2": "1234"}, m)
 	m = p.parseMetadataRow(" file created : 2021-10-08T12:34:18+10:00 \r\n")
-	require.Equal(t, m, map[string]string{"file created": "2021-10-08T12:34:18+10:00"})
+	require.Equal(t, map[string]string{"file created": "2021-10-08T12:34:18+10:00"}, m)
 	m = p.parseMetadataRow("file created: '2021-10-08T12:34:18'\r\n")
-	require.Equal(t, m, map[string]string{"file created": "2021-10-08T12:34:18"})
+	require.Equal(t, map[string]string{"file created": "2021-10-08T12:34:18"}, m)
 }
 
 func TestParseCSVFileWithMetadata(t *testing.T) {
@@ -1015,7 +1015,7 @@ timestamp,type,name,status
 		require.Nil(t, m)
 	}
 	m, err := p.ParseLine(testCSVRows[rowIndex])
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Nil(t, m)
 	rowIndex++
 	m, err = p.ParseLine(testCSVRows[rowIndex])
@@ -1514,4 +1514,66 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 		err,
 		`parsing time "garbage nonsense that needs be skipped" as "2006-01-02T15:04:05Z07:00": cannot parse "garbage nonsense that needs be skipped" as "2006"`,
 	)
+}
+
+const benchmarkData = `tags_host,tags_platform,tags_sdkver,value,timestamp
+myhost,python,3.11.5,5,1653643420
+myhost,python,3.11.4,4,1653643420
+`
+
+func TestBenchmarkData(t *testing.T) {
+	plugin := &Parser{
+		MetricName:      "benchmark",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.5",
+			},
+			map[string]interface{}{
+				"value": 5,
+			},
+			time.Unix(1653643420, 0),
+		),
+		metric.New(
+			"benchmark",
+			map[string]string{
+				"tags_host":     "myhost",
+				"tags_platform": "python",
+				"tags_sdkver":   "3.11.4",
+			},
+			map[string]interface{}{
+				"value": 4,
+			},
+			time.Unix(1653643420, 0),
+		),
+	}
+
+	actual, err := plugin.Parse([]byte(benchmarkData))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsing(b *testing.B) {
+	plugin := &Parser{
+		MetricName:      "benchmark",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host", "tags_platform", "tags_sdkver"},
+	}
+	require.NoError(b, plugin.Init())
+
+	for n := 0; n < b.N; n++ {
+		_, _ = plugin.Parse([]byte(benchmarkData))
+	}
 }

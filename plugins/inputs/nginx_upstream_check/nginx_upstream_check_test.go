@@ -6,8 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const sampleStatusResponse = `
@@ -45,7 +46,7 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
 		var response string
 
-		require.Equal(test, request.URL.Path, "/status", "Cannot handle request")
+		require.Equal(test, "/status", request.URL.Path, "Cannot handle request")
 
 		response = sampleStatusResponse
 		responseWriter.Header()["Content-Type"] = []string{"application/json"}
@@ -102,7 +103,7 @@ func TestNginxUpstreamCheckRequest(test *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
 		var response string
 
-		require.Equal(test, request.URL.Path, "/status", "Cannot handle request")
+		require.Equal(test, "/status", request.URL.Path, "Cannot handle request")
 
 		response = sampleStatusResponse
 		responseWriter.Header()["Content-Type"] = []string{"application/json"}
@@ -110,10 +111,10 @@ func TestNginxUpstreamCheckRequest(test *testing.T) {
 		_, err := fmt.Fprintln(responseWriter, response)
 		require.NoError(test, err)
 
-		require.Equal(test, request.Method, "POST")
-		require.Equal(test, request.Header.Get("X-Test"), "test-value")
-		require.Equal(test, request.Header.Get("Authorization"), "Basic dXNlcjpwYXNzd29yZA==")
-		require.Equal(test, request.Host, "status.local")
+		require.Equal(test, "POST", request.Method)
+		require.Equal(test, "test-value", request.Header.Get("X-Test"))
+		require.Equal(test, "Basic dXNlcjpwYXNzd29yZA==", request.Header.Get("Authorization"))
+		require.Equal(test, "status.local", request.Host)
 	}))
 	defer testServer.Close()
 

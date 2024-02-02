@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -75,12 +75,11 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
 }
 
 func TestPrometheusCustomHeader(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.Header.Get("accept"))
 		switch r.Header.Get("accept") {
 		case "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3":
 			_, err := fmt.Fprintln(w, "proto 15 1490802540000")
@@ -164,8 +163,43 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	require.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
-	require.True(t, acc.TagValue("test_metric", "address") == tsAddress)
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL)
+	require.Equal(t, acc.TagValue("test_metric", "address"), tsAddress)
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL)
+}
+
+func TestPrometheusWithTimestamp(t *testing.T) {
+	prommetric := `# HELP test_counter A sample test counter.
+# TYPE test_counter counter
+test_counter{label="test"} 1 1685443805885`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, prommetric)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		KubernetesServices: []string{ts.URL},
+	}
+	require.NoError(t, p.Init())
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	tsAddress := u.Hostname()
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"test_counter",
+			map[string]string{"address": tsAddress, "label": "test"},
+			map[string]interface{}{"counter": float64(1.0)},
+			time.UnixMilli(1685443805885),
+			telegraf.Counter,
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T) {
@@ -225,7 +259,7 @@ func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
@@ -282,7 +316,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 	require.True(t, acc.HasFloatField("test_metric", "value"))
 	require.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	require.False(t, acc.HasTag("test_metric", "address"))
-	require.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("test_metric", "url"), ts.URL+"/metrics")
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t *testing.T) {
@@ -308,6 +342,26 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	require.ErrorContains(t, err, "error making HTTP request to \""+ts.URL+"/metrics\"")
 }
 
+func TestPrometheusContentLengthLimit(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                testutil.Logger{},
+		URLs:               []string{ts.URL},
+		URLTag:             "url",
+		ContentLengthLimit: 1,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
+	require.Empty(t, acc.Metrics)
+}
+
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)
@@ -316,6 +370,7 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,
@@ -328,10 +383,10 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
-	require.True(t, acc.TagSetValue("prometheus", "quantile") == "0")
+	require.Equal(t, "0", acc.TagSetValue("prometheus", "quantile"))
 	require.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_sum"))
 	require.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
-	require.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("prometheus", "url"), ts.URL+"/metrics")
 }
 
 func TestSummaryMayContainNaN(t *testing.T) {
@@ -349,6 +404,7 @@ go_gc_duration_seconds_count 42`
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "",
 		MetricVersion: 2,
@@ -408,6 +464,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:           &testutil.Logger{},
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,
@@ -421,7 +478,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	require.NoError(t, err)
 
 	require.True(t, acc.HasFloatField("prometheus", "go_goroutines"))
-	require.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+	require.Equal(t, acc.TagValue("prometheus", "url"), ts.URL+"/metrics")
 	require.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
 
@@ -438,15 +495,14 @@ func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 		URLTag:          "url",
 		IgnoreTimestamp: true,
 	}
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
 
-	err = acc.GatherError(p.Gather)
-	require.NoError(t, err)
-
-	m, _ := acc.Get("test_metric")
+	m, found := acc.Get("test_metric")
+	require.True(t, found)
+	require.NotNil(t, m)
 	require.WithinDuration(t, time.Now(), m.Time, 5*time.Second)
 }
 
@@ -456,7 +512,7 @@ func TestUnsupportedFieldSelector(t *testing.T) {
 
 	fieldSelector, _ := fields.ParseSelector(prom.KubernetesFieldSelector)
 	isValid, invalidSelector := fieldSelectorIsSupported(fieldSelector)
-	require.Equal(t, false, isValid)
+	require.False(t, isValid)
 	require.Equal(t, "spec.containerName", invalidSelector)
 }
 

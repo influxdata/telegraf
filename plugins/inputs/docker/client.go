@@ -6,23 +6,26 @@ import (
 	"net/http"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/system"
 	dockerClient "github.com/docker/docker/client"
 )
 
 var (
-	version        = "1.24" // https://docs.docker.com/engine/api/
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 
 type Client interface {
-	Info(ctx context.Context) (types.Info, error)
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	Info(ctx context.Context) (system.Info, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
 	ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	DiskUsage(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
+	ClientVersion() string
 	Close() error
 }
 
@@ -43,7 +46,7 @@ func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
 	client, err := dockerClient.NewClientWithOpts(
 		dockerClient.WithHTTPHeaders(defaultHeaders),
 		dockerClient.WithHTTPClient(httpClient),
-		dockerClient.WithVersion(version),
+		dockerClient.WithAPIVersionNegotiation(),
 		dockerClient.WithHost(host))
 	if err != nil {
 		return nil, err
@@ -56,10 +59,10 @@ type SocketClient struct {
 	client *dockerClient.Client
 }
 
-func (c *SocketClient) Info(ctx context.Context) (types.Info, error) {
+func (c *SocketClient) Info(ctx context.Context) (system.Info, error) {
 	return c.client.Info(ctx)
 }
-func (c *SocketClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+func (c *SocketClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 	return c.client.ContainerList(ctx, options)
 }
 func (c *SocketClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
@@ -77,6 +80,14 @@ func (c *SocketClient) TaskList(ctx context.Context, options types.TaskListOptio
 func (c *SocketClient) NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error) {
 	return c.client.NodeList(ctx, options)
 }
+func (c *SocketClient) DiskUsage(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error) {
+	return c.client.DiskUsage(ctx, options)
+}
+
+func (c *SocketClient) ClientVersion() string {
+	return c.client.ClientVersion()
+}
+
 func (c *SocketClient) Close() error {
 	return c.client.Close()
 }

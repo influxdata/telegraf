@@ -42,6 +42,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # service_address = "udp6://:8094"
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
+  # service_address = "vsock://cid:port"
 
   ## Change the file mode bits on unix sockets.  These permissions may not be
   ## respected by some platforms, to safely restrict write permissions it is best
@@ -111,8 +112,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Delimiter used to split received data to messages consumed by the parser.
   ## The delimiter is a hex byte-sequence marking the end of a message
   ## e.g. "0x0D0A", "x0d0a" or "0d0a" marks a Windows line-break (CR LF).
-  ## The value is case-insensitive and can be specifed with "0x" or "x" prefix
-  ## or withou.
+  ## The value is case-insensitive and can be specified with "0x" or "x" prefix
+  ## or without.
   ## Note: This setting is only used for splitting_strategy = "delimiter".
   # splitting_delimiter = ""
 

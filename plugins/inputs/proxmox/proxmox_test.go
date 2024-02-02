@@ -65,7 +65,7 @@ func TestGetNodeSearchDomain(t *testing.T) {
 	err := getNodeSearchDomain(px)
 
 	require.NoError(t, err)
-	require.Equal(t, px.nodeSearchDomain, "test.example.com")
+	require.Equal(t, "test.example.com", px.nodeSearchDomain)
 }
 
 func TestGatherLxcData(t *testing.T) {
@@ -75,7 +75,7 @@ func TestGatherLxcData(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	gatherLxcData(px, acc)
 
-	require.Equal(t, acc.NFields(), 15)
+	require.Equal(t, 15, acc.NFields())
 	testFields := map[string]interface{}{
 		"status":               "running",
 		"uptime":               int64(2078164),
@@ -109,7 +109,7 @@ func TestGatherQemuData(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	gatherQemuData(px, acc)
 
-	require.Equal(t, acc.NFields(), 15)
+	require.Equal(t, 15, acc.NFields())
 	testFields := map[string]interface{}{
 		"status":               "running",
 		"uptime":               int64(2159739),
@@ -145,5 +145,5 @@ func TestGather(t *testing.T) {
 	require.NoError(t, err)
 
 	// Results from both tests above
-	require.Equal(t, acc.NFields(), 30)
+	require.Equal(t, 30, acc.NFields())
 }

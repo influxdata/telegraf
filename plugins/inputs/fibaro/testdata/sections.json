@@ -1,0 +1,17 @@
+[
+    {
+        "id": 1,
+        "name": "Section 1",
+        "sortOrder": 1
+    },
+    {
+        "id": 2,
+        "name": "Section 2",
+        "sortOrder": 2
+    },
+    {
+        "id": 3,
+        "name": "Section 3",
+        "sortOrder": 3
+    }
+]

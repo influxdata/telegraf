@@ -75,7 +75,7 @@ type program struct {
 	*Telegraf
 }
 
-func (p *program) Start(s service.Service) error {
+func (p *program) Start(_ service.Service) error {
 	go func() {
 		stop = make(chan struct{})
 		err := p.reloadLoop()
@@ -87,14 +87,7 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 
-func (p *program) run(errChan chan error) {
-	stop = make(chan struct{})
-	err := p.reloadLoop()
-	errChan <- err
-	close(stop)
-}
-
-func (p *program) Stop(s service.Service) error {
+func (p *program) Stop(_ service.Service) error {
 	var empty struct{}
 	stop <- empty // signal reloadLoop to finish (context cancel)
 	<-stop        // wait for reloadLoop to finish and close channel

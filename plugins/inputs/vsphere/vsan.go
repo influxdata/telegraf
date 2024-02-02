@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
@@ -40,8 +39,7 @@ var (
 
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) error {
-	//resourceType := "vsan"
-	lower := versionLowerThan(e.apiVersion, "5.5")
+	lower := versionLowerThan(e.apiVersion, 5, 5)
 	if lower {
 		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)
 	}
@@ -362,7 +360,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 // queryResyncSummary adds resync information to accumulator
 func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource,
 	clusterRef *objectRef, acc telegraf.Accumulator) error {
-	if lower := versionLowerThan(e.apiVersion, "6.7"); lower {
+	if lower := versionLowerThan(e.apiVersion, 6, 7); lower {
 		e.Parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s",
 			e.apiVersion, e.URL.Host)
 		return nil
@@ -495,10 +493,30 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 }
 
 // versionLowerThan returns true is the current version < a base version
-func versionLowerThan(current string, base string) bool {
-	v1 := semver.New(current)
-	v2 := semver.New(base)
-	return v1.LessThan(*v2)
+func versionLowerThan(current string, major int, minor int) bool {
+	version := strings.Split(current, ".")
+	currentMajor, err := strconv.Atoi(version[0])
+	if err != nil {
+		return false
+	}
+
+	if currentMajor > major {
+		return false
+	}
+	if currentMajor == major {
+		if len(version) < 2 {
+			return true
+		}
+		currentMinor, err := strconv.Atoi(version[1])
+		if err != nil {
+			return true
+		}
+		if currentMinor >= minor {
+			return false
+		}
+	}
+
+	return true
 }
 
 type CmmdsEntity struct {

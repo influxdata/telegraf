@@ -286,7 +286,7 @@
     "value": 38
   },
   "MAIN.s_synth": {
-    "description": "Total synthethic responses made",
+    "description": "Total synthetic responses made",
     "type": "MAIN", "flag": "c", "format": "i",
     "value": 0
   },

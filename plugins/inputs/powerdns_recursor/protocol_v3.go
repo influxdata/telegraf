@@ -34,7 +34,7 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 
 	command := []byte("get-all")
 
-	if err = writeNativeUIntToConn(conn, uint(len(command))); err != nil {
+	if err := writeNativeUIntToConn(conn, uint(len(command))); err != nil {
 		return err
 	}
 

@@ -1,7 +1,6 @@
 linters:
   disable-all: true
   enable:
-    # - telegraflinter
     - asasalint
     - asciicheck
     - bidichk
@@ -13,6 +12,7 @@ linters:
     - errorlint
     - exportloopref
     - gocheckcompilerdirectives
+    - gocritic
     - goprintffuncname
     - gosec
     - gosimple
@@ -24,12 +24,14 @@ linters:
     - nakedret
     - nilerr
     - nolintlint
+    - perfsprint
     - prealloc
     - predeclared
     - revive
     - sqlclosecheck
     - staticcheck
     - tenv
+    - testifylint
     - tparallel
     - typecheck
     - unconvert
@@ -38,44 +40,30 @@ linters:
 
 linters-settings:
   depguard:
-    # Kind of list is passed in.
-    # Allowed values: allowlist|denylist
-    # Default: denylist
-    list-type: denylist
-    # Check the list against standard lib.
-    # Default: false
-    include-go-root: true
-    # A list of packages for the list type specified.
-    # Can accept both string prefixes and string glob patterns.
-    # Default: []
-    packages:
-      - log
-    # A list of packages for the list type specified.
-    # Specify an error message to output when a denied package is used.
-    # Default: []
-    packages-with-error-message:
-      - log: 'Use injected telegraf.Logger instead'
-    # Specify rules by which the linter ignores certain files for consideration.
-    # Can accept both string prefixes and string glob patterns.
-    # The ! character in front of the rule is a special character
-    # which signals that the linter should negate the rule.
-    # This allows for more precise control, but it is only available for glob patterns.
-    # Default: []
-    ignore-file-rules:
-      - "**/agent/**"
-      - "**/cmd/**"
-      - "**/config/**"
-      - "**/filter/**"
-      - "**/internal/**"
-      - "**/logger/**"
-      - "**/metric/**"
-      - "**/models/**"
-      - "**/plugins/serializers/**"
-      - "**/scripts/**"
-      - "**/selfstat/**"
-      - "**/testutil/**"
-      - "**/tools/**"
-      - "**/*_test.go"
+    rules:
+      # Name of a rule.
+      main:
+        # Packages that are not allowed where the value is a suggestion.
+        deny:
+          - pkg: log
+            desc: 'Use injected telegraf.Logger instead'
+        # List of file globs that will match this list of settings to compare against.
+        # Default: $all
+        files:
+          - "!**/agent/**"
+          - "!**/cmd/**"
+          - "!**/config/**"
+          - "!**/filter/**"
+          - "!**/internal/**"
+          - "!**/logger/**"
+          - "!**/metric/**"
+          - "!**/models/**"
+          - "!**/plugins/serializers/**"
+          - "!**/scripts/**"
+          - "!**/selfstat/**"
+          - "!**/testutil/**"
+          - "!**/tools/**"
+          - "!**/*_test.go"
   errcheck:
     # List of functions to exclude from checking, where each entry is a single function to exclude.
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
@@ -83,6 +71,78 @@ linters-settings:
       - "(*hash/maphash.Hash).Write"
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
+  gocritic:
+    # Which checks should be enabled; can't be combined with 'disabled-checks'.
+    # See https://go-critic.github.io/overview#checks-overview.
+    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
+    # By default, list of stable checks is used.
+    enabled-checks:
+      # diagnostic
+      - argOrder
+      - badCall
+      - badCond
+      - badLock
+      - badRegexp
+      - badSorting
+      - builtinShadowDecl
+      - caseOrder
+      - codegenComment
+      - commentedOutCode
+      - deferInLoop
+      - dupArg
+      - deprecatedComment
+      - dupBranchBody
+      - dupCase
+      - dupSubExpr
+      - dynamicFmtString
+      - emptyDecl
+      - evalOrder
+      - exitAfterDefer
+      - externalErrorReassign
+      - filepathJoin
+      - flagName
+      - mapKey
+      - nilValReturn
+      - offBy1
+      - regexpPattern
+      - sloppyTestFuncName
+      - sloppyReassign
+      - sloppyTypeAssert
+      - sortSlice
+      - sprintfQuotedString
+      - sqlQuery
+      - syncMapLoadAndDelete
+      - truncateCmp
+      - uncheckedInlineErr
+      - unnecessaryDefer
+      - weakCond
+      # performance
+      - appendCombine
+      - equalFold
+      - indexAlloc
+      - hugeParam
+      - preferDecodeRune
+      - preferFprint
+      - preferStringWriter
+      - preferWriteByte
+      - rangeExprCopy
+      - rangeValCopy
+      - sliceClear
+      - stringXbytes
+
+    # Settings passed to gocritic.
+    # The settings key is the name of a supported gocritic checker.
+    # The list of supported checkers can be find in https://go-critic.github.io/overview.
+    settings:
+      hugeParam:
+        # Size in bytes that makes the warning trigger.
+        # Default: 80
+        sizeThreshold: 512
+      rangeValCopy:
+        # Size in bytes that makes the warning trigger.
+        # Default: 128
+        sizeThreshold: 512
+
   gosec:
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules
@@ -109,11 +169,13 @@ linters-settings:
       - G306
       - G401
       - G403
+      - G404
       - G501
       - G502
       - G503
       - G505
       - G601
+      # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
@@ -122,6 +184,19 @@ linters-settings:
       # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
       # Default: "0600"
       G306: "0640"
+  govet:
+    settings:
+      ## Check the logging function like it would be a printf
+      printf:
+        funcs:
+          - (github.com/influxdata/telegraf.Logger).Debugf
+          - (github.com/influxdata/telegraf.Logger).Infof
+          - (github.com/influxdata/telegraf.Logger).Warnf
+          - (github.com/influxdata/telegraf.Logger).Errorf
+          - (github.com/influxdata/telegraf.Logger).Debug
+          - (github.com/influxdata/telegraf.Logger).Info
+          - (github.com/influxdata/telegraf.Logger).Warn
+          - (github.com/influxdata/telegraf.Logger).Error
   lll:
     # Max line length, lines longer will be reported.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
@@ -201,6 +276,22 @@ linters-settings:
     # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
     # Default: false
     all: true
+  testifylint:
+    # Enable specific checkers.
+    # https://github.com/Antonboom/testifylint#checkers
+    # Default: ["bool-compare", "compares", "empty", "error-is-as", "error-nil", "expected-actual", "float-compare", "len", "require-error", "suite-dont-use-pkg", "suite-extra-assert-call"]
+    enable:
+      - bool-compare
+      - compares
+      - empty
+      - error-is-as
+      - error-nil
+      - expected-actual
+      - len
+      - require-error
+      - suite-dont-use-pkg
+      - suite-extra-assert-call
+      - suite-thelper
 
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
@@ -256,14 +347,14 @@ issues:
       linters:
         - govet
 
-    - path: cmd/telegraf/(main|printer).go
-      text: "Error return value of `outputBuffer.Write` is not checked"
-
-    - path: cmd/telegraf/(main|printer).go
-      text: "unhandled-error: Unhandled error in call to function outputBuffer.Write"
+    - path: cmd/telegraf/(main|printer|cmd_plugins).go
+      text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     - path: _test\.go
-      text: "Potential hardcoded credentials"
+      text: "Potential hardcoded credentials" #gosec:G101
+
+    - path: _test\.go
+      text: "Use of weak random number generator" #gosec:G404
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.

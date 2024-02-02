@@ -1,0 +1,29 @@
+{
+    "timestamp": "2023-04-07T00:21:01.318245+0800",
+    "flow_id": 180225164834117,
+    "in_iface": "eth1",
+    "event_type": "drop",
+    "src_ip": "192.168.0.110",
+    "src_port": 46016,
+    "dest_ip": "54.192.18.125",
+    "dest_port": 443,
+    "proto": "TCP",
+    "drop": {
+        "len": 76,
+        "tos": 0,
+        "ttl": 64,
+        "ipid": 62316,
+        "tcpseq": 3900248957,
+        "tcpack": 2339873683,
+        "tcpwin": 501,
+        "syn": false,
+        "ack": true,
+        "psh": true,
+        "rst": false,
+        "urg": false,
+        "fin": true,
+        "tcpres": 0,
+        "tcpurgp": 0,
+        "reason": "stream error"
+    }
+}

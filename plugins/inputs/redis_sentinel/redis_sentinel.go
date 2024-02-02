@@ -65,9 +65,14 @@ func (r *RedisSentinel) Init() error {
 			return fmt.Errorf("unable to parse to address %q: %w", serv, err)
 		}
 
+		username := ""
 		password := ""
 		if u.User != nil {
-			password, _ = u.User.Password()
+			username = u.User.Username()
+			pw, ok := u.User.Password()
+			if ok {
+				password = pw
+			}
 		}
 
 		var address string
@@ -88,6 +93,7 @@ func (r *RedisSentinel) Init() error {
 		sentinel := redis.NewSentinelClient(
 			&redis.Options{
 				Addr:      address,
+				Username:  username,
 				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,

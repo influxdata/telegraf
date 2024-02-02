@@ -133,7 +133,10 @@ func (r *RunningAggregator) MakeMetric(telegrafMetric telegraf.Metric) telegraf.
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
 func (r *RunningAggregator) Add(m telegraf.Metric) bool {
-	if ok := r.Config.Filter.Select(m); !ok {
+	ok, err := r.Config.Filter.Select(m)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		return false
 	}
 

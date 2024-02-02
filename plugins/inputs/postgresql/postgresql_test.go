@@ -23,7 +23,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 		},
 		WaitingFor: wait.ForAll(
 			// the database comes up twice, once right away, then again a second
-			// time after the docker entrypoint starts configuraiton
+			// time after the docker entrypoint starts configuration
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
@@ -122,7 +122,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.True(t, metricsCounted > 0)
+	require.Greater(t, metricsCounted, 0)
 	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 

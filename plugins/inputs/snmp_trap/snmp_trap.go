@@ -3,11 +3,13 @@ package snmp_trap
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gosnmp/gosnmp"
 
@@ -24,6 +26,18 @@ var sampleConfig string
 
 type translator interface {
 	lookup(oid string) (snmp.MibEntry, error)
+}
+
+type wrapLog struct {
+	telegraf.Logger
+}
+
+func (l wrapLog) Printf(format string, args ...interface{}) {
+	l.Debugf(format, args...)
+}
+
+func (l wrapLog) Print(args ...interface{}) {
+	l.Debug(args...)
 }
 
 type SnmpTrap struct {
@@ -104,7 +118,12 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.acc = acc
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
-	s.listener.Params = gosnmp.Default
+
+	// gosnmp.Default is a pointer, using this more than once
+	// has side effects
+	defaults := *gosnmp.Default
+	s.listener.Params = &defaults
+	s.listener.Params.Logger = gosnmp.NewLogger(wrapLog{s.Log})
 
 	switch s.Version {
 	case "3":
@@ -137,14 +156,14 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			authenticationProtocol = gosnmp.MD5
 		case "sha":
 			authenticationProtocol = gosnmp.SHA
-		//case "sha224":
-		//	authenticationProtocol = gosnmp.SHA224
-		//case "sha256":
-		//	authenticationProtocol = gosnmp.SHA256
-		//case "sha384":
-		//	authenticationProtocol = gosnmp.SHA384
-		//case "sha512":
-		//	authenticationProtocol = gosnmp.SHA512
+		case "sha224":
+			authenticationProtocol = gosnmp.SHA224
+		case "sha256":
+			authenticationProtocol = gosnmp.SHA256
+		case "sha384":
+			authenticationProtocol = gosnmp.SHA384
+		case "sha512":
+			authenticationProtocol = gosnmp.SHA512
 		case "":
 			authenticationProtocol = gosnmp.NoAuth
 		default:
@@ -175,22 +194,22 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		secname := string(secnameSecret)
-		config.ReleaseSecret(secnameSecret)
+		secname := secnameSecret.String()
+		secnameSecret.Destroy()
 
 		privPasswdSecret, err := s.PrivPassword.Get()
 		if err != nil {
 			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		privPasswd := string(privPasswdSecret)
-		config.ReleaseSecret(privPasswdSecret)
+		privPasswd := privPasswdSecret.String()
+		privPasswdSecret.Destroy()
 
 		authPasswdSecret, err := s.AuthPassword.Get()
 		if err != nil {
 			return fmt.Errorf("getting secname failed: %w", err)
 		}
-		authPasswd := string(authPasswdSecret)
-		config.ReleaseSecret(authPasswdSecret)
+		authPasswd := authPasswdSecret.String()
+		authPasswdSecret.Destroy()
 
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
 			UserName:                 secname,
@@ -325,6 +344,13 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
 					setTrapOid(tags, val, e)
 					continue
+				}
+			case gosnmp.OctetString:
+				// OctetStrings may contain hex data that needs its own conversion
+				if !utf8.ValidString(string(v.Value.([]byte)[:])) {
+					value = hex.EncodeToString(v.Value.([]byte))
+				} else {
+					value = v.Value
 				}
 			default:
 				value = v.Value

@@ -12,18 +12,19 @@ import (
 
 var (
 	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v2.html
-	ecsMetadataPath  = "/v2/metadata"
-	ecsMetaStatsPath = "/v2/stats"
+	ecsMetadataPathV2  = "/v2/metadata"
+	ecsMetaStatsPathV2 = "/v2/stats"
 
 	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
-	ecsMetadataPathV3  = "/task"
-	ecsMetaStatsPathV3 = "/task/stats"
+	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
+	ecsMetadataPath  = "/task"
+	ecsMetaStatsPath = "/task/stats"
 )
 
 // Client is the ECS client contract
 type Client interface {
 	Task() (*Task, error)
-	ContainerStats() (map[string]types.StatsJSON, error)
+	ContainerStats() (map[string]*types.StatsJSON, error)
 }
 
 type httpClient interface {
@@ -32,8 +33,8 @@ type httpClient interface {
 
 // NewClient constructs an ECS client with the passed configuration params
 func NewClient(timeout time.Duration, endpoint string, version int) (*EcsClient, error) {
-	if version != 2 && version != 3 {
-		const msg = "expected metadata version 2 or 3, got %d"
+	if version < 2 || version > 4 {
+		const msg = "expected metadata version 2, 3 or 4, got %d"
 		return nil, fmt.Errorf(msg, version)
 	}
 
@@ -59,11 +60,12 @@ func resolveTaskURL(base *url.URL, version int) string {
 	var path string
 	switch version {
 	case 2:
-		path = ecsMetadataPath
+		path = ecsMetadataPathV2
 	case 3:
-		path = ecsMetadataPathV3
+		path = ecsMetadataPath
+	case 4:
+		path = ecsMetadataPath
 	default:
-		// Should never happen.
 		const msg = "resolveTaskURL: unexpected version %d"
 		panic(fmt.Errorf(msg, version))
 	}
@@ -74,9 +76,11 @@ func resolveStatsURL(base *url.URL, version int) string {
 	var path string
 	switch version {
 	case 2:
-		path = ecsMetaStatsPath
+		path = ecsMetaStatsPathV2
 	case 3:
-		path = ecsMetaStatsPathV3
+		path = ecsMetaStatsPath
+	case 4:
+		path = ecsMetaStatsPath
 	default:
 		// Should never happen.
 		const msg = "resolveStatsURL: unexpected version %d"
@@ -125,11 +129,11 @@ func (c *EcsClient) Task() (*Task, error) {
 }
 
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
-func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
+func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 	req, _ := http.NewRequest("GET", c.statsURL, nil)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return map[string]types.StatsJSON{}, err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -140,19 +144,14 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", c.statsURL, resp.Status, body)
 	}
 
-	statsMap, err := unmarshalStats(resp.Body)
-	if err != nil {
-		return map[string]types.StatsJSON{}, err
-	}
-
-	return statsMap, nil
+	return unmarshalStats(resp.Body)
 }
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
 // If either errors, a single error is returned.
-func PollSync(c Client) (*Task, map[string]types.StatsJSON, error) {
+func PollSync(c Client) (*Task, map[string]*types.StatsJSON, error) {
 	var task *Task
-	var stats map[string]types.StatsJSON
+	var stats map[string]*types.StatsJSON
 	var err error
 
 	if stats, err = c.ContainerStats(); err != nil {

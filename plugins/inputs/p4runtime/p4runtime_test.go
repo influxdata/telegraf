@@ -10,7 +10,6 @@ import (
 
 	p4ConfigV1 "github.com/p4lang/p4runtime/go/p4/config/v1"
 	p4v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -568,7 +567,7 @@ func TestFailReadCounterEntryFromEntry(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
-	assert.Equal(
+	require.Equal(
 		t,
 		acc.Errors[0],
 		errors.New("reading counter entry from entry table_entry:<>  failed"),
@@ -615,7 +614,7 @@ func TestFailReadAllEntries(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
-	assert.Equal(
+	require.Equal(
 		t,
 		acc.Errors[0],
 		fmt.Errorf("reading counter entries with ID=1111 failed with error: %w",
@@ -640,11 +639,10 @@ func TestFilterCounterNamesInclude(t *testing.T) {
 	counterNamesInclude := []string{"bar"}
 
 	filteredCounters := filterCounters(counters, counterNamesInclude)
-	assert.Equal(
+	require.Equal(
 		t,
-		filteredCounters,
 		[]*p4ConfigV1.Counter{
 			createCounter("bar", 2, p4ConfigV1.CounterSpec_BOTH),
-		},
+		}, filteredCounters,
 	)
 }
