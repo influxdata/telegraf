@@ -431,10 +431,20 @@ go_gc_duration_seconds_count 42`
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
+		testutil.MustMetric(
+			"prometheus_request",
+			map[string]string{"result": "success"},
+			map[string]interface{}{
+				"http_response_code": int64(200.0),
+				"result_code":        int64(0),
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(), testutil.SortMetrics())
+		testutil.IgnoreTime(), testutil.SortMetrics(), testutil.IgnoreFields("content_length", "response_time"))
 }
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
@@ -573,7 +583,6 @@ test_counter{label="test"} 1 1685443805885`
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
-		InternalMetric:     true,
 	}
 	require.NoError(t, p.Init())
 
@@ -583,7 +592,7 @@ test_counter{label="test"} 1 1685443805885`
 
 	expected := []telegraf.Metric{
 		metric.New(
-			"prometheus_internal",
+			"prometheus_request",
 			map[string]string{
 				"address": tsAddress,
 				"result":  "success"},
@@ -617,7 +626,6 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
-		InternalMetric:     true,
 	}
 	require.NoError(t, p.Init())
 
@@ -627,7 +635,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 
 	expected := []telegraf.Metric{
 		metric.New(
-			"prometheus_internal",
+			"prometheus_request",
 			map[string]string{
 				"address": tsAddress,
 				"result":  "unable_to_decode"},
@@ -656,7 +664,6 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
-		InternalMetric:     true,
 	}
 	require.NoError(t, p.Init())
 
@@ -666,7 +673,7 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 
 	expected := []telegraf.Metric{
 		metric.New(
-			"prometheus_internal",
+			"prometheus_request",
 			map[string]string{
 				"address": tsAddress,
 				"result":  "http_code_not_ok"},

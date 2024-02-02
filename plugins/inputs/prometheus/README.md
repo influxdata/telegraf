@@ -32,9 +32,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If set to true, the gather time will be used.
   # ignore_timestamp = false
 
-  ## Return the prometheus_internal metrics.
-  # internal_metric = false
-
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
@@ -354,10 +351,7 @@ All metrics receive the `url` tag indicating the related URL specified in the
 Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
-There is also internal metrics that is add
-(Must be unable with internal_metric) :
-
-* prometheus_internal
+* prometheus_request
   * tags:
     * url
     * address
@@ -420,7 +414,7 @@ cpu_usage_user,cpu=cpu0,url=http://example.org:9273/metrics gauge=1.513622603430
 cpu_usage_user,cpu=cpu1,url=http://example.org:9273/metrics gauge=5.829145728641773 1505776751000000000
 cpu_usage_user,cpu=cpu2,url=http://example.org:9273/metrics gauge=2.119071644805144 1505776751000000000
 cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics gauge=1.5228426395944945 1505776751000000000
-prometheus_internal,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601,result_code=0i 1505776751000000000
+prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601,result_code=0i 1505776751000000000
 ```
 
 ### Output (when metric_version = 2)
@@ -437,7 +431,7 @@ prometheus,cpu=cpu0,url=http://example.org:9273/metrics cpu_usage_user=1.5136226
 prometheus,cpu=cpu1,url=http://example.org:9273/metrics cpu_usage_user=5.829145728641773 1505776751000000000
 prometheus,cpu=cpu2,url=http://example.org:9273/metrics cpu_usage_user=2.119071644805144 1505776751000000000
 prometheus,cpu=cpu3,url=http://example.org:9273/metrics cpu_usage_user=1.5228426395944945 1505776751000000000
-prometheus_internal,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601,result_code=0i 1505776751000000000
+prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601,result_code=0i 1505776751000000000
 ```
 
 ### Output with timestamp included
