@@ -59,9 +59,8 @@ type Lookup struct {
 const (
 	defaultCacheSize             = 100
 	defaultCacheTTL              = config.Duration(8 * time.Hour)
-	defaultParallelLookups       = 100
+	defaultParallelLookups       = 16
 	defaultMinTimeBetweenUpdates = config.Duration(5 * time.Minute)
-	orderedQueueSize             = 10_000
 )
 
 func (*Lookup) SampleConfig() string {

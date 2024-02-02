@@ -57,7 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # priv_password = ""
 
   ## The maximum number of SNMP requests to make at the same time.
-  # max_parallel_lookups = 100
+  # max_parallel_lookups = 16
 
   ## Control whether the metrics need to stay in the same order this plugin
   ## received them in. If false, this plugin may change the order when data is
