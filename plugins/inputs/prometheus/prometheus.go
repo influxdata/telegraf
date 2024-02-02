@@ -528,7 +528,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 		}
 		if int64(len(body)) > limit {
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, limit)
-			return nil
+			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
@@ -544,7 +544,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 		MetricVersion:   p.MetricVersion,
 		IgnoreTimestamp: p.IgnoreTimestamp,
 	}
-	metrics, err := metricParser.Parse(body)
+	metrics, err = metricParser.Parse(body)
 	if err != nil {
 		setResult("unable_to_decode", requestFields, tags)
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
@@ -577,9 +577,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 		}
 	}
-	setResult("success", internalFields, tags)
+	setResult("success", requestFields, tags)
 
-	return internalFields, tags, nil
+	return requestFields, tags, nil
 }
 
 func (p *Prometheus) addHeaders(req *http.Request) {
