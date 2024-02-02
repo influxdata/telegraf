@@ -524,7 +524,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
-			return fmt.Errorf("error reading body: %w", err)
+			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, limit)
@@ -533,7 +533,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("error reading body: %w", err)
+			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}
 
