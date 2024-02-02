@@ -391,7 +391,7 @@ func (o *OpcUAInputClient) initLastReceivedValues() {
 func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	o.LastReceivedData[nodeIdx].Quality = d.Status
 	if !o.StatusCodeOK(d.Status) {
-		o.Log.Errorf("status not OK for node %v: %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, d.Status)
+		o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, o.NodeIDs[nodeIdx].String(), d.Status)
 		return
 	}
 

@@ -172,8 +172,9 @@ func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegra
 	}
 	o.Log.Debug("Monitoring items")
 
-	for _, res := range resp.Results {
+	for idx, res := range resp.Results {
 		if !o.StatusCodeOK(res.StatusCode) {
+			o.Log.Debugf("Failed to create monitored item for node %v (%v)", o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, o.OpcUAInputClient.NodeIDs[idx].String())
 			return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
 		}
 	}
