@@ -84,9 +84,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # pod_scrape_interval = 60
 
   ## Content length limit
-  ## When set, telegraf will drop responses with length larger than the
-  ## configured value in bytes.
-  # content_length_limit = 0
+  ## When set, telegraf will drop responses with length larger than the configured value.
+  ## Default is "0KB" which means unlimited.
+  # content_length_limit = "0KB"
 
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
