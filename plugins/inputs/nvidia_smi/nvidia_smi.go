@@ -57,7 +57,7 @@ func (smi *NvidiaSMI) Init() error {
 		}
 		smi.BinPath = binPath
 	}
-	
+
 	return nil
 }
 
