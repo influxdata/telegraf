@@ -14,8 +14,6 @@ import (
 func TestStartPluginIfGPUNotFound(t *testing.T) {
 	plugin := &NvidiaSMI{Log: &testutil.Logger{}}
 
-	var acc testutil.Accumulator
-
 	plugin.IfNotFound = "ignore"
 	plugin.BinPath = "/random/non-existent/path"
 	require.NoError(t, plugin.Init())
