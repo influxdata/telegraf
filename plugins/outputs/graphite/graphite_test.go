@@ -585,6 +585,23 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGraphiteLocalAddress(t *testing.T) {
+	t.Log("Starting server")
+	server, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer server.Close()
+
+	plugin := Graphite{
+		Servers:   []string{server.Addr().String()},
+		LocalAddr: "localhost",
+		Prefix:    "my.prefix",
+		Log:       testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Close())
+}
+
 func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
