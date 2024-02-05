@@ -48,7 +48,7 @@ func (smi *NvidiaSMI) Init() error {
 			switch smi.IfNotFound {
 			case "ignore":
 				// Ignore the error and move on
-				smi.log.Warnf("GPU SMI not found on the system, ignoring: %s", err)
+				smi.Log.Warnf("GPU SMI not found on the system, ignoring: %s", err)
 				return nil
 			case "", "error":
 			default:
