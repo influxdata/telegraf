@@ -24,8 +24,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 
   ## All user metrics should be sent with "custom" service specified. 
-  ## More details here:
-  ## https://nebius.com/il/docs/monitoring/operations/unified-agent/linux_metrics
   # service = "custom"
 ```
 
