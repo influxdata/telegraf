@@ -27,9 +27,10 @@ var sampleConfig string
 
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
-	BinPath string          `toml:"bin_path"`
-	Timeout config.Duration `toml:"timeout"`
-	Log     telegraf.Logger `toml:"-"`
+	BinPath    string          `toml:"bin_path"`
+	Timeout    config.Duration `toml:"timeout"`
+	IfNotFound string          `toml:"if_not_found"`
+	Log        telegraf.Logger `toml:"-"`
 
 	once sync.Once
 }
@@ -41,13 +42,22 @@ func (*NvidiaSMI) SampleConfig() string {
 func (smi *NvidiaSMI) Init() error {
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
 		binPath, err := exec.LookPath("nvidia-smi")
+
 		// fail-fast
 		if err != nil {
-			return fmt.Errorf("nvidia-smi not found in %q and not in PATH; please make sure nvidia-smi is installed and/or is in PATH", smi.BinPath)
+			switch smi.IfNotFound {
+			case "ignore":
+				// Ignore the error and move on
+				smi.log.Warnf("GPU SMI not found on the system, ignoring: %s", err)
+				return nil
+			case "", "error":
+			default:
+				return fmt.Errorf("nvidia-smi not found in %q and not in PATH; please make sure nvidia-smi is installed and/or is in PATH", smi.BinPath)
+			}
 		}
 		smi.BinPath = binPath
 	}
-
+	
 	return nil
 }
 
@@ -114,6 +124,7 @@ func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
 			BinPath: "/usr/bin/nvidia-smi",
+			IfNotFound: "error",
 			Timeout: config.Duration(5 * time.Second),
 		}
 	})
