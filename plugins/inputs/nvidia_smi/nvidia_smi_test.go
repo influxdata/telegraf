@@ -11,6 +11,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestStartPluginIfGPUNotFound(t *testing.T) {
+	plugin := &NvidiaSMI{Log: &testutil.Logger{}}
+
+	var acc testutil.Accumulator
+
+	plugin.sampleConfig.IfNotFound = "ignore"
+	plugin.sampleConfig.BinPath = "/random/non-existent/path"
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(acc))
+	plugin.Stop()
+
+	plugin.sampleConfig.IfNotFound = "error"
+	plugin.sampleConfig.BinPath = "/random/non-existent/path"
+	require.NoError(t, plugin.Init(), "nvidia-smi not found in /random/non-existent/path and not in PATH; please make sure nvidia-smi is installed and/or is in PATH")
+
+	plugin.sampleConfig.IfNotFound = "error"
+	plugin.sampleConfig.BinPath = "/usr/bin/nvidia-smi"
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(acc))
+	plugin.Stop()
+}
+
 func TestGatherValidXML(t *testing.T) {
 	tests := []struct {
 		name     string
