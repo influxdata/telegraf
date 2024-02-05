@@ -166,6 +166,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## enable TLS only if any of the other options are specified.
   # tls_enable = true
 
+  ## This option allows you to report the status of prometheus requests.
+  # enable_request_metrics = false
+
   ## Control pod scraping based on pod namespace annotations
   ## Pass and drop here act like tagpass and tagdrop, but instead
   ## of filtering metrics they filters pod candidates for scraping

@@ -75,8 +75,9 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout    config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
-	ContentLengthLimit config.Size     `toml:"content_length_limit"`
+	ResponseTimeout      config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
+	ContentLengthLimit   config.Size     `toml:"content_length_limit"`
+	EnableRequestMetrics bool            `toml:"enable_request_metrics"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -357,7 +358,9 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Add metrics
-			acc.AddFields("prometheus_request", requestFields, tags)
+			if p.EnableRequestMetrics {
+				acc.AddFields("prometheus_request", requestFields, tags)
+			}
 		}(URL)
 	}
 

@@ -350,10 +350,11 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:                testutil.Logger{},
-		URLs:               []string{ts.URL},
-		URLTag:             "url",
-		ContentLengthLimit: 1,
+		Log:                  testutil.Logger{},
+		URLs:                 []string{ts.URL},
+		URLTag:               "url",
+		ContentLengthLimit:   1,
+		EnableRequestMetrics: true,
 	}
 	require.NoError(t, p.Init())
 
@@ -418,10 +419,11 @@ go_gc_duration_seconds_count 42`
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:           &testutil.Logger{},
-		URLs:          []string{ts.URL},
-		URLTag:        "",
-		MetricVersion: 2,
+		Log:                  &testutil.Logger{},
+		URLs:                 []string{ts.URL},
+		URLTag:               "",
+		MetricVersion:        2,
+		EnableRequestMetrics: true,
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -613,8 +615,9 @@ test_counter{label="test"} 1 1685443805885`
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:                testutil.Logger{},
-		KubernetesServices: []string{ts.URL},
+		Log:                  testutil.Logger{},
+		KubernetesServices:   []string{ts.URL},
+		EnableRequestMetrics: true,
 	}
 	require.NoError(t, p.Init())
 
@@ -656,8 +659,9 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:                testutil.Logger{},
-		KubernetesServices: []string{ts.URL},
+		Log:                  testutil.Logger{},
+		KubernetesServices:   []string{ts.URL},
+		EnableRequestMetrics: true,
 	}
 	require.NoError(t, p.Init())
 
@@ -694,8 +698,9 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:                testutil.Logger{},
-		KubernetesServices: []string{ts.URL},
+		Log:                  testutil.Logger{},
+		KubernetesServices:   []string{ts.URL},
+		EnableRequestMetrics: true,
 	}
 	require.NoError(t, p.Init())
 
