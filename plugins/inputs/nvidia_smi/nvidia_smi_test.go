@@ -16,21 +16,19 @@ func TestStartPluginIfGPUNotFound(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	plugin.SampleConfig.IfNotFound = "ignore"
-	plugin.SampleConfig.BinPath = "/random/non-existent/path"
+	plugin.IfNotFound = "ignore"
+	plugin.BinPath = "/random/non-existent/path"
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Start(acc))
-	plugin.Stop()
 
-	plugin.SampleConfig.IfNotFound = "error"
-	plugin.SampleConfig.BinPath = "/random/non-existent/path"
+	plugin.IfNotFound = "error"
+	plugin.BinPath = "/random/non-existent/path"
 	require.NoError(t, plugin.Init(), "nvidia-smi not found in /random/non-existent/path and not in PATH; please make sure nvidia-smi is installed and/or is in PATH")
 
-	plugin.SampleConfig.IfNotFound = "error"
-	plugin.SampleConfig.BinPath = "/usr/bin/nvidia-smi"
+	plugin.IfNotFound = "error"
+	plugin.BinPath = "/usr/bin/nvidia-smi"
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Start(acc))
-	plugin.Stop()
 }
 
 func TestGatherValidXML(t *testing.T) {
