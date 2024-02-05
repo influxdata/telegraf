@@ -123,16 +123,16 @@ func (*WinServices) SampleConfig() string {
 func (m *WinServices) Init() error {
 	// For case insensitive comparision (see issue #8796) we need to transform the services
 	// to lowercase
-	services_include := make([]string, 0, len(m.ServiceNames))
+	servicesInclude := make([]string, 0, len(m.ServiceNames))
 	for _, s := range m.ServiceNames {
-		services_include = append(services_include, strings.ToLower(s))
+		servicesInclude = append(servicesInclude, strings.ToLower(s))
 	}
-	services_exclude := make([]string, 0, len(m.ServiceNamesExcluded))
+	servicesExclude := make([]string, 0, len(m.ServiceNamesExcluded))
 	for _, s := range m.ServiceNamesExcluded {
-		services_exclude = append(services_exclude, strings.ToLower(s))
+		servicesExclude = append(servicesExclude, strings.ToLower(s))
 	}
 
-	f, err := filter.NewIncludeExcludeFilter(services_include, services_exclude)
+	f, err := filter.NewIncludeExcludeFilter(servicesInclude, servicesExclude)
 	if err != nil {
 		return err
 	}
