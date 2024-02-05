@@ -790,9 +790,6 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 	for i := range resources {
 		r := &resources[i]
 
-		if r.Runtime.PowerState != "poweredOn" {
-			continue
-		}
 		guest := "unknown"
 		uuid := ""
 		lookup := make(map[string]string)
@@ -803,6 +800,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		if r.Guest != nil && r.Guest.HostName != "" {
 			lookup["guesthostname"] = r.Guest.HostName
 		}
+		fmt.Printf("power state for %q: %s\n", lookup["guesthostname"], r.Runtime.PowerState)
 
 		// Collect network information
 		for _, net := range r.Guest.Net {
