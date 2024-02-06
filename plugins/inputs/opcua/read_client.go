@@ -31,6 +31,7 @@ type ReadClient struct {
 
 	// internal values
 	req *ua.ReadRequest
+	ctx context.Context
 }
 
 func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, error) {
@@ -52,7 +53,9 @@ func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, 
 }
 
 func (o *ReadClient) Connect() error {
-	if err := o.OpcUAClient.Connect(); err != nil {
+	o.ctx = context.Background()
+
+	if err := o.OpcUAClient.Connect(o.ctx); err != nil {
 		return fmt.Errorf("connect failed: %w", err)
 	}
 
@@ -68,7 +71,7 @@ func (o *ReadClient) Connect() error {
 			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
-		regResp, err := o.Client.RegisterNodes(&ua.RegisterNodesRequest{
+		regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
 			NodesToRegister: o.NodeIDs,
 		})
 		if err != nil {
@@ -133,7 +136,7 @@ func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
 }
 
 func (o *ReadClient) read() error {
-	resp, err := o.Client.Read(o.req)
+	resp, err := o.Client.Read(o.ctx, o.req)
 	if err != nil {
 		o.ReadError.Incr(1)
 		return fmt.Errorf("RegisterNodes Read failed: %w", err)

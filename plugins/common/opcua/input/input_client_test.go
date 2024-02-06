@@ -833,7 +833,7 @@ func TestMetricForNode(t *testing.T) {
 			status: ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{"Quality": "OK (0x0)", "fn": 16},
+				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn": 16},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 	}
