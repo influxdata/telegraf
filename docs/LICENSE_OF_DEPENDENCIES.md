@@ -372,6 +372,7 @@ following works:
 - go.opentelemetry.io/collector/consumer [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector/blob/main/LICENSE)
 - go.opentelemetry.io/collector/pdata [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector/blob/main/LICENSE)
 - go.opentelemetry.io/collector/semconv [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector/blob/main/LICENSE)
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/LICENSE)
 - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/LICENSE)
 - go.opentelemetry.io/otel [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-go/blob/main/LICENSE)
 - go.opentelemetry.io/otel/metric [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-go/blob/main/LICENSE)
