@@ -9,7 +9,7 @@ require (
 	cloud.google.com/go/storage v1.34.1
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
-	github.com/Azure/azure-event-hubs-go/v3 v3.6.1
+	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
 	github.com/Azure/azure-kusto-go v0.15.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor v0.11.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
