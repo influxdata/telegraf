@@ -722,8 +722,6 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	fmt.Printf("%+v\n", acc.GetTelegrafMetrics())
-
 	require.Error(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
 }
