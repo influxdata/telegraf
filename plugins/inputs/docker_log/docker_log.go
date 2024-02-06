@@ -66,10 +66,14 @@ type DockerLogs struct {
 	mu              sync.Mutex
 	containerList   map[string]context.CancelFunc
 
-	// State of the plugin mapping container-ID to the timestamp of the
+	// Current state of the plugin mapping container-ID to the timestamp of the
 	// last record processed
 	lastRecord    map[string]time.Time
 	lastRecordMtx sync.Mutex
+
+	// State of the plugin to be persisted by persister
+	pluginState    map[string]time.Time
+	pluginStateMtx sync.Mutex
 }
 
 func (*DockerLogs) SampleConfig() string {
@@ -122,20 +126,21 @@ func (d *DockerLogs) Init() error {
 	}
 
 	d.lastRecord = make(map[string]time.Time)
+	d.pluginState = make(map[string]time.Time)
 
 	return nil
 }
 
 // State persistence interfaces
 func (d *DockerLogs) GetState() interface{} {
-	d.lastRecordMtx.Lock()
-	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
-	for k, v := range d.lastRecord {
-		recordOffsets[k] = v
+	d.pluginStateMtx.Lock()
+	state := make(map[string]time.Time, len(d.pluginState))
+	for k, v := range d.pluginState {
+		state[k] = v
 	}
-	d.lastRecordMtx.Unlock()
+	d.pluginStateMtx.Unlock()
 
-	return recordOffsets
+	return state
 }
 
 func (d *DockerLogs) SetState(state interface{}) error {
@@ -143,11 +148,15 @@ func (d *DockerLogs) SetState(state interface{}) error {
 	if !ok {
 		return fmt.Errorf("state has wrong type %T", state)
 	}
+
+	d.pluginStateMtx.Lock()
 	d.lastRecordMtx.Lock()
 	for k, v := range recordOffsets {
 		d.lastRecord[k] = v
+		d.pluginState[k] = v
 	}
 	d.lastRecordMtx.Unlock()
+	d.pluginStateMtx.Unlock()
 
 	return nil
 }
@@ -228,6 +237,18 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			}
 		}(container)
 	}
+
+	// Persist offsets stored in lastRecord into plugin state at the end of gather
+	d.pluginStateMtx.Lock()
+	d.lastRecordMtx.Lock()
+	pluginState := make(map[string]time.Time, len(d.lastRecord))
+	for k, v := range d.lastRecord {
+		pluginState[k] = v
+	}
+	d.pluginState = pluginState
+	d.lastRecordMtx.Unlock()
+	d.pluginStateMtx.Unlock()
+
 	return nil
 }
 
