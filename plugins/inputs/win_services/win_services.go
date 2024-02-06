@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strings"
 	"syscall"
 
 	"golang.org/x/sys/windows"
@@ -120,11 +121,22 @@ func (*WinServices) SampleConfig() string {
 }
 
 func (m *WinServices) Init() error {
-	var err error
-	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, m.ServiceNamesExcluded)
+	// For case insensitive comparision (see issue #8796) we need to transform the services
+	// to lowercase
+	servicesInclude := make([]string, 0, len(m.ServiceNames))
+	for _, s := range m.ServiceNames {
+		servicesInclude = append(servicesInclude, strings.ToLower(s))
+	}
+	servicesExclude := make([]string, 0, len(m.ServiceNamesExcluded))
+	for _, s := range m.ServiceNamesExcluded {
+		servicesExclude = append(servicesExclude, strings.ToLower(s))
+	}
+
+	f, err := filter.NewIncludeExcludeFilter(servicesInclude, servicesExclude)
 	if err != nil {
 		return err
 	}
+	m.servicesFilter = f
 
 	return nil
 }
@@ -178,9 +190,11 @@ func (m *WinServices) listServices(scmgr WinServiceManager) ([]string, error) {
 	}
 
 	var services []string
-	for _, n := range names {
+	for _, name := range names {
+		// Compare case-insensitive. Use lowercase as we already converted the filter to use it.
+		n := strings.ToLower(name)
 		if m.servicesFilter.Match(n) {
-			services = append(services, n)
+			services = append(services, name)
 		}
 	}
 
