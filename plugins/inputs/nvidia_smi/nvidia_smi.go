@@ -123,9 +123,9 @@ func (smi *NvidiaSMI) parse(acc telegraf.Accumulator, data []byte) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
-			BinPath: "/usr/bin/nvidia-smi",
+			BinPath:    "/usr/bin/nvidia-smi",
 			IfNotFound: "error",
-			Timeout: config.Duration(5 * time.Second),
+			Timeout:    config.Duration(5 * time.Second),
 		}
 	})
 }
