@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -48,6 +49,10 @@ type WinEventLog struct {
 	subscription     EvtHandle
 	subscriptionFlag EvtSubscribeFlag
 	bookmark         EvtHandle
+
+	// State of the plugin to be persisted by persister
+	pluginState    string
+	pluginStateMtx sync.Mutex
 }
 
 const bufferSize = 1 << 14
@@ -87,12 +92,11 @@ func (w *WinEventLog) Stop() {
 }
 
 func (w *WinEventLog) GetState() interface{} {
-	bookmarkXML, err := w.renderBookmark(w.bookmark)
-	if err != nil {
-		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
-		return ""
-	}
-	return bookmarkXML
+	w.pluginStateMtx.Lock()
+	state := w.pluginState
+	w.pluginStateMtx.Unlock()
+
+	return state
 }
 
 func (w *WinEventLog) SetState(state interface{}) error {
@@ -110,6 +114,11 @@ func (w *WinEventLog) SetState(state interface{}) error {
 	if err != nil {
 		return fmt.Errorf("creating bookmark failed: %w", err)
 	}
+
+	w.pluginStateMtx.Lock()
+	w.pluginState = bookmarkXML
+	w.pluginStateMtx.Unlock()
+
 	w.bookmark = bookmark
 	w.subscriptionFlag = EvtSubscribeStartAfterBookmark
 
@@ -247,6 +256,17 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			acc.AddFields("win_eventlog", fields, tags, timeStamp)
 		}
 	}
+
+	// Persist current bookmark into state at the end of gather
+	bookmarkXML, err := w.renderBookmark(w.bookmark)
+	if err != nil {
+		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
+		bookmarkXML = ""
+	}
+
+	w.pluginStateMtx.Lock()
+	w.pluginState = bookmarkXML
+	w.pluginStateMtx.Unlock()
 
 	return nil
 }
