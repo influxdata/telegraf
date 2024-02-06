@@ -4,6 +4,7 @@ package dedup
 import (
 	_ "embed"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -20,6 +21,10 @@ type Dedup struct {
 	DedupInterval config.Duration `toml:"dedup_interval"`
 	FlushTime     time.Time
 	Cache         map[uint64]telegraf.Metric
+
+	// State of the plugin to be persisted by persister
+	pluginState    []byte
+	pluginStateMtx sync.Mutex
 }
 
 // Remove expired items from cache
@@ -42,6 +47,19 @@ func (d *Dedup) cleanup() {
 func (d *Dedup) save(metric telegraf.Metric, id uint64) {
 	d.Cache[id] = metric.Copy()
 	d.Cache[id].Accept()
+}
+
+// Persist cache into plugin state
+func (d *Dedup) persistState() {
+	d.pluginStateMtx.Lock()
+	s := &influxSerializer.Serializer{}
+	v := make([]telegraf.Metric, 0, len(d.Cache))
+	for _, value := range d.Cache {
+		v = append(v, value)
+	}
+	state, _ := s.SerializeBatch(v)
+	d.pluginState = state
+	d.pluginStateMtx.Unlock()
 }
 
 func (*Dedup) SampleConfig() string {
@@ -117,16 +135,17 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	}
 	metrics = metrics[:idx]
 	d.cleanup()
+	d.persistState()
+
 	return metrics
 }
 
 func (d *Dedup) GetState() interface{} {
-	s := &influxSerializer.Serializer{}
-	v := make([]telegraf.Metric, 0, len(d.Cache))
-	for _, value := range d.Cache {
-		v = append(v, value)
-	}
-	state, _ := s.SerializeBatch(v)
+	d.pluginStateMtx.Lock()
+	state := make([]byte, len(d.pluginState))
+	copy(state, d.pluginState)
+	d.pluginStateMtx.Unlock()
+
 	return state
 }
 
