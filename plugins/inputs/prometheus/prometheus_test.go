@@ -642,8 +642,6 @@ test_counter{label="test"} 1 1685443805885`
 	}
 
 	var acc testutil.Accumulator
-	fmt.Printf("%+v\n", acc.GetTelegrafMetrics())
-
 	require.NoError(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
 }
