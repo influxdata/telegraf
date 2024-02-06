@@ -31,6 +31,7 @@ type ModbusWorkarounds struct {
 	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
 	OnRequestPerField       bool            `toml:"one_request_per_field"`
 	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
+	SkipAddressErrors       bool            `toml:"skip_address_errors"`
 }
 
 // According to github.com/grid-x/serial
@@ -404,6 +405,11 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 		m.Log.Debugf("trying to read coil@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadCoils(request.address, request.length)
 		if err != nil {
+
+			if m.Workarounds.SkipAddressErrors {
+				m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, err)
+				continue
+			}
 			return err
 		}
 		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
@@ -431,6 +437,12 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 		m.Log.Debugf("trying to read discrete@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadDiscreteInputs(request.address, request.length)
 		if err != nil {
+
+			if m.Workarounds.SkipAddressErrors {
+				m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, err)
+				continue
+			}
+
 			return err
 		}
 		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
@@ -458,6 +470,12 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 		m.Log.Debugf("trying to read holding@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadHoldingRegisters(request.address, request.length)
 		if err != nil {
+
+			if m.Workarounds.SkipAddressErrors {
+				m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, err)
+				continue
+			}
+
 			return err
 		}
 		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
@@ -485,6 +503,12 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 		m.Log.Debugf("trying to read input@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadInputRegisters(request.address, request.length)
 		if err != nil {
+
+			if m.Workarounds.SkipAddressErrors {
+				m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, err)
+				continue
+			}
+
 			return err
 		}
 		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
