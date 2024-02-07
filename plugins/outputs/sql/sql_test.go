@@ -159,7 +159,7 @@ func TestMysqlIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	initdb, err := filepath.Abs("testdata/mariadb/initdb")
+	initdb, err := filepath.Abs("testdata/mariadb/initdb/script.sql")
 	require.NoError(t, err)
 
 	// initdb/script.sql creates this database
@@ -178,9 +178,9 @@ func TestMysqlIntegration(t *testing.T) {
 		Env: map[string]string{
 			"MARIADB_ROOT_PASSWORD": password,
 		},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": initdb,
-			"/out":                        outDir,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql": initdb,
+			"/out":                                   outDir,
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -244,7 +244,7 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	initdb, err := filepath.Abs("testdata/postgres/initdb")
+	initdb, err := filepath.Abs("testdata/postgres/initdb/init.sql")
 	require.NoError(t, err)
 
 	// initdb/init.sql creates this database
@@ -262,9 +262,9 @@ func TestPostgresIntegration(t *testing.T) {
 		Env: map[string]string{
 			"POSTGRES_PASSWORD": password,
 		},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": initdb,
-			"/out":                        outDir,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql": initdb,
+			"/out":                                   outDir,
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -330,7 +330,7 @@ func TestClickHouseIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	initdb, err := filepath.Abs("testdata/clickhouse/initdb")
+	initdb, err := filepath.Abs("testdata/clickhouse/initdb/init.sql")
 	require.NoError(t, err)
 
 	// initdb/init.sql creates this database
@@ -345,9 +345,9 @@ func TestClickHouseIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "yandex/clickhouse-server",
 		ExposedPorts: []string{servicePort, "8123"},
-		BindMounts: map[string]string{
-			"/docker-entrypoint-initdb.d": initdb,
-			"/out":                        outDir,
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql": initdb,
+			"/out":                                   outDir,
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),

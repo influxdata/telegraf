@@ -391,7 +391,13 @@ func (o *OpcUAInputClient) initLastReceivedValues() {
 func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	o.LastReceivedData[nodeIdx].Quality = d.Status
 	if !o.StatusCodeOK(d.Status) {
-		o.Log.Errorf("status not OK for node %v: %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, d.Status)
+		// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
+		if len(o.NodeIDs) > nodeIdx {
+			o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, o.NodeIDs[nodeIdx].String(), d.Status)
+		} else {
+			o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, '?', d.Status)
+		}
+
 		return
 	}
 

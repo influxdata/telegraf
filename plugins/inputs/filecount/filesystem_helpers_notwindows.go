@@ -50,3 +50,8 @@ func (f fakeFileSystem) Stat(name string) (os.FileInfo, error) {
 	}
 	return nil, &os.PathError{Op: "Stat", Path: name, Err: errors.New("no such file or directory")}
 }
+
+func (f fakeFileSystem) Lstat(name string) (os.FileInfo, error) {
+	// not able to test with symlinks currently
+	return f.Stat(name)
+}

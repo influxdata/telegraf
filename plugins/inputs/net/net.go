@@ -5,6 +5,9 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -104,6 +107,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"err_out":      io.Errout,
 			"drop_in":      io.Dropin,
 			"drop_out":     io.Dropout,
+			"speed":        getInterfaceSpeed(io.Name),
 		}
 		acc.AddCounter("net", fields, tags)
 	}
@@ -127,6 +131,25 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// Get the interface speed from /sys/class/net/*/speed file. returns -1 if unsupported
+func getInterfaceSpeed(ioName string) int64 {
+	sysPath := os.Getenv("HOST_SYS")
+	if sysPath == "" {
+		sysPath = "/sys"
+	}
+
+	raw, err := os.ReadFile(filepath.Join(sysPath, "class", "net", ioName, "speed"))
+	if err != nil {
+		return -1
+	}
+
+	speed, err := strconv.ParseInt(strings.TrimSuffix(string(raw), "\n"), 10, 64)
+	if err != nil {
+		return -1
+	}
+	return speed
 }
 
 func init() {

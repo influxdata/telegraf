@@ -353,18 +353,19 @@ var (
 
 // Smart plugin reads metrics from storage devices supporting S.M.A.R.T.
 type Smart struct {
-	Path             string          `toml:"path" deprecated:"1.16.0;use 'path_smartctl' instead"`
-	PathSmartctl     string          `toml:"path_smartctl"`
-	PathNVMe         string          `toml:"path_nvme"`
-	Nocheck          string          `toml:"nocheck"`
-	EnableExtensions []string        `toml:"enable_extensions"`
-	Attributes       bool            `toml:"attributes"`
-	Excludes         []string        `toml:"excludes"`
-	Devices          []string        `toml:"devices"`
-	UseSudo          bool            `toml:"use_sudo"`
-	Timeout          config.Duration `toml:"timeout"`
-	ReadMethod       string          `toml:"read_method"`
-	Log              telegraf.Logger `toml:"-"`
+	Path              string          `toml:"path" deprecated:"1.16.0;use 'path_smartctl' instead"`
+	PathSmartctl      string          `toml:"path_smartctl"`
+	PathNVMe          string          `toml:"path_nvme"`
+	Nocheck           string          `toml:"nocheck"`
+	EnableExtensions  []string        `toml:"enable_extensions"`
+	Attributes        bool            `toml:"attributes"`
+	Excludes          []string        `toml:"excludes"`
+	Devices           []string        `toml:"devices"`
+	UseSudo           bool            `toml:"use_sudo"`
+	TagWithDeviceType bool            `toml:"tag_with_device_type"`
+	Timeout           config.Duration `toml:"timeout"`
+	ReadMethod        string          `toml:"read_method"`
+	Log               telegraf.Logger `toml:"-"`
 }
 
 type nvmeDevice struct {
@@ -741,8 +742,16 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 	}
 
 	deviceTags := map[string]string{}
-	deviceNode := strings.Split(device, " ")[0]
-	deviceTags["device"] = path.Base(deviceNode)
+	if m.TagWithDeviceType {
+		deviceNode := strings.SplitN(device, " ", 2)
+		deviceTags["device"] = path.Base(deviceNode[0])
+		if len(deviceNode) == 2 && deviceNode[1] != "" {
+			deviceTags["device_type"] = strings.TrimPrefix(deviceNode[1], "-d ")
+		}
+	} else {
+		deviceNode := strings.Split(device, " ")[0]
+		deviceTags["device"] = path.Base(deviceNode)
+	}
 	deviceFields := make(map[string]interface{})
 	deviceFields["exit_status"] = exitStatus
 
@@ -798,7 +807,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 		if m.Attributes {
 			//add power mode
-			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
+			keys := [...]string{"device", "device_type", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
 					tags[key] = value

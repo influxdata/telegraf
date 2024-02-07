@@ -27,19 +27,20 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
-	// Make sure we have a finishing newline but no trailing one
-	data = bytes.TrimPrefix(data, []byte("\n"))
-	if !bytes.HasSuffix(data, []byte("\n")) {
-		data = append(data, []byte("\n")...)
-	}
-	buf := bytes.NewBuffer(data)
-
 	// Determine the metric transport-type derived from the response header and
 	// create a matching decoder.
 	format := expfmt.ResponseFormat(p.Header)
-	if format == expfmt.FmtUnknown {
+	switch format {
+	case expfmt.FmtProtoText:
+		// Make sure we have a finishing newline but no trailing one
+		data = bytes.TrimPrefix(data, []byte("\n"))
+		if !bytes.HasSuffix(data, []byte("\n")) {
+			data = append(data, []byte("\n")...)
+		}
+	case expfmt.FmtUnknown:
 		p.Log.Warnf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
 	}
+	buf := bytes.NewBuffer(data)
 	decoder := expfmt.NewDecoder(buf, format)
 
 	// Decode the input data into prometheus metrics

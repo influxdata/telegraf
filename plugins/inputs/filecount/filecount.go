@@ -130,7 +130,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		if err == nil && rel == "." {
 			return nil
 		}
-		file, err := fc.Fs.Stat(path)
+		file, err := fc.resolveLink(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -242,6 +242,21 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func (fc *FileCount) resolveLink(path string) (os.FileInfo, error) {
+	if fc.FollowSymlinks {
+		return fc.Fs.Stat(path)
+	}
+	fi, err := fc.Fs.Lstat(path)
+	if err != nil {
+		return fi, err
+	}
+	if fi.Mode()&os.ModeSymlink != 0 {
+		// if this file is a symlink, skip it
+		return nil, godirwalk.SkipThis
+	}
+	return fi, nil
 }
 
 func (fc *FileCount) onlyDirectories(directories []string) []string {

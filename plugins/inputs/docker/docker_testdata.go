@@ -8,12 +8,14 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 )
 
-var info = types.Info{
+var info = system.Info{
 	Containers:         108,
 	ContainersRunning:  98,
 	ContainersStopped:  6,
@@ -549,7 +551,7 @@ var diskUsage = types.DiskUsage{
 	Containers: []*types.Container{
 		{Names: []string{"/some_container"}, Image: "some_image:1.0.0-alpine", SizeRw: 0, SizeRootFs: 123456789},
 	},
-	Images: []*types.ImageSummary{
+	Images: []*image.Summary{
 		{ID: "sha256:some_imageid", RepoTags: []string{"some_image_tag:1.0.0-alpine"}, Size: 123456789, SharedSize: 0},
 		{ID: "sha256:7f4a1cc74046ce48cd918693cd6bf4b2683f4ce0d7be3f7148a21df9f06f5b5f", RepoTags: []string{"telegraf:latest"}, Size: 425484494, SharedSize: 0},
 	},
