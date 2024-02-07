@@ -103,7 +103,7 @@ func newPostgresql() *Postgresql {
 
 func (p *Postgresql) Init() error {
 	if p.TagCacheSize < 0 {
-		return fmt.Errorf("invalid tag_cache_size")
+		return errors.New("invalid tag_cache_size")
 	}
 
 	// Set the time-column name
@@ -148,7 +148,7 @@ func (p *Postgresql) Init() error {
 		p.dbConfig.ConnConfig.Logger = utils.PGXLogger{Logger: p.Logger}
 		p.dbConfig.ConnConfig.LogLevel, err = pgx.LogLevelFromString(p.LogLevel)
 		if err != nil {
-			return fmt.Errorf("invalid log level")
+			return errors.New("invalid log level")
 		}
 	}
 
@@ -157,7 +157,7 @@ func (p *Postgresql) Init() error {
 	case PgUint8:
 		p.dbConfig.AfterConnect = p.registerUint8
 	default:
-		return fmt.Errorf("invalid uint64_type")
+		return errors.New("invalid uint64_type")
 	}
 
 	return nil

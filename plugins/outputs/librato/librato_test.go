@@ -1,18 +1,19 @@
 package librato
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -220,7 +221,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 				MeasureTime: mtime.Unix(),
 				Value:       1.0,
 			},
-			fmt.Errorf("undeterminable Source type from Field, hostname"),
+			errors.New("undeterminable Source type from Field, hostname"),
 		},
 		{
 			pt3,

@@ -2,6 +2,7 @@ package shim
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -90,7 +91,7 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 			return fmt.Errorf("RunOutput error: %w", err)
 		}
 	} else {
-		return fmt.Errorf("nothing to run")
+		return errors.New("nothing to run")
 	}
 
 	return nil

@@ -89,7 +89,7 @@ func (s *Snmp) Init() error {
 	case "netsnmp":
 		s.translator = NewNetsnmpTranslator()
 	default:
-		return fmt.Errorf("invalid translator value")
+		return errors.New("invalid translator value")
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -146,7 +146,7 @@ func (t *Table) Init(tr Translator) error {
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
-		return fmt.Errorf("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+		return errors.New("SNMP table in config file is not named. One or both of the oid and name settings must be set")
 	}
 
 	if t.initialized {
@@ -165,7 +165,7 @@ func (t *Table) Init(tr Translator) error {
 		}
 		if t.Fields[i].SecondaryIndexTable {
 			if secondaryIndexTablePresent {
-				return fmt.Errorf("only one field can be SecondaryIndexTable")
+				return errors.New("only one field can be SecondaryIndexTable")
 			}
 			secondaryIndexTablePresent = true
 		}
@@ -270,11 +270,11 @@ func (f *Field) init(tr Translator) error {
 	}
 
 	if f.SecondaryIndexTable && f.SecondaryIndexUse {
-		return fmt.Errorf("SecondaryIndexTable and UseSecondaryIndex are exclusive")
+		return errors.New("SecondaryIndexTable and UseSecondaryIndex are exclusive")
 	}
 
 	if !f.SecondaryIndexTable && !f.SecondaryIndexUse && f.SecondaryOuterJoin {
-		return fmt.Errorf("SecondaryOuterJoin set to true, but field is not being used in join")
+		return errors.New("SecondaryOuterJoin set to true, but field is not being used in join")
 	}
 
 	f.initialized = true
@@ -425,13 +425,13 @@ func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, erro
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
 				if errors.Is(err, gosnmp.ErrUnknownSecurityLevel) {
-					return nil, fmt.Errorf("unknown security level (sec_level)")
+					return nil, errors.New("unknown security level (sec_level)")
 				} else if errors.Is(err, gosnmp.ErrUnknownUsername) {
-					return nil, fmt.Errorf("unknown username (sec_name)")
+					return nil, errors.New("unknown username (sec_name)")
 				} else if errors.Is(err, gosnmp.ErrWrongDigest) {
-					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+					return nil, errors.New("wrong digest (auth_protocol, auth_password)")
 				} else if errors.Is(err, gosnmp.ErrDecryption) {
-					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+					return nil, errors.New("decryption error (priv_protocol, priv_password)")
 				}
 				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {

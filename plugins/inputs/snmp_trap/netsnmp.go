@@ -3,7 +3,7 @@ package snmp_trap
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"errors"
 	"os/exec"
 	"strings"
 	"sync"
@@ -75,7 +75,7 @@ func (s *netsnmpTranslator) snmptranslate(oid string) (e snmp.MibEntry, err erro
 
 	i := strings.Index(e.OidText, "::")
 	if i == -1 {
-		return e, fmt.Errorf("not found")
+		return e, errors.New("not found")
 	}
 	e.MibName = e.OidText[:i]
 	e.OidText = e.OidText[i+2:]

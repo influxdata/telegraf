@@ -212,7 +212,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		if (len(selectedNodes) < 1 || selectedNodes[0] == nil) && !p.AllowEmptySelection {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
-			return metrics, fmt.Errorf("cannot parse with empty selection node")
+			return metrics, errors.New("cannot parse with empty selection node")
 		}
 		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 

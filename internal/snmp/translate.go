@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -271,7 +272,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	oidText = out.RenderQualified()
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		return "", oid, oid, oid, out, fmt.Errorf("not found")
+		return "", oid, oid, oid, out, errors.New("not found")
 	}
 	mibName = oidText[:i]
 	oidText = oidText[i+2:] + end

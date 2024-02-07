@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/nsqio/go-nsq"
@@ -112,7 +111,7 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 
 	// Check if we have anything to connect to
 	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
-		return fmt.Errorf("either 'nsqd' or 'nsqlookupd' needs to be specified")
+		return errors.New("either 'nsqd' or 'nsqlookupd' needs to be specified")
 	}
 
 	if len(n.Nsqlookupd) > 0 {

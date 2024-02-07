@@ -519,7 +519,7 @@ func (s *SQLServer) loadToken() (*adal.Token, error) {
 	// however it's been structured here to allow extending the cache mechanism to a different approach in future
 
 	if s.adalToken == nil {
-		return nil, fmt.Errorf("token is nil or failed to load existing token")
+		return nil, errors.New("token is nil or failed to load existing token")
 	}
 
 	return s.adalToken, nil

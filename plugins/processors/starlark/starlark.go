@@ -3,6 +3,7 @@ package starlark
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 
 	"go.starlark.net/starlark"
@@ -50,7 +51,7 @@ func (s *Starlark) Start(_ telegraf.Accumulator) error {
 func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) error {
 	parameters, found := s.GetParameters("apply")
 	if !found {
-		return fmt.Errorf("the parameters of the apply function could not be found")
+		return errors.New("the parameters of the apply function could not be found")
 	}
 	parameters[0].(*common.Metric).Wrap(origMetric)
 

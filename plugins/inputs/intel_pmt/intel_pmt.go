@@ -384,7 +384,7 @@ func eval(eq string, params map[string]interface{}) (interface{}, error) {
 	// gval doesn't support hexadecimals
 	eq = hexToDecRegex.ReplaceAllStringFunc(eq, hexToDec)
 	if eq == "" {
-		return nil, fmt.Errorf("error during hex to decimal conversion")
+		return nil, errors.New("error during hex to decimal conversion")
 	}
 	result, err := gval.Evaluate(eq, params)
 	if err != nil {

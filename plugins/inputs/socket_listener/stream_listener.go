@@ -16,10 +16,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mdlayher/vsock"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/mdlayher/vsock"
 )
 
 type hasSetReadBuffer interface {
@@ -93,7 +94,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 
 	// Check address string for containing two tokens
 	if len(addrTuple) < 2 {
-		return fmt.Errorf("CID and/or port number missing")
+		return errors.New("CID and/or port number missing")
 	}
 	// Parse CID and port number from address string both being 32-bit
 	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
@@ -103,7 +104,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 	}
 	port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
 	if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-		return fmt.Errorf("Port number %d is out of range", port)
+		return fmt.Errorf("port number %d is out of range", port)
 	}
 
 	l.listener, err = vsock.Listen(uint32(port), nil)

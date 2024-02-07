@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -85,7 +86,7 @@ func (*Loki) SampleConfig() string {
 
 func (l *Loki) Connect() (err error) {
 	if l.Domain == "" {
-		return fmt.Errorf("domain is required")
+		return errors.New("domain is required")
 	}
 
 	if l.Endpoint == "" {

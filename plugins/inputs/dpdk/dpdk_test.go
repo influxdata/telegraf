@@ -4,6 +4,7 @@ package dpdk
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -524,7 +525,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 	t.Run("when ethdev commands are enabled but params fetching command returns error then error should be logged in accumulator", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
-		simulateResponse(mockConn, `{notAJson}`, fmt.Errorf("some error"))
+		simulateResponse(mockConn, `{notAJson}`, errors.New("some error"))
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}

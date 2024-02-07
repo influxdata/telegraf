@@ -2,6 +2,7 @@ package opcua
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -64,12 +65,12 @@ func (o *OpcUAClientConfig) validateOptionalFields() error {
 
 func (o *OpcUAClientConfig) validateEndpoint() error {
 	if o.Endpoint == "" {
-		return fmt.Errorf("endpoint url is empty")
+		return errors.New("endpoint url is empty")
 	}
 
 	_, err := url.Parse(o.Endpoint)
 	if err != nil {
-		return fmt.Errorf("endpoint url is invalid")
+		return errors.New("endpoint url is invalid")
 	}
 
 	switch o.SecurityPolicy {
@@ -216,7 +217,7 @@ func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 		o.Client = nil
 		return err
 	default:
-		return fmt.Errorf("invalid controller")
+		return errors.New("invalid controller")
 	}
 }
 

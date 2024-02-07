@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -373,7 +374,7 @@ func (s *Sensu) getCheck(metricPoints []*OutputMetric) (*OutputCheck, error) {
 	count := len(metricPoints)
 
 	if s.Check == nil || s.Check.Name == nil {
-		return &OutputCheck{}, fmt.Errorf("missing check name")
+		return &OutputCheck{}, errors.New("missing check name")
 	}
 
 	return &OutputCheck{

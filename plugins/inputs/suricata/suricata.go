@@ -336,7 +336,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) error {
 		}
 	} else {
 		s.Log.Debugf("Invalid input without 'stats' or 'alert' object: %v", result)
-		return fmt.Errorf("input does not contain 'stats' or 'alert' object")
+		return errors.New("input does not contain 'stats' or 'alert' object")
 	}
 
 	return nil

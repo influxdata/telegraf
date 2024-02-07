@@ -1,7 +1,7 @@
 package snmp_trap
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -32,7 +32,7 @@ func (t *testTranslator) lookup(input string) (snmp.MibEntry, error) {
 			return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
 		}
 	}
-	return snmp.MibEntry{}, fmt.Errorf("unexpected oid")
+	return snmp.MibEntry{}, errors.New("unexpected oid")
 }
 
 func newTestTranslator(entries []entry) *testTranslator {

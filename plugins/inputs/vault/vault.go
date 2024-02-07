@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -44,11 +45,11 @@ func (n *Vault) Init() error {
 	}
 
 	if n.TokenFile == "" && n.Token == "" {
-		return fmt.Errorf("token missing")
+		return errors.New("token missing")
 	}
 
 	if n.TokenFile != "" && n.Token != "" {
-		return fmt.Errorf("both token_file and token are set")
+		return errors.New("both token_file and token are set")
 	}
 
 	if n.TokenFile != "" {

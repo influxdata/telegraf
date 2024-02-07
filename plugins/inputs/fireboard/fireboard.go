@@ -4,6 +4,7 @@ package fireboard
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -57,7 +58,7 @@ func (*Fireboard) SampleConfig() string {
 // Init the things
 func (r *Fireboard) Init() error {
 	if len(r.AuthToken) == 0 {
-		return fmt.Errorf("you must specify an authToken")
+		return errors.New("you must specify an authToken")
 	}
 	if len(r.URL) == 0 {
 		r.URL = "https://fireboard.io/api/v1/devices.json"

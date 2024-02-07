@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	ole "github.com/go-ole/go-ole"
+	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 
 	"github.com/influxdata/telegraf"
@@ -120,7 +120,7 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 		return err
 	}
 	if unknown == nil {
-		return fmt.Errorf("failed to create WbemScripting.SWbemLocator, maybe WMI is broken")
+		return errors.New("failed to create WbemScripting.SWbemLocator, maybe WMI is broken")
 	}
 	defer unknown.Release()
 

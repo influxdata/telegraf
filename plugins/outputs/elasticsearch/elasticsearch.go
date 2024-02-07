@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -137,7 +138,7 @@ func (*Elasticsearch) SampleConfig() string {
 
 func (a *Elasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
-		return fmt.Errorf("elasticsearch urls or index_name is not defined")
+		return errors.New("elasticsearch urls or index_name is not defined")
 	}
 
 	// Determine if we should process NaN and inf values
@@ -333,7 +334,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
-		return fmt.Errorf("elasticsearch template_name configuration not defined")
+		return errors.New("elasticsearch template_name configuration not defined")
 	}
 
 	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
@@ -353,7 +354,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	}
 
 	if templatePattern == "" {
-		return fmt.Errorf("template cannot be created for dynamic index names without an index prefix")
+		return errors.New("template cannot be created for dynamic index names without an index prefix")
 	}
 
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {

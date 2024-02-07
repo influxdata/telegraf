@@ -7,10 +7,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type Parser struct {
@@ -71,11 +72,11 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("no metrics in line")
+		return nil, errors.New("no metrics in line")
 	}
 
 	if len(metrics) > 1 {
-		return nil, fmt.Errorf("more than one metric in line")
+		return nil, errors.New("more than one metric in line")
 	}
 
 	return metrics[0], nil

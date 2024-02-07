@@ -4,7 +4,6 @@ package converter
 import (
 	_ "embed"
 	"errors"
-	"fmt"
 	"math"
 	"math/big"
 	"strconv"
@@ -79,7 +78,7 @@ func (p *Converter) compile() error {
 	}
 
 	if tf == nil && ff == nil {
-		return fmt.Errorf("no filters found")
+		return errors.New("no filters found")
 	}
 
 	p.tagConversions = tf

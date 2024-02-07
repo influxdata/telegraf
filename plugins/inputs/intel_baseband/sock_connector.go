@@ -3,6 +3,7 @@
 package intel_baseband
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -50,7 +51,7 @@ func (sc *socketConnector) sendCommandToSocket(c byte) error {
 
 func (sc *socketConnector) writeCommandToSocket(c byte) error {
 	if sc.connection == nil {
-		return fmt.Errorf("connection had not been established before")
+		return errors.New("connection had not been established before")
 	}
 	var err error
 	if sc.accessTimeout == 0 {

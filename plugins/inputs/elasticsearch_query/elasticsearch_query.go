@@ -4,6 +4,7 @@ package elasticsearch_query
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -63,7 +64,7 @@ func (*ElasticsearchQuery) SampleConfig() string {
 // Init the plugin.
 func (e *ElasticsearchQuery) Init() error {
 	if e.URLs == nil {
-		return fmt.Errorf("elasticsearch urls is not defined")
+		return errors.New("elasticsearch urls is not defined")
 	}
 
 	err := e.connectToES()
@@ -77,10 +78,10 @@ func (e *ElasticsearchQuery) Init() error {
 
 	for i, agg := range e.Aggregations {
 		if agg.MeasurementName == "" {
-			return fmt.Errorf("field 'measurement_name' is not set")
+			return errors.New("field 'measurement_name' is not set")
 		}
 		if agg.DateField == "" {
-			return fmt.Errorf("field 'date_field' is not set")
+			return errors.New("field 'date_field' is not set")
 		}
 		err = e.initAggregation(ctx, agg, i)
 		if err != nil {
@@ -160,7 +161,7 @@ func (e *ElasticsearchQuery) connectToES() error {
 
 	// quit if ES version is not supported
 	if len(esVersionSplit) == 0 {
-		return fmt.Errorf("elasticsearch version check failed")
+		return errors.New("elasticsearch version check failed")
 	}
 
 	i, err := strconv.Atoi(esVersionSplit[0])

@@ -3,6 +3,7 @@ package thrift
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -144,7 +145,7 @@ type span struct {
 
 func (s *span) Trace() (string, error) {
 	if s.Span.GetTraceIDHigh() == 0 && s.Span.GetTraceID() == 0 {
-		return "", fmt.Errorf("Span does not have a trace ID")
+		return "", errors.New("span does not have a trace ID")
 	}
 
 	if s.Span.GetTraceIDHigh() == 0 {

@@ -4,7 +4,6 @@ package ping
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -518,7 +517,7 @@ func TestDNSLookupError(t *testing.T) {
 		Method: "native",
 		IPv6:   false,
 		nativePingFunc: func(destination string) (*pingStats, error) {
-			return nil, fmt.Errorf("unknown")
+			return nil, errors.New("unknown")
 		},
 	}
 

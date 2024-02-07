@@ -4,6 +4,7 @@ package dynatrace
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -191,7 +192,7 @@ func (d *Dynatrace) Init() error {
 	}
 	if d.URL != apiconstants.GetDefaultOneAgentEndpoint() && d.APIToken.Empty() {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
-		return fmt.Errorf("api_token is a required field for Dynatrace output")
+		return errors.New("api_token is a required field for Dynatrace output")
 	}
 
 	tlsCfg, err := d.ClientConfig.TLSConfig()

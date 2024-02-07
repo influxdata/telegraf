@@ -615,7 +615,7 @@ func (m *WinPerfCounters) Init() error {
 		}
 
 		if found {
-			return fmt.Errorf("wildcards can't be used with LocalizeWildcardsExpansion=false")
+			return errors.New("wildcards can't be used with LocalizeWildcardsExpansion=false")
 		}
 	}
 	return nil
