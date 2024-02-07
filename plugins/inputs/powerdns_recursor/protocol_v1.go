@@ -20,7 +20,7 @@ import (
 // The `data` field contains a list of commands to execute with
 // the \n character after every command.
 func (p *PowerdnsRecursor) gatherFromV1Server(address string, acc telegraf.Accumulator) error {
-	recvSocket := filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%s", uuid.New().String()))
+	recvSocket := filepath.Join(p.SocketDir, "pdns_recursor_telegraf"+uuid.New().String())
 
 	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
 	if err != nil {

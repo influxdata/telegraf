@@ -310,7 +310,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 		c, _ := os.ReadFile(filepath.Join(filepath.Dir(file), filename[0]+"_label"))
 		if c != nil {
 			//format the label from "Core 0" to "core0_"
-			label = fmt.Sprintf("%s_", strings.Join(strings.Split(strings.TrimSpace(strings.ToLower(string(c))), " "), ""))
+			label = strings.Join(strings.Split(strings.TrimSpace(strings.ToLower(string(c))), " "), "") + "_"
 		}
 
 		// Get the name of the temperature you are reading

@@ -792,7 +792,7 @@ func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interfa
 			deviceStatMap[device] = make(map[string]interface{})
 		}
 
-		field := fmt.Sprintf("io_service_bytes_recursive_%s", strings.ToLower(metric.Op))
+		field := "io_service_bytes_recursive_" + strings.ToLower(metric.Op)
 		deviceStatMap[device][field] = metric.Value
 	}
 
@@ -803,31 +803,31 @@ func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interfa
 			deviceStatMap[device] = make(map[string]interface{})
 		}
 
-		field := fmt.Sprintf("io_serviced_recursive_%s", strings.ToLower(metric.Op))
+		field := "io_serviced_recursive_" + strings.ToLower(metric.Op)
 		deviceStatMap[device][field] = metric.Value
 	}
 
 	for _, metric := range blkioStats.IoQueuedRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
-		field := fmt.Sprintf("io_queue_recursive_%s", strings.ToLower(metric.Op))
+		field := "io_queue_recursive_" + strings.ToLower(metric.Op)
 		deviceStatMap[device][field] = metric.Value
 	}
 
 	for _, metric := range blkioStats.IoServiceTimeRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
-		field := fmt.Sprintf("io_service_time_recursive_%s", strings.ToLower(metric.Op))
+		field := "io_service_time_recursive_" + strings.ToLower(metric.Op)
 		deviceStatMap[device][field] = metric.Value
 	}
 
 	for _, metric := range blkioStats.IoWaitTimeRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
-		field := fmt.Sprintf("io_wait_time_%s", strings.ToLower(metric.Op))
+		field := "io_wait_time_" + strings.ToLower(metric.Op)
 		deviceStatMap[device][field] = metric.Value
 	}
 
 	for _, metric := range blkioStats.IoMergedRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
-		field := fmt.Sprintf("io_merged_recursive_%s", strings.ToLower(metric.Op))
+		field := "io_merged_recursive_" + strings.ToLower(metric.Op)
 		deviceStatMap[device][field] = metric.Value
 	}
 

@@ -996,7 +996,7 @@ func parseWearLeveling(acc telegraf.Accumulator, fields map[string]interface{}, 
 	values := []int64{min, max, avg}
 	for i, submetricName := range []string{"Min", "Max", "Avg"} {
 		fields["raw_value"] = values[i]
-		tags["name"] = fmt.Sprintf("Wear_Leveling_%s", submetricName)
+		tags["name"] = "Wear_Leveling_" + submetricName
 		acc.AddFields("smart_attribute", fields, tags)
 	}
 

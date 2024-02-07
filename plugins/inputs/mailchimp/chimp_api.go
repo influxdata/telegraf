@@ -58,7 +58,7 @@ func (p *ReportsParams) String() string {
 func NewChimpAPI(apiKey string, log telegraf.Logger) *ChimpAPI {
 	u := &url.URL{}
 	u.Scheme = "https"
-	u.Host = fmt.Sprintf("%s.api.mailchimp.com", mailchimpDatacenter.FindString(apiKey))
+	u.Host = mailchimpDatacenter.FindString(apiKey) + ".api.mailchimp.com"
 	u.User = url.UserPassword("", apiKey)
 	return &ChimpAPI{url: u, log: log}
 }

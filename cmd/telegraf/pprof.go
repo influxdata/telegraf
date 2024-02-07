@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -28,7 +27,7 @@ func (p *PprofServer) Start(address string) {
 		pprofHostPort := address
 		parts := strings.Split(pprofHostPort, ":")
 		if len(parts) == 2 && parts[0] == "" {
-			pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			pprofHostPort = "localhost:" + parts[1]
 		}
 		pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 

@@ -78,7 +78,7 @@ func launchTests(packageFile string, images []string) error {
 		fmt.Printf("starting test with %s\n", image)
 
 		uuidWithHyphen := uuid.New()
-		name := fmt.Sprintf("telegraf-test-%s", uuidWithHyphen.String()[0:8])
+		name := "telegraf-test-" + uuidWithHyphen.String()[0:8]
 
 		err := runTest(image, name, packageFile)
 		if err != nil {

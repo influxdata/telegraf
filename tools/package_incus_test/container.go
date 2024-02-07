@@ -136,7 +136,7 @@ func (c *Container) CheckStatus(serviceName string) error {
 
 func (c *Container) UploadAndInstall(filename string) error {
 	basename := filepath.Base(filename)
-	destination := fmt.Sprintf("/root/%s", basename)
+	destination := "/root/" + basename
 
 	if err := c.client.Push(c.Name, filename, destination); err != nil {
 		return err

@@ -221,7 +221,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	address := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+	address := "http://" + ts.Listener.Addr().String()
 
 	tests := []struct {
 		name             string
@@ -320,7 +320,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 
 	var token = "2YotnFZFEjr1zCsicMWpAA"
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {

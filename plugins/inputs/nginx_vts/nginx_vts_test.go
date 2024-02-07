@@ -215,7 +215,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &NginxVTS{
-		Urls: []string{fmt.Sprintf("%s/status", ts.URL)},
+		Urls: []string{ts.URL + "/status"},
 	}
 
 	var acc testutil.Accumulator

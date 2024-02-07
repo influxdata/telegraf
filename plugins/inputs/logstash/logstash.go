@@ -284,7 +284,7 @@ func (logstash *Logstash) gatherPluginsStats(
 				if strings.HasPrefix(k, "bulk_requests") {
 					continue
 				}
-				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				newKey := "bulk_requests_" + k
 				flattener.Fields[newKey] = v
 				delete(flattener.Fields, k)
 			}
@@ -307,7 +307,7 @@ func (logstash *Logstash) gatherPluginsStats(
 				if strings.HasPrefix(k, "documents") {
 					continue
 				}
-				newKey := fmt.Sprintf("documents_%s", k)
+				newKey := "documents_" + k
 				flattener.Fields[newKey] = v
 				delete(flattener.Fields, k)
 			}

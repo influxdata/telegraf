@@ -59,11 +59,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				switch {
 				case strings.HasSuffix(field.Key, "_bucket"):
 					// if bucket only, init sum, count, inf
-					metrickeysum, promtssum := getPromTS(fmt.Sprintf("%s_sum", metricName), labels, float64(0), metric.Time())
+					metrickeysum, promtssum := getPromTS(metricName+"_sum", labels, float64(0), metric.Time())
 					if _, ok = entries[metrickeysum]; !ok {
 						entries[metrickeysum] = promtssum
 					}
-					metrickeycount, promtscount := getPromTS(fmt.Sprintf("%s_count", metricName), labels, float64(0), metric.Time())
+					metrickeycount, promtscount := getPromTS(metricName+"_count", labels, float64(0), metric.Time())
 					if _, ok = entries[metrickeycount]; !ok {
 						entries[metrickeycount] = promtscount
 					}
@@ -71,7 +71,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: "+Inf",
 					}
-					metrickeyinf, promtsinf := getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(0), metric.Time(), extraLabel)
+					metrickeyinf, promtsinf := getPromTS(metricName+"_bucket", labels, float64(0), metric.Time(), extraLabel)
 					if _, ok = entries[metrickeyinf]; !ok {
 						entries[metrickeyinf] = promtsinf
 					}
@@ -93,14 +93,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: fmt.Sprint(bound),
 					}
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(count), metric.Time(), extraLabel)
+					metrickey, promts = getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
 				case strings.HasSuffix(field.Key, "_sum"):
 					sum, ok := prometheus.SampleSum(field.Value)
 					if !ok {
 						continue
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_sum", metricName), labels, sum, metric.Time())
+					metrickey, promts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
@@ -112,12 +112,12 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: "+Inf",
 					}
-					metrickeyinf, promtsinf := getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(count), metric.Time(), extraLabel)
+					metrickeyinf, promtsinf := getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
 					if minf, ok := entries[metrickeyinf]; !ok || minf.Samples[0].Value == 0 {
 						entries[metrickeyinf] = promtsinf
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_count", metricName), labels, float64(count), metric.Time())
+					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					continue
 				}
@@ -129,14 +129,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						continue
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_sum", metricName), labels, sum, metric.Time())
+					metrickey, promts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
 						continue
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_count", metricName), labels, float64(count), metric.Time())
+					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					quantileTag, ok := metric.GetTag("quantile")
 					if !ok {
