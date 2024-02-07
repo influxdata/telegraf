@@ -26,8 +26,8 @@ var sampleConfig string
 
 type Redfish struct {
 	Address          string          `toml:"address"`
-	Username         string          `toml:"username"`
-	Password         string          `toml:"password"`
+	Username         config.Secret   `toml:"username"`
+	Password         config.Secret   `toml:"password"`
 	ComputerSystemID string          `toml:"computer_system_id"`
 	IncludeMetrics   []string        `toml:"include_metrics"`
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
@@ -162,7 +162,7 @@ func (r *Redfish) Init() error {
 		return errors.New("did not provide IP")
 	}
 
-	if r.Username == "" && r.Password == "" {
+	if r.Username.Empty() && r.Password.Empty() {
 		return errors.New("did not provide username and password")
 	}
 
@@ -221,7 +221,19 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 		return err
 	}
 
-	req.SetBasicAuth(r.Username, r.Password)
+	username, err := r.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+	defer username.Destroy()
+
+	password, err := r.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+	defer password.Destroy()
+
+	req.SetBasicAuth(username.String(), password.String())
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("OData-Version", "4.0")
