@@ -369,27 +369,10 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setResult(resultString string, requestFields map[string]interface{}, tags map[string]string) {
-	resultCodes := map[string]int{
-		"success":                 0,
-		"unable_to_decode":        1,
-		"body_read_error":         2,
-		"connection_failed":       3,
-		"timeout":                 4,
-		"dns_error":               5,
-		"http_code_not_ok":        6,
-		"error_reading_body":      7,
-		"content_length_exceeded": 8,
-	}
-
-	tags["result"] = resultString
-	requestFields["result_code"] = resultCodes[resultString]
-}
-
 func setError(err error, requestFields map[string]interface{}, tags map[string]string) error {
 	var timeoutError net.Error
 	if errors.As(err, &timeoutError) && timeoutError.Timeout() {
-		setResult("timeout", requestFields, tags)
+		tags["result"] = "timeout"
 		return timeoutError
 	}
 
@@ -404,23 +387,22 @@ func setError(err error, requestFields map[string]interface{}, tags map[string]s
 		var parseErr *net.ParseError
 
 		if errors.As(opErr, &dnsErr) {
-			setResult("dns_error", requestFields, tags)
+			tags["result"] = "dns_error"
 			return dnsErr
 		} else if errors.As(opErr, &parseErr) {
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
-			setResult("address_error", requestFields, tags)
+			tags["result"] = "address_error"
 			return parseErr
 		}
 	}
-
+	tags["result"] = "connection_failed"
 	return nil
 }
 
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[string]interface{}, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
-	var metrics []telegraf.Metric
 	requestFields := make(map[string]interface{})
 	tags := map[string]string{}
 	u.OriginalURL.User = nil
@@ -493,29 +475,29 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 	var err error
 	var resp *http.Response
-	start := time.Now()
+	var start time.Time
 	if u.URL.Scheme != "unix" {
 		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
+		start = time.Now()
 		resp, err = p.client.Do(req)
 	} else {
 		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
+		start = time.Now()
 		resp, err = uClient.Do(req)
 	}
+	end := time.Since(start).Seconds()
 	if err != nil {
-		if setError(err, requestFields, tags) == nil {
-			// Any error not recognized by `set_error` is considered a "connection_failed"
-			setResult("connection_failed", requestFields, tags)
-		}
+		setError(err, requestFields, tags)
 		return requestFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
 	}
-	requestFields["response_time"] = time.Since(start).Seconds()
+	requestFields["response_time"] = end
 	requestFields["http_response_code"] = resp.StatusCode
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		setResult("http_code_not_ok", requestFields, tags)
-		return requestFields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
+		tags["result"] = "http_code_not_ok"
+		return requestFields, tags, nil
 	}
 
 	var body []byte
@@ -529,19 +511,19 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
-			setResult("error_reading_body", requestFields, tags)
-			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
+			tags["result"] = "error_reading_body"
+			return requestFields, tags, nil
 		}
 		if int64(len(body)) > limit {
-			setResult("content_length_exceeded", requestFields, tags)
+			tags["result"] = "content_length_exceeded"
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, limit)
 			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			setResult("error_reading_body", requestFields, tags)
-			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
+			tags["result"] = "error_reading_body"
+			return requestFields, tags, nil
 		}
 	}
 
@@ -552,9 +534,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 		MetricVersion:   p.MetricVersion,
 		IgnoreTimestamp: p.IgnoreTimestamp,
 	}
-	metrics, err = metricParser.Parse(body)
+	metrics, err := metricParser.Parse(body)
 	if err != nil {
-		setResult("unable_to_decode", requestFields, tags)
+		tags["result"] = "unable_to_decode"
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
@@ -585,7 +567,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 		}
 	}
-	setResult("success", requestFields, tags)
+	tags["result"] = "success"
 
 	return requestFields, tags, nil
 }

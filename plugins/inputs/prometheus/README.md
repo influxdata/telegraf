@@ -363,11 +363,11 @@ tag is also added indicating the discovered ip address.
   * tags:
     * url
     * address
+    * result_code ([see below](#result_code))
   * fields:
     * response_time (float, seconds)
     * content_length (int, response body length)
     * http_response_code (int, response status code)
-    * result_code (int, [see below](#result_code))
 
 ### `result_code`
 
@@ -378,17 +378,17 @@ corresponding with that tag value.
 This tag is used to expose network and plugin errors. HTTP errors are considered
 a successful connection.
 
-|Tag value                     |Corresponding field value|Description|
--------------------------------|-------------------------|-----------|
-|success                       | 0                       |The HTTP request completed, even if the HTTP code represents an error|
-|unable_to_decode              | 1                       |Unable to parse web content|
-|body_read_error               | 2                       |content empty |
-|connection_failed             | 3                       |Catch all for any network error not specifically handled by the plugin|
-|timeout                       | 4                       |The plugin timed out while awaiting the HTTP connection to complete|
-|dns_error                     | 5                       |There was a DNS error while attempting to connect to the host|
-|http_code_not_ok              | 6                       |Http return code not 200|
-|error_reading_body            | 7                       |Error while reading data|
-|content_length_exceeded       | 8                       |Data exceeded max size|
+|Tag value                     |Description|
+-------------------------------|-----------|
+|success                       |The HTTP request completed, even if the HTTP code represents an error|
+|unable_to_decode              |Unable to parse web content|
+|body_read_error               |content empty |
+|connection_failed             |Catch all for any network error not specifically handled by the plugin|
+|timeout                       |The plugin timed out while awaiting the HTTP connection to complete|
+|dns_error                     |There was a DNS error while attempting to connect to the host|
+|http_code_not_ok              |Http return code not 200|
+|error_reading_body            |Error while reading data|
+|content_length_exceeded       |Data exceeded max size|
 
 ## Example Output
 
@@ -424,7 +424,7 @@ cpu_usage_user,cpu=cpu0,url=http://example.org:9273/metrics gauge=1.513622603430
 cpu_usage_user,cpu=cpu1,url=http://example.org:9273/metrics gauge=5.829145728641773 1505776751000000000
 cpu_usage_user,cpu=cpu2,url=http://example.org:9273/metrics gauge=2.119071644805144 1505776751000000000
 cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics gauge=1.5228426395944945 1505776751000000000
-prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601,result_code=0i 1505776751000000000
+prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601 1505776751000000000
 ```
 
 ### Output (when metric_version = 2)
@@ -441,7 +441,7 @@ prometheus,cpu=cpu0,url=http://example.org:9273/metrics cpu_usage_user=1.5136226
 prometheus,cpu=cpu1,url=http://example.org:9273/metrics cpu_usage_user=5.829145728641773 1505776751000000000
 prometheus,cpu=cpu2,url=http://example.org:9273/metrics cpu_usage_user=2.119071644805144 1505776751000000000
 prometheus,cpu=cpu3,url=http://example.org:9273/metrics cpu_usage_user=1.5228426395944945 1505776751000000000
-prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601,result_code=0i 1505776751000000000
+prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601 1505776751000000000
 ```
 
 ### Output with timestamp included

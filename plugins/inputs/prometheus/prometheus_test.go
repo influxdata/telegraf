@@ -367,8 +367,7 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 				"url":    ts.URL,
 				"result": "content_length_exceeded"},
 			map[string]interface{}{
-				"http_response_code": int64(200),
-				"result_code":        int64(8)},
+				"http_response_code": int64(200)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -471,7 +470,6 @@ go_gc_duration_seconds_count 42`
 			map[string]string{"result": "success"},
 			map[string]interface{}{
 				"http_response_code": int64(200.0),
-				"result_code":        int64(0),
 			},
 			time.Unix(0, 0),
 			telegraf.Untyped,
@@ -634,15 +632,14 @@ test_counter{label="test"} 1 1685443805885`
 			map[string]interface{}{
 				"content_length":     int64(1),
 				"http_response_code": int64(200),
-				"response_time":      float64(0),
-				"result_code":        int64(0)},
+				"response_time":      float64(0)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
 	}
 
 	var acc testutil.Accumulator
-	fmt.Printf("%+v\n", acc.GetTelegrafMetrics())
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
@@ -678,8 +675,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 			map[string]interface{}{
 				"content_length":     int64(94),
 				"http_response_code": int64(200),
-				"response_time":      float64(0),
-				"result_code":        int64(1)},
+				"response_time":      float64(0)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -717,16 +713,15 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 			map[string]interface{}{
 				"content_length":     int64(94),
 				"http_response_code": int64(404),
-				"response_time":      float64(0),
-				"result_code":        int64(6)},
+				"response_time":      float64(0)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
 	}
 
 	var acc testutil.Accumulator
-	fmt.Printf("%+v\n", acc.GetTelegrafMetrics())
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 
-	require.Error(t, acc.GatherError(p.Gather))
+	require.NoError(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
 }
