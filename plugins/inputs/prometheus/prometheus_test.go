@@ -682,7 +682,6 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-
 	require.Error(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
 }
@@ -722,6 +721,6 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 	var acc testutil.Accumulator
 	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 
-	require.NoError(t, acc.GatherError(p.Gather))
+	require.Error(t, acc.GatherError(p.Gather))
 	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreFields("content_length", "response_time"), testutil.IgnoreTime())
 }
