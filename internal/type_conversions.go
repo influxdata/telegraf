@@ -104,6 +104,9 @@ func ToFloat32(value interface{}) (float32, error) {
 func ToUint64(value interface{}) (uint64, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			return strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 64)
+		}
 		return strconv.ParseUint(v, 10, 64)
 	case []byte:
 		return strconv.ParseUint(string(v), 10, 64)
@@ -168,6 +171,10 @@ func ToUint64(value interface{}) (uint64, error) {
 func ToUint32(value interface{}) (uint32, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			x, err := strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 32)
+			return uint32(x), err
+		}
 		x, err := strconv.ParseUint(v, 10, 32)
 		return uint32(x), err
 	case []byte:
@@ -238,6 +245,10 @@ func ToUint32(value interface{}) (uint32, error) {
 func ToUint16(value interface{}) (uint16, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			x, err := strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 16)
+			return uint16(x), err
+		}
 		x, err := strconv.ParseUint(v, 10, 32)
 		return uint16(x), err
 	case []byte:
@@ -311,6 +322,10 @@ func ToUint16(value interface{}) (uint16, error) {
 func ToUint8(value interface{}) (uint8, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			x, err := strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 8)
+			return uint8(x), err
+		}
 		x, err := strconv.ParseUint(v, 10, 32)
 		return uint8(x), err
 	case []byte:
@@ -445,6 +460,10 @@ func ToInt64(value interface{}) (int64, error) {
 func ToInt32(value interface{}) (int32, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			x, err := strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 32)
+			return int32(x), err
+		}
 		x, err := strconv.ParseInt(v, 10, 32)
 		return int32(x), err
 	case []byte:
@@ -512,6 +531,10 @@ func ToInt32(value interface{}) (int32, error) {
 func ToInt16(value interface{}) (int16, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			x, err := strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 16)
+			return int16(x), err
+		}
 		x, err := strconv.ParseInt(v, 10, 32)
 		return int16(x), err
 	case []byte:
@@ -582,6 +605,10 @@ func ToInt16(value interface{}) (int16, error) {
 func ToInt8(value interface{}) (int8, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			x, err := strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 8)
+			return int8(x), err
+		}
 		x, err := strconv.ParseInt(v, 10, 32)
 		return int8(x), err
 	case []byte:

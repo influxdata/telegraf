@@ -168,14 +168,13 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 		}
 
 		if p.tagConversions.Unsigned != nil && p.tagConversions.Unsigned.Match(key) {
-			v, ok := toUnsigned(value)
-			if !ok {
-				metric.RemoveTag(key)
-				p.Log.Errorf("error converting to unsigned [%T]: %v", value, value)
+			metric.RemoveTag(key)
+			v, err := toUnsigned(value)
+			if err != nil {
+				p.Log.Errorf("Converting to unsigned [%T] failed: %v", value, err)
 				continue
 			}
 
-			metric.RemoveTag(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -275,14 +274,13 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 		}
 
 		if p.fieldConversions.Unsigned != nil && p.fieldConversions.Unsigned.Match(key) {
-			v, ok := toUnsigned(value)
-			if !ok {
-				metric.RemoveField(key)
+			metric.RemoveField(key)
+			v, err := toUnsigned(value)
+			if err != nil {
 				p.Log.Errorf("error converting to unsigned [%T]: %v", value, value)
 				continue
 			}
 
-			metric.RemoveField(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -380,50 +378,43 @@ func toInteger(v interface{}) (int64, error) {
 	}
 }
 
-func toUnsigned(v interface{}) (uint64, bool) {
+func toUnsigned(v interface{}) (uint64, error) {
 	switch value := v.(type) {
-	case uint64:
-		return value, true
-	case int64:
+
+	case float32:
 		if value < 0 {
-			return 0, true
+			return 0, nil
 		}
-		return uint64(value), true
+		if value > float32(math.MaxUint64) {
+			return math.MaxUint64, nil
+		}
+		return uint64(math.Round(float64(value))), nil
 	case float64:
-		if value < 0.0 {
-			return 0, true
-		} else if value > float64(math.MaxUint64) {
-			return math.MaxUint64, true
-		} else {
-			return uint64(math.Round(value)), true
+		if value < 0 {
+			return 0, nil
 		}
-	case bool:
-		if value {
-			return 1, true
+		if value > float64(math.MaxUint64) {
+			return math.MaxUint64, nil
 		}
-		return 0, true
-	case string:
-		result, err := strconv.ParseUint(value, 0, 64)
+		return uint64(math.Round(value)), nil
+	default:
+		if v, err := internal.ToUint64(value); err == nil {
+			return v, nil
+		}
 
+		v, err := internal.ToFloat64(value)
 		if err != nil {
-			var result float64
-			var err error
-
-			if isHexadecimal(value) {
-				result, err = parseHexadecimal(value)
-			} else {
-				result, err = strconv.ParseFloat(value, 64)
-			}
-
-			if err != nil {
-				return 0, false
-			}
-
-			return toUnsigned(result)
+			return 0, err
 		}
-		return result, true
+
+		if v < 0 {
+			return 0, nil
+		}
+		if v > float64(math.MaxUint64) {
+			return math.MaxUint64, nil
+		}
+		return uint64(math.Round(v)), nil
 	}
-	return 0, false
 }
 
 func toFloat(v interface{}) (float64, bool) {
