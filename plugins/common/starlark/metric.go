@@ -97,7 +97,7 @@ func (m *Metric) Attr(name string) (starlark.Value, error) {
 // SetField implements the starlark.HasSetField interface.
 func (m *Metric) SetField(name string, value starlark.Value) error {
 	if m.frozen {
-		return fmt.Errorf("cannot modify frozen metric")
+		return errors.New("cannot modify frozen metric")
 	}
 
 	switch name {

@@ -4,6 +4,7 @@ package snmp_trap
 import (
 	_ "embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -105,7 +106,7 @@ func (s *SnmpTrap) Init() error {
 	case "netsnmp":
 		s.transl = newNetsnmpTranslator(s.Timeout)
 	default:
-		return fmt.Errorf("invalid translator value")
+		return errors.New("invalid translator value")
 	}
 
 	if err != nil {

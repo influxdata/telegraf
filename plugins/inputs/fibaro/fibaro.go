@@ -3,6 +3,7 @@ package fibaro
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -71,7 +72,7 @@ func (f *Fibaro) Init() error {
 		f.DeviceType = "HC2"
 	case "HC2", "HC3":
 	default:
-		return fmt.Errorf("invalid option for device type")
+		return errors.New("invalid option for device type")
 	}
 
 	return nil

@@ -2,7 +2,7 @@ package cookie
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,9 +12,10 @@ import (
 
 	clockutil "github.com/benbjohnson/clock"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -189,7 +190,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
-			wantErr:           fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized) []"),
+			wantErr:           errors.New("cookie auth renewal received status code: 401 (Unauthorized) []"),
 			firstAuthCount:    0,
 			lastAuthCount:     0,
 			firstHTTPResponse: http.StatusForbidden,
@@ -220,7 +221,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
-			wantErr:           fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized) []"),
+			wantErr:           errors.New("cookie auth renewal received status code: 401 (Unauthorized) []"),
 			firstAuthCount:    0,
 			lastAuthCount:     0,
 			firstHTTPResponse: http.StatusForbidden,

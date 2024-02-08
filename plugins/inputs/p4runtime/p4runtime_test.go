@@ -76,10 +76,8 @@ func TestErrorGetP4Info(t *testing.T) {
 		getForwardingPipelineConfigResponseError error
 	}{
 		{
-			getForwardingPipelineConfigResponse: nil,
-			getForwardingPipelineConfigResponseError: fmt.Errorf(
-				"error when retrieving forwarding pipeline config",
-			),
+			getForwardingPipelineConfigResponse:      nil,
+			getForwardingPipelineConfigResponseError: errors.New("error when retrieving forwarding pipeline config"),
 		}, {
 			getForwardingPipelineConfigResponse: &p4v1.GetForwardingPipelineConfigResponse{
 				Config: nil,
@@ -583,7 +581,7 @@ func TestFailReadCounterEntryFromEntry(t *testing.T) {
 func TestFailReadAllEntries(t *testing.T) {
 	p4RtClient := &fakeP4RuntimeClient{
 		readFn: func(ctx context.Context, in *p4v1.ReadRequest, opts ...grpc.CallOption) (p4v1.P4Runtime_ReadClient, error) {
-			return nil, errors.New("Connection error")
+			return nil, errors.New("connection error")
 		},
 		getForwardingPipelineConfigFn: func(
 			ctx context.Context,
@@ -617,8 +615,7 @@ func TestFailReadAllEntries(t *testing.T) {
 	require.Equal(
 		t,
 		acc.Errors[0],
-		fmt.Errorf("reading counter entries with ID=1111 failed with error: %w",
-			errors.New("Connection error")),
+		fmt.Errorf("reading counter entries with ID=1111 failed with error: %w", errors.New("connection error")),
 	)
 	testutil.RequireMetricsEqual(
 		t,

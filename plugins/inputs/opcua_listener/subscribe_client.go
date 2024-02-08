@@ -2,6 +2,7 @@ package opcua_listener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -44,9 +45,9 @@ func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
 		params.DeadbandType != input.Percent:
 		return fmt.Errorf("deadband_type '%s' not supported", params.DeadbandType)
 	case params.DeadbandValue == nil:
-		return fmt.Errorf("deadband_value was not set")
+		return errors.New("deadband_value was not set")
 	case *params.DeadbandValue < 0:
-		return fmt.Errorf("negative deadband_value not supported")
+		return errors.New("negative deadband_value not supported")
 	default:
 		return nil
 	}

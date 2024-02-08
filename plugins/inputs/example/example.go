@@ -4,6 +4,7 @@ package example
 import (
 	"crypto/rand"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -51,7 +52,7 @@ func (*Example) SampleConfig() string {
 func (m *Example) Init() error {
 	// Check your options according to your requirements
 	if m.DeviceName == "" {
-		return fmt.Errorf("device name cannot be empty")
+		return errors.New("device name cannot be empty")
 	}
 
 	// Set your defaults.
@@ -85,7 +86,7 @@ func (m *Example) Init() error {
 func (m *Example) Gather(acc telegraf.Accumulator) error {
 	// Imagine some completely arbitrary error occurring here
 	if m.NumberFields > 10 {
-		return fmt.Errorf("too many fields")
+		return errors.New("too many fields")
 	}
 
 	// For illustration, we gather three metrics in one go
@@ -95,7 +96,7 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 		// all later metrics. Simply accumulate errors in this case
 		// and ignore the metric.
 		if m.EnableRandomVariable && m.DeviceName == "flappy" && run > 1 {
-			acc.AddError(fmt.Errorf("too many runs for random values"))
+			acc.AddError(errors.New("too many runs for random values"))
 			continue
 		}
 

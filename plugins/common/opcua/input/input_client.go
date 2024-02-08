@@ -95,7 +95,7 @@ type InputClientConfig struct {
 
 func (o *InputClientConfig) Validate() error {
 	if o.MetricName == "" {
-		return fmt.Errorf("metric name is empty")
+		return errors.New("metric name is empty")
 	}
 
 	err := choice.Check(string(o.Timestamp), []string{"", "gather", "server", "source"})
@@ -278,11 +278,11 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 	}
 
 	if len(nmm.Tag.Namespace) == 0 {
-		return fmt.Errorf("empty node namespace not allowed")
+		return errors.New("empty node namespace not allowed")
 	}
 
 	if len(nmm.Tag.Identifier) == 0 {
-		return fmt.Errorf("empty node identifier not allowed")
+		return errors.New("empty node identifier not allowed")
 	}
 
 	mp := newMP(nmm)

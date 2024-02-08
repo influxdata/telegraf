@@ -3,6 +3,7 @@ package application_insights
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -46,7 +47,7 @@ func (*ApplicationInsights) SampleConfig() string {
 
 func (a *ApplicationInsights) Connect() error {
 	if a.InstrumentationKey == "" {
-		return fmt.Errorf("instrumentation key is required")
+		return errors.New("instrumentation key is required")
 	}
 
 	if a.transmitter == nil {
@@ -222,7 +223,7 @@ func getFloat64TelemetryPropertyValue(
 		return metricValue, nil
 	}
 
-	return 0.0, fmt.Errorf("no field from the candidate list was found in the metric")
+	return 0.0, errors.New("no field from the candidate list was found in the metric")
 }
 
 func getIntTelemetryPropertyValue(
@@ -248,7 +249,7 @@ func getIntTelemetryPropertyValue(
 		return metricValue, nil
 	}
 
-	return 0, fmt.Errorf("no field from the candidate list was found in the metric")
+	return 0, errors.New("no field from the candidate list was found in the metric")
 }
 
 func contains(set []string, val string) bool {

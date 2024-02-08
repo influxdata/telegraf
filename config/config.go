@@ -503,7 +503,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if val, ok := tbl.Fields["agent"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("invalid configuration, error parsing agent table")
+			return errors.New("invalid configuration, error parsing agent table")
 		}
 		if err = c.toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			return fmt.Errorf("error parsing [agent]: %w", err)
@@ -794,7 +794,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := aggregators.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("aggregators", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested aggregator: %s", name)
 	}
@@ -980,7 +980,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := processors.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("processors", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested processor: %s", name)
 	}
@@ -1109,7 +1109,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := outputs.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("outputs", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested output: %s", name)
 	}
@@ -1191,7 +1191,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := inputs.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("inputs", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 
 		return fmt.Errorf("undefined but requested input: %s", name)

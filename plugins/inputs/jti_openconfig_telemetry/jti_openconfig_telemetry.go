@@ -4,6 +4,7 @@ package jti_openconfig_telemetry
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -368,7 +369,7 @@ func (m *OpenConfigTelemetry) authenticate(ctx context.Context, server string, g
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	// Build sensors config
 	if m.splitSensorConfig() == 0 {
-		return fmt.Errorf("no valid sensor configuration available")
+		return errors.New("no valid sensor configuration available")
 	}
 
 	// Parse TLS config

@@ -128,11 +128,11 @@ func (m *Modbus) SampleConfig() string {
 func (m *Modbus) Init() error {
 	//check device name
 	if m.Name == "" {
-		return fmt.Errorf("device name is empty")
+		return errors.New("device name is empty")
 	}
 
 	if m.Retries < 0 {
-		return fmt.Errorf("retries cannot be negative")
+		return errors.New("retries cannot be negative")
 	}
 
 	// Determine the configuration style

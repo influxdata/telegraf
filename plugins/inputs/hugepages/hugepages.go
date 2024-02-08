@@ -6,6 +6,7 @@ package hugepages
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -258,7 +259,7 @@ func (h *Hugepages) parseHugepagesConfig() error {
 
 	// empty array
 	if len(h.Types) == 0 {
-		return fmt.Errorf("plugin was configured with nothing to read")
+		return errors.New("plugin was configured with nothing to read")
 	}
 
 	for _, hugepagesType := range h.Types {

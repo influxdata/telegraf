@@ -1,6 +1,7 @@
 package json_v2
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -169,7 +170,7 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
-					err := fmt.Errorf("use of 'timestamp_path' requires 'timestamp_format'")
+					err := errors.New("use of 'timestamp_path' requires 'timestamp_format'")
 					return nil, err
 				}
 
@@ -227,7 +228,7 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 	metrics := make([][]telegraf.Metric, 0, len(data))
 	for _, c := range data {
 		if c.Path == "" {
-			return nil, fmt.Errorf("GJSON path is required")
+			return nil, errors.New("GJSON path is required")
 		}
 		result := gjson.GetBytes(input, c.Path)
 		if err := p.checkResult(result, c.Path); err != nil {
@@ -383,7 +384,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 	} else {
 		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
-				err := fmt.Errorf("use of 'timestamp_key' requires 'timestamp_format'")
+				err := errors.New("use of 'timestamp_key' requires 'timestamp_format'")
 				return nil, err
 			}
 			var loc *time.Location
@@ -474,7 +475,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 		p.objectConfig = c
 
 		if c.Path == "" {
-			return nil, fmt.Errorf("GJSON path is required")
+			return nil, errors.New("GJSON path is required")
 		}
 
 		result := gjson.GetBytes(input, c.Path)
@@ -646,7 +647,7 @@ func (p *Parser) isExcluded(key string) bool {
 }
 
 func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
-	return nil, fmt.Errorf("ParseLine is designed for parsing influx line protocol, therefore not implemented for parsing JSON")
+	return nil, errors.New("ParseLine is designed for parsing influx line protocol, therefore not implemented for parsing JSON")
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {

@@ -1,7 +1,6 @@
 package jolokia
 
 import (
-	_ "fmt"
 	"io"
 	"net/http"
 	"strings"

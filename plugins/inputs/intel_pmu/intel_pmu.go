@@ -148,7 +148,7 @@ func (i *IntelPMU) Init() error {
 
 func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolver, activator entitiesActivator) error {
 	if parser == nil || resolver == nil || activator == nil {
-		return fmt.Errorf("entities parser and/or resolver and/or activator is nil")
+		return errors.New("entities parser and/or resolver and/or activator is nil")
 	}
 
 	err := parser.parseEntities(i.CoreEntities, i.UncoreEntities)
@@ -183,7 +183,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 		return fmt.Errorf("failed to estimate number of uncore events file descriptors: %w", err)
 	}
 	if coreFd > math.MaxUint64-uncoreFd {
-		return fmt.Errorf("requested number of file descriptors exceeds uint64")
+		return errors.New("requested number of file descriptors exceeds uint64")
 	}
 	allFd := coreFd + uncoreFd
 
@@ -210,7 +210,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 
 func (i *IntelPMU) Gather(acc telegraf.Accumulator) error {
 	if i.entitiesReader == nil {
-		return fmt.Errorf("entities reader is nil")
+		return errors.New("entities reader is nil")
 	}
 	coreMetrics, uncoreMetrics, err := i.entitiesReader.readEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
@@ -342,7 +342,7 @@ func multiplyAndAdd(factorA uint64, factorB uint64, sum uint64) (uint64, error) 
 
 func readMaxFD(reader fileInfoProvider) (uint64, error) {
 	if reader == nil {
-		return 0, fmt.Errorf("file reader is nil")
+		return 0, errors.New("file reader is nil")
 	}
 	buf, err := reader.readFile(fileMaxPath)
 	if err != nil {
@@ -358,10 +358,10 @@ func readMaxFD(reader fileInfoProvider) (uint64, error) {
 func checkFiles(paths []string, fileInfo fileInfoProvider) error {
 	// No event definition JSON locations present
 	if len(paths) == 0 {
-		return fmt.Errorf("no paths were given")
+		return errors.New("no paths were given")
 	}
 	if fileInfo == nil {
-		return fmt.Errorf("file info provider is nil")
+		return errors.New("file info provider is nil")
 	}
 	// Wrong files
 	for _, path := range paths {

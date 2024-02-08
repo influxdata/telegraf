@@ -1,12 +1,13 @@
 package kafka
 
 import (
-	"fmt"
+	"errors"
 	"math"
 	"strings"
 	"time"
 
 	"github.com/IBM/sarama"
+
 	"github.com/influxdata/telegraf"
 	tgConf "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -141,7 +142,7 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 
 	switch strings.ToLower(k.MetadataRetryType) {
 	default:
-		return fmt.Errorf("invalid metadata retry type")
+		return errors.New("invalid metadata retry type")
 	case "exponential":
 		if k.MetadataRetryBackoff == 0 {
 			k.MetadataRetryBackoff = tgConf.Duration(250 * time.Millisecond)

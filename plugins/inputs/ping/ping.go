@@ -160,10 +160,10 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "operation not permitted") {
 			if runtime.GOOS == "linux" {
-				return nil, fmt.Errorf("permission changes required, enable CAP_NET_RAW capabilities (refer to the ping plugin's README.md for more info)")
+				return nil, errors.New("permission changes required, enable CAP_NET_RAW capabilities (refer to the ping plugin's README.md for more info)")
 			}
 
-			return nil, fmt.Errorf("permission changes required, refer to the ping plugin's README.md for more info")
+			return nil, errors.New("permission changes required, refer to the ping plugin's README.md for more info")
 		}
 		return nil, err
 	}

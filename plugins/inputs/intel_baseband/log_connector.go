@@ -144,13 +144,13 @@ func (lc *logConnector) readNumVFs() error {
 		return nil
 	}
 
-	return fmt.Errorf("numVFs data wasn't found in the log file")
+	return errors.New("numVFs data wasn't found in the log file")
 }
 
 // Find a line which contains a substring in the log file
 func (lc *logConnector) getSubstringLine(offsetLine int, substring string) (int, string, error) {
 	if len(substring) == 0 {
-		return 0, "", fmt.Errorf("substring is empty")
+		return 0, "", errors.New("substring is empty")
 	}
 
 	for i := offsetLine; i < len(lc.lines); i++ {
@@ -208,13 +208,13 @@ func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric,
 
 	dataRaw := strings.TrimSpace(infoData[1])
 	if len(dataRaw) == 0 {
-		return offsetLine, nil, fmt.Errorf("the content of the log file is incorrect, metric's data is incorrect")
+		return offsetLine, nil, errors.New("the content of the log file is incorrect, metric's data is incorrect")
 	}
 
 	data := strings.Split(dataRaw, " ")
 	for i := range data {
 		if len(data[i]) == 0 {
-			return offsetLine, nil, fmt.Errorf("the content of the log file is incorrect, metric's data is empty")
+			return offsetLine, nil, errors.New("the content of the log file is incorrect, metric's data is empty")
 		}
 	}
 	return i + 2, &logMetric{operationName: operationName, data: data}, nil
@@ -224,18 +224,18 @@ func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric,
 func (lc *logConnector) parseNumVFs(s string) (int, error) {
 	i := strings.LastIndex(s, deviceStatusStartPrefix)
 	if i == -1 {
-		return 0, fmt.Errorf("couldn't find device status prefix in line")
+		return 0, errors.New("couldn't find device status prefix in line")
 	}
 
 	j := strings.Index(s[i:], deviceStatusEndPrefix)
 	if j == -1 {
-		return 0, fmt.Errorf("couldn't find device end prefix in line")
+		return 0, errors.New("couldn't find device end prefix in line")
 	}
 
 	startIndex := i + len(deviceStatusStartPrefix) + 1
 	endIndex := i + j - 1
 	if len(s) < startIndex || startIndex >= endIndex {
-		return 0, fmt.Errorf("incorrect format of the line")
+		return 0, errors.New("incorrect format of the line")
 	}
 
 	return strconv.Atoi(s[startIndex:endIndex])

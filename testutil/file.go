@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -17,7 +18,7 @@ type LineParser interface {
 func ParseRawLinesFrom(lines []string, header string) ([]string, error) {
 	if len(lines) < 2 {
 		// We need a line for HEADER and EMPTY TRAILING LINE
-		return nil, fmt.Errorf("expected at least two lines to parse from")
+		return nil, errors.New("expected at least two lines to parse from")
 	}
 	start := -1
 	for i := range lines {
@@ -33,7 +34,7 @@ func ParseRawLinesFrom(lines []string, header string) ([]string, error) {
 	output := make([]string, 0)
 	for _, line := range lines[start:] {
 		if !strings.HasPrefix(strings.TrimLeft(line, "\t "), "#") {
-			return nil, fmt.Errorf("section does not end with trailing empty line")
+			return nil, errors.New("section does not end with trailing empty line")
 		}
 
 		// Stop at empty line
@@ -51,7 +52,7 @@ func ParseRawLinesFrom(lines []string, header string) ([]string, error) {
 func ParseMetricsFrom(lines []string, header string, parser LineParser) ([]telegraf.Metric, error) {
 	if len(lines) < 2 {
 		// We need a line for HEADER and EMPTY TRAILING LINE
-		return nil, fmt.Errorf("expected at least two lines to parse from")
+		return nil, errors.New("expected at least two lines to parse from")
 	}
 	start := -1
 	for i := range lines {
@@ -67,7 +68,7 @@ func ParseMetricsFrom(lines []string, header string, parser LineParser) ([]teleg
 	metrics := make([]telegraf.Metric, 0)
 	for _, line := range lines[start:] {
 		if !strings.HasPrefix(strings.TrimLeft(line, "\t "), "#") {
-			return nil, fmt.Errorf("section does not end with trailing empty line")
+			return nil, errors.New("section does not end with trailing empty line")
 		}
 
 		// Stop at empty line

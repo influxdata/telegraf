@@ -13,6 +13,7 @@ package openstack
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -113,10 +114,10 @@ func (o *OpenStack) Init() error {
 	}
 	sort.Strings(o.EnabledServices)
 	if o.Username == "" || o.Password == "" {
-		return fmt.Errorf("username or password can not be empty string")
+		return errors.New("username or password can not be empty string")
 	}
 	if o.TagValue == "" {
-		return fmt.Errorf("tag_value option can not be empty string")
+		return errors.New("tag_value option can not be empty string")
 	}
 
 	// Check the enabled services
