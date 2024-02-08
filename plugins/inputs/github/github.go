@@ -216,7 +216,7 @@ func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (
 			return fields, err
 		}
 
-		f := fmt.Sprintf("%s_pull_requests", class)
+		f := class + "_pull_requests"
 		fields[f] = searchResult.GetTotal()
 	}
 

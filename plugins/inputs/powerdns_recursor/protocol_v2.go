@@ -2,7 +2,6 @@ package powerdns_recursor
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ import (
 // Datagram 1 => status: uint32
 // Datagram 2 => data: byte[] (max 16_384 bytes)
 func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accumulator) error {
-	recvSocket := filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%s", uuid.New().String()))
+	recvSocket := filepath.Join(p.SocketDir, "pdns_recursor_telegraf"+uuid.New().String())
 
 	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
 	if err != nil {

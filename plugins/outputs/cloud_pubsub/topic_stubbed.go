@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"testing"
@@ -225,7 +224,7 @@ func (r *stubResult) Get(ctx context.Context) (string, error) {
 	case err := <-r.err:
 		return "", err
 	case <-r.done:
-		return fmt.Sprintf("id-%s", r.metricIds[0]), nil
+		return "id-" + r.metricIds[0], nil
 	}
 }
 

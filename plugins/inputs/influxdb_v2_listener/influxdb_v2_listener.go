@@ -92,7 +92,7 @@ func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
 func (h *InfluxDBV2Listener) routes() {
 	credentials := ""
 	if h.Token != "" {
-		credentials = fmt.Sprintf("Token %s", h.Token)
+		credentials = "Token " + h.Token
 	}
 	authHandler := internal.GenericAuthHandler(credentials,
 		func(_ http.ResponseWriter) {
