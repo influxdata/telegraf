@@ -33,13 +33,13 @@ func (*Date) SampleConfig() string {
 func (d *Date) Init() error {
 	// Check either TagKey or FieldKey specified
 	if len(d.FieldKey) > 0 && len(d.TagKey) > 0 {
-		return errors.New("Only one of field_key or tag_key can be specified")
+		return errors.New("field_key and tag_key cannot be specified at the same time")
 	} else if len(d.FieldKey) == 0 && len(d.TagKey) == 0 {
-		return errors.New("One of field_key or tag_key must be specified")
+		return errors.New("at least one of field_key or tag_key must be specified")
 	}
 
-	var err error
 	// LoadLocation returns UTC if timezone is the empty string.
+	var err error
 	d.location, err = time.LoadLocation(d.Timezone)
 	return err
 }
