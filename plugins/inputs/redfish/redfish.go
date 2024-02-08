@@ -225,15 +225,17 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer username.Destroy()
+	user := username.String()
+	username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer password.Destroy()
+	pass := password.String()
+	password.Destroy()
 
-	req.SetBasicAuth(username.String(), password.String())
+	req.SetBasicAuth(user, pass)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("OData-Version", "4.0")
