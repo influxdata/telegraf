@@ -105,7 +105,6 @@ linters-settings:
       - nilValReturn
       - offBy1
       - regexpPattern
-      - sloppyTestFuncName
       - sloppyReassign
       - sloppyTypeAssert
       - sortSlice
@@ -277,6 +276,9 @@ linters-settings:
     # Default: false
     all: true
   testifylint:
+    # Disable all checkers (https://github.com/Antonboom/testifylint#checkers).
+    # Default: false
+    disable-all: true
     # Enable specific checkers.
     # https://github.com/Antonboom/testifylint#checkers
     # Default: ["bool-compare", "compares", "empty", "error-is-as", "error-nil", "expected-actual", "float-compare", "len", "require-error", "suite-dont-use-pkg", "suite-extra-assert-call"]
@@ -316,6 +318,10 @@ run:
   # on Windows.
   skip-files:
     - plugins/parsers/influx/machine.go*
+
+  # Show statistics per linter.
+  # Default: false
+  show-stats: true
 
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.

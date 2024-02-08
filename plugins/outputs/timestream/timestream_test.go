@@ -418,7 +418,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
-	require.EqualValues(t, result[0], expectedResultMultiTable)
+	require.EqualValues(t, expectedResultMultiTable, result[0])
 
 	require.True(t, arrayContains(result, expectedResultMultiTable), "Expected that the list of requests to Timestream: %+v\n "+
 		"will contain request: %+v\n\n", result, expectedResultMultiTable)
@@ -443,7 +443,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
-	require.EqualValues(t, result[0], expectedResultSingleTable)
+	require.EqualValues(t, expectedResultSingleTable, result[0])
 
 	require.True(t, arrayContains(result, expectedResultSingleTable), "Expected that the list of requests to Timestream: %+v\n "+
 		"will contain request: %+v\n\n", result, expectedResultSingleTable)

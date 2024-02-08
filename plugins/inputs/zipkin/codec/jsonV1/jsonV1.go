@@ -234,7 +234,7 @@ func TraceIDFromString(s string) (string, error) {
 		}
 	}
 	if hi == 0 {
-		return fmt.Sprintf("%x", lo), nil
+		return strconv.FormatUint(lo, 16), nil
 	}
 	return fmt.Sprintf("%x%016x", hi, lo), nil
 }
