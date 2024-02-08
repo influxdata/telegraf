@@ -228,27 +228,23 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 
 	for key, value := range metric.Fields() {
 		if p.fieldConversions.Measurement != nil && p.fieldConversions.Measurement.Match(key) {
-			v, ok := toString(value)
-			if !ok {
-				metric.RemoveField(key)
-				p.Log.Errorf("error converting to measurement [%T]: %v", value, value)
+			metric.RemoveField(key)
+			v, err := internal.ToString(value)
+			if err != nil {
+				p.Log.Errorf("Converting to measurement [%T] failed: %v", value, err)
 				continue
 			}
-
-			metric.RemoveField(key)
 			metric.SetName(v)
 			continue
 		}
 
 		if p.fieldConversions.Tag != nil && p.fieldConversions.Tag.Match(key) {
-			v, ok := toString(value)
-			if !ok {
-				metric.RemoveField(key)
-				p.Log.Errorf("error converting to tag [%T]: %v", value, value)
+			metric.RemoveField(key)
+			v, err := internal.ToString(value)
+			if err != nil {
+				p.Log.Errorf("Converting to tag [%T] failed: %v", value, err)
 				continue
 			}
-
-			metric.RemoveField(key)
 			metric.AddTag(key, v)
 			continue
 		}
@@ -306,14 +302,12 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 		}
 
 		if p.fieldConversions.String != nil && p.fieldConversions.String.Match(key) {
-			v, ok := toString(value)
-			if !ok {
-				metric.RemoveField(key)
-				p.Log.Errorf("Error converting to string [%T]: %v", value, value)
+			metric.RemoveField(key)
+			v, err := internal.ToString(value)
+			if err != nil {
+				p.Log.Errorf("Converting to string [%T] failed: %v", value, err)
 				continue
 			}
-
-			metric.RemoveField(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -464,22 +458,6 @@ func toFloat(v interface{}) (float64, bool) {
 		return result, err == nil
 	}
 	return 0.0, false
-}
-
-func toString(v interface{}) (string, bool) {
-	switch value := v.(type) {
-	case int64:
-		return strconv.FormatInt(value, 10), true
-	case uint64:
-		return strconv.FormatUint(value, 10), true
-	case float64:
-		return strconv.FormatFloat(value, 'f', -1, 64), true
-	case bool:
-		return strconv.FormatBool(value), true
-	case string:
-		return value, true
-	}
-	return "", false
 }
 
 func parseHexadecimal(value string) (float64, error) {
