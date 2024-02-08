@@ -37,9 +37,9 @@ type HTTP struct {
 	Token       config.Secret `toml:"token"`
 	TokenFile   string        `toml:"token_file"`
 
-	Headers            map[string]string `toml:"headers"`
-	SuccessStatusCodes []int             `toml:"success_status_codes"`
-	Log                telegraf.Logger   `toml:"-"`
+	Headers            map[string]config.Secret `toml:"headers"`
+	SuccessStatusCodes []int                    `toml:"success_status_codes"`
+	Log                telegraf.Logger          `toml:"-"`
 
 	httpconfig.HTTPClientConfig
 
@@ -141,10 +141,16 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	}
 
 	for k, v := range h.Headers {
+		secret, err := v.Get()
+		if err != nil {
+			return err
+		}
+
+		headerVal := secret.String()
 		if strings.EqualFold(k, "host") {
-			request.Host = v
+			request.Host = headerVal
 		} else {
-			request.Header.Add(k, v)
+			request.Header.Add(k, headerVal)
 		}
 	}
 

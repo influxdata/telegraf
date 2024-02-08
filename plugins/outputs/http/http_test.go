@@ -306,7 +306,7 @@ func TestContentType(t *testing.T) {
 			name: "overwrite content_type",
 			plugin: &HTTP{
 				URL:     u.String(),
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string]config.Secret{"Content-Type": config.NewSecret([]byte("application/json"))},
 			},
 			expected: "application/json",
 		},

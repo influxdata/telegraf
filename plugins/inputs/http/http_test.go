@@ -3,6 +3,7 @@ package http_test
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/influxdata/telegraf/config"
 	"io"
 	"math/rand"
 	"net"
@@ -84,7 +85,7 @@ func TestHTTPHeaders(t *testing.T) {
 	address := fakeServer.URL + "/endpoint"
 	plugin := &httpplugin.HTTP{
 		URLs:    []string{address},
-		Headers: map[string]string{header: headerValue},
+		Headers: map[string]config.Secret{header: config.NewSecret([]byte(headerValue))},
 		Log:     testutil.Logger{},
 	}
 
@@ -116,7 +117,7 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 	address := fakeServer.URL + "/endpoint"
 	plugin := &httpplugin.HTTP{
 		URLs:    []string{address},
-		Headers: map[string]string{},
+		Headers: map[string]config.Secret{},
 		Body:    "{}",
 		Log:     testutil.Logger{},
 	}
