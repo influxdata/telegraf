@@ -24,7 +24,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Redfish API Base URL.
   address = "https://127.0.0.1:5000"
 
-  ## Credentials for the Redfish API.
+  ## Credentials for the Redfish API. Can also use secrets.
   username = "root"
   password = "password123456"
 
