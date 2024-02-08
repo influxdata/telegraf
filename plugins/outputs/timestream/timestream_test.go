@@ -2,6 +2,7 @@ package timestream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -64,7 +65,7 @@ func (m *mockTimestreamClient) DescribeDatabase(
 	*timestreamwrite.DescribeDatabaseInput,
 	...func(*timestreamwrite.Options),
 ) (*timestreamwrite.DescribeDatabaseOutput, error) {
-	return nil, fmt.Errorf("hello from DescribeDatabase")
+	return nil, errors.New("hello from DescribeDatabase")
 }
 
 func TestConnectValidatesConfigParameters(t *testing.T) {

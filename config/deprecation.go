@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -171,7 +172,7 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	models.PrintPluginDeprecationNotice(info.LogLevel, info.Name, info.info)
 
 	if info.LogLevel == telegraf.Error {
-		return fmt.Errorf("plugin deprecated")
+		return errors.New("plugin deprecated")
 	}
 
 	// Print deprecated options

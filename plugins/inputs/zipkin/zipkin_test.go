@@ -2,6 +2,7 @@ package zipkin
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -647,7 +648,7 @@ func postThriftData(datafile, address, contentType string) error {
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/v1/spans", address), bytes.NewReader(dat))
 	if err != nil {
-		return fmt.Errorf("HTTP request creation failed")
+		return errors.New("HTTP request creation failed")
 	}
 
 	req.Header.Set("Content-Type", contentType)

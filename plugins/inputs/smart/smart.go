@@ -1022,7 +1022,7 @@ func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error 
 	// '16 829 004' --> 16829004
 	numRegex, err := regexp.Compile(`[^0-9\-]+`)
 	if err != nil {
-		return fmt.Errorf("failed to compile numeric regex")
+		return errors.New("failed to compile numeric regex")
 	}
 	value = numRegex.ReplaceAllString(value, "")
 

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -99,7 +100,7 @@ func (sr *schemaRegistry) getSchemaAndCodec(id int) (*schemaAndCodec, error) {
 
 	schema, ok := jsonResponse["schema"]
 	if !ok {
-		return nil, fmt.Errorf("malformed response from schema registry: no 'schema' key")
+		return nil, errors.New("malformed response from schema registry: no 'schema' key")
 	}
 
 	schemaValue, ok := schema.(string)

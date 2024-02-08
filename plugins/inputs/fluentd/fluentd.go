@@ -4,6 +4,7 @@ package fluentd
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -63,7 +64,7 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 	var endpointData endpointInfo
 
 	if err = json.Unmarshal(data, &endpointData); err != nil {
-		err = fmt.Errorf("processing JSON structure")
+		err = errors.New("processing JSON structure")
 		return nil, err
 	}
 
@@ -110,13 +111,13 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http status ok not met")
+		return errors.New("http status ok not met")
 	}
 
 	dataPoints, err := parse(body)
 
 	if err != nil {
-		return fmt.Errorf("problem with parsing")
+		return errors.New("problem with parsing")
 	}
 
 	// Go through all plugins one by one

@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -309,11 +310,11 @@ func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 
 func (ps *PubSub) Init() error {
 	if ps.Subscription == "" {
-		return fmt.Errorf(`"subscription" is required`)
+		return errors.New(`"subscription" is required`)
 	}
 
 	if ps.Project == "" {
-		return fmt.Errorf(`"project" is required`)
+		return errors.New(`"project" is required`)
 	}
 
 	switch ps.ContentEncoding {

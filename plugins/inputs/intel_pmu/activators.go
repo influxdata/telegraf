@@ -88,10 +88,10 @@ func (ea *iaEntitiesActivator) activateEntities(coreEntities []*CoreEventEntity,
 
 func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error {
 	if entity == nil {
-		return fmt.Errorf("core events entity is nil")
+		return errors.New("core events entity is nil")
 	}
 	if ea.placementMaker == nil {
-		return fmt.Errorf("placement maker is nil")
+		return errors.New("placement maker is nil")
 	}
 	if entity.PerfGroup {
 		err := ea.activateCoreEventsGroup(entity)
@@ -101,7 +101,7 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 	} else {
 		for _, event := range entity.parsedEvents {
 			if event == nil {
-				return fmt.Errorf("core parsed event is nil")
+				return errors.New("core parsed event is nil")
 			}
 			placements, err := ea.placementMaker.makeCorePlacements(entity.parsedCores, event.custom.Event)
 			if err != nil {
@@ -119,14 +119,14 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 
 func (ea *iaEntitiesActivator) activateUncoreEvents(entity *UncoreEventEntity) error {
 	if entity == nil {
-		return fmt.Errorf("uncore events entity is nil")
+		return errors.New("uncore events entity is nil")
 	}
 	if ea.perfActivator == nil || ea.placementMaker == nil {
-		return fmt.Errorf("events activator or placement maker is nil")
+		return errors.New("events activator or placement maker is nil")
 	}
 	for _, event := range entity.parsedEvents {
 		if event == nil {
-			return fmt.Errorf("uncore parsed event is nil")
+			return errors.New("uncore parsed event is nil")
 		}
 		perfEvent := event.custom.Event
 		if perfEvent == nil {
@@ -152,16 +152,16 @@ func (ea *iaEntitiesActivator) activateUncoreEvents(entity *UncoreEventEntity) e
 
 func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) error {
 	if ea.perfActivator == nil || ea.placementMaker == nil {
-		return fmt.Errorf("missing perf activator or placement maker")
+		return errors.New("missing perf activator or placement maker")
 	}
 	if entity == nil || len(entity.parsedEvents) < 1 {
-		return fmt.Errorf("missing parsed events")
+		return errors.New("missing parsed events")
 	}
 
 	events := make([]ia.CustomizableEvent, 0, len(entity.parsedEvents))
 	for _, event := range entity.parsedEvents {
 		if event == nil {
-			return fmt.Errorf("core event is nil")
+			return errors.New("core event is nil")
 		}
 		events = append(events, event.custom)
 	}
@@ -184,10 +184,10 @@ func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) 
 
 func (ea *iaEntitiesActivator) activateEventForPlacements(event *eventWithQuals, placements []ia.PlacementProvider) ([]*ia.ActiveEvent, error) {
 	if event == nil {
-		return nil, fmt.Errorf("core event is nil")
+		return nil, errors.New("core event is nil")
 	}
 	if ea.perfActivator == nil {
-		return nil, fmt.Errorf("missing perf activator")
+		return nil, errors.New("missing perf activator")
 	}
 
 	activeEvents := make([]*ia.ActiveEvent, 0, len(placements))

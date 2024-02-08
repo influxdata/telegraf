@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mdlayher/vsock"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/mdlayher/vsock"
 )
 
 //go:embed sample.conf
@@ -64,7 +65,7 @@ func (sw *SocketWriter) Connect() error {
 
 		// Check address string for containing two
 		if len(addrTuple) < 2 {
-			return fmt.Errorf("CID and/or port number missing")
+			return errors.New("CID and/or port number missing")
 		}
 
 		// Parse CID and port number from address string both being 32-bit
@@ -75,7 +76,7 @@ func (sw *SocketWriter) Connect() error {
 		}
 		port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
 		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-			return fmt.Errorf("Port number %d is out of range", port)
+			return fmt.Errorf("port number %d is out of range", port)
 		}
 		c, err = vsock.Dial(uint32(cid), uint32(port), nil)
 		if err != nil {

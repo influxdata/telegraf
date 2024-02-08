@@ -491,7 +491,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			s.UDPBytesRecv.Incr(int64(n))
 			b, ok := s.bufPool.Get().(*bytes.Buffer)
 			if !ok {
-				return fmt.Errorf("bufPool is not a bytes buffer")
+				return errors.New("bufPool is not a bytes buffer")
 			}
 			b.Reset()
 			b.Write(buf[:n])

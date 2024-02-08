@@ -31,8 +31,7 @@ func TestNoFilesFound(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := c.Gather(acc)
 
-	require.EqualError(t, err, "Conntrack input failed to collect metrics. "+
-		"Is the conntrack kernel module loaded?")
+	require.EqualError(t, err, "conntrack input failed to collect metrics, make sure that the kernel module is loaded")
 }
 
 func TestDefaultsUsed(t *testing.T) {

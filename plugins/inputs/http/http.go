@@ -5,6 +5,7 @@ package http
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -54,14 +55,14 @@ func (*HTTP) SampleConfig() string {
 func (h *HTTP) Init() error {
 	// For backward compatibility
 	if h.TokenFile != "" && h.BearerToken != "" && h.TokenFile != h.BearerToken {
-		return fmt.Errorf("conflicting settings for 'bearer_token' and 'token_file'")
+		return errors.New("conflicting settings for 'bearer_token' and 'token_file'")
 	} else if h.TokenFile == "" && h.BearerToken != "" {
 		h.TokenFile = h.BearerToken
 	}
 
 	// We cannot use multiple sources for tokens
 	if h.TokenFile != "" && !h.Token.Empty() {
-		return fmt.Errorf("either use 'token_file' or 'token' not both")
+		return errors.New("either use 'token_file' or 'token' not both")
 	}
 
 	// Create the client

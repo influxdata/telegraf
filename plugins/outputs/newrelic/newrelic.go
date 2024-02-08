@@ -4,6 +4,7 @@ package newrelic
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,7 +43,7 @@ func (*NewRelic) SampleConfig() string {
 // Connect to the Output
 func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {
-		return fmt.Errorf("InsightKey is a required for newrelic")
+		return errors.New("InsightKey is a required for newrelic")
 	}
 	err := nr.initClient()
 	if err != nil {

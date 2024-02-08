@@ -4,6 +4,7 @@ package redfish
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -158,19 +159,19 @@ func (*Redfish) SampleConfig() string {
 
 func (r *Redfish) Init() error {
 	if r.Address == "" {
-		return fmt.Errorf("did not provide IP")
+		return errors.New("did not provide IP")
 	}
 
 	if r.Username == "" && r.Password == "" {
-		return fmt.Errorf("did not provide username and password")
+		return errors.New("did not provide username and password")
 	}
 
 	if r.ComputerSystemID == "" {
-		return fmt.Errorf("did not provide the computer system ID of the resource")
+		return errors.New("did not provide the computer system ID of the resource")
 	}
 
 	if len(r.IncludeMetrics) == 0 {
-		return fmt.Errorf("no metrics specified to collect")
+		return errors.New("no metrics specified to collect")
 	}
 	for _, metric := range r.IncludeMetrics {
 		switch metric {

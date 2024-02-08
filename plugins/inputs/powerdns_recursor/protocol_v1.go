@@ -1,6 +1,7 @@
 package powerdns_recursor
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -64,7 +65,7 @@ func (p *PowerdnsRecursor) gatherFromV1Server(address string, acc telegraf.Accum
 		return err
 	}
 	if n == 0 {
-		return fmt.Errorf("no data received")
+		return errors.New("no data received")
 	}
 
 	metrics := string(buf)

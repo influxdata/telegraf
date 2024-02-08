@@ -1,14 +1,13 @@
 package amon
 
 import (
-	"fmt"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestBuildPoint(t *testing.T) {
@@ -71,7 +70,7 @@ func TestBuildPoint(t *testing.T) {
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
 			},
-			fmt.Errorf("unable to extract value from Fields, undeterminable type"),
+			errors.New("unable to extract value from Fields, undeterminable type"),
 		},
 	}
 	for _, tt := range tagtests {

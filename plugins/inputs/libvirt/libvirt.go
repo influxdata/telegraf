@@ -3,13 +3,13 @@ package libvirt
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"sync"
 
-	"golang.org/x/sync/errgroup"
-
 	golibvirt "github.com/digitalocean/go-libvirt"
 	libvirtutils "github.com/thomasklein94/packer-plugin-libvirt/libvirt-utils"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -84,7 +84,7 @@ func (l *Libvirt) Init() error {
 	}
 
 	if !l.isThereAnythingToGather() {
-		return fmt.Errorf("all configuration options are empty or invalid. Did not find anything to gather")
+		return errors.New("all configuration options are empty or invalid. Did not find anything to gather")
 	}
 
 	return nil

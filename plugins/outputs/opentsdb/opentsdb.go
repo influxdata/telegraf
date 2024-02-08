@@ -3,6 +3,7 @@ package opentsdb
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -98,7 +99,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	} else if u.Scheme == "http" || u.Scheme == "https" {
 		return o.WriteHTTP(metrics, u)
 	}
-	return fmt.Errorf("unknown scheme in host parameter")
+	return errors.New("unknown scheme in host parameter")
 }
 
 func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
@@ -154,7 +155,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB: Telnet connect fail")
+		return errors.New("OpenTSDB: Telnet connect fail")
 	}
 	defer connection.Close()
 

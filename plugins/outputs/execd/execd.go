@@ -4,6 +4,7 @@ package execd
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -41,7 +42,7 @@ func (e *Execd) SetSerializer(s serializers.Serializer) {
 
 func (e *Execd) Init() error {
 	if len(e.Command) == 0 {
-		return fmt.Errorf("no command specified")
+		return errors.New("no command specified")
 	}
 
 	var err error
