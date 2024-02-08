@@ -180,14 +180,13 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 		}
 
 		if p.tagConversions.Boolean != nil && p.tagConversions.Boolean.Match(key) {
-			v, ok := toBool(value)
-			if !ok {
-				metric.RemoveTag(key)
-				p.Log.Errorf("error converting to boolean [%T]: %v", value, value)
+			metric.RemoveTag(key)
+			v, err := internal.ToBool(value)
+			if err != nil {
+				p.Log.Errorf("Converting to boolean [%T] failed: %v", value, err)
 				continue
 			}
 
-			metric.RemoveTag(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -286,14 +285,13 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 		}
 
 		if p.fieldConversions.Boolean != nil && p.fieldConversions.Boolean.Match(key) {
-			v, ok := toBool(value)
-			if !ok {
-				metric.RemoveField(key)
-				p.Log.Errorf("error converting to bool [%T]: %v", value, value)
+			metric.RemoveField(key)
+			v, err := internal.ToBool(value)
+			if err != nil {
+				p.Log.Errorf("Converting to bool [%T] failed: %v", value, err)
 				continue
 			}
 
-			metric.RemoveField(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -321,23 +319,6 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			continue
 		}
 	}
-}
-
-func toBool(v interface{}) (val bool, ok bool) {
-	switch value := v.(type) {
-	case int64:
-		return value != 0, true
-	case uint64:
-		return value != 0, true
-	case float64:
-		return value != 0, true
-	case bool:
-		return value, true
-	case string:
-		result, err := strconv.ParseBool(value)
-		return result, err == nil
-	}
-	return false, false
 }
 
 func toInteger(v interface{}) (int64, error) {
