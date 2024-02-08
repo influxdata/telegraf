@@ -25,13 +25,7 @@ func (*Clone) SampleConfig() string {
 func (c *Clone) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, 2*len(in))
 
-	for _, raw := range in {
-		// Strip the tracking information if the metric is wrapped.
-		original := raw
-		if wm, ok := raw.(telegraf.UnwrappableMetric); ok {
-			original = wm.Unwrap()
-		}
-
+	for _, original := range in {
 		m := original.Copy()
 		if len(c.NameOverride) > 0 {
 			m.SetName(c.NameOverride)
