@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 )
 
 var ErrOutOfRange = strconv.ErrRange
@@ -386,6 +387,9 @@ func ToUint8(value interface{}) (uint8, error) {
 func ToInt64(value interface{}) (int64, error) {
 	switch v := value.(type) {
 	case string:
+		if strings.HasPrefix(v, "0x") {
+			return strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 64)
+		}
 		return strconv.ParseInt(v, 10, 64)
 	case []byte:
 		return strconv.ParseInt(string(v), 10, 64)
