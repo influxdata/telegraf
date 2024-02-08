@@ -3,7 +3,6 @@ package zabbix
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"net"
 	"os"
 	"sort"
@@ -859,7 +858,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 		1,
 	)
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%sname.value[b,bar]", keyPrefix), zm.Key)
+	require.Equal(t, keyPrefix+"name.value[b,bar]", zm.Key)
 
 	zm, err = z.buildZabbixMetric(testutil.MustMetric(
 		"name",
@@ -870,7 +869,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 		1,
 	)
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%sname.value", keyPrefix), zm.Key)
+	require.Equal(t, keyPrefix+"name.value", zm.Key)
 }
 
 func TestGetHostname(t *testing.T) {

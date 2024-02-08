@@ -55,11 +55,11 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &Nginx{
-		Urls: []string{fmt.Sprintf("%s/stub_status", ts.URL)},
+		Urls: []string{ts.URL + "/stub_status"},
 	}
 
 	nt := &Nginx{
-		Urls: []string{fmt.Sprintf("%s/tengine_status", ts.URL)},
+		Urls: []string{ts.URL + "/tengine_status"},
 	}
 
 	var accNginx testutil.Accumulator

@@ -381,7 +381,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	}
 	vsanSystemEx := types.ManagedObjectReference{
 		Type:  "VsanSystemEx",
-		Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
+		Value: "vsanSystemEx-" + strings.Split(hostRefValue, "-")[1],
 	}
 
 	includeSummary := true

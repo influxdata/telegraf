@@ -394,7 +394,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 
 		// Prepare time series request.
 		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
-			Name:       fmt.Sprintf("projects/%s", s.Project),
+			Name:       "projects/" + s.Project,
 			TimeSeries: timeSeries,
 		}
 

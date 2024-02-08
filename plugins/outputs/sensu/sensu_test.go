@@ -78,7 +78,7 @@ func TestConnectAndWrite(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	testURL := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+	testURL := "http://" + ts.Listener.Addr().String()
 	testAPIKey := "a0b1c2d3-e4f5-g6h7-i8j9-k0l1m2n3o4p5"
 	testCheck := "telegraf"
 	testEntity := "entity1"
@@ -86,7 +86,7 @@ func TestConnectAndWrite(t *testing.T) {
 	testHandler := "influxdb"
 	testTagName := "myTagName"
 	testTagValue := "myTagValue"
-	expectedAuthHeader := fmt.Sprintf("Key %s", testAPIKey)
+	expectedAuthHeader := "Key " + testAPIKey
 	expectedURL := fmt.Sprintf("/api/core/v2/namespaces/%s/events", testNamespace)
 	expectedPointName := "cpu"
 	expectedPointValue := float64(42)

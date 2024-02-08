@@ -283,7 +283,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 			resourceLabelsFilter = append(resourceLabelsFilter, fmt.Sprintf(valueFmt, resourceLabel.Key, resourceLabel.Value))
 		}
 		if len(resourceLabelsFilter) == 1 {
-			filterString += fmt.Sprintf(" AND %s", resourceLabelsFilter[0])
+			filterString += " AND " + resourceLabelsFilter[0]
 		} else {
 			filterString += fmt.Sprintf(" AND (%s)", strings.Join(resourceLabelsFilter, " OR "))
 		}
@@ -301,7 +301,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 			metricLabelsFilter = append(metricLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(metricLabelsFilter) == 1 {
-			filterString += fmt.Sprintf(" AND %s", metricLabelsFilter[0])
+			filterString += " AND " + metricLabelsFilter[0]
 		} else {
 			filterString += fmt.Sprintf(" AND (%s)", strings.Join(metricLabelsFilter, " OR "))
 		}
@@ -319,7 +319,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 			userLabelsFilter = append(userLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(userLabelsFilter) == 1 {
-			filterString += fmt.Sprintf(" AND %s", userLabelsFilter[0])
+			filterString += " AND " + userLabelsFilter[0]
 		} else {
 			filterString += fmt.Sprintf(" AND (%s)", strings.Join(userLabelsFilter, " OR "))
 		}
@@ -337,7 +337,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 			systemLabelsFilter = append(systemLabelsFilter, fmt.Sprintf(valueFmt, metricLabel.Key, metricLabel.Value))
 		}
 		if len(systemLabelsFilter) == 1 {
-			filterString += fmt.Sprintf(" AND %s", systemLabelsFilter[0])
+			filterString += " AND " + systemLabelsFilter[0]
 		} else {
 			filterString += fmt.Sprintf(" AND (%s)", strings.Join(systemLabelsFilter, " OR "))
 		}
@@ -357,7 +357,7 @@ func (s *Stackdriver) newTimeSeriesConf(
 		StartTime: &timestamppb.Timestamp{Seconds: startTime.Unix()},
 	}
 	tsReq := &monitoringpb.ListTimeSeriesRequest{
-		Name:     fmt.Sprintf("projects/%s", s.Project),
+		Name:     "projects/" + s.Project,
 		Filter:   filter,
 		Interval: interval,
 	}
@@ -493,7 +493,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 
 	ret := []*timeSeriesConf{}
 	req := &monitoringpb.ListMetricDescriptorsRequest{
-		Name: fmt.Sprintf("projects/%s", s.Project),
+		Name: "projects/" + s.Project,
 	}
 
 	filters := s.newListMetricDescriptorsFilters()

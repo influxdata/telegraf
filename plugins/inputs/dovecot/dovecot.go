@@ -90,7 +90,7 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 		return fmt.Errorf("setting deadline failed for dovecot server %q: %w", addr, err)
 	}
 
-	msg := fmt.Sprintf("EXPORT\t%s", qtype)
+	msg := "EXPORT\t" + qtype
 	if len(filter) > 0 {
 		msg += fmt.Sprintf("\t%s=%s", qtype, filter)
 	}

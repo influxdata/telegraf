@@ -126,13 +126,13 @@ func getShowParameters(s *SystemdUnits) *[]string {
 
 	// add the fields we're interested in to the command line
 	for property := range tagMap {
-		params = append(params, fmt.Sprintf("--property=%s", property))
+		params = append(params, "--property="+property)
 	}
 	for property := range valueMap {
 		// If a property exists within the tagMap it was already added. Do not add it again to
 		// keep the command line short.
 		if _, exists := tagMap[property]; !exists {
-			params = append(params, fmt.Sprintf("--property=%s", property))
+			params = append(params, "--property="+property)
 		}
 	}
 

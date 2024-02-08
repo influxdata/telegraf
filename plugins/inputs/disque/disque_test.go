@@ -6,8 +6,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDisqueGeneratesMetricsIntegration(t *testing.T) {
@@ -47,7 +48,7 @@ func TestDisqueGeneratesMetricsIntegration(t *testing.T) {
 		}
 	}()
 
-	addr := fmt.Sprintf("disque://%s", l.Addr().String())
+	addr := "disque://" + l.Addr().String()
 
 	r := &Disque{
 		Servers: []string{addr},
@@ -117,7 +118,7 @@ func TestDisqueCanPullStatsFromMultipleServersIntegration(t *testing.T) {
 		}
 	}()
 
-	addr := fmt.Sprintf("disque://%s", l.Addr().String())
+	addr := "disque://" + l.Addr().String()
 
 	r := &Disque{
 		Servers: []string{addr},

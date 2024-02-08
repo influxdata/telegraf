@@ -41,10 +41,10 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 		rsaBits = 2048
 	}
 	if len(certFile) == 0 {
-		certFile = fmt.Sprintf("%s/cert.pem", dir)
+		certFile = dir + "/cert.pem"
 	}
 	if len(keyFile) == 0 {
-		keyFile = fmt.Sprintf("%s/key.pem", dir)
+		keyFile = dir + "/key.pem"
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
