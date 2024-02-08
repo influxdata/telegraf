@@ -34,7 +34,7 @@ func TestTengineGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &Tengine{
-		Urls: []string{fmt.Sprintf("%s/us", ts.URL)},
+		Urls: []string{ts.URL + "/us"},
 	}
 
 	var accTengine testutil.Accumulator

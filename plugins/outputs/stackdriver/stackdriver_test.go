@@ -106,7 +106,7 @@ func TestWrite(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:   "projects/" + "[PROJECT]",
 		Namespace: "test",
 		Log:       testutil.Logger{},
 		client:    c,
@@ -134,7 +134,7 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:      fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:      "projects/" + "[PROJECT]",
 		Namespace:    "test",
 		ResourceType: "foo",
 		ResourceLabels: map[string]string{
@@ -167,7 +167,7 @@ func TestWriteTagsAsResourceLabels(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:              fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:              "projects/" + "[PROJECT]",
 		Namespace:            "test",
 		ResourceType:         "foo",
 		TagsAsResourceLabels: []string{"job_name"},
@@ -231,7 +231,7 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:   "projects/" + "[PROJECT]",
 		Namespace: "test",
 		ResourceLabels: map[string]string{
 			"mylabel": "myvalue",
@@ -307,7 +307,7 @@ func TestWriteMetricTypesPath(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:   "projects/" + "[PROJECT]",
 		Namespace: "test",
 		ResourceLabels: map[string]string{
 			"mylabel": "myvalue",
@@ -367,7 +367,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:   "projects/" + "[PROJECT]",
 		Namespace: "test",
 		Log:       testutil.Logger{},
 		client:    c,
@@ -443,7 +443,7 @@ func TestWriteBatchable(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:   "projects/" + "[PROJECT]",
 		Namespace: "test",
 		Log:       testutil.Logger{},
 		client:    c,
@@ -636,7 +636,7 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			}
 
 			s := &Stackdriver{
-				Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+				Project:   "projects/" + "[PROJECT]",
 				Namespace: "test",
 				Log:       testutil.Logger{},
 				client:    c,
@@ -713,7 +713,7 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 	}
 
 	s := &Stackdriver{
-		Project:      fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Project:      "projects/" + "[PROJECT]",
 		Namespace:    "test",
 		Log:          testutil.Logger{},
 		client:       c,

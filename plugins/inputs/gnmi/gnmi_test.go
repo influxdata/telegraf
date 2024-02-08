@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -75,7 +74,7 @@ func TestWaitError(t *testing.T) {
 	grpcServer := grpc.NewServer()
 	gnmiServer := &MockServer{
 		SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-			return fmt.Errorf("testerror")
+			return errors.New("testerror")
 		},
 		GRPCServer: grpcServer,
 	}

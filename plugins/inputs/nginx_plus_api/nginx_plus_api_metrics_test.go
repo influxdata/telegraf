@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const processesPayload = `
@@ -1532,7 +1533,7 @@ func TestUnknownContentType(t *testing.T) {
 
 func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 	t.Helper()
-	addr, err := url.Parse(fmt.Sprintf("%s/api", ts.URL))
+	addr, err := url.Parse(ts.URL + "/api")
 	require.NoError(t, err)
 
 	host, port, err := net.SplitHostPort(addr.Host)
@@ -1561,7 +1562,7 @@ func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Serve
 	}))
 
 	n := &NginxPlusAPI{
-		Urls:       []string{fmt.Sprintf("%s/api", ts.URL)},
+		Urls:       []string{ts.URL + "/api"},
 		APIVersion: defaultAPIVersion,
 	}
 

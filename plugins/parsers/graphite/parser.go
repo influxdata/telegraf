@@ -134,7 +134,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			// Check if we have fractional seconds
 			timestamp = time.Unix(int64(unixTime), int64((unixTime-math.Floor(unixTime))*float64(time.Second)))
 			if timestamp.Before(MinDate) || timestamp.After(MaxDate) {
-				return nil, fmt.Errorf("timestamp out of range")
+				return nil, errors.New("timestamp out of range")
 			}
 		}
 	}

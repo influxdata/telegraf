@@ -147,32 +147,32 @@ func main() {
 		{
 			FileName: ".circleci/config.yml",
 			Regex:    `(quay\.io\/influxdb\/telegraf-ci):(\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1:%s", version),
+			Replace:  "$1:" + version,
 		},
 		{
 			FileName: ".github/workflows/govulncheck.yml",
 			Regex:    `(go-version-input).*`,
-			Replace:  fmt.Sprintf("$1: %s", version),
+			Replace:  "$1: " + version,
 		},
 		{
 			FileName: "go.mod",
 			Regex:    `(go)\s(\d.\d*)`,
-			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
+			Replace:  "$1 " + noPatchVersion,
 		},
 		{
 			FileName: "Makefile",
 			Regex:    `(quay\.io\/influxdb\/telegraf-ci):(\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1:%s", version),
+			Replace:  "$1:" + version,
 		},
 		{
 			FileName: "README.md",
 			Regex:    `(Telegraf requires Go version) (\d.\d*)`,
-			Replace:  fmt.Sprintf("$1 %s", noPatchVersion),
+			Replace:  "$1 " + noPatchVersion,
 		},
 		{
 			FileName: "scripts/ci.docker",
 			Regex:    `(FROM golang):(\d.\d*.\d)`,
-			Replace:  fmt.Sprintf("$1:%s", version),
+			Replace:  "$1:" + version,
 		},
 		{
 			FileName: "scripts/installgo_linux.sh",

@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -65,7 +66,7 @@ func (*OpensearchQuery) SampleConfig() string {
 // Init the plugin.
 func (o *OpensearchQuery) Init() error {
 	if o.URLs == nil {
-		return fmt.Errorf("no urls defined")
+		return errors.New("no urls defined")
 	}
 
 	err := o.newClient()
@@ -75,10 +76,10 @@ func (o *OpensearchQuery) Init() error {
 
 	for i, agg := range o.Aggregations {
 		if agg.MeasurementName == "" {
-			return fmt.Errorf("field 'measurement_name' is not set")
+			return errors.New("field 'measurement_name' is not set")
 		}
 		if agg.DateField == "" {
-			return fmt.Errorf("field 'date_field' is not set")
+			return errors.New("field 'date_field' is not set")
 		}
 		err = o.initAggregation(agg, i)
 		if err != nil {

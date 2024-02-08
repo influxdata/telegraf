@@ -3,6 +3,7 @@
 package intel_pmu
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,12 +25,12 @@ type configParser struct {
 
 func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) (err error) {
 	if len(coreEntities) == 0 && len(uncoreEntities) == 0 {
-		return fmt.Errorf("neither core nor uncore entities configured")
+		return errors.New("neither core nor uncore entities configured")
 	}
 
 	for _, coreEntity := range coreEntities {
 		if coreEntity == nil {
-			return fmt.Errorf("core entity is nil")
+			return errors.New("core entity is nil")
 		}
 		if coreEntity.Events == nil {
 			if cp.log != nil {
@@ -39,7 +40,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 		} else {
 			events := cp.parseEvents(coreEntity.Events)
 			if events == nil {
-				return fmt.Errorf("an empty list of core events was provided")
+				return errors.New("an empty list of core events was provided")
 			}
 			coreEntity.parsedEvents = events
 		}
@@ -52,7 +53,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 
 	for _, uncoreEntity := range uncoreEntities {
 		if uncoreEntity == nil {
-			return fmt.Errorf("uncore entity is nil")
+			return errors.New("uncore entity is nil")
 		}
 		if uncoreEntity.Events == nil {
 			if cp.log != nil {
@@ -62,7 +63,7 @@ func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEnt
 		} else {
 			events := cp.parseEvents(uncoreEntity.Events)
 			if events == nil {
-				return fmt.Errorf("an empty list of uncore events was provided")
+				return errors.New("an empty list of uncore events was provided")
 			}
 			uncoreEntity.parsedEvents = events
 		}
@@ -95,7 +96,7 @@ func (cp *configParser) parseCores(cores []string) ([]int, error) {
 			cp.log.Debug("all possible cores will be configured")
 		}
 		if cp.sys == nil {
-			return nil, fmt.Errorf("system info provider is nil")
+			return nil, errors.New("system info provider is nil")
 		}
 		cores, err := cp.sys.allCPUs()
 		if err != nil {
@@ -104,7 +105,7 @@ func (cp *configParser) parseCores(cores []string) ([]int, error) {
 		return cores, nil
 	}
 	if len(cores) == 0 {
-		return nil, fmt.Errorf("an empty list of cores was provided")
+		return nil, errors.New("an empty list of cores was provided")
 	}
 
 	result, err := cp.parseIntRanges(cores)
@@ -120,7 +121,7 @@ func (cp *configParser) parseSockets(sockets []string) ([]int, error) {
 			cp.log.Debug("all possible sockets will be configured")
 		}
 		if cp.sys == nil {
-			return nil, fmt.Errorf("system info provider is nil")
+			return nil, errors.New("system info provider is nil")
 		}
 		sockets, err := cp.sys.allSockets()
 		if err != nil {
@@ -129,7 +130,7 @@ func (cp *configParser) parseSockets(sockets []string) ([]int, error) {
 		return sockets, nil
 	}
 	if len(sockets) == 0 {
-		return nil, fmt.Errorf("an empty list of sockets was provided")
+		return nil, errors.New("an empty list of sockets was provided")
 	}
 
 	result, err := cp.parseIntRanges(sockets)

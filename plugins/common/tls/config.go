@@ -10,8 +10,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/youmark/pkcs8"
+
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 const TLSMinVersionDefault = tls.VersionTLS12
@@ -254,7 +255,7 @@ func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase
 	} else if keyPEMBlock.Headers["Proc-Type"] == "4,ENCRYPTED" {
 		// The key is an encrypted private key with the DEK-Info header.
 		// This is currently unsupported because of the deprecation of x509.IsEncryptedPEMBlock and x509.DecryptPEMBlock.
-		return fmt.Errorf("password-protected keys in pkcs#1 format are not supported")
+		return errors.New("password-protected keys in pkcs#1 format are not supported")
 	} else {
 		cert, err = tls.X509KeyPair(certBytes, keyBytes)
 		if err != nil {

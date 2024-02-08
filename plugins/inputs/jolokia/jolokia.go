@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -235,14 +236,14 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 					server.Host, server.Port, metrics[i].Mbean, metrics[i].Attribute, status))
 				continue
 			} else if !ok {
-				acc.AddError(fmt.Errorf("missing status in response body"))
+				acc.AddError(errors.New("missing status in response body"))
 				continue
 			}
 
 			if values, ok := resp["value"]; ok {
 				j.extractValues(metrics[i].Name, values, fields)
 			} else {
-				acc.AddError(fmt.Errorf("missing key 'value' in output response"))
+				acc.AddError(errors.New("missing key 'value' in output response"))
 			}
 		}
 

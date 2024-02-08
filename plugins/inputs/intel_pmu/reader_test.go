@@ -3,6 +3,7 @@
 package intel_pmu
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -61,7 +62,7 @@ func TestReadCoreEvents(t *testing.T) {
 	})
 
 	t.Run("reading failed", func(t *testing.T) {
-		errMock := fmt.Errorf("mock error")
+		errMock := errors.New("mock error")
 		event := &ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event1"}}
 
 		entity := &CoreEventEntity{}
@@ -138,7 +139,7 @@ func TestReadMultiEventSeparately(t *testing.T) {
 	})
 
 	t.Run("reading failed", func(t *testing.T) {
-		errMock := fmt.Errorf("mock error")
+		errMock := errors.New("mock error")
 		perfEvent := &ia.PerfEvent{Name: "event"}
 
 		event := &ia.ActiveEvent{PerfEvent: perfEvent}
@@ -190,7 +191,7 @@ func TestReadMultiEventAgg(t *testing.T) {
 	mReader := &mockValuesReader{}
 	mTimer := &moonClock{}
 	mEntitiesReader := &iaEntitiesValuesReader{mReader, mTimer}
-	errMock := fmt.Errorf("mock error")
+	errMock := errors.New("mock error")
 
 	t.Run("event reader is nil", func(t *testing.T) {
 		event := multiEvent{}
@@ -294,7 +295,7 @@ func TestReadMultiEventAgg(t *testing.T) {
 }
 
 func TestReadUncoreEvents(t *testing.T) {
-	errMock := fmt.Errorf("mock error")
+	errMock := errors.New("mock error")
 
 	t.Run("entity is nil", func(t *testing.T) {
 		metrics, err := (&iaEntitiesValuesReader{}).readUncoreEvents(nil)

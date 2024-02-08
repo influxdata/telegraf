@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -145,24 +146,24 @@ func (m *Mcrouter) ParseAddress(address string) (parsedAddress string, protocol 
 	u, parseError := url.Parse(parsedAddress)
 
 	if parseError != nil {
-		return "", "", fmt.Errorf("invalid server address")
+		return "", "", errors.New("invalid server address")
 	}
 
 	if u.Scheme != "tcp" && u.Scheme != "unix" {
-		return "", "", fmt.Errorf("invalid server protocol")
+		return "", "", errors.New("invalid server protocol")
 	}
 
 	protocol = u.Scheme
 
 	if protocol == "unix" {
 		if u.Path == "" {
-			return "", "", fmt.Errorf("invalid unix socket path")
+			return "", "", errors.New("invalid unix socket path")
 		}
 
 		parsedAddress = u.Path
 	} else {
 		if u.Host == "" {
-			return "", "", fmt.Errorf("invalid host")
+			return "", "", errors.New("invalid host")
 		}
 
 		host = u.Hostname()

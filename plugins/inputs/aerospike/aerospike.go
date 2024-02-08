@@ -307,7 +307,7 @@ func (a *Aerospike) getSetInfo(namespaceSet string, n *as.Node, infoPolicy *as.I
 func (a *Aerospike) parseSetInfo(acc telegraf.Accumulator, stats map[string]string, hostPort string, namespaceSet string, nodeName string) {
 	stat := strings.Split(
 		strings.TrimSuffix(
-			stats[fmt.Sprintf("sets/%s", namespaceSet)], ";"), ":")
+			stats["sets/"+namespaceSet], ";"), ":")
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,

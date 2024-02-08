@@ -1,6 +1,7 @@
 package procstat
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -269,7 +270,7 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 		Log:       testutil.Logger{},
 		finder:    newTestFinder([]PID{pid}),
 		createProcess: func(PID) (Process, error) {
-			return nil, fmt.Errorf("createProcess error")
+			return nil, errors.New("createProcess error")
 		},
 	}
 	require.NoError(t, p.Init())

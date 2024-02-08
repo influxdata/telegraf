@@ -3,6 +3,7 @@
 package processes
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"testing"
@@ -192,7 +193,7 @@ func (t *tester) testProcFile2(_ string) ([]byte, error) {
 }
 
 func testExecPSError(_ bool) ([]byte, error) {
-	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), fmt.Errorf("error")
+	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), errors.New("error")
 }
 
 const testProcStat = `10 (rcuob/0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 ` +

@@ -147,15 +147,15 @@ func (m *MQTTConsumer) Init() error {
 		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 
 		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
-			return fmt.Errorf("config error topic parsing: measurement length does not equal topic length")
+			return errors.New("config error topic parsing: measurement length does not equal topic length")
 		}
 
 		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
-			return fmt.Errorf("config error topic parsing: fields length does not equal topic length")
+			return errors.New("config error topic parsing: fields length does not equal topic length")
 		}
 
 		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
-			return fmt.Errorf("config error topic parsing: tags length does not equal topic length")
+			return errors.New("config error topic parsing: tags length does not equal topic length")
 		}
 	}
 
@@ -383,7 +383,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		password.Destroy()
 	}
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host information")
+		return opts, errors.New("could not get host information")
 	}
 	for _, server := range m.Servers {
 		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4

@@ -4,6 +4,7 @@ package gnmi
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -98,7 +99,7 @@ func (*GNMI) SampleConfig() string {
 func (c *GNMI) Init() error {
 	// Check options
 	if time.Duration(c.Redial) <= 0 {
-		return fmt.Errorf("redial duration must be positive")
+		return errors.New("redial duration must be positive")
 	}
 
 	// Check vendor_specific options configured by user
@@ -144,7 +145,7 @@ func (c *GNMI) Init() error {
 			return err
 		}
 		if c.TagSubscriptions[idx].TagOnly != c.TagSubscriptions[0].TagOnly {
-			return fmt.Errorf("do not mix legacy tag_only subscriptions and tag subscriptions")
+			return errors.New("do not mix legacy tag_only subscriptions and tag subscriptions")
 		}
 		switch c.TagSubscriptions[idx].Match {
 		case "":
@@ -157,7 +158,7 @@ func (c *GNMI) Init() error {
 		case "name":
 		case "elements":
 			if len(c.TagSubscriptions[idx].Elements) == 0 {
-				return fmt.Errorf("tag_subscription must have at least one element")
+				return errors.New("tag_subscription must have at least one element")
 			}
 		default:
 			return fmt.Errorf("unknown match type %q for tag-subscription %q", c.TagSubscriptions[idx].Match, c.TagSubscriptions[idx].Name)

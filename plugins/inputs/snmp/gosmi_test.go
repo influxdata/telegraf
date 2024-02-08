@@ -1,7 +1,7 @@
 package snmp
 
 import (
-	"fmt"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -612,7 +612,7 @@ func TestSnmpTranslateCache_hitGosmi(t *testing.T) {
 			oidNum:     "b",
 			oidText:    "c",
 			conversion: "d",
-			err:        fmt.Errorf("e"),
+			err:        errors.New("e"),
 		},
 	}
 	mibName, oidNum, oidText, conversion, err := getGosmiTr(t).SnmpTranslate("foo")
@@ -620,7 +620,7 @@ func TestSnmpTranslateCache_hitGosmi(t *testing.T) {
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
 	require.Equal(t, "d", conversion)
-	require.Equal(t, fmt.Errorf("e"), err)
+	require.Equal(t, errors.New("e"), err)
 	gosmiSnmpTranslateCaches = nil
 }
 
@@ -645,7 +645,7 @@ func TestSnmpTableCache_hitGosmi(t *testing.T) {
 			oidNum:  "b",
 			oidText: "c",
 			fields:  []Field{{Name: "d"}},
-			err:     fmt.Errorf("e"),
+			err:     errors.New("e"),
 		},
 	}
 	mibName, oidNum, oidText, fields, err := getGosmiTr(t).SnmpTable("foo")
@@ -653,7 +653,7 @@ func TestSnmpTableCache_hitGosmi(t *testing.T) {
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
 	require.Equal(t, []Field{{Name: "d"}}, fields)
-	require.Equal(t, fmt.Errorf("e"), err)
+	require.Equal(t, errors.New("e"), err)
 }
 
 func TestTableJoin_walkGosmi(t *testing.T) {

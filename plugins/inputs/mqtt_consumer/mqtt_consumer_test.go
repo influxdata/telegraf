@@ -1,7 +1,7 @@
 package mqtt_consumer
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -325,7 +325,7 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: fmt.Errorf("config error topic parsing: fields length does not equal topic length"),
+			expectedError: errors.New("config error topic parsing: fields length does not equal topic length"),
 			topicParsing: []TopicParsingConfig{
 				{
 					Topic:       "telegraf/+/test/hello",

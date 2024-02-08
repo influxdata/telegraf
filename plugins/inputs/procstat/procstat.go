@@ -366,7 +366,7 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 
 func (p *Procstat) systemdUnitPIDs() ([]PidsTags, error) {
 	if p.IncludeSystemdChildren {
-		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
+		p.CGroup = "systemd/system.slice/" + p.SystemdUnit
 		return p.cgroupPIDs()
 	}
 

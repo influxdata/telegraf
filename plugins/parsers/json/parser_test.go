@@ -1,7 +1,7 @@
 package json
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -840,7 +840,7 @@ func TestTimeErrors(t *testing.T) {
 	actual, err = parser.Parse([]byte(testString2))
 	require.Error(t, err)
 	require.Empty(t, actual)
-	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
+	require.Equal(t, errors.New("JSON time key could not be found"), err)
 }
 
 func TestShareTimestamp(t *testing.T) {

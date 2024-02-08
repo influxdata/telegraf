@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -145,7 +146,7 @@ func (m *Memcached) gatherServer(
 	}
 
 	if conn == nil {
-		return fmt.Errorf("Failed to create net connection")
+		return errors.New("failed to create net connection")
 	}
 
 	// Extend connection

@@ -137,7 +137,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		}
 		// Find Amp and Watt probes and add them as fields.
 		// Remove the redundant probe.
-		if pos := findProbe(fmt.Sprintf("%sW", o.Name), r.Probe); pos > -1 {
+		if pos := findProbe(o.Name+"W", r.Probe); pos > -1 {
 			value, err := strconv.ParseFloat(
 				strings.TrimSpace(r.Probe[pos].Value), 64)
 			if err != nil {
@@ -149,7 +149,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 			r.Probe[pos] = r.Probe[len(r.Probe)-1]
 			r.Probe = r.Probe[:len(r.Probe)-1]
 		}
-		if pos := findProbe(fmt.Sprintf("%sA", o.Name), r.Probe); pos > -1 {
+		if pos := findProbe(o.Name+"A", r.Probe); pos > -1 {
 			value, err := strconv.ParseFloat(
 				strings.TrimSpace(r.Probe[pos].Value), 64)
 			if err != nil {
@@ -245,7 +245,7 @@ func parseTime(val string, tz float64) (time.Time, error) {
 }
 
 func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
-	url := fmt.Sprintf("%s/cgi-bin/status.xml", server)
+	url := server + "/cgi-bin/status.xml"
 	resp, err := n.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("http GET failed: %w", err)

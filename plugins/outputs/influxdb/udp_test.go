@@ -3,6 +3,7 @@ package influxdb_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -121,8 +122,7 @@ func TestUDP_DialError(t *testing.T) {
 		URL: u,
 		Dialer: &MockDialer{
 			DialContextF: func(network, address string) (influxdb.Conn, error) {
-				return nil, fmt.Errorf(
-					`unsupported scheme [invalid://localhost:9999]: "invalid"`)
+				return nil, errors.New(`unsupported scheme [invalid://localhost:9999]: "invalid"`)
 			},
 		},
 	}
@@ -143,8 +143,7 @@ func TestUDP_WriteError(t *testing.T) {
 			DialContextF: func(network, address string) (influxdb.Conn, error) {
 				conn := &MockConn{
 					WriteF: func(b []byte) (n int, err error) {
-						return 0, fmt.Errorf(
-							"write udp 127.0.0.1:52190->127.0.0.1:9999: write: connection refused")
+						return 0, errors.New("write udp 127.0.0.1:52190->127.0.0.1:9999: write: connection refused")
 					},
 					CloseF: func() error {
 						closed = true
