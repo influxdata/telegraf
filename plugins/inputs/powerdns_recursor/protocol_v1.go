@@ -2,7 +2,6 @@ package powerdns_recursor
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
