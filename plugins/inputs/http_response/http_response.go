@@ -283,7 +283,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		return fields, tags, nil
 	} else if err != nil {
 		h.setBodyReadError("Failed to read body of HTTP Response : "+err.Error(), bodyBytes, fields, tags)
-		return fields, tags, nil
+		return fields, tags, nil //nolint:nilerr // error is handled properly
 	}
 
 	// Add the body of the response if expected
