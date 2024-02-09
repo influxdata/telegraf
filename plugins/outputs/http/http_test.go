@@ -290,6 +290,7 @@ func TestContentType(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
+	headerSecret := config.NewSecret([]byte("application/json"))
 	tests := []struct {
 		name     string
 		plugin   *HTTP
@@ -306,7 +307,7 @@ func TestContentType(t *testing.T) {
 			name: "overwrite content_type",
 			plugin: &HTTP{
 				URL:     u.String(),
-				Headers: map[string]config.Secret{"Content-Type": config.NewSecret([]byte("application/json"))},
+				Headers: map[string]*config.Secret{"Content-Type": &headerSecret},
 			},
 			expected: "application/json",
 		},

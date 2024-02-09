@@ -37,9 +37,9 @@ type HTTP struct {
 	Token       config.Secret `toml:"token"`
 	TokenFile   string        `toml:"token_file"`
 
-	Headers            map[string]config.Secret `toml:"headers"`
-	SuccessStatusCodes []int                    `toml:"success_status_codes"`
-	Log                telegraf.Logger          `toml:"-"`
+	Headers            map[string]*config.Secret `toml:"headers"`
+	SuccessStatusCodes []int                     `toml:"success_status_codes"`
+	Log                telegraf.Logger           `toml:"-"`
 
 	httpconfig.HTTPClientConfig
 

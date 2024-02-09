@@ -83,9 +83,10 @@ func TestHTTPHeaders(t *testing.T) {
 	defer fakeServer.Close()
 
 	address := fakeServer.URL + "/endpoint"
+	headerSecret := config.NewSecret([]byte(headerValue))
 	plugin := &httpplugin.HTTP{
 		URLs:    []string{address},
-		Headers: map[string]config.Secret{header: config.NewSecret([]byte(headerValue))},
+		Headers: map[string]*config.Secret{header: &headerSecret},
 		Log:     testutil.Logger{},
 	}
 
@@ -117,7 +118,7 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 	address := fakeServer.URL + "/endpoint"
 	plugin := &httpplugin.HTTP{
 		URLs:    []string{address},
-		Headers: map[string]config.Secret{},
+		Headers: map[string]*config.Secret{},
 		Body:    "{}",
 		Log:     testutil.Logger{},
 	}
