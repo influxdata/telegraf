@@ -93,7 +93,7 @@ require (
 	github.com/google/gopacket v1.1.19
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.5.0
-	github.com/gopcua/opcua v0.4.0
+	github.com/gopcua/opcua v0.5.3
 	github.com/gophercloud/gophercloud v1.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
