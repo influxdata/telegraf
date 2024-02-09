@@ -6,7 +6,6 @@ import (
 	"errors"
 	"math"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -192,14 +191,13 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 		}
 
 		if p.tagConversions.Float != nil && p.tagConversions.Float.Match(key) {
-			v, ok := toFloat(value)
-			if !ok {
-				metric.RemoveTag(key)
-				p.Log.Errorf("error converting to float [%T]: %v", value, value)
+			metric.RemoveTag(key)
+			v, err := toFloat(value)
+			if err != nil {
+				p.Log.Errorf("Converting to float [%T] failed: %v", value, err)
 				continue
 			}
 
-			metric.RemoveTag(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -207,7 +205,7 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 		if p.tagConversions.Timestamp != nil && p.tagConversions.Timestamp.Match(key) {
 			time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, nil)
 			if err != nil {
-				p.Log.Errorf("error converting to timestamp [%T]: %v", value, value)
+				p.Log.Errorf("Converting to timestamp [%T] failed: %v", value, err)
 				continue
 			}
 
@@ -248,14 +246,13 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 		}
 
 		if p.fieldConversions.Float != nil && p.fieldConversions.Float.Match(key) {
-			v, ok := toFloat(value)
-			if !ok {
-				metric.RemoveField(key)
-				p.Log.Errorf("error converting to float [%T]: %v", value, value)
+			metric.RemoveField(key)
+			v, err := toFloat(value)
+			if err != nil {
+				p.Log.Errorf("Converting to float [%T] failed: %v", value, err)
 				continue
 			}
 
-			metric.RemoveField(key)
 			metric.AddField(key, v)
 			continue
 		}
@@ -276,7 +273,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			metric.RemoveField(key)
 			v, err := toUnsigned(value)
 			if err != nil {
-				p.Log.Errorf("error converting to unsigned [%T]: %v", value, value)
+				p.Log.Errorf("Converting to unsigned [%T] failed: %v", value, err)
 				continue
 			}
 
@@ -310,7 +307,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 		if p.fieldConversions.Timestamp != nil && p.fieldConversions.Timestamp.Match(key) {
 			time, err := internal.ParseTimestamp(p.Fields.TimestampFormat, value, nil)
 			if err != nil {
-				p.Log.Errorf("error converting to timestamp [%T]: %v", value, value)
+				p.Log.Errorf("Converting to timestamp [%T] failed: %v", value, err)
 				continue
 			}
 
@@ -398,47 +395,20 @@ func toUnsigned(v interface{}) (uint64, error) {
 	}
 }
 
-func toFloat(v interface{}) (float64, bool) {
-	switch value := v.(type) {
-	case int64:
-		return float64(value), true
-	case uint64:
-		return float64(value), true
-	case float64:
-		return value, true
-	case bool:
-		if value {
-			return 1.0, true
-		}
-		return 0.0, true
-	case string:
-		if isHexadecimal(value) {
-			result, err := parseHexadecimal(value)
-			return result, err == nil
+func toFloat(v interface{}) (float64, error) {
+	if v, ok := v.(string); ok && strings.HasPrefix(v, "0x") {
+		var i big.Int
+		if _, success := i.SetString(v, 0); !success {
+			return 0, errors.New("unable to parse string to big int")
 		}
 
-		result, err := strconv.ParseFloat(value, 64)
-		return result, err == nil
+		var f big.Float
+		f.SetInt(&i)
+		result, _ := f.Float64()
+
+		return result, nil
 	}
-	return 0.0, false
-}
-
-func parseHexadecimal(value string) (float64, error) {
-	i := new(big.Int)
-
-	_, success := i.SetString(value, 0)
-	if !success {
-		return 0, errors.New("unable to parse string to big int")
-	}
-
-	f := new(big.Float).SetInt(i)
-	result, _ := f.Float64()
-
-	return result, nil
-}
-
-func isHexadecimal(value string) bool {
-	return len(value) >= 3 && strings.ToLower(value)[1] == 'x'
+	return internal.ToFloat64(v)
 }
 
 func init() {
