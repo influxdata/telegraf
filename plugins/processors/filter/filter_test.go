@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -658,4 +659,79 @@ func TestRuleMultiple(t *testing.T) {
 	}
 	actual := plugin.Apply(testmetrics...)
 	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestTracking(t *testing.T) {
+	inputRaw := testmetrics
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m.Copy(), notify)
+		input = append(input, tm)
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"welding",
+			map[string]string{
+				"source":   "machine C",
+				"location": "factory X",
+				"status":   "failure",
+			},
+			map[string]interface{}{
+				"operating_hours": 1009,
+				"temperature":     67.3,
+				"message":         "temperature alert",
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"welding",
+			map[string]string{
+				"source":   "machine D",
+				"location": "factory Y",
+				"status":   "OK",
+			},
+			map[string]interface{}{
+				"operating_hours": 825,
+				"temperature":     31.2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	plugin := &Filter{
+		Rules: []rule{
+			{
+				Name:   []string{"welding"},
+				Action: "pass",
+			},
+		},
+		DefaultAction: "drop",
+	}
+	require.NoError(t, plugin.Init())
+
+	// Process expected metrics and compare with resulting metrics
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }
