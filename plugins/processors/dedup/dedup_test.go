@@ -1,6 +1,7 @@
 package dedup
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -366,4 +367,93 @@ func TestCacheShrink(t *testing.T) {
 	expected := input
 	testutil.RequireMetricsEqual(t, expected, actual)
 	require.Empty(t, plugin.Cache)
+}
+
+func TestTracking(t *testing.T) {
+	now := time.Now()
+
+	inputRaw := []telegraf.Metric{
+		metric.New("metric",
+			map[string]string{"tag": "value"},
+			map[string]interface{}{"foo": 1},
+			now.Add(-2*time.Second),
+		),
+		metric.New("metric",
+			map[string]string{"tag": "pass"},
+			map[string]interface{}{"foo": 1},
+			now.Add(-2*time.Second),
+		),
+		metric.New("metric",
+			map[string]string{"tag": "value"},
+			map[string]interface{}{"foo": 1},
+			now.Add(-1*time.Second),
+		),
+		metric.New("metric",
+			map[string]string{"tag": "pass"},
+			map[string]interface{}{"foo": 1},
+			now.Add(-1*time.Second),
+		),
+		metric.New(
+			"metric",
+			map[string]string{"tag": "value"},
+			map[string]interface{}{"foo": 3},
+			now,
+		),
+	}
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	expected := []telegraf.Metric{
+		metric.New("metric",
+			map[string]string{"tag": "value"},
+			map[string]interface{}{"foo": 1},
+			now.Add(-2*time.Second),
+		),
+		metric.New("metric",
+			map[string]string{"tag": "pass"},
+			map[string]interface{}{"foo": 1},
+			now.Add(-2*time.Second),
+		),
+		metric.New(
+			"metric",
+			map[string]string{"tag": "value"},
+			map[string]interface{}{"foo": 3},
+			now,
+		),
+	}
+
+	// Create plugin instance
+	plugin := &Dedup{
+		DedupInterval: config.Duration(10 * time.Minute),
+		FlushTime:     now.Add(-1 * time.Second),
+		Cache:         make(map[uint64]telegraf.Metric),
+	}
+
+	// Process expected metrics and compare with resulting metrics
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }
