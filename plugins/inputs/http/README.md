@@ -17,7 +17,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username`, `password`, 
+This plugin supports secrets from secret-stores for the `username`, `password`,
 `token` and `headers` option. The `headers` option supports it for the
 header values.
 See the [secret-store documentation][SECRETSTORE] for more details on how
