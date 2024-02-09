@@ -293,7 +293,6 @@ func toInteger(v interface{}) (int64, error) {
 
 func toUnsigned(v interface{}) (uint64, error) {
 	switch value := v.(type) {
-
 	case float32:
 		if value < 0 {
 			return 0, nil
