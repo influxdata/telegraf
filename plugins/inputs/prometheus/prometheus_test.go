@@ -446,8 +446,7 @@ go_gc_duration_seconds_count 42`
 			map[string]string{},
 			map[string]interface{}{
 				"go_gc_duration_seconds_sum":   float64(42.0),
-				"go_gc_duration_seconds_count": float64(42),
-			},
+				"go_gc_duration_seconds_count": float64(42)},
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
