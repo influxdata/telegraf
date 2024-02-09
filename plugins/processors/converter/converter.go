@@ -144,52 +144,44 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 	for key, value := range metric.Tags() {
 		switch {
 		case p.tagConversions.Measurement != nil && p.tagConversions.Measurement.Match(key):
-			metric.RemoveTag(key)
 			metric.SetName(value)
 		case p.tagConversions.String != nil && p.tagConversions.String.Match(key):
-			metric.RemoveTag(key)
 			metric.AddField(key, value)
 		case p.tagConversions.Integer != nil && p.tagConversions.Integer.Match(key):
-			metric.RemoveTag(key)
-			v, err := toInteger(value)
-			if err != nil {
+			if v, err := toInteger(value); err != nil {
 				p.Log.Errorf("Converting to integer [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.tagConversions.Unsigned != nil && p.tagConversions.Unsigned.Match(key):
-			metric.RemoveTag(key)
-			v, err := toUnsigned(value)
-			if err != nil {
+			if v, err := toUnsigned(value); err != nil {
 				p.Log.Errorf("Converting to unsigned [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.tagConversions.Boolean != nil && p.tagConversions.Boolean.Match(key):
-			metric.RemoveTag(key)
-			v, err := internal.ToBool(value)
-			if err != nil {
+			if v, err := internal.ToBool(value); err != nil {
 				p.Log.Errorf("Converting to boolean [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.tagConversions.Float != nil && p.tagConversions.Float.Match(key):
-			metric.RemoveTag(key)
-			v, err := toFloat(value)
-			if err != nil {
+			if v, err := toFloat(value); err != nil {
 				p.Log.Errorf("Converting to float [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.tagConversions.Timestamp != nil && p.tagConversions.Timestamp.Match(key):
-			time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, nil)
-			if err != nil {
+			if time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, nil); err != nil {
 				p.Log.Errorf("Converting to timestamp [%T] failed: %v", value, err)
 				continue
+			} else {
+				metric.SetTime(time)
 			}
-			metric.RemoveTag(key)
-			metric.SetTime(time)
+		default:
+			continue
 		}
+		metric.RemoveTag(key)
 	}
 }
 
@@ -202,69 +194,61 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 	for key, value := range metric.Fields() {
 		switch {
 		case p.fieldConversions.Measurement != nil && p.fieldConversions.Measurement.Match(key):
-			metric.RemoveField(key)
-			v, err := internal.ToString(value)
-			if err != nil {
+			if v, err := internal.ToString(value); err != nil {
 				p.Log.Errorf("Converting to measurement [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.SetName(v)
 			}
-			metric.SetName(v)
+			metric.RemoveField(key)
 		case p.fieldConversions.Tag != nil && p.fieldConversions.Tag.Match(key):
-			metric.RemoveField(key)
-			v, err := internal.ToString(value)
-			if err != nil {
+			if v, err := internal.ToString(value); err != nil {
 				p.Log.Errorf("Converting to tag [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.AddTag(key, v)
 			}
-			metric.AddTag(key, v)
+			metric.RemoveField(key)
 		case p.fieldConversions.Float != nil && p.fieldConversions.Float.Match(key):
-			metric.RemoveField(key)
-			v, err := toFloat(value)
-			if err != nil {
+			if v, err := toFloat(value); err != nil {
 				p.Log.Errorf("Converting to float [%T] failed: %v", value, err)
-				continue
+				metric.RemoveField(key)
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.fieldConversions.Integer != nil && p.fieldConversions.Integer.Match(key):
-			metric.RemoveField(key)
-			v, err := toInteger(value)
-			if err != nil {
+			if v, err := toInteger(value); err != nil {
 				p.Log.Errorf("Converting to integer [%T] failed: %v", value, err)
-				continue
+				metric.RemoveField(key)
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.fieldConversions.Unsigned != nil && p.fieldConversions.Unsigned.Match(key):
-			metric.RemoveField(key)
-			v, err := toUnsigned(value)
-			if err != nil {
+			if v, err := toUnsigned(value); err != nil {
 				p.Log.Errorf("Converting to unsigned [%T] failed: %v", value, err)
-				continue
+				metric.RemoveField(key)
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.fieldConversions.Boolean != nil && p.fieldConversions.Boolean.Match(key):
-			metric.RemoveField(key)
-			v, err := internal.ToBool(value)
-			if err != nil {
+			if v, err := internal.ToBool(value); err != nil {
 				p.Log.Errorf("Converting to bool [%T] failed: %v", value, err)
-				continue
+				metric.RemoveField(key)
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.fieldConversions.String != nil && p.fieldConversions.String.Match(key):
-			metric.RemoveField(key)
-			v, err := internal.ToString(value)
-			if err != nil {
+			if v, err := internal.ToString(value); err != nil {
 				p.Log.Errorf("Converting to string [%T] failed: %v", value, err)
-				continue
+				metric.RemoveField(key)
+			} else {
+				metric.AddField(key, v)
 			}
-			metric.AddField(key, v)
 		case p.fieldConversions.Timestamp != nil && p.fieldConversions.Timestamp.Match(key):
-			time, err := internal.ParseTimestamp(p.Fields.TimestampFormat, value, nil)
-			if err != nil {
+			if time, err := internal.ParseTimestamp(p.Fields.TimestampFormat, value, nil); err != nil {
 				p.Log.Errorf("Converting to timestamp [%T] failed: %v", value, err)
-				continue
+			} else {
+				metric.SetTime(time)
+				metric.RemoveField(key)
 			}
-			metric.RemoveField(key)
-			metric.SetTime(time)
 		}
 	}
 }
