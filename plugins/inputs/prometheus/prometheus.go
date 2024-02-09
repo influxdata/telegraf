@@ -444,12 +444,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	var resp *http.Response
 	var start time.Time
 	if u.URL.Scheme != "unix" {
-		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		start = time.Now()
+		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = p.client.Do(req)
 	} else {
-		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		start = time.Now()
+		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = uClient.Do(req)
 	}
 	end := time.Since(start).Seconds()
