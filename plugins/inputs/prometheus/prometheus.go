@@ -367,37 +367,6 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setError(err error, requestFields map[string]interface{}, tags map[string]string) error {
-	var timeoutError net.Error
-	if errors.As(err, &timeoutError) && timeoutError.Timeout() {
-		tags["result"] = "timeout"
-		return timeoutError
-	}
-
-	var urlErr *url.Error
-	if !errors.As(err, &urlErr) {
-		return nil
-	}
-
-	var opErr *net.OpError
-	if errors.As(urlErr, &opErr) {
-		var dnsErr *net.DNSError
-		var parseErr *net.ParseError
-
-		if errors.As(opErr, &dnsErr) {
-			tags["result"] = "dns_error"
-			return dnsErr
-		} else if errors.As(opErr, &parseErr) {
-			// Parse error has to do with parsing of IP addresses, so we
-			// group it with address errors
-			tags["result"] = "address_error"
-			return parseErr
-		}
-	}
-	tags["result"] = "connection_failed"
-	return nil
-}
-
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[string]interface{}, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
@@ -485,17 +454,14 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	}
 	end := time.Since(start).Seconds()
 	if err != nil {
-		setError(err, requestFields, tags)
 		return requestFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
 	}
 	requestFields["response_time"] = end
-	requestFields["http_response_code"] = resp.StatusCode
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		tags["result"] = "http_code_not_ok"
-		return requestFields, tags, nil
+		return requestFields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
 	var body []byte
@@ -509,19 +475,16 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
-			tags["result"] = "error_reading_body"
-			return requestFields, tags, nil
+			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
-			tags["result"] = "content_length_exceeded"
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, limit)
 			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			tags["result"] = "error_reading_body"
-			return requestFields, tags, nil
+			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}
 
@@ -534,7 +497,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {
-		tags["result"] = "unable_to_decode"
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
@@ -565,7 +527,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 		}
 	}
-	tags["result"] = "success"
 
 	return requestFields, tags, nil
 }

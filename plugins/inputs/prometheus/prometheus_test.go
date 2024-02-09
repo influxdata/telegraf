@@ -350,30 +350,16 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:                  testutil.Logger{},
-		URLs:                 []string{ts.URL},
-		URLTag:               "url",
-		ContentLengthLimit:   1,
-		EnableRequestMetrics: true,
+		Log:                testutil.Logger{},
+		URLs:               []string{ts.URL},
+		URLTag:             "url",
+		ContentLengthLimit: 1,
 	}
 	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
-	expected := []telegraf.Metric{
-		metric.New(
-			"prometheus_request",
-			map[string]string{
-				"url":    ts.URL,
-				"result": "content_length_exceeded"},
-			map[string]interface{}{
-				"http_response_code": int64(200)},
-			time.UnixMilli(0),
-			telegraf.Untyped,
-		),
-	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(), testutil.SortMetrics(), testutil.IgnoreFields("response_time"))
+	require.Empty(t, acc.Metrics)
 }
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
@@ -467,10 +453,10 @@ go_gc_duration_seconds_count 42`
 		),
 		testutil.MustMetric(
 			"prometheus_request",
-			map[string]string{"result": "success"},
+			map[string]string{},
 			map[string]interface{}{
-				"http_response_code": int64(200.0),
-			},
+				"content_length": int64(1),
+				"response_time":  float64(0)},
 			time.Unix(0, 0),
 			telegraf.Untyped,
 		),
@@ -627,12 +613,10 @@ test_counter{label="test"} 1 1685443805885`
 		metric.New(
 			"prometheus_request",
 			map[string]string{
-				"address": tsAddress,
-				"result":  "success"},
+				"address": tsAddress},
 			map[string]interface{}{
-				"content_length":     int64(1),
-				"http_response_code": int64(200),
-				"response_time":      float64(0)},
+				"content_length": int64(1),
+				"response_time":  float64(0)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -670,12 +654,10 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 		metric.New(
 			"prometheus_request",
 			map[string]string{
-				"address": tsAddress,
-				"result":  "unable_to_decode"},
+				"address": tsAddress},
 			map[string]interface{}{
-				"content_length":     int64(94),
-				"http_response_code": int64(200),
-				"response_time":      float64(0)},
+				"content_length": int64(94),
+				"response_time":  float64(0)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -707,12 +689,10 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 		metric.New(
 			"prometheus_request",
 			map[string]string{
-				"address": tsAddress,
-				"result":  "http_code_not_ok"},
+				"address": tsAddress},
 			map[string]interface{}{
-				"content_length":     int64(94),
-				"http_response_code": int64(404),
-				"response_time":      float64(0)},
+				"content_length": int64(94),
+				"response_time":  float64(0)},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),

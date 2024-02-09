@@ -363,32 +363,9 @@ tag is also added indicating the discovered ip address.
   * tags:
     * url
     * address
-    * result_code ([see below](#result_code))
   * fields:
     * response_time (float, seconds)
     * content_length (int, response body length)
-    * http_response_code (int, response status code)
-
-### `result_code`
-
-Upon finishing polling the target server, the plugin registers the result of the
-operation in a numeric field called `result_code`
-corresponding with that tag value.
-
-This tag is used to expose network and plugin errors. HTTP errors are considered
-a successful connection.
-
-|Tag value                     |Description|
--------------------------------|-----------|
-|success                       |The HTTP request completed, even if the HTTP code represents an error|
-|unable_to_decode              |Unable to parse web content|
-|body_read_error               |content empty |
-|connection_failed             |Catch all for any network error not specifically handled by the plugin|
-|timeout                       |The plugin timed out while awaiting the HTTP connection to complete|
-|dns_error                     |There was a DNS error while attempting to connect to the host|
-|http_code_not_ok              |Http return code not 200|
-|error_reading_body            |Error while reading data|
-|content_length_exceeded       |Data exceeded max size|
 
 ## Example Output
 
