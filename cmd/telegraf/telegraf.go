@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/go-systemd/daemon"
+	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/fatih/color"
 	"github.com/influxdata/tail/watch"
 	"gopkg.in/tomb.v1"
