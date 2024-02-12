@@ -92,7 +92,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 }
 
 func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprint(w, string(csvOutputSample))
 		require.NoError(t, err)
 	}))
@@ -213,7 +213,7 @@ func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 }
 
 func TestHaproxyKeepFieldNames(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprint(w, string(csvOutputSample))
 		require.NoError(t, err)
 	}))

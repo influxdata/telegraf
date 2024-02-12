@@ -125,7 +125,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	oldestFileTimestamp := make(map[string]int64)
 	newestFileTimestamp := make(map[string]int64)
 
-	walkFn := func(path string, de *godirwalk.Dirent) error {
+	walkFn := func(path string, _ *godirwalk.Dirent) error {
 		rel, err := filepath.Rel(basedir, path)
 		if err == nil && rel == "." {
 			return nil
@@ -159,7 +159,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		return nil
 	}
 
-	postChildrenFn := func(path string, de *godirwalk.Dirent) error {
+	postChildrenFn := func(path string, _ *godirwalk.Dirent) error {
 		if glob.MatchString(path) {
 			gauge := map[string]interface{}{
 				"count":      childCount[path],
@@ -195,7 +195,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		PostChildrenCallback: postChildrenFn,
 		Unsorted:             true,
 		FollowSymbolicLinks:  fc.FollowSymlinks,
-		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
+		ErrorCallback: func(_ string, err error) godirwalk.ErrorAction {
 			if errors.Is(err, fs.ErrPermission) {
 				fc.Log.Debug(err)
 				return godirwalk.SkipNode

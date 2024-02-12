@@ -11,16 +11,16 @@ import (
 )
 
 type MockClient struct {
-	PublishF func(key string, body []byte) error
+	PublishF func() error
 	CloseF   func() error
 
 	PublishCallCount int
 	CloseCallCount   int
 }
 
-func (c *MockClient) Publish(key string, body []byte) error {
+func (c *MockClient) Publish(string, []byte) error {
 	c.PublishCallCount++
-	return c.PublishF(key, body)
+	return c.PublishF()
 }
 
 func (c *MockClient) Close() error {
@@ -30,7 +30,7 @@ func (c *MockClient) Close() error {
 
 func NewMockClient() Client {
 	return &MockClient{
-		PublishF: func(key string, body []byte) error {
+		PublishF: func() error {
 			return nil
 		},
 		CloseF: func() error {

@@ -88,7 +88,7 @@ var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteCl
 	}
 
 	if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(string, string, ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
 				PartitionID:   "aws",
 				URL:           credentialConfig.EndpointURL,

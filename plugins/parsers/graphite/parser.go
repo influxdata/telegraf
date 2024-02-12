@@ -194,5 +194,5 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func init() {
-	parsers.Add("graphite", func(_ string) telegraf.Parser { return &Parser{} })
+	parsers.Add("graphite", func(string) telegraf.Parser { return &Parser{} })
 }

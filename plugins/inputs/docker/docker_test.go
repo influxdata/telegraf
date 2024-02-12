@@ -22,70 +22,48 @@ import (
 )
 
 type MockClient struct {
-	InfoF             func(ctx context.Context) (system.Info, error)
-	ContainerListF    func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error)
-	ContainerStatsF   func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
-	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
-	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
-	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
-	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
-	DiskUsageF        func(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
+	InfoF             func() (system.Info, error)
+	ContainerListF    func(options typeContainer.ListOptions) ([]types.Container, error)
+	ContainerStatsF   func(containerID string) (types.ContainerStats, error)
+	ContainerInspectF func() (types.ContainerJSON, error)
+	ServiceListF      func() ([]swarm.Service, error)
+	TaskListF         func() ([]swarm.Task, error)
+	NodeListF         func() ([]swarm.Node, error)
+	DiskUsageF        func() (types.DiskUsage, error)
 	ClientVersionF    func() string
 	CloseF            func() error
 }
 
-func (c *MockClient) Info(ctx context.Context) (system.Info, error) {
-	return c.InfoF(ctx)
+func (c *MockClient) Info(context.Context) (system.Info, error) {
+	return c.InfoF()
 }
 
-func (c *MockClient) ContainerList(
-	ctx context.Context,
-	options typeContainer.ListOptions,
-) ([]types.Container, error) {
-	return c.ContainerListF(ctx, options)
+func (c *MockClient) ContainerList(_ context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
+	return c.ContainerListF(options)
 }
 
-func (c *MockClient) ContainerStats(
-	ctx context.Context,
-	containerID string,
-	stream bool,
-) (types.ContainerStats, error) {
-	return c.ContainerStatsF(ctx, containerID, stream)
+func (c *MockClient) ContainerStats(_ context.Context, containerID string, _ bool) (types.ContainerStats, error) {
+	return c.ContainerStatsF(containerID)
 }
 
-func (c *MockClient) ContainerInspect(
-	ctx context.Context,
-	containerID string,
-) (types.ContainerJSON, error) {
-	return c.ContainerInspectF(ctx, containerID)
+func (c *MockClient) ContainerInspect(context.Context, string) (types.ContainerJSON, error) {
+	return c.ContainerInspectF()
 }
 
-func (c *MockClient) ServiceList(
-	ctx context.Context,
-	options types.ServiceListOptions,
-) ([]swarm.Service, error) {
-	return c.ServiceListF(ctx, options)
+func (c *MockClient) ServiceList(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+	return c.ServiceListF()
 }
 
-func (c *MockClient) TaskList(
-	ctx context.Context,
-	options types.TaskListOptions,
-) ([]swarm.Task, error) {
-	return c.TaskListF(ctx, options)
+func (c *MockClient) TaskList(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+	return c.TaskListF()
 }
 
-func (c *MockClient) NodeList(
-	ctx context.Context,
-	options types.NodeListOptions,
-) ([]swarm.Node, error) {
-	return c.NodeListF(ctx, options)
+func (c *MockClient) NodeList(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+	return c.NodeListF()
 }
 
-func (c *MockClient) DiskUsage(
-	ctx context.Context,
-	options types.DiskUsageOptions,
-) (types.DiskUsage, error) {
-	return c.DiskUsageF(ctx, options)
+func (c *MockClient) DiskUsage(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+	return c.DiskUsageF()
 }
 
 func (c *MockClient) ClientVersion() string {
@@ -97,28 +75,28 @@ func (c *MockClient) Close() error {
 }
 
 var baseClient = MockClient{
-	InfoF: func(context.Context) (system.Info, error) {
+	InfoF: func() (system.Info, error) {
 		return info, nil
 	},
-	ContainerListF: func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
+	ContainerListF: func(typeContainer.ListOptions) ([]types.Container, error) {
 		return containerList, nil
 	},
-	ContainerStatsF: func(c context.Context, s string, b bool) (types.ContainerStats, error) {
+	ContainerStatsF: func(s string) (types.ContainerStats, error) {
 		return containerStats(s), nil
 	},
-	ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
+	ContainerInspectF: func() (types.ContainerJSON, error) {
 		return containerInspect(), nil
 	},
-	ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+	ServiceListF: func() ([]swarm.Service, error) {
 		return ServiceList, nil
 	},
-	TaskListF: func(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+	TaskListF: func() ([]swarm.Task, error) {
 		return TaskList, nil
 	},
-	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+	NodeListF: func() ([]swarm.Node, error) {
 		return NodeList, nil
 	},
-	DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+	DiskUsageF: func() (types.DiskUsage, error) {
 		return diskUsage, nil
 	},
 	ClientVersionF: func() string {
@@ -445,28 +423,28 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 		Log: testutil.Logger{},
 		newClient: func(string, *tls.Config) (Client, error) {
 			return &MockClient{
-				InfoF: func(ctx context.Context) (system.Info, error) {
+				InfoF: func() (system.Info, error) {
 					return info, nil
 				},
-				ContainerListF: func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
+				ContainerListF: func(typeContainer.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				},
-				ContainerStatsF: func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+				ContainerStatsF: func(string) (types.ContainerStats, error) {
 					return containerStatsWindows(), nil
 				},
-				ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+				ContainerInspectF: func() (types.ContainerJSON, error) {
 					return containerInspect(), nil
 				},
-				ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+				ServiceListF: func() ([]swarm.Service, error) {
 					return ServiceList, nil
 				},
-				TaskListF: func(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+				TaskListF: func() ([]swarm.Task, error) {
 					return TaskList, nil
 				},
-				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+				NodeListF: func() ([]swarm.Node, error) {
 					return NodeList, nil
 				},
-				DiskUsageF: func(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
+				DiskUsageF: func() (types.DiskUsage, error) {
 					return diskUsage, nil
 				},
 				ClientVersionF: func() string {
@@ -581,9 +559,9 @@ func TestContainerLabels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
-			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+			newClientFunc := func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
 					return []types.Container{tt.container}, nil
 				}
 				return &client, nil
@@ -701,12 +679,12 @@ func TestContainerNames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
-			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+			newClientFunc := func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				}
-				client.ContainerStatsF = func(c context.Context, s string, b bool) (types.ContainerStats, error) {
+				client.ContainerStatsF = func(s string) (types.ContainerStats, error) {
 					return containerStats(s), nil
 				}
 
@@ -913,10 +891,10 @@ func TestContainerStatus(t *testing.T) {
 				acc           testutil.Accumulator
 				newClientFunc = func(string, *tls.Config) (Client, error) {
 					client := baseClient
-					client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
+					client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
 						return containerList[:1], nil
 					}
-					client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
+					client.ContainerInspectF = func() (types.ContainerJSON, error) {
 						return tt.inspect, nil
 					}
 
@@ -1196,9 +1174,9 @@ func TestContainerStateFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
-			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+			newClientFunc := func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(ctx context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(options typeContainer.ListOptions) ([]types.Container, error) {
 					for k, v := range tt.expected {
 						actual := options.Filters.Get(k)
 						sort.Strings(actual)
@@ -1232,16 +1210,16 @@ func TestContainerName(t *testing.T) {
 	}{
 		{
 			name: "container stats name is preferred",
-			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
+			clientFunc: func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout/foo"},
 					})
 					return containers, nil
 				}
-				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+				client.ContainerStatsF = func(string) (types.ContainerStats, error) {
 					return types.ContainerStats{
 						Body: io.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
 					}, nil
@@ -1252,16 +1230,16 @@ func TestContainerName(t *testing.T) {
 		},
 		{
 			name: "container stats without name uses container list name",
-			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
+			clientFunc: func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(context.Context, typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout"},
 					})
 					return containers, nil
 				}
-				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+				client.ContainerStatsF = func(string) (types.ContainerStats, error) {
 					return types.ContainerStats{
 						Body: io.NopCloser(strings.NewReader(`{}`)),
 					}, nil

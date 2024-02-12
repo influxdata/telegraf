@@ -34,10 +34,10 @@ func TestAurora(t *testing.T) {
 	}{
 		{
 			name: "minimal",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{
 					"variable_scrape_events": 2958,
 					"variable_scrape_events_per_sec": 1.0,
@@ -71,7 +71,7 @@ func TestAurora(t *testing.T) {
 		{
 			name:  "disabled role",
 			roles: []string{"leader"},
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusServiceUnavailable)
 			},
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
@@ -82,10 +82,10 @@ func TestAurora(t *testing.T) {
 		},
 		{
 			name: "no metrics available",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
@@ -98,10 +98,10 @@ func TestAurora(t *testing.T) {
 		},
 		{
 			name: "string metrics skipped",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{
 					"foo": "bar"
 				}`
@@ -117,10 +117,10 @@ func TestAurora(t *testing.T) {
 		},
 		{
 			name: "float64 unparseable",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				// too large
 				body := `{
 					"foo": 1e309
@@ -137,10 +137,10 @@ func TestAurora(t *testing.T) {
 		},
 		{
 			name: "int64 unparseable",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				// too large
 				body := `{
 					"foo": 9223372036854775808
@@ -157,10 +157,10 @@ func TestAurora(t *testing.T) {
 		},
 		{
 			name: "bad json",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{]`
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(body))
@@ -174,10 +174,10 @@ func TestAurora(t *testing.T) {
 		},
 		{
 			name: "wrong status code",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{
 					"value": 42
 				}`

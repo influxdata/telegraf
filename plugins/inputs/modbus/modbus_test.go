@@ -159,10 +159,9 @@ func TestRetrySuccessful(t *testing.T) {
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
-	// Make read on coil-registers fail for some trials by making the device
-	// to appear busy
+	// Make read on coil-registers fail for some trials by making the device to appear busy
 	serv.RegisterFunctionHandler(1,
-		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+		func(*mbserver.Server, mbserver.Framer) ([]byte, *mbserver.Exception) {
 			data := make([]byte, 2)
 			data[0] = byte(1)
 			data[1] = byte(value)
@@ -221,7 +220,7 @@ func TestRetryFailExhausted(t *testing.T) {
 
 	// Make the read on coils fail with busy
 	serv.RegisterFunctionHandler(1,
-		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+		func(*mbserver.Server, mbserver.Framer) ([]byte, *mbserver.Exception) {
 			data := make([]byte, 2)
 			data[0] = byte(1)
 			data[1] = byte(0)
@@ -262,7 +261,7 @@ func TestRetryFailIllegal(t *testing.T) {
 	// Make the read on coils fail with illegal function preventing retry
 	counter := 0
 	serv.RegisterFunctionHandler(1,
-		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+		func(*mbserver.Server, mbserver.Framer) ([]byte, *mbserver.Exception) {
 			counter++
 			data := make([]byte, 2)
 			data[0] = byte(1)
@@ -315,7 +314,7 @@ func TestCases(t *testing.T) {
 	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
 
 	// Define a function to return the register value as data
-	readFunc := func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+	readFunc := func(_ *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
 		data := frame.GetData()
 		register := binary.BigEndian.Uint16(data[0:2])
 		numRegs := binary.BigEndian.Uint16(data[2:4])

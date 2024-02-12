@@ -171,7 +171,7 @@ func (p *Parser) Init() error {
 
 func init() {
 	parsers.Add("influx",
-		func(_ string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		},
 	)

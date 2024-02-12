@@ -38,7 +38,7 @@ func (s *Common) Init() error {
 
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
-		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+		Load: func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
 			return s.StarlarkLoadFunc(module, s.Log)
 		},
 	}

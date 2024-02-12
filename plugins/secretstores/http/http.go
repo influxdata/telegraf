@@ -226,7 +226,7 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 
 // Register the secret-store on load.
 func init() {
-	secretstores.Add("http", func(id string) telegraf.SecretStore {
+	secretstores.Add("http", func(string) telegraf.SecretStore {
 		return &HTTP{}
 	})
 }

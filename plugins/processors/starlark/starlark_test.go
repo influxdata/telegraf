@@ -3293,7 +3293,7 @@ func TestAllScriptTestData(t *testing.T) {
 	// can be run from multiple folders
 	paths := []string{"testdata", "plugins/processors/starlark/testdata"}
 	for _, testdataPath := range paths {
-		err := filepath.Walk(testdataPath, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(testdataPath, func(path string, info os.FileInfo, _ error) error {
 			if info == nil || info.IsDir() {
 				return nil
 			}

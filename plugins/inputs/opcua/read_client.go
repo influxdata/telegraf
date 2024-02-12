@@ -65,10 +65,10 @@ func (o *ReadClient) Connect() error {
 		return fmt.Errorf("initializing node IDs failed: %w", err)
 	}
 
-	readValueIds := make([]*ua.ReadValueID, 0, len(o.NodeIDs))
+	readValueIDs := make([]*ua.ReadValueID, 0, len(o.NodeIDs))
 	if o.Workarounds.UseUnregisteredReads {
 		for _, nid := range o.NodeIDs {
-			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: nid})
+			readValueIDs = append(readValueIDs, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
 		regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
@@ -79,14 +79,14 @@ func (o *ReadClient) Connect() error {
 		}
 
 		for _, v := range regResp.RegisteredNodeIDs {
-			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: v})
+			readValueIDs = append(readValueIDs, &ua.ReadValueID{NodeID: v})
 		}
 	}
 
 	o.req = &ua.ReadRequest{
 		MaxAge:             2000,
 		TimestampsToReturn: ua.TimestampsToReturnBoth,
-		NodesToRead:        readValueIds,
+		NodesToRead:        readValueIDs,
 	}
 
 	if err := o.read(); err != nil {

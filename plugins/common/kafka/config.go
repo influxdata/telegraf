@@ -73,7 +73,7 @@ type Config struct {
 type BackoffFunc func(retries, maxRetries int) time.Duration
 
 func makeBackoffFunc(backoff, maxDuration time.Duration) BackoffFunc {
-	return func(retries, maxRetries int) time.Duration {
+	return func(retries, _ int) time.Duration {
 		d := time.Duration(math.Pow(2, float64(retries))) * backoff
 		if maxDuration != 0 && d > maxDuration {
 			return maxDuration

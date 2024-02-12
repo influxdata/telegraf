@@ -133,7 +133,7 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 }
 
 func TestInvalidStatusCode(t *testing.T) {
-	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer fakeServer.Close()
@@ -156,7 +156,7 @@ func TestInvalidStatusCode(t *testing.T) {
 }
 
 func TestSuccessStatusCodes(t *testing.T) {
-	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer fakeServer.Close()
@@ -354,7 +354,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				},
 				Log: testutil.Logger{},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)

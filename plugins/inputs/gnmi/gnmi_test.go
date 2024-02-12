@@ -73,7 +73,7 @@ func TestWaitError(t *testing.T) {
 
 	grpcServer := grpc.NewServer()
 	gnmiServer := &MockServer{
-		SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+		SubscribeF: func(gnmiLib.GNMI_SubscribeServer) error {
 			return errors.New("testerror")
 		},
 		GRPCServer: grpcServer,
