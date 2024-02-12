@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/clarify/clarify-go"
 	"github.com/clarify/clarify-go/jsonrpc"
 	"github.com/clarify/clarify-go/views"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 )
 
 var errTimeout = errors.New("timeout: operation timed out")
