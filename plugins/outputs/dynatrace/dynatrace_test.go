@@ -23,7 +23,7 @@ import (
 )
 
 func TestNilMetrics(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestNilMetrics(t *testing.T) {
 }
 
 func TestEmptyMetricsSlice(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
@@ -72,7 +72,7 @@ func TestEmptyMetricsSlice(t *testing.T) {
 }
 
 func TestMockURL(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
@@ -529,7 +529,7 @@ func (l loggerStub) Warnf(_ string, _ ...interface{}) {
 
 func TestSendUnsupportedMetric(t *testing.T) {
 	warnfCalledTimes = 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Fatal("should not export because the only metric is an invalid type")
 	}))
 	defer ts.Close()

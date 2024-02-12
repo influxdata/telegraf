@@ -536,7 +536,7 @@ func TestGatherClickhouseCloud(t *testing.T) {
 
 func TestWrongJSONMarshalling(t *testing.T) {
 	var (
-		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			type result struct {
 				Data interface{} `json:"data"`
 			}

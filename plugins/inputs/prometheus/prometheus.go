@@ -15,16 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/models"
-	"k8s.io/client-go/tools/cache"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser "github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -401,7 +400,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
 				DisableKeepAlives: true,
-				Dial: func(network, addr string) (net.Conn, error) {
+				Dial: func(string, string) (net.Conn, error) {
 					c, err := net.Dial("unix", u.URL.Path)
 					return c, err
 				},

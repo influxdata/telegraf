@@ -29,7 +29,7 @@ func newTestLibrato(testURL string) *Librato {
 func TestUriOverride(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}))
 	defer ts.Close()
@@ -43,7 +43,7 @@ func TestUriOverride(t *testing.T) {
 
 func TestBadStatusCode(t *testing.T) {
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}))
 	defer ts.Close()

@@ -814,7 +814,7 @@ func (s *MockupSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error
 func init() {
 	// Register the mockup input plugin for the required names
 	inputs.Add("mockup", func() telegraf.Input { return &MockupSecretPlugin{} })
-	secretstores.Add("mockup", func(id string) telegraf.SecretStore {
+	secretstores.Add("mockup", func(string) telegraf.SecretStore {
 		return &MockupSecretStore{}
 	})
 }

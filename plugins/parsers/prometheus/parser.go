@@ -85,7 +85,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 func init() {
 	parsers.Add("prometheus",
-		func(defaultMetricName string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		},
 	)

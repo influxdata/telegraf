@@ -77,7 +77,7 @@ func getProxyFunc(httpProxy string) func(*http.Request) (*url.URL, error) {
 			return nil, errors.New("bad proxy: " + err.Error())
 		}
 	}
-	return func(r *http.Request) (*url.URL, error) {
+	return func(*http.Request) (*url.URL, error) {
 		return proxyURL, nil
 	}
 }
@@ -110,7 +110,7 @@ func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 	}
 
 	if !h.FollowRedirects {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}

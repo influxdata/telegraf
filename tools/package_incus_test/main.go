@@ -40,7 +40,7 @@ func main() {
 				Destination: &image,
 			},
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(*cli.Context) error {
 			if _, err := os.Stat(packageFile); err != nil {
 				return fmt.Errorf("unknown package file: %w", err)
 			}

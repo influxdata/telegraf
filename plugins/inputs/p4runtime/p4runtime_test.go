@@ -1,7 +1,6 @@
 package p4runtime
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -93,11 +92,7 @@ func TestErrorGetP4Info(t *testing.T) {
 
 	for _, response := range responses {
 		p4RtClient := &fakeP4RuntimeClient{
-			getForwardingPipelineConfigFn: func(
-				ctx context.Context,
-				in *p4v1.GetForwardingPipelineConfigRequest,
-				opts ...grpc.CallOption,
-			) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+			getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 				return response.getForwardingPipelineConfigResponse, response.getForwardingPipelineConfigResponseError
 			},
 		}
@@ -235,14 +230,10 @@ func TestOneCounterRead(t *testing.T) {
 		}
 
 		p4RtClient := &fakeP4RuntimeClient{
-			readFn: func(ctx context.Context, in *p4v1.ReadRequest, opts ...grpc.CallOption) (p4v1.P4Runtime_ReadClient, error) {
+			readFn: func(*p4v1.ReadRequest) (p4v1.P4Runtime_ReadClient, error) {
 				return p4RtReadClient, nil
 			},
-			getForwardingPipelineConfigFn: func(
-				ctx context.Context,
-				in *p4v1.GetForwardingPipelineConfigRequest,
-				opts ...grpc.CallOption,
-			) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+			getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 				return &p4v1.GetForwardingPipelineConfigResponse{
 					Config: tt.forwardingPipelineConfig,
 				}, nil
@@ -327,14 +318,10 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 		}
 
 		p4RtClient := &fakeP4RuntimeClient{
-			readFn: func(ctx context.Context, in *p4v1.ReadRequest, opts ...grpc.CallOption) (p4v1.P4Runtime_ReadClient, error) {
+			readFn: func(*p4v1.ReadRequest) (p4v1.P4Runtime_ReadClient, error) {
 				return p4RtReadClient, nil
 			},
-			getForwardingPipelineConfigFn: func(
-				ctx context.Context,
-				in *p4v1.GetForwardingPipelineConfigRequest,
-				opts ...grpc.CallOption,
-			) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+			getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 				return &p4v1.GetForwardingPipelineConfigResponse{
 					Config: forwardingPipelineConfig,
 				}, nil
@@ -407,7 +394,7 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 		}
 
 		p4RtClient := &fakeP4RuntimeClient{
-			readFn: func(ctx context.Context, in *p4v1.ReadRequest, opts ...grpc.CallOption) (p4v1.P4Runtime_ReadClient, error) {
+			readFn: func(in *p4v1.ReadRequest) (p4v1.P4Runtime_ReadClient, error) {
 				counterID := in.Entities[0].GetCounterEntry().CounterId
 				return &fakeP4RuntimeReadClient{
 					recvFn: func() (*p4v1.ReadResponse, error) {
@@ -426,11 +413,7 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 					},
 				}, nil
 			},
-			getForwardingPipelineConfigFn: func(
-				ctx context.Context,
-				in *p4v1.GetForwardingPipelineConfigRequest,
-				opts ...grpc.CallOption,
-			) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+			getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 				return &p4v1.GetForwardingPipelineConfigResponse{
 					Config: forwardingPipelineConfig,
 				}, nil
@@ -462,11 +445,7 @@ func TestNoCountersAvailable(t *testing.T) {
 	}
 
 	p4RtClient := &fakeP4RuntimeClient{
-		getForwardingPipelineConfigFn: func(
-			ctx context.Context,
-			in *p4v1.GetForwardingPipelineConfigRequest,
-			opts ...grpc.CallOption,
-		) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+		getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 			return &p4v1.GetForwardingPipelineConfigResponse{
 				Config: forwardingPipelineConfig,
 			}, nil
@@ -493,11 +472,7 @@ func TestFilterCounters(t *testing.T) {
 	}
 
 	p4RtClient := &fakeP4RuntimeClient{
-		getForwardingPipelineConfigFn: func(
-			ctx context.Context,
-			in *p4v1.GetForwardingPipelineConfigRequest,
-			opts ...grpc.CallOption,
-		) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+		getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 			return &p4v1.GetForwardingPipelineConfigResponse{
 				Config: forwardingPipelineConfig,
 			}, nil
@@ -533,14 +508,10 @@ func TestFailReadCounterEntryFromEntry(t *testing.T) {
 	}
 
 	p4RtClient := &fakeP4RuntimeClient{
-		readFn: func(ctx context.Context, in *p4v1.ReadRequest, opts ...grpc.CallOption) (p4v1.P4Runtime_ReadClient, error) {
+		readFn: func(*p4v1.ReadRequest) (p4v1.P4Runtime_ReadClient, error) {
 			return p4RtReadClient, nil
 		},
-		getForwardingPipelineConfigFn: func(
-			ctx context.Context,
-			in *p4v1.GetForwardingPipelineConfigRequest,
-			opts ...grpc.CallOption,
-		) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+		getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 			return &p4v1.GetForwardingPipelineConfigResponse{
 				Config: &p4v1.ForwardingPipelineConfig{
 					P4Info: &p4ConfigV1.P4Info{
@@ -580,14 +551,10 @@ func TestFailReadCounterEntryFromEntry(t *testing.T) {
 
 func TestFailReadAllEntries(t *testing.T) {
 	p4RtClient := &fakeP4RuntimeClient{
-		readFn: func(ctx context.Context, in *p4v1.ReadRequest, opts ...grpc.CallOption) (p4v1.P4Runtime_ReadClient, error) {
+		readFn: func(*p4v1.ReadRequest) (p4v1.P4Runtime_ReadClient, error) {
 			return nil, errors.New("connection error")
 		},
-		getForwardingPipelineConfigFn: func(
-			ctx context.Context,
-			in *p4v1.GetForwardingPipelineConfigRequest,
-			opts ...grpc.CallOption,
-		) (*p4v1.GetForwardingPipelineConfigResponse, error) {
+		getForwardingPipelineConfigFn: func() (*p4v1.GetForwardingPipelineConfigResponse, error) {
 			return &p4v1.GetForwardingPipelineConfigResponse{
 				Config: &p4v1.ForwardingPipelineConfig{
 					P4Info: &p4ConfigV1.P4Info{

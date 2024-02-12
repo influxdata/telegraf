@@ -1458,7 +1458,7 @@ func TestGatherStreamServerZonesMetrics(t *testing.T) {
 }
 
 func TestUnavailableEndpoints(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer ts.Close()
@@ -1476,7 +1476,7 @@ func TestUnavailableEndpoints(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer ts.Close()
@@ -1494,7 +1494,7 @@ func TestServerError(t *testing.T) {
 }
 
 func TestMalformedJSON(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_, err := fmt.Fprintln(w, "this is not JSON")
 		require.NoError(t, err)
@@ -1514,7 +1514,7 @@ func TestMalformedJSON(t *testing.T) {
 }
 
 func TestUnknownContentType(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 	}))
 	defer ts.Close()

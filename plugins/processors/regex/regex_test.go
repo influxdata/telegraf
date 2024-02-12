@@ -1027,7 +1027,7 @@ func TestTrackedMetricNotLost(t *testing.T) {
 
 	m := newM2().Copy()
 	var delivered bool
-	notify := func(di telegraf.DeliveryInfo) {
+	notify := func(telegraf.DeliveryInfo) {
 		delivered = true
 	}
 	m, _ = metric.WithTracking(m, notify)

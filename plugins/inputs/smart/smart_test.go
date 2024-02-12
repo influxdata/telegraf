@@ -20,7 +20,7 @@ func TestGatherAttributes(t *testing.T) {
 
 	require.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(_ config.Duration, _ bool, _ string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--info" && args[7] == "/dev/ada0" {
 				return []byte(mockInfoAttributeData), nil
@@ -86,7 +86,7 @@ func TestGatherInParallelMode(t *testing.T) {
 	s.EnableExtensions = append(s.EnableExtensions, "auto-on")
 	s.Devices = []string{"/dev/nvme0"}
 
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(_ config.Duration, _ bool, _ string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--info" && args[7] == "/dev/ada0" {
 				return []byte(mockInfoAttributeData), nil
@@ -150,7 +150,7 @@ func TestGatherNoAttributes(t *testing.T) {
 
 	require.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(_ config.Duration, _ bool, _ string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--scan" && len(args) == 1 {
 				return []byte(mockScanData), nil
@@ -201,7 +201,7 @@ var (
 )
 
 func TestGatherSATAInfo(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData), nil
 	}
 
@@ -218,7 +218,7 @@ func TestGatherSATAInfo(t *testing.T) {
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData65), nil
 	}
 
@@ -234,7 +234,7 @@ func TestGatherSATAInfo65(t *testing.T) {
 }
 
 func TestGatherHgstSAS(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
 	}
 
@@ -250,7 +250,7 @@ func TestGatherHgstSAS(t *testing.T) {
 }
 
 func TestGatherHtSAS(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(htSASInfoData), nil
 	}
 
@@ -266,7 +266,7 @@ func TestGatherHtSAS(t *testing.T) {
 }
 
 func TestGatherLongFormEnduranceAttrib(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(mockHGST), nil
 	}
 
@@ -283,7 +283,7 @@ func TestGatherLongFormEnduranceAttrib(t *testing.T) {
 }
 
 func TestGatherSSD(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(ssdInfoData), nil
 	}
 
@@ -299,7 +299,7 @@ func TestGatherSSD(t *testing.T) {
 }
 
 func TestGatherSSDRaid(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(ssdRaidInfoData), nil
 	}
 
@@ -315,7 +315,7 @@ func TestGatherSSDRaid(t *testing.T) {
 }
 
 func TestGatherDeviceTypeTag(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(_ config.Duration, _ bool, _ string, args ...string) ([]byte, error) {
 		switch args[0] {
 		case "--scan":
 			return nil, errors.New("scan command should not be run, since devices are provided in config")
@@ -348,7 +348,7 @@ func TestGatherDeviceTypeTag(t *testing.T) {
 }
 
 func TestGatherNVMe(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(smartctlNVMeInfoData), nil
 	}
 
@@ -365,7 +365,7 @@ func TestGatherNVMe(t *testing.T) {
 }
 
 func TestGatherNVMeWindows(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(smartctlNVMeInfoDataWindows), nil
 	}
 
@@ -383,7 +383,7 @@ func TestGatherNVMeWindows(t *testing.T) {
 }
 
 func TestGatherIntelNVMeMetrics(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(nvmeIntelInfoDataMetricsFormat), nil
 	}
 
@@ -406,7 +406,7 @@ func TestGatherIntelNVMeMetrics(t *testing.T) {
 }
 
 func TestGatherIntelNVMeDeprecatedFormatMetrics(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(nvmeIntelInfoDataDeprecatedMetricsFormat), nil
 	}
 
@@ -461,7 +461,7 @@ func Test_difference(t *testing.T) {
 }
 
 func Test_integerOverflow(t *testing.T) {
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(smartctlNVMeInfoDataWithOverflow), nil
 	}
 

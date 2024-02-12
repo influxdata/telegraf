@@ -197,7 +197,7 @@ func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request)
 }
 
 func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
+	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.queriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query

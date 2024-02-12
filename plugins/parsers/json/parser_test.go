@@ -1488,7 +1488,7 @@ func FuzzParserJSON(f *testing.F) {
 	parser := &Parser{MetricName: "testing"}
 	require.NoError(f, parser.Init())
 
-	f.Fuzz(func(t *testing.T, input []byte) {
+	f.Fuzz(func(_ *testing.T, input []byte) {
 		_, _ = parser.Parse(input)
 	})
 }

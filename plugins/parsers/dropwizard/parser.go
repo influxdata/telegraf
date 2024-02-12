@@ -233,7 +233,7 @@ func (p *Parser) Init() error {
 
 func init() {
 	parsers.Add("dropwizard",
-		func(defaultMetricName string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		})
 }

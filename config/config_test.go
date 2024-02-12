@@ -497,7 +497,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 }
 
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("[agent]\ndebug = true"))
 	}))

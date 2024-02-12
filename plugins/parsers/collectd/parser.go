@@ -200,7 +200,7 @@ func LoadTypesDB(path string) (*api.TypesDB, error) {
 
 func init() {
 	parsers.Add("collectd",
-		func(_ string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{
 				AuthFile: DefaultAuthFile,
 			}

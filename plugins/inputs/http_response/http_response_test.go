@@ -93,7 +93,7 @@ func setUpTestMux() http.Handler {
 	mux.HandleFunc("/redirect", func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/good", http.StatusMovedPermanently)
 	})
-	mux.HandleFunc("/good", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/good", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Server", "MyTestServer")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		fmt.Fprintf(w, "hit the good page!")
@@ -112,13 +112,13 @@ func setUpTestMux() http.Handler {
 			w.WriteHeader(http.StatusOK)
 		}
 	})
-	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte{0xff, 0xfe, 0xfd}) //nolint:errcheck // ignore the returned error as the test will fail anyway
 	})
-	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/noheader", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintf(w, "hit the good page!")
 	})
-	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintf(w, "\"service_status\": \"up\", \"healthy\" : \"true\"")
 	})
 	mux.HandleFunc("/badredirect", func(w http.ResponseWriter, req *http.Request) {
@@ -144,7 +144,7 @@ func setUpTestMux() http.Handler {
 		}
 		fmt.Fprintf(w, "sent a body!")
 	})
-	mux.HandleFunc("/twosecondnap", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/twosecondnap", func(http.ResponseWriter, *http.Request) {
 		time.Sleep(time.Second * 2)
 	})
 	mux.HandleFunc("/nocontent", func(w http.ResponseWriter, _ *http.Request) {
@@ -1109,7 +1109,7 @@ func TestRedirect(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Location", "http://example.org")
 		w.WriteHeader(http.StatusMovedPermanently)
 		_, err := w.Write([]byte("test"))
