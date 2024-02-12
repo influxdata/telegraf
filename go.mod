@@ -97,6 +97,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/gopcua/opcua v0.5.3
 	github.com/gophercloud/gophercloud v1.7.0
+	github.com/gorcon/rcon v1.3.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/gosnmp/gosnmp v1.37.0
