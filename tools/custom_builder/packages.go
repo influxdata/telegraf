@@ -49,14 +49,6 @@ var exceptions = map[string][]packageInfo{
 			Tag:      "parsers.influx",
 		},
 	},
-	"processors": {
-		{
-			Category: "processors",
-			Plugin:   "aws_ec2",
-			Path:     "plugins/processors/aws/ec2",
-			Tag:      "processors.aws_ec2",
-		},
-	},
 }
 
 func (p *packageCollection) collectPackagesForCategory(category string) error {

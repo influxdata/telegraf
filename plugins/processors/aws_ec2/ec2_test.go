@@ -1,4 +1,4 @@
-package ec2
+package aws_ec2
 
 import (
 	"testing"

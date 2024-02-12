@@ -1,5 +1,5 @@
-//go:generate ../../../../tools/readme_config_includer/generator
-package ec2
+//go:generate ../../../tools/readme_config_includer/generator
+package aws_ec2
 
 import (
 	"context"
