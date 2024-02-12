@@ -35,6 +35,13 @@ func (c *ConfigurationOriginal) SampleConfigPart() string {
 }
 
 func (c *ConfigurationOriginal) Check() error {
+	switch c.workarounds.StringRegisterLocation {
+	case "", "both", "lower", "upper":
+		// Do nothing as those are valid
+	default:
+		return fmt.Errorf("invalid 'string_register_location' %q", c.workarounds.StringRegisterLocation)
+	}
+
 	if err := c.validateFieldDefinitions(c.DiscreteInputs, cDiscreteInputs); err != nil {
 		return err
 	}
@@ -165,7 +172,7 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition, type
 			return f, err
 		}
 
-		f.converter, err = determineConverter(inType, byteOrder, outType, def.Scale)
+		f.converter, err = determineConverter(inType, byteOrder, outType, def.Scale, c.workarounds.StringRegisterLocation)
 		if err != nil {
 			return f, err
 		}

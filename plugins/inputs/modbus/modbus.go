@@ -31,6 +31,7 @@ type ModbusWorkarounds struct {
 	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
 	OnRequestPerField       bool            `toml:"one_request_per_field"`
 	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
+	StringRegisterLocation  string          `toml:"string_register_location"`
 }
 
 // According to github.com/grid-x/serial
