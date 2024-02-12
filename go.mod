@@ -93,7 +93,7 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/gopacket v1.1.19
 	github.com/google/licensecheck v0.3.1
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/gopcua/opcua v0.5.3
 	github.com/gophercloud/gophercloud v1.7.0
 	github.com/gorcon/rcon v1.3.5
