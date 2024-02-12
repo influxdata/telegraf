@@ -5,8 +5,7 @@ package intel_pmt
 import (
 	"errors"
 	"regexp"
-
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 var metricPatternRegex = regexp.MustCompile(`(?P<class>(C|CHA))\d+_(?P<var>[A-Z0-9_]+)$`)
