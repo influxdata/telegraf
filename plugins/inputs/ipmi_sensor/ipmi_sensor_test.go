@@ -30,7 +30,7 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, i.Init())
 	require.NoError(t, acc.GatherError(i.Gather))
-	require.EqualValues(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
+	require.EqualValues(t, 262, acc.NFields(), "non-numeric measurements should be ignored")
 
 	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
 	require.EqualValues(t, "USERID", conn.Username)

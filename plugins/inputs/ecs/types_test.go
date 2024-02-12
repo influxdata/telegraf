@@ -42,6 +42,7 @@ func Test_mergeTaskStats(t *testing.T) {
 	mergeTaskStats(parsedMetadata, parsedStats)
 
 	for i := range parsedMetadata.Containers {
+		//nolint:testifylint // values are in proper order (expected, actual)
 		require.Equal(t, validStats[parsedMetadata.Containers[i].ID], &parsedMetadata.Containers[i].Stats)
 	}
 }
