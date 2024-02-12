@@ -62,7 +62,6 @@ require (
 	github.com/compose-spec/compose-go v1.20.2
 	github.com/coocood/freecache v1.2.3
 	github.com/coreos/go-semver v0.3.1
-	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/digitalocean/go-libvirt v0.0.0-20221205150000-2939327a8519
