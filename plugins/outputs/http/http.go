@@ -216,6 +216,8 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 			req.Host = headerVal
 		}
 		req.Header.Set(k, headerVal)
+
+		secret.Destroy()
 	}
 
 	resp, err := h.client.Do(req)

@@ -152,6 +152,8 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 		} else {
 			request.Header.Add(k, headerVal)
 		}
+
+		secret.Destroy()
 	}
 
 	if err := h.setRequestAuth(request); err != nil {
