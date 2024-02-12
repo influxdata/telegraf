@@ -30,10 +30,10 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 		KeepAlive:      uint16(cfg.KeepAlive),
 		OnConnectError: cfg.OnConnectionLost,
 	}
-	opts.SetConnectPacketConfigurator(func(c *mqttv5.Connect) *mqttv5.Connect {
+	opts.ConnectPacketBuilder = func(c *mqttv5.Connect, _ *url.URL) *mqttv5.Connect {
 		c.CleanStart = cfg.PersistentSession
 		return c
-	})
+	}
 
 	if time.Duration(cfg.ConnectionTimeout) >= 1*time.Second {
 		opts.ConnectTimeout = time.Duration(cfg.ConnectionTimeout)
@@ -115,7 +115,8 @@ func (m *mqttv5Client) Connect() (bool, error) {
 		return false, fmt.Errorf("getting password failed: %w", err)
 	}
 	defer pass.Destroy()
-	m.options.SetUsernamePassword(user.TemporaryString(), pass.Bytes())
+	m.options.ConnectUsername = user.TemporaryString()
+	m.options.ConnectPassword = pass.Bytes()
 
 	client, err := mqttv5auto.NewConnection(context.Background(), m.options)
 	if err != nil {
