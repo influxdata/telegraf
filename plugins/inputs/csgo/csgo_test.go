@@ -2,54 +2,78 @@ package csgo
 
 import (
 	"testing"
+	"time"
 
+	"github.com/gorcon/rcon"
+	"github.com/gorcon/rcon/rcontest"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const testInput = `CPU   NetIn   NetOut    Uptime  Maps   FPS   Players  Svms    +-ms   ~tick
+func TestCPUStats(t *testing.T) {
+	// Define the input
+	const input = `CPU   NetIn   NetOut    Uptime  Maps   FPS   Players  Svms    +-ms   ~tick
 10.0      1.2      3.4   100     1   120.20       15    5.23    0.01    0.02`
 
-var (
-	expectedOutput = statsData{
-		10.0, 1.2, 3.4, 100.0, 1, 120.20, 15, 5.23, 0.01, 0.02,
-	}
-)
+	// Start the mockup server
+	server := rcontest.NewUnstartedServer()
+	server.Settings.Password = "password"
+	server.SetAuthHandler(func(c *rcontest.Context) {
+		if c.Request().Body() == c.Server().Settings.Password {
+			pkg := rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, c.Request().ID, "")
+			_, _ = pkg.WriteTo(c.Conn())
+		} else {
+			pkg := rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, -1, string([]byte{0x00}))
+			_, _ = pkg.WriteTo(c.Conn())
+		}
+	})
+	server.SetCommandHandler(func(c *rcontest.Context) {
+		pkg := rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, c.Request().ID, input)
+		_, _ = pkg.WriteTo(c.Conn())
+	})
+	server.Start()
+	defer server.Close()
 
-func TestCPUStats(t *testing.T) {
-	c := NewCSGOStats()
-	var acc testutil.Accumulator
-	err := c.gatherServer(&acc, c.Servers[0], requestMock)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !acc.HasMeasurement("csgo") {
-		t.Errorf("acc.HasMeasurement: expected csgo")
-	}
-
-	require.Equal(t, "1.2.3.4:1234", acc.Metrics[0].Tags["host"])
-	require.Equal(t, expectedOutput.CPU, acc.Metrics[0].Fields["cpu"])
-	require.Equal(t, expectedOutput.NetIn, acc.Metrics[0].Fields["net_in"])
-	require.Equal(t, expectedOutput.NetOut, acc.Metrics[0].Fields["net_out"])
-	require.Equal(t, expectedOutput.UptimeMinutes, acc.Metrics[0].Fields["uptime_minutes"])
-	require.Equal(t, expectedOutput.Maps, acc.Metrics[0].Fields["maps"])
-	require.Equal(t, expectedOutput.FPS, acc.Metrics[0].Fields["fps"])
-	require.Equal(t, expectedOutput.Players, acc.Metrics[0].Fields["players"])
-	require.Equal(t, expectedOutput.Sim, acc.Metrics[0].Fields["sv_ms"])
-	require.Equal(t, expectedOutput.Variance, acc.Metrics[0].Fields["variance_ms"])
-	require.Equal(t, expectedOutput.Tick, acc.Metrics[0].Fields["tick_ms"])
-}
-
-func requestMock(_ string, _ string) (string, error) {
-	return testInput, nil
-}
-
-func NewCSGOStats() *CSGO {
-	return &CSGO{
+	// Setup the plugin
+	plugin := &CSGO{
 		Servers: [][]string{
-			{"1.2.3.4:1234", "password"},
+			{server.Addr(), "password"},
 		},
 	}
+	require.NoError(t, plugin.Init())
+
+	// Define expected result
+	expected := []telegraf.Metric{
+		metric.New(
+			"csgo",
+			map[string]string{
+				"host": server.Addr(),
+			},
+			map[string]interface{}{
+				"cpu":            10.0,
+				"fps":            120.2,
+				"maps":           1.0,
+				"net_in":         1.2,
+				"net_out":        3.4,
+				"players":        15.0,
+				"sv_ms":          5.23,
+				"tick_ms":        0.02,
+				"uptime_minutes": 100.0,
+				"variance_ms":    0.01,
+			},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	// Gather data
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	// Test the result
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }

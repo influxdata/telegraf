@@ -94,6 +94,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/gopcua/opcua v0.5.3
 	github.com/gophercloud/gophercloud v1.7.0
+	github.com/gorcon/rcon v1.3.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/gosnmp/gosnmp v1.37.0
@@ -116,7 +117,6 @@ require (
 	github.com/jackc/pgio v1.0.0
 	github.com/jackc/pgtype v1.14.0
 	github.com/jackc/pgx/v4 v4.18.1
-	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jhump/protoreflect v1.15.4
 	github.com/jmespath/go-jmespath v0.4.0
