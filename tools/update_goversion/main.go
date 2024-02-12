@@ -204,6 +204,11 @@ func main() {
 			Regex:    `(GO_VERSION_SHA_amd64)=".*"`,
 			Replace:  fmt.Sprintf("$1=%q", hashes[fmt.Sprintf("go%s.darwin-amd64.tar.gz", version)]),
 		},
+		{
+			FileName: ".github/workflows/readme-linter.yml",
+			Regex:    `(go-version): '\d.\d*.\d'`,
+			Replace:  fmt.Sprintf("$1: '%s'", version),
+		},
 	}
 
 	for _, f := range files {
