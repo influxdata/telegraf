@@ -591,7 +591,7 @@ func TestPrometheusInternalOk(t *testing.T) {
 	prommetric := `# HELP test_counter A sample test counter.
 # TYPE test_counter counter
 test_counter{label="test"} 1 1685443805885`
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, prommetric)
 		require.NoError(t, err)
 	}))
@@ -632,7 +632,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 	prommetric := `# HELP test_counter A sample test counter.
 # TYPE test_counter counter
 <body>Flag test</body>`
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, prommetric)
 		require.NoError(t, err)
 	}))
@@ -668,7 +668,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 }
 
 func TestPrometheusInternalNoWeb(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(404)
 	}))
 	defer ts.Close()
