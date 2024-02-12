@@ -372,7 +372,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	var uClient *http.Client
 	requestFields := make(map[string]interface{})
 	tags := map[string]string{}
-	u.OriginalURL.User = nil
 	if p.URLTag != "" {
 		tags[p.URLTag] = u.OriginalURL.String()
 	}
