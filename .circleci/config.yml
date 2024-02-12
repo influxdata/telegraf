@@ -376,6 +376,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: '.'
+      - run: sh ./scripts/installgo_linux.sh
       - run: ./scripts/install_incus.sh
       - run: cd tools/package_incus_test && go build
       - run: sudo ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*_amd64.deb")
