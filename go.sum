@@ -1422,8 +1422,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 h1:YBftPWNWd4WwGqtY2yeZL2ef8rH
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0/go.mod h1:YN5jB8ie0yfIUg6VvR9Kz84aCaG7AsGZnLjhHbUqwPg=
 github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c h1:6rhixN/i8ZofjG1Y75iExal34USq5p+wiN1tpie8IrU=
 github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c/go.mod h1:NMPJylDgVpX0MLRlPy15sqSwOFv/U1GZ2m21JhFfek0=
-github.com/gwos/tcg/sdk v0.0.0-20220621192633-df0eac0a1a4c h1:pVr0TkSFnMP4BWSsEak/4bxD8/K+foJ9V8DGyZ6PIDE=
-github.com/gwos/tcg/sdk v0.0.0-20220621192633-df0eac0a1a4c/go.mod h1:4yzxLBACr76Is0AMAkE0F/fqWBk28p2tzeO06yDGR/Y=
+github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240 h1:dQUb3aqhbE1Z/QximDiPfBbTkq90Pf6p2f4k5M2puus=
+github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240/go.mod h1:H3CAtDtRLVPIkShWzarGiKYVZqrBtWNJMMRtfqJ3rXI=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6 h1:38nI+nE+oUmLmlNjuByhvnmuBrcQVLNkOJhSSM4eJv0=
