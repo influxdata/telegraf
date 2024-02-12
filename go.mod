@@ -182,7 +182,7 @@ require (
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.17.0
 	github.com/tinylib/msgp v1.1.9
-	github.com/urfave/cli/v2 v2.25.7
+	github.com/urfave/cli/v2 v2.27.1
 	github.com/vapourismo/knx-go v0.0.0-20240107135439-816b70397a00
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.33.1
