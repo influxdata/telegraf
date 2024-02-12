@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorcon/rcon"
 	"github.com/gorcon/rcon/rcontest"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -39,6 +40,7 @@ func TestCPUStats(t *testing.T) {
 			{server.Addr(), "password"},
 		},
 	}
+	require.NoError(t, plugin.Init())
 
 	// Define expected result
 	expected := []telegraf.Metric{
