@@ -23,13 +23,16 @@ func TestCPUStats(t *testing.T) {
 	server.Settings.Password = "password"
 	server.SetAuthHandler(func(c *rcontest.Context) {
 		if c.Request().Body() == c.Server().Settings.Password {
-			rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, c.Request().ID, "").WriteTo(c.Conn())
+			pkg := rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, c.Request().ID, "")
+			_, _ = pkg.WriteTo(c.Conn())
 		} else {
-			rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, -1, string([]byte{0x00})).WriteTo(c.Conn())
+			pkg := rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, -1, string([]byte{0x00}))
+			_, _ = pkg.WriteTo(c.Conn())
 		}
 	})
 	server.SetCommandHandler(func(c *rcontest.Context) {
-		rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, c.Request().ID, input).WriteTo(c.Conn())
+		pkg := rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, c.Request().ID, input)
+		_, _ = pkg.WriteTo(c.Conn())
 	})
 	server.Start()
 	defer server.Close()
@@ -68,7 +71,7 @@ func TestCPUStats(t *testing.T) {
 
 	// Gather data
 	var acc testutil.Accumulator
-	plugin.Gather(&acc)
+	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	// Test the result
 	actual := acc.GetTelegrafMetrics()
