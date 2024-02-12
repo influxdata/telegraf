@@ -39,7 +39,7 @@ require (
 	github.com/apache/thrift v0.18.1
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
-	github.com/awnumar/memguard v0.22.4-0.20231204102859-fce56aae03b8
+	github.com/awnumar/memguard v0.22.4
 	github.com/aws/aws-sdk-go-v2 v1.24.1
 	github.com/aws/aws-sdk-go-v2/config v1.26.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.16.16
