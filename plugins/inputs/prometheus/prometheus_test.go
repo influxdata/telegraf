@@ -51,7 +51,7 @@ const sampleGaugeTextFormat = `
 go_goroutines 15 1490802350000`
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
 	}))
@@ -138,7 +138,7 @@ func TestPrometheusCustomHeader(t *testing.T) {
 }
 
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
 	}))
@@ -172,7 +172,7 @@ func TestPrometheusWithTimestamp(t *testing.T) {
 	prommetric := `# HELP test_counter A sample test counter.
 # TYPE test_counter counter
 test_counter{label="test"} 1 1685443805885`
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, prommetric)
 		require.NoError(t, err)
 	}))
@@ -208,7 +208,7 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
 	}))
@@ -234,7 +234,7 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(4 * time.Second)
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
@@ -264,7 +264,7 @@ func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(6 * time.Second)
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
@@ -291,7 +291,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(4 * time.Second)
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
@@ -321,7 +321,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 }
 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(6 * time.Second)
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
@@ -344,7 +344,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 }
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)
 		require.NoError(t, err)
 	}))
@@ -378,7 +378,7 @@ go_gc_duration_seconds{quantile="1"} NaN
 go_gc_duration_seconds_sum 42.0
 go_gc_duration_seconds_count 42`
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, data)
 		require.NoError(t, err)
 	}))
@@ -438,7 +438,7 @@ go_gc_duration_seconds_count 42`
 }
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, sampleGaugeTextFormat)
 		require.NoError(t, err)
 	}))
@@ -464,7 +464,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 }
 
 func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
 	}))

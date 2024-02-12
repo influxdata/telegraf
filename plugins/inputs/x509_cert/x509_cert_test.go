@@ -78,7 +78,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if test.unset {
 				cfg.Certificates = nil
-				cfg.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				cfg.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 					return nil, nil
 				}
 			}
@@ -336,7 +336,7 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 }
 
 func TestGatherTCPCert(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()

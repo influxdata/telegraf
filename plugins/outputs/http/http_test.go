@@ -172,7 +172,7 @@ func TestHTTPClientConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			})
 
@@ -265,7 +265,7 @@ func TestStatusCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			})
 
@@ -485,7 +485,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 					},
 				},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)
@@ -513,7 +513,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 					},
 				},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)
@@ -616,7 +616,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				URL:             u.String() + "/write",
 				CredentialsFile: tmpFile.Name(),
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				authHeader := fmt.Sprintf(`{"id_token":%q}`, token)
 				_, err = w.Write([]byte(authHeader))
@@ -704,7 +704,7 @@ func TestBatchedUnbatched(t *testing.T) {
 
 	for name, serializer := range s {
 		var requests int
-		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			requests++
 			w.WriteHeader(http.StatusOK)
 		})

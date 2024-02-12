@@ -155,7 +155,7 @@ func (c *CloudWatchLogs) Connect() error {
 		return err
 	}
 	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(string, string, ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
 				PartitionID:   "aws",
 				URL:           c.CredentialConfig.EndpointURL,

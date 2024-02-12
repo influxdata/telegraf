@@ -133,7 +133,7 @@ func BenchmarkHttpSend(b *testing.B) {
 		metrics = append(metrics, testutil.TestMetric(1.0))
 	}
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintln(w, "{}")
 	}))

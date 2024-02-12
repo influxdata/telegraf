@@ -116,7 +116,7 @@ func TestSocketstat_Gather(t *testing.T) {
 			if err != nil {
 				require.EqualError(t, err, "exec: \"ss\": executable file not found in $PATH")
 			}
-			ss.lister = func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+			ss.lister = func(string, string, config.Duration) (*bytes.Buffer, error) {
 				return bytes.NewBuffer(octets), nil
 			}
 
@@ -153,7 +153,7 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
 	}
-	ss.lister = func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+	ss.lister = func(string, string, config.Duration) (*bytes.Buffer, error) {
 		return new(bytes.Buffer), errFoo
 	}
 	acc := new(testutil.Accumulator)

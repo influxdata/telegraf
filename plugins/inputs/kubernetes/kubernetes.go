@@ -252,7 +252,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 			Transport: &http.Transport{
 				TLSClientConfig: tlsCfg,
 			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 			Timeout: time.Duration(k.ResponseTimeout),

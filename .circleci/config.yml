@@ -96,7 +96,7 @@ jobs:
       - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.0
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
       - run:
           name: "golangci-lint/Linux"
           command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
@@ -107,7 +107,7 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.0
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
       - run:
           name: "golangci-lint/macOS"
           command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
@@ -119,7 +119,7 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.0
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
       - run:
           name: "golangci-lint/Windows"
           command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m

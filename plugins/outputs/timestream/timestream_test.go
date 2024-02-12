@@ -69,7 +69,7 @@ func (m *mockTimestreamClient) DescribeDatabase(
 }
 
 func TestConnectValidatesConfigParameters(t *testing.T) {
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamClient{}, nil
 	}
 	// checking base arguments
@@ -227,7 +227,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -284,7 +284,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -553,7 +553,7 @@ func (m *mockTimestreamErrorClient) DescribeDatabase(
 }
 
 func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.ThrottlingException{Message: aws.String("Throttling Test")},
 		}, nil
@@ -579,7 +579,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 }
 
 func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.RejectedRecordsException{Message: aws.String("RejectedRecords Test")},
 		}, nil
@@ -610,7 +610,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -649,7 +649,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 

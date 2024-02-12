@@ -211,7 +211,7 @@ func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 
 func init() {
 	parsers.Add("prometheus",
-		func(defaultMetricName string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		})
 }

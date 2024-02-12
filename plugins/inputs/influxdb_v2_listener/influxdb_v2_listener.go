@@ -193,7 +193,7 @@ func (h *InfluxDBV2Listener) ServeHTTP(res http.ResponseWriter, req *http.Reques
 }
 
 func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
+	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.readysServed.Incr(1)
 
 		// respond to ready requests

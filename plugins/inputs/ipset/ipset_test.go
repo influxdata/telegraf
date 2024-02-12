@@ -95,7 +95,7 @@ func TestIpset(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			i++
 			ips := &Ipset{
-				lister: func(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
+				lister: func(config.Duration, bool) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.value), nil
 				},
 			}
@@ -138,7 +138,7 @@ func TestIpset(t *testing.T) {
 func TestIpset_Gather_listerError(t *testing.T) {
 	errFoo := errors.New("error foobar")
 	ips := &Ipset{
-		lister: func(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
+		lister: func(config.Duration, bool) (*bytes.Buffer, error) {
 			return new(bytes.Buffer), errFoo
 		},
 	}

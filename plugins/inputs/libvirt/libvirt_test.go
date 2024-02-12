@@ -313,10 +313,6 @@ func TestLibvirt_filterDomains(t *testing.T) {
 		result := l.filterDomains(domains)
 		require.NotEmpty(t, result)
 	})
-
-	t.Run("failed on something", func(t *testing.T) {
-
-	})
 }
 
 var (

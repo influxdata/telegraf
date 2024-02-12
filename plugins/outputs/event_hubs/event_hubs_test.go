@@ -129,7 +129,7 @@ func TestInitAndWriteIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// The handler function will pass received messages via the channel
-	handler := func(ctx context.Context, event *eventhub.Event) error {
+	handler := func(_ context.Context, event *eventhub.Event) error {
 		exit <- string(event.Data)
 		return nil
 	}

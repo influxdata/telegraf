@@ -200,7 +200,7 @@ func TestTagGlobMatching(t *testing.T) {
 func TestTracking(t *testing.T) {
 	m := createTestMetric()
 	var delivered bool
-	notify := func(di telegraf.DeliveryInfo) {
+	notify := func(telegraf.DeliveryInfo) {
 		delivered = true
 	}
 	m, _ = metric.WithTracking(m, notify)

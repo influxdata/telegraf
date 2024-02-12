@@ -104,7 +104,7 @@ func TestGetMap(t *testing.T) {
 	}
 
 	// Don't run net-snmp commands to look up table names.
-	d.makeTable = func(agent string) (*si.Table, error) {
+	d.makeTable = func(string) (*si.Table, error) {
 		return &si.Table{}, nil
 	}
 	err := d.Init()
@@ -118,7 +118,7 @@ func TestGetMap(t *testing.T) {
 	var remoteCalls int32
 
 	// Mock the snmp transaction
-	d.getMapRemote = func(agent string) (nameMap, error) {
+	d.getMapRemote = func(string) (nameMap, error) {
 		atomic.AddInt32(&remoteCalls, 1)
 		return expected, nil
 	}
