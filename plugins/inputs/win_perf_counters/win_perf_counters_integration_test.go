@@ -77,13 +77,13 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	paths, err := query.ExpandWildCardPath(counterPath)
 	require.NoError(t, err)
 	require.NotNil(t, paths)
-	require.Greater(t, len(paths), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
+	require.Greater(t, len(paths), 1)
 
 	counterPath = "\\Process(_Total)\\*"
 	paths, err = query.ExpandWildCardPath(counterPath)
 	require.NoError(t, err)
 	require.NotNil(t, paths)
-	require.Greater(t, len(paths), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
+	require.Greater(t, len(paths), 1)
 
 	require.NoError(t, query.Open())
 
@@ -572,7 +572,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 
 	time.Sleep(2000 * time.Millisecond)
 	require.NoError(t, m.Gather(&acc))
-	require.Greater(t, len(acc.Metrics), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
+	require.Greater(t, len(acc.Metrics), 1)
 
 	expectedCounter := "Percent_Idle_Time_Raw"
 	for _, metric := range acc.Metrics {
@@ -597,7 +597,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 
 	time.Sleep(2000 * time.Millisecond)
 	require.NoError(t, m.Gather(&acc2))
-	require.Greater(t, len(acc2.Metrics), 1) //nolint:testifylint // https://github.com/Antonboom/testifylint/issues/6
+	require.Greater(t, len(acc2.Metrics), 1)
 
 	for _, metric := range acc2.Metrics {
 		val, ok := metric.Fields[expectedCounter]

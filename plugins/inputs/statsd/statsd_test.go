@@ -1290,9 +1290,9 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	// A 0 with invalid samplerate will add a single 0,
 	// plus the last bit of value 1
 	// which adds up to 12 individual datapoints to be cached
-	require.EqualValuesf(t, cachedtiming.fields[defaultFieldName].n, 12, "Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
+	require.EqualValuesf(t, 12, cachedtiming.fields[defaultFieldName].n, "Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 
-	require.EqualValuesf(t, cachedtiming.fields[defaultFieldName].upper, 1, "Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
+	require.EqualValuesf(t, 1, cachedtiming.fields[defaultFieldName].upper, "Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
 
 	// test if sSingle and sMultiple did compute the same stats for valid.multiple.duplicate
 	require.NoError(t, testValidateSet("valid_multiple_duplicate", 2, sSingle.sets))
