@@ -1,4 +1,4 @@
-package socket_listener
+package socket
 
 import (
 	"errors"
@@ -18,7 +18,8 @@ type packetListener struct {
 	MaxDecompressionSize int64
 	SocketMode           string
 	ReadBufferSize       int
-	Parser               telegraf.Parser
+	OnData               CallbackData
+	OnError              CallbackError
 	Log                  telegraf.Logger
 
 	conn    net.PacketConn
@@ -26,31 +27,25 @@ type packetListener struct {
 	path    string
 }
 
-func (l *packetListener) listen(acc telegraf.Accumulator) {
+func (l *packetListener) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
 		n, _, err := l.conn.ReadFrom(buf)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				acc.AddError(err)
+				if l.OnError != nil {
+					l.OnError(err)
+				}
 			}
 			break
 		}
 
 		body, err := l.decoder.Decode(buf[:n])
-		if err != nil {
-			acc.AddError(fmt.Errorf("unable to decode incoming packet: %w", err))
+		if err != nil && l.OnError != nil {
+			l.OnError(fmt.Errorf("unable to decode incoming packet: %w", err))
 		}
 
-		metrics, err := l.Parser.Parse(body)
-		if err != nil {
-			acc.AddError(fmt.Errorf("unable to parse incoming packet: %w", err))
-			// TODO rate limit
-			continue
-		}
-		for _, m := range metrics {
-			acc.AddMetric(m)
-		}
+		l.OnData(body)
 	}
 }
 
@@ -164,7 +159,7 @@ func (l *packetListener) setupIP(u *url.URL) error {
 	return nil
 }
 
-func (l *packetListener) addr() net.Addr {
+func (l *packetListener) address() net.Addr {
 	return l.conn.LocalAddr()
 }
 

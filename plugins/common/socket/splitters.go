@@ -1,4 +1,4 @@
-package socket_listener
+package socket
 
 import (
 	"bufio"

@@ -1,4 +1,4 @@
-package socket_listener
+package socket
 
 import (
 	"bufio"
@@ -34,11 +34,12 @@ type streamListener struct {
 	ReadTimeout     config.Duration
 	KeepAlivePeriod *config.Duration
 	Splitter        bufio.SplitFunc
-	Parser          telegraf.Parser
+	OnData          CallbackData
+	OnError         CallbackError
 	Log             telegraf.Logger
 
 	listener    net.Listener
-	connections map[net.Conn]struct{}
+	connections map[net.Conn]bool
 	path        string
 
 	wg sync.WaitGroup
@@ -124,7 +125,7 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 		_ = conn.Close()
 		return fmt.Errorf("unable to accept connection from %q: too many connections", addr)
 	}
-	l.connections[conn] = struct{}{}
+	l.connections[conn] = true
 	l.Unlock()
 
 	if l.ReadBufferSize > 0 {
@@ -169,7 +170,7 @@ func (l *streamListener) closeConnection(conn net.Conn) {
 	delete(l.connections, conn)
 }
 
-func (l *streamListener) addr() net.Addr {
+func (l *streamListener) address() net.Addr {
 	return l.listener.Addr()
 }
 
@@ -195,8 +196,8 @@ func (l *streamListener) close() error {
 	return nil
 }
 
-func (l *streamListener) listen(acc telegraf.Accumulator) {
-	l.connections = make(map[net.Conn]struct{})
+func (l *streamListener) listen() {
+	l.connections = make(map[net.Conn]bool)
 
 	l.wg.Add(1)
 	defer l.wg.Done()
@@ -205,23 +206,25 @@ func (l *streamListener) listen(acc telegraf.Accumulator) {
 	for {
 		conn, err := l.listener.Accept()
 		if err != nil {
-			if !errors.Is(err, net.ErrClosed) {
-				acc.AddError(err)
+			if !errors.Is(err, net.ErrClosed) && l.OnError != nil {
+				l.OnError(err)
 			}
 			break
 		}
 
-		if err := l.setupConnection(conn); err != nil {
-			acc.AddError(err)
+		if err := l.setupConnection(conn); err != nil && l.OnError != nil {
+			l.OnError(err)
 			continue
 		}
 
 		wg.Add(1)
 		go func(c net.Conn) {
 			defer wg.Done()
-			if err := l.read(acc, c); err != nil {
+			if err := l.read(c); err != nil {
 				if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
-					acc.AddError(err)
+					if l.OnError != nil {
+						l.OnError(err)
+					}
 				}
 			}
 			l.Lock()
@@ -232,7 +235,7 @@ func (l *streamListener) listen(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-func (l *streamListener) read(acc telegraf.Accumulator, conn net.Conn) error {
+func (l *streamListener) read(conn net.Conn) error {
 	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
@@ -259,15 +262,7 @@ func (l *streamListener) read(acc telegraf.Accumulator, conn net.Conn) error {
 		}
 
 		data := scanner.Bytes()
-		metrics, err := l.Parser.Parse(data)
-		if err != nil {
-			acc.AddError(fmt.Errorf("parsing error: %w", err))
-			l.Log.Debugf("invalid data for parser: %v", data)
-			continue
-		}
-		for _, m := range metrics {
-			acc.AddMetric(m)
-		}
+		l.OnData(data)
 	}
 
 	if err := scanner.Err(); err != nil {
