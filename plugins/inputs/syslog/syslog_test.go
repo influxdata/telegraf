@@ -27,44 +27,65 @@ var maxPID = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc
 var maxMID = "abcdefghilmnopqrstuvzabcdefghilm"
 var message7681 = strings.Repeat("l", 7681)
 
-func TestAddress(t *testing.T) {
-	var err error
-	var rec *Syslog
-
-	rec = &Syslog{
-		Address: "localhost:6514",
-	}
-	err = rec.Start(&testutil.Accumulator{})
-	require.EqualError(t, err, `missing protocol within address "localhost:6514"`)
-	require.Error(t, err)
-
-	rec = &Syslog{
-		Address: "unsupported://example.com:6514",
-	}
-	err = rec.Start(&testutil.Accumulator{})
-	require.EqualError(t, err, `unknown protocol "unsupported" in "example.com:6514"`)
-	require.Error(t, err)
-
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "syslog.TestAddress.sock")
-
-	if runtime.GOOS != "windows" {
-		// Skipping on Windows, as unixgram sockets are not supported
-		rec = &Syslog{
-			Address: "unixgram://" + sock,
-		}
-		err = rec.Start(&testutil.Accumulator{})
-		require.NoError(t, err)
-		require.Equal(t, sock, rec.Address)
-		rec.Stop()
+func TestInitFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  string
+		expected string
+	}{
+		{
+			name:     "no address",
+			expected: "missing protocol within address",
+		},
+		{
+			name:     "missing protocol",
+			address:  "localhost:6514",
+			expected: "missing protocol within address",
+		},
+		{
+			name:     "unknown protocol",
+			address:  "unsupported://example.com:6514",
+			expected: "unknown protocol",
+		},
 	}
 
-	// Default port is 6514
-	rec = &Syslog{
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Syslog{
+				Address: tt.address,
+			}
+			var acc testutil.Accumulator
+			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
+		})
+	}
+}
+
+func TestAddressUnixgram(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test as unixgram is not supported on Windows")
+	}
+
+	sock := filepath.Join(t.TempDir(), "syslog.TestAddress.sock")
+	plugin := &Syslog{
+		Address: "unixgram://" + sock,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, sock, plugin.Address)
+}
+
+func TestAddressDefaultPort(t *testing.T) {
+	plugin := &Syslog{
 		Address: "tcp://localhost",
 	}
-	err = rec.Start(&testutil.Accumulator{})
-	require.NoError(t, err)
-	require.Equal(t, "localhost:6514", rec.Address)
-	rec.Stop()
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Default port is 6514
+	require.Equal(t, "localhost:6514", plugin.Address)
 }
