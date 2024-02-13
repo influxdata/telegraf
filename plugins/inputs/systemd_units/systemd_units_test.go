@@ -494,8 +494,8 @@ func (c *fakeClient) ListUnitsByNamesContext(_ context.Context, units []string) 
 	}
 
 	return states, nil
-
 }
+
 func (c *fakeClient) GetUnitTypePropertiesContext(_ context.Context, unit, unitType string) (map[string]interface{}, error) {
 	u, found := c.units[unit]
 	if !found {
@@ -507,7 +507,7 @@ func (c *fakeClient) GetUnitTypePropertiesContext(_ context.Context, unit, unitT
 	return u.properties, nil
 }
 
-func (c *fakeClient) GetUnitPropertyContext(ctx context.Context, unit, propertyName string) (*sdbus.Property, error) {
+func (c *fakeClient) GetUnitPropertyContext(_ context.Context, unit, propertyName string) (*sdbus.Property, error) {
 	u, found := c.units[unit]
 	if !found {
 		return nil, nil
