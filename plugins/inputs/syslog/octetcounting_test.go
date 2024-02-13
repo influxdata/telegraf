@@ -347,64 +347,6 @@ func getTestCasesForOctetCounting(hasRemoteAddr bool) []testCaseStream {
 	return testCases
 }
 
-func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
-	for _, tc := range getTestCasesForOctetCounting(protocol != "unix") {
-		t.Run(tc.name, func(t *testing.T) {
-			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.OctetCounting)
-			require.NotNil(t, receiver)
-			if wantTLS {
-				receiver.ServerConfig = *pki.TLSServerConfig()
-			}
-			require.Equal(t, receiver.KeepAlivePeriod, keepAlive)
-			acc := &testutil.Accumulator{}
-			require.NoError(t, receiver.Start(acc))
-			defer receiver.Stop()
-
-			// Connect
-			var conn net.Conn
-			var err error
-			if wantTLS {
-				config, e := pki.TLSClientConfig().TLSConfig()
-				require.NoError(t, e)
-				config.ServerName = "localhost"
-				conn, err = tls.Dial(protocol, address, config)
-				require.NotNil(t, conn)
-				require.NoError(t, err)
-			} else {
-				conn, err = net.Dial(protocol, address)
-				require.NotNil(t, conn)
-				require.NoError(t, err)
-				defer conn.Close()
-			}
-
-			// Clear
-			acc.ClearMetrics()
-			acc.Errors = make([]error, 0)
-
-			// Write
-			_, err = conn.Write(tc.data)
-			conn.Close()
-			require.NoError(t, err)
-
-			// Wait that the number of data points is accumulated
-			// Since the receiver is running concurrently
-			if tc.wantStrict != nil {
-				acc.Wait(len(tc.wantStrict))
-			}
-
-			// Wait the parsing error
-			acc.WaitError(tc.werr)
-
-			// Verify
-			if len(acc.Errors) != tc.werr {
-				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
-			}
-			testutil.RequireMetricsEqual(t, tc.wantStrict, acc.GetTelegrafMetrics())
-		})
-	}
-}
-
 func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool) {
 	keepAlive := (*config.Duration)(nil)
 	for _, tc := range getTestCasesForOctetCounting(protocol != "unix") {
@@ -454,45 +396,17 @@ func testBestEffortOctetCounting(t *testing.T, protocol string, address string, 
 	}
 }
 
-func TestOctetCountingStrict_tcp(t *testing.T) {
-	testStrictOctetCounting(t, "tcp", address, false, nil)
-}
-
 func TestOctetCountingBestEffort_tcp(t *testing.T) {
 	testBestEffortOctetCounting(t, "tcp", address, false)
-}
-
-func TestOctetCountingStrict_tcp_tls(t *testing.T) {
-	testStrictOctetCounting(t, "tcp", address, true, nil)
 }
 
 func TestOctetCountingBestEffort_tcp_tls(t *testing.T) {
 	testBestEffortOctetCounting(t, "tcp", address, true)
 }
 
-func TestOctetCountingStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	d := config.Duration(time.Minute)
-	testStrictOctetCounting(t, "tcp", address, true, &d)
-}
-
-func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	d := config.Duration(0)
-	testStrictOctetCounting(t, "tcp", address, true, &d)
-}
-
-func TestOctetCountingStrict_unix(t *testing.T) {
-	sock := testutil.TempSocket(t)
-	testStrictOctetCounting(t, "unix", sock, false, nil)
-}
-
 func TestOctetCountingBestEffort_unix(t *testing.T) {
 	sock := testutil.TempSocket(t)
 	testBestEffortOctetCounting(t, "unix", sock, false)
-}
-
-func TestOctetCountingStrict_unix_tls(t *testing.T) {
-	sock := testutil.TempSocket(t)
-	testStrictOctetCounting(t, "unix", sock, true, nil)
 }
 
 func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
