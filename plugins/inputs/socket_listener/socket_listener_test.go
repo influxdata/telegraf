@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -22,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -137,10 +137,12 @@ func TestSocketListener(t *testing.T) {
 
 			// Setup plugin according to test specification
 			plugin := &SocketListener{
-				Log:             &testutil.Logger{},
-				ServiceAddress:  proto + "://" + serverAddr,
-				ContentEncoding: tt.encoding,
-				ReadBufferSize:  tt.buffersize,
+				ServiceAddress: proto + "://" + serverAddr,
+				Config: socket.Config{
+					ContentEncoding: tt.encoding,
+					ReadBufferSize:  tt.buffersize,
+				},
+				Log: &testutil.Logger{},
 			}
 			if strings.HasSuffix(tt.schema, "tls") {
 				plugin.ServerConfig = *serverTLS
@@ -158,7 +160,7 @@ func TestSocketListener(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
-			addr := plugin.listener.addr()
+			addr := plugin.socket.Address()
 
 			// Create a noop client
 			// Server is async, so verify no errors at the end.
@@ -191,59 +193,6 @@ func TestSocketListener(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
-}
-
-func TestSocketListenerStream(t *testing.T) {
-	logger := &testutil.CaptureLogger{}
-
-	plugin := &SocketListener{
-		Log:            logger,
-		ServiceAddress: "tcp://127.0.0.1:0",
-		ReadBufferSize: 1024,
-	}
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-	plugin.SetParser(parser)
-
-	// Start the plugin
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	addr := plugin.listener.addr()
-
-	// Create a noop client
-	client, err := createClient(plugin.ServiceAddress, addr, nil)
-	require.NoError(t, err)
-
-	_, err = client.Write([]byte("test value=42i\n"))
-	require.NoError(t, err)
-
-	require.Eventually(t, func() bool {
-		acc.Lock()
-		defer acc.Unlock()
-		return acc.NMetrics() >= 1
-	}, time.Second, 100*time.Millisecond, "did not receive metric")
-
-	// This has to be a stream-listener...
-	listener, ok := plugin.listener.(*streamListener)
-	require.True(t, ok)
-	listener.Lock()
-	conns := len(listener.connections)
-	listener.Unlock()
-	require.NotZero(t, conns)
-
-	plugin.Stop()
-
-	// Verify that plugin.Stop() closed the client's connection
-	_ = client.SetReadDeadline(time.Now().Add(time.Second))
-	buf := []byte{1}
-	_, err = client.Read(buf)
-	require.Equal(t, err, io.EOF)
-
-	require.Empty(t, logger.Errors())
-	require.Empty(t, logger.Warnings())
 }
 
 func TestCases(t *testing.T) {
@@ -314,7 +263,7 @@ func TestCases(t *testing.T) {
 			defer plugin.Stop()
 
 			// Create a client without TLS
-			addr := plugin.listener.addr()
+			addr := plugin.socket.Address()
 			client, err := createClient(plugin.ServiceAddress, addr, nil)
 			require.NoError(t, err)
 
