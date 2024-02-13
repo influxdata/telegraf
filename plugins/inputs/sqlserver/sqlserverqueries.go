@@ -404,6 +404,7 @@ SELECT DISTINCT
 			,'Backup/Restore Throughput/sec'
 			,'Total Server Memory (KB)'
 			,'Target Server Memory (KB)'
+			,'Stolen target memory ratio'
 			,'Log Flushes/sec'
 			,'Log Flush Wait Time'
 			,'Memory broker clerk size'
