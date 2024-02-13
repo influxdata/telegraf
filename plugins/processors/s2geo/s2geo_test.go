@@ -26,7 +26,7 @@ func TestGeo(t *testing.T) {
 	err := plugin.Init()
 	require.NoError(t, err)
 
-	metric := testutil.MustMetric(
+	m := testutil.MustMetric(
 		"mta",
 		map[string]string{},
 		map[string]interface{}{
@@ -50,9 +50,9 @@ func TestGeo(t *testing.T) {
 		),
 	}
 
-	actual := plugin.Apply(metric)
+	actual := plugin.Apply(m)
 	testutil.RequireMetricsEqual(t, expected, actual)
-	actual = pluginMostlyDefault.Apply(metric)
+	actual = pluginMostlyDefault.Apply(m)
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
