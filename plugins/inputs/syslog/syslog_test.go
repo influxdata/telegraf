@@ -23,20 +23,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const (
-	address = ":6514"
-)
-
-var defaultTime = time.Unix(0, 0)
-var maxP = uint8(191)
-var maxV = uint16(999)
-var maxTS = "2017-12-31T23:59:59.999999+00:00"
-var maxH = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqr" +
-	"stuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
-var maxA = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
-var maxPID = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
-var maxMID = "abcdefghilmnopqrstuvzabcdefghilm"
-var message7681 = strings.Repeat("l", 7681)
+var pki = testutil.NewPKI("../../../testutil/pki")
 
 func TestInitFail(t *testing.T) {
 	tests := []struct {
