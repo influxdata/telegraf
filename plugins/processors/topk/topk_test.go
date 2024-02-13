@@ -559,7 +559,11 @@ func TestTracking(t *testing.T) {
 	plugin.Reset()
 
 	// Process expected metrics and compare with resulting metrics
-	actual := plugin.Apply(input...)
+	var actual []telegraf.Metric
+	require.Eventuallyf(t, func() bool {
+		actual = plugin.Apply(input...)
+		return len(actual) > 0
+	}, time.Second, 100*time.Millisecond, "never got any metrics")
 	testutil.RequireMetricsEqual(t, expected, actual)
 
 	// Simulate output acknowledging delivery
