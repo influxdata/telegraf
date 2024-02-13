@@ -207,6 +207,256 @@ func TestListFiles(t *testing.T) {
 	}
 }
 
+func TestShow(t *testing.T) {
+	tests := []struct {
+		name        string
+		properties  map[string]properties
+		expected    []telegraf.Metric
+		expectedErr string
+	}{
+		{
+			name: "example loaded active running",
+			properties: map[string]properties{
+				"example.service": {
+					utype: "Service",
+					state: sdbus.UnitStatus{
+						Name:        "example.service",
+						LoadState:   "loaded",
+						ActiveState: "active",
+						SubState:    "running",
+					},
+					ufPreset: "disabled",
+					ufState:  "enabled",
+					properties: map[string]interface{}{
+						"Id":                "example.service",
+						"StatusErrno":       0,
+						"NRestarts":         1,
+						"MemoryCurrent":     1000,
+						"MemoryPeak":        2000,
+						"MemorySwapCurrent": 3000,
+						"MemorySwapPeak":    4000,
+						"MemoryAvailable":   5000,
+						"MainPID":           9999,
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":      "example.service",
+						"load":      "loaded",
+						"active":    "active",
+						"sub":       "running",
+						"uf_state":  "enabled",
+						"uf_preset": "disabled",
+					},
+					map[string]interface{}{
+						"load_code":    0,
+						"active_code":  0,
+						"sub_code":     0,
+						"status_errno": 0,
+						"restarts":     1,
+						"mem_current":  1000,
+						"mem_peak":     2000,
+						"swap_current": 3000,
+						"swap_peak":    4000,
+						"mem_avail":    5000,
+						"pid":          9999,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "example loaded active exited",
+			properties: map[string]properties{
+				"example.service": {
+					utype: "Service",
+					state: sdbus.UnitStatus{
+						Name:        "example.service",
+						LoadState:   "loaded",
+						ActiveState: "active",
+						SubState:    "exited",
+					},
+					ufPreset: "disabled",
+					ufState:  "enabled",
+					properties: map[string]interface{}{
+						"Id":          "example.service",
+						"StatusErrno": 0,
+						"NRestarts":   0,
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":      "example.service",
+						"load":      "loaded",
+						"active":    "active",
+						"sub":       "exited",
+						"uf_state":  "enabled",
+						"uf_preset": "disabled",
+					},
+					map[string]interface{}{
+						"load_code":    0,
+						"active_code":  0,
+						"sub_code":     4,
+						"status_errno": 0,
+						"restarts":     0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "example loaded failed failed",
+			properties: map[string]properties{
+				"example.service": {
+					utype: "Service",
+					state: sdbus.UnitStatus{
+						Name:        "example.service",
+						LoadState:   "loaded",
+						ActiveState: "failed",
+						SubState:    "failed",
+					},
+					ufPreset: "disabled",
+					ufState:  "enabled",
+					properties: map[string]interface{}{
+						"Id":                "example.service",
+						"StatusErrno":       10,
+						"NRestarts":         1,
+						"MemoryCurrent":     1000,
+						"MemoryPeak":        2000,
+						"MemorySwapCurrent": 3000,
+						"MemorySwapPeak":    4000,
+						"MemoryAvailable":   5000,
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":      "example.service",
+						"load":      "loaded",
+						"active":    "failed",
+						"sub":       "failed",
+						"uf_state":  "enabled",
+						"uf_preset": "disabled",
+					},
+					map[string]interface{}{
+						"load_code":    0,
+						"active_code":  3,
+						"sub_code":     12,
+						"status_errno": 10,
+						"restarts":     1,
+						"mem_current":  1000,
+						"mem_peak":     2000,
+						"swap_current": 3000,
+						"swap_peak":    4000,
+						"mem_avail":    5000,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "example not-found inactive dead",
+			properties: map[string]properties{
+				"example.service": {
+					utype: "Service",
+					state: sdbus.UnitStatus{
+						Name:        "example.service",
+						LoadState:   "not-found",
+						ActiveState: "inactive",
+						SubState:    "dead",
+					},
+					ufPreset: "disabled",
+					ufState:  "enabled",
+					properties: map[string]interface{}{
+						"Id": "example.service",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":      "example.service",
+						"load":      "not-found",
+						"active":    "inactive",
+						"sub":       "dead",
+						"uf_state":  "enabled",
+						"uf_preset": "disabled",
+					},
+					map[string]interface{}{
+						"load_code":   2,
+						"active_code": 2,
+						"sub_code":    1,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "example unknown unknown unknown",
+			properties: map[string]properties{
+				"example.service": {
+					utype: "Service",
+					state: sdbus.UnitStatus{
+						Name:        "example.service",
+						LoadState:   "unknown",
+						ActiveState: "unknown",
+						SubState:    "unknown",
+					},
+					ufPreset: "unknown",
+					ufState:  "unknown",
+					properties: map[string]interface{}{
+						"Id": "example.service",
+					},
+				},
+			},
+			expectedErr: "parsing field 'load' failed, value not in map",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin. Do NOT call Start() as this would connect to
+			// the real systemd daemon.
+			plugin := &SystemdUnits{
+				Pattern:    "examp*",
+				SubCommand: "show",
+				Timeout:    config.Duration(time.Second),
+			}
+			require.NoError(t, plugin.Init())
+
+			// Create a fake client to inject data
+			plugin.client = &fakeClient{
+				units:     tt.properties,
+				connected: true,
+			}
+			defer plugin.Stop()
+
+			// Run gather
+			var acc testutil.Accumulator
+			err := acc.GatherError(plugin.Gather)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			// Do the comparison
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
+}
+
+// Fake client implementation
 type fakeClient struct {
 	units     map[string]properties
 	connected bool
