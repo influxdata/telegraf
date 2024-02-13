@@ -66,7 +66,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Filter for a specific unit type, default is "service", other possible
   ## values are "socket", "target", "device", "mount", "automount", "swap",
-  ## "timer", "path", "slice" and "scope ":
+  ## "timer", "path", "slice" and "scope":
   # unittype = "service"
 
   ## Filter for a specific pattern, default is "" (i.e. all), other possible
