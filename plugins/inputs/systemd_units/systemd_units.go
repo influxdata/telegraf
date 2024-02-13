@@ -2,23 +2,22 @@
 package systemd_units
 
 import (
-	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
-	"os/exec"
+	"path"
 	"strings"
 	"time"
 
+	"github.com/coreos/go-systemd/v22/dbus"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
-
-const measurement = "systemd_units"
 
 // Below are mappings of systemd state tables as defined in
 // https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c
@@ -119,82 +118,221 @@ var subMap = map[string]int{
 	"elapsed": 0x00a0,
 }
 
+type client interface {
+	Connected() bool
+	Close()
+
+	ListUnitFilesByPatternsContext(ctx context.Context, states, pattern []string) ([]dbus.UnitFile, error)
+	ListUnitsByNamesContext(ctx context.Context, units []string) ([]dbus.UnitStatus, error)
+	GetUnitTypePropertiesContext(ctx context.Context, unit, unitType string) (map[string]interface{}, error)
+	GetUnitPropertyContext(ctx context.Context, unit, propertyName string) (*dbus.Property, error)
+}
+
 // SystemdUnits is a telegraf plugin to gather systemd unit status
 type SystemdUnits struct {
-	Timeout       config.Duration `toml:"timeout"`
-	SubCommand    string          `toml:"subcommand"`
-	UnitType      string          `toml:"unittype"`
-	Pattern       string          `toml:"pattern"`
-	resultParser  parseResultFunc
-	commandParams *[]string
+	Pattern    string          `toml:"pattern"`
+	UnitType   string          `toml:"unittype"`
+	SubCommand string          `toml:"subcommand"`
+	Timeout    config.Duration `toml:"timeout"`
+
+	client client
 }
 
-type getParametersFunc func(*SystemdUnits) *[]string
-type parseResultFunc func(telegraf.Accumulator, *bytes.Buffer)
-
-type subCommandInfo struct {
-	getParameters getParametersFunc
-	parseResult   parseResultFunc
+type unitInfo struct {
+	name           string
+	state          dbus.UnitStatus
+	properties     map[string]interface{}
+	unitFileState  string
+	unitFilePreset string
 }
-
-var (
-	defaultSubCommand = "list-units"
-	defaultTimeout    = config.Duration(time.Second)
-	defaultUnitType   = "service"
-	defaultPattern    = ""
-)
 
 func (*SystemdUnits) SampleConfig() string {
 	return sampleConfig
 }
 
 func (s *SystemdUnits) Init() error {
-	var subCommandInfo *subCommandInfo
-
-	switch s.SubCommand {
-	case "show":
-		subCommandInfo = initSubcommandShow()
-	case "list-units":
-		subCommandInfo = initSubcommandListUnits()
+	// Check unit-type and convert the first letter to uppercase as this is
+	// what dbus expects.
+	switch s.UnitType {
+	case "":
+		s.UnitType = "service"
+	case "service", "socket", "target", "device", "mount", "automount", "swap",
+		"timer", "path", "slice", "scope":
 	default:
-		return fmt.Errorf("invalid value for 'subcommand': %s", s.SubCommand)
+		return fmt.Errorf("invalid 'unittype' %q", s.UnitType)
 	}
+	s.UnitType = strings.ToUpper(s.UnitType[0:1]) + strings.ToLower(s.UnitType[1:])
 
-	// Save the parsing function for later and pre-compute the
-	// command line because it will not change.
-	s.resultParser = subCommandInfo.parseResult
-	s.commandParams = subCommandInfo.getParameters(s)
+	// Check the sub-command
+	switch s.SubCommand {
+	case "":
+		s.SubCommand = "list-units"
+	case "list-units", "show":
+	default:
+		return fmt.Errorf("invalid 'subcommand' %q", s.SubCommand)
+	}
 
 	return nil
 }
 
-func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
-	// is systemctl available ?
-	systemctlPath, err := exec.LookPath("systemctl")
+func (s *SystemdUnits) Start(telegraf.Accumulator) error {
+	ctx := context.Background()
+	client, err := dbus.NewSystemConnectionContext(ctx)
 	if err != nil {
 		return err
 	}
+	s.client = client
 
-	cmd := exec.Command(systemctlPath, *s.commandParams...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, time.Duration(s.Timeout))
+	return nil
+}
+
+func (s *SystemdUnits) Stop() {
+	if s.client != nil && s.client.Connected() {
+		s.client.Close()
+	}
+}
+
+func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
+	defer cancel()
+
+	// List all unit files matching the patter. This is necessary to also get
+	// disabled units.
+	list := []string{"enabled", "disabled", "static"}
+	pattern := strings.Split(s.Pattern, " ")
+	unitFiles, err := s.client.ListUnitFilesByPatternsContext(ctx, list, pattern)
 	if err != nil {
-		return fmt.Errorf("error running systemctl %q: %w", strings.Join(*s.commandParams, " "), err)
+		return fmt.Errorf("listing unit files failed: %w", err)
 	}
 
-	s.resultParser(acc, &out)
+	// Get the unit states
+	names := make([]string, 0, len(unitFiles))
+	for _, u := range unitFiles {
+		name := path.Base(u.Path)
+
+		// Filter template services without instance
+		if strings.Contains(name, "@.") {
+			continue
+		}
+		names = append(names, name)
+	}
+	states, err := s.client.ListUnitsByNamesContext(ctx, names)
+	if err != nil {
+		return fmt.Errorf("listing unit states failed: %w", err)
+	}
+
+	// Merge the unit information into one struct
+	units := make([]unitInfo, 0, len(names))
+	for i, name := range names {
+		// Filter units of the wrong type
+		props, err := s.client.GetUnitTypePropertiesContext(ctx, name, s.UnitType)
+		if err != nil {
+			continue
+		}
+
+		u := unitInfo{
+			name:       name,
+			state:      states[i],
+			properties: props,
+		}
+
+		// Get required unit file properties
+		if v, err := s.client.GetUnitPropertyContext(ctx, name, "UnitFileState"); err == nil {
+			u.unitFileState = strings.Trim(v.Value.String(), `'"`)
+		}
+		if v, err := s.client.GetUnitPropertyContext(ctx, name, "UnitFilePreset"); err == nil {
+			u.unitFilePreset = strings.Trim(v.Value.String(), `'"`)
+		}
+
+		units = append(units, u)
+	}
+
+	// Create the metrics
+	switch s.SubCommand {
+	case "list-units":
+		for _, u := range units {
+			// Map the state names to numerical values
+			load, ok := loadMap[u.state.LoadState]
+			if !ok {
+				acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", u.state.LoadState))
+				continue
+			}
+			active, ok := activeMap[u.state.ActiveState]
+			if !ok {
+				acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", u.state.ActiveState))
+				continue
+			}
+			subState, ok := subMap[u.state.SubState]
+			if !ok {
+				acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", u.state.SubState))
+				continue
+			}
+
+			// Create the metric
+			tags := map[string]string{
+				"name":   u.name,
+				"load":   u.state.LoadState,
+				"active": u.state.ActiveState,
+				"sub":    u.state.SubState,
+			}
+
+			fields := map[string]interface{}{
+				"load_code":   load,
+				"active_code": active,
+				"sub_code":    subState,
+			}
+			acc.AddFields("systemd_units", fields, tags)
+		}
+	case "show":
+		for _, u := range units {
+			// Map the state names to numerical values
+			load, ok := loadMap[u.state.LoadState]
+			if !ok {
+				acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", u.state.LoadState))
+				continue
+			}
+			active, ok := activeMap[u.state.ActiveState]
+			if !ok {
+				acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", u.state.ActiveState))
+				continue
+			}
+			subState, ok := subMap[u.state.SubState]
+			if !ok {
+				acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", u.state.SubState))
+				continue
+			}
+
+			// Create the metric
+			tags := map[string]string{
+				"name":      u.name,
+				"load":      u.state.LoadState,
+				"active":    u.state.ActiveState,
+				"sub":       u.state.SubState,
+				"uf_state":  u.unitFileState,
+				"uf_preset": u.unitFilePreset,
+			}
+			fields := map[string]interface{}{
+				"load_code":    load,
+				"active_code":  active,
+				"sub_code":     subState,
+				"status_errno": u.properties["StatusErrno"],
+				"restarts":     u.properties["NRestarts"],
+				"mem_current":  u.properties["MemoryCurrent"],
+				"mem_peak":     u.properties["MemoryPeak"],
+				"swap_current": u.properties["MemorySwapCurrent"],
+				"swap_peak":    u.properties["MemorySwapPeak"],
+				"mem_avail":    u.properties["MemoryAvailable"],
+				"pid":          u.properties["MainPID"],
+			}
+			acc.AddFields("systemd_units", fields, tags)
+		}
+	}
 
 	return nil
 }
 
 func init() {
 	inputs.Add("systemd_units", func() telegraf.Input {
-		return &SystemdUnits{
-			Timeout:    defaultTimeout,
-			UnitType:   defaultUnitType,
-			Pattern:    defaultPattern,
-			SubCommand: defaultSubCommand,
-		}
+		return &SystemdUnits{Timeout: config.Duration(time.Second)}
 	})
 }
