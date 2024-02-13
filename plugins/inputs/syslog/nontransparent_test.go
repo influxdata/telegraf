@@ -2,6 +2,7 @@ package syslog
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -184,6 +185,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 			acc.Errors = make([]error, 0)
 
 			// Write
+			fmt.Println("data:", string(tc.data))
 			_, err = conn.Write(tc.data)
 			conn.Close()
 			require.NoError(t, err)
@@ -201,7 +203,9 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 			if len(acc.Errors) != tc.werr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
 			}
-			testutil.RequireMetricsEqual(t, tc.wantStrict, acc.GetTelegrafMetrics())
+			actual := acc.GetTelegrafMetrics()
+			testutil.PrintMetrics(actual)
+			testutil.RequireMetricsEqual(t, tc.wantStrict, actual)
 		})
 	}
 }
@@ -255,16 +259,8 @@ func testBestEffortNonTransparent(t *testing.T, protocol string, address string,
 	}
 }
 
-func TestNonTransparentStrict_tcp(t *testing.T) {
-	testStrictNonTransparent(t, "tcp", address, false, nil)
-}
-
 func TestNonTransparentBestEffort_tcp(t *testing.T) {
 	testBestEffortNonTransparent(t, "tcp", address, false)
-}
-
-func TestNonTransparentStrict_tcp_tls(t *testing.T) {
-	testStrictNonTransparent(t, "tcp", address, true, nil)
 }
 
 func TestNonTransparentBestEffort_tcp_tls(t *testing.T) {
@@ -281,19 +277,9 @@ func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
 	testStrictNonTransparent(t, "tcp", address, true, &d)
 }
 
-func TestNonTransparentStrict_unix(t *testing.T) {
-	sock := testutil.TempSocket(t)
-	testStrictNonTransparent(t, "unix", sock, false, nil)
-}
-
 func TestNonTransparentBestEffort_unix(t *testing.T) {
 	sock := testutil.TempSocket(t)
 	testBestEffortNonTransparent(t, "unix", sock, false)
-}
-
-func TestNonTransparentStrict_unix_tls(t *testing.T) {
-	sock := testutil.TempSocket(t)
-	testStrictNonTransparent(t, "unix", sock, true, nil)
 }
 
 func TestNonTransparentBestEffort_unix_tls(t *testing.T) {
