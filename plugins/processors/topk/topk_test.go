@@ -58,11 +58,11 @@ func generateAns(input []telegraf.Metric, changeSet map[int]metricChange) []tele
 
 	// For every input metric, we check if there is a change we need to apply
 	// If there is no change for a given input metric, the metric is dropped
-	for i, metric := range input {
+	for i, m := range input {
 		change, ok := changeSet[i]
 		if ok {
 			// Deep copy the metric
-			newMetric := metric.Copy()
+			newMetric := m.Copy()
 
 			// Add new fields
 			if change.newFields != nil {
