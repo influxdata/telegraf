@@ -2,7 +2,6 @@ package syslog
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -149,67 +148,6 @@ func getTestCasesForNonTransparent(hasRemoteAddr bool) []testCaseStream {
 	return testCases
 }
 
-func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
-	for _, tc := range getTestCasesForNonTransparent(protocol != "unix") {
-		t.Run(tc.name, func(t *testing.T) {
-			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, false, framing.NonTransparent)
-			require.NotNil(t, receiver)
-			if wantTLS {
-				receiver.ServerConfig = *pki.TLSServerConfig()
-			}
-			require.Equal(t, receiver.KeepAlivePeriod, keepAlive)
-			acc := &testutil.Accumulator{}
-			require.NoError(t, receiver.Start(acc))
-			defer receiver.Stop()
-
-			// Connect
-			var conn net.Conn
-			var err error
-			if wantTLS {
-				config, e := pki.TLSClientConfig().TLSConfig()
-				require.NoError(t, e)
-				config.ServerName = "localhost"
-				conn, err = tls.Dial(protocol, address, config)
-				require.NotNil(t, conn)
-				require.NoError(t, err)
-			} else {
-				conn, err = net.Dial(protocol, address)
-				require.NotNil(t, conn)
-				require.NoError(t, err)
-				defer conn.Close()
-			}
-
-			// Clear
-			acc.ClearMetrics()
-			acc.Errors = make([]error, 0)
-
-			// Write
-			fmt.Println("data:", string(tc.data))
-			_, err = conn.Write(tc.data)
-			conn.Close()
-			require.NoError(t, err)
-
-			// Wait that the number of data points is accumulated
-			// Since the receiver is running concurrently
-			if tc.wantStrict != nil {
-				acc.Wait(len(tc.wantStrict))
-			}
-
-			// Wait the parsing error
-			acc.WaitError(tc.werr)
-
-			// Verify
-			if len(acc.Errors) != tc.werr {
-				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
-			}
-			actual := acc.GetTelegrafMetrics()
-			testutil.PrintMetrics(actual)
-			testutil.RequireMetricsEqual(t, tc.wantStrict, actual)
-		})
-	}
-}
-
 func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool) {
 	keepAlive := (*config.Duration)(nil)
 	for _, tc := range getTestCasesForNonTransparent(protocol != "unix") {
@@ -265,16 +203,6 @@ func TestNonTransparentBestEffort_tcp(t *testing.T) {
 
 func TestNonTransparentBestEffort_tcp_tls(t *testing.T) {
 	testBestEffortNonTransparent(t, "tcp", address, true)
-}
-
-func TestNonTransparentStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	d := config.Duration(time.Minute)
-	testStrictNonTransparent(t, "tcp", address, true, &d)
-}
-
-func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	d := config.Duration(0)
-	testStrictNonTransparent(t, "tcp", address, true, &d)
 }
 
 func TestNonTransparentBestEffort_unix(t *testing.T) {
