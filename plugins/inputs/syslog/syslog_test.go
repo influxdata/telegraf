@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
@@ -71,23 +71,6 @@ func TestInitFail(t *testing.T) {
 	}
 }
 
-func TestAddressUnixgram(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test as unixgram is not supported on Windows")
-	}
-
-	sock := filepath.Join(t.TempDir(), "syslog.TestAddress.sock")
-	plugin := &Syslog{
-		Address: "unixgram://" + sock,
-	}
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.Equal(t, sock, plugin.Address)
-}
-
 func TestAddressDefaultPort(t *testing.T) {
 	plugin := &Syslog{
 		Address: "tcp://localhost",
@@ -99,6 +82,79 @@ func TestAddressDefaultPort(t *testing.T) {
 
 	// Default port is 6514
 	require.Equal(t, "localhost:6514", plugin.Address)
+}
+
+func TestUnixgram(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test as unixgram is not supported on Windows")
+	}
+
+	// Create the socket
+	sock := testutil.TempSocket(t)
+	f, err := os.Create(sock)
+	require.NoError(t, err)
+	defer f.Close()
+
+	// Setup plugin and start it
+	timeout := config.Duration(defaultReadTimeout)
+	plugin := &Syslog{
+		Address:        "unixgram://" + sock,
+		Framing:        framing.OctetCounting,
+		ReadTimeout:    &timeout,
+		Separator:      "_",
+		SyslogStandard: "RFC5424",
+		Trailer:        nontransparent.LF,
+		now:            getNanoNow,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Send the messgae
+	msg := `<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`
+	client, err := net.Dial("unixgram", sock)
+	require.NoError(t, err)
+	defer client.Close()
+	_, err = client.Write([]byte(msg))
+	require.NoError(t, err)
+
+	// Do the comparison
+	expected := []telegraf.Metric{
+		metric.New(
+			"syslog",
+			map[string]string{
+				"severity": "notice",
+				"facility": "daemon",
+				"hostname": "web1",
+				"appname":  "someservice",
+			},
+			map[string]interface{}{
+				"version":       uint16(1),
+				"timestamp":     time.Unix(1456029177, 0).UnixNano(),
+				"procid":        "2341",
+				"msgid":         "2",
+				"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
+				"origin":        true,
+				"meta_sequence": "14125553",
+				"meta_service":  "someservice",
+				"severity_code": 5,
+				"facility_code": 3,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	client.Close()
+
+	// Check the metric nevertheless as we might get some metrics despite errors.
+	require.Eventually(t, func() bool {
+		return int(acc.NMetrics()) >= len(expected)
+	}, 3*time.Second, 100*time.Millisecond)
+	plugin.Stop()
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
 func TestCases(t *testing.T) {
@@ -124,11 +180,6 @@ func TestCases(t *testing.T) {
 		// Only handle folders
 		if !f.IsDir() {
 			continue
-		}
-		// Compare options
-		options := []cmp.Option{
-			testutil.IgnoreTime(),
-			testutil.SortMetrics(),
 		}
 
 		t.Run(f.Name(), func(t *testing.T) {
@@ -222,7 +273,7 @@ func TestCases(t *testing.T) {
 			plugin.Stop()
 
 			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expected, actual, options...)
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 
 			// Check for errors
 			if expectedError != "" {
