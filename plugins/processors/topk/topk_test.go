@@ -1,12 +1,15 @@
 package topk
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var tenMillisecondsDuration = config.Duration(10 * time.Millisecond)
@@ -500,4 +503,74 @@ func TestTopkGroupByKeyTag(t *testing.T) {
 
 	// Run the test
 	runAndCompare(&topk, input, answer, "GroupByKeyTag test", t)
+}
+
+func TestTracking(t *testing.T) {
+	inputRaw := []telegraf.Metric{
+		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 100}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 22}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 1}, time.Unix(0, 0)),
+	}
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"foo",
+			map[string]string{},
+			map[string]interface{}{"value": 100},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"bar",
+			map[string]string{},
+			map[string]interface{}{"value": 22},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"baz",
+			map[string]string{},
+			map[string]interface{}{"value": 1},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Only doing this over 1 period, so we should expect the same number of
+	// metrics back.
+	plugin := &TopK{
+		Period:      1,
+		K:           3,
+		Aggregation: "mean",
+		Fields:      []string{"value"},
+		Log:         testutil.Logger{},
+	}
+	plugin.Reset()
+
+	// Process expected metrics and compare with resulting metrics
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(expected) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }
