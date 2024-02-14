@@ -91,11 +91,9 @@ func TestUnixgram(t *testing.T) {
 
 	// Setup plugin and start it
 	plugin := &Syslog{
-		Address:        "unixgram://" + sock,
-		Separator:      "_",
-		SyslogStandard: "RFC5424",
-		Trailer:        nontransparent.LF,
-		Log:            testutil.Logger{},
+		Address: "unixgram://" + sock,
+		Trailer: nontransparent.LF,
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -158,10 +156,8 @@ func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			SyslogStandard: syslogRFC5424,
-			Trailer:        nontransparent.LF,
-			Separator:      "_",
-			Log:            testutil.Logger{},
+			Trailer: nontransparent.LF,
+			Log:     testutil.Logger{},
 		}
 	})
 
@@ -284,7 +280,7 @@ func TestIssue10121(t *testing.T) {
 	plugin := &Syslog{
 		Address:        "tcp://127.0.0.1:0",
 		ReadTimeout:    config.Duration(10 * time.Millisecond),
-		SyslogStandard: syslogRFC5424,
+		SyslogStandard: "RFC5424",
 		Trailer:        nontransparent.LF,
 		Separator:      "_",
 		Log:            testutil.Logger{},

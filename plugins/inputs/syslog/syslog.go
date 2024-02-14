@@ -32,8 +32,6 @@ var sampleConfig string
 type syslogRFC string
 
 const ipMaxPacketSize = 64 * 1024
-const syslogRFC3164 = "RFC3164"
-const syslogRFC5424 = "RFC5424"
 const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 // Syslog is a syslog plugin
@@ -69,13 +67,25 @@ func (*Syslog) SampleConfig() string {
 }
 
 func (s *Syslog) Init() error {
-	// Check framing and set default
+	// Check settings and set defaults
 	switch s.Framing {
 	case "":
 		s.Framing = "octet-counting"
 	case "octet-counting", "non-transparent":
 	default:
 		return fmt.Errorf("invalid 'framing' %q", s.Framing)
+	}
+
+	switch s.SyslogStandard {
+	case "":
+		s.SyslogStandard = "RFC5424"
+	case "RFC3164", "RFC5424":
+	default:
+		return fmt.Errorf("invalid 'syslog_standard' %q", s.SyslogStandard)
+	}
+
+	if s.Separator == "" {
+		s.Separator = "_"
 	}
 
 	// Check and parse address, set default if necessary
@@ -210,15 +220,21 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 	defer s.wg.Done()
 	b := make([]byte, ipMaxPacketSize)
 	var p syslog.Machine
-	switch {
-	case !s.BestEffort && s.SyslogStandard == syslogRFC5424:
-		p = rfc5424.NewParser()
-	case s.BestEffort && s.SyslogStandard == syslogRFC5424:
-		p = rfc5424.NewParser(rfc5424.WithBestEffort())
-	case !s.BestEffort && s.SyslogStandard == syslogRFC3164:
-		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}))
-	case s.BestEffort && s.SyslogStandard == syslogRFC3164:
-		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}), rfc3164.WithBestEffort())
+	switch s.SyslogStandard {
+	case "RFC3164":
+		opts := []syslog.MachineOption{
+			rfc3164.WithYear(rfc3164.CurrentYear{}),
+		}
+		if s.BestEffort {
+			opts = append(opts, rfc3164.WithBestEffort())
+		}
+		p = rfc3164.NewParser(opts...)
+	case "RFC5424":
+		var opts []syslog.MachineOption
+		if s.BestEffort {
+			opts = append(opts, rfc5424.WithBestEffort())
+		}
+		p = rfc5424.NewParser(opts...)
 	}
 	for {
 		n, sourceAddr, err := s.udpListener.ReadFrom(b)
@@ -451,9 +467,7 @@ func (uc unixCloser) Close() error {
 func init() {
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			SyslogStandard: syslogRFC5424,
-			Trailer:        nontransparent.LF,
-			Separator:      "_",
+			Trailer: nontransparent.LF,
 		}
 	})
 }
