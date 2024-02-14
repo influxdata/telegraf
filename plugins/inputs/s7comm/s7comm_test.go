@@ -8,9 +8,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/robinson/gos7"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSampleConfig(t *testing.T) {
@@ -273,7 +274,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return false },
+							convert:     func([]byte) interface{} { return false },
 						},
 					},
 				},
@@ -308,7 +309,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return byte(0) },
+							convert:     func([]byte) interface{} { return byte(0) },
 						},
 					},
 				},
@@ -343,7 +344,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return string([]byte{0}) },
+							convert:     func([]byte) interface{} { return string([]byte{0}) },
 						},
 					},
 				},
@@ -378,7 +379,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return "" },
+							convert:     func([]byte) interface{} { return "" },
 						},
 					},
 				},
@@ -413,7 +414,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return uint16(0) },
+							convert:     func([]byte) interface{} { return uint16(0) },
 						},
 					},
 				},
@@ -448,7 +449,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return int16(0) },
+							convert:     func([]byte) interface{} { return int16(0) },
 						},
 					},
 				},
@@ -483,7 +484,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return uint32(0) },
+							convert:     func([]byte) interface{} { return uint32(0) },
 						},
 					},
 				},
@@ -518,7 +519,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return int32(0) },
+							convert:     func([]byte) interface{} { return int32(0) },
 						},
 					},
 				},
@@ -553,7 +554,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(b []byte) interface{} { return float32(0) },
+							convert:     func([]byte) interface{} { return float32(0) },
 						},
 					},
 				},

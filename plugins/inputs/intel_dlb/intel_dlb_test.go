@@ -5,6 +5,7 @@ package intel_dlb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -132,7 +133,7 @@ func TestDLB_Init(t *testing.T) {
 			Log:        testutil.Logger{},
 		}
 		const emptyPath = ""
-		fileMock.On("gatherPaths", mock.Anything).Return([]string{emptyPath}, fmt.Errorf("can't find device folder")).Once()
+		fileMock.On("gatherPaths", mock.Anything).Return([]string{emptyPath}, errors.New("can't find device folder")).Once()
 		err := dlb.Init()
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "can't find device folder")
@@ -147,7 +148,7 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 			connection: mockConn,
 			Log:        testutil.Logger{},
 		}
-		mockConn.On("Write", []byte{}).Return(0, fmt.Errorf("write error")).Once().
+		mockConn.On("Write", []byte{}).Return(0, errors.New("write error")).Once().
 			On("Close").Return(nil).Once()
 
 		_, _, err := dlb.writeReadSocketMessage("")
@@ -163,7 +164,7 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 			connection: mockConn,
 			Log:        testutil.Logger{},
 		}
-		simulateResponse(mockConn, "", fmt.Errorf("read error"))
+		simulateResponse(mockConn, "", errors.New("read error"))
 
 		_, _, err := dlb.writeReadSocketMessage("")
 
@@ -584,7 +585,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 		mockConn.On("Read", mock.Anything).Run(func(arg mock.Arguments) {
 			elem := arg.Get(0).([]byte)
 			copy(elem, response)
-		}).Return(len(response), fmt.Errorf("read error")).Once()
+		}).Return(len(response), errors.New("read error")).Once()
 		mockConn.On("Close").Return(nil)
 
 		err := dlb.gatherMetricsFromSocket(mockAcc)
@@ -652,7 +653,7 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 			rasReader: fileMock,
 			Log:       testutil.Logger{},
 		}
-		fileMock.On("gatherPaths", mock.AnythingOfType("string")).Return(nil, fmt.Errorf("can't find device folder")).Once()
+		fileMock.On("gatherPaths", mock.AnythingOfType("string")).Return(nil, errors.New("can't find device folder")).Once()
 
 		err := dlb.checkAndAddDLBDevice()
 
@@ -670,7 +671,7 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
-			On("readFromFile", mock.Anything).Return([]byte("0x2710"), fmt.Errorf("read error while getting device folders")).Once()
+			On("readFromFile", mock.Anything).Return([]byte("0x2710"), errors.New("read error while getting device folders")).Once()
 
 		err := dlb.checkAndAddDLBDevice()
 
@@ -701,7 +702,7 @@ func Test_checkAndAddDLBDevice(t *testing.T) {
 		}
 		const globPath = "/sys/devices/pci0000:00/0000:00:00.0/device"
 		fileMock.On("gatherPaths", mock.Anything).Return([]string{globPath}, nil).Once().
-			On("readFromFile", mock.Anything).Return([]byte("0x2710"), fmt.Errorf("read error while getting device folders")).Once()
+			On("readFromFile", mock.Anything).Return([]byte("0x2710"), errors.New("read error while getting device folders")).Once()
 
 		err := dlb.checkAndAddDLBDevice()
 
@@ -778,7 +779,7 @@ func Test_readRasMetrics(t *testing.T) {
 		err            error
 		errMsg         string
 	}{
-		{"error when reading fails", []byte(aerCorrectableData), fmt.Errorf("read error"), "read error"},
+		{"error when reading fails", []byte(aerCorrectableData), errors.New("read error"), "read error"},
 		{"error when empty data is given", []byte(""), nil, "no value to parse"},
 		{"error when trying to split empty data", []byte("x1 x2"), nil, "failed to parse value"},
 	}

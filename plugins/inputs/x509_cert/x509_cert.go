@@ -384,7 +384,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		for {
 			block, rest := pem.Decode(bytes.TrimSpace(content))
 			if block == nil {
-				return nil, nil, fmt.Errorf("failed to parse certificate PEM")
+				return nil, nil, errors.New("failed to parse certificate PEM")
 			}
 
 			if block.Type == "CERTIFICATE" {

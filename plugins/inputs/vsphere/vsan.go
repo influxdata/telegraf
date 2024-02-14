@@ -3,6 +3,7 @@ package vsphere
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -182,7 +183,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 		}
 	}
 	if resp == nil {
-		return nil, fmt.Errorf("all hosts fail to query cmmds")
+		return nil, errors.New("all hosts fail to query cmmds")
 	}
 	var clusterCmmds Cmmds
 	if err := json.Unmarshal([]byte(resp.Returnval), &clusterCmmds); err != nil {
@@ -380,7 +381,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	}
 	vsanSystemEx := types.ManagedObjectReference{
 		Type:  "VsanSystemEx",
-		Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
+		Value: "vsanSystemEx-" + strings.Split(hostRefValue, "-")[1],
 	}
 
 	includeSummary := true

@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.21.6'
+      - image: 'quay.io/influxdb/telegraf-ci:1.22.0'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -96,7 +96,7 @@ jobs:
       - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
       - run:
           name: "golangci-lint/Linux"
           command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
@@ -107,7 +107,7 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
       - run:
           name: "golangci-lint/macOS"
           command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
@@ -119,7 +119,7 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
       - run:
           name: "golangci-lint/Windows"
           command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
@@ -386,6 +386,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: '.'
+      - run: sh ./scripts/installgo_linux.sh
       - run: ./scripts/install_incus.sh
       - run: cd tools/package_incus_test && go build
       - run: sudo ./tools/package_incus_test/package_incus_test --package $(find ./dist -name "*_amd64.deb")

@@ -4,7 +4,7 @@ package cloud_pubsub_push
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -256,7 +256,7 @@ func (*testOutput) SampleConfig() string {
 
 func (t *testOutput) Write(_ []telegraf.Metric) error {
 	if t.failWrite {
-		return fmt.Errorf("failed write")
+		return errors.New("failed write")
 	}
 	return nil
 }

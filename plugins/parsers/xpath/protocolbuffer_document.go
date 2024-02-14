@@ -2,6 +2,7 @@ package xpath
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -32,10 +33,10 @@ type protobufDocument struct {
 func (d *protobufDocument) Init() error {
 	// Check the message definition and type
 	if d.MessageDefinition == "" {
-		return fmt.Errorf("protocol-buffer message-definition not set")
+		return errors.New("protocol-buffer message-definition not set")
 	}
 	if d.MessageType == "" {
-		return fmt.Errorf("protocol-buffer message-type not set")
+		return errors.New("protocol-buffer message-type not set")
 	}
 
 	// Load the file descriptors from the given protocol-buffer definition

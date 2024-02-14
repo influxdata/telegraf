@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const processesPayload = `
@@ -1457,7 +1458,7 @@ func TestGatherStreamServerZonesMetrics(t *testing.T) {
 }
 
 func TestUnavailableEndpoints(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer ts.Close()
@@ -1475,7 +1476,7 @@ func TestUnavailableEndpoints(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer ts.Close()
@@ -1493,7 +1494,7 @@ func TestServerError(t *testing.T) {
 }
 
 func TestMalformedJSON(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_, err := fmt.Fprintln(w, "this is not JSON")
 		require.NoError(t, err)
@@ -1513,7 +1514,7 @@ func TestMalformedJSON(t *testing.T) {
 }
 
 func TestUnknownContentType(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 	}))
 	defer ts.Close()
@@ -1532,7 +1533,7 @@ func TestUnknownContentType(t *testing.T) {
 
 func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 	t.Helper()
-	addr, err := url.Parse(fmt.Sprintf("%s/api", ts.URL))
+	addr, err := url.Parse(ts.URL + "/api")
 	require.NoError(t, err)
 
 	host, port, err := net.SplitHostPort(addr.Host)
@@ -1561,7 +1562,7 @@ func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Serve
 	}))
 
 	n := &NginxPlusAPI{
-		Urls:       []string{fmt.Sprintf("%s/api", ts.URL)},
+		Urls:       []string{ts.URL + "/api"},
 		APIVersion: defaultAPIVersion,
 	}
 

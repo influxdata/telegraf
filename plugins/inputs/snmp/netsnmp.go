@@ -132,7 +132,7 @@ func (n *netsnmpTranslator) snmpTableCall(oid string) (
 	scanner.Scan()
 	cols := scanner.Text()
 	if len(cols) == 0 {
-		return "", "", "", nil, fmt.Errorf("could not find any columns in table")
+		return "", "", "", nil, errors.New("could not find any columns in table")
 	}
 	for _, col := range strings.Split(cols, " ") {
 		if len(col) == 0 {

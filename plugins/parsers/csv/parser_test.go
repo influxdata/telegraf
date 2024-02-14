@@ -1,7 +1,7 @@
 package csv
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -144,7 +144,7 @@ func TestTimestampError(t *testing.T) {
 23/05/09 04:05:06 PM,70,test_name
 07/11/09 04:05:06 PM,80,test_name2`
 	_, err = p.Parse([]byte(testCSV))
-	require.Equal(t, fmt.Errorf("timestamp format must be specified"), err)
+	require.Equal(t, errors.New("timestamp format must be specified"), err)
 }
 
 func TestTimestampUnixFormat(t *testing.T) {

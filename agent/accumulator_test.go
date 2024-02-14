@@ -2,7 +2,7 @@ package agent
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"log"
 	"os"
 	"testing"
@@ -55,9 +55,9 @@ func TestAccAddError(t *testing.T) {
 	defer close(metrics)
 	a := NewAccumulator(&TestMetricMaker{}, metrics)
 
-	a.AddError(fmt.Errorf("foo"))
-	a.AddError(fmt.Errorf("bar"))
-	a.AddError(fmt.Errorf("baz"))
+	a.AddError(errors.New("foo"))
+	a.AddError(errors.New("bar"))
+	a.AddError(errors.New("baz"))
 
 	errs := bytes.Split(errBuf.Bytes(), []byte{'\n'})
 	require.Len(t, errs, 4) // 4 because of trailing newline

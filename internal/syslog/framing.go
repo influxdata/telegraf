@@ -1,7 +1,7 @@
 package syslog
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -50,7 +50,7 @@ func (f *Framing) UnmarshalText(data []byte) error {
 		return nil
 	}
 	*f = -1
-	return fmt.Errorf("unknown framing")
+	return errors.New("unknown framing")
 }
 
 // MarshalText implements encoding.TextMarshaller
@@ -59,5 +59,5 @@ func (f Framing) MarshalText() ([]byte, error) {
 	if s != "" {
 		return []byte(s), nil
 	}
-	return nil, fmt.Errorf("unknown framing")
+	return nil, errors.New("unknown framing")
 }

@@ -204,7 +204,7 @@ func (h *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 		return err
 	}
 	if len(headers[0]) <= 2 || headers[0][:2] != "# " {
-		return fmt.Errorf("did not receive standard haproxy headers")
+		return errors.New("did not receive standard haproxy headers")
 	}
 	headers[0] = headers[0][2:]
 

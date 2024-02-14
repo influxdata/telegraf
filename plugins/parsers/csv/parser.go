@@ -91,7 +91,7 @@ func (p *Parser) initializeMetadataSeparators() error {
 	}
 
 	if len(p.MetadataSeparators) == 0 {
-		return fmt.Errorf("csv_metadata_separators required when specifying csv_metadata_rows")
+		return errors.New("csv_metadata_separators required when specifying csv_metadata_rows")
 	}
 
 	p.metadataSeparatorList = metadataPattern{}
@@ -140,7 +140,7 @@ func (p *Parser) Reset() {
 
 func (p *Parser) Init() error {
 	if p.HeaderRowCount == 0 && len(p.ColumnNames) == 0 {
-		return fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
+		return errors.New("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
 	}
 
 	if p.Delimiter != "" {
@@ -160,7 +160,7 @@ func (p *Parser) Init() error {
 
 	p.gotInitialColumnNames = len(p.ColumnNames) > 0
 	if len(p.ColumnNames) > 0 && len(p.ColumnTypes) > 0 && len(p.ColumnNames) != len(p.ColumnTypes) {
-		return fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
+		return errors.New("csv_column_names field count doesn't match with csv_column_types")
 	}
 
 	if err := p.initializeMetadataSeparators(); err != nil {
@@ -393,7 +393,7 @@ outer:
 			if len(p.ColumnTypes) > 0 {
 				// Throw error if current column count exceeds defined types.
 				if i >= len(p.ColumnTypes) {
-					return nil, fmt.Errorf("column type: column count exceeded")
+					return nil, errors.New("column type: column count exceeded")
 				}
 
 				var val interface{}
@@ -483,7 +483,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 
 		switch timestampFormat {
 		case "":
-			return time.Time{}, fmt.Errorf("timestamp format must be specified")
+			return time.Time{}, errors.New("timestamp format must be specified")
 		default:
 			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], timezone)
 			if err != nil {

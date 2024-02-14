@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"testing"
 
 	"github.com/awnumar/memguard"
@@ -716,6 +718,27 @@ func (tsuite *SecretImplTestSuite) TestSecretSetResolveInvalid() {
 	require.ErrorContains(t, err, `linking new secrets failed: unlinked part "@{mock:another_secret}"`)
 }
 
+func (tsuite *SecretImplTestSuite) TestSecretInvalidWarn() {
+	t := tsuite.T()
+
+	// Intercept the log output
+	var buf bytes.Buffer
+	backup := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(backup)
+
+	cfg := []byte(`
+      [[inputs.mockup]]
+	    secret = "server=a user=@{mock:secret-with-invalid-chars} pass=@{mock:secret_pass}"
+	`)
+	c := NewConfig()
+	require.NoError(t, c.LoadConfigData(cfg))
+	require.Len(t, c.Inputs, 1)
+
+	require.Contains(t, buf.String(), `W! Secret "@{mock:secret-with-invalid-chars}" contains invalid character(s)`)
+	require.NotContains(t, buf.String(), "@{mock:secret_pass}")
+}
+
 func TestSecretImplUnprotected(t *testing.T) {
 	impl := &unprotectedSecretImpl{}
 	container := impl.Container([]byte("foobar"))
@@ -791,7 +814,7 @@ func (s *MockupSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error
 func init() {
 	// Register the mockup input plugin for the required names
 	inputs.Add("mockup", func() telegraf.Input { return &MockupSecretPlugin{} })
-	secretstores.Add("mockup", func(id string) telegraf.SecretStore {
+	secretstores.Add("mockup", func(string) telegraf.SecretStore {
 		return &MockupSecretStore{}
 	})
 }

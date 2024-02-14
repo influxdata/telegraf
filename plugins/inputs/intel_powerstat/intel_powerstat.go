@@ -15,7 +15,6 @@ import (
 
 	ptel "github.com/intel/powertelemetry"
 	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
-	"golang.org/x/exp/constraints"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -322,7 +321,7 @@ func (p *PowerStat) parsePackageMsrMetrics() {
 
 // hasDuplicate takes a slice of a generic type, and returns true
 // if the slice contains duplicates. Otherwise, it returns false.
-func hasDuplicate[S ~[]E, E constraints.Ordered](s S) bool {
+func hasDuplicate[S ~[]E, E comparable](s S) bool {
 	m := make(map[E]struct{}, len(s))
 	for _, v := range s {
 		if _, ok := m[v]; ok {

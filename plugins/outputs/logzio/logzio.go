@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -54,12 +55,12 @@ func (l *Logzio) Connect() error {
 	l.Log.Debug("Connecting to logz.io output...")
 
 	if l.Token.Empty() {
-		return fmt.Errorf("token is required")
+		return errors.New("token is required")
 	}
 	if equal, err := l.Token.EqualTo([]byte("your logz.io token")); err != nil {
 		return err
 	} else if equal {
-		return fmt.Errorf("please replace 'token' with your actual token")
+		return errors.New("please replace 'token' with your actual token")
 	}
 
 	tlsCfg, err := l.ClientConfig.TLSConfig()

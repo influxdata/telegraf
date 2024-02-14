@@ -990,3 +990,67 @@ func TestAnyFieldConversion(t *testing.T) {
 		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }
+
+func TestTrackedMetricNotLost(t *testing.T) {
+	regex := Regex{
+		Tags: []converter{
+			{
+				Key:         "resp_code",
+				Pattern:     "^(\\d)\\d\\d$",
+				Replacement: "${1}xx",
+				ResultKey:   "resp_code_group",
+			},
+			{
+				Key:         "resp_code_group",
+				Pattern:     "2xx",
+				Replacement: "OK",
+				ResultKey:   "resp_code_text",
+			},
+		},
+		Fields: []converter{
+			{
+				Key:         "request",
+				Pattern:     "^/api(?P<method>/[\\w/]+)\\S*",
+				Replacement: "${method}",
+				ResultKey:   "method",
+			},
+			{
+				Key:         "request",
+				Pattern:     ".*category=(\\w+).*",
+				Replacement: "${1}",
+				ResultKey:   "search_category",
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, regex.Init())
+
+	m := newM2().Copy()
+	var delivered bool
+	notify := func(telegraf.DeliveryInfo) {
+		delivered = true
+	}
+	m, _ = metric.WithTracking(m, notify)
+	processed := regex.Apply(m)
+	processed[0].Accept()
+
+	expectedFields := map[string]interface{}{
+		"request":         "/api/search/?category=plugins&q=regex&sort=asc",
+		"method":          "/search/",
+		"search_category": "plugins",
+		"ignore_number":   int64(200),
+		"ignore_bool":     true,
+	}
+	expectedTags := map[string]string{
+		"verb":            "GET",
+		"resp_code":       "200",
+		"resp_code_group": "2xx",
+		"resp_code_text":  "OK",
+	}
+
+	require.Equal(t, expectedFields, processed[0].Fields())
+	require.Equal(t, expectedTags, processed[0].Tags())
+	require.Eventually(t, func() bool {
+		return delivered
+	}, time.Second, 100*time.Millisecond, "metric not delivered")
+}

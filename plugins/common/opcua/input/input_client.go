@@ -95,7 +95,7 @@ type InputClientConfig struct {
 
 func (o *InputClientConfig) Validate() error {
 	if o.MetricName == "" {
-		return fmt.Errorf("metric name is empty")
+		return errors.New("metric name is empty")
 	}
 
 	err := choice.Check(string(o.Timestamp), []string{"", "gather", "server", "source"})
@@ -278,11 +278,11 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 	}
 
 	if len(nmm.Tag.Namespace) == 0 {
-		return fmt.Errorf("empty node namespace not allowed")
+		return errors.New("empty node namespace not allowed")
 	}
 
 	if len(nmm.Tag.Identifier) == 0 {
-		return fmt.Errorf("empty node identifier not allowed")
+		return errors.New("empty node identifier not allowed")
 	}
 
 	mp := newMP(nmm)
@@ -391,7 +391,13 @@ func (o *OpcUAInputClient) initLastReceivedValues() {
 func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	o.LastReceivedData[nodeIdx].Quality = d.Status
 	if !o.StatusCodeOK(d.Status) {
-		o.Log.Errorf("status not OK for node %v: %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, d.Status)
+		// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
+		if len(o.NodeIDs) > nodeIdx {
+			o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, o.NodeIDs[nodeIdx].String(), d.Status)
+		} else {
+			o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, '?', d.Status)
+		}
+
 		return
 	}
 

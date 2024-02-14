@@ -1,18 +1,19 @@
 package librato
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -28,7 +29,7 @@ func newTestLibrato(testURL string) *Librato {
 func TestUriOverride(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}))
 	defer ts.Close()
@@ -42,7 +43,7 @@ func TestUriOverride(t *testing.T) {
 
 func TestBadStatusCode(t *testing.T) {
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}))
 	defer ts.Close()
@@ -220,7 +221,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 				MeasureTime: mtime.Unix(),
 				Value:       1.0,
 			},
-			fmt.Errorf("undeterminable Source type from Field, hostname"),
+			errors.New("undeterminable Source type from Field, hostname"),
 		},
 		{
 			pt3,

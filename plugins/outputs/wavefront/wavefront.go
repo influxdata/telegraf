@@ -122,7 +122,7 @@ func (w *Wavefront) Connect() error {
 	sender, err := w.createSender(connectionURL, flushSeconds)
 
 	if err != nil {
-		return fmt.Errorf("could not create Wavefront Sender for the provided url")
+		return errors.New("could not create Wavefront Sender for the provided url")
 	}
 
 	w.sender = sender

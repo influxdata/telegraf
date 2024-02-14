@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"testing"
@@ -37,7 +36,7 @@ type (
 	}
 
 	stubResult struct {
-		metricIds []string
+		metricIDs []string
 
 		sendError bool
 		err       chan error
@@ -124,7 +123,7 @@ func (t *stubTopic) Publish(ctx context.Context, msg *pubsub.Message) publishRes
 
 	ids := t.parseIDs(msg)
 	r := &stubResult{
-		metricIds: ids,
+		metricIDs: ids,
 		err:       make(chan error, 1),
 		done:      make(chan struct{}, 1),
 	}
@@ -173,7 +172,7 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 
 		for _, msg := range bundled {
 			r := msg.stubResult
-			for _, id := range r.metricIds {
+			for _, id := range r.metricIDs {
 				t.published[id] = msg.Message
 			}
 
@@ -225,7 +224,7 @@ func (r *stubResult) Get(ctx context.Context) (string, error) {
 	case err := <-r.err:
 		return "", err
 	case <-r.done:
-		return fmt.Sprintf("id-%s", r.metricIds[0]), nil
+		return "id-" + r.metricIDs[0], nil
 	}
 }
 

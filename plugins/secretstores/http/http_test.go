@@ -28,7 +28,7 @@ func TestCases(t *testing.T) {
 	require.NotEmpty(t, folders)
 
 	// Set up for file inputs
-	secretstores.Add("http", func(id string) telegraf.SecretStore {
+	secretstores.Add("http", func(string) telegraf.SecretStore {
 		return &HTTP{Log: testutil.Logger{}}
 	})
 
@@ -154,7 +154,7 @@ func TestGetErrors(t *testing.T) {
 }
 
 func TestResolver(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"test": "aedMZXaLR246OHHjVtJKXQ=="}`))
 	}))
 	defer server.Close()
@@ -195,7 +195,7 @@ func TestGetResolverErrors(t *testing.T) {
 	require.ErrorContains(t, err, "context deadline exceeded")
 	dummy.Close()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`[{"test": "aedMZXaLR246OHHjVtJKXQ=="}]`))
 	}))
 	defer server.Close()
@@ -228,7 +228,7 @@ func TestInvalidServerResponse(t *testing.T) {
 	require.NoError(t, err)
 	defer dummy.Close()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`[somerandomebytes`))
 	}))
 	defer server.Close()

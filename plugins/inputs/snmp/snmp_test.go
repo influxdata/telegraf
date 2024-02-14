@@ -2,6 +2,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os/exec"
@@ -908,7 +909,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			oidNum:     "b",
 			oidText:    "c",
 			conversion: "d",
-			err:        fmt.Errorf("e"),
+			err:        errors.New("e"),
 		},
 	}
 	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator().SnmpTranslate("foo")
@@ -916,7 +917,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
 	require.Equal(t, "d", conversion)
-	require.Equal(t, fmt.Errorf("e"), err)
+	require.Equal(t, errors.New("e"), err)
 	snmpTranslateCaches = nil
 }
 
@@ -941,7 +942,7 @@ func TestSnmpTableCache_hit(t *testing.T) {
 			oidNum:  "b",
 			oidText: "c",
 			fields:  []Field{{Name: "d"}},
-			err:     fmt.Errorf("e"),
+			err:     errors.New("e"),
 		},
 	}
 	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator().SnmpTable("foo")
@@ -949,7 +950,7 @@ func TestSnmpTableCache_hit(t *testing.T) {
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
 	require.Equal(t, []Field{{Name: "d"}}, fields)
-	require.Equal(t, fmt.Errorf("e"), err)
+	require.Equal(t, errors.New("e"), err)
 }
 
 func TestTableJoin_walk(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func UnboundControl(output string) func(unbound Unbound) (*bytes.Buffer, error) {
-	return func(unbound Unbound) (*bytes.Buffer, error) {
+func UnboundControl(output string) func(Unbound) (*bytes.Buffer, error) {
+	return func(Unbound) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }

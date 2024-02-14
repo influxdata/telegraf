@@ -79,7 +79,7 @@ var (
 	// 0xab    program_fail_count
 	nvmeIDSeparatePattern = regexp.MustCompile(`^([A-Za-z0-9_]+)(.+)`)
 
-	deviceFieldIds = map[string]string{
+	deviceFieldIDs = map[string]string{
 		"1":   "read_error_rate",
 		"5":   "reallocated_sectors_count",
 		"7":   "seek_error_rate",
@@ -842,9 +842,9 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 				acc.AddFields("smart_attribute", fields, tags)
 			}
 
-			// If the attribute matches on the one in deviceFieldIds
+			// If the attribute matches on the one in deviceFieldIDs
 			// save the raw value to a field.
-			if field, ok := deviceFieldIds[attr[1]]; ok {
+			if field, ok := deviceFieldIDs[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
 					deviceFields[field] = val
 				}
@@ -996,7 +996,7 @@ func parseWearLeveling(acc telegraf.Accumulator, fields map[string]interface{}, 
 	values := []int64{min, max, avg}
 	for i, submetricName := range []string{"Min", "Max", "Avg"} {
 		fields["raw_value"] = values[i]
-		tags["name"] = fmt.Sprintf("Wear_Leveling_%s", submetricName)
+		tags["name"] = "Wear_Leveling_" + submetricName
 		acc.AddFields("smart_attribute", fields, tags)
 	}
 
@@ -1031,7 +1031,7 @@ func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error 
 	// '16 829 004' --> 16829004
 	numRegex, err := regexp.Compile(`[^0-9\-]+`)
 	if err != nil {
-		return fmt.Errorf("failed to compile numeric regex")
+		return errors.New("failed to compile numeric regex")
 	}
 	value = numRegex.ReplaceAllString(value, "")
 

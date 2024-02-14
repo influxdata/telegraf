@@ -258,7 +258,7 @@ func TestInit(t *testing.T) {
 
 func TestConnect(t *testing.T) {
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w,
 			`{
 				   "logGroups": [
@@ -298,7 +298,7 @@ func TestConnect(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w,
 			`{
 				   "logGroups": [

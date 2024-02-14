@@ -201,7 +201,7 @@ func (p *Parser) Init() error {
 
 func init() {
 	parsers.Add("influx_upstream",
-		func(_ string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		},
 	)
@@ -242,9 +242,9 @@ func (sp *StreamParser) SetTimePrecision(u time.Duration) error {
 	case time.Second:
 		sp.precision = lineprotocol.Second
 	case time.Minute:
-		return fmt.Errorf("time precision 'm' is not supported")
+		return errors.New("time precision 'm' is not supported")
 	case time.Hour:
-		return fmt.Errorf("time precision 'h' is not supported")
+		return errors.New("time precision 'h' is not supported")
 	}
 
 	return nil

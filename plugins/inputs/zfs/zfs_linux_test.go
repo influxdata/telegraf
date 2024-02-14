@@ -3,7 +3,6 @@
 package zfs
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -391,7 +390,7 @@ func TestGetTags(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			tags := getTags(tc.pools)
 			require.Equal(t, tc.expected, tags)
 		})

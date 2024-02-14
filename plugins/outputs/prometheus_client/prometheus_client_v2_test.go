@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -386,6 +387,7 @@ cpu_time_idle{host="example.org"} 42
 
 func TestRoundTripMetricVersion2(t *testing.T) {
 	logger := testutil.Logger{Name: "outputs.prometheus_client"}
+	regxPattern := regexp.MustCompile(`.*prometheus_request_.*`)
 	tests := []struct {
 		name string
 		data []byte
@@ -465,7 +467,7 @@ rpc_duration_seconds_count 2693
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write(tt.data)
 				require.NoError(t, err)
@@ -514,9 +516,10 @@ rpc_duration_seconds_count 2693
 			actual, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
+			current := regxPattern.ReplaceAllLiteralString(string(actual), "")
 			require.Equal(t,
 				strings.TrimSpace(string(tt.data)),
-				strings.TrimSpace(string(actual)))
+				strings.TrimSpace(current))
 		})
 	}
 }

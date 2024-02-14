@@ -63,12 +63,12 @@ func (b *Baseband) SampleConfig() string {
 // Init performs one time setup of the plugin
 func (b *Baseband) Init() error {
 	if b.SocketAccessTimeout < 0 {
-		return fmt.Errorf("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")
+		return errors.New("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")
 	}
 
 	waitForTelemetryDuration := time.Duration(b.WaitForTelemetryTimeout)
 	if waitForTelemetryDuration < 50*time.Millisecond {
-		return fmt.Errorf("wait_for_telemetry_timeout should be equal or larger than 50ms")
+		return errors.New("wait_for_telemetry_timeout should be equal or larger than 50ms")
 	}
 
 	// Filling default values

@@ -69,7 +69,7 @@ func TestAggregate(t *testing.T) {
 			},
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(0, 0),
-			check: func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric) {
+			check: func(t *testing.T, _ *AzureMonitor, metrics []telegraf.Metric) {
 				require.Empty(t, metrics)
 			},
 		},
@@ -96,7 +96,7 @@ func TestAggregate(t *testing.T) {
 			},
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(3600, 0),
-			check: func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric) {
+			check: func(t *testing.T, _ *AzureMonitor, metrics []telegraf.Metric) {
 				expected := []telegraf.Metric{
 					testutil.MustMetric(
 						"cpu-value",
@@ -136,7 +136,7 @@ func TestAggregate(t *testing.T) {
 			},
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(3600, 0),
-			check: func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric) {
+			check: func(t *testing.T, _ *AzureMonitor, metrics []telegraf.Metric) {
 				expected := []telegraf.Metric{
 					testutil.MustMetric(
 						"cpu-value",
@@ -190,7 +190,7 @@ func TestAggregate(t *testing.T) {
 			},
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(3600, 0),
-			check: func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric) {
+			check: func(t *testing.T, _ *AzureMonitor, metrics []telegraf.Metric) {
 				expected := []telegraf.Metric{
 					testutil.MustMetric(
 						"cpu-value",
@@ -292,7 +292,7 @@ func TestWrite(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
-			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			handler: func(t *testing.T, _ http.ResponseWriter, _ *http.Request) {
 				t.Fatal("should not call")
 			},
 		},

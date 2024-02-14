@@ -2,7 +2,6 @@ package starlark
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"go.starlark.net/starlark"
@@ -91,7 +90,7 @@ func (d TagDict) Get(key starlark.Value) (v starlark.Value, found bool, err erro
 // using x[k]=v syntax, like a dictionary.
 func (d TagDict) SetKey(k, v starlark.Value) error {
 	if d.tagIterCount > 0 {
-		return fmt.Errorf("cannot insert during iteration")
+		return errors.New("cannot insert during iteration")
 	}
 
 	key, ok := k.(starlark.String)
@@ -122,7 +121,7 @@ func (d TagDict) Items() []starlark.Tuple {
 
 func (d TagDict) Clear() error {
 	if d.tagIterCount > 0 {
-		return fmt.Errorf("cannot delete during iteration")
+		return errors.New("cannot delete during iteration")
 	}
 
 	keys := make([]string, 0, len(d.metric.TagList()))
@@ -138,7 +137,7 @@ func (d TagDict) Clear() error {
 
 func (d TagDict) PopItem() (v starlark.Value, err error) {
 	if d.tagIterCount > 0 {
-		return nil, fmt.Errorf("cannot delete during iteration")
+		return nil, errors.New("cannot delete during iteration")
 	}
 
 	for _, tag := range d.metric.TagList() {
@@ -157,7 +156,7 @@ func (d TagDict) PopItem() (v starlark.Value, err error) {
 
 func (d TagDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
 	if d.tagIterCount > 0 {
-		return nil, false, fmt.Errorf("cannot delete during iteration")
+		return nil, false, errors.New("cannot delete during iteration")
 	}
 
 	if key, ok := k.(starlark.String); ok {

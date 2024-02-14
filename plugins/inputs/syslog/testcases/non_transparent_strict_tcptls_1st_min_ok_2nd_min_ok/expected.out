@@ -1,0 +1,2 @@
+syslog,facility=kern,severity=alert,source=127.0.0.1 facility_code=0i,severity_code=1i,version=2u 0
+syslog,facility=kern,severity=warning,source=127.0.0.1 facility_code=0i,severity_code=4i,version=11u 1

@@ -78,7 +78,7 @@ func TestKapacitor(t *testing.T) {
 }
 
 func TestMissingStats(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(`{}`))
 		require.NoError(t, err)
 	}))
@@ -117,7 +117,7 @@ func TestErrorHandling(t *testing.T) {
 }
 
 func TestErrorHandling404(t *testing.T) {
-	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer badServer.Close()

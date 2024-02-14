@@ -2,4 +2,4 @@
 
 package all
 
-import _ "github.com/influxdata/telegraf/plugins/processors/aws/ec2" // register plugin
+import _ "github.com/influxdata/telegraf/plugins/processors/aws_ec2" // register plugin

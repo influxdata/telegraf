@@ -74,7 +74,7 @@ func logMetricDataToValue(data string) (int, error) {
 	}
 
 	if value < 0 {
-		return 0, fmt.Errorf("metric can't be negative")
+		return 0, errors.New("metric can't be negative")
 	}
 
 	return value, nil

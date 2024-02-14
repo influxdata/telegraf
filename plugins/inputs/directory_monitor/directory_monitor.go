@@ -98,7 +98,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 	if monitor.Recursive {
 		err := filepath.Walk(monitor.Directory,
-			func(path string, info os.FileInfo, err error) error {
+			func(path string, _ os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}

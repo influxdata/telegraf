@@ -4,7 +4,6 @@ package ping
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -226,7 +225,7 @@ func TestArguments(t *testing.T) {
 	}
 }
 
-func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockHostPinger(string, float64, ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -284,7 +283,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockLossyHostPinger(string, float64, ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -320,7 +319,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockErrorHostPinger(string, float64, ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -345,7 +344,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockFatalHostPinger(string, float64, ...string) (string, error) {
 	return fatalPingOutput, errors.New("so very bad")
 }
 
@@ -389,7 +388,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		var acc testutil.Accumulator
 		p := Ping{
 			Urls: []string{"www.amazon.com"},
-			pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			pingHost: func(string, float64, ...string) (string, error) {
 				return param.out, errors.New("so very bad")
 			},
 		}
@@ -404,7 +403,7 @@ func TestPingBinary(t *testing.T) {
 	p := Ping{
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
-		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+		pingHost: func(binary string, _ float64, _ ...string) (string, error) {
 			require.Equal(t, "ping6", binary)
 			return "", nil
 		},
@@ -420,7 +419,7 @@ func TestPingGatherNative(t *testing.T) {
 		P *Ping
 	}
 
-	fakePingFunc := func(destination string) (*pingStats, error) {
+	fakePingFunc := func(string) (*pingStats, error) {
 		s := &pingStats{
 			Statistics: ping.Statistics{
 				PacketsSent: 5,
@@ -488,7 +487,7 @@ func TestNoPacketsSent(t *testing.T) {
 		Method:      "native",
 		Count:       5,
 		Percentiles: []int{50, 95, 99},
-		nativePingFunc: func(destination string) (*pingStats, error) {
+		nativePingFunc: func(string) (*pingStats, error) {
 			s := &pingStats{
 				Statistics: ping.Statistics{
 					PacketsSent: 0,
@@ -517,8 +516,8 @@ func TestDNSLookupError(t *testing.T) {
 		Urls:   []string{"localhost"},
 		Method: "native",
 		IPv6:   false,
-		nativePingFunc: func(destination string) (*pingStats, error) {
-			return nil, fmt.Errorf("unknown")
+		nativePingFunc: func(string) (*pingStats, error) {
+			return nil, errors.New("unknown")
 		},
 	}
 

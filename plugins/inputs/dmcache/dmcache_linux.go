@@ -3,11 +3,10 @@
 package dmcache
 
 import (
+	"errors"
 	"os/exec"
 	"strconv"
 	"strings"
-
-	"errors"
 
 	"github.com/influxdata/telegraf"
 )

@@ -98,7 +98,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 
 	num, err := strconv.ParseUint(numS, 10, 64)
 	if err != nil {
-		return fmt.Errorf("couldn't parse source tag as uint")
+		return errors.New("couldn't parse source tag as uint")
 	}
 
 	firstTime := true
@@ -212,7 +212,7 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 		if ok {
 			return m, age, nil
 		}
-		return nil, 0, fmt.Errorf("getting remote table from cache")
+		return nil, 0, errors.New("getting remote table from cache")
 	}
 
 	// The cache missed and this is the first request for this
@@ -316,7 +316,7 @@ func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error)
 	}
 
 	if len(rtab.Rows) == 0 {
-		return nil, fmt.Errorf("empty table")
+		return nil, errors.New("empty table")
 	}
 
 	t := make(nameMap)
@@ -325,11 +325,11 @@ func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error)
 		if !ok {
 			//should always have an index tag because the table should
 			//always have IndexAsTag true
-			return nil, fmt.Errorf("no index tag")
+			return nil, errors.New("no index tag")
 		}
 		i, err := strconv.ParseUint(iStr, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("index tag isn't a uint")
+			return nil, errors.New("index tag isn't a uint")
 		}
 		nameIf, ok := v.Fields["ifName"]
 		if !ok {

@@ -1,6 +1,9 @@
 package opensearch_query
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type BucketAggregationRequest map[string]*aggregationFunction
 
@@ -25,7 +28,7 @@ func (b BucketAggregationRequest) AddNestedAggregation(name string, a Aggregatio
 
 func (b BucketAggregationRequest) BucketSize(name string, size int) error {
 	if size <= 0 {
-		return fmt.Errorf("invalid size; must be integer value > 0")
+		return errors.New("invalid size; must be integer value > 0")
 	}
 
 	if _, ok := b[name]; !ok {

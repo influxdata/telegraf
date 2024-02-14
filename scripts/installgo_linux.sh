@@ -2,10 +2,10 @@
 
 set -eux
 
-GO_VERSION="1.21.6"
+GO_VERSION="1.22.0"
 GO_ARCH="linux-amd64"
 # from https://golang.org/dl
-GO_VERSION_SHA="3f934f40ac360b9c01f616a9aa1796d227d8b0328bf64cb045c7b8c4ee9caea4"
+GO_VERSION_SHA="f6c8a87aa03b92c4b0bf3d558e28ea03006eb29db78917daec5cfb6ec1046265"
 
 # Download Go and verify Go tarball
 setup_go () {
@@ -22,6 +22,7 @@ setup_go () {
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
+    cd
     v=$(go version | { read -r _ _ v _; echo "${v#go}"; })
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then

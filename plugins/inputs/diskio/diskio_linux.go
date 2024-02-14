@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
-	"golang.org/x/sys/unix"
 )
 
 type DiskIO struct {
@@ -68,7 +69,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		_, err := os.Stat(udevDataPath)
 		if err != nil {
 			// This path failed, try the fallback .udev style (non-systemd)
-			udevDataPath = fmt.Sprintf("/dev/.udev/db/block:%s", devName)
+			udevDataPath = "/dev/.udev/db/block:" + devName
 			_, err := os.Stat(udevDataPath)
 			if err != nil {
 				// Giving up, cannot retrieve disk info

@@ -35,7 +35,7 @@ func fakeDatadog() *Datadog {
 }
 
 func TestUriOverride(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(`{"status":"ok"}`) //nolint:errcheck // Ignore the returned error as the test will fail anyway
 	}))
@@ -50,7 +50,7 @@ func TestUriOverride(t *testing.T) {
 }
 
 func TestCompressionOverride(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(`{"status":"ok"}`) //nolint:errcheck // Ignore the returned error as the test will fail anyway
 	}))
@@ -67,7 +67,7 @@ func TestCompressionOverride(t *testing.T) {
 
 func TestBadStatusCode(t *testing.T) {
 	errorString := `{"errors": ["Something bad happened to the server.", "Your query made the server very sad."]}`
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, errorString)
 	}))

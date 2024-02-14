@@ -185,12 +185,12 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 		"DateTime",
 	}
 	testopcquality := []string{
-		"OK (0x0)",
-		"OK (0x0)",
-		"OK (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
 		"User does not have permission to perform the requested operation. StatusBadUserAccessDenied (0x801F0000)",
-		"OK (0x0)",
-		"OK (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
 	}
 	expectedopcmetrics := []telegraf.Metric{}
 	for i, x := range testopctags {
@@ -432,9 +432,9 @@ use_unregistered_reads = true
 	err = o.Init()
 	require.NoError(t, err)
 	require.Len(t, o.client.NodeMetricMapping, 5, "incorrect number of nodes")
-	require.EqualValues(t, o.client.NodeMetricMapping[0].MetricTags, map[string]string{"tag0": "val0"})
-	require.EqualValues(t, o.client.NodeMetricMapping[1].MetricTags, map[string]string{"tag6": "val6"})
-	require.EqualValues(t, o.client.NodeMetricMapping[2].MetricTags, map[string]string{"tag1": "val1", "tag2": "val2", "tag3": "val3"})
-	require.EqualValues(t, o.client.NodeMetricMapping[3].MetricTags, map[string]string{"tag1": "override", "tag2": "val2"})
-	require.EqualValues(t, o.client.NodeMetricMapping[4].MetricTags, map[string]string{"tag1": "val1", "tag2": "val2"})
+	require.EqualValues(t, map[string]string{"tag0": "val0"}, o.client.NodeMetricMapping[0].MetricTags)
+	require.EqualValues(t, map[string]string{"tag6": "val6"}, o.client.NodeMetricMapping[1].MetricTags)
+	require.EqualValues(t, map[string]string{"tag1": "val1", "tag2": "val2", "tag3": "val3"}, o.client.NodeMetricMapping[2].MetricTags)
+	require.EqualValues(t, map[string]string{"tag1": "override", "tag2": "val2"}, o.client.NodeMetricMapping[3].MetricTags)
+	require.EqualValues(t, map[string]string{"tag1": "val1", "tag2": "val2"}, o.client.NodeMetricMapping[4].MetricTags)
 }

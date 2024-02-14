@@ -362,7 +362,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			{
 				Name:  "version",
 				Usage: "print current version to stdout",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(*cli.Context) error {
 					fmt.Fprintf(outputBuffer, "%s\n", internal.FormatFullVersion())
 					return nil
 				},

@@ -23,7 +23,7 @@ func (s *stubSub) Receive(ctx context.Context, f func(context.Context, message))
 type receiveFunc func(ctx context.Context, f func(context.Context, message)) error
 
 func testMessagesError(expectedErr error) receiveFunc {
-	return func(ctx context.Context, f func(context.Context, message)) error {
+	return func(context.Context, func(context.Context, message)) error {
 		return expectedErr
 	}
 }

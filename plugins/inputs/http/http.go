@@ -5,6 +5,7 @@ package http
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,9 +38,9 @@ type HTTP struct {
 	Token       config.Secret `toml:"token"`
 	TokenFile   string        `toml:"token_file"`
 
-	Headers            map[string]string `toml:"headers"`
-	SuccessStatusCodes []int             `toml:"success_status_codes"`
-	Log                telegraf.Logger   `toml:"-"`
+	Headers            map[string]*config.Secret `toml:"headers"`
+	SuccessStatusCodes []int                     `toml:"success_status_codes"`
+	Log                telegraf.Logger           `toml:"-"`
 
 	httpconfig.HTTPClientConfig
 
@@ -54,14 +55,14 @@ func (*HTTP) SampleConfig() string {
 func (h *HTTP) Init() error {
 	// For backward compatibility
 	if h.TokenFile != "" && h.BearerToken != "" && h.TokenFile != h.BearerToken {
-		return fmt.Errorf("conflicting settings for 'bearer_token' and 'token_file'")
+		return errors.New("conflicting settings for 'bearer_token' and 'token_file'")
 	} else if h.TokenFile == "" && h.BearerToken != "" {
 		h.TokenFile = h.BearerToken
 	}
 
 	// We cannot use multiple sources for tokens
 	if h.TokenFile != "" && !h.Token.Empty() {
-		return fmt.Errorf("either use 'token_file' or 'token' not both")
+		return errors.New("either use 'token_file' or 'token' not both")
 	}
 
 	// Create the client
@@ -141,11 +142,19 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	}
 
 	for k, v := range h.Headers {
-		if strings.EqualFold(k, "host") {
-			request.Host = v
-		} else {
-			request.Header.Add(k, v)
+		secret, err := v.Get()
+		if err != nil {
+			return err
 		}
+
+		headerVal := secret.String()
+		if strings.EqualFold(k, "host") {
+			request.Host = headerVal
+		} else {
+			request.Header.Add(k, headerVal)
+		}
+
+		secret.Destroy()
 	}
 
 	if err := h.setRequestAuth(request); err != nil {

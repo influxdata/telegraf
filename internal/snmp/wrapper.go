@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -46,7 +47,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	case 1:
 		gs.Version = gosnmp.Version1
 	default:
-		return GosnmpWrapper{}, fmt.Errorf("invalid version")
+		return GosnmpWrapper{}, errors.New("invalid version")
 	}
 
 	if s.Version < 3 {
@@ -74,7 +75,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 		case "authpriv":
 			gs.MsgFlags = gosnmp.AuthPriv
 		default:
-			return GosnmpWrapper{}, fmt.Errorf("invalid secLevel")
+			return GosnmpWrapper{}, errors.New("invalid secLevel")
 		}
 
 		sp.UserName = s.SecName
@@ -95,7 +96,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 		case "":
 			sp.AuthenticationProtocol = gosnmp.NoAuth
 		default:
-			return GosnmpWrapper{}, fmt.Errorf("invalid authProtocol")
+			return GosnmpWrapper{}, errors.New("invalid authProtocol")
 		}
 
 		sp.AuthenticationPassphrase = s.AuthPassword
@@ -116,7 +117,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 		case "":
 			sp.PrivacyProtocol = gosnmp.NoPriv
 		default:
-			return GosnmpWrapper{}, fmt.Errorf("invalid privProtocol")
+			return GosnmpWrapper{}, errors.New("invalid privProtocol")
 		}
 
 		sp.PrivacyPassphrase = s.PrivPassword

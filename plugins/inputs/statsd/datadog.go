@@ -38,14 +38,14 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	// tag is key:value
 	messageRaw := strings.SplitN(message, ":", 2)
 	if len(messageRaw) < 2 || len(messageRaw[0]) < 7 || len(messageRaw[1]) < 3 {
-		return fmt.Errorf("invalid message format")
+		return errors.New("invalid message format")
 	}
 	header := messageRaw[0]
 	message = messageRaw[1]
 
 	rawLen := strings.SplitN(header[3:], ",", 2)
 	if len(rawLen) != 2 {
-		return fmt.Errorf("invalid message format")
+		return errors.New("invalid message format")
 	}
 
 	titleLen, err := strconv.ParseInt(rawLen[0], 10, 64)
@@ -60,7 +60,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 		return fmt.Errorf("invalid message format, could not parse text.length: %q", rawLen[0])
 	}
 	if titleLen+textLen+1 > int64(len(message)) {
-		return fmt.Errorf("invalid message format, title.length and text.length exceed total message length")
+		return errors.New("invalid message format, title.length and text.length exceed total message length")
 	}
 
 	rawTitle := message[:titleLen]
@@ -68,7 +68,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	message = message[titleLen+1+textLen:]
 
 	if len(rawTitle) == 0 || len(rawText) == 0 {
-		return fmt.Errorf("invalid event message format: empty 'title' or 'text' field")
+		return errors.New("invalid event message format: empty 'title' or 'text' field")
 	}
 
 	name := rawTitle

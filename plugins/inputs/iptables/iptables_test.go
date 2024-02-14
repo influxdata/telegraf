@@ -177,7 +177,7 @@ func TestIptables_Gather(t *testing.T) {
 			ipt := &Iptables{
 				Table:  tt.table,
 				Chains: tt.chains,
-				lister: func(table, chain string) (string, error) {
+				lister: func(string, string) (string, error) {
 					if len(tt.values) > 0 {
 						v := tt.values[0]
 						tt.values = tt.values[1:]
@@ -241,7 +241,7 @@ func TestIptables_Gather_listerError(t *testing.T) {
 	ipt := &Iptables{
 		Table:  "nat",
 		Chains: []string{"foo", "bar"},
-		lister: func(table, chain string) (string, error) {
+		lister: func(string, string) (string, error) {
 			return "", errFoo
 		},
 	}

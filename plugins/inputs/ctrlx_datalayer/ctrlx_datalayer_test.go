@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/boschrexroth/ctrlx-datalayer-golang/pkg/token"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const path = "/automation/api/v2/events"
@@ -33,7 +34,7 @@ func getMultiEntries() bool {
 }
 
 func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		_, err := w.Write([]byte("201 created"))
 		require.NoError(t, err)
@@ -77,7 +78,7 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.res, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(test.status)
 				_, err := w.Write([]byte(test.res))
 				require.NoError(t, err)
@@ -116,23 +117,23 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 func newServer(t *testing.T) *httptest.Server {
 	mux := http.NewServeMux()
 	// Handle request to fetch token
-	mux.HandleFunc("/identity-manager/api/v2/auth/token", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/identity-manager/api/v2/auth/token", func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte("{\"access_token\": \"eyJhbGciOiJIU.xxx.xxx\", \"token_type\":\"Bearer\"}"))
 		require.NoError(t, err)
-	}))
+	})
 	// Handle request to validate token
-	mux.HandleFunc("/identity-manager/api/v2/auth/token/validity", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/identity-manager/api/v2/auth/token/validity", func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte("{\"valid\": \"true\"}"))
 		require.NoError(t, err)
-	}))
+	})
 	// Handle request to create subscription
-	mux.HandleFunc(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(path, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		_, err := w.Write([]byte("201 created"))
 		require.NoError(t, err)
-	}))
+	})
 	// Handle request to fetch sse data
-	mux.HandleFunc(path+"/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(path+"/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte("event: update\n"))
@@ -157,7 +158,7 @@ func newServer(t *testing.T) *httptest.Server {
 			_, err = w.Write([]byte("\n"))
 			require.NoError(t, err)
 		}
-	}))
+	})
 	return httptest.NewServer(mux)
 }
 

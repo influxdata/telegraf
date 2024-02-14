@@ -377,7 +377,7 @@ func TestRemoveComments(t *testing.T) {
 func TestURLRetries3Fails(t *testing.T) {
 	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		responseCounter++
 	}))
@@ -395,7 +395,7 @@ func TestURLRetries3Fails(t *testing.T) {
 func TestURLRetries3FailsThenPasses(t *testing.T) {
 	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if responseCounter <= 2 {
 			w.WriteHeader(http.StatusNotFound)
 		} else {

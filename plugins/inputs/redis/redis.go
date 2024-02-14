@@ -693,7 +693,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 				value = float64(0)
 			}
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case int, int8, int16, int32, int64:
 		switch typ.Kind() {
@@ -704,7 +704,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			value = float64(reflect.ValueOf(sourceType).Int())
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case uint, uint8, uint16, uint32, uint64:
 		switch typ.Kind() {
@@ -715,7 +715,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			value = float64(reflect.ValueOf(sourceType).Uint())
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case float32, float64:
 		switch typ.Kind() {
@@ -726,7 +726,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			// types match
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case string:
 		switch typ.Kind() {
@@ -737,7 +737,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			value, _ = strconv.ParseFloat(value.(string), 64)
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	default:
 		panic(fmt.Sprintf("unhandled source type %T", sourceType))

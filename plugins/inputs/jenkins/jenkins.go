@@ -4,6 +4,7 @@ package jenkins
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -147,7 +148,7 @@ func (j *Jenkins) initialize(client *http.Client) error {
 func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	tags := map[string]string{}
 	if n.DisplayName == "" {
-		return fmt.Errorf("error empty node name")
+		return errors.New("error empty node name")
 	}
 
 	tags["node_name"] = n.DisplayName

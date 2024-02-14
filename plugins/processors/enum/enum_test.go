@@ -196,3 +196,24 @@ func TestTagGlobMatching(t *testing.T) {
 
 	assertTagValue(t, "glob", "tag", tags)
 }
+
+func TestTracking(t *testing.T) {
+	m := createTestMetric()
+	var delivered bool
+	notify := func(telegraf.DeliveryInfo) {
+		delivered = true
+	}
+	m, _ = metric.WithTracking(m, notify)
+
+	mapper := EnumMapper{Mappings: []Mapping{{Tag: "*", ValueMappings: map[string]interface{}{"tag_value": "glob"}}}}
+	err := mapper.Init()
+	require.NoError(t, err)
+
+	actual := mapper.Apply(m)[0]
+	assertTagValue(t, "glob", "tag", actual.Tags())
+
+	actual.Accept()
+	require.Eventually(t, func() bool {
+		return delivered
+	}, time.Second, 100*time.Millisecond, "no metrics delivered")
+}

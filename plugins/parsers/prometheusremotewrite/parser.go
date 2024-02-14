@@ -1,6 +1,7 @@
 package prometheusremotewrite
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -70,11 +71,11 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("no metrics in line")
+		return nil, errors.New("no metrics in line")
 	}
 
 	if len(metrics) > 1 {
-		return nil, fmt.Errorf("more than one metric in line")
+		return nil, errors.New("more than one metric in line")
 	}
 
 	return metrics[0], nil
@@ -86,7 +87,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 func init() {
 	parsers.Add("prometheusremotewrite",
-		func(defaultMetricName string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		})
 }
