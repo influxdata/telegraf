@@ -38,6 +38,7 @@ func (*Quantile) SampleConfig() string {
 }
 
 func (q *Quantile) Add(in telegraf.Metric) {
+	in.Accept()
 	id := in.HashID()
 	if cached, ok := q.cache[id]; ok {
 		fields := in.Fields()

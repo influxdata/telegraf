@@ -2,12 +2,14 @@ package quantile
 
 import (
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -668,4 +670,70 @@ func BenchmarkDefaultExactR8100Q(b *testing.B) {
 		}
 		q.Push(&acc)
 	}
+}
+
+func TestTracking(t *testing.T) {
+	inputRaw := make([]telegraf.Metric, 0, 100)
+	for i := 0; i < 100; i++ {
+		inputRaw = append(inputRaw, testutil.MustMetric(
+			"test",
+			map[string]string{"foo": "bar"},
+			map[string]interface{}{
+				"a": int32(i),
+			},
+			time.Now(),
+		))
+	}
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"test",
+			map[string]string{"foo": "bar"},
+			map[string]interface{}{
+				"a_025": 24.75,
+				"a_050": 49.50,
+				"a_075": 74.25,
+			},
+			time.Now(),
+		),
+	}
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	// Process expected metrics and compare with resulting metrics
+	acc := &testutil.Accumulator{}
+	plugin := Quantile{
+		Compression: 100,
+		Log:         testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	for _, m := range input {
+		plugin.Add(m)
+	}
+	plugin.Push(acc)
+	actual := acc.GetTelegrafMetrics()
+	epsilon := cmpopts.EquateApprox(0, 1e-3)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), epsilon)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }
