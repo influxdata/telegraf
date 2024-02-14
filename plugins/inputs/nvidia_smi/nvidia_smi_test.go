@@ -27,8 +27,8 @@ func TestStartPluginIfGPUNotFound(t *testing.T) {
 
 	plugin.StartupErrorBehavior = "error"
 	plugin.BinPath = "/random/non-existent/path"
-	errMsg := "nvidia-smi not found in /random/non-existent/path and not in PATH; "
-	+"please make sure nvidia-smi is installed and/or is in PATH"
+	errMsg := "nvidia-smi not found in /random/non-existent/path and not in PATH; " +
+		"please make sure nvidia-smi is installed and/or is in PATH"
 	require.NoError(t, plugin.Init(), errMsg)
 }
 
