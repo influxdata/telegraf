@@ -1,5 +1,9 @@
 # Aerospike Input Plugin
 
+**DEPRECATED: As of version 1.30 the Aerospike plugin has been deprecated in
+favor of the [prometheus plugin](../prometheus/README.md) with the
+Aerospike Prometheus Exporter**
+
 The aerospike plugin queries aerospike server(s) and get node statistics & stats
 for all the configured namespaces.
 

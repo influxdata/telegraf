@@ -4,6 +4,10 @@ import "github.com/influxdata/telegraf"
 
 // Deprecations lists the deprecated plugins
 var Deprecations = map[string]telegraf.DeprecationInfo{
+	"aerospike": {
+		Since:  "1.30.0",
+		Notice: "use 'inputs.prometheus' with the Aerospike Prometheus Exporter instead",
+	},
 	"cassandra": {
 		Since:     "1.7.0",
 		RemovalIn: "1.30.0",
