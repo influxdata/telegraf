@@ -98,7 +98,6 @@ func TestUnixgram(t *testing.T) {
 		SyslogStandard: "RFC5424",
 		Trailer:        nontransparent.LF,
 		Log:            testutil.Logger{},
-		now:            getNanoNow,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -161,7 +160,6 @@ func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			now:            getNanoNow,
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,
@@ -288,7 +286,6 @@ func TestIssue10121(t *testing.T) {
 	// Setup the plugin
 	plugin := &Syslog{
 		Address:        "tcp://127.0.0.1:0",
-		now:            getNanoNow,
 		ReadTimeout:    config.Duration(10 * time.Millisecond),
 		Framing:        framing.OctetCounting,
 		SyslogStandard: syslogRFC5424,

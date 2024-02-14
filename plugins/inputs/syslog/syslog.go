@@ -51,9 +51,6 @@ type Syslog struct {
 	Separator       string                     `toml:"sdparam_separator"`
 	Log             telegraf.Logger            `toml:"-"`
 
-	now      func() time.Time
-	lastTime time.Time
-
 	mu sync.Mutex
 	wg sync.WaitGroup
 	io.Closer
@@ -226,7 +223,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 
 		message, err := p.Parse(b[:n])
 		if message != nil {
-			acc.AddFields("syslog", fields(message, s), tags(message, sourceAddr), s.currentTime())
+			acc.AddFields("syslog", fields(message, s), tags(message, sourceAddr))
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -351,7 +348,7 @@ func (s *Syslog) store(res syslog.Result, remoteAddr net.Addr, acc telegraf.Accu
 		acc.AddError(res.Error)
 	}
 	if res.Message != nil {
-		acc.AddFields("syslog", fields(res.Message, s), tags(res.Message, remoteAddr), s.currentTime())
+		acc.AddFields("syslog", fields(res.Message, s), tags(res.Message, remoteAddr))
 	}
 }
 
@@ -446,23 +443,9 @@ func (uc unixCloser) Close() error {
 	return err
 }
 
-func (s *Syslog) currentTime() time.Time {
-	t := s.now()
-	if t == s.lastTime {
-		t = t.Add(time.Nanosecond)
-	}
-	s.lastTime = t
-	return t
-}
-
-func getNanoNow() time.Time {
-	return time.Unix(0, time.Now().UnixNano())
-}
-
 func init() {
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			now:            getNanoNow,
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,
