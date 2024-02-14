@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -170,7 +171,7 @@ func TestCases(t *testing.T) {
 		t.Run(f.Name(), func(t *testing.T) {
 			testcasePath := filepath.Join("testcases", f.Name())
 			configFilename := filepath.Join(testcasePath, "telegraf.conf")
-			inputFilename := filepath.Join(testcasePath, "input.txt")
+			inputFilenamePattern := filepath.Join(testcasePath, "input*.txt")
 			expectedFilename := filepath.Join(testcasePath, "expected.out")
 			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
@@ -179,8 +180,16 @@ func TestCases(t *testing.T) {
 			require.NoError(t, parser.Init())
 
 			// Read the input data
-			inputData, err := os.ReadFile(inputFilename)
+			inputFiles, err := filepath.Glob(inputFilenamePattern)
 			require.NoError(t, err)
+			require.NotEmpty(t, inputFiles)
+			sort.Strings(inputFiles)
+			messages := make([][]byte, 0, len(inputFiles))
+			for _, fn := range inputFiles {
+				data, err := os.ReadFile(fn)
+				require.NoErrorf(t, err, "failed file: %s", fn)
+				messages = append(messages, data)
+			}
 
 			// Read the expected output if any
 			var expected []telegraf.Metric
@@ -247,8 +256,10 @@ func TestCases(t *testing.T) {
 			defer client.Close()
 
 			// Send the data and afterwards stop client and plugin
-			_, err = client.Write(inputData)
-			require.NoError(t, err)
+			for i, msg := range messages {
+				_, err := client.Write(msg)
+				require.NoErrorf(t, err, "message %d failed with content %q", i, string(msg))
+			}
 			client.Close()
 
 			// Check the metric nevertheless as we might get some metrics despite errors.
