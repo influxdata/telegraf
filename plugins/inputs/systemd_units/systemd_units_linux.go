@@ -1,9 +1,9 @@
-//go:generate ../../../tools/readme_config_includer/generator
+//go:build linux
+
 package systemd_units
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"path"
 	"strings"
@@ -12,12 +12,7 @@ import (
 	"github.com/coreos/go-systemd/v22/dbus"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-//go:embed sample.conf
-var sampleConfig string
 
 // Below are mappings of systemd state tables as defined in
 // https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c
@@ -118,37 +113,12 @@ var subMap = map[string]int{
 	"elapsed": 0x00a0,
 }
 
-type client interface {
-	Connected() bool
-	Close()
-
-	ListUnitFilesByPatternsContext(ctx context.Context, states, pattern []string) ([]dbus.UnitFile, error)
-	ListUnitsByNamesContext(ctx context.Context, units []string) ([]dbus.UnitStatus, error)
-	GetUnitTypePropertiesContext(ctx context.Context, unit, unitType string) (map[string]interface{}, error)
-	GetUnitPropertyContext(ctx context.Context, unit, propertyName string) (*dbus.Property, error)
-	ListUnitsContext(ctx context.Context) ([]dbus.UnitStatus, error)
-}
-
-// SystemdUnits is a telegraf plugin to gather systemd unit status
-type SystemdUnits struct {
-	Pattern    string          `toml:"pattern"`
-	UnitType   string          `toml:"unittype"`
-	SubCommand string          `toml:"subcommand"`
-	Timeout    config.Duration `toml:"timeout"`
-
-	client client
-}
-
 type unitInfo struct {
 	name           string
 	state          dbus.UnitStatus
 	properties     map[string]interface{}
 	unitFileState  string
 	unitFilePreset string
-}
-
-func (*SystemdUnits) SampleConfig() string {
-	return sampleConfig
 }
 
 func (s *SystemdUnits) Init() error {
@@ -348,10 +318,4 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
-}
-
-func init() {
-	inputs.Add("systemd_units", func() telegraf.Input {
-		return &SystemdUnits{Timeout: config.Duration(time.Second)}
-	})
 }
