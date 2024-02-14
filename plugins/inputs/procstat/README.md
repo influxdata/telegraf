@@ -71,12 +71,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   user    -- username owning the process
   # tag_with = []
 
-
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
   ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
   ## the native finder performs the search directly in a manor dependent on the
-  ## platform.  Default is 'pgrep'
+  ## platform. Default is 'pgrep'
   # pid_finder = "pgrep"
+
+  ## allow to search processus by multiple criterias (only exe, pattern, user)
+  # multi_criterias = false
 ```
 
 ### Windows support

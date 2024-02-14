@@ -13,6 +13,7 @@ import (
 // Implementation of PIDGatherer that execs pgrep to find processes
 type Pgrep struct {
 	path string
+	args []string
 }
 
 func newPgrepFinder() (PIDFinder, error) {
@@ -20,7 +21,7 @@ func newPgrepFinder() (PIDFinder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not find pgrep binary: %w", err)
 	}
-	return &Pgrep{path}, nil
+	return &Pgrep{path, nil}, nil
 }
 
 func (pg *Pgrep) PidFile(path string) ([]PID, error) {
@@ -38,29 +39,30 @@ func (pg *Pgrep) PidFile(path string) ([]PID, error) {
 	return pids, nil
 }
 
-func (pg *Pgrep) Pattern(pattern string) ([]PID, error) {
-	args := []string{pattern}
-	return pg.find(args)
+func (pg *Pgrep) Pattern(pattern string) error {
+	pg.args = append(pg.args, pattern)
+	return nil
 }
 
-func (pg *Pgrep) UID(user string) ([]PID, error) {
-	args := []string{"-u", user}
-	return pg.find(args)
+func (pg *Pgrep) UID(user string) error {
+	pg.args = append(pg.args, "-u", user)
+	return nil
 }
 
-func (pg *Pgrep) FullPattern(pattern string) ([]PID, error) {
-	args := []string{"-f", pattern}
-	return pg.find(args)
+func (pg *Pgrep) FullPattern(pattern string) error {
+	pg.args = append(pg.args, "-f", pattern)
+	return nil
 }
 
 func (pg *Pgrep) Children(pid PID) ([]PID, error) {
-	args := []string{"-P", strconv.FormatInt(int64(pid), 10)}
-	return pg.find(args)
+	pg.args = nil
+	pg.args = append(pg.args, "-P", strconv.FormatInt(int64(pid), 10))
+	return pg.find()
 }
 
-func (pg *Pgrep) find(args []string) ([]PID, error) {
+func (pg *Pgrep) find() ([]PID, error) {
 	// Execute pgrep with the given arguments
-	buf, err := exec.Command(pg.path, args...).Output()
+	buf, err := exec.Command(pg.path, pg.args...).Output()
 	if err != nil {
 		// Exit code 1 means "no processes found" so we should not return
 		// an error in this case.
@@ -82,4 +84,14 @@ func (pg *Pgrep) find(args []string) ([]PID, error) {
 		pids = append(pids, PID(pid))
 	}
 	return pids, nil
+}
+
+// Uid will return all pids for the given user
+func (pg *Pgrep) Init() error {
+	return nil
+}
+
+// Pattern matches on the process name
+func (pg *Pgrep) GetResult() ([]PID, error) {
+	return pg.find()
 }

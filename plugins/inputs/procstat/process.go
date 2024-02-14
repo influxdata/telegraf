@@ -20,11 +20,13 @@ type Process interface {
 }
 
 type PIDFinder interface {
+	Init() error
 	PidFile(path string) ([]PID, error)
-	Pattern(pattern string) ([]PID, error)
-	UID(user string) ([]PID, error)
-	FullPattern(path string) ([]PID, error)
+	Pattern(pattern string) error
+	UID(user string) error
+	FullPattern(path string) error
 	Children(pid PID) ([]PID, error)
+	GetResult() ([]PID, error)
 }
 
 type Proc struct {
@@ -132,6 +134,13 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 	}
 
 	collectMemmap(p, prefix, fields)
+
+	childProc, err := p.Children()
+	if err == nil {
+		fields[prefix+"children"] = len(childProc)
+	} else {
+		fields[prefix+"children"] = 0
+	}
 
 	memPerc, err := p.MemoryPercent()
 	if err == nil {

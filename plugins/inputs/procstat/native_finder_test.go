@@ -13,16 +13,20 @@ import (
 
 func BenchmarkPattern(b *testing.B) {
 	finder := &NativeFinder{}
+	err := finder.Init()
+	require.NoError(b, err)
 	for n := 0; n < b.N; n++ {
-		_, err := finder.Pattern(".*")
+		err := finder.Pattern(".*")
 		require.NoError(b, err)
 	}
 }
 
 func BenchmarkFullPattern(b *testing.B) {
 	finder := &NativeFinder{}
+	err := finder.Init()
+	require.NoError(b, err)
 	for n := 0; n < b.N; n++ {
-		_, err := finder.FullPattern(".*")
+		err := finder.FullPattern(".*")
 		require.NoError(b, err)
 	}
 }
@@ -53,7 +57,11 @@ func TestChildPattern(t *testing.T) {
 
 	// Use the plugin to find the children
 	finder := &NativeFinder{}
-	parent, err := finder.Pattern(parentName)
+	err = finder.Init()
+	require.NoError(t, err)
+	err = finder.Pattern(parentName)
+	require.NoError(t, err)
+	parent, err := finder.GetResult()
 	require.NoError(t, err)
 	require.Len(t, parent, 1)
 	childs, err := finder.Children(parent[0])
@@ -62,11 +70,20 @@ func TestChildPattern(t *testing.T) {
 }
 
 func TestGather_RealPatternIntegration(t *testing.T) {
+	var err error
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	pg := &NativeFinder{}
-	pids, err := pg.Pattern(`procstat`)
+	finder := &NativeFinder{}
+	err = finder.Init()
+	require.NoError(t, err)
+	if runtime.GOOS != "windows" {
+		err = finder.Pattern(`procstat`)
+	} else {
+		err = finder.Pattern(`conhost.exe`)
+	}
+	require.NoError(t, err)
+	pids, err := finder.GetResult()
 	require.NoError(t, err)
 	require.NotEmpty(t, pids)
 }
@@ -78,8 +95,16 @@ func TestGather_RealFullPatternIntegration(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("Skipping integration test on Non-Windows OS")
 	}
-	pg := &NativeFinder{}
-	pids, err := pg.FullPattern(`%procstat%`)
+	finder := &NativeFinder{}
+	err := finder.Init()
+	require.NoError(t, err)
+	if runtime.GOOS != "windows" {
+		err = finder.FullPattern(`procstat`)
+	} else {
+		err = finder.FullPattern(`conhost.exe`)
+	}
+	require.NoError(t, err)
+	pids, err := finder.GetResult()
 	require.NoError(t, err)
 	require.NotEmpty(t, pids)
 }
@@ -91,8 +116,12 @@ func TestGather_RealUserIntegration(t *testing.T) {
 	currentUser, err := user.Current()
 	require.NoError(t, err)
 
-	pg := &NativeFinder{}
-	pids, err := pg.UID(currentUser.Username)
+	finder := &NativeFinder{}
+	err = finder.Init()
+	require.NoError(t, err)
+	err = finder.UID(currentUser.Username)
+	require.NoError(t, err)
+	pids, err := finder.GetResult()
 	require.NoError(t, err)
 	require.NotEmpty(t, pids)
 }

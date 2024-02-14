@@ -87,23 +87,27 @@ func newTestFinder(pids []PID) PIDFinder {
 	}
 }
 
+func (pg *testPgrep) Init() error {
+	return nil
+}
+
 func (pg *testPgrep) PidFile(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
-func (p *testProc) Cmdline() (string, error) {
-	return "test_proc", nil
+func (pg *testPgrep) Pattern(_ string) error {
+	return nil
 }
 
-func (pg *testPgrep) Pattern(_ string) ([]PID, error) {
-	return pg.pids, pg.err
+func (pg *testPgrep) UID(_ string) error {
+	return nil
 }
 
-func (pg *testPgrep) UID(_ string) ([]PID, error) {
-	return pg.pids, pg.err
+func (pg *testPgrep) FullPattern(_ string) error {
+	return nil
 }
 
-func (pg *testPgrep) FullPattern(_ string) ([]PID, error) {
+func (pg *testPgrep) GetResult() ([]PID, error) {
 	return pg.pids, pg.err
 }
 
@@ -212,6 +216,7 @@ func (p *testProc) Metric(prefix string, tagging map[string]bool, _ bool) telegr
 
 var pid = PID(42)
 var exe = "foo"
+var pattern = "test_proc"
 
 func TestInitInvalidFinder(t *testing.T) {
 	plugin := Procstat{
@@ -366,6 +371,27 @@ func TestGather_NoProcessNameUsesReal(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, p.Gather(&acc))
+
+	require.True(t, acc.HasTag("procstat", "process_name"))
+}
+
+func TestGather_MultiFilter(t *testing.T) {
+	pid := PID(os.Getpid())
+
+	p := Procstat{
+		Exe:            exe,
+		Pattern:        pattern,
+		MultiCriterias: true,
+		PidFinder:      "test",
+		Log:            testutil.Logger{},
+		finder:         newTestFinder([]PID{pid}),
+		createProcess:  newTestProc,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 
 	require.True(t, acc.HasTag("procstat", "process_name"))
 }
@@ -652,4 +678,22 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 			t.Fatalf("unexpected value for tag 'supervisor_unit': %q", pidsTag.Tags["supervisor_unit"])
 		}
 	}
+}
+
+func TestGather_GoCommand(t *testing.T) {
+	p := Procstat{
+		Exe:            "go",
+		Pattern:        "test",
+		MultiCriterias: true,
+		PidFinder:      "native",
+		Log:            testutil.Logger{},
+		createProcess:  newProc,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
+
+	require.True(t, acc.HasTag("procstat", "process_name"))
 }

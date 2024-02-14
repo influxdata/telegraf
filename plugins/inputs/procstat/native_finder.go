@@ -11,16 +11,24 @@ import (
 )
 
 // NativeFinder uses gopsutil to find processes
-type NativeFinder struct{}
+type NativeFinder struct {
+	procs []*process.Process
+}
 
 // Uid will return all pids for the given user
-func (pg *NativeFinder) UID(user string) ([]PID, error) {
-	var dst []PID
-	procs, err := process.Processes()
+func (pg *NativeFinder) Init() error {
+	var err error
+	pg.procs, err = process.Processes()
 	if err != nil {
-		return dst, err
+		return err
 	}
-	for _, p := range procs {
+	return nil
+}
+
+// Uid will return all pids for the given user
+func (pg *NativeFinder) UID(user string) error {
+	var final []*process.Process
+	for _, p := range pg.procs {
 		username, err := p.Username()
 		if err != nil {
 			//skip, this can happen if we don't have permissions or
@@ -28,10 +36,11 @@ func (pg *NativeFinder) UID(user string) ([]PID, error) {
 			continue
 		}
 		if username == user {
-			dst = append(dst, PID(p.Pid))
+			final = append(final, p)
 		}
 	}
-	return dst, nil
+	pg.procs = final
+	return nil
 }
 
 // PidFile returns the pid from the pid file given.
@@ -50,28 +59,25 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 }
 
 // FullPattern matches on the command line when the process was executed
-func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
-	var pids []PID
+func (pg *NativeFinder) FullPattern(pattern string) error {
+	var final []*process.Process
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
-		return pids, err
+		return err
 	}
-	procs, err := pg.FastProcessList()
-	if err != nil {
-		return pids, err
-	}
-	for _, p := range procs {
+	for _, p := range pg.procs {
 		cmd, err := p.Cmdline()
 		if err != nil {
-			//skip, this can be caused by the pid no longer existing
-			//or you having no permissions to access it
+			//skip, this can happen if we don't have permissions or
+			//the pid no longer exists
 			continue
 		}
 		if regxPattern.MatchString(cmd) {
-			pids = append(pids, PID(p.Pid))
+			final = append(final, p)
 		}
 	}
-	return pids, err
+	pg.procs = final
+	return nil
 }
 
 // Children matches children pids on the command line when the process was executed
@@ -95,40 +101,33 @@ func (pg *NativeFinder) Children(pid PID) ([]PID, error) {
 	return pids, err
 }
 
-func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
-	pids, err := process.Pids()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*process.Process, 0, len(pids))
-	for _, pid := range pids {
-		result = append(result, &process.Process{Pid: pid})
-	}
-	return result, nil
-}
-
 // Pattern matches on the process name
-func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
-	var pids []PID
+func (pg *NativeFinder) Pattern(pattern string) error {
+	var final []*process.Process
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
-		return pids, err
+		return err
 	}
-	procs, err := pg.FastProcessList()
-	if err != nil {
-		return pids, err
-	}
-	for _, p := range procs {
+	for _, p := range pg.procs {
 		name, err := processName(p)
 		if err != nil {
-			//skip, this can be caused by the pid no longer existing
-			//or you having no permissions to access it
+			//skip, this can happen if we don't have permissions or
+			//the pid no longer exists
 			continue
 		}
 		if regxPattern.MatchString(name) {
-			pids = append(pids, PID(p.Pid))
+			final = append(final, p)
 		}
 	}
-	return pids, err
+	pg.procs = final
+	return nil
+}
+
+// Pattern matches on the process name
+func (pg *NativeFinder) GetResult() ([]PID, error) {
+	var dst []PID
+	for _, p := range pg.procs {
+		dst = append(dst, PID(p.Pid))
+	}
+	return dst, nil
 }
