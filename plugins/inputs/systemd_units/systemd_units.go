@@ -126,6 +126,7 @@ type client interface {
 	ListUnitsByNamesContext(ctx context.Context, units []string) ([]dbus.UnitStatus, error)
 	GetUnitTypePropertiesContext(ctx context.Context, unit, unitType string) (map[string]interface{}, error)
 	GetUnitPropertyContext(ctx context.Context, unit, propertyName string) (*dbus.Property, error)
+	ListUnitsContext(ctx context.Context) ([]dbus.UnitStatus, error)
 }
 
 // SystemdUnits is a telegraf plugin to gather systemd unit status
@@ -207,11 +208,13 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 
 	// Get the unit states
 	names := make([]string, 0, len(unitFiles))
+	nameMultiInstance := make([]string, 0)
 	for _, u := range unitFiles {
 		name := path.Base(u.Path)
 
 		// Filter template services without instance
 		if strings.Contains(name, "@.") {
+			nameMultiInstance = append(nameMultiInstance, name)
 			continue
 		}
 		names = append(names, name)
@@ -221,26 +224,42 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("listing unit states failed: %w", err)
 	}
 
+	if len(nameMultiInstance) > 0 {
+		// List all loaded units to handle multi-instance units correctly
+		loadedUnits, err := s.client.ListUnitsContext(ctx)
+		if err != nil {
+			return fmt.Errorf("listing loaded units failed: %w", err)
+		}
+		for _, name := range nameMultiInstance {
+			prefix, suffix, _ := strings.Cut(name, "@")
+			for _, u := range loadedUnits {
+				if strings.HasPrefix(u.Name, prefix+"@") && strings.HasSuffix(u.Name, suffix) {
+					states = append(states, u)
+				}
+			}
+		}
+	}
+
 	// Merge the unit information into one struct
-	units := make([]unitInfo, 0, len(names))
-	for i, name := range names {
+	units := make([]unitInfo, 0, len(states))
+	for _, state := range states {
 		// Filter units of the wrong type
-		props, err := s.client.GetUnitTypePropertiesContext(ctx, name, s.UnitType)
+		props, err := s.client.GetUnitTypePropertiesContext(ctx, state.Name, s.UnitType)
 		if err != nil {
 			continue
 		}
 
 		u := unitInfo{
-			name:       name,
-			state:      states[i],
+			name:       state.Name,
+			state:      state,
 			properties: props,
 		}
 
 		// Get required unit file properties
-		if v, err := s.client.GetUnitPropertyContext(ctx, name, "UnitFileState"); err == nil {
+		if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFileState"); err == nil {
 			u.unitFileState = strings.Trim(v.Value.String(), `'"`)
 		}
-		if v, err := s.client.GetUnitPropertyContext(ctx, name, "UnitFilePreset"); err == nil {
+		if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFilePreset"); err == nil {
 			u.unitFilePreset = strings.Trim(v.Value.String(), `'"`)
 		}
 

@@ -19,6 +19,7 @@ import (
 )
 
 type properties struct {
+	uf         string
 	utype      string
 	state      sdbus.UnitStatus
 	ufPreset   string
@@ -456,6 +457,120 @@ func TestShow(t *testing.T) {
 	}
 }
 
+func TestMultiInstance(t *testing.T) {
+	// Setup plugin. Do NOT call Start() as this would connect to
+	// the real systemd daemon.
+	plugin := &SystemdUnits{
+		Pattern: "examp* user@*",
+		Timeout: config.Duration(time.Second),
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a fake client to inject data
+	plugin.client = &fakeClient{
+		units: map[string]properties{
+			"example.service": {
+				utype: "Service",
+				state: sdbus.UnitStatus{
+					Name:        "example.service",
+					LoadState:   "loaded",
+					ActiveState: "active",
+					SubState:    "running",
+				},
+			},
+			"user-runtime-dir@1000.service": {
+				uf:    "user-runtime-dir@.service",
+				utype: "Service",
+				state: sdbus.UnitStatus{
+					Name:        "user-runtime-dir@1000.service",
+					LoadState:   "loaded",
+					ActiveState: "active",
+					SubState:    "exited",
+				},
+			},
+			"user@1000.service": {
+				uf:    "user@.service",
+				utype: "Service",
+				state: sdbus.UnitStatus{
+					Name:        "user@1000.service",
+					LoadState:   "loaded",
+					ActiveState: "active",
+					SubState:    "running",
+				},
+			},
+			"user@1001.service": {
+				uf:    "user@.service",
+				utype: "Service",
+				state: sdbus.UnitStatus{
+					Name:        "user@1001.service",
+					LoadState:   "loaded",
+					ActiveState: "active",
+					SubState:    "exited",
+				},
+			},
+		},
+		connected: true,
+	}
+	defer plugin.Stop()
+
+	// Run gather
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	// Define expectation
+	expected := []telegraf.Metric{
+		metric.New(
+			"systemd_units",
+			map[string]string{
+				"name":   "example.service",
+				"load":   "loaded",
+				"active": "active",
+				"sub":    "running",
+			},
+			map[string]interface{}{
+				"load_code":   0,
+				"active_code": 0,
+				"sub_code":    0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"systemd_units",
+			map[string]string{
+				"name":   "user@1000.service",
+				"load":   "loaded",
+				"active": "active",
+				"sub":    "running",
+			},
+			map[string]interface{}{
+				"load_code":   0,
+				"active_code": 0,
+				"sub_code":    0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"systemd_units",
+			map[string]string{
+				"name":   "user@1001.service",
+				"load":   "loaded",
+				"active": "active",
+				"sub":    "exited",
+			},
+			map[string]interface{}{
+				"load_code":   0,
+				"active_code": 0,
+				"sub_code":    4,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Do the comparison
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 // Fake client implementation
 type fakeClient struct {
 	units     map[string]properties
@@ -474,11 +589,23 @@ func (c *fakeClient) ListUnitFilesByPatternsContext(_ context.Context, _, patter
 	f := filter.MustCompile(pattern)
 
 	var files []sdbus.UnitFile
-	for name := range c.units {
-		if f.Match(name) {
-			files = append(files, sdbus.UnitFile{Path: "/usr/lib/systemd/system/" + name, Type: "unknown"})
+	seen := make(map[string]bool)
+	for name, props := range c.units {
+		var uf string
+		if props.uf != "" && f.Match(props.uf) {
+			uf = "/usr/lib/systemd/system/" + props.uf
+		} else if props.uf == "" && f.Match(name) {
+			uf = "/usr/lib/systemd/system/" + name
+		} else {
+			continue
 		}
+
+		if !seen[uf] {
+			files = append(files, sdbus.UnitFile{Path: uf, Type: "unknown"})
+		}
+		seen[uf] = true
 	}
+
 	return files, nil
 }
 
@@ -520,4 +647,12 @@ func (c *fakeClient) GetUnitPropertyContext(_ context.Context, unit, propertyNam
 		return &sdbus.Property{Name: propertyName, Value: dbus.MakeVariant(u.ufPreset)}, nil
 	}
 	return nil, errors.New("unknown property")
+}
+
+func (c *fakeClient) ListUnitsContext(_ context.Context) ([]sdbus.UnitStatus, error) {
+	units := make([]sdbus.UnitStatus, 0, len(c.units))
+	for _, u := range c.units {
+		units = append(units, u.state)
+	}
+	return units, nil
 }
