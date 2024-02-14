@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -16,7 +15,7 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 	var err error
 
 	if ki.KubeletURL != "" {
-		err = ki.queryPodsFromKubelet(fmt.Sprintf("%s/pods", ki.KubeletURL), listRef)
+		err = ki.queryPodsFromKubelet(ki.KubeletURL+"/pods", listRef)
 	} else {
 		listRef, err = ki.client.getPods(ctx, ki.NodeName)
 	}

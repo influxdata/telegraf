@@ -2,7 +2,6 @@ package input
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -39,9 +38,9 @@ func TestTagsSliceToMap_dupeKey(t *testing.T) {
 
 func TestTagsSliceToMap_empty(t *testing.T) {
 	_, err := tagsSliceToMap([][]string{{"foo", ""}})
-	require.Equal(t, fmt.Errorf("tag 1 has empty value"), err)
+	require.Equal(t, errors.New("tag 1 has empty value"), err)
 	_, err = tagsSliceToMap([][]string{{"", "bar"}})
-	require.Equal(t, fmt.Errorf("tag 1 has empty name"), err)
+	require.Equal(t, errors.New("tag 1 has empty name"), err)
 }
 
 func TestValidateOPCTags(t *testing.T) {
@@ -91,7 +90,7 @@ func TestValidateOPCTags(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("tag 1 has empty value"),
+			errors.New("tag 1 has empty value"),
 		},
 		{
 			"empty tag name not allowed",
@@ -105,7 +104,7 @@ func TestValidateOPCTags(t *testing.T) {
 					},
 				},
 			},
-			fmt.Errorf("tag 1 has empty name"),
+			errors.New("tag 1 has empty name"),
 		},
 		{
 			"different metric tag names",
@@ -370,7 +369,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				}, map[string]string{})
 				return nmm
 			}(),
-			err: fmt.Errorf("empty node namespace not allowed"),
+			err: errors.New("empty node namespace not allowed"),
 		},
 		{
 			name:     "empty identifier type not allowed",
@@ -833,7 +832,7 @@ func TestMetricForNode(t *testing.T) {
 			status: ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{"Quality": "OK (0x0)", "fn": 16},
+				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn": 16},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 	}

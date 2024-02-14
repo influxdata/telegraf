@@ -44,55 +44,42 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # service_address = "unixgram:///tmp/telegraf.sock"
   # service_address = "vsock://cid:port"
 
-  ## Change the file mode bits on unix sockets.  These permissions may not be
-  ## respected by some platforms, to safely restrict write permissions it is best
-  ## to place the socket into a directory that has previously been created
-  ## with the desired permissions.
+  ## Permission for unix sockets (only available on unix sockets)
+  ## This setting may not be respected by some platforms. To safely restrict
+  ## permissions it is recommended to place the socket into a previously
+  ## created directory with the desired permissions.
   ##   ex: socket_mode = "777"
   # socket_mode = ""
 
-  ## Maximum number of concurrent connections.
-  ## Only applies to stream sockets (e.g. TCP).
-  ## 0 (default) is unlimited.
-  # max_connections = 1024
+  ## Maximum number of concurrent connections (only available on stream sockets like TCP)
+  ## Zero means unlimited.
+  # max_connections = 0
 
-  ## Read timeout.
-  ## Only applies to stream sockets (e.g. TCP).
-  ## 0 (default) is unlimited.
-  # read_timeout = "30s"
+  ## Read timeout (only available on stream sockets like TCP)
+  ## Zero means unlimited.
+  # read_timeout = "0s"
 
-  ## Optional TLS configuration.
-  ## Only applies to stream sockets (e.g. TCP).
+  ## Optional TLS configuration (only available on stream sockets like TCP)
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key  = "/etc/telegraf/key.pem"
   ## Enables client authentication if set.
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
-  ## Maximum socket buffer size (in bytes when no unit specified).
-  ## For stream sockets, once the buffer fills up, the sender will start backing up.
-  ## For datagram sockets, once the buffer fills up, metrics will start dropping.
-  ## Defaults to the OS default.
+  ## Maximum socket buffer size (in bytes when no unit specified)
+  ## For stream sockets, once the buffer fills up, the sender will start
+  ## backing up. For datagram sockets, once the buffer fills up, metrics will
+  ## start dropping. Defaults to the OS default.
   # read_buffer_size = "64KiB"
 
-  ## Period between keep alive probes.
-  ## Only applies to TCP sockets.
-  ## 0 disables keep alive probes.
-  ## Defaults to the OS configuration.
+  ## Period between keep alive probes (only applies to TCP sockets)
+  ## Zero disables keep alive probes. Defaults to the OS configuration.
   # keep_alive_period = "5m"
 
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  # data_format = "influx"
-
-  ## Content encoding for message payloads, can be set to "gzip" to or
-  ## "identity" to apply no encoding.
+  ## Content encoding for message payloads
+  ## Can be set to "gzip" for compressed payloads or "identity" for no encoding.
   # content_encoding = "identity"
 
-  ## Maximum size of decoded packet.
-  ## Acceptable units are B, KiB, KB, MiB, MB...
-  ## Without quotes and units, interpreted as size in bytes.
+  ## Maximum size of decoded packet (in bytes when no unit specified)
   # max_decompression_size = "500MB"
 
   ## Message splitting strategy and corresponding settings for stream sockets
@@ -132,6 +119,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##                   is passed on to the parser together with the message.
   ## Note: This setting is only used for splitting_strategy = "variable length".
   # splitting_length_field = {offset = 0, bytes = 0, endianness = "be", header_length = 0}
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  # data_format = "influx"
 ```
 
 ## A Note on UDP OS Buffer Sizes

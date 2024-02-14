@@ -8,8 +8,9 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
 	"time"
+
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -69,7 +70,7 @@ func AnnotationTypeFromString(s string) (AnnotationType, error) {
 	case "STRING":
 		return AnnotationType_STRING, nil
 	}
-	return AnnotationType(0), fmt.Errorf("not a valid AnnotationType string")
+	return AnnotationType(0), errors.New("not a valid AnnotationType string")
 }
 
 func AnnotationTypePtr(v AnnotationType) *AnnotationType { return &v }

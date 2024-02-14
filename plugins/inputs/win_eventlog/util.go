@@ -8,6 +8,7 @@ package win_eventlog
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf16"
@@ -20,7 +21,7 @@ import (
 // DecodeUTF16 to UTF8 bytes
 func DecodeUTF16(b []byte) ([]byte, error) {
 	if len(b)%2 != 0 {
-		return nil, fmt.Errorf("must have even length byte slice")
+		return nil, errors.New("must have even length byte slice")
 	}
 
 	u16s := make([]uint16, 1)

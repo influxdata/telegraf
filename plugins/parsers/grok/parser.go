@@ -3,6 +3,7 @@ package grok
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -160,7 +161,7 @@ func (p *Parser) Compile() error {
 	}
 
 	if len(p.NamedPatterns) == 0 {
-		return fmt.Errorf("pattern required")
+		return errors.New("pattern required")
 	}
 
 	// Combine user-supplied CustomPatterns with DEFAULT_PATTERNS and parse

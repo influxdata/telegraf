@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -68,13 +69,13 @@ func (m *MongoDB) Init() error {
 			InsecureSkipVerify: m.ClientConfig.InsecureSkipVerify,
 		}
 		if len(m.Ssl.CaCerts) == 0 {
-			return fmt.Errorf("you must explicitly set insecure_skip_verify to skip certificate validation")
+			return errors.New("you must explicitly set insecure_skip_verify to skip certificate validation")
 		}
 
 		roots := x509.NewCertPool()
 		for _, caCert := range m.Ssl.CaCerts {
 			if ok := roots.AppendCertsFromPEM([]byte(caCert)); !ok {
-				return fmt.Errorf("failed to parse root certificate")
+				return errors.New("failed to parse root certificate")
 			}
 		}
 		m.tlsConfig.RootCAs = roots

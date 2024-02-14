@@ -115,10 +115,10 @@ func (r *IntelRDT) Initialize() error {
 		return err
 	}
 	if len(r.Cores) != 0 && len(r.Processes) != 0 {
-		return fmt.Errorf("monitoring start error, process and core tracking can not be done simultaneously")
+		return errors.New("monitoring start error, process and core tracking can not be done simultaneously")
 	}
 	if len(r.Cores) == 0 && len(r.Processes) == 0 {
-		return fmt.Errorf("monitoring start error, at least one of cores or processes must be provided in config")
+		return errors.New("monitoring start error, at least one of cores or processes must be provided in config")
 	}
 	if r.SamplingInterval == 0 {
 		r.SamplingInterval = defaultSamplingInterval
@@ -206,7 +206,7 @@ func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[s
 
 	availableProcesses, err := r.Processor.getAllProcesses()
 	if err != nil {
-		return nil, fmt.Errorf("cannot gather information of all available processes")
+		return nil, errors.New("cannot gather information of all available processes")
 	}
 	for _, availableProcess := range availableProcesses {
 		if choice.Contains(availableProcess.Name, providedProcesses) {
@@ -388,14 +388,14 @@ func createArgsForGroups(coresOrPIDs []string) string {
 
 func validatePqosPath(pqosPath string) error {
 	if len(pqosPath) == 0 {
-		return fmt.Errorf("monitoring start error, can not find pqos executable")
+		return errors.New("monitoring start error, can not find pqos executable")
 	}
 	pathInfo, err := os.Stat(pqosPath)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("monitoring start error, provided pqos path not exist")
+		return errors.New("monitoring start error, provided pqos path not exist")
 	}
 	if mode := pathInfo.Mode(); !mode.IsRegular() {
-		return fmt.Errorf("monitoring start error, provided pqos path does not point to a regular file")
+		return errors.New("monitoring start error, provided pqos path does not point to a regular file")
 	}
 	return nil
 }
@@ -431,7 +431,7 @@ func validateAndParseCores(coreStr string) ([]int, error) {
 		rangeValues := strings.Split(coreStr, "-")
 
 		if len(rangeValues) != 2 {
-			return nil, fmt.Errorf("more than two values in range")
+			return nil, errors.New("more than two values in range")
 		}
 
 		startValue, err := strconv.Atoi(rangeValues[0])
@@ -444,7 +444,7 @@ func validateAndParseCores(coreStr string) ([]int, error) {
 		}
 
 		if startValue > stopValue {
-			return nil, fmt.Errorf("first value cannot be higher than second")
+			return nil, errors.New("first value cannot be higher than second")
 		}
 
 		rangeOfCores := makeRange(startValue, stopValue)
@@ -464,7 +464,7 @@ func findPIDsInMeasurement(measurements string) (string, error) {
 	var insideQuoteRegex = regexp.MustCompile(`"(.*?)"`)
 	pidsMatch := insideQuoteRegex.FindStringSubmatch(measurements)
 	if len(pidsMatch) < 2 {
-		return "", fmt.Errorf("cannot find PIDs in measurement line")
+		return "", errors.New("cannot find PIDs in measurement line")
 	}
 	pids := pidsMatch[1]
 	return pids, nil
@@ -489,7 +489,7 @@ func splitCSVLineIntoValues(line string) (splitCSVLine, error) {
 
 func validateInterval(interval int32) error {
 	if interval < 0 {
-		return fmt.Errorf("interval cannot be lower than 0")
+		return errors.New("interval cannot be lower than 0")
 	}
 	return nil
 }

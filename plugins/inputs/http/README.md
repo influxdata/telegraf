@@ -17,8 +17,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username`, `password`
-and `token` option.
+This plugin supports secrets from secret-stores for the `username`, `password`,
+`token` and `headers` option.
 See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
 
@@ -121,7 +121,7 @@ by a colon (":").
 
 This example output was taken from [this instructional article][1].
 
-[1]: https://docs.influxdata.com/telegraf/v1.21/guides/using_http/
+[1]: https://docs.influxdata.com/telegraf/v1/configure_plugins/input_plugins/using_http/
 
 ```text
 citibike,station_id=4703 eightd_has_available_keys=false,is_installed=1,is_renting=1,is_returning=1,legacy_id="4703",num_bikes_available=6,num_bikes_disabled=2,num_docks_available=26,num_docks_disabled=0,num_ebikes_available=0,station_status="active" 1641505084000000000

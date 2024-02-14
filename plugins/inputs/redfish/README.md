@@ -16,6 +16,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` options. See the [secret-store documentation][SECRETSTORE] for more
+details on how to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -24,7 +32,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Redfish API Base URL.
   address = "https://127.0.0.1:5000"
 
-  ## Credentials for the Redfish API.
+  ## Credentials for the Redfish API. Can also use secrets.
   username = "root"
   password = "password123456"
 

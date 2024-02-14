@@ -484,7 +484,7 @@ func formatField(metricName string, statistic string) string {
 func formatMeasurement(project string) string {
 	project = strings.ReplaceAll(project, "/", "_")
 	project = snakeCase(project)
-	return fmt.Sprintf("aliyuncms_%s", project)
+	return "aliyuncms_" + project
 }
 
 func snakeCase(s string) string {

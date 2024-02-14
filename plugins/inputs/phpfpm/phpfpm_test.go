@@ -80,7 +80,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 }
 
 func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(outputSampleJSON)))
 		_, err := fmt.Fprint(w, string(outputSampleJSON))

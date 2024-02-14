@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -258,11 +259,11 @@ func (ps *PubSub) waitForResults(ctx context.Context, cancel context.CancelFunc)
 
 func (ps *PubSub) Init() error {
 	if ps.Topic == "" {
-		return fmt.Errorf(`"topic" is required`)
+		return errors.New(`"topic" is required`)
 	}
 
 	if ps.Project == "" {
-		return fmt.Errorf(`"project" is required`)
+		return errors.New(`"project" is required`)
 	}
 
 	switch ps.ContentEncoding {

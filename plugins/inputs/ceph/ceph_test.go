@@ -107,11 +107,11 @@ func TestGather(t *testing.T) {
 		perfDump = saveDump
 	}()
 
-	findSockets = func(c *Ceph) ([]*socket, error) {
+	findSockets = func(*Ceph) ([]*socket, error) {
 		return []*socket{{"osd.1", typeOsd, ""}}, nil
 	}
 
-	perfDump = func(binary string, s *socket) (string, error) {
+	perfDump = func(string, *socket) (string, error) {
 		return osdPerfDump, nil
 	}
 

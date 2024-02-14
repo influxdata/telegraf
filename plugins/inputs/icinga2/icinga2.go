@@ -133,7 +133,7 @@ func (i *Icinga2) gatherObjects(acc telegraf.Accumulator, checks ResultObject, o
 			"port":          serverURL.Port(),
 		}
 
-		acc.AddFields(fmt.Sprintf("icinga2_%s", objectType), fields, tags)
+		acc.AddFields("icinga2_"+objectType, fields, tags)
 	}
 }
 

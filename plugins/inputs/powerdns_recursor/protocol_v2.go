@@ -1,7 +1,7 @@
 package powerdns_recursor
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
@@ -18,7 +18,7 @@ import (
 // Datagram 1 => status: uint32
 // Datagram 2 => data: byte[] (max 16_384 bytes)
 func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accumulator) error {
-	recvSocket := filepath.Join(p.SocketDir, fmt.Sprintf("pdns_recursor_telegraf%s", uuid.New().String()))
+	recvSocket := filepath.Join(p.SocketDir, "pdns_recursor_telegraf"+uuid.New().String())
 
 	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
 	if err != nil {
@@ -68,7 +68,7 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 		return err
 	}
 	if n == 0 {
-		return fmt.Errorf("no status code received")
+		return errors.New("no status code received")
 	}
 
 	// Read the response data.
@@ -78,7 +78,7 @@ func (p *PowerdnsRecursor) gatherFromV2Server(address string, acc telegraf.Accum
 		return err
 	}
 	if n == 0 {
-		return fmt.Errorf("no data received")
+		return errors.New("no data received")
 	}
 
 	metrics := string(buf)

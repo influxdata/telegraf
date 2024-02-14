@@ -8,8 +8,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/metric"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -104,7 +106,7 @@ func TestGetMap(t *testing.T) {
 	}
 
 	// Don't run net-snmp commands to look up table names.
-	d.makeTable = func(agent string) (*si.Table, error) {
+	d.makeTable = func(string) (*si.Table, error) {
 		return &si.Table{}, nil
 	}
 	err := d.Init()
@@ -118,7 +120,7 @@ func TestGetMap(t *testing.T) {
 	var remoteCalls int32
 
 	// Mock the snmp transaction
-	d.getMapRemote = func(agent string) (nameMap, error) {
+	d.getMapRemote = func(string) (nameMap, error) {
 		atomic.AddInt32(&remoteCalls, 1)
 		return expected, nil
 	}
@@ -147,4 +149,85 @@ func TestGetMap(t *testing.T) {
 
 	// Remote call should not happen subsequent times getMap runs
 	require.Equal(t, int32(1), remoteCalls)
+}
+
+func TestTracking(t *testing.T) {
+	// Setup raw input and expected output
+	inputRaw := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"ifIndex": "1", "agent": "127.0.0.1"},
+			map[string]interface{}{"value": 42},
+			time.Unix(0, 0),
+		),
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"ifIndex": "1",
+				"agent":   "127.0.0.1",
+				"ifName":  "lo",
+			},
+			map[string]interface{}{"value": 42},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Create fake notification for testing
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	// Convert raw input to tracking metric
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	// Prepare and start the plugin
+	plugin := &IfName{
+		SourceTag:          "ifIndex",
+		DestTag:            "ifName",
+		AgentTag:           "agent",
+		CacheSize:          1000,
+		CacheTTL:           config.Duration(10 * time.Second),
+		MaxParallelLookups: 100,
+	}
+	require.NoError(t, plugin.Init())
+	plugin.cache.Put("127.0.0.1", nameMap{1: "lo"})
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Process expected metrics and compare with resulting metrics
+	for _, in := range input {
+		require.NoError(t, plugin.Add(in, &acc))
+	}
+
+	require.Eventually(t, func() bool {
+		return int(acc.NMetrics()) >= len(expected)
+	}, 3*time.Second, 100*time.Microsecond)
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(expected) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

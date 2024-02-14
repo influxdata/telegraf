@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -154,7 +153,7 @@ func TestWriteTokenAuth(t *testing.T) {
 
 	req, err := http.NewRequest("POST", createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", token))
+	req.Header.Set("Authorization", "Token "+token)
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -216,7 +215,7 @@ func TestWriteKeepBucket(t *testing.T) {
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteNoNewline(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -242,7 +241,7 @@ func TestWriteNoNewline(t *testing.T) {
 
 func TestAllOrNothing(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -265,7 +264,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBV2Listener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -293,7 +292,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBV2Listener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -469,7 +468,7 @@ func TestWriteHighTraffic(t *testing.T) {
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -489,7 +488,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 
 func TestWriteInvalid(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -509,7 +508,7 @@ func TestWriteInvalid(t *testing.T) {
 
 func TestWriteEmpty(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -550,7 +549,7 @@ func TestReady(t *testing.T) {
 
 func TestWriteWithPrecision(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 

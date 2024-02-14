@@ -1,14 +1,15 @@
 package procstat
 
 import (
-	"fmt"
+	"errors"
 	"runtime"
 	"strconv"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/process"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/shirou/gopsutil/v3/process"
 )
 
 type Process interface {
@@ -59,7 +60,7 @@ func (p *Proc) percent(_ time.Duration) (float64, error) {
 	cpuPerc, err := p.Process.Percent(time.Duration(0))
 	if !p.hasCPUTimes && err == nil {
 		p.hasCPUTimes = true
-		return 0, fmt.Errorf("must call Percent twice to compute percent cpu")
+		return 0, errors.New("must call Percent twice to compute percent cpu")
 	}
 	return cpuPerc, err
 }

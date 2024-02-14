@@ -145,9 +145,9 @@ func (a *AzureMonitor) Connect() error {
 	}
 
 	if resourceID == "" {
-		return fmt.Errorf("no resource ID configured or available via VM instance metadata")
+		return errors.New("no resource ID configured or available via VM instance metadata")
 	} else if region == "" {
-		return fmt.Errorf("no region configured or available via VM instance metadata")
+		return errors.New("no region configured or available via VM instance metadata")
 	}
 
 	if endpointURL == "" {

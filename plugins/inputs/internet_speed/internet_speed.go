@@ -4,6 +4,7 @@ package internet_speed
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -142,7 +143,7 @@ func (is *InternetSpeed) findClosestServer() error {
 	}
 
 	if len(is.servers) < 1 {
-		return fmt.Errorf("no servers found")
+		return errors.New("no servers found")
 	}
 
 	// Return the first match or the server with the lowest latency
@@ -168,7 +169,7 @@ func (is *InternetSpeed) findClosestServer() error {
 		return nil
 	}
 
-	return fmt.Errorf("no server set: filter excluded all servers or no available server found")
+	return errors.New("no server set: filter excluded all servers or no available server found")
 }
 
 func init() {

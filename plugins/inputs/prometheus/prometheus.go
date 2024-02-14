@@ -15,16 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/models"
-	"k8s.io/client-go/tools/cache"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser "github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -75,8 +74,9 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout    config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
-	ContentLengthLimit config.Size     `toml:"content_length_limit"`
+	ResponseTimeout      config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
+	ContentLengthLimit   config.Size     `toml:"content_length_limit"`
+	EnableRequestMetrics bool            `toml:"enable_request_metrics"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -351,7 +351,13 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serviceURL URLAndAddress) {
 			defer wg.Done()
-			acc.AddError(p.gatherURL(serviceURL, acc))
+			requestFields, tags, err := p.gatherURL(serviceURL, acc)
+			acc.AddError(err)
+
+			// Add metrics
+			if p.EnableRequestMetrics {
+				acc.AddFields("prometheus_request", requestFields, tags)
+			}
 		}(URL)
 	}
 
@@ -360,9 +366,21 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
+func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[string]interface{}, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
+	requestFields := make(map[string]interface{})
+	tags := map[string]string{}
+	if p.URLTag != "" {
+		tags[p.URLTag] = u.OriginalURL.String()
+	}
+	if u.Address != "" {
+		tags["address"] = u.Address
+	}
+	for k, v := range u.Tags {
+		tags[k] = v
+	}
+
 	if u.URL.Scheme == "unix" {
 		path := u.URL.Query().Get("path")
 		if path == "" {
@@ -373,7 +391,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		addr := "http://localhost" + path
 		req, err = http.NewRequest("GET", addr, nil)
 		if err != nil {
-			return fmt.Errorf("unable to create new request %q: %w", addr, err)
+			return nil, nil, fmt.Errorf("unable to create new request %q: %w", addr, err)
 		}
 
 		// ignore error because it's been handled before getting here
@@ -382,7 +400,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
 				DisableKeepAlives: true,
-				Dial: func(network, addr string) (net.Conn, error) {
+				Dial: func(string, string) (net.Conn, error) {
 					c, err := net.Dial("unix", u.URL.Path)
 					return c, err
 				},
@@ -398,7 +416,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		var err error
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 		if err != nil {
-			return fmt.Errorf("unable to create new request %q: %w", u.URL.String(), err)
+			return nil, nil, fmt.Errorf("unable to create new request %q: %w", u.URL.String(), err)
 		}
 	}
 
@@ -407,7 +425,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	if p.BearerToken != "" {
 		token, err := os.ReadFile(p.BearerToken)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		req.Header.Set("Authorization", "Bearer "+string(token))
 	} else if p.BearerTokenString != "" {
@@ -422,20 +440,26 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	var err error
 	var resp *http.Response
+	var start time.Time
 	if u.URL.Scheme != "unix" {
+		start = time.Now()
 		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = p.client.Do(req)
 	} else {
+		start = time.Now()
 		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = uClient.Do(req)
 	}
+	end := time.Since(start).Seconds()
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
+		return requestFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.URL, err)
 	}
+	requestFields["response_time"] = end
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
+		return requestFields, tags, fmt.Errorf("%q returned HTTP status %q", u.URL, resp.Status)
 	}
 
 	var body []byte
@@ -449,19 +473,20 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
-			return fmt.Errorf("error reading body: %w", err)
+			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.URL, limit)
-			return nil
+			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("error reading body: %w", err)
+			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}
 
+	requestFields["content_length"] = len(body)
 	// Parse the metrics
 	metricParser := parser.Parser{
 		Header:          resp.Header,
@@ -470,7 +495,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {
-		return fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
+		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.URL, err)
 	}
 
 	for _, metric := range metrics {
@@ -501,7 +526,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 	}
 
-	return nil
+	return requestFields, tags, nil
 }
 
 func (p *Prometheus) addHeaders(req *http.Request) {

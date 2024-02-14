@@ -7,7 +7,7 @@ package exec
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"runtime"
 	"testing"
 	"time"
@@ -133,7 +133,7 @@ func TestCommandError(t *testing.T) {
 	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock(nil, nil, fmt.Errorf("exit status code 1")),
+		runner:   newRunnerMock(nil, nil, errors.New("exit status code 1")),
 		Commands: []string{"badcommand"},
 		parser:   parser,
 	}

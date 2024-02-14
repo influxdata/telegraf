@@ -167,6 +167,11 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 	for _, msg := range topicMessages {
 		if err := m.client.Publish(msg.topic, msg.payload); err != nil {
+			// We do receive a timeout error if the remote broker is down,
+			// so let's retry the metrics in this case and drop them otherwise.
+			if errors.Is(err, internal.ErrTimeout) {
+				return fmt.Errorf("could not publish message to MQTT server: %w", err)
+			}
 			m.Log.Warnf("Could not publish message to MQTT server: %v", err)
 		}
 	}

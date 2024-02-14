@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -258,6 +259,8 @@ COLUMN:
 				tags[col] = string(v)
 			case int64, int32, int:
 				tags[col] = fmt.Sprintf("%d", v)
+			case bool:
+				tags[col] = strconv.FormatBool(v)
 			default:
 				p.Log.Debugf("Failed to add %q as additional tag", col)
 			}

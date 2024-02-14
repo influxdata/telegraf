@@ -153,7 +153,7 @@ func (p *PrometheusClient) Init() error {
 	authHandler := internal.BasicAuthHandler(p.BasicUsername, password, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
-	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte("Telegraf Output Plugin: Prometheus Client "))
 		if err != nil {
 			p.Log.Errorf("Error occurred when writing HTTP reply: %v", err)

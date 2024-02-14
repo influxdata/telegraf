@@ -2,6 +2,7 @@ package json_v1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -65,14 +66,14 @@ func (s *span) Validate() error {
 
 func (s *span) Trace() (string, error) {
 	if s.TraceID == "" {
-		return "", fmt.Errorf("Trace ID cannot be null")
+		return "", errors.New("trace ID cannot be null")
 	}
 	return TraceIDFromString(s.TraceID)
 }
 
 func (s *span) SpanID() (string, error) {
 	if s.ID == "" {
-		return "", fmt.Errorf("Span ID cannot be null")
+		return "", errors.New("span ID cannot be null")
 	}
 	return IDFromString(s.ID)
 }
@@ -234,7 +235,7 @@ func TraceIDFromString(s string) (string, error) {
 		}
 	}
 	if hi == 0 {
-		return fmt.Sprintf("%x", lo), nil
+		return strconv.FormatUint(lo, 16), nil
 	}
 	return fmt.Sprintf("%x%016x", hi, lo), nil
 }

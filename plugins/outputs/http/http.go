@@ -43,15 +43,15 @@ const (
 )
 
 type HTTP struct {
-	URL                     string            `toml:"url"`
-	Method                  string            `toml:"method"`
-	Username                config.Secret     `toml:"username"`
-	Password                config.Secret     `toml:"password"`
-	Headers                 map[string]string `toml:"headers"`
-	ContentEncoding         string            `toml:"content_encoding"`
-	UseBatchFormat          bool              `toml:"use_batch_format"`
-	AwsService              string            `toml:"aws_service"`
-	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
+	URL                     string                    `toml:"url"`
+	Method                  string                    `toml:"method"`
+	Username                config.Secret             `toml:"username"`
+	Password                config.Secret             `toml:"password"`
+	Headers                 map[string]*config.Secret `toml:"headers"`
+	ContentEncoding         string                    `toml:"content_encoding"`
+	UseBatchFormat          bool                      `toml:"use_batch_format"`
+	AwsService              string                    `toml:"aws_service"`
+	NonRetryableStatusCodes []int                     `toml:"non_retryable_statuscodes"`
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
@@ -204,11 +204,20 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	if h.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
+
 	for k, v := range h.Headers {
-		if strings.EqualFold(k, "host") {
-			req.Host = v
+		secret, err := v.Get()
+		if err != nil {
+			return err
 		}
-		req.Header.Set(k, v)
+
+		headerVal := secret.String()
+		if strings.EqualFold(k, "host") {
+			req.Host = headerVal
+		}
+		req.Header.Set(k, headerVal)
+
+		secret.Destroy()
 	}
 
 	resp, err := h.client.Do(req)

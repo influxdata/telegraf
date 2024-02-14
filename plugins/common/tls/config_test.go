@@ -376,7 +376,7 @@ func TestConnect(t *testing.T) {
 	serverTLSConfig, err := serverConfig.TLSConfig()
 	require.NoError(t, err)
 
-	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	ts.TLS = serverTLSConfig
@@ -499,7 +499,7 @@ func TestConnectClientMinTLSVersion(t *testing.T) {
 				serverTLSConfig.MaxVersion = serverTLSMaxVersion
 
 				// Start the server
-				ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					w.WriteHeader(http.StatusOK)
 				}))
 				ts.TLS = serverTLSConfig
@@ -553,7 +553,7 @@ func TestConnectWrongDNS(t *testing.T) {
 	serverTLSConfig, err := serverConfig.TLSConfig()
 	require.NoError(t, err)
 
-	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	ts.TLS = serverTLSConfig

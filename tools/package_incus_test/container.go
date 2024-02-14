@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -25,7 +26,7 @@ type Container struct {
 // create container with given name and image
 func (c *Container) Create(image string) error {
 	if c.Name == "" {
-		return fmt.Errorf("unable to create container: no name given")
+		return errors.New("unable to create container: no name given")
 	}
 
 	c.client = IncusClient{}
@@ -136,7 +137,7 @@ func (c *Container) CheckStatus(serviceName string) error {
 
 func (c *Container) UploadAndInstall(filename string) error {
 	basename := filepath.Base(filename)
-	destination := fmt.Sprintf("/root/%s", basename)
+	destination := "/root/" + basename
 
 	if err := c.client.Push(c.Name, filename, destination); err != nil {
 		return err
@@ -292,7 +293,7 @@ func (c *Container) detectPackageManager() error {
 		return nil
 	}
 
-	return fmt.Errorf("unable to determine package manager")
+	return errors.New("unable to determine package manager")
 }
 
 // Configure the system with InfluxData repo
@@ -339,5 +340,5 @@ func (c *Container) waitForNetwork() error {
 		attempts++
 	}
 
-	return fmt.Errorf("timeout reached waiting for network on container")
+	return errors.New("timeout reached waiting for network on container")
 }

@@ -7,6 +7,7 @@ import (
 	"compress/zlib"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -261,7 +262,7 @@ func (k *KinesisConsumer) GetCheckpoint(streamName, shardID string) (string, err
 // Set wraps the checkpoint's SetCheckpoint function (called by consumer library)
 func (k *KinesisConsumer) SetCheckpoint(streamName, shardID, sequenceNumber string) error {
 	if sequenceNumber == "" {
-		return fmt.Errorf("sequence number should not be empty")
+		return errors.New("sequence number should not be empty")
 	}
 
 	k.checkpointTex.Lock()
