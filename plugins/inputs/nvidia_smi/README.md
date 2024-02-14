@@ -23,9 +23,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
   # bin_path = "/usr/bin/nvidia-smi"
 
-  ## Optional: decide if GPU is not found for Telegraf to proceed with other metrics or error out
-  ## Valid values are "error" (the default) and "ignore"
-  # if_not_found = "error"
+  ## Optional: specifies plugin behavior regarding missing nvidia-smi binary
+  ## Available choices:
+  ##   - error: telegraf will return an error on startup
+  ##   - ignore: telegraf will ignore this plugin
+  # startup_error_behavior = "error"
 
   ## Optional: timeout for GPU polling
   # timeout = "5s"

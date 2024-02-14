@@ -27,10 +27,10 @@ var sampleConfig string
 
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
-	BinPath    string          `toml:"bin_path"`
-	Timeout    config.Duration `toml:"timeout"`
-	IfNotFound string          `toml:"if_not_found"`
-	Log        telegraf.Logger `toml:"-"`
+	BinPath              string          `toml:"bin_path"`
+	Timeout              config.Duration `toml:"timeout"`
+	StartupErrorBehavior string          `toml:"startup_error_behavior"`
+	Log                  telegraf.Logger `toml:"-"`
 
 	once sync.Once
 }
@@ -45,7 +45,7 @@ func (smi *NvidiaSMI) Init() error {
 
 		// fail-fast
 		if err != nil {
-			switch smi.IfNotFound {
+			switch smi.StartupErrorBehavior {
 			case "ignore":
 				// Ignore the error and move on
 				smi.Log.Warnf("GPU SMI not found on the system, ignoring: %s", err)
@@ -123,9 +123,9 @@ func (smi *NvidiaSMI) parse(acc telegraf.Accumulator, data []byte) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
-			BinPath:    "/usr/bin/nvidia-smi",
-			IfNotFound: "error",
-			Timeout:    config.Duration(5 * time.Second),
+			BinPath:              "/usr/bin/nvidia-smi",
+			StartupErrorBehavior: "error",
+			Timeout:              config.Duration(5 * time.Second),
 		}
 	})
 }

@@ -14,17 +14,22 @@ import (
 func TestStartPluginIfGPUNotFound(t *testing.T) {
 	plugin := &NvidiaSMI{Log: &testutil.Logger{}}
 
+	plugin.IfNotFound = "error"
+	plugin.BinPath = "/usr/bin/nvidia-smi"
+	require.NoError(t, plugin.Init())
+
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+
 	plugin.IfNotFound = "ignore"
 	plugin.BinPath = "/random/non-existent/path"
 	require.NoError(t, plugin.Init())
 
 	plugin.IfNotFound = "error"
 	plugin.BinPath = "/random/non-existent/path"
-	require.NoError(t, plugin.Init(), "nvidia-smi not found in /random/non-existent/path and not in PATH; please make sure nvidia-smi is installed and/or is in PATH")
-
-	plugin.IfNotFound = "error"
-	plugin.BinPath = "/usr/bin/nvidia-smi"
-	require.NoError(t, plugin.Init())
+	errMsg := "nvidia-smi not found in /random/non-existent/path and not in PATH; "
+	+"please make sure nvidia-smi is installed and/or is in PATH"
+	require.NoError(t, plugin.Init(), errMsg)
 }
 
 func TestGatherValidXML(t *testing.T) {
