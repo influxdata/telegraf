@@ -125,7 +125,7 @@ func (pg *NativeFinder) Pattern(pattern string) error {
 
 // Pattern matches on the process name
 func (pg *NativeFinder) GetResult() ([]PID, error) {
-	var dst []PID
+	dst := []PID{}
 	for _, p := range pg.procs {
 		dst = append(dst, PID(p.Pid))
 	}
