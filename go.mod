@@ -21,7 +21,7 @@ require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/IBM/nzgo/v12 v12.0.9-0.20231115043259-49c27f2dfe48
-	github.com/IBM/sarama v1.42.1
+	github.com/IBM/sarama v1.42.2
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/Mellanox/rdmamap v1.1.0
@@ -312,7 +312,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
-	github.com/eapache/go-resiliency v1.4.0 // indirect
+	github.com/eapache/go-resiliency v1.5.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
@@ -420,7 +420,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
-	github.com/pierrec/lz4/v4 v4.1.18 // indirect
+	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/transport/v2 v2.2.1 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
