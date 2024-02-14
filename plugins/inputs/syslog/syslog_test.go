@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
@@ -93,7 +92,6 @@ func TestUnixgram(t *testing.T) {
 	// Setup plugin and start it
 	plugin := &Syslog{
 		Address:        "unixgram://" + sock,
-		Framing:        framing.OctetCounting,
 		Separator:      "_",
 		SyslogStandard: "RFC5424",
 		Trailer:        nontransparent.LF,
@@ -160,7 +158,6 @@ func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,
 			Separator:      "_",
@@ -287,7 +284,6 @@ func TestIssue10121(t *testing.T) {
 	plugin := &Syslog{
 		Address:        "tcp://127.0.0.1:0",
 		ReadTimeout:    config.Duration(10 * time.Millisecond),
-		Framing:        framing.OctetCounting,
 		SyslogStandard: syslogRFC5424,
 		Trailer:        nontransparent.LF,
 		Separator:      "_",

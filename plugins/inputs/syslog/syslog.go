@@ -22,7 +22,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -44,7 +43,7 @@ type Syslog struct {
 	KeepAlivePeriod *config.Duration           `toml:"keep_alive_period"`
 	MaxConnections  int                        `toml:"max_connections"`
 	ReadTimeout     config.Duration            `toml:"read_timeout"`
-	Framing         framing.Framing            `toml:"framing"`
+	Framing         string                     `toml:"framing"`
 	SyslogStandard  syslogRFC                  `toml:"syslog_standard"`
 	Trailer         nontransparent.TrailerType `toml:"trailer"`
 	BestEffort      bool                       `toml:"best_effort"`
@@ -70,7 +69,16 @@ func (*Syslog) SampleConfig() string {
 }
 
 func (s *Syslog) Init() error {
-	// Set defaults and check address
+	// Check framing and set default
+	switch s.Framing {
+	case "":
+		s.Framing = "octet-counting"
+	case "octet-counting", "non-transparent":
+	default:
+		return fmt.Errorf("invalid 'framing' %q", s.Framing)
+	}
+
+	// Check and parse address, set default if necessary
 	if s.Address == "" {
 		s.Address = "tcp://127.0.0.1:6514"
 	}
@@ -291,8 +299,6 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		conn.Close()
 	}()
 
-	var p syslog.Parser
-
 	emit := func(r *syslog.Result) {
 		s.store(*r, conn.RemoteAddr(), acc)
 		if s.ReadTimeout > 0 {
@@ -311,15 +317,14 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	}
 
 	// Select the parser to use depending on transport framing
-	if s.Framing == framing.OctetCounting {
-		// Octet counting transparent framing
+	var p syslog.Parser
+	switch s.Framing {
+	case "octet-counting":
 		p = octetcounting.NewParser(opts...)
-	} else {
-		// Non-transparent framing
+	case "non-transparent":
 		opts = append(opts, nontransparent.WithTrailer(s.Trailer))
 		p = nontransparent.NewParser(opts...)
 	}
-
 	p.Parse(conn)
 
 	if s.ReadTimeout > 0 {
@@ -446,7 +451,6 @@ func (uc unixCloser) Close() error {
 func init() {
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,
 			Separator:      "_",

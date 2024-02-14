@@ -68,10 +68,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Zero means unlimited.
   # read_timeout = "0s"
 
-  ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
-  ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
-  ## or the non-transparent framing technique (RFC6587#section-3.4.2).
-  ## Must be one of "octect-counting", "non-transparent".
+  ## Framing technique used for messages transport
+  ## Available settings are:
+  ##   octet-counting  -- see RFC5425#section-4.3.1 and RFC6587#section-3.4.1
+  ##   non-transparent -- see RFC6587#section-3.4.2
   # framing = "octet-counting"
 
   ## The trailer to be expected in case of non-transparent framing (default = "LF").
