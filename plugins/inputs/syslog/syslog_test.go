@@ -3,7 +3,6 @@ package syslog
 import (
 	"crypto/tls"
 	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,38 +24,27 @@ import (
 
 var pki = testutil.NewPKI("../../../testutil/pki")
 
-func TestInitFail(t *testing.T) {
-	tests := []struct {
-		name     string
-		address  string
-		expected string
-	}{
-		{
-			name:     "no address",
-			expected: "missing protocol within address",
-		},
-		{
-			name:     "missing protocol",
-			address:  "localhost:6514",
-			expected: "missing protocol within address",
-		},
-		{
-			name:     "unknown protocol",
-			address:  "unsupported://example.com:6514",
-			expected: "unknown protocol",
-		},
+func TestAddressMissingProtocol(t *testing.T) {
+	plugin := &Syslog{
+		Address: "localhost:6514",
+		Log:     testutil.Logger{},
 	}
+	require.ErrorContains(t, plugin.Init(), "missing protocol within address")
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &Syslog{
-				Address: tt.address,
-				Log:     testutil.Logger{},
-			}
-			var acc testutil.Accumulator
-			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
-		})
+func TestAddressUnknownProtocol(t *testing.T) {
+	plugin := &Syslog{
+		Address: "unsupported://example.com:6514",
+		Log:     testutil.Logger{},
 	}
+	require.ErrorContains(t, plugin.Init(), "unknown protocol")
+}
+
+func TestAddressDefault(t *testing.T) {
+	plugin := &Syslog{Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+
+	require.Equal(t, "tcp://127.0.0.1:6514", plugin.url.String())
 }
 
 func TestAddressDefaultPort(t *testing.T) {
@@ -64,13 +52,10 @@ func TestAddressDefaultPort(t *testing.T) {
 		Address: "tcp://localhost",
 		Log:     testutil.Logger{},
 	}
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
+	require.NoError(t, plugin.Init())
 
 	// Default port is 6514
-	require.Equal(t, "localhost:6514", plugin.Address)
+	require.Equal(t, "tcp://localhost:6514", plugin.url.String())
 }
 
 func TestReadTimeoutWarning(t *testing.T) {
@@ -80,6 +65,7 @@ func TestReadTimeoutWarning(t *testing.T) {
 		ReadTimeout: config.Duration(time.Second),
 		Log:         logger,
 	}
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
@@ -114,6 +100,7 @@ func TestUnixgram(t *testing.T) {
 		Log:            testutil.Logger{},
 		now:            getNanoNow,
 	}
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
@@ -174,7 +161,6 @@ func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Address:        ":6514",
 			now:            getNanoNow,
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
@@ -234,13 +220,12 @@ func TestCases(t *testing.T) {
 
 			// Determine server properties. We need to parse the address before
 			// calling Start() as it is modified in this function.
-			u, err := url.Parse(plugin.Address)
-			require.NoError(t, err)
-			if u.Scheme == "unix" {
+			if strings.HasPrefix(plugin.Address, "unix://") {
 				// Use a random socket
 				sock := testutil.TempSocket(t)
 				plugin.Address = "unix://" + sock
 			}
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
@@ -248,9 +233,10 @@ func TestCases(t *testing.T) {
 
 			// Get the address
 			var addr string
-			if plugin.isStream {
+			switch plugin.url.Scheme {
+			case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 				addr = plugin.tcpListener.Addr().String()
-			} else {
+			case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
 				addr = plugin.udpListener.LocalAddr().String()
 			}
 
@@ -261,10 +247,10 @@ func TestCases(t *testing.T) {
 				require.NoError(t, err)
 				tlscfg.ServerName = "localhost"
 
-				client, err = tls.Dial(u.Scheme, addr, tlscfg)
+				client, err = tls.Dial(plugin.url.Scheme, addr, tlscfg)
 				require.NoError(t, err)
 			} else {
-				client, err = net.Dial(u.Scheme, addr)
+				client, err = net.Dial(plugin.url.Scheme, addr)
 				require.NoError(t, err)
 			}
 			defer client.Close()
@@ -310,18 +296,14 @@ func TestIssue10121(t *testing.T) {
 		Separator:      "_",
 		Log:            testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
 
 	// Get the address
-	var addr string
-	if plugin.isStream {
-		addr = plugin.tcpListener.Addr().String()
-	} else {
-		addr = plugin.udpListener.LocalAddr().String()
-	}
+	addr := plugin.tcpListener.Addr().String()
 
 	// Create a fake sender
 	client, err := net.Dial("tcp", addr)

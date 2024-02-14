@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -41,16 +40,16 @@ const readTimeoutMsg = "Read timeout set! Connections, inactive for the set dura
 // Syslog is a syslog plugin
 type Syslog struct {
 	tlsConfig.ServerConfig
-	Address         string `toml:"server"`
-	KeepAlivePeriod *config.Duration
-	MaxConnections  int
-	ReadTimeout     config.Duration
-	Framing         framing.Framing
-	SyslogStandard  syslogRFC
-	Trailer         nontransparent.TrailerType
-	BestEffort      bool
-	Separator       string          `toml:"sdparam_separator"`
-	Log             telegraf.Logger `toml:"-"`
+	Address         string                     `toml:"server"`
+	KeepAlivePeriod *config.Duration           `toml:"keep_alive_period"`
+	MaxConnections  int                        `toml:"max_connections"`
+	ReadTimeout     config.Duration            `toml:"read_timeout"`
+	Framing         framing.Framing            `toml:"framing"`
+	SyslogStandard  syslogRFC                  `toml:"syslog_standard"`
+	Trailer         nontransparent.TrailerType `toml:"trailer"`
+	BestEffort      bool                       `toml:"best_effort"`
+	Separator       string                     `toml:"sdparam_separator"`
+	Log             telegraf.Logger            `toml:"-"`
 
 	now      func() time.Time
 	lastTime time.Time
@@ -59,21 +58,53 @@ type Syslog struct {
 	wg sync.WaitGroup
 	io.Closer
 
-	isStream      bool
 	tcpListener   net.Listener
 	tlsConfig     *tls.Config
 	connections   map[string]net.Conn
 	connectionsMu sync.Mutex
 
 	udpListener net.PacketConn
+
+	url *url.URL
 }
 
 func (*Syslog) SampleConfig() string {
 	return sampleConfig
 }
 
+func (s *Syslog) Init() error {
+	// Set defaults and check address
+	if s.Address == "" {
+		s.Address = "tcp://127.0.0.1:6514"
+	}
+
+	if !strings.Contains(s.Address, "://") {
+		return fmt.Errorf("missing protocol within address %q", s.Address)
+	}
+
+	u, err := url.Parse(s.Address)
+	if err != nil {
+		return fmt.Errorf("parsing address %q failed: %w", s.Address, err)
+	}
+
+	// Check if we do have a port and add the default one if not
+	if u.Port() == "" {
+		u.Host += ":6514"
+	}
+	s.url = u
+
+	switch s.url.Scheme {
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket",
+		"udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+	default:
+		return fmt.Errorf("unknown protocol %q in %q", u.Scheme, s.Address)
+	}
+
+	return nil
+}
+
 // Gather ...
-func (s *Syslog) Gather(_ telegraf.Accumulator) error {
+func (*Syslog) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -82,30 +113,20 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	scheme, host, err := getAddressParts(s.Address)
-	if err != nil {
-		return err
+	// Cleanup socket
+	switch s.url.Scheme {
+	case "unix", "unixpacket", "unixgram":
+		_ = os.Remove(s.url.Path)
 	}
-	s.Address = host
 
-	switch scheme {
-	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		s.isStream = true
+	// Create the listener
+	switch s.url.Scheme {
+	case "tcp", "tcp4", "tcp6":
 		if s.ReadTimeout > 0 {
 			s.Log.Warn(readTimeoutMsg)
 		}
-	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		s.isStream = false
-	default:
-		return fmt.Errorf("unknown protocol %q in %q", scheme, s.Address)
-	}
 
-	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
-		os.Remove(s.Address)
-	}
-
-	if s.isStream {
-		l, err := net.Listen(scheme, s.Address)
+		l, err := net.Listen(s.url.Scheme, s.url.Host)
 		if err != nil {
 			return err
 		}
@@ -118,8 +139,8 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 
 		s.wg.Add(1)
 		go s.listenStream(acc)
-	} else {
-		l, err := net.ListenPacket(scheme, s.Address)
+	case "udp", "udp4", "udp6", "ip", "ip4", "ip6":
+		l, err := net.ListenPacket(s.url.Scheme, s.url.Host)
 		if err != nil {
 			return err
 		}
@@ -128,10 +149,42 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 
 		s.wg.Add(1)
 		go s.listenPacket(acc)
+	case "unix", "unixpacket":
+		if s.ReadTimeout > 0 {
+			s.Log.Warn(readTimeoutMsg)
+		}
+
+		l, err := net.Listen(s.url.Scheme, s.url.Host)
+		if err != nil {
+			return err
+		}
+		s.Closer = l
+		s.tcpListener = l
+		s.tlsConfig, err = s.TLSConfig()
+		if err != nil {
+			return err
+		}
+
+		s.wg.Add(1)
+		go s.listenStream(acc)
+	case "unixgram":
+		l, err := net.ListenPacket(s.url.Scheme, s.url.Path)
+		if err != nil {
+			return err
+		}
+		s.Closer = l
+		s.udpListener = l
+
+		s.wg.Add(1)
+		go s.listenPacket(acc)
+	default:
+		return fmt.Errorf("unknown protocol %q in %q", s.url.Scheme, s.Address)
 	}
 
-	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
-		s.Closer = unixCloser{path: s.Address, closer: s.Closer}
+	// Create a cleanup-closer
+	switch s.url.Scheme {
+	case "unix", "unixpacket", "unixgram":
+		s.Closer = unixCloser{path: s.url.Path, closer: s.Closer}
 	}
 
 	return nil
@@ -146,37 +199,6 @@ func (s *Syslog) Stop() {
 		s.Close()
 	}
 	s.wg.Wait()
-}
-
-// getAddressParts returns the address scheme and host
-// it also sets defaults for them when missing
-// when the input address does not specify the protocol it returns an error
-func getAddressParts(a string) (scheme string, host string, err error) {
-	parts := strings.SplitN(a, "://", 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("missing protocol within address %q", a)
-	}
-
-	u, err := url.Parse(filepath.ToSlash(a)) //convert backslashes to slashes (to make Windows path a valid URL)
-	if err != nil {
-		return "", "", fmt.Errorf("could not parse address %q: %w", a, err)
-	}
-	switch u.Scheme {
-	case "unix", "unixpacket", "unixgram":
-		return parts[0], parts[1], nil
-	}
-
-	if u.Hostname() != "" {
-		host = u.Hostname()
-	}
-	host += ":"
-	if u.Port() == "" {
-		host += "6514"
-	} else {
-		host += u.Port()
-	}
-
-	return u.Scheme, host, nil
 }
 
 func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
@@ -440,7 +462,6 @@ func getNanoNow() time.Time {
 func init() {
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Address:        ":6514",
 			now:            getNanoNow,
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,

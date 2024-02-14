@@ -43,7 +43,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## When using tcp, consider using 'tcp4' or 'tcp6' to force the usage of IPv4
   ## or IPV6 respectively. There are cases, where when not specified, a system
   ## may force an IPv4 mapped IPv6 address.
-  server = "tcp://:6514"
+  server = "tcp://127.0.0.1:6514"
 
   ## TLS Config
   # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
