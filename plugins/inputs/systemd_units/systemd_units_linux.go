@@ -121,6 +121,17 @@ type unitInfo struct {
 	unitFilePreset string
 }
 
+type client interface {
+	Connected() bool
+	Close()
+
+	ListUnitFilesByPatternsContext(ctx context.Context, states, pattern []string) ([]dbus.UnitFile, error)
+	ListUnitsByNamesContext(ctx context.Context, units []string) ([]dbus.UnitStatus, error)
+	GetUnitTypePropertiesContext(ctx context.Context, unit, unitType string) (map[string]interface{}, error)
+	GetUnitPropertyContext(ctx context.Context, unit, propertyName string) (*dbus.Property, error)
+	ListUnitsContext(ctx context.Context) ([]dbus.UnitStatus, error)
+}
+
 func (s *SystemdUnits) Init() error {
 	// Check unit-type and convert the first letter to uppercase as this is
 	// what dbus expects.
