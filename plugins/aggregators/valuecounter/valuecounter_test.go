@@ -1,12 +1,14 @@
 package valuecounter
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 // Create a valuecounter with config
@@ -122,4 +124,46 @@ func TestWithReset(t *testing.T) {
 		"status_OK":  2,
 	}
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+func TestTracking(t *testing.T) {
+	inputRaw := []telegraf.Metric{m1, m1, m2}
+	expected := []telegraf.Metric{
+		metric.New("m1", map[string]string{"foo": "bar"}, map[string]interface{}{"status_200": 2, "status_OK": 1}, time.Now()),
+	}
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	// Process expected metrics and compare with resulting metrics
+	acc := &testutil.Accumulator{}
+	plugin := NewTestValueCounter([]string{"status"})
+	for _, m := range input {
+		plugin.Add(m)
+	}
+	plugin.Push(acc)
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

@@ -38,6 +38,7 @@ func (*ValueCounter) SampleConfig() string {
 
 // Add is run on every metric which passes the plugin
 func (vc *ValueCounter) Add(in telegraf.Metric) {
+	in.Accept()
 	id := in.HashID()
 
 	// Check if the cache already has an entry for this metric, if not create it
