@@ -1,45 +1,9 @@
-# systemd Units Input Plugin
+# Systemd-Units Input Plugin
 
-The systemd_units plugin gathers systemd unit status on Linux. It uses the
-`systemctl list-units` or the `systemctl show` command to collect data on
-service status.
+This plugin gathers the status of systemd-units on Linux, using systemd's DBus
+interface.
 
-This plugin is related to the [win_services module](../win_services/README.md),
-which fulfills the same purpose on windows.
-
-This plugin supports two modes of operation:
-
-## Using `systemctl list-units`
-
-This is the default mode. It uses the output of
-`systemctl list-units [PATTERN] --all --plain --type=service` to collect data on
-service status.
-
-This mode will not supply as much information as `systemctl show`, but will be
-compatible with almost every version of systemd.
-
-The results are tagged with the unit name and provide enumerated fields for
-loaded, active and running fields, indicating the unit's health.
-
-In addition to services, this plugin can gather other unit types as well,
-see `systemctl list-units --all --type help` for possible options.
-
-## Using `systemctl show`
-
-This mode can be enabled by setting the configuration option `subcommand` to
-`show`. The plugin will use
-`systemctl show [PATTERN] --all --type=service --property=...` to collect data
-on service status.
-
-This mode will yield more data on the service status. See the metrics chapter
-for a list of properties.
-
-The results are tagged with the unit name, unit status, preset status and
-provide enumerated fields for loaded, active and running fields, as well as the
-restart count and memory usage of the unit.
-
-In addition to services, this plugin can gather other unit types as well,
-see `systemctl show --all --type help` for possible options.
+Please note: At least systemd v230 is required!
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -53,29 +17,51 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Gather systemd units state
+# Gather information about systemd-unit states
+# This plugin ONLY supports Linux
 [[inputs.systemd_units]]
-  ## Set timeout for systemctl execution
-  # timeout = "1s"
+  ## Pattern of units to collect
+  ## A space-separated list of unit-patterns including wildcards determining
+  ## the units to collect.
+  ##  ex: pattern = "telegraf* influxdb* user@*"
+  # pattern = "*"
 
-  ## Select the systemctl subcommand to use to gather information.
-  ## Using `list-units` is the option with the broadest compatibility.
-  ## Using `show` will get more information but may fail to list all units on
-  ## some systems.
-  # subcommand = "list-units"
-
-  ## Filter for a specific unit type, default is "service", other possible
-  ## values are "socket", "target", "device", "mount", "automount", "swap",
-  ## "timer", "path", "slice" and "scope":
+  ## Filter for a specific unit type
+  ## Available settings are: service, socket, target, device, mount,
+  ## automount, swap, timer, path, slice" and scope
   # unittype = "service"
 
-  ## Filter for a specific pattern, default is "" (i.e. all), other possible
-  ## values are valid pattern for systemctl, e.g. "a*" for all units with
-  ## names starting with "a"
-  ## pattern = "telegraf* influxdb*"
-  ## pattern = "a*"
-  # pattern = ""
+  ## Level of detail of the selected information
+  ## Available settings are:
+  ##   list-units -- collect the unit's running and loading states only
+  ##   show       -- collect detailed information about the unit
+  # subcommand = "list-units"
+
+  ## Timeout for state-collection
+  # timeout = "1s"
 ```
+
+This plugin supports two modes of operation:
+
+### `list-units` mode
+
+This is the default mode. It collect data on the unit's status only and
+will supply less compared to `show`.
+
+The results are tagged with the unit name and provide enumerated fields for
+loaded, active and running fields, indicating the unit's health.
+
+### `show` mode
+
+This mode can be enabled by setting the configuration option `subcommand` to
+`show`. It plugin will collect data on the unit's status similar to the
+`list-units` mode but will provide additional information such as memory usage,
+restart-counts etc. See the [metrics section](#metrics) below for a list of
+all properties collected.
+
+The results are tagged with the unit name, unit status, preset status and
+provide enumerated fields for loaded, active and running fields, as well as the
+restart count and memory usage of the unit.
 
 ## Metrics
 
@@ -92,7 +78,7 @@ These metrics are available in both modes:
     - active_code (int, see below)
     - sub_code (int, see below)
 
-The following additional metrics are available whe using `subcommand = "show"`:
+The following additional metrics are available using the `show` mode:
 
 - systemd_units:
   - tags:
@@ -110,7 +96,7 @@ The following additional metrics are available whe using `subcommand = "show"`:
 
 ### Load
 
-enumeration of [unit_load_state_table][1]
+Enumeration of [unit_load_state_table][1]
 
 | Value | Meaning     | Description                     |
 | ----- | -------     | -----------                     |
@@ -126,7 +112,7 @@ enumeration of [unit_load_state_table][1]
 
 ### Active
 
-enumeration of [unit_active_state_table][2]
+Enumeration of [unit_active_state_table][2]
 
 | Value | Meaning   | Description                        |
 | ----- | -------   | -----------                        |
