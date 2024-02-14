@@ -251,6 +251,7 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 		tags := map[string]string{"pidfile": p.PidFile}
 		return []PidsTags{{pids, tags}}, nil
 	default:
+		filterFound := false
 		tags := map[string]string{}
 		err := p.finder.Init()
 		if err != nil {
@@ -259,6 +260,7 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 		switch {
 		case p.MultiCriterias:
 			if p.Exe != "" {
+				filterFound = true
 				err := p.finder.Pattern(p.Exe)
 				if err != nil {
 					return nil, err
@@ -266,6 +268,7 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 				tags = map[string]string{"exe": p.Exe}
 			}
 			if p.Pattern != "" {
+				filterFound = true
 				err := p.finder.FullPattern(p.Pattern)
 				if err != nil {
 					return nil, err
@@ -273,6 +276,7 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 				tags = map[string]string{"pattern": p.Pattern}
 			}
 			if p.User != "" {
+				filterFound = true
 				err := p.finder.UID(p.User)
 				if err != nil {
 					return nil, err
@@ -280,31 +284,37 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 				tags = map[string]string{"user": p.User}
 			}
 		case p.Exe != "":
+			filterFound = true
 			err := p.finder.Pattern(p.Exe)
 			if err != nil {
 				return nil, err
 			}
 			tags = map[string]string{"exe": p.Exe}
 		case p.Pattern != "":
+			filterFound = true
 			err := p.finder.FullPattern(p.Pattern)
 			if err != nil {
 				return nil, err
 			}
 			tags = map[string]string{"pattern": p.Pattern}
 		case p.User != "":
+			filterFound = true
 			err := p.finder.UID(p.User)
 			if err != nil {
 				return nil, err
 			}
 			tags = map[string]string{"user": p.User}
 		}
+		if !filterFound {
+			return nil, errors.New("no filter option set")
+		}
+
 		pids, err := p.finder.GetResult()
 		if err != nil {
 			return nil, err
 		}
 		return []PidsTags{{pids, tags}}, nil
 	}
-	return nil, errors.New("no filter option set")
 }
 
 func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
