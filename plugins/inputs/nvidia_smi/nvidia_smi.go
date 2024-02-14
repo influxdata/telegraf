@@ -32,7 +32,8 @@ type NvidiaSMI struct {
 	StartupErrorBehavior string          `toml:"startup_error_behavior"`
 	Log                  telegraf.Logger `toml:"-"`
 
-	once sync.Once
+	ignorePlugin bool
+	once         sync.Once
 }
 
 func (*NvidiaSMI) SampleConfig() string {
@@ -42,17 +43,16 @@ func (*NvidiaSMI) SampleConfig() string {
 func (smi *NvidiaSMI) Init() error {
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
 		binPath, err := exec.LookPath("nvidia-smi")
-
-		// fail-fast
 		if err != nil {
 			switch smi.StartupErrorBehavior {
 			case "ignore":
-				// Ignore the error and move on
-				smi.Log.Warnf("GPU SMI not found on the system, ignoring: %s", err)
+				smi.ignorePlugin = true
+				smi.Log.Warnf("nvidia-smi not found on the system, ignoring: %s", err)
 				return nil
 			case "", "error":
-			default:
 				return fmt.Errorf("nvidia-smi not found in %q and not in PATH; please make sure nvidia-smi is installed and/or is in PATH", smi.BinPath)
+			default:
+				return fmt.Errorf("unknown startup behavior setting: %s", smi.StartupErrorBehavior)
 			}
 		}
 		smi.BinPath = binPath
@@ -63,6 +63,10 @@ func (smi *NvidiaSMI) Init() error {
 
 // Gather implements the telegraf interface
 func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
+	if smi.ignorePlugin {
+		return nil
+	}
+
 	// Construct and execute metrics query
 	data, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, "-q", "-x"), time.Duration(smi.Timeout))
 	if err != nil {
@@ -123,9 +127,8 @@ func (smi *NvidiaSMI) parse(acc telegraf.Accumulator, data []byte) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
-			BinPath:              "/usr/bin/nvidia-smi",
-			StartupErrorBehavior: "error",
-			Timeout:              config.Duration(5 * time.Second),
+			BinPath: "/usr/bin/nvidia-smi",
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

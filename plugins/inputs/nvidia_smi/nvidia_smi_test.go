@@ -11,25 +11,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStartPluginIfGPUNotFound(t *testing.T) {
-	plugin := &NvidiaSMI{Log: &testutil.Logger{}}
-
-	plugin.StartupErrorBehavior = "error"
-	plugin.BinPath = "/usr/bin/nvidia-smi"
-	require.NoError(t, plugin.Init())
-
+func TestErrorBehaviorError(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath:              "/random/non-existent/path",
+		Log:                  &testutil.Logger{},
+		StartupErrorBehavior: "error",
+	}
+	require.Error(t, plugin.Init())
+}
 
-	plugin.StartupErrorBehavior = "ignore"
-	plugin.BinPath = "/random/non-existent/path"
+func TestErrorBehaviorDefault(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	require.Error(t, plugin.Init())
+}
+
+func TestErorBehaviorIgnore(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath:              "/random/non-existent/path",
+		Log:                  &testutil.Logger{},
+		StartupErrorBehavior: "ignore",
+	}
 	require.NoError(t, plugin.Init())
+	acc := testutil.Accumulator{}
+	require.NoError(t, plugin.Gather(&acc))
+}
 
-	plugin.StartupErrorBehavior = "error"
-	plugin.BinPath = "/random/non-existent/path"
-	errMsg := "nvidia-smi not found in /random/non-existent/path and not in PATH; " +
-		"please make sure nvidia-smi is installed and/or is in PATH"
-	require.NoError(t, plugin.Init(), errMsg)
+func TestErrorBehaviorInvalidOption(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath:              "/random/non-existent/path",
+		Log:                  &testutil.Logger{},
+		StartupErrorBehavior: "giveup",
+	}
+	require.Error(t, plugin.Init())
 }
 
 func TestGatherValidXML(t *testing.T) {
