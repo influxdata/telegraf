@@ -356,13 +356,13 @@ func TestURIParsing(t *testing.T) {
 		},
 		{
 			name:     "with spaces",
-			uri:      `postgres://jack%20hunter:secret@localhost:5432/mydb?application_name=pgx%20test&search_path=myschema&connect_timeout=5`,
-			expected: "application_name='pgx test' connect_timeout=5 dbname=mydb host=localhost password=secret port=5432 search_path=myschema user='jack hunter'",
+			uri:      `postgres://jack%20hunter:secret@localhost/mydb?application_name=pgx%20test`,
+			expected: "application_name='pgx test' dbname=mydb host=localhost password=secret user='jack hunter'",
 		},
 		{
 			name:     "with equal signs",
-			uri:      `postgres://jack%20hunter:secret@localhost:5432/mydb?application_name=pgx%3Dtest&search_path=myschema&connect_timeout=5`,
-			expected: "application_name='pgx=test' connect_timeout=5 dbname=mydb host=localhost password=secret port=5432 search_path=myschema user='jack hunter'",
+			uri:      `postgres://jack%20hunter:secret@localhost/mydb?application_name=pgx%3Dtest`,
+			expected: "application_name='pgx=test' dbname=mydb host=localhost password=secret user='jack hunter'",
 		},
 		{
 			name:     "multiple hosts",

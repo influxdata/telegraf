@@ -39,7 +39,7 @@ func toKeyValue(uri string) (string, error) {
 	}
 
 	// Extract the parameters
-	var parts []string
+	parts := make([]string, 0, len(u.Query())+5)
 	if u.User != nil {
 		parts = append(parts, "user="+quoteIfNecessary(u.User.Username()))
 		if password, found := u.User.Password(); found {
@@ -48,10 +48,11 @@ func toKeyValue(uri string) (string, error) {
 	}
 
 	// Handle multiple host:port's in url.Host by splitting them into host,host,host and port,port,port.
-	var hosts []string
-	var ports []string
+	hostParts := strings.Split(u.Host, ",")
+	hosts := make([]string, 0, len(hostParts))
+	ports := make([]string, 0, len(hostParts))
 	var anyPortSet bool
-	for _, host := range strings.Split(u.Host, ",") {
+	for _, host := range hostParts {
 		if host == "" {
 			continue
 		}
