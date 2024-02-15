@@ -44,12 +44,13 @@ type Syslog struct {
 	Address         string `toml:"server"`
 	KeepAlivePeriod *config.Duration
 	MaxConnections  int
-	ReadTimeout     *config.Duration
+	ReadTimeout     config.Duration
 	Framing         framing.Framing
 	SyslogStandard  syslogRFC
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
-	Separator       string `toml:"sdparam_separator"`
+	Separator       string          `toml:"sdparam_separator"`
+	Log             telegraf.Logger `toml:"-"`
 
 	now      func() time.Time
 	lastTime time.Time
@@ -90,6 +91,11 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	switch scheme {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		s.isStream = true
+		if s.ReadTimeout > 0 {
+			msg := "Read timeout set! In case the remote side doesn't send " +
+				"messages in that period the connection will be closed"
+			s.Log.Warn(msg)
+		}
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
 		s.isStream = false
 	default:
@@ -272,8 +278,8 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	emit := func(r *syslog.Result) {
 		s.store(*r, conn.RemoteAddr(), acc)
-		if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
-			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
+		if s.ReadTimeout > 0 {
+			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(s.ReadTimeout))); err != nil {
 				acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
 			}
 		}
@@ -299,8 +305,8 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	p.Parse(conn)
 
-	if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
-		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
+	if s.ReadTimeout > 0 {
+		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(s.ReadTimeout))); err != nil {
 			acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
 		}
 	}
@@ -434,12 +440,11 @@ func getNanoNow() time.Time {
 }
 
 func init() {
-	defaultTimeout := config.Duration(defaultReadTimeout)
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
 			Address:        ":6514",
 			now:            getNanoNow,
-			ReadTimeout:    &defaultTimeout,
+			ReadTimeout:    config.Duration(defaultReadTimeout),
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,

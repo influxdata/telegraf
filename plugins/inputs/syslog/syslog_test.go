@@ -51,6 +51,7 @@ func TestInitFail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Syslog{
 				Address: tt.address,
+				Log:     testutil.Logger{},
 			}
 			var acc testutil.Accumulator
 			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
@@ -61,6 +62,7 @@ func TestInitFail(t *testing.T) {
 func TestAddressDefaultPort(t *testing.T) {
 	plugin := &Syslog{
 		Address: "tcp://localhost",
+		Log:     testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -83,14 +85,14 @@ func TestUnixgram(t *testing.T) {
 	defer f.Close()
 
 	// Setup plugin and start it
-	timeout := config.Duration(defaultReadTimeout)
 	plugin := &Syslog{
 		Address:        "unixgram://" + sock,
 		Framing:        framing.OctetCounting,
-		ReadTimeout:    &timeout,
+		ReadTimeout:    config.Duration(defaultReadTimeout),
 		Separator:      "_",
 		SyslogStandard: "RFC5424",
 		Trailer:        nontransparent.LF,
+		Log:            testutil.Logger{},
 		now:            getNanoNow,
 	}
 
@@ -152,15 +154,15 @@ func TestCases(t *testing.T) {
 
 	// Register the plugin
 	inputs.Add("syslog", func() telegraf.Input {
-		defaultTimeout := config.Duration(defaultReadTimeout)
 		return &Syslog{
 			Address:        ":6514",
 			now:            getNanoNow,
-			ReadTimeout:    &defaultTimeout,
+			ReadTimeout:    config.Duration(defaultReadTimeout),
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,
 			Separator:      "_",
+			Log:            testutil.Logger{},
 		}
 	})
 
@@ -280,15 +282,15 @@ func TestCases(t *testing.T) {
 
 func TestIssue10121(t *testing.T) {
 	// Setup the plugin
-	timeout := config.Duration(10 * time.Millisecond)
 	plugin := &Syslog{
 		Address:        "tcp://127.0.0.1:0",
 		now:            getNanoNow,
-		ReadTimeout:    &timeout,
+		ReadTimeout:    config.Duration(10 * time.Millisecond),
 		Framing:        framing.OctetCounting,
 		SyslogStandard: syslogRFC5424,
 		Trailer:        nontransparent.LF,
 		Separator:      "_",
+		Log:            testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
