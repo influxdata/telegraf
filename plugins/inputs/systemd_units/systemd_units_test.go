@@ -29,6 +29,12 @@ type properties struct {
 	properties map[string]interface{}
 }
 
+func TestDefaultPattern(t *testing.T) {
+	plugin := &SystemdUnits{}
+	require.NoError(t, plugin.Init())
+	require.Equal(t, "*", plugin.Pattern)
+}
+
 func TestListFiles(t *testing.T) {
 	tests := []struct {
 		name        string

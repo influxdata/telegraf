@@ -133,6 +133,11 @@ type client interface {
 }
 
 func (s *SystemdUnits) Init() error {
+	// Set default pattern
+	if s.Pattern == "" {
+		s.Pattern = "*"
+	}
+
 	// Check unit-type and convert the first letter to uppercase as this is
 	// what dbus expects.
 	switch s.UnitType {
