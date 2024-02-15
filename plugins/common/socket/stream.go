@@ -261,8 +261,12 @@ func (l *streamListener) read(conn net.Conn) error {
 			break
 		}
 
+		src := conn.RemoteAddr()
+		if l.path != "" {
+			src = &net.UnixAddr{Name: l.path, Net: "unix"}
+		}
 		data := scanner.Bytes()
-		l.OnData(data)
+		l.OnData(src, data)
 	}
 
 	if err := scanner.Err(); err != nil {

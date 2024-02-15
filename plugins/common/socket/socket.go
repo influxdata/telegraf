@@ -31,7 +31,7 @@ type lengthFieldSpec struct {
 	converter    func([]byte) int
 }
 
-type CallbackData func([]byte)
+type CallbackData func(net.Addr, []byte)
 type CallbackError func(error)
 
 type Config struct {

@@ -30,7 +30,7 @@ type packetListener struct {
 func (l *packetListener) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
-		n, _, err := l.conn.ReadFrom(buf)
+		n, src, err := l.conn.ReadFrom(buf)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				if l.OnError != nil {
@@ -45,7 +45,10 @@ func (l *packetListener) listen() {
 			l.OnError(fmt.Errorf("unable to decode incoming packet: %w", err))
 		}
 
-		l.OnData(body)
+		if l.path != "" {
+			src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
+		}
+		l.OnData(src, body)
 	}
 }
 
