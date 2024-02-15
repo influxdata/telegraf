@@ -73,6 +73,26 @@ func TestAddressDefaultPort(t *testing.T) {
 	require.Equal(t, "localhost:6514", plugin.Address)
 }
 
+func TestReadTimeoutWarning(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+	plugin := &Syslog{
+		Address:     "tcp://localhost:6514",
+		ReadTimeout: config.Duration(time.Second),
+		Log:         logger,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	plugin.Stop()
+
+	require.Eventually(t, func() bool {
+		return logger.NMessages() > 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	warnings := logger.Warnings()
+	require.Contains(t, warnings, "W! [] "+readTimeoutMsg)
+}
+
 func TestUnixgram(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test as unixgram is not supported on Windows")

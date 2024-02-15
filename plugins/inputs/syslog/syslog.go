@@ -37,6 +37,7 @@ const defaultReadTimeout = time.Second * 5
 const ipMaxPacketSize = 64 * 1024
 const syslogRFC3164 = "RFC3164"
 const syslogRFC5424 = "RFC5424"
+const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 // Syslog is a syslog plugin
 type Syslog struct {
@@ -92,9 +93,7 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		s.isStream = true
 		if s.ReadTimeout > 0 {
-			msg := "Read timeout set! In case the remote side doesn't send " +
-				"messages in that period the connection will be closed"
-			s.Log.Warn(msg)
+			s.Log.Warn(readTimeoutMsg)
 		}
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
 		s.isStream = false

@@ -89,6 +89,12 @@ func (l *CaptureLogger) Info(args ...interface{}) {
 	l.loga(LevelInfo, args...)
 }
 
+func (l *CaptureLogger) NMessages() int {
+	l.Lock()
+	defer l.Unlock()
+	return len(l.messages)
+}
+
 func (l *CaptureLogger) Messages() []Entry {
 	l.Lock()
 	msgs := make([]Entry, len(l.messages))
