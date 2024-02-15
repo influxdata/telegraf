@@ -379,7 +379,7 @@ func TestURIParsing(t *testing.T) {
 	for _, tt := range tests {
 		// Key value without spaces around equal sign
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := parseURL(tt.uri)
+			actual, err := toKeyValue(tt.uri)
 			require.NoError(t, err)
 			require.Equalf(t, tt.expected, actual, "initial: %s", tt.uri)
 		})
