@@ -151,3 +151,9 @@ func TestFolderLookup(t *testing.T) {
 		})
 	}
 }
+
+func TestMissingMibPath(t *testing.T) {
+	log := testutil.Logger{}
+	path := []string{"non-existing-directory"}
+	require.NoError(t, LoadMibsFromPath(path, log, &GosmiMibLoader{}))
+}

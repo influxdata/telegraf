@@ -205,10 +205,10 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		moduleName := s[0]
 		module, err := gosmi.GetModule(moduleName)
 		if err != nil {
-			return oid, oid, oid, oid, gosmi.SmiNode{}, err
+			return oid, oid, oid, "", gosmi.SmiNode{}, err
 		}
 		if s[1] == "" {
-			return "", oid, oid, oid, gosmi.SmiNode{}, fmt.Errorf("cannot parse %v", oid)
+			return "", oid, oid, "", gosmi.SmiNode{}, fmt.Errorf("cannot parse %v", oid)
 		}
 		// node becomes sysUpTime.0
 		node := s[1]
@@ -221,11 +221,11 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 
 		out, err = module.GetNode(node)
 		if err != nil {
-			return oid, oid, oid, oid, out, err
+			return oid, oid, oid, "", out, err
 		}
 
 		if oidNum = out.RenderNumeric(); oidNum == "" {
-			return oid, oid, oid, oid, out, fmt.Errorf("cannot translate %v into a numeric OID, please ensure all imported MIBs are in the path", oid)
+			return oid, oid, oid, "", out, fmt.Errorf("cannot translate %v into a numeric OID, please ensure all imported MIBs are in the path", oid)
 		}
 
 		oidNum = "." + oidNum + end
@@ -236,7 +236,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
 				out, err = gosmi.GetNode(s[i])
 				if err != nil {
-					return oid, oid, oid, oid, out, err
+					return oid, oid, oid, "", out, err
 				}
 				s[i] = out.RenderNumeric()
 			}
@@ -249,7 +249,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		// ensure modules are loaded or node will be empty (might not error)
 		//nolint:nilerr // do not return the err as the oid is numeric and telegraf can continue
 		if err != nil || out.Name == "iso" {
-			return oid, oid, oid, oid, out, nil
+			return oid, oid, oid, "", out, nil
 		}
 	}
 
@@ -272,7 +272,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	oidText = out.RenderQualified()
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		return "", oid, oid, oid, out, errors.New("not found")
+		return "", oid, oid, "", out, errors.New("not found")
 	}
 	mibName = oidText[:i]
 	oidText = oidText[i+2:] + end

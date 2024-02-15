@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
-	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -25,7 +24,6 @@ type keyType = string
 type valType = nameMap
 
 type mapFunc func(agent string) (nameMap, error)
-type makeTableFunc func(string) (*si.Table, error)
 
 type sigMap map[string]chan struct{}
 
@@ -43,8 +41,8 @@ type IfName struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	ifTable  *si.Table
-	ifXTable *si.Table
+	ifTable  *snmp.Table
+	ifXTable *snmp.Table
 
 	cache    *TTLCache
 	lock     sync.Mutex
@@ -52,9 +50,6 @@ type IfName struct {
 	sigs     sigMap
 
 	getMapRemote mapFunc
-	makeTable    makeTableFunc
-
-	translator si.Translator
 }
 
 const minRetry = 5 * time.Minute
@@ -65,7 +60,6 @@ func (*IfName) SampleConfig() string {
 
 func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
-	d.makeTable = d.makeTableNoMock
 
 	c := NewTTLCache(time.Duration(d.CacheTTL), d.CacheSize)
 	d.cache = &c
@@ -75,10 +69,6 @@ func (d *IfName) Init() error {
 	if _, err := snmp.NewWrapper(d.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
-
-	// Since OIDs in this plugin are always numeric there is no need
-	// to translate.
-	d.translator = si.NewNetsnmpTranslator()
 
 	return nil
 }
@@ -287,17 +277,17 @@ func init() {
 	})
 }
 
-func (d *IfName) makeTableNoMock(oid string) (*si.Table, error) {
+func (d *IfName) makeTable(oid string) (*snmp.Table, error) {
 	var err error
-	tab := si.Table{
+	tab := snmp.Table{
 		Name:       "ifTable",
 		IndexAsTag: true,
-		Fields: []si.Field{
+		Fields: []snmp.Field{
 			{Oid: oid, Name: "ifName"},
 		},
 	}
 
-	err = tab.Init(d.translator)
+	err = tab.Init(nil)
 	if err != nil {
 		//Init already wraps
 		return nil, err
@@ -306,10 +296,10 @@ func (d *IfName) makeTableNoMock(oid string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
+func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *snmp.Table) (nameMap, error) {
 	var err error
 
-	rtab, err := tab.Build(gs, true, d.translator)
+	rtab, err := tab.Build(gs, true)
 	if err != nil {
 		//Build already wraps
 		return nil, err

@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/metric"
-	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -105,12 +104,7 @@ func TestGetMap(t *testing.T) {
 		CacheTTL:  config.Duration(10 * time.Second),
 	}
 
-	// Don't run net-snmp commands to look up table names.
-	d.makeTable = func(string) (*si.Table, error) {
-		return &si.Table{}, nil
-	}
-	err := d.Init()
-	require.NoError(t, err)
+	require.NoError(t, d.Init())
 
 	expected := nameMap{
 		1: "ifname1",
