@@ -148,30 +148,32 @@ func (p *Service) Stop() {
 	p.DB.Close()
 }
 
-var keyValueMatcher = regexp.MustCompile(`(\s|^)((?:password|sslcert|sslkey|sslmode|sslrootcert)\s?=\s?(?:(?:'(?:[^'\\]|\\.)*')|(?:\S+)))(?:\s|$)`)
+var sanitizer = regexp.MustCompile(`(\s|^)((?:password|sslcert|sslkey|sslmode|sslrootcert)\s?=\s?(?:(?:'(?:[^'\\]|\\.)*')|(?:\S+)))`)
 
 // SanitizedAddress utility function to strip sensitive information from the connection string.
-func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
+func (p *Service) SanitizedAddress() (string, error) {
 	if p.OutputAddress != "" {
 		return p.OutputAddress, nil
 	}
 
-	addr, err := p.Address.Get()
+	// Get the address
+	addrSecret, err := p.Address.Get()
 	if err != nil {
-		return sanitizedAddress, fmt.Errorf("getting address for sanitization failed: %w", err)
+		return "", fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
-	defer addr.Destroy()
+	addr := addrSecret.String()
+	addrSecret.Destroy()
 
-	var canonicalizedAddress string
-	if strings.HasPrefix(addr.TemporaryString(), "postgres://") || strings.HasPrefix(addr.TemporaryString(), "postgresql://") {
-		if canonicalizedAddress, err = parseURL(addr.String()); err != nil {
-			return sanitizedAddress, err
+	// Make sure we convert URI-formatted strings into key-values
+	if strings.HasPrefix(addr, "postgres://") || strings.HasPrefix(addr, "postgresql://") {
+		if addr, err = parseURL(addr); err != nil {
+			return "", err
 		}
-	} else {
-		canonicalizedAddress = addr.String()
 	}
 
-	return keyValueMatcher.ReplaceAllString(canonicalizedAddress, "$1"), nil
+	// Sanitize the string using a regular expression
+	sanitized := sanitizer.ReplaceAllString(addr, "")
+	return strings.TrimSpace(sanitized), nil
 }
 
 // GetConnectDatabase utility function for getting the database to which the connection was made
