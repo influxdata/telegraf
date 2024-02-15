@@ -1,13 +1,13 @@
 package unpivot
 
 import (
-	"github.com/influxdata/telegraf/metric"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
