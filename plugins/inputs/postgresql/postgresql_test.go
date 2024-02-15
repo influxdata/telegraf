@@ -375,6 +375,7 @@ func TestSanitizeAddressKeyValue(t *testing.T) {
 			}
 
 			expected := strings.Join(make([]string, len(keys)), "canary=ok ")
+			expected = strings.TrimSpace(expected)
 			actual, err := plugin.SanitizedAddress()
 			require.NoError(t, err)
 			require.Equalf(t, expected, actual, "initial: %s", dsn)
@@ -396,6 +397,7 @@ func TestSanitizeAddressKeyValue(t *testing.T) {
 			}
 
 			expected := strings.Join(make([]string, len(keys)), "canary=ok ")
+			expected = strings.TrimSpace(expected)
 			actual, err := plugin.SanitizedAddress()
 			require.NoError(t, err)
 			require.Equalf(t, expected, actual, "initial: %s", dsn)

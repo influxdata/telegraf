@@ -148,7 +148,7 @@ func (p *Service) Stop() {
 	p.DB.Close()
 }
 
-var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)
+var keyValueMatcher = regexp.MustCompile(`(\s|^)((?:password|sslcert|sslkey|sslmode|sslrootcert)\s?=\s?(?:(?:'(?:[^'\\]|\\.)*')|(?:\S+)))(?:\s|$)`)
 
 // SanitizedAddress utility function to strip sensitive information from the connection string.
 func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
@@ -171,7 +171,7 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 		canonicalizedAddress = addr.String()
 	}
 
-	return kvMatcher.ReplaceAllString(canonicalizedAddress, ""), nil
+	return keyValueMatcher.ReplaceAllString(canonicalizedAddress, "$1"), nil
 }
 
 // GetConnectDatabase utility function for getting the database to which the connection was made
