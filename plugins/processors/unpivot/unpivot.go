@@ -64,7 +64,12 @@ func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	results := make([]telegraf.Metric, 0, fieldCount)
 
 	for _, m := range metrics {
-		base := copyWithoutFields(m)
+		base := m
+		if wm, ok := m.(telegraf.UnwrappableMetric); ok {
+			base = wm.Unwrap()
+		}
+		base = copyWithoutFields(base)
+
 		for _, field := range m.FieldList() {
 			newMetric := base.Copy()
 			newMetric.AddField(p.ValueKey, field.Value)
