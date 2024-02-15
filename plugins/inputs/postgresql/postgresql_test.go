@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/docker/go-connections/nat"
@@ -315,4 +316,138 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 
 	require.False(t, foundTemplate0)
 	require.True(t, foundTemplate1)
+}
+
+func TestSanitizeAddressKeyValue(t *testing.T) {
+	keys := []string{"password", "sslcert", "sslkey", "sslmode", "sslrootcert"}
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{
+			name:  "simple text",
+			value: `foo`,
+		},
+		{
+			name:  "empty values",
+			value: `''`,
+		},
+		{
+			name:  "space in value",
+			value: `'foo bar'`,
+		},
+		{
+			name:  "escaped quote",
+			value: `'foo\'s bar'`,
+		},
+		{
+			name:  "escaped quote no space",
+			value: `\'foobar\'s\'`,
+		},
+		{
+			name:  "escaped backslash",
+			value: `'foo bar\\'`,
+		},
+		{
+			name:  "escaped quote and backslash",
+			value: `'foo\\\'s bar'`,
+		},
+		{
+			name:  "two escaped backslashes",
+			value: `'foo bar\\\\'`,
+		},
+	}
+
+	for _, tt := range tests {
+		// Key value without spaces around equal sign
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the DSN from the given keys and value
+			parts := make([]string, 0, len(keys))
+			for _, k := range keys {
+				parts = append(parts, k+"="+tt.value)
+			}
+			dsn := strings.Join(parts, " canary=ok ")
+
+			plugin := &Postgresql{
+				Service: Service{
+					Address: config.NewSecret([]byte(dsn)),
+				},
+			}
+
+			expected := strings.Join(make([]string, len(keys)), "canary=ok ")
+			actual, err := plugin.SanitizedAddress()
+			require.NoError(t, err)
+			require.Equalf(t, expected, actual, "initial: %s", dsn)
+		})
+
+		// Key value with spaces around equal sign
+		t.Run("spaced "+tt.name, func(t *testing.T) {
+			// Generate the DSN from the given keys and value
+			parts := make([]string, 0, len(keys))
+			for _, k := range keys {
+				parts = append(parts, k+" = "+tt.value)
+			}
+			dsn := strings.Join(parts, " canary=ok ")
+
+			plugin := &Postgresql{
+				Service: Service{
+					Address: config.NewSecret([]byte(dsn)),
+				},
+			}
+
+			expected := strings.Join(make([]string, len(keys)), "canary=ok ")
+			actual, err := plugin.SanitizedAddress()
+			require.NoError(t, err)
+			require.Equalf(t, expected, actual, "initial: %s", dsn)
+		})
+	}
+}
+
+func TestSanitizeAddressURI(t *testing.T) {
+	keys := []string{"password", "sslcert", "sslkey", "sslmode", "sslrootcert"}
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{
+			name:  "simple text",
+			value: `foo`,
+		},
+		{
+			name:  "empty values",
+			value: ``,
+		},
+		{
+			name:  "space in value",
+			value: `foo bar`,
+		},
+		{
+			name:  "equal sign in value",
+			value: `foo=bar`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate the DSN from the given keys and value
+			value := strings.ReplaceAll(tt.value, "=", "%3D")
+			value = strings.ReplaceAll(value, " ", "%20")
+			parts := make([]string, 0, len(keys))
+			for _, k := range keys {
+				parts = append(parts, k+"="+value)
+			}
+			dsn := "postgresql://user:passwd@localhost:5432/db?" + strings.Join(parts, "&")
+
+			plugin := &Postgresql{
+				Service: Service{
+					Address: config.NewSecret([]byte(dsn)),
+				},
+			}
+
+			expected := "dbname=db host=localhost port=5432 user=user"
+			actual, err := plugin.SanitizedAddress()
+			require.NoError(t, err)
+			require.Equalf(t, expected, actual, "initial: %s", dsn)
+		})
+	}
 }
