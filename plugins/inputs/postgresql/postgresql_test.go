@@ -337,6 +337,10 @@ func TestSanitizeAddressKeyValue(t *testing.T) {
 			value: `'foo bar'`,
 		},
 		{
+			name:  "equal sign in value",
+			value: `'foo=bar'`,
+		},
+		{
 			name:  "escaped quote",
 			value: `'foo\'s bar'`,
 		},
