@@ -108,7 +108,6 @@ func TestUnixgram(t *testing.T) {
 	plugin := &Syslog{
 		Address:        "unixgram://" + sock,
 		Framing:        framing.OctetCounting,
-		ReadTimeout:    config.Duration(defaultReadTimeout),
 		Separator:      "_",
 		SyslogStandard: "RFC5424",
 		Trailer:        nontransparent.LF,
@@ -177,7 +176,6 @@ func TestCases(t *testing.T) {
 		return &Syslog{
 			Address:        ":6514",
 			now:            getNanoNow,
-			ReadTimeout:    config.Duration(defaultReadTimeout),
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,

@@ -33,7 +33,6 @@ var sampleConfig string
 
 type syslogRFC string
 
-const defaultReadTimeout = time.Second * 5
 const ipMaxPacketSize = 64 * 1024
 const syslogRFC3164 = "RFC3164"
 const syslogRFC5424 = "RFC5424"
@@ -443,7 +442,6 @@ func init() {
 		return &Syslog{
 			Address:        ":6514",
 			now:            getNanoNow,
-			ReadTimeout:    config.Duration(defaultReadTimeout),
 			Framing:        framing.OctetCounting,
 			SyslogStandard: syslogRFC5424,
 			Trailer:        nontransparent.LF,

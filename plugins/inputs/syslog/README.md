@@ -61,9 +61,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Only applies to stream sockets (e.g. TCP).
   # max_connections = 1024
 
-  ## Read timeout is the maximum time allowed for reading a single message (default = 5s).
-  ## 0 means unlimited.
-  # read_timeout = "5s"
+  ## Read timeout for the connection (only applies to stream sockets e.g. TCP)
+  ## This specifies the maximum time between messages before the connection is
+  ## considered dead and will be closed. Be carefull when setting this value
+  ## as you might get connection loss messages on the sender side!
+  ## Zero means unlimited.
+  # read_timeout = "0s"
 
   ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
   ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
