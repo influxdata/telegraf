@@ -1,6 +1,8 @@
 package strings
 
 import (
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -1157,4 +1159,43 @@ func TestValidUTF8(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
 	}
+}
+
+func TestTrackedMetricNotLost(t *testing.T) {
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, 3)
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+	input := make([]telegraf.Metric, 0, 3)
+	expected := make([]telegraf.Metric, 0, 6)
+	for i := 0; i < 3; i++ {
+		strI := strconv.Itoa(i)
+
+		m := metric.New("m"+strI, map[string]string{}, map[string]interface{}{"message": "test" + string([]byte{0xff}) + strI}, time.Unix(0, 0))
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+
+		m = metric.New("m"+strI, map[string]string{}, map[string]interface{}{"message": "test" + strI}, time.Unix(0, 0))
+		expected = append(expected, m)
+	}
+
+	// Process expected metrics and compare with resulting metrics
+	plugin := &Strings{ValidUTF8: []converter{{Field: "message", Replacement: ""}}}
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }
