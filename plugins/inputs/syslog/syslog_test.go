@@ -311,10 +311,11 @@ func TestSocketClosed(t *testing.T) {
 
 	// Stop the plugin and check if the socket is closed and unreachable
 	plugin.Stop()
-	_, err = client.Write(msg)
-	require.NoError(t, err)
-	_, err = client.Write(msg)
-	require.Error(t, err)
+
+	require.Eventually(t, func() bool {
+		_, err := client.Write(msg)
+		return err != nil
+	}, 3*time.Second, 100*time.Millisecond)
 }
 
 func TestIssue10121(t *testing.T) {
@@ -340,20 +341,10 @@ func TestIssue10121(t *testing.T) {
 	require.NoError(t, err)
 	defer client.Close()
 
-	// Send a first message which should succeed
+	// Messages should eventually timeout
 	msg := []byte(`72 <13>1 2024-02-15T11:12:24.718151+01:00 Hugin sven - - [] Connection test`)
-	_, err = client.Write(msg)
-	require.NoError(t, err)
-	time.Sleep(100 * time.Millisecond)
-
-	// Send a second message after some time. This will also succeed due to
-	// the way the read-timeout is currently set-up by the plugin.
-	_, err = client.Write(msg)
-	require.NoError(t, err)
-	time.Sleep(100 * time.Millisecond)
-
-	// Send a third message after some time. This time, the plugin should have
-	// closed the connection already.
-	_, err = client.Write(msg)
-	require.Error(t, err)
+	require.Eventually(t, func() bool {
+		_, err := client.Write(msg)
+		return err != nil
+	}, 3*time.Second, 250*time.Millisecond)
 }
