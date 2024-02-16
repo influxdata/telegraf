@@ -466,117 +466,187 @@ func TestShow(t *testing.T) {
 }
 
 func TestMultiInstance(t *testing.T) {
-	// Setup plugin. Do NOT call Start() as this would connect to
-	// the real systemd daemon.
-	plugin := &SystemdUnits{
-		Pattern: "examp* user@*",
-		Timeout: config.Duration(time.Second),
-	}
-	require.NoError(t, plugin.Init())
-
-	// Create a fake client to inject data
-	plugin.client = &fakeClient{
-		units: map[string]properties{
-			"example.service": {
-				utype: "Service",
-				state: sdbus.UnitStatus{
-					Name:        "example.service",
-					LoadState:   "loaded",
-					ActiveState: "active",
-					SubState:    "running",
-				},
-			},
-			"user-runtime-dir@1000.service": {
-				uf:    "user-runtime-dir@.service",
-				utype: "Service",
-				state: sdbus.UnitStatus{
-					Name:        "user-runtime-dir@1000.service",
-					LoadState:   "loaded",
-					ActiveState: "active",
-					SubState:    "exited",
-				},
-			},
-			"user@1000.service": {
-				uf:    "user@.service",
-				utype: "Service",
-				state: sdbus.UnitStatus{
-					Name:        "user@1000.service",
-					LoadState:   "loaded",
-					ActiveState: "active",
-					SubState:    "running",
-				},
-			},
-			"user@1001.service": {
-				uf:    "user@.service",
-				utype: "Service",
-				state: sdbus.UnitStatus{
-					Name:        "user@1001.service",
-					LoadState:   "loaded",
-					ActiveState: "active",
-					SubState:    "exited",
-				},
+	tests := []struct {
+		name     string
+		pattern  string
+		expected []telegraf.Metric
+	}{
+		{
+			name:    "multiple without concrete instance",
+			pattern: "examp* user@*",
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "example.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "running",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 0,
+						"sub_code":    0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "user@1000.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "running",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 0,
+						"sub_code":    0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "user@1001.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "exited",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 0,
+						"sub_code":    4,
+					},
+					time.Unix(0, 0),
+				),
 			},
 		},
-		connected: true,
+		{
+			name:    "multiple without instance prefix",
+			pattern: "user@1*",
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "user@1000.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "running",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 0,
+						"sub_code":    0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "user@1001.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "exited",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 0,
+						"sub_code":    4,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:    "multiple with concrete instance",
+			pattern: "user@1001.service",
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "user@1001.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "exited",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 0,
+						"sub_code":    4,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
-	defer plugin.Stop()
 
-	// Run gather
-	var acc testutil.Accumulator
-	require.NoError(t, acc.GatherError(plugin.Gather))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin. Do NOT call Start() as this would connect to
+			// the real systemd daemon.
+			plugin := &SystemdUnits{
+				Pattern: tt.pattern,
+				Timeout: config.Duration(time.Second),
+			}
+			require.NoError(t, plugin.Init())
 
-	// Define expectation
-	expected := []telegraf.Metric{
-		metric.New(
-			"systemd_units",
-			map[string]string{
-				"name":   "example.service",
-				"load":   "loaded",
-				"active": "active",
-				"sub":    "running",
-			},
-			map[string]interface{}{
-				"load_code":   0,
-				"active_code": 0,
-				"sub_code":    0,
-			},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"systemd_units",
-			map[string]string{
-				"name":   "user@1000.service",
-				"load":   "loaded",
-				"active": "active",
-				"sub":    "running",
-			},
-			map[string]interface{}{
-				"load_code":   0,
-				"active_code": 0,
-				"sub_code":    0,
-			},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"systemd_units",
-			map[string]string{
-				"name":   "user@1001.service",
-				"load":   "loaded",
-				"active": "active",
-				"sub":    "exited",
-			},
-			map[string]interface{}{
-				"load_code":   0,
-				"active_code": 0,
-				"sub_code":    4,
-			},
-			time.Unix(0, 0),
-		),
+			// Create a fake client to inject data
+			plugin.client = &fakeClient{
+				units: map[string]properties{
+					"example.service": {
+						utype: "Service",
+						state: sdbus.UnitStatus{
+							Name:        "example.service",
+							LoadState:   "loaded",
+							ActiveState: "active",
+							SubState:    "running",
+						},
+					},
+					"user-runtime-dir@1000.service": {
+						uf:    "user-runtime-dir@.service",
+						utype: "Service",
+						state: sdbus.UnitStatus{
+							Name:        "user-runtime-dir@1000.service",
+							LoadState:   "loaded",
+							ActiveState: "active",
+							SubState:    "exited",
+						},
+					},
+					"user@1000.service": {
+						uf:    "user@.service",
+						utype: "Service",
+						state: sdbus.UnitStatus{
+							Name:        "user@1000.service",
+							LoadState:   "loaded",
+							ActiveState: "active",
+							SubState:    "running",
+						},
+					},
+					"user@1001.service": {
+						uf:    "user@.service",
+						utype: "Service",
+						state: sdbus.UnitStatus{
+							Name:        "user@1001.service",
+							LoadState:   "loaded",
+							ActiveState: "active",
+							SubState:    "exited",
+						},
+					},
+				},
+				connected: true,
+			}
+			defer plugin.Stop()
+
+			// Run gather
+			var acc testutil.Accumulator
+			require.NoError(t, acc.GatherError(plugin.Gather))
+
+			// Do the comparison
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+		})
 	}
-
-	// Do the comparison
-	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 // Fake client implementation

@@ -20,8 +20,7 @@ type SystemdUnits struct {
 	SubCommand string          `toml:"subcommand"`
 	Timeout    config.Duration `toml:"timeout"`
 	Log        telegraf.Logger `toml:"-"`
-
-	client client
+	archParams
 }
 
 func (*SystemdUnits) SampleConfig() string {

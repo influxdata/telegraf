@@ -12,6 +12,7 @@ import (
 	"github.com/coreos/go-systemd/v22/dbus"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 // Below are mappings of systemd state tables as defined in
@@ -132,6 +133,12 @@ type client interface {
 	ListUnitsContext(ctx context.Context) ([]dbus.UnitStatus, error)
 }
 
+type archParams struct {
+	client  client
+	pattern []string
+	filter  filter.Filter
+}
+
 func (s *SystemdUnits) Init() error {
 	// Set default pattern
 	if s.Pattern == "" {
@@ -159,6 +166,13 @@ func (s *SystemdUnits) Init() error {
 		return fmt.Errorf("invalid 'subcommand' %q", s.SubCommand)
 	}
 
+	s.pattern = strings.Split(s.Pattern, " ")
+	f, err := filter.Compile(s.pattern)
+	if err != nil {
+		return fmt.Errorf("compiling filter failed: %w", err)
+	}
+	s.filter = f
+
 	return nil
 }
 
@@ -183,48 +197,67 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 	defer cancel()
 
-	// List all unit files matching the patter. This is necessary to also get
-	// disabled units.
+	// List all loaded units to handle multi-instance units correctly
+	loaded, err := s.client.ListUnitsContext(ctx)
+	if err != nil {
+		return fmt.Errorf("listing loaded units failed: %w", err)
+	}
+
+	// List all unit files matching the pattern to also get disabled units
 	list := []string{"enabled", "disabled", "static"}
-	pattern := strings.Split(s.Pattern, " ")
-	unitFiles, err := s.client.ListUnitFilesByPatternsContext(ctx, list, pattern)
+	files, err := s.client.ListUnitFilesByPatternsContext(ctx, list, s.pattern)
 	if err != nil {
 		return fmt.Errorf("listing unit files failed: %w", err)
 	}
 
-	// Get the unit states
-	names := make([]string, 0, len(unitFiles))
-	nameMultiInstance := make([]string, 0)
-	for _, u := range unitFiles {
-		name := path.Base(u.Path)
+	// Collect all matching units, the loaded ones and the disabled ones
+	states := make([]dbus.UnitStatus, 0, len(files))
 
-		// Filter template services without instance
-		if strings.Contains(name, "@.") {
-			nameMultiInstance = append(nameMultiInstance, name)
-			continue
-		}
-		names = append(names, name)
-	}
-	states, err := s.client.ListUnitsByNamesContext(ctx, names)
-	if err != nil {
-		return fmt.Errorf("listing unit states failed: %w", err)
-	}
+	// Match all loaded units first
+	multiUnits := make(map[string]bool)
+	for _, u := range loaded {
+		if s.filter.Match(u.Name) {
+			states = append(states, u)
 
-	if len(nameMultiInstance) > 0 {
-		// List all loaded units to handle multi-instance units correctly
-		loadedUnits, err := s.client.ListUnitsContext(ctx)
-		if err != nil {
-			return fmt.Errorf("listing loaded units failed: %w", err)
-		}
-		for _, name := range nameMultiInstance {
-			prefix, suffix, _ := strings.Cut(name, "@")
-			for _, u := range loadedUnits {
-				if strings.HasPrefix(u.Name, prefix+"@") && strings.HasSuffix(u.Name, suffix) {
-					states = append(states, u)
-				}
+			// Remember multi-instance units to remove duplicates from files
+			if strings.Contains(u.Name, "@") {
+				prefix, _, _ := strings.Cut(u.Name, "@")
+				suffix := path.Ext(u.Name)
+				multiUnits[prefix+"@"+suffix] = true
 			}
 		}
 	}
+
+	// Now split the unit-files into disabled ones and static ones, ignore
+	// enabled units as those are already contained in the "loaded" list.
+	disabled := make([]string, 0, len(files))
+	static := make([]string, 0, len(files))
+	for _, f := range files {
+		name := path.Base(f.Path)
+
+		switch f.Type {
+		case "disabled":
+			disabled = append(disabled, name)
+		case "static":
+			// Make sure we filter already loaded static multi-instance units
+			if !strings.Contains(name, "@") {
+				static = append(static, name)
+			}
+			prefix, _, _ := strings.Cut(name, "@")
+			suffix := path.Ext(name)
+			if !multiUnits[prefix+"@"+suffix] {
+				static = append(static, name)
+			}
+			multiUnits[prefix+"@"+suffix] = true
+		}
+	}
+
+	// Resolve the disabled and remaining static units
+	disabledStates, err := s.client.ListUnitsByNamesContext(ctx, disabled)
+	if err != nil {
+		return fmt.Errorf("listing unit states failed: %w", err)
+	}
+	states = append(states, disabledStates...)
 
 	// Merge the unit information into one struct
 	units := make([]unitInfo, 0, len(states))
@@ -250,6 +283,23 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		units = append(units, u)
+	}
+
+	// Add special information about unused static units
+	for _, name := range static {
+		if !strings.EqualFold(strings.TrimPrefix(path.Ext(name), "."), s.UnitType) {
+			continue
+		}
+
+		units = append(units, unitInfo{
+			name: name,
+			state: dbus.UnitStatus{
+				Name:        name,
+				LoadState:   "stub",
+				ActiveState: "inactive",
+				SubState:    "dead",
+			},
+		})
 	}
 
 	// Create the metrics
