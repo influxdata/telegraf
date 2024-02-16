@@ -94,7 +94,7 @@ func (w *WebSocket) Connect() error {
 	for k, v := range w.Headers {
 		secret, err := v.Get()
 		if err != nil {
-			return err
+			return fmt.Errorf("getting header secret %q failed: %w", k, err)
 		}
 
 		headerVal := secret.String()
