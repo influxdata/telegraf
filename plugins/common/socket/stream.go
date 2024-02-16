@@ -363,8 +363,6 @@ func (l *streamListener) handleConnection(conn net.Conn, onConnection CallbackCo
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				if !errors.Is(err, os.ErrDeadlineExceeded) && errors.Is(err, net.ErrClosed) {
 					writer.CloseWithError(err)
-				} else {
-					l.Log.Debug(err)
 				}
 			}
 			return nil

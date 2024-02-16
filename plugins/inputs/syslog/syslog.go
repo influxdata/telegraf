@@ -2,16 +2,13 @@
 package syslog
 
 import (
-	"crypto/tls"
 	_ "embed"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
-	"time"
 	"unicode"
 
 	"github.com/influxdata/go-syslog/v3"
@@ -21,8 +18,7 @@ import (
 	"github.com/influxdata/go-syslog/v3/rfc5424"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,35 +27,24 @@ var sampleConfig string
 
 type syslogRFC string
 
-const ipMaxPacketSize = 64 * 1024
 const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 // Syslog is a syslog plugin
 type Syslog struct {
-	tlsConfig.ServerConfig
-	Address         string                     `toml:"server"`
-	KeepAlivePeriod *config.Duration           `toml:"keep_alive_period"`
-	MaxConnections  int                        `toml:"max_connections"`
-	ReadTimeout     config.Duration            `toml:"read_timeout"`
-	Framing         string                     `toml:"framing"`
-	SyslogStandard  syslogRFC                  `toml:"syslog_standard"`
-	Trailer         nontransparent.TrailerType `toml:"trailer"`
-	BestEffort      bool                       `toml:"best_effort"`
-	Separator       string                     `toml:"sdparam_separator"`
-	Log             telegraf.Logger            `toml:"-"`
+	Address        string                     `toml:"server"`
+	Framing        string                     `toml:"framing"`
+	SyslogStandard syslogRFC                  `toml:"syslog_standard"`
+	Trailer        nontransparent.TrailerType `toml:"trailer"`
+	BestEffort     bool                       `toml:"best_effort"`
+	Separator      string                     `toml:"sdparam_separator"`
+	Log            telegraf.Logger            `toml:"-"`
+	socket.Config
 
 	mu sync.Mutex
 	wg sync.WaitGroup
-	io.Closer
 
-	tcpListener   net.Listener
-	tlsConfig     *tls.Config
-	connections   map[string]net.Conn
-	connectionsMu sync.Mutex
-
-	udpListener net.PacketConn
-
-	url *url.URL
+	url    *url.URL
+	socket *socket.Socket
 }
 
 func (*Syslog) SampleConfig() string {
@@ -109,11 +94,21 @@ func (s *Syslog) Init() error {
 	s.url = u
 
 	switch s.url.Scheme {
-	case "tcp", "tcp4", "tcp6", "unix", "unixpacket",
-		"udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
+		if s.ReadTimeout > 0 {
+			s.Log.Warn(readTimeoutMsg)
+		}
+	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
 	default:
 		return fmt.Errorf("unknown protocol %q in %q", u.Scheme, s.Address)
 	}
+
+	// Create a socket
+	sock, err := s.Config.NewSocket(u.String(), s.Log)
+	if err != nil {
+		return err
+	}
+	s.socket = sock
 
 	return nil
 }
@@ -128,78 +123,26 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Cleanup socket
-	switch s.url.Scheme {
-	case "unix", "unixpacket", "unixgram":
-		_ = os.Remove(s.url.Path)
+	// Setup the listener
+	if err := s.socket.Setup(); err != nil {
+		return err
 	}
+	addr := s.socket.Address()
+	s.Log.Infof("Listening on %s://%s", addr.Network(), addr.String())
 
-	// Create the listener
+	// Setup the callbacks and start listening
+	onError := func(err error) {
+		acc.AddError(err)
+	}
 	switch s.url.Scheme {
-	case "tcp", "tcp4", "tcp6":
-		if s.ReadTimeout > 0 {
-			s.Log.Warn(readTimeoutMsg)
-		}
-
-		l, err := net.Listen(s.url.Scheme, s.url.Host)
-		if err != nil {
-			return err
-		}
-		s.Closer = l
-		s.tcpListener = l
-		s.tlsConfig, err = s.TLSConfig()
-		if err != nil {
-			return err
-		}
-
-		s.wg.Add(1)
-		go s.listenStream(acc)
-	case "udp", "udp4", "udp6", "ip", "ip4", "ip6":
-		l, err := net.ListenPacket(s.url.Scheme, s.url.Host)
-		if err != nil {
-			return err
-		}
-		s.Closer = l
-		s.udpListener = l
-
-		s.wg.Add(1)
-		go s.listenPacket(acc)
-	case "unix", "unixpacket":
-		if s.ReadTimeout > 0 {
-			s.Log.Warn(readTimeoutMsg)
-		}
-
-		l, err := net.Listen(s.url.Scheme, s.url.Host)
-		if err != nil {
-			return err
-		}
-		s.Closer = l
-		s.tcpListener = l
-		s.tlsConfig, err = s.TLSConfig()
-		if err != nil {
-			return err
-		}
-
-		s.wg.Add(1)
-		go s.listenStream(acc)
-	case "unixgram":
-		l, err := net.ListenPacket(s.url.Scheme, s.url.Path)
-		if err != nil {
-			return err
-		}
-		s.Closer = l
-		s.udpListener = l
-
-		s.wg.Add(1)
-		go s.listenPacket(acc)
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
+		onConnection := s.createStreamDataHandler(acc)
+		s.socket.ListenConnection(onConnection, onError)
+	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+		onData := s.createDatagramDataHandler(acc)
+		s.socket.Listen(onData, onError)
 	default:
 		return fmt.Errorf("unknown protocol %q in %q", s.url.Scheme, s.Address)
-	}
-
-	// Create a cleanup-closer
-	switch s.url.Scheme {
-	case "unix", "unixpacket", "unixgram":
-		s.Closer = unixCloser{path: s.url.Path, closer: s.Closer}
 	}
 
 	return nil
@@ -210,166 +153,68 @@ func (s *Syslog) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.Closer != nil {
-		s.Close()
-	}
+	s.socket.Close()
 	s.wg.Wait()
 }
 
-func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
-	defer s.wg.Done()
-	b := make([]byte, ipMaxPacketSize)
-	var p syslog.Machine
-	switch s.SyslogStandard {
-	case "RFC3164":
-		opts := []syslog.MachineOption{
-			rfc3164.WithYear(rfc3164.CurrentYear{}),
-		}
-		if s.BestEffort {
-			opts = append(opts, rfc3164.WithBestEffort())
-		}
-		p = rfc3164.NewParser(opts...)
-	case "RFC5424":
-		var opts []syslog.MachineOption
-		if s.BestEffort {
-			opts = append(opts, rfc5424.WithBestEffort())
-		}
-		p = rfc5424.NewParser(opts...)
-	}
-	for {
-		n, sourceAddr, err := s.udpListener.ReadFrom(b)
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				acc.AddError(err)
-			}
-			break
-		}
-
-		message, err := p.Parse(b[:n])
-		if message != nil {
-			acc.AddFields("syslog", fields(message, s), tags(message, sourceAddr))
-		}
-		if err != nil {
-			acc.AddError(err)
-		}
-		if err == nil && message == nil {
-			acc.AddError(fmt.Errorf("unable to parse message: %s", string(b[:n])))
-		}
-	}
-}
-
-func (s *Syslog) listenStream(acc telegraf.Accumulator) {
-	defer s.wg.Done()
-
-	s.connections = map[string]net.Conn{}
-
-	for {
-		conn, err := s.tcpListener.Accept()
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				acc.AddError(err)
-			}
-			break
-		}
-		var tcpConn, _ = conn.(*net.TCPConn)
-		if s.tlsConfig != nil {
-			conn = tls.Server(conn, s.tlsConfig)
-		}
-
-		s.connectionsMu.Lock()
-		if s.MaxConnections > 0 && len(s.connections) >= s.MaxConnections {
-			s.connectionsMu.Unlock()
-			if err := conn.Close(); err != nil {
-				acc.AddError(err)
-			}
-			continue
-		}
-		s.connections[conn.RemoteAddr().String()] = conn
-		s.connectionsMu.Unlock()
-
-		if err := s.setKeepAlive(tcpConn); err != nil {
-			acc.AddError(fmt.Errorf("unable to configure keep alive %q: %w", s.Address, err))
-		}
-
-		go s.handle(conn, acc)
-	}
-
-	s.connectionsMu.Lock()
-	for _, c := range s.connections {
-		if err := c.Close(); err != nil {
-			acc.AddError(err)
-		}
-	}
-	s.connectionsMu.Unlock()
-}
-
-func (s *Syslog) removeConnection(c net.Conn) {
-	s.connectionsMu.Lock()
-	delete(s.connections, c.RemoteAddr().String())
-	s.connectionsMu.Unlock()
-}
-
-func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
-	defer func() {
-		s.removeConnection(conn)
-		conn.Close()
-	}()
-
-	emit := func(r *syslog.Result) {
-		s.store(*r, conn.RemoteAddr(), acc)
-		if s.ReadTimeout > 0 {
-			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(s.ReadTimeout))); err != nil {
-				acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
-			}
-		}
-	}
-
+func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.CallbackConnection {
 	// Create parser options
-	opts := []syslog.ParserOption{
-		syslog.WithListener(emit),
-	}
+	var opts []syslog.ParserOption
 	if s.BestEffort {
 		opts = append(opts, syslog.WithBestEffort())
 	}
-
-	// Select the parser to use depending on transport framing
-	var p syslog.Parser
-	switch s.Framing {
-	case "octet-counting":
-		p = octetcounting.NewParser(opts...)
-	case "non-transparent":
+	if s.Framing == "non-transparent" {
 		opts = append(opts, nontransparent.WithTrailer(s.Trailer))
-		p = nontransparent.NewParser(opts...)
 	}
-	p.Parse(conn)
 
-	if s.ReadTimeout > 0 {
-		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(s.ReadTimeout))); err != nil {
-			acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
+	return func(src net.Addr, reader io.ReadCloser) {
+		// Create the parser depending on transport framing and other settings
+		var parser syslog.Parser
+		switch s.Framing {
+		case "octet-counting":
+			parser = octetcounting.NewParser(opts...)
+		case "non-transparent":
+			parser = nontransparent.NewParser(opts...)
 		}
+
+		parser.WithListener(func(r *syslog.Result) {
+			if r.Error != nil {
+				acc.AddError(r.Error)
+			}
+			if r.Message != nil {
+				acc.AddFields("syslog", fields(r.Message, s), tags(r.Message, src))
+			}
+		})
+		parser.Parse(reader)
 	}
 }
 
-func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
-	if s.KeepAlivePeriod == nil {
-		return nil
+func (s *Syslog) createDatagramDataHandler(acc telegraf.Accumulator) socket.CallbackData {
+	// Create the parser depending on syslog standard and other settings
+	var parser syslog.Machine
+	switch s.SyslogStandard {
+	case "RFC3164":
+		parser = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}))
+	case "RFC5424":
+		parser = rfc5424.NewParser()
+	}
+	if s.BestEffort {
+		parser.WithBestEffort()
 	}
 
-	if *s.KeepAlivePeriod == 0 {
-		return c.SetKeepAlive(false)
-	}
-	if err := c.SetKeepAlive(true); err != nil {
-		return err
-	}
-	return c.SetKeepAlivePeriod(time.Duration(*s.KeepAlivePeriod))
-}
+	// Return the OnData function
+	return func(src net.Addr, data []byte) {
+		message, err := parser.Parse(data)
+		if err != nil {
+			acc.AddError(err)
+		} else if message == nil {
+			acc.AddError(fmt.Errorf("unable to parse message: %s", string(data)))
+		}
+		if message == nil {
+			return
+		}
 
-func (s *Syslog) store(res syslog.Result, remoteAddr net.Addr, acc telegraf.Accumulator) {
-	if res.Error != nil {
-		acc.AddError(res.Error)
-	}
-	if res.Message != nil {
-		acc.AddFields("syslog", fields(res.Message, s), tags(res.Message, remoteAddr))
+		acc.AddFields("syslog", fields(message, s), tags(message, src))
 	}
 }
 
@@ -451,17 +296,6 @@ func populateCommonTags(msg *syslog.Base, ts map[string]string) {
 	if msg.Appname != nil {
 		ts["appname"] = *msg.Appname
 	}
-}
-
-type unixCloser struct {
-	path   string
-	closer io.Closer
-}
-
-func (uc unixCloser) Close() error {
-	err := uc.closer.Close()
-	os.Remove(uc.path)
-	return err
 }
 
 func init() {

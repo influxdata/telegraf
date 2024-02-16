@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
@@ -61,9 +62,11 @@ func TestAddressDefaultPort(t *testing.T) {
 func TestReadTimeoutWarning(t *testing.T) {
 	logger := &testutil.CaptureLogger{}
 	plugin := &Syslog{
-		Address:     "tcp://localhost:6514",
-		ReadTimeout: config.Duration(time.Second),
-		Log:         logger,
+		Address: "tcp://localhost:6514",
+		Config: socket.Config{
+			ReadTimeout: config.Duration(time.Second),
+		},
+		Log: logger,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -232,13 +235,7 @@ func TestCases(t *testing.T) {
 			defer plugin.Stop()
 
 			// Get the address
-			var addr string
-			switch plugin.url.Scheme {
-			case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-				addr = plugin.tcpListener.Addr().String()
-			case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-				addr = plugin.udpListener.LocalAddr().String()
-			}
+			addr := plugin.socket.Address().String()
 
 			// Create a fake sender
 			var client net.Conn
@@ -286,15 +283,12 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func TestIssue10121(t *testing.T) {
+func TestSocketClosed(t *testing.T) {
 	// Setup the plugin
 	plugin := &Syslog{
-		Address:        "tcp://127.0.0.1:0",
-		ReadTimeout:    config.Duration(10 * time.Millisecond),
-		SyslogStandard: "RFC5424",
-		Trailer:        nontransparent.LF,
-		Separator:      "_",
-		Log:            testutil.Logger{},
+		Address: "tcp://127.0.0.1:0",
+		Config:  socket.Config{},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -303,7 +297,43 @@ func TestIssue10121(t *testing.T) {
 	defer plugin.Stop()
 
 	// Get the address
-	addr := plugin.tcpListener.Addr().String()
+	addr := plugin.socket.Address().String()
+
+	// Create a fake sender
+	client, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	defer client.Close()
+
+	// Send a message to check if the socket is really active
+	msg := []byte(`72 <13>1 2024-02-15T11:12:24.718151+01:00 Hugin sven - - [] Connection test`)
+	_, err = client.Write(msg)
+	require.NoError(t, err)
+
+	// Stop the plugin and check if the socket is closed and unreachable
+	plugin.Stop()
+	_, err = client.Write(msg)
+	require.NoError(t, err)
+	_, err = client.Write(msg)
+	require.Error(t, err)
+}
+
+func TestIssue10121(t *testing.T) {
+	// Setup the plugin
+	plugin := &Syslog{
+		Address: "tcp://127.0.0.1:0",
+		Config: socket.Config{
+			ReadTimeout: config.Duration(10 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Get the address
+	addr := plugin.socket.Address().String()
 
 	// Create a fake sender
 	client, err := net.Dial("tcp", addr)
