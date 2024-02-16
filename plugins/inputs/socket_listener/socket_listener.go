@@ -62,9 +62,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Start the listener
-	if err := sl.socket.Listen(onData, onError); err != nil {
+	if err := sl.socket.Setup(); err != nil {
 		return err
 	}
+	sl.socket.Listen(onData, onError)
 	addr := sl.socket.Address()
 	sl.Log.Infof("Listening on %s://%s", addr.Network(), addr.String())
 

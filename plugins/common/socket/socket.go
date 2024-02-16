@@ -6,20 +6,25 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 )
 
+type CallbackData func(net.Addr, []byte)
+type CallbackConnection func(net.Addr, io.ReadCloser)
+type CallbackError func(error)
+
 type listener interface {
 	address() net.Addr
-	listen()
+	listenData(CallbackData, CallbackError)
+	listenConnection(CallbackConnection, CallbackError)
 	close() error
 }
 
@@ -30,9 +35,6 @@ type lengthFieldSpec struct {
 	HeaderLength int64  `toml:"header_length"`
 	converter    func([]byte) int
 }
-
-type CallbackData func(net.Addr, []byte)
-type CallbackError func(error)
 
 type Config struct {
 	MaxConnections       int              `toml:"max_connections"`
@@ -58,8 +60,6 @@ type Socket struct {
 	log           telegraf.Logger
 
 	splitter bufio.SplitFunc
-	wg       sync.WaitGroup
-
 	listener listener
 }
 
@@ -164,7 +164,7 @@ func (cfg *Config) NewSocket(address string, logger telegraf.Logger) (*Socket, e
 	return s, nil
 }
 
-func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
+func (s *Socket) Setup() error {
 	switch s.url.Scheme {
 	case "tcp", "tcp4", "tcp6":
 		l := &streamListener{
@@ -174,8 +174,6 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 			MaxConnections:  s.MaxConnections,
 			Encoding:        s.ContentEncoding,
 			Splitter:        s.splitter,
-			OnData:          onData,
-			OnError:         onError,
 			Log:             s.log,
 		}
 
@@ -191,8 +189,6 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 			MaxConnections:  s.MaxConnections,
 			Encoding:        s.ContentEncoding,
 			Splitter:        s.splitter,
-			OnData:          onData,
-			OnError:         onError,
 			Log:             s.log,
 		}
 
@@ -204,8 +200,6 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 		l := &packetListener{
 			Encoding:             s.ContentEncoding,
 			MaxDecompressionSize: int64(s.MaxDecompressionSize),
-			OnData:               onData,
-			OnError:              onError,
 		}
 		if err := l.setupUDP(s.url, s.interfaceName, int(s.ReadBufferSize)); err != nil {
 			return err
@@ -215,8 +209,6 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 		l := &packetListener{
 			Encoding:             s.ContentEncoding,
 			MaxDecompressionSize: int64(s.MaxDecompressionSize),
-			OnData:               onData,
-			OnError:              onError,
 		}
 		if err := l.setupIP(s.url); err != nil {
 			return err
@@ -226,8 +218,6 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 		l := &packetListener{
 			Encoding:             s.ContentEncoding,
 			MaxDecompressionSize: int64(s.MaxDecompressionSize),
-			OnData:               onData,
-			OnError:              onError,
 		}
 		if err := l.setupUnixgram(s.url, s.SocketMode); err != nil {
 			return err
@@ -241,8 +231,6 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 			MaxConnections:  s.MaxConnections,
 			Encoding:        s.ContentEncoding,
 			Splitter:        s.splitter,
-			OnData:          onData,
-			OnError:         onError,
 			Log:             s.log,
 		}
 
@@ -254,13 +242,15 @@ func (s *Socket) Listen(onData CallbackData, onError CallbackError) error {
 		return fmt.Errorf("unknown protocol %q", s.url.Scheme)
 	}
 
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		s.listener.listen()
-	}()
-
 	return nil
+}
+
+func (s *Socket) Listen(onData CallbackData, onError CallbackError) {
+	s.listener.listenData(onData, onError)
+}
+
+func (s *Socket) ListenConnection(onConnection CallbackConnection, onError CallbackError) {
+	s.listener.listenConnection(onConnection, onError)
 }
 
 func (s *Socket) Close() {
@@ -271,7 +261,6 @@ func (s *Socket) Close() {
 		}
 		s.listener = nil
 	}
-	s.wg.Wait()
 }
 
 func (s *Socket) Address() net.Addr {
