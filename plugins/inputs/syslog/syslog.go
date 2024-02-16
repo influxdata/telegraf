@@ -175,13 +175,25 @@ func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.Callba
 			parser = nontransparent.NewParser(opts...)
 		}
 
+		// Remove port from address
+		var addr string
+		if src.Network() != "unix" {
+			var err error
+			if addr, _, err = net.SplitHostPort(src.String()); err != nil {
+				addr = src.String()
+			}
+		}
+
 		parser.WithListener(func(r *syslog.Result) {
 			if r.Error != nil {
 				acc.AddError(r.Error)
 			}
-			if r.Message != nil {
-				acc.AddFields("syslog", fields(r.Message, s), tags(r.Message, src))
+			if r.Message == nil {
+				return
 			}
+
+			// Extract message information
+			acc.AddFields("syslog", fields(r.Message, s.Separator), tags(r.Message, addr))
 		})
 		parser.Parse(reader)
 	}
@@ -212,88 +224,106 @@ func (s *Syslog) createDatagramDataHandler(acc telegraf.Accumulator) socket.Call
 			return
 		}
 
-		acc.AddFields("syslog", fields(message, s), tags(message, src))
+		// Extract message information
+		var addr string
+		if src.Network() != "unixgram" {
+			var err error
+			if addr, _, err = net.SplitHostPort(src.String()); err != nil {
+				addr = src.String()
+			}
+		}
+		acc.AddFields("syslog", fields(message, s.Separator), tags(message, addr))
 	}
 }
 
-func tags(msg syslog.Message, sourceAddr net.Addr) map[string]string {
-	ts := map[string]string{}
-
-	// Not checking assuming a minimally valid message
-	ts["severity"] = *msg.SeverityShortLevel()
-	ts["facility"] = *msg.FacilityLevel()
-
-	switch m := msg.(type) {
-	case *rfc5424.SyslogMessage:
-		populateCommonTags(&m.Base, ts)
-	case *rfc3164.SyslogMessage:
-		populateCommonTags(&m.Base, ts)
+func tags(msg syslog.Message, src string) map[string]string {
+	// Extract message information
+	tags := map[string]string{
+		"severity": *msg.SeverityShortLevel(),
+		"facility": *msg.FacilityLevel(),
 	}
 
-	if sourceAddr != nil {
-		if source, _, err := net.SplitHostPort(sourceAddr.String()); err == nil {
-			ts["source"] = source
+	if src != "" {
+		tags["source"] = src
+	}
+
+	switch msg := msg.(type) {
+	case *rfc5424.SyslogMessage:
+		if msg.Hostname != nil {
+			tags["hostname"] = *msg.Hostname
+		}
+		if msg.Appname != nil {
+			tags["appname"] = *msg.Appname
+		}
+	case *rfc3164.SyslogMessage:
+		if msg.Hostname != nil {
+			tags["hostname"] = *msg.Hostname
+		}
+		if msg.Appname != nil {
+			tags["appname"] = *msg.Appname
 		}
 	}
 
-	return ts
+	return tags
 }
 
-func fields(msg syslog.Message, s *Syslog) map[string]interface{} {
-	flds := map[string]interface{}{}
-
-	switch m := msg.(type) {
+func fields(msg syslog.Message, separator string) map[string]interface{} {
+	var fields map[string]interface{}
+	switch msg := msg.(type) {
 	case *rfc5424.SyslogMessage:
-		populateCommonFields(&m.Base, flds)
-		// Not checking assuming a minimally valid message
-		flds["version"] = m.Version
-
-		if m.StructuredData != nil {
-			for sdid, sdparams := range *m.StructuredData {
+		fields = map[string]interface{}{
+			"facility_code": int(*msg.Facility),
+			"severity_code": int(*msg.Severity),
+			"version":       msg.Version,
+		}
+		if msg.Timestamp != nil {
+			fields["timestamp"] = (*msg.Timestamp).UnixNano()
+		}
+		if msg.ProcID != nil {
+			fields["procid"] = *msg.ProcID
+		}
+		if msg.MsgID != nil {
+			fields["msgid"] = *msg.MsgID
+		}
+		if msg.Message != nil {
+			fields["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
+				return unicode.IsSpace(r)
+			})
+		}
+		if msg.StructuredData != nil {
+			for sdid, sdparams := range *msg.StructuredData {
 				if len(sdparams) == 0 {
 					// When SD-ID does not have params we indicate its presence with a bool
-					flds[sdid] = true
+					fields[sdid] = true
 					continue
 				}
-				for name, value := range sdparams {
-					// Using whitespace as separator since it is not allowed by the grammar within SDID
-					flds[sdid+s.Separator+name] = value
+				for k, v := range sdparams {
+					fields[sdid+separator+k] = v
 				}
 			}
 		}
 	case *rfc3164.SyslogMessage:
-		populateCommonFields(&m.Base, flds)
+		fields = map[string]interface{}{
+			"facility_code": int(*msg.Facility),
+			"severity_code": int(*msg.Severity),
+		}
+		if msg.Timestamp != nil {
+			fields["timestamp"] = (*msg.Timestamp).UnixNano()
+		}
+		if msg.ProcID != nil {
+			fields["procid"] = *msg.ProcID
+		}
+		if msg.MsgID != nil {
+			fields["msgid"] = *msg.MsgID
+		}
+		if msg.Message != nil {
+			fields["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
+				return unicode.IsSpace(r)
+			})
+		}
 	}
 
-	return flds
-}
-
-func populateCommonFields(msg *syslog.Base, flds map[string]interface{}) {
-	flds["facility_code"] = int(*msg.Facility)
-	flds["severity_code"] = int(*msg.Severity)
-	if msg.Timestamp != nil {
-		flds["timestamp"] = (*msg.Timestamp).UnixNano()
-	}
-	if msg.ProcID != nil {
-		flds["procid"] = *msg.ProcID
-	}
-	if msg.MsgID != nil {
-		flds["msgid"] = *msg.MsgID
-	}
-	if msg.Message != nil {
-		flds["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
-			return unicode.IsSpace(r)
-		})
-	}
-}
-
-func populateCommonTags(msg *syslog.Base, ts map[string]string) {
-	if msg.Hostname != nil {
-		ts["hostname"] = *msg.Hostname
-	}
-	if msg.Appname != nil {
-		ts["appname"] = *msg.Appname
-	}
+	return fields
 }
 
 func init() {
