@@ -340,6 +340,7 @@ func (l *streamListener) handleConnection(conn net.Conn, onConnection CallbackCo
 
 	// Create a pipe and feed it to the callback
 	reader, writer := io.Pipe()
+	defer writer.Close()
 	go onConnection(src, reader)
 
 	timeout := time.Duration(l.ReadTimeout)
@@ -359,17 +360,12 @@ func (l *streamListener) handleConnection(conn net.Conn, onConnection CallbackCo
 		// Copy the data
 		n, err := decoder.Read(buf)
 		if err != nil {
-			if strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				writer.Close()
-			} else if errors.Is(err, os.ErrDeadlineExceeded) {
-				// Ignore the timeout and silently close the connection
-				l.Log.Debug(err)
-				writer.Close()
-			} else if errors.Is(err, net.ErrClosed) {
-				// Ignore the connection closing of the remote side
-				writer.Close()
-			} else {
-				writer.CloseWithError(err)
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				if !errors.Is(err, os.ErrDeadlineExceeded) && errors.Is(err, net.ErrClosed) {
+					writer.CloseWithError(err)
+				} else {
+					l.Log.Debug(err)
+				}
 			}
 			return nil
 		}
