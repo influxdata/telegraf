@@ -581,6 +581,7 @@ func (a *Agent) gatherOnce(
 ) error {
 	done := make(chan error)
 	go func() {
+		defer panicRecover(input)
 		done <- input.Gather(acc)
 	}()
 
