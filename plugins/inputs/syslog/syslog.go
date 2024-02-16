@@ -25,15 +25,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type syslogRFC string
-
 const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 // Syslog is a syslog plugin
 type Syslog struct {
 	Address        string                     `toml:"server"`
 	Framing        string                     `toml:"framing"`
-	SyslogStandard syslogRFC                  `toml:"syslog_standard"`
+	SyslogStandard string                     `toml:"syslog_standard"`
 	Trailer        nontransparent.TrailerType `toml:"trailer"`
 	BestEffort     bool                       `toml:"best_effort"`
 	Separator      string                     `toml:"sdparam_separator"`
