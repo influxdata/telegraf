@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package syslog
 
@@ -102,7 +103,7 @@ func (s *Syslog) Init() error {
 	}
 
 	// Create a socket
-	sock, err := s.Config.NewSocket(u.String(), s.Log)
+	sock, err := s.Config.NewSocket(u.String(), nil, s.Log)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,93 @@ package socket
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+	"regexp"
+	"strings"
 )
+
+type lengthFieldSpec struct {
+	Offset       int64  `toml:"offset"`
+	Bytes        int64  `toml:"bytes"`
+	Endianness   string `toml:"endianness"`
+	HeaderLength int64  `toml:"header_length"`
+	converter    func([]byte) int
+}
+
+type SplitConfig struct {
+	SplittingStrategy    string          `toml:"splitting_strategy"`
+	SplittingDelimiter   string          `toml:"splitting_delimiter"`
+	SplittingLength      int             `toml:"splitting_length"`
+	SplittingLengthField lengthFieldSpec `toml:"splitting_length_field"`
+}
+
+func (cfg *SplitConfig) NewSplitter() (bufio.SplitFunc, error) {
+	switch cfg.SplittingStrategy {
+	case "", "newline":
+		return bufio.ScanLines, nil
+	case "null":
+		return scanNull, nil
+	case "delimiter":
+		re := regexp.MustCompile(`(\s*0?x)`)
+		d := re.ReplaceAllString(strings.ToLower(cfg.SplittingDelimiter), "")
+		delimiter, err := hex.DecodeString(d)
+		if err != nil {
+			return nil, fmt.Errorf("decoding delimiter failed: %w", err)
+		}
+		return createScanDelimiter(delimiter), nil
+	case "fixed length":
+		return createScanFixedLength(cfg.SplittingLength), nil
+	case "variable length":
+		// Create the converter function
+		var order binary.ByteOrder
+		switch strings.ToLower(cfg.SplittingLengthField.Endianness) {
+		case "", "be":
+			order = binary.BigEndian
+		case "le":
+			order = binary.LittleEndian
+		default:
+			return nil, fmt.Errorf("invalid 'endianness' %q", cfg.SplittingLengthField.Endianness)
+		}
+
+		switch cfg.SplittingLengthField.Bytes {
+		case 1:
+			cfg.SplittingLengthField.converter = func(b []byte) int {
+				return int(b[0])
+			}
+		case 2:
+			cfg.SplittingLengthField.converter = func(b []byte) int {
+				return int(order.Uint16(b))
+			}
+		case 4:
+			cfg.SplittingLengthField.converter = func(b []byte) int {
+				return int(order.Uint32(b))
+			}
+		case 8:
+			cfg.SplittingLengthField.converter = func(b []byte) int {
+				return int(order.Uint64(b))
+			}
+		default:
+			cfg.SplittingLengthField.converter = func(b []byte) int {
+				buf := make([]byte, 8)
+				start := 0
+				if order == binary.BigEndian {
+					start = 8 - len(b)
+				}
+				for i := 0; i < len(b); i++ {
+					buf[start+i] = b[i]
+				}
+				return int(order.Uint64(buf))
+			}
+		}
+
+		// Check if we have enough bytes in the header
+		return createScanVariableLength(cfg.SplittingLengthField), nil
+	}
+
+	return nil, fmt.Errorf("unknown 'splitting_strategy' %q", cfg.SplittingStrategy)
+}
 
 func scanNull(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {

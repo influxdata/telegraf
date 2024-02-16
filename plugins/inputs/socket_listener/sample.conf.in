@@ -13,7 +13,9 @@
   # service_address = "unixgram:///tmp/telegraf.sock"
   # service_address = "vsock://cid:port"
 
-{{template "/plugins/common/socket/sample.conf"}}
+{{template "/plugins/common/socket/socket.conf"}}
+
+{{template "/plugins/common/socket/splitter.conf"}}
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

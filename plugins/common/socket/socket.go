@@ -3,8 +3,6 @@ package socket
 import (
 	"bufio"
 	"crypto/tls"
-	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -28,14 +26,6 @@ type listener interface {
 	close() error
 }
 
-type lengthFieldSpec struct {
-	Offset       int64  `toml:"offset"`
-	Bytes        int64  `toml:"bytes"`
-	Endianness   string `toml:"endianness"`
-	HeaderLength int64  `toml:"header_length"`
-	converter    func([]byte) int
-}
-
 type Config struct {
 	MaxConnections       int              `toml:"max_connections"`
 	ReadBufferSize       config.Size      `toml:"read_buffer_size"`
@@ -44,10 +34,6 @@ type Config struct {
 	SocketMode           string           `toml:"socket_mode"`
 	ContentEncoding      string           `toml:"content_encoding"`
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
-	SplittingStrategy    string           `toml:"splitting_strategy"`
-	SplittingDelimiter   string           `toml:"splitting_delimiter"`
-	SplittingLength      int              `toml:"splitting_length"`
-	SplittingLengthField lengthFieldSpec  `toml:"splitting_length_field"`
 	tlsint.ServerConfig
 }
 
@@ -63,74 +49,19 @@ type Socket struct {
 	listener listener
 }
 
-func (cfg *Config) NewSocket(address string, logger telegraf.Logger) (*Socket, error) {
+func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger telegraf.Logger) (*Socket, error) {
 	s := &Socket{
 		Config: *cfg,
 		log:    logger,
 	}
 
-	switch s.SplittingStrategy {
-	case "", "newline":
-		s.splitter = bufio.ScanLines
-	case "null":
-		s.splitter = scanNull
-	case "delimiter":
-		re := regexp.MustCompile(`(\s*0?x)`)
-		d := re.ReplaceAllString(strings.ToLower(s.SplittingDelimiter), "")
-		delimiter, err := hex.DecodeString(d)
+	// Setup the splitter if given
+	if splitcfg != nil {
+		splitter, err := splitcfg.NewSplitter()
 		if err != nil {
-			return nil, fmt.Errorf("decoding delimiter failed: %w", err)
+			return nil, err
 		}
-		s.splitter = createScanDelimiter(delimiter)
-	case "fixed length":
-		s.splitter = createScanFixedLength(s.SplittingLength)
-	case "variable length":
-		// Create the converter function
-		var order binary.ByteOrder
-		switch strings.ToLower(s.SplittingLengthField.Endianness) {
-		case "", "be":
-			order = binary.BigEndian
-		case "le":
-			order = binary.LittleEndian
-		default:
-			return nil, fmt.Errorf("invalid 'endianness' %q", s.SplittingLengthField.Endianness)
-		}
-
-		switch s.SplittingLengthField.Bytes {
-		case 1:
-			s.SplittingLengthField.converter = func(b []byte) int {
-				return int(b[0])
-			}
-		case 2:
-			s.SplittingLengthField.converter = func(b []byte) int {
-				return int(order.Uint16(b))
-			}
-		case 4:
-			s.SplittingLengthField.converter = func(b []byte) int {
-				return int(order.Uint32(b))
-			}
-		case 8:
-			s.SplittingLengthField.converter = func(b []byte) int {
-				return int(order.Uint64(b))
-			}
-		default:
-			s.SplittingLengthField.converter = func(b []byte) int {
-				buf := make([]byte, 8)
-				start := 0
-				if order == binary.BigEndian {
-					start = 8 - len(b)
-				}
-				for i := 0; i < len(b); i++ {
-					buf[start+i] = b[i]
-				}
-				return int(order.Uint64(buf))
-			}
-		}
-
-		// Check if we have enough bytes in the header
-		s.splitter = createScanVariableLength(s.SplittingLengthField)
-	default:
-		return nil, fmt.Errorf("unknown 'splitting_strategy' %q", s.SplittingStrategy)
+		s.splitter = splitter
 	}
 
 	// Resolve the interface to an address if any given

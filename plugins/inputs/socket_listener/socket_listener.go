@@ -18,6 +18,7 @@ type SocketListener struct {
 	ServiceAddress string          `toml:"service_address"`
 	Log            telegraf.Logger `toml:"-"`
 	socket.Config
+	socket.SplitConfig
 
 	socket *socket.Socket
 	parser telegraf.Parser
@@ -28,7 +29,7 @@ func (*SocketListener) SampleConfig() string {
 }
 
 func (sl *SocketListener) Init() error {
-	sock, err := sl.Config.NewSocket(sl.ServiceAddress, sl.Log)
+	sock, err := sl.Config.NewSocket(sl.ServiceAddress, &sl.SplitConfig, sl.Log)
 	if err != nil {
 		return err
 	}

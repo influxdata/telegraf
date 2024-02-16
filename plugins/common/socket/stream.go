@@ -219,16 +219,23 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 			wg.Add(1)
 			go func(c net.Conn) {
 				defer wg.Done()
-				if err := l.read(c, onData); err != nil {
+				defer func() {
+					l.Lock()
+					l.closeConnection(conn)
+					l.Unlock()
+				}()
+
+				reader := l.read
+				if l.Splitter == nil {
+					reader = l.readAll
+				}
+				if err := reader(c, onData); err != nil {
 					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
 						if onError != nil {
 							onError(err)
 						}
 					}
 				}
-				l.Lock()
-				l.closeConnection(conn)
-				l.Unlock()
 			}(conn)
 		}
 		wg.Wait()
@@ -322,6 +329,38 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 		}
 		return err
 	}
+	return nil
+}
+
+func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
+	src := conn.RemoteAddr()
+	if l.path != "" {
+		src = &net.UnixAddr{Name: l.path, Net: "unix"}
+	}
+
+	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
+	if err != nil {
+		return fmt.Errorf("creating decoder failed: %w", err)
+	}
+
+	timeout := time.Duration(l.ReadTimeout)
+	// Set the read deadline, if any, then start reading. The read
+	// will accept the deadline and return if no or insufficient data
+	// arrived in time. We need to set the deadline in every cycle as
+	// it is an ABSOLUTE time and not a timeout.
+	if timeout > 0 {
+		deadline := time.Now().Add(timeout)
+		if err := conn.SetReadDeadline(deadline); err != nil {
+			return fmt.Errorf("setting read deadline failed: %w", err)
+		}
+	}
+
+	buf, err := io.ReadAll(decoder)
+	if err != nil {
+		return fmt.Errorf("read on %s failed: %w", src, err)
+	}
+	onData(src, buf)
+
 	return nil
 }
 
