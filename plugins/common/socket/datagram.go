@@ -94,7 +94,9 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 			// blocks until all data is consumed!
 			reader, writer := io.Pipe()
 			go onConnection(src, reader)
-			writer.Write(body)
+			if _, err := writer.Write(body); err != nil && onError != nil {
+				onError(err)
+			}
 			writer.Close()
 		}
 	}()
