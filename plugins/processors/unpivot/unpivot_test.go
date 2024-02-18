@@ -1,10 +1,13 @@
 package unpivot
 
 import (
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -218,4 +221,44 @@ func TestUnpivot_fieldMode(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.SortMetrics())
 		})
 	}
+}
+
+func TestTrackedMetricNotLost(t *testing.T) {
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, 3)
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+	input := make([]telegraf.Metric, 0, 3)
+	expected := make([]telegraf.Metric, 0, 6)
+	for i := 0; i < 3; i++ {
+		strI := strconv.Itoa(i)
+
+		m := metric.New("m"+strI, map[string]string{}, map[string]interface{}{"x": int64(1), "y": int64(2)}, time.Unix(0, 0))
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+
+		unpivot1 := metric.New("m"+strI, map[string]string{"name": "x"}, map[string]interface{}{"value": int64(1)}, time.Unix(0, 0))
+		unpivot2 := metric.New("m"+strI, map[string]string{"name": "y"}, map[string]interface{}{"value": int64(2)}, time.Unix(0, 0))
+		expected = append(expected, unpivot1, unpivot2)
+	}
+
+	// Process expected metrics and compare with resulting metrics
+	plugin := &Unpivot{TagKey: "name", ValueKey: "value"}
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(input))
 }
