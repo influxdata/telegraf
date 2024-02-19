@@ -1,6 +1,7 @@
 package regex
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -992,6 +993,56 @@ func TestAnyFieldConversion(t *testing.T) {
 }
 
 func TestTrackedMetricNotLost(t *testing.T) {
+	now := time.Now()
+
+	// Setup raw input and expected output
+	inputRaw := testutil.MustMetric(
+		"access_log",
+		map[string]string{
+			"verb":      "GET",
+			"resp_code": "200",
+		},
+		map[string]interface{}{
+			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+			"ignore_number": int64(200),
+			"ignore_bool":   true,
+		},
+		now,
+	)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"access_log",
+			map[string]string{
+				"verb":            "GET",
+				"resp_code":       "200",
+				"resp_code_group": "2xx",
+				"resp_code_text":  "OK",
+			},
+			map[string]interface{}{
+				"request":         "/api/search/?category=plugins&q=regex&sort=asc",
+				"method":          "/search/",
+				"search_category": "plugins",
+				"ignore_number":   int64(200),
+				"ignore_bool":     true,
+			},
+			now,
+		),
+	}
+
+	// Create fake notification for testing
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, 1)
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	// Convert raw input to tracking metric
+	input, _ := metric.WithTracking(inputRaw, notify)
+
+	// Prepare and start the plugin
 	regex := Regex{
 		Tags: []converter{
 			{
@@ -1025,32 +1076,19 @@ func TestTrackedMetricNotLost(t *testing.T) {
 	}
 	require.NoError(t, regex.Init())
 
-	m := newM2().Copy()
-	var delivered bool
-	notify := func(telegraf.DeliveryInfo) {
-		delivered = true
-	}
-	m, _ = metric.WithTracking(m, notify)
-	processed := regex.Apply(m)
-	processed[0].Accept()
+	// Process expected metrics and compare with resulting metrics
+	actual := regex.Apply(input)
+	testutil.RequireMetricsEqual(t, expected, actual)
 
-	expectedFields := map[string]interface{}{
-		"request":         "/api/search/?category=plugins&q=regex&sort=asc",
-		"method":          "/search/",
-		"search_category": "plugins",
-		"ignore_number":   int64(200),
-		"ignore_bool":     true,
-	}
-	expectedTags := map[string]string{
-		"verb":            "GET",
-		"resp_code":       "200",
-		"resp_code_group": "2xx",
-		"resp_code_text":  "OK",
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
 	}
 
-	require.Equal(t, expectedFields, processed[0].Fields())
-	require.Equal(t, expectedTags, processed[0].Tags())
-	require.Eventually(t, func() bool {
-		return delivered
-	}, time.Second, 100*time.Millisecond, "metric not delivered")
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(delivered) == 1
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

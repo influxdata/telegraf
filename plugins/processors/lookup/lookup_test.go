@@ -162,7 +162,7 @@ func TestCasesTracking(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual)
 
 			// Simulate output acknowledging delivery
-			for _, m := range input {
+			for _, m := range actual {
 				m.Accept()
 			}
 
@@ -170,7 +170,7 @@ func TestCasesTracking(t *testing.T) {
 			require.Eventuallyf(t, func() bool {
 				mu.Lock()
 				defer mu.Unlock()
-				return len(expected) == len(delivered)
+				return len(input) == len(delivered)
 			}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 		})
 	}
