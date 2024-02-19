@@ -21,9 +21,9 @@ import (
 )
 
 type properties struct {
-	uf         string
+	uf         *sdbus.UnitFile
 	utype      string
-	state      sdbus.UnitStatus
+	state      *sdbus.UnitStatus
 	ufPreset   string
 	ufState    string
 	properties map[string]interface{}
@@ -47,7 +47,7 @@ func TestListFiles(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "loaded",
 						ActiveState: "active",
@@ -78,7 +78,7 @@ func TestListFiles(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "loaded",
 						ActiveState: "active",
@@ -109,7 +109,7 @@ func TestListFiles(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "loaded",
 						ActiveState: "failed",
@@ -140,7 +140,7 @@ func TestListFiles(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "not-found",
 						ActiveState: "inactive",
@@ -171,7 +171,7 @@ func TestListFiles(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "unknown",
 						ActiveState: "unknown",
@@ -228,7 +228,7 @@ func TestShow(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "loaded",
 						ActiveState: "active",
@@ -282,7 +282,7 @@ func TestShow(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "loaded",
 						ActiveState: "active",
@@ -324,7 +324,7 @@ func TestShow(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "loaded",
 						ActiveState: "failed",
@@ -376,7 +376,7 @@ func TestShow(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "not-found",
 						ActiveState: "inactive",
@@ -414,7 +414,7 @@ func TestShow(t *testing.T) {
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
-					state: sdbus.UnitStatus{
+					state: &sdbus.UnitStatus{
 						Name:        "example.service",
 						LoadState:   "unknown",
 						ActiveState: "unknown",
@@ -579,6 +579,48 @@ func TestMultiInstance(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:    "static but loaded instance",
+			pattern: "shadow*",
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "shadow.service",
+						"load":   "loaded",
+						"active": "inactive",
+						"sub":    "dead",
+					},
+					map[string]interface{}{
+						"load_code":   0,
+						"active_code": 2,
+						"sub_code":    1,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:    "static but not loaded instance",
+			pattern: "cups*",
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":   "cups-lpd@.service",
+						"load":   "stub",
+						"active": "inactive",
+						"sub":    "dead",
+					},
+					map[string]interface{}{
+						"load_code":   1,
+						"active_code": 2,
+						"sub_code":    1,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -596,7 +638,7 @@ func TestMultiInstance(t *testing.T) {
 				units: map[string]properties{
 					"example.service": {
 						utype: "Service",
-						state: sdbus.UnitStatus{
+						state: &sdbus.UnitStatus{
 							Name:        "example.service",
 							LoadState:   "loaded",
 							ActiveState: "active",
@@ -604,9 +646,12 @@ func TestMultiInstance(t *testing.T) {
 						},
 					},
 					"user-runtime-dir@1000.service": {
-						uf:    "user-runtime-dir@.service",
+						uf: &sdbus.UnitFile{
+							Path: "user-runtime-dir@.service",
+							Type: "static",
+						},
 						utype: "Service",
-						state: sdbus.UnitStatus{
+						state: &sdbus.UnitStatus{
 							Name:        "user-runtime-dir@1000.service",
 							LoadState:   "loaded",
 							ActiveState: "active",
@@ -614,9 +659,12 @@ func TestMultiInstance(t *testing.T) {
 						},
 					},
 					"user@1000.service": {
-						uf:    "user@.service",
+						uf: &sdbus.UnitFile{
+							Path: "user@.service",
+							Type: "static",
+						},
 						utype: "Service",
-						state: sdbus.UnitStatus{
+						state: &sdbus.UnitStatus{
 							Name:        "user@1000.service",
 							LoadState:   "loaded",
 							ActiveState: "active",
@@ -624,14 +672,37 @@ func TestMultiInstance(t *testing.T) {
 						},
 					},
 					"user@1001.service": {
-						uf:    "user@.service",
+						uf: &sdbus.UnitFile{
+							Path: "user@.service",
+							Type: "static",
+						},
 						utype: "Service",
-						state: sdbus.UnitStatus{
+						state: &sdbus.UnitStatus{
 							Name:        "user@1001.service",
 							LoadState:   "loaded",
 							ActiveState: "active",
 							SubState:    "exited",
 						},
+					},
+					"shadow.service": {
+						uf: &sdbus.UnitFile{
+							Path: "shadow.service",
+							Type: "static",
+						},
+						utype: "Service",
+						state: &sdbus.UnitStatus{
+							Name:        "shadow.service",
+							LoadState:   "loaded",
+							ActiveState: "inactive",
+							SubState:    "dead",
+						},
+					},
+					"cups-lpd@.service": {
+						uf: &sdbus.UnitFile{
+							Path: "cups-lpd@.service",
+							Type: "static",
+						},
+						utype: "Service",
 					},
 				},
 				connected: true,
@@ -669,19 +740,25 @@ func (c *fakeClient) ListUnitFilesByPatternsContext(_ context.Context, _, patter
 	var files []sdbus.UnitFile
 	seen := make(map[string]bool)
 	for name, props := range c.units {
-		var uf string
-		if props.uf != "" && f.Match(props.uf) {
-			uf = "/usr/lib/systemd/system/" + props.uf
-		} else if props.uf == "" && f.Match(name) {
-			uf = "/usr/lib/systemd/system/" + name
+		var uf sdbus.UnitFile
+		if props.uf != nil && f.Match(props.uf.Path) {
+			uf = sdbus.UnitFile{
+				Path: "/usr/lib/systemd/system/" + props.uf.Path,
+				Type: props.uf.Type,
+			}
+		} else if props.uf == nil && f.Match(name) {
+			uf = sdbus.UnitFile{
+				Path: "/usr/lib/systemd/system/" + name,
+				Type: "enabled",
+			}
 		} else {
 			continue
 		}
 
-		if !seen[uf] {
-			files = append(files, sdbus.UnitFile{Path: uf, Type: "unknown"})
+		if !seen[uf.Path] {
+			files = append(files, uf)
 		}
-		seen[uf] = true
+		seen[uf.Path] = true
 	}
 
 	return files, nil
@@ -691,8 +768,8 @@ func (c *fakeClient) ListUnitsByNamesContext(_ context.Context, units []string) 
 	var states []sdbus.UnitStatus
 	for name, u := range c.units {
 		for _, requestedName := range units {
-			if name == requestedName {
-				states = append(states, u.state)
+			if name == requestedName && u.state != nil {
+				states = append(states, *u.state)
 				break
 			}
 		}
@@ -730,7 +807,9 @@ func (c *fakeClient) GetUnitPropertyContext(_ context.Context, unit, propertyNam
 func (c *fakeClient) ListUnitsContext(_ context.Context) ([]sdbus.UnitStatus, error) {
 	units := make([]sdbus.UnitStatus, 0, len(c.units))
 	for _, u := range c.units {
-		units = append(units, u.state)
+		if u.state != nil {
+			units = append(units, *u.state)
+		}
 	}
 	return units, nil
 }
