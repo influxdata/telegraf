@@ -214,18 +214,21 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	states := make([]dbus.UnitStatus, 0, len(files))
 
 	// Match all loaded units first
-	multiUnits := make(map[string]bool)
+	seen := make(map[string]bool)
 	for _, u := range loaded {
-		if s.filter.Match(u.Name) {
-			states = append(states, u)
-
-			// Remember multi-instance units to remove duplicates from files
-			if strings.Contains(u.Name, "@") {
-				prefix, _, _ := strings.Cut(u.Name, "@")
-				suffix := path.Ext(u.Name)
-				multiUnits[prefix+"@"+suffix] = true
-			}
+		if !s.filter.Match(u.Name) {
+			continue
 		}
+		states = append(states, u)
+
+		// Remember multi-instance units to remove duplicates from files
+		instance := u.Name
+		if strings.Contains(u.Name, "@") {
+			prefix, _, _ := strings.Cut(u.Name, "@")
+			suffix := path.Ext(u.Name)
+			instance = prefix + "@" + suffix
+		}
+		seen[instance] = true
 	}
 
 	// Now split the unit-files into disabled ones and static ones, ignore
@@ -237,18 +240,24 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 
 		switch f.Type {
 		case "disabled":
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
 			disabled = append(disabled, name)
 		case "static":
 			// Make sure we filter already loaded static multi-instance units
-			if !strings.Contains(name, "@") {
-				static = append(static, name)
+			instance := name
+			if strings.Contains(name, "@") {
+				prefix, _, _ := strings.Cut(name, "@")
+				suffix := path.Ext(name)
+				instance = prefix + "@" + suffix
 			}
-			prefix, _, _ := strings.Cut(name, "@")
-			suffix := path.Ext(name)
-			if !multiUnits[prefix+"@"+suffix] {
-				static = append(static, name)
+			if seen[instance] || seen[name] {
+				continue
 			}
-			multiUnits[prefix+"@"+suffix] = true
+			seen[instance] = true
+			static = append(static, name)
 		}
 	}
 
