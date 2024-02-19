@@ -130,6 +130,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 		ClientConfig: snmp.ClientConfig{
 			Translator: "netsnmp",
 		},
+		Log: testutil.Logger{Name: "inputs.snmp"},
 	}
 
 	err := s.Init()
