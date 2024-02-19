@@ -61,7 +61,7 @@ func (s *Snmp) Init() error {
 			return err
 		}
 	case "netsnmp":
-		s.translator = snmp.NewNetsnmpTranslator()
+		s.translator = snmp.NewNetsnmpTranslator(s.Log)
 	default:
 		return errors.New("invalid translator value")
 	}

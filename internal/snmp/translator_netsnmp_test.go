@@ -6,6 +6,8 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestFieldInit(t *testing.T) {
@@ -31,7 +33,7 @@ func TestFieldInit(t *testing.T) {
 		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
 	}
 
-	tr := NewNetsnmpTranslator()
+	tr := NewNetsnmpTranslator(testutil.Logger{})
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
 		err := f.Init(tr)
@@ -49,7 +51,7 @@ func TestTableInit(t *testing.T) {
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
-	err := tbl.Init(NewNetsnmpTranslator())
+	err := tbl.Init(NewNetsnmpTranslator(testutil.Logger{}))
 	require.NoError(t, err)
 
 	require.Equal(t, "testTable", tbl.Name)
@@ -124,7 +126,7 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, tbl.Init(NewNetsnmpTranslator()))
+	require.NoError(t, tbl.Init(NewNetsnmpTranslator(testutil.Logger{})))
 
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
@@ -278,7 +280,7 @@ func TestFieldConvert(t *testing.T) {
 			Name:       "test",
 			Conversion: tc.conv,
 		}
-		require.NoError(t, f.Init(NewNetsnmpTranslator()))
+		require.NoError(t, f.Init(NewNetsnmpTranslator(testutil.Logger{})))
 
 		act, err := f.Convert(gosnmp.SnmpPDU{Value: tc.input})
 		require.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
@@ -289,7 +291,7 @@ func TestFieldConvert(t *testing.T) {
 func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator().SnmpTranslate(oid)
+	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator(testutil.Logger{}).SnmpTranslate(oid)
 	require.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
@@ -309,7 +311,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			conversion: "d",
 		},
 	}
-	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator().SnmpTranslate("foo")
+	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator(testutil.Logger{}).SnmpTranslate("foo")
 	require.Equal(t, "a", mibName)
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
@@ -321,7 +323,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 func TestSnmpTableCache_miss(t *testing.T) {
 	snmpTableCaches = nil
 	oid := ".1.0.0.0"
-	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator().SnmpTable(oid)
+	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator(testutil.Logger{}).SnmpTable(oid)
 	require.Len(t, snmpTableCaches, 1)
 	stc := snmpTableCaches[oid]
 	require.NotNil(t, stc)
@@ -341,7 +343,7 @@ func TestSnmpTableCache_hit(t *testing.T) {
 			fields:  []Field{{Name: "d"}},
 		},
 	}
-	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator().SnmpTable("foo")
+	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator(testutil.Logger{}).SnmpTable("foo")
 	require.Equal(t, "a", mibName)
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
