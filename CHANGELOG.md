@@ -48,6 +48,15 @@
 - [#14771](https://github.com/influxdata/telegraf/pull/14771) `deps` Bump tj-actions/changed-files from 41 to 42
 - [#14757](https://github.com/influxdata/telegraf/pull/14757) `deps` Get rid of golang.org/x/exp and use stable versions instead
 - [#14753](https://github.com/influxdata/telegraf/pull/14753) `deps` Use github.com/coreos/go-systemd/v22 instead of git version
+## Unreleased
+
+### Important Changes
+
+- The default read-timeout of `inputs.syslog` of five seconds is not a sensible
+  default as the plugin will close the connection if the time between
+  consecutive messages exceeds the timeout.
+  [#14828](https://github.com/influxdata/telegraf/pull/14828) sets the timeout
+  to infinite (i.e zero) as this is the expected behavior.
 
 ## v1.29.4 [2024-01-31]
 
