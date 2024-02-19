@@ -105,19 +105,18 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 }
 
 func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
-	fn := filepath.FromSlash(u.Path)
-	if runtime.GOOS == "windows" {
-		fn = strings.TrimPrefix(fn, `\`)
+	l.path = filepath.FromSlash(u.Path)
+	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {
+		l.path = strings.TrimPrefix(l.path, `\`)
 	}
-	if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(l.path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing socket failed: %w", err)
 	}
 
-	conn, err := net.ListenPacket(u.Scheme, u.Path)
+	conn, err := net.ListenPacket(u.Scheme, l.path)
 	if err != nil {
 		return fmt.Errorf("listening (unixgram) failed: %w", err)
 	}
-	l.path = u.Path
 	l.conn = conn
 
 	// Set permissions on socket
@@ -229,7 +228,7 @@ func (l *packetListener) close() error {
 
 	if l.path != "" {
 		fn := filepath.FromSlash(l.path)
-		if runtime.GOOS == "windows" {
+		if runtime.GOOS == "windows" && strings.Contains(fn, ":") {
 			fn = strings.TrimPrefix(fn, `\`)
 		}
 		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {

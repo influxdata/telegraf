@@ -57,24 +57,23 @@ func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
 }
 
 func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode string) error {
-	fn := filepath.FromSlash(u.Path)
-	if runtime.GOOS == "windows" {
-		fn = strings.TrimPrefix(fn, `\`)
+	l.path = filepath.FromSlash(u.Path)
+	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {
+		l.path = strings.TrimPrefix(l.path, `\`)
 	}
-	if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(l.path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing socket failed: %w", err)
 	}
 
 	var err error
 	if tlsCfg == nil {
-		l.listener, err = net.Listen(u.Scheme, u.Path)
+		l.listener, err = net.Listen(u.Scheme, l.path)
 	} else {
-		l.listener, err = tls.Listen(u.Scheme, u.Path, tlsCfg)
+		l.listener, err = tls.Listen(u.Scheme, l.path, tlsCfg)
 	}
 	if err != nil {
 		return err
 	}
-	l.path = u.Path
 
 	// Set permissions on socket
 	if socketMode != "" {
@@ -192,7 +191,7 @@ func (l *streamListener) close() error {
 
 	if l.path != "" {
 		fn := filepath.FromSlash(l.path)
-		if runtime.GOOS == "windows" {
+		if runtime.GOOS == "windows" && strings.Contains(fn, ":") {
 			fn = strings.TrimPrefix(fn, `\`)
 		}
 		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
