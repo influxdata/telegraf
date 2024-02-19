@@ -1,3 +1,4 @@
+//go:generate go run -tags generate translator_netsnmp_mocks_generate.go
 package snmp
 
 import (

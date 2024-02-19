@@ -1,4 +1,3 @@
-//go:generate go run -tags generate snmp_mocks_generate.go
 package snmp
 
 import (
