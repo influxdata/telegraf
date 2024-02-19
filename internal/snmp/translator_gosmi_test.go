@@ -596,15 +596,6 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	require.Contains(t, tb.Rows, rtr3)
 }
 
-func BenchmarkMibLoading(b *testing.B) {
-	log := testutil.Logger{}
-	path := []string{"testdata/gosmi"}
-	for i := 0; i < b.N; i++ {
-		err := LoadMibsFromPath(path, log, &GosmiMibLoader{})
-		require.NoError(b, err)
-	}
-}
-
 func TestCanNotParse(t *testing.T) {
 	tr := getGosmiTr(t)
 	f := Field{

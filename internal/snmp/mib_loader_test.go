@@ -77,3 +77,11 @@ func TestMissingMibPath(t *testing.T) {
 	path := []string{"non-existing-directory"}
 	require.NoError(t, LoadMibsFromPath(path, log, &GosmiMibLoader{}))
 }
+
+func BenchmarkMibLoading(b *testing.B) {
+	log := testutil.Logger{}
+	path := []string{"testdata/gosmi"}
+	for i := 0; i < b.N; i++ {
+		require.NoError(b, LoadMibsFromPath(path, log, &GosmiMibLoader{}))
+	}
+}
