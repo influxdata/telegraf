@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -103,8 +105,11 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 }
 
 func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
-	err := os.Remove(u.Path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	fn := filepath.FromSlash(u.Path)
+	if runtime.GOOS == "windows" {
+		fn = strings.TrimPrefix(fn, `\`)
+	}
+	if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing socket failed: %w", err)
 	}
 
@@ -223,8 +228,11 @@ func (l *packetListener) close() error {
 	l.wg.Wait()
 
 	if l.path != "" {
-		err := os.Remove(l.path)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
+		fn := filepath.FromSlash(l.path)
+		if runtime.GOOS == "windows" {
+			fn = strings.TrimPrefix(fn, `\`)
+		}
+		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
 			// Ignore file-not-exists errors when removing the socket
 			return err
 		}

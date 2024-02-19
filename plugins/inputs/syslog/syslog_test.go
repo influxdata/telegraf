@@ -225,7 +225,10 @@ func TestCases(t *testing.T) {
 			// calling Start() as it is modified in this function.
 			if strings.HasPrefix(plugin.Address, "unix://") {
 				// Use a random socket
-				sock := testutil.TempSocket(t)
+				sock := filepath.ToSlash(testutil.TempSocket(t))
+				if !strings.HasPrefix(sock, "/") {
+					sock = "/" + sock
+				}
 				plugin.Address = "unix://" + sock
 			}
 			require.NoError(t, plugin.Init())

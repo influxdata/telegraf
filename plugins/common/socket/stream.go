@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,11 +57,15 @@ func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
 }
 
 func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode string) error {
-	err := os.Remove(u.Path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	fn := filepath.FromSlash(u.Path)
+	if runtime.GOOS == "windows" {
+		fn = strings.TrimPrefix(fn, `\`)
+	}
+	if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing socket failed: %w", err)
 	}
 
+	var err error
 	if tlsCfg == nil {
 		l.listener, err = net.Listen(u.Scheme, u.Path)
 	} else {
@@ -185,8 +191,11 @@ func (l *streamListener) close() error {
 	l.wg.Wait()
 
 	if l.path != "" {
-		err := os.Remove(l.path)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
+		fn := filepath.FromSlash(l.path)
+		if runtime.GOOS == "windows" {
+			fn = strings.TrimPrefix(fn, `\`)
+		}
+		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
 			// Ignore file-not-exists errors when removing the socket
 			return err
 		}
