@@ -1,8 +1,8 @@
-# Telegraf Spec Overview
+# Telegraf Specification Overview
 
 ## Objective
 
-Define and layout the Telegraf spec process.
+Define and layout the Telegraf specification process.
 
 ## Overview
 
@@ -11,9 +11,9 @@ for a new feature. A developer should be able to pick up a spec and have a
 decent understanding of the objective, the steps required, and most of the
 general design decisions.
 
-The specs can then live in the Telegraf repo to share and involve with the
-community the planning process that goes into larger changes and have a public
-historical record for changes.
+The specs can then live in the Telegraf repository to share and involve the
+community in the process of planning larger changes or new features. The specs
+also serve as a public historical record for changes.
 
 ## Process
 
@@ -24,6 +24,14 @@ the finished spec to the repo.
 While researching a new feature may involve an investment of time, writing the
 spec should be relatively quick. It should not take hours of time.
 
+## Spec naming
+
+Please name the actual file prefixed with the scope, for example:
+
+* agent-write-ahead-log.md
+* inputs-apache-increase-timeout.md
+* serializers-parquet.md
+
 ## What belongs in a spec
 
 A spec should involve the creation of a markdown file with at least an objective
@@ -32,6 +40,8 @@ and overview:
 * Objective (required) - One sentence headline
 * Overview (required) - Explain the reasoning for the new feature and any
   historical information. Answer the why this is needed.
+
+Please feel free to make a copy the template.md and start with that.
 
 The user is free to add additional sections or parts in order to express and
 convey a new feature. For example this might include:
