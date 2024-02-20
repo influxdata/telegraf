@@ -141,6 +141,7 @@ func (pi *pathInfo) append(paths ...*gnmiLib.Path) *pathInfo {
 			path.keyValues = append(path.keyValues, keyInfo)
 		}
 	}
+	path.normalize()
 
 	return path
 }
@@ -172,6 +173,7 @@ func (pi *pathInfo) appendSegments(segments ...string) *pathInfo {
 		}
 		path.segments = append(path.segments, s)
 	}
+	path.normalize()
 
 	return path
 }
