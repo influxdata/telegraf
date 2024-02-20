@@ -759,9 +759,15 @@ func TestTimestampAbbrevWarning(t *testing.T) {
 	log.SetOutput(&buf)
 	defer log.SetOutput(backup)
 
+	// Try multiple timestamps with abbreviated timezones in case a user
+	// is actually in one of the timezones.
 	ts, err := ParseTimestamp("RFC1123", "Mon, 02 Jan 2006 15:04:05 MST", nil)
 	require.NoError(t, err)
 	require.EqualValues(t, 1136239445, ts.Unix())
+
+	ts2, err := ParseTimestamp("RFC1123", "Mon, 02 Jan 2006 15:04:05 EST", nil)
+	require.NoError(t, err)
+	require.EqualValues(t, 1136232245, ts2.Unix())
 
 	require.Contains(t, buf.String(), "Your config is using abbreviated timezones and parsing was changed in v1.27.0")
 }
