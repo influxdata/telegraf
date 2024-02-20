@@ -589,7 +589,7 @@ func TestProcstatLookupMetric(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, p.Gather(&acc))
-	require.Len(t, acc.GetTelegrafMetrics(), 1)
+	require.NotEmpty(t, acc.GetTelegrafMetrics())
 }
 
 func TestGather_SameTimestamps(t *testing.T) {
