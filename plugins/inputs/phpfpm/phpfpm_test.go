@@ -322,7 +322,6 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
-
 	err := acc.GatherError(r.Gather)
 	require.ErrorContains(t, err, `unable to connect to phpfpm status page 'http://aninvalidone'`)
 	require.ErrorContains(t, err, `lookup aninvalidone`)
@@ -392,7 +391,7 @@ func TestGatherDespiteUnavailable(t *testing.T) {
 	defer tcp.Close()
 
 	s := statServer{}
-	go fcgi.Serve(tcp, s)
+	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
 	//Now we tested again above server
 	r := &phpfpm{
