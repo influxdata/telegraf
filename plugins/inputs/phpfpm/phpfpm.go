@@ -73,8 +73,8 @@ type JSONMetrics struct {
 	} `json:"processes"`
 }
 
-type metric map[string]int64
-type poolStat map[string]metric
+type metricStat map[string]int64
+type poolStat map[string]metricStat
 
 type phpfpm struct {
 	Format  string          `toml:"format"`
@@ -259,7 +259,7 @@ func parseLines(r io.Reader, acc telegraf.Accumulator, addr string) {
 		// We start to gather data for a new pool here
 		if fieldName == PfPool {
 			currentPool = strings.Trim(keyvalue[1], " ")
-			stats[currentPool] = make(metric)
+			stats[currentPool] = make(metricStat)
 			continue
 		}
 
