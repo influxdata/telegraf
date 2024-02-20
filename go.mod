@@ -174,7 +174,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.7.2
-	github.com/srebhan/cborquery v0.0.0-20230626165538-38be85b82316
+	github.com/srebhan/cborquery v1.0.1
 	github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55
 	github.com/stretchr/testify v1.8.4
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
@@ -228,6 +228,7 @@ require (
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
@@ -318,7 +319,6 @@ require (
 	github.com/echlebek/timeproxy v1.0.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/fxamacker/cbor v1.5.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
