@@ -19,7 +19,7 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12
 	github.com/BurntSushi/toml v1.3.2
 	github.com/ClickHouse/clickhouse-go v1.5.4
-	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/nzgo/v12 v12.0.9-0.20231115043259-49c27f2dfe48
 	github.com/IBM/sarama v1.42.2
 	github.com/Masterminds/sprig v2.22.0+incompatible
