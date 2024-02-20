@@ -405,6 +405,8 @@ SELECT DISTINCT
 			,'Total Server Memory (KB)'
 			,'Target Server Memory (KB)'
 			,'Stolen Server Memory (KB)'
+			,'Database Cache Memory (KB)'
+			,'Free Memory (KB)'
 			,'Log Flushes/sec'
 			,'Log Flush Wait Time'
 			,'Memory broker clerk size'
