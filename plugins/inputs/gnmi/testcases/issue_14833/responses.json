@@ -1,0 +1,51 @@
+[
+    {
+        "update": {
+            "timestamp": "1708069483623763000",
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "Cisco-IOS-XE-interfaces-oper:interfaces"
+                            },
+                            {
+                                "name": "interface",
+                                "key": {
+                                    "name": "AppGigabitEthernet1/0/1"
+                                }
+                            },
+                            {
+                                "name": "statistics"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJkaXNjb250aW51aXR5LXRpbWUiOiIyMDIzLTExLTE1VDA1OjUwOjQwKzAwOjAwIn0K"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "Cisco-IOS-XE-interfaces-oper:interfaces"
+                            },
+                            {
+                                "name": "interface",
+                                "key": {
+                                    "name": "FortyGigabitEthernet1/1/1"
+                                }
+                            },
+                            {
+                                "name": "statistics"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJkaXNjb250aW51aXR5LXRpbWUiOiIyMDIzLTExLTE1VDA1OjUwOjQwKzAwOjAwIn0K"
+                    }
+                }
+            ]
+        }
+    }
+]
