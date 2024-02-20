@@ -373,52 +373,62 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 		{
 			name:     "in input plugin without parser",
 			filename: "./testdata/invalid_field.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in input plugin with parser",
 			filename: "./testdata/invalid_field_with_parser.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in input plugin with parser func",
 			filename: "./testdata/invalid_field_with_parserfunc.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of input plugin",
 			filename: "./testdata/invalid_field_in_parser_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of input plugin with parser-func",
 			filename: "./testdata/invalid_field_in_parserfunc_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin without parser",
 			filename: "./testdata/invalid_field_processor.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin with parser",
 			filename: "./testdata/invalid_field_processor_with_parser.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin with parser func",
 			filename: "./testdata/invalid_field_processor_with_parserfunc.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of processor plugin",
 			filename: "./testdata/invalid_field_processor_in_parser_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of processor plugin with parser-func",
 			filename: "./testdata/invalid_field_processor_in_parserfunc_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 	}
 
