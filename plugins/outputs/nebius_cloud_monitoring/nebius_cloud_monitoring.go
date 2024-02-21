@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -25,7 +26,6 @@ var sampleConfig string
 type NebiusCloudMonitoring struct {
 	Timeout  config.Duration `toml:"timeout"`
 	Endpoint string          `toml:"endpoint"`
-	Service  string          `toml:"service"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -34,6 +34,7 @@ type NebiusCloudMonitoring struct {
 	folderID               string
 	iamToken               string
 	iamTokenExpirationTime time.Time
+	service                string
 
 	client *http.Client
 
@@ -83,8 +84,11 @@ func (a *NebiusCloudMonitoring) Init() error {
 	if a.Endpoint == "" {
 		a.Endpoint = defaultEndpoint
 	}
-	if a.Service == "" {
-		a.Service = "custom"
+	if a.service == "" {
+		a.service = "custom"
+	}
+	if service := os.Getenv("NEBIUS_SERVICE"); service != "" {
+		a.service = service
 	}
 	if a.metadataTokenURL == "" {
 		a.metadataTokenURL = defaultMetadataTokenURL
@@ -208,7 +212,7 @@ func (a *NebiusCloudMonitoring) send(body []byte) error {
 	}
 	q := req.URL.Query()
 	q.Add("folderId", a.folderID)
-	q.Add("service", a.Service)
+	q.Add("service", a.service)
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
