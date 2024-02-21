@@ -49,6 +49,7 @@ Please feel free to make a copy the template.md and start with that.
 The user is free to add additional sections or parts in order to express and
 convey a new feature. For example this might include:
 
+* Keywords - Help identify what the spec is about
 * Is/Is-not - Explicitly state what this change includes and does not include
 * Prior Art - Point at existing or previous PRs, issues, or other works that
   demonstrate the feature or need for it.
