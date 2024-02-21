@@ -26,11 +26,14 @@ spec should be relatively quick. It should not take hours of time.
 
 ## Spec naming
 
-Please name the actual file prefixed with the scope, for example:
+Please name the actual file prefixed with `tsd` and the next available
+number, for example:
 
-* agent-write-ahead-log.md
-* inputs-apache-increase-timeout.md
-* serializers-parquet.md
+* tsd-001-agent-write-ahead-log.md
+* tsd-002-inputs-apache-increase-timeout.md
+* tsd-003-serializers-parquet.md
+
+All lower-case and separated by hyphens.
 
 ## What belongs in a spec
 
