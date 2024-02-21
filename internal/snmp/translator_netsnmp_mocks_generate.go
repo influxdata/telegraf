@@ -98,5 +98,5 @@ func generate() error {
 	f.Write([]byte("}\n"))
 	f.Close()
 
-	return exec.Command("gofmt", "-w", "snmp_mocks_test.go").Run()
+	return exec.Command("gofmt", "-w", "translator_netsnmp_mocks_test.go").Run()
 }

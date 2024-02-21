@@ -5,21 +5,21 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log" //nolint:depguard // Allow exceptional but valid use of log here.
 	"os/exec"
 	"strings"
 	"sync"
 
-	"github.com/influxdata/wlog"
+	"github.com/influxdata/telegraf"
 )
 
 // struct that implements the translator interface. This calls existing
 // code to exec netsnmp's snmptranslate program
 type netsnmpTranslator struct {
+	log telegraf.Logger
 }
 
-func NewNetsnmpTranslator() *netsnmpTranslator {
-	return &netsnmpTranslator{}
+func NewNetsnmpTranslator(log telegraf.Logger) *netsnmpTranslator {
+	return &netsnmpTranslator{log: log}
 }
 
 type snmpTableCache struct {
@@ -35,14 +35,12 @@ var execCommand = exec.Command
 
 // execCmd executes the specified command, returning the STDOUT content.
 // If command exits with error status, the output is captured into the returned error.
-func execCmd(arg0 string, args ...string) ([]byte, error) {
-	if wlog.LogLevel() == wlog.DEBUG {
-		quoted := make([]string, 0, len(args))
-		for _, arg := range args {
-			quoted = append(quoted, fmt.Sprintf("%q", arg))
-		}
-		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
+func (n *netsnmpTranslator) execCmd(arg0 string, args ...string) ([]byte, error) {
+	quoted := make([]string, 0, len(args))
+	for _, arg := range args {
+		quoted = append(quoted, fmt.Sprintf("%q", arg))
 	}
+	n.log.Debugf("executing %q %s", arg0, strings.Join(quoted, " "))
 
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
@@ -98,7 +96,7 @@ func (n *netsnmpTranslator) snmpTableCall(oid string) (
 	// first attempt to get the table's tags
 	tagOids := map[string]struct{}{}
 	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
+	if out, err := n.execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
 		scanner := bufio.NewScanner(bytes.NewBuffer(out))
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -124,7 +122,7 @@ func (n *netsnmpTranslator) snmpTableCall(oid string) (
 	}
 
 	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
+	out, err := n.execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("getting table columns: %w", err)
 	}
@@ -179,7 +177,7 @@ func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 		// is worth it. Especially when it would slam the system pretty hard if lots
 		// of lookups are being performed.
 
-		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
+		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = n.snmpTranslateCall(oid)
 		snmpTranslateCaches[oid] = stc
 	}
 
@@ -189,12 +187,12 @@ func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 }
 
 //nolint:revive //function-result-limit conditionally 5 return results allowed
-func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out []byte
 	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
+		out, err = n.execCmd("snmptranslate", "-Td", "-Ob", oid)
 	} else {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
+		out, err = n.execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
 		var execErr *exec.Error
 		if errors.As(err, &execErr) && errors.Is(execErr, exec.ErrNotFound) {
 			// Silently discard error if snmptranslate not found and we have a numeric OID.

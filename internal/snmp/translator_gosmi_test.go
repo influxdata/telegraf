@@ -1,20 +1,17 @@
 package snmp
 
 import (
-	"errors"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func getGosmiTr(t *testing.T) Translator {
-	testDataPath, err := filepath.Abs("./testdata")
+	testDataPath, err := filepath.Abs("./testdata/gosmi")
 	require.NoError(t, err)
 
 	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
@@ -31,56 +28,8 @@ func TestGosmiTranslator(t *testing.T) {
 	require.NotNil(t, tr)
 }
 
-// gosmi uses the same connection struct as netsnmp but has a few
-// different test cases, so it has its own copy
-var gosmiTsc = &testSNMPConnection{
-	host: "tsc",
-	values: map[string]interface{}{
-		".1.3.6.1.2.1.3.1.1.1.0": "foo",
-		".1.3.6.1.2.1.3.1.1.1.1": []byte("bar"),
-		".1.3.6.1.2.1.3.1.1.1.2": []byte(""),
-		".1.3.6.1.2.1.3.1.1.102": "bad",
-		".1.3.6.1.2.1.3.1.1.2.0": 1,
-		".1.3.6.1.2.1.3.1.1.2.1": 2,
-		".1.3.6.1.2.1.3.1.1.2.2": 0,
-		".1.3.6.1.2.1.3.1.1.3.0": "1.3.6.1.2.1.3.1.1.3",
-		".1.3.6.1.2.1.3.1.1.5.0": 123456,
-		".1.0.0.0.1.1.0":         "foo",
-		".1.0.0.0.1.1.1":         []byte("bar"),
-		".1.0.0.0.1.1.2":         []byte(""),
-		".1.0.0.0.1.102":         "bad",
-		".1.0.0.0.1.2.0":         1,
-		".1.0.0.0.1.2.1":         2,
-		".1.0.0.0.1.2.2":         0,
-		".1.0.0.0.1.3.0":         "0.123",
-		".1.0.0.0.1.3.1":         "0.456",
-		".1.0.0.0.1.3.2":         "0.000",
-		".1.0.0.0.1.3.3":         "9.999",
-		".1.0.0.0.1.5.0":         123456,
-		".1.0.0.1.1":             "baz",
-		".1.0.0.1.2":             234,
-		".1.0.0.1.3":             []byte("byte slice"),
-		".1.0.0.2.1.5.0.9.9":     11,
-		".1.0.0.2.1.5.1.9.9":     22,
-		".1.0.0.0.1.6.0":         ".1.0.0.0.1.7",
-		".1.0.0.3.1.1.10":        "instance",
-		".1.0.0.3.1.1.11":        "instance2",
-		".1.0.0.3.1.1.12":        "instance3",
-		".1.0.0.3.1.2.10":        10,
-		".1.0.0.3.1.2.11":        20,
-		".1.0.0.3.1.2.12":        20,
-		".1.0.0.3.1.3.10":        1,
-		".1.0.0.3.1.3.11":        2,
-		".1.0.0.3.1.3.12":        3,
-	},
-}
-
 func TestFieldInitGosmi(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
+	tr := getGosmiTr(t)
 
 	translations := []struct {
 		inputOid           string
@@ -102,124 +51,50 @@ func TestFieldInitGosmi(t *testing.T) {
 
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
-		err := f.init(tr)
-		require.NoError(t, err, "inputOid=%q inputName=%q", txl.inputOid, txl.inputName)
+		require.NoError(t, f.Init(tr), "inputOid=%q inputName=%q", txl.inputOid, txl.inputName)
 
 		require.Equal(t, txl.expectedOid, f.Oid, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
 		require.Equal(t, txl.expectedName, f.Name, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
+		require.Equal(t, txl.expectedConversion, f.Conversion, "inputOid=%q inputName=%q inputConversion=%q", txl.inputOid, txl.inputName, txl.inputConversion)
 	}
 }
 
 func TestTableInitGosmi(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	s := &Snmp{
-		ClientConfig: snmp.ClientConfig{
-			Path:       []string{testDataPath},
-			Translator: "gosmi",
-		},
-		Tables: []Table{
-			{Oid: ".1.3.6.1.2.1.3.1",
-				Fields: []Field{
-					{Oid: ".999", Name: "foo"},
-					{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true},
-					{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress"},
-				}},
-		},
-	}
-	err = s.Init()
-	require.NoError(t, err)
-
-	require.Equal(t, "atTable", s.Tables[0].Name)
-
-	require.Len(t, s.Tables[0].Fields, 5)
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".999", Name: "foo", initialized: true})
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
-}
-
-func TestSnmpInitGosmi(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	s := &Snmp{
-		Tables: []Table{
-			{Oid: "RFC1213-MIB::atTable"},
-		},
+	tbl := Table{
+		Oid: ".1.3.6.1.2.1.3.1",
 		Fields: []Field{
-			{Oid: "RFC1213-MIB::atPhysAddress"},
-		},
-		ClientConfig: snmp.ClientConfig{
-			Path:       []string{testDataPath},
-			Translator: "gosmi",
+			{Oid: ".999", Name: "foo"},
+			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true},
+			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress"},
 		},
 	}
 
-	err = s.Init()
-	require.NoError(t, err)
+	tr := getGosmiTr(t)
+	require.NoError(t, tbl.Init(tr))
 
-	require.Len(t, s.Tables[0].Fields, 3)
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true, initialized: true})
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
-	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", IsTag: true, initialized: true})
+	require.Equal(t, "atTable", tbl.Name)
 
-	require.Equal(t, Field{
-		Oid:         ".1.3.6.1.2.1.3.1.1.2",
-		Name:        "atPhysAddress",
-		Conversion:  "hwaddr",
-		initialized: true,
-	}, s.Fields[0])
-}
+	require.Len(t, tbl.Fields, 5)
 
-func TestSnmpInit_noTranslateGosmi(t *testing.T) {
-	s := &Snmp{
-		Fields: []Field{
-			{Oid: ".9.1.1.1.1", Name: "one", IsTag: true},
-			{Oid: ".9.1.1.1.2", Name: "two"},
-			{Oid: ".9.1.1.1.3"},
-		},
-		Tables: []Table{
-			{Name: "testing",
-				Fields: []Field{
-					{Oid: ".9.1.1.1.4", Name: "four", IsTag: true},
-					{Oid: ".9.1.1.1.5", Name: "five"},
-					{Oid: ".9.1.1.1.6"},
-				}},
-		},
-		ClientConfig: snmp.ClientConfig{
-			Path:       []string{},
-			Translator: "gosmi",
-		},
-	}
+	require.Equal(t, ".999", tbl.Fields[0].Oid)
+	require.Equal(t, "foo", tbl.Fields[0].Name)
+	require.False(t, tbl.Fields[0].IsTag)
+	require.Empty(t, tbl.Fields[0].Conversion)
 
-	err := s.Init()
-	require.NoError(t, err)
+	require.Equal(t, ".1.3.6.1.2.1.3.1.1.1", tbl.Fields[1].Oid)
+	require.Equal(t, "atIfIndex", tbl.Fields[1].Name)
+	require.True(t, tbl.Fields[1].IsTag)
+	require.Empty(t, tbl.Fields[1].Conversion)
 
-	require.Equal(t, ".9.1.1.1.1", s.Fields[0].Oid)
-	require.Equal(t, "one", s.Fields[0].Name)
-	require.True(t, s.Fields[0].IsTag)
+	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", tbl.Fields[2].Oid)
+	require.Equal(t, "atPhysAddress", tbl.Fields[2].Name)
+	require.False(t, tbl.Fields[2].IsTag)
+	require.Equal(t, "hwaddr", tbl.Fields[2].Conversion)
 
-	require.Equal(t, ".9.1.1.1.2", s.Fields[1].Oid)
-	require.Equal(t, "two", s.Fields[1].Name)
-	require.False(t, s.Fields[1].IsTag)
-
-	require.Equal(t, ".9.1.1.1.3", s.Fields[2].Oid)
-	require.Equal(t, ".9.1.1.1.3", s.Fields[2].Name)
-	require.False(t, s.Fields[2].IsTag)
-
-	require.Equal(t, ".9.1.1.1.4", s.Tables[0].Fields[0].Oid)
-	require.Equal(t, "four", s.Tables[0].Fields[0].Name)
-	require.True(t, s.Tables[0].Fields[0].IsTag)
-
-	require.Equal(t, ".9.1.1.1.5", s.Tables[0].Fields[1].Oid)
-	require.Equal(t, "five", s.Tables[0].Fields[1].Name)
-	require.False(t, s.Tables[0].Fields[1].IsTag)
-
-	require.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Oid)
-	require.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Name)
-	require.False(t, s.Tables[0].Fields[2].IsTag)
+	require.Equal(t, ".1.3.6.1.2.1.3.1.1.3", tbl.Fields[4].Oid)
+	require.Equal(t, "atNetAddress", tbl.Fields[4].Name)
+	require.True(t, tbl.Fields[4].IsTag)
+	require.Empty(t, tbl.Fields[4].Conversion)
 }
 
 // TestTableBuild_walk in snmp_test.go is split into two tests here,
@@ -259,13 +134,7 @@ func TestTableBuild_walk_noTranslate(t *testing.T) {
 		},
 	}
 
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
-
-	tb, err := tbl.Build(gosmiTsc, true, tr)
+	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 	require.Equal(t, "mytable", tb.Name)
 	rtr1 := RTableRow{
@@ -317,12 +186,6 @@ func TestTableBuild_walk_noTranslate(t *testing.T) {
 }
 
 func TestTableBuild_walk_Translate(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
-
 	tbl := Table{
 		Name:       "atTable",
 		IndexAsTag: true,
@@ -345,9 +208,8 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 		},
 	}
 
-	err = tbl.Init(tr)
-	require.NoError(t, err)
-	tb, err := tbl.Build(gosmiTsc, true, tr)
+	require.NoError(t, tbl.Init(getGosmiTr(t)))
+	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
 	require.Equal(t, "atTable", tb.Name)
@@ -387,12 +249,6 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 }
 
 func TestTableBuild_noWalkGosmi(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
-
 	tbl := Table{
 		Name: "mytable",
 		Fields: []Field{
@@ -421,7 +277,7 @@ func TestTableBuild_noWalkGosmi(t *testing.T) {
 		},
 	}
 
-	tb, err := tbl.Build(gosmiTsc, false, tr)
+	tb, err := tbl.Build(tsc, false)
 	require.NoError(t, err)
 
 	rtr := RTableRow{
@@ -430,103 +286,6 @@ func TestTableBuild_noWalkGosmi(t *testing.T) {
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)
-}
-
-func TestGatherGosmi(t *testing.T) {
-	s := &Snmp{
-		Agents: []string{"TestGather"},
-		Name:   "mytable",
-		Fields: []Field{
-			{
-				Name:  "myfield1",
-				Oid:   ".1.0.0.1.1",
-				IsTag: true,
-			},
-			{
-				Name: "myfield2",
-				Oid:  ".1.0.0.1.2",
-			},
-			{
-				Name: "myfield3",
-				Oid:  "1.0.0.1.1",
-			},
-		},
-		Tables: []Table{
-			{
-				Name:        "myOtherTable",
-				InheritTags: []string{"myfield1"},
-				Fields: []Field{
-					{
-						Name: "myOtherField",
-						Oid:  ".1.0.0.0.1.5",
-					},
-				},
-			},
-		},
-
-		connectionCache: []snmpConnection{
-			gosmiTsc,
-		},
-
-		ClientConfig: snmp.ClientConfig{
-			Path:       []string{"testdata"},
-			Translator: "gosmi",
-		},
-	}
-	acc := &testutil.Accumulator{}
-
-	tstart := time.Now()
-	require.NoError(t, s.Gather(acc))
-	tstop := time.Now()
-
-	require.Len(t, acc.Metrics, 2)
-
-	m := acc.Metrics[0]
-	require.Equal(t, "mytable", m.Measurement)
-	require.Equal(t, "tsc", m.Tags[s.AgentHostTag])
-	require.Equal(t, "baz", m.Tags["myfield1"])
-	require.Len(t, m.Fields, 2)
-	require.Equal(t, 234, m.Fields["myfield2"])
-	require.Equal(t, "baz", m.Fields["myfield3"])
-	require.False(t, tstart.After(m.Time))
-	require.False(t, tstop.Before(m.Time))
-
-	m2 := acc.Metrics[1]
-	require.Equal(t, "myOtherTable", m2.Measurement)
-	require.Equal(t, "tsc", m2.Tags[s.AgentHostTag])
-	require.Equal(t, "baz", m2.Tags["myfield1"])
-	require.Len(t, m2.Fields, 1)
-	require.Equal(t, 123456, m2.Fields["myOtherField"])
-}
-
-func TestGather_hostGosmi(t *testing.T) {
-	s := &Snmp{
-		Agents: []string{"TestGather"},
-		Name:   "mytable",
-		Fields: []Field{
-			{
-				Name:  "host",
-				Oid:   ".1.0.0.1.1",
-				IsTag: true,
-			},
-			{
-				Name: "myfield2",
-				Oid:  ".1.0.0.1.2",
-			},
-		},
-
-		connectionCache: []snmpConnection{
-			gosmiTsc,
-		},
-	}
-
-	acc := &testutil.Accumulator{}
-
-	require.NoError(t, s.Gather(acc))
-
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-	require.Equal(t, "baz", m.Tags["host"])
 }
 
 func TestFieldConvertGosmi(t *testing.T) {
@@ -585,75 +344,16 @@ func TestFieldConvertGosmi(t *testing.T) {
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(getGosmiTr(t), tc.conv, gosnmp.SnmpPDU{Name: ".1.3.6.1.2.1.2.2.1.8", Value: tc.input})
+		f := Field{
+			Name:       "test",
+			Conversion: tc.conv,
+		}
+		require.NoError(t, f.Init(getGosmiTr(t)))
+
+		act, err := f.Convert(gosnmp.SnmpPDU{Name: ".1.3.6.1.2.1.2.2.1.8", Value: tc.input})
 		require.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 		require.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}
-}
-
-func TestSnmpTranslateCache_missGosmi(t *testing.T) {
-	gosmiSnmpTranslateCaches = nil
-	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := getGosmiTr(t).SnmpTranslate(oid)
-	require.Len(t, gosmiSnmpTranslateCaches, 1)
-	stc := gosmiSnmpTranslateCaches[oid]
-	require.NotNil(t, stc)
-	require.Equal(t, mibName, stc.mibName)
-	require.Equal(t, oidNum, stc.oidNum)
-	require.Equal(t, oidText, stc.oidText)
-	require.Equal(t, conversion, stc.conversion)
-	require.Equal(t, err, stc.err)
-}
-
-func TestSnmpTranslateCache_hitGosmi(t *testing.T) {
-	gosmiSnmpTranslateCaches = map[string]gosmiSnmpTranslateCache{
-		"foo": {
-			mibName:    "a",
-			oidNum:     "b",
-			oidText:    "c",
-			conversion: "d",
-			err:        errors.New("e"),
-		},
-	}
-	mibName, oidNum, oidText, conversion, err := getGosmiTr(t).SnmpTranslate("foo")
-	require.Equal(t, "a", mibName)
-	require.Equal(t, "b", oidNum)
-	require.Equal(t, "c", oidText)
-	require.Equal(t, "d", conversion)
-	require.Equal(t, errors.New("e"), err)
-	gosmiSnmpTranslateCaches = nil
-}
-
-func TestSnmpTableCache_missGosmi(t *testing.T) {
-	gosmiSnmpTableCaches = nil
-	oid := ".1.0.0.0"
-	mibName, oidNum, oidText, fields, err := getGosmiTr(t).SnmpTable(oid)
-	require.Len(t, gosmiSnmpTableCaches, 1)
-	stc := gosmiSnmpTableCaches[oid]
-	require.NotNil(t, stc)
-	require.Equal(t, mibName, stc.mibName)
-	require.Equal(t, oidNum, stc.oidNum)
-	require.Equal(t, oidText, stc.oidText)
-	require.Equal(t, fields, stc.fields)
-	require.Equal(t, err, stc.err)
-}
-
-func TestSnmpTableCache_hitGosmi(t *testing.T) {
-	gosmiSnmpTableCaches = map[string]gosmiSnmpTableCache{
-		"foo": {
-			mibName: "a",
-			oidNum:  "b",
-			oidText: "c",
-			fields:  []Field{{Name: "d"}},
-			err:     errors.New("e"),
-		},
-	}
-	mibName, oidNum, oidText, fields, err := getGosmiTr(t).SnmpTable("foo")
-	require.Equal(t, "a", mibName)
-	require.Equal(t, "b", oidNum)
-	require.Equal(t, "c", oidText)
-	require.Equal(t, []Field{{Name: "d"}}, fields)
-	require.Equal(t, errors.New("e"), err)
 }
 
 func TestTableJoin_walkGosmi(t *testing.T) {
@@ -689,13 +389,8 @@ func TestTableJoin_walkGosmi(t *testing.T) {
 		},
 	}
 
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
-
-	tb, err := tbl.Build(gosmiTsc, true, tr)
+	require.NoError(t, tbl.Init(getGosmiTr(t)))
+	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
 	require.Equal(t, "mytable", tb.Name)
@@ -772,13 +467,7 @@ func TestTableOuterJoin_walkGosmi(t *testing.T) {
 		},
 	}
 
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
-
-	tb, err := tbl.Build(gosmiTsc, true, tr)
+	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
 	require.Equal(t, "mytable", tb.Name)
@@ -864,13 +553,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 		},
 	}
 
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
-	require.NoError(t, err)
-
-	tb, err := tbl.Build(gosmiTsc, true, tr)
+	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
 	require.Equal(t, "mytable", tb.Name)
@@ -913,33 +596,91 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	require.Contains(t, tb.Rows, rtr3)
 }
 
-func BenchmarkMibLoading(b *testing.B) {
-	log := testutil.Logger{}
-	path := []string{"testdata"}
-	for i := 0; i < b.N; i++ {
-		err := snmp.LoadMibsFromPath(path, log, &snmp.GosmiMibLoader{})
-		require.NoError(b, err)
-	}
-}
-
 func TestCanNotParse(t *testing.T) {
-	s := &Snmp{
-		Fields: []Field{
-			{Oid: "RFC1213-MIB::"},
+	tr := getGosmiTr(t)
+	f := Field{
+		Oid: "RFC1213-MIB::",
+	}
+
+	require.Error(t, f.Init(tr))
+}
+
+func TestTrapLookup(t *testing.T) {
+	tests := []struct {
+		name     string
+		oid      string
+		expected MibEntry
+	}{
+		{
+			name: "Known trap OID",
+			oid:  ".1.3.6.1.6.3.1.1.5.1",
+			expected: MibEntry{
+				MibName: "TGTEST-MIB",
+				OidText: "coldStart",
+			},
 		},
-		ClientConfig: snmp.ClientConfig{
-			Path:       []string{"testdata"},
-			Translator: "gosmi",
+		{
+			name: "Known trap value OID",
+			oid:  ".1.3.6.1.2.1.1.3.0",
+			expected: MibEntry{
+				MibName: "TGTEST-MIB",
+				OidText: "sysUpTimeInstance",
+			},
+		},
+		{
+			name: "Unknown enterprise sub-OID",
+			oid:  ".1.3.6.1.4.1.0.1.2.3",
+			expected: MibEntry{
+				MibName: "SNMPv2-SMI",
+				OidText: "enterprises.0.1.2.3",
+			},
+		},
+		{
+			name:     "Unknown MIB",
+			oid:      ".1.999",
+			expected: MibEntry{OidText: "iso.999"},
 		},
 	}
 
-	err := s.Init()
-	require.Error(t, err)
+	// Load the MIBs
+	getGosmiTr(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Run the actual test
+			actual, err := TrapLookup(tt.oid)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
 }
 
-func TestMissingMibPath(t *testing.T) {
-	log := testutil.Logger{}
-	path := []string{"non-existing-directory"}
-	err := snmp.LoadMibsFromPath(path, log, &snmp.GosmiMibLoader{})
-	require.NoError(t, err)
+func TestTrapLookupFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		oid      string
+		expected string
+	}{
+		{
+			name:     "New top level OID",
+			oid:      ".3.6.1.3.0",
+			expected: "Could not find node for OID 3.6.1.3.0",
+		},
+		{
+			name:     "Malformed OID",
+			oid:      ".1.3.dod.1.3.0",
+			expected: "could not convert OID .1.3.dod.1.3.0: strconv.ParseUint: parsing \"dod\": invalid syntax",
+		},
+	}
+
+	// Load the MIBs
+	getGosmiTr(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Run the actual test
+			_, err := TrapLookup(tt.oid)
+			require.EqualError(t, err, tt.expected)
+		})
+	}
 }

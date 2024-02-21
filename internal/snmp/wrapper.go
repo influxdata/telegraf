@@ -11,6 +11,16 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
+// Connection is an interface which wraps a *gosnmp.GoSNMP object.
+// We interact through an interface so we can mock it out in tests.
+type Connection interface {
+	Host() string
+	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
+	Walk(string, gosnmp.WalkFunc) error
+	Get(oids []string) (*gosnmp.SnmpPacket, error)
+	Reconnect() error
+}
+
 // GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
 type GosnmpWrapper struct {
 	*gosnmp.GoSNMP
