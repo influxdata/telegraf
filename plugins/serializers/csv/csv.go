@@ -81,7 +81,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	// Write the header if the user wants us to
 	if s.Header {
 		if len(s.Columns) > 0 {
-			if err := s.writeHeaderOrdered(metrics[0]); err != nil {
+			if err := s.writeHeaderOrdered(); err != nil {
 				return nil, fmt.Errorf("writing header failed: %w", err)
 			}
 		} else {
@@ -137,7 +137,7 @@ func (s *Serializer) writeHeader(metric telegraf.Metric) error {
 	return s.writer.Write(columns)
 }
 
-func (s *Serializer) writeHeaderOrdered(metric telegraf.Metric) error {
+func (s *Serializer) writeHeaderOrdered() error {
 	columns := make([]string, 0, len(s.Columns))
 	for _, name := range s.Columns {
 		if s.Prefix {
