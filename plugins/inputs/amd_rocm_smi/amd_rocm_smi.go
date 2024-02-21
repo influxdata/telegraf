@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -30,7 +29,6 @@ type ROCmSMI struct {
 	Log                  telegraf.Logger `toml:"-"`
 
 	ignorePlugin bool
-	once         sync.Once
 }
 
 func (*ROCmSMI) SampleConfig() string {
