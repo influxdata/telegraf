@@ -1,0 +1,5 @@
+[[inputs.memcached]]
+  servers = [
+    # A comment in the array
+    "localhost"
+  ]
