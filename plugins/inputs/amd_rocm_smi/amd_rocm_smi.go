@@ -23,8 +23,12 @@ var sampleConfig string
 const measurement = "amd_rocm_smi"
 
 type ROCmSMI struct {
-	BinPath string
-	Timeout config.Duration
+	BinPath              string          `toml:"bin_path"`
+	Timeout              config.Duration `toml:"timeout"`
+	StartupErrorBehavior string          `toml:"startup_error_behavior"`
+	Log                  telegraf.Logger `toml:"-"`
+
+	ignorePlugin bool
 }
 
 func (*ROCmSMI) SampleConfig() string {
@@ -33,14 +37,35 @@ func (*ROCmSMI) SampleConfig() string {
 
 // Gather implements the telegraf interface
 func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
-	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
-		return fmt.Errorf("rocm-smi binary not found in path %s, cannot query GPUs statistics", rsmi.BinPath)
+	if rsmi.ignorePlugin {
+		return nil
 	}
 
 	data := rsmi.pollROCmSMI()
 	err := gatherROCmSMI(data, acc)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (rsmi *ROCmSMI) Init() error {
+	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
+		binPath, err := exec.LookPath("rocm-smi")
+		if err != nil {
+			switch rsmi.StartupErrorBehavior {
+			case "ignore":
+				rsmi.ignorePlugin = true
+				rsmi.Log.Warnf("rocm-smi not found on the system, ignoring: %s", err)
+				return nil
+			case "", "error":
+				return fmt.Errorf("rocm-smi binary not found in path %s, cannot query GPUs statistics", rsmi.BinPath)
+			default:
+				return fmt.Errorf("unknown startup behavior setting: %s", rsmi.StartupErrorBehavior)
+			}
+		}
+		rsmi.BinPath = binPath
 	}
 
 	return nil
