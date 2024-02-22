@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- With the upgrade of the ClickHouse SQL driver in [#14877](https://github.com/influxdata/telegraf/pull/14877)
+  from version 1 to version 2, the DSN settings in `inputs.sql` and `outputs.sql`
+  might need to be adapted to the new version.
+
 ## v1.29.5 [2024-02-20]
 
 ### Bugfixes
