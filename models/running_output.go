@@ -113,7 +113,7 @@ func NewRunningOutput(
 		),
 		BufferFullness: selfstat.Register(
 			"write",
-			"buffered_metrics",
+			"buffer_usage",
 			tags,
 		),
 		StartupErrors: selfstat.Register(
@@ -172,7 +172,7 @@ func (r *RunningOutput) Connect() error {
 	switch r.Config.StartupErrorBehavior {
 	case "", "error": // fall-trough to return the actual error
 	case "retry":
-		r.log.Infof("Connect failed: %w; retrying...", err)
+		r.log.Infof("Connect failed: %v; retrying...", err)
 		return nil
 	case "ignore":
 		serr.RemovePlugin = true
@@ -251,7 +251,7 @@ func (r *RunningOutput) Write() error {
 			return telegraf.ErrNotConnected
 		}
 		r.started = true
-		r.log.Debug("Successfully connected after %d attempts", r.retries)
+		r.log.Debugf("Successfully connected after %d attempts", r.retries)
 	}
 
 	if output, ok := r.Output.(telegraf.AggregatingOutput); ok {
@@ -294,7 +294,7 @@ func (r *RunningOutput) WriteBatch() error {
 			return telegraf.ErrNotConnected
 		}
 		r.started = true
-		r.log.Debug("Successfully connected after %d attempts", r.retries)
+		r.log.Debugf("Successfully connected after %d attempts", r.retries)
 	}
 
 	batch := r.buffer.Batch(r.MetricBatchSize)
