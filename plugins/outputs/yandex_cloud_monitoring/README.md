@@ -23,7 +23,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
   # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 
-  ## All user metrics should be sent with "custom" service specified.
+  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
   # service = "custom"
 ```
 
