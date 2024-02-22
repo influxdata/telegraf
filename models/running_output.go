@@ -154,7 +154,6 @@ func (r *RunningOutput) Connect() error {
 	if !errors.As(err, &serr) || !serr.Retry {
 		return err
 	}
-	serr.RemovePlugin = false
 
 	// Handle the retry-able error depending on the configured behavior
 	switch r.Config.StartupErrorBehavior {
