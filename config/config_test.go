@@ -193,6 +193,15 @@ func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
+func TestConfig_LoadSingleInput_WithCommentInArray(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_comment_in_array.toml"))
+	require.Len(t, c.Inputs, 1)
+
+	input := c.Inputs[0].Input.(*MockupInputPlugin)
+	require.ElementsMatch(t, input.Servers, []string{"localhost"})
+}
+
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := config.NewConfig()
 
