@@ -49,6 +49,8 @@ type RunningOutput struct {
 
 	MetricsFiltered selfstat.Stat
 	WriteTime       selfstat.Stat
+	BufferFullness  selfstat.Stat
+	StartupErrors   selfstat.Stat
 
 	BatchReady chan time.Time
 
@@ -109,6 +111,16 @@ func NewRunningOutput(
 			"write_time_ns",
 			tags,
 		),
+		BufferFullness: selfstat.Register(
+			"write",
+			"buffered_metrics",
+			tags,
+		),
+		StartupErrors: selfstat.Register(
+			"write",
+			"startup_errors",
+			tags,
+		),
 		log: logger,
 	}
 
@@ -148,6 +160,7 @@ func (r *RunningOutput) Connect() error {
 		r.started = true
 		return nil
 	}
+	r.StartupErrors.Incr(1)
 
 	// Check if the plugin reports a retry-able error, otherwise we exit.
 	var serr *telegraf.StartupError
@@ -234,6 +247,7 @@ func (r *RunningOutput) Write() error {
 	if !r.started {
 		r.retries++
 		if err := r.Output.Connect(); err != nil {
+			r.StartupErrors.Incr(1)
 			return telegraf.ErrNotConnected
 		}
 		r.started = true
@@ -276,6 +290,7 @@ func (r *RunningOutput) WriteBatch() error {
 	if !r.started {
 		r.retries++
 		if err := r.Output.Connect(); err != nil {
+			r.StartupErrors.Incr(1)
 			return telegraf.ErrNotConnected
 		}
 		r.started = true
@@ -318,6 +333,7 @@ func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 func (r *RunningOutput) LogBufferStatus() {
 	nBuffer := r.buffer.Len()
 	r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
+	r.BufferFullness.Set(int64(nBuffer))
 }
 
 func (r *RunningOutput) Log() telegraf.Logger {
