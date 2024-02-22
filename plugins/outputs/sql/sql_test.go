@@ -361,8 +361,8 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	//use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%v:%v?username=%v&database=%v",
-		container.Address, container.Ports[servicePort], username, dbname)
+	address := fmt.Sprintf("clickhouse://%s@%s:%s/%s",
+		username, container.Address, container.Ports[servicePort], dbname)
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "clickhouse"

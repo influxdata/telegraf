@@ -290,10 +290,42 @@ func TestClickHouseIntegration(t *testing.T) {
 		},
 	}
 
+	// Test with v1 DSN scheme
+	for _, tt := range testset {
+		t.Run(tt.name+"_v1", func(t *testing.T) {
+			// Setup the plugin-under-test
+			dsn := fmt.Sprintf("tcp://%v:%v?username=%v", container.Address, container.Ports[port], user)
+			secret := config.NewSecret([]byte(dsn))
+			plugin := &SQL{
+				Driver:  "clickhouse",
+				Dsn:     secret,
+				Queries: tt.queries,
+				Log:     logger,
+			}
+
+			var acc testutil.Accumulator
+
+			// Startup the plugin
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(&acc))
+
+			// Gather
+			require.NoError(t, plugin.Gather(&acc))
+			require.Empty(t, acc.Errors)
+
+			// Stopping the plugin
+			plugin.Stop()
+
+			// Do the comparison
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
+		})
+	}
+
+	// Test with v2 DSN scheme
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
-			dsn := fmt.Sprintf("tcp://%v:%v?username=%v", container.Address, container.Ports[port], user)
+			dsn := fmt.Sprintf("clickhouse://%s@%s:%s", user, container.Address, container.Ports[port])
 			secret := config.NewSecret([]byte(dsn))
 			plugin := &SQL{
 				Driver:  "clickhouse",

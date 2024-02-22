@@ -413,6 +413,12 @@ func (s *SQL) ping() error {
 }
 
 func (s *SQL) prepareStatements() {
+	// We don't support prepare on ClickHouse as this requires a non-standard
+	// exec sequence on query later.
+	if s.driverName == "clickhouse" {
+		return
+	}
+
 	// Prepare the statements
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
