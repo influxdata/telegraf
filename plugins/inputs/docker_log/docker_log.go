@@ -185,9 +185,11 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 	// this array is always of length 1.
 	for _, name := range names {
 		trimmedName := strings.TrimPrefix(name, "/")
-		match := d.containerFilter.Match(trimmedName)
-		if match {
-			return trimmedName
+		if !strings.Contains(trimmedName, "/") {
+			match := d.containerFilter.Match(trimmedName)
+			if match {
+				return trimmedName
+			}
 		}
 	}
 	return ""
