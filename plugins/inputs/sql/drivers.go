@@ -2,7 +2,7 @@ package sql
 
 import (
 	// Blank imports to register the drivers
-	_ "github.com/ClickHouse/clickhouse-go"
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/IBM/nzgo/v12"
 	_ "github.com/apache/arrow/go/v13/arrow/flight/flightsql/driver"
 	_ "github.com/go-sql-driver/mysql"

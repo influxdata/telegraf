@@ -9,11 +9,11 @@ import (
 	"time"
 
 	//Register sql drivers
-	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
-	_ "github.com/go-sql-driver/mysql"      // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
-	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
-	_ "github.com/snowflakedb/gosnowflake"  // snowflake
+	_ "github.com/ClickHouse/clickhouse-go/v2" // clickhouse
+	_ "github.com/go-sql-driver/mysql"         // mysql
+	_ "github.com/jackc/pgx/v4/stdlib"         // pgx (postgres)
+	_ "github.com/microsoft/go-mssqldb"        // mssql (sql server)
+	_ "github.com/snowflakedb/gosnowflake"     // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
