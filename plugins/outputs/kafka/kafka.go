@@ -157,13 +157,16 @@ func (k *Kafka) Init() error {
 func (k *Kafka) Connect() error {
 	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
 	if err != nil {
-		return err
+		return &telegraf.StartupError{Err: err, Retry: true}
 	}
 	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Close() error {
+	if k.producer == nil {
+		return nil
+	}
 	return k.producer.Close()
 }
 
