@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,10 +20,11 @@ const (
 
 // OutputConfig containing name and filter
 type OutputConfig struct {
-	Name   string
-	Alias  string
-	ID     string
-	Filter Filter
+	Name                 string
+	Alias                string
+	ID                   string
+	StartupErrorBehavior string
+	Filter               Filter
 
 	FlushInterval     time.Duration
 	FlushJitter       time.Duration
@@ -52,6 +54,9 @@ type RunningOutput struct {
 
 	buffer *Buffer
 	log    telegraf.Logger
+
+	started bool
+	retries uint64
 
 	aggMutex sync.Mutex
 }
@@ -119,6 +124,13 @@ func (r *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
+func (r *RunningOutput) ID() string {
+	if p, ok := r.Output.(telegraf.PluginWithID); ok {
+		return p.ID()
+	}
+	return r.Config.ID
+}
+
 func (r *RunningOutput) Init() error {
 	if p, ok := r.Output.(telegraf.Initializer); ok {
 		err := p.Init()
@@ -129,11 +141,42 @@ func (r *RunningOutput) Init() error {
 	return nil
 }
 
-func (r *RunningOutput) ID() string {
-	if p, ok := r.Output.(telegraf.PluginWithID); ok {
-		return p.ID()
+func (r *RunningOutput) Connect() error {
+	// Try to connect and exit early on success
+	err := r.Output.Connect()
+	if err == nil {
+		r.started = true
+		return nil
 	}
-	return r.Config.ID
+
+	// Check if the plugin reports a retry-able error, otherwise we exit.
+	var serr *telegraf.StartupError
+	if !errors.As(err, &serr) || !serr.Retry {
+		return err
+	}
+	serr.RemovePlugin = false
+
+	// Handle the retry-able error depending on the configured behavior
+	switch r.Config.StartupErrorBehavior {
+	case "", "error": // fall-trough to return the actual error
+	case "retry":
+		r.log.Infof("Connect failed: %w; retrying...", err)
+		return nil
+	case "ignore":
+		serr.RemovePlugin = true
+		return serr
+	default:
+		r.log.Errorf("Invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
+	}
+
+	return err
+}
+
+// Close closes the output
+func (r *RunningOutput) Close() {
+	if err := r.Output.Close(); err != nil {
+		r.log.Errorf("Error closing output: %v", err)
+	}
 }
 
 // AddMetric adds a metric to the output.
@@ -188,6 +231,16 @@ func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
 // Write writes all metrics to the output, stopping when all have been sent on
 // or error.
 func (r *RunningOutput) Write() error {
+	// Try to connect if we are not yet started up
+	if !r.started {
+		r.retries++
+		if err := r.Output.Connect(); err != nil {
+			return telegraf.ErrNotConnected
+		}
+		r.started = true
+		r.log.Debug("Successfully connected after %d attempts", r.retries)
+	}
+
 	if output, ok := r.Output.(telegraf.AggregatingOutput); ok {
 		r.aggMutex.Lock()
 		metrics := output.Push()
@@ -220,6 +273,16 @@ func (r *RunningOutput) Write() error {
 
 // WriteBatch writes a single batch of metrics to the output.
 func (r *RunningOutput) WriteBatch() error {
+	// Try to connect if we are not yet started up
+	if !r.started {
+		r.retries++
+		if err := r.Output.Connect(); err != nil {
+			return telegraf.ErrNotConnected
+		}
+		r.started = true
+		r.log.Debug("Successfully connected after %d attempts", r.retries)
+	}
+
 	batch := r.buffer.Batch(r.MetricBatchSize)
 	if len(batch) == 0 {
 		return nil
@@ -233,14 +296,6 @@ func (r *RunningOutput) WriteBatch() error {
 	r.buffer.Accept(batch)
 
 	return nil
-}
-
-// Close closes the output
-func (r *RunningOutput) Close() {
-	err := r.Output.Close()
-	if err != nil {
-		r.log.Errorf("Error closing output: %v", err)
-	}
 }
 
 func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
