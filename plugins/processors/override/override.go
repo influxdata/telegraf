@@ -15,7 +15,7 @@ type Override struct {
 	NameOverride string            `toml:"name_override"`
 	NamePrefix   string            `toml:"name_prefix"`
 	NameSuffix   string            `toml:"name_suffix"`
-	Tags         map[string]string `toml:"tag"`
+	Tags         map[string]string `toml:"tags"`
 }
 
 func (*Override) SampleConfig() string {
