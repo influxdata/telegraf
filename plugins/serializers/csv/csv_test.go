@@ -66,6 +66,22 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			name:     "header and semicolon",
 			filename: "testcases/semicolon.conf",
 		},
+		{
+			name:     "ordered without header",
+			filename: "testcases/ordered.conf",
+		},
+		{
+			name:     "ordered with header",
+			filename: "testcases/ordered_with_header.conf",
+		},
+		{
+			name:     "ordered with header and prefix",
+			filename: "testcases/ordered_with_header_prefix.conf",
+		},
+		{
+			name:     "ordered non-existing fields and tags",
+			filename: "testcases/ordered_not_exist.conf",
+		},
 	}
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
@@ -93,6 +109,7 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 				Separator:       cfg.Separator,
 				Header:          cfg.Header,
 				Prefix:          cfg.Prefix,
+				Columns:         cfg.Columns,
 			}
 			require.NoError(t, serializer.Init())
 			// expected results use LF endings
@@ -139,6 +156,22 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			name:     "header and semicolon",
 			filename: "testcases/semicolon.conf",
 		},
+		{
+			name:     "ordered without header",
+			filename: "testcases/ordered.conf",
+		},
+		{
+			name:     "ordered with header",
+			filename: "testcases/ordered_with_header.conf",
+		},
+		{
+			name:     "ordered with header and prefix",
+			filename: "testcases/ordered_with_header_prefix.conf",
+		},
+		{
+			name:     "ordered non-existing fields and tags",
+			filename: "testcases/ordered_not_exist.conf",
+		},
 	}
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
@@ -166,6 +199,7 @@ func TestSerializeTransformationBatch(t *testing.T) {
 				Separator:       cfg.Separator,
 				Header:          cfg.Header,
 				Prefix:          cfg.Prefix,
+				Columns:         cfg.Columns,
 			}
 			require.NoError(t, serializer.Init())
 			// expected results use LF endings
