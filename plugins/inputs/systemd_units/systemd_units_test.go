@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -194,10 +197,12 @@ func TestListFiles(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			// Create a fake client to inject data
-			plugin.client = &fakeClient{
+			client := &fakeClient{
 				units:     tt.properties,
 				connected: true,
 			}
+			client.fixPropertyTypes()
+			plugin.client = client
 			defer plugin.Stop()
 
 			// Run gather
@@ -266,11 +271,11 @@ func TestShow(t *testing.T) {
 						"sub_code":     0,
 						"status_errno": 0,
 						"restarts":     1,
-						"mem_current":  1000,
-						"mem_peak":     2000,
-						"swap_current": 3000,
-						"swap_peak":    4000,
-						"mem_avail":    5000,
+						"mem_current":  uint64(1000),
+						"mem_peak":     uint64(2000),
+						"swap_current": uint64(3000),
+						"swap_peak":    uint64(4000),
+						"mem_avail":    uint64(5000),
 						"pid":          9999,
 					},
 					time.Unix(0, 0),
@@ -314,6 +319,11 @@ func TestShow(t *testing.T) {
 						"sub_code":     4,
 						"status_errno": 0,
 						"restarts":     0,
+						"mem_current":  uint64(0),
+						"mem_peak":     uint64(0),
+						"swap_current": uint64(0),
+						"swap_peak":    uint64(0),
+						"mem_avail":    uint64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -361,11 +371,11 @@ func TestShow(t *testing.T) {
 						"sub_code":     12,
 						"status_errno": 10,
 						"restarts":     1,
-						"mem_current":  1000,
-						"mem_peak":     2000,
-						"swap_current": 3000,
-						"swap_peak":    4000,
-						"mem_avail":    5000,
+						"mem_current":  uint64(1000),
+						"mem_peak":     uint64(2000),
+						"swap_current": uint64(3000),
+						"swap_peak":    uint64(4000),
+						"mem_avail":    uint64(5000),
 					},
 					time.Unix(0, 0),
 				),
@@ -401,9 +411,14 @@ func TestShow(t *testing.T) {
 						"uf_preset": "disabled",
 					},
 					map[string]interface{}{
-						"load_code":   2,
-						"active_code": 2,
-						"sub_code":    1,
+						"load_code":    2,
+						"active_code":  2,
+						"sub_code":     1,
+						"mem_current":  uint64(0),
+						"mem_peak":     uint64(0),
+						"swap_current": uint64(0),
+						"swap_peak":    uint64(0),
+						"mem_avail":    uint64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -429,6 +444,58 @@ func TestShow(t *testing.T) {
 			},
 			expectedErr: "parsing field 'load' failed, value not in map",
 		},
+		{
+			name: "example loaded but inactive with unset fields",
+			properties: map[string]properties{
+				"example.service": {
+					utype: "Service",
+					state: &sdbus.UnitStatus{
+						Name:        "example.service",
+						LoadState:   "loaded",
+						ActiveState: "inactive",
+						SubState:    "dead",
+					},
+					ufPreset: "disabled",
+					ufState:  "disabled",
+					properties: map[string]interface{}{
+						"Id":                "example.service",
+						"StatusErrno":       0,
+						"NRestarts":         0,
+						"MemoryCurrent":     uint64(math.MaxUint64),
+						"MemoryPeak":        uint64(math.MaxUint64),
+						"MemorySwapCurrent": uint64(math.MaxUint64),
+						"MemorySwapPeak":    uint64(math.MaxUint64),
+						"MemoryAvailable":   uint64(math.MaxUint64),
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"systemd_units",
+					map[string]string{
+						"name":      "example.service",
+						"load":      "loaded",
+						"active":    "inactive",
+						"sub":       "dead",
+						"uf_state":  "disabled",
+						"uf_preset": "disabled",
+					},
+					map[string]interface{}{
+						"load_code":    0,
+						"active_code":  int64(2),
+						"sub_code":     1,
+						"status_errno": 0,
+						"restarts":     0,
+						"mem_current":  uint64(0),
+						"mem_peak":     uint64(0),
+						"swap_current": uint64(0),
+						"swap_peak":    uint64(0),
+						"mem_avail":    uint64(0),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -443,10 +510,12 @@ func TestShow(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			// Create a fake client to inject data
-			plugin.client = &fakeClient{
+			client := &fakeClient{
 				units:     tt.properties,
 				connected: true,
 			}
+			client.fixPropertyTypes()
+			plugin.client = client
 			defer plugin.Stop()
 
 			// Run gather
@@ -634,7 +703,7 @@ func TestMultiInstance(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			// Create a fake client to inject data
-			plugin.client = &fakeClient{
+			client := &fakeClient{
 				units: map[string]properties{
 					"example.service": {
 						utype: "Service",
@@ -707,6 +776,8 @@ func TestMultiInstance(t *testing.T) {
 				},
 				connected: true,
 			}
+			client.fixPropertyTypes()
+			plugin.client = client
 			defer plugin.Stop()
 
 			// Run gather
@@ -724,6 +795,18 @@ func TestMultiInstance(t *testing.T) {
 type fakeClient struct {
 	units     map[string]properties
 	connected bool
+}
+
+func (c *fakeClient) fixPropertyTypes() {
+	for unit, u := range c.units {
+		for k, value := range u.properties {
+			switch {
+			case strings.HasPrefix(k, "Memory"):
+				u.properties[k], _ = internal.ToUint64(value)
+			}
+		}
+		c.units[unit] = u
+	}
 }
 
 func (c *fakeClient) Connected() bool {

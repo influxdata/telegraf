@@ -5,6 +5,7 @@ package systemd_units
 import (
 	"context"
 	"fmt"
+	"math"
 	"path"
 	"strings"
 	"time"
@@ -388,6 +389,18 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 				"mem_avail":    u.properties["MemoryAvailable"],
 				"pid":          u.properties["MainPID"],
 			}
+
+			// Sanitize unset memory fields
+			for k, value := range fields {
+				switch {
+				case strings.HasPrefix(k, "mem_"), strings.HasPrefix(k, "swap_"):
+					v, ok := value.(uint64)
+					if ok && v == math.MaxUint64 || value == nil {
+						fields[k] = uint64(0)
+					}
+				}
+			}
+
 			acc.AddFields("systemd_units", fields, tags)
 		}
 	}
