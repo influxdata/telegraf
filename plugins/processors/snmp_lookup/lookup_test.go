@@ -236,13 +236,12 @@ func TestUpdateAgent(t *testing.T) {
 	})
 
 	t.Run("connection fail", func(t *testing.T) {
-		p.getConnectionFunc = func(s string) (snmp.Connection, error) {
+		p.getConnectionFunc = func(string) (snmp.Connection, error) {
 			return nil, errors.New("Random connection error")
 		}
 
 		require.Nil(t, p.updateAgent("127.0.0.1"))
 	})
-
 }
 
 func TestAdd(t *testing.T) {

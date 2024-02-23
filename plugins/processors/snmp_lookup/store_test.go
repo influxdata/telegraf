@@ -12,8 +12,8 @@ import (
 func TestAddBacklog(t *testing.T) {
 	var notifyCount atomic.Uint64
 	s := newStore(0, 0, 0, 0)
-	s.update = func(agent string) *tagMap { return nil }
-	s.notify = func(agent string, tm *tagMap) { notifyCount.Add(1) }
+	s.update = func(string) *tagMap { return nil }
+	s.notify = func(string, *tagMap) { notifyCount.Add(1) }
 	defer s.destroy()
 
 	require.Empty(t, s.deferredUpdates)
@@ -35,13 +35,13 @@ func TestLookup(t *testing.T) {
 	cacheTTL := config.Duration(2 * minUpdateInterval)
 	var notifyCount atomic.Uint64
 	s := newStore(defaultCacheSize, cacheTTL, defaultParallelLookups, config.Duration(minUpdateInterval))
-	s.update = func(agent string) *tagMap {
+	s.update = func(string) *tagMap {
 		return &tagMap{
 			created: time.Now(),
 			rows:    tmr,
 		}
 	}
-	s.notify = func(agent string, tm *tagMap) { notifyCount.Add(1) }
+	s.notify = func(string, *tagMap) { notifyCount.Add(1) }
 	defer s.destroy()
 
 	require.Equal(t, 0, s.cache.Len())
