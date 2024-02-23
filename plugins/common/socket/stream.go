@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,8 +36,6 @@ type streamListener struct {
 	ReadTimeout     config.Duration
 	KeepAlivePeriod *config.Duration
 	Splitter        bufio.SplitFunc
-	OnData          CallbackData
-	OnError         CallbackError
 	Log             telegraf.Logger
 
 	listener    net.Listener
@@ -57,20 +57,23 @@ func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
 }
 
 func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode string) error {
-	err := os.Remove(u.Path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	l.path = filepath.FromSlash(u.Path)
+	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {
+		l.path = strings.TrimPrefix(l.path, `\`)
+	}
+	if err := os.Remove(l.path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing socket failed: %w", err)
 	}
 
+	var err error
 	if tlsCfg == nil {
-		l.listener, err = net.Listen(u.Scheme, u.Path)
+		l.listener, err = net.Listen(u.Scheme, l.path)
 	} else {
-		l.listener, err = tls.Listen(u.Scheme, u.Path, tlsCfg)
+		l.listener, err = tls.Listen(u.Scheme, l.path, tlsCfg)
 	}
 	if err != nil {
 		return err
 	}
-	l.path = u.Path
 
 	// Set permissions on socket
 	if socketMode != "" {
@@ -187,8 +190,11 @@ func (l *streamListener) close() error {
 	l.wg.Wait()
 
 	if l.path != "" {
-		err := os.Remove(l.path)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
+		fn := filepath.FromSlash(l.path)
+		if runtime.GOOS == "windows" && strings.Contains(fn, ":") {
+			fn = strings.TrimPrefix(fn, `\`)
+		}
+		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
 			// Ignore file-not-exists errors when removing the socket
 			return err
 		}
@@ -196,46 +202,96 @@ func (l *streamListener) close() error {
 	return nil
 }
 
-func (l *streamListener) listen() {
+func (l *streamListener) listenData(onData CallbackData, onError CallbackError) {
 	l.connections = make(map[net.Conn]bool)
 
 	l.wg.Add(1)
-	defer l.wg.Done()
+	go func() {
+		defer l.wg.Done()
 
-	var wg sync.WaitGroup
-	for {
-		conn, err := l.listener.Accept()
-		if err != nil {
-			if !errors.Is(err, net.ErrClosed) && l.OnError != nil {
-				l.OnError(err)
+		var wg sync.WaitGroup
+		for {
+			conn, err := l.listener.Accept()
+			if err != nil {
+				if !errors.Is(err, net.ErrClosed) && onError != nil {
+					onError(err)
+				}
+				break
 			}
-			break
-		}
 
-		if err := l.setupConnection(conn); err != nil && l.OnError != nil {
-			l.OnError(err)
-			continue
-		}
+			if err := l.setupConnection(conn); err != nil && onError != nil {
+				onError(err)
+				continue
+			}
 
-		wg.Add(1)
-		go func(c net.Conn) {
-			defer wg.Done()
-			if err := l.read(c); err != nil {
-				if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
-					if l.OnError != nil {
-						l.OnError(err)
+			wg.Add(1)
+			go func(c net.Conn) {
+				defer wg.Done()
+				defer func() {
+					l.Lock()
+					l.closeConnection(conn)
+					l.Unlock()
+				}()
+
+				reader := l.read
+				if l.Splitter == nil {
+					reader = l.readAll
+				}
+				if err := reader(c, onData); err != nil {
+					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+						if onError != nil {
+							onError(err)
+						}
 					}
 				}
-			}
-			l.Lock()
-			l.closeConnection(conn)
-			l.Unlock()
-		}(conn)
-	}
-	wg.Wait()
+			}(conn)
+		}
+		wg.Wait()
+	}()
 }
 
-func (l *streamListener) read(conn net.Conn) error {
+func (l *streamListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
+	l.connections = make(map[net.Conn]bool)
+
+	l.wg.Add(1)
+	go func() {
+		defer l.wg.Done()
+
+		var wg sync.WaitGroup
+		for {
+			conn, err := l.listener.Accept()
+			if err != nil {
+				if !errors.Is(err, net.ErrClosed) && onError != nil {
+					onError(err)
+				}
+				break
+			}
+
+			if err := l.setupConnection(conn); err != nil && onError != nil {
+				onError(err)
+				continue
+			}
+
+			wg.Add(1)
+			go func(c net.Conn) {
+				defer wg.Done()
+				if err := l.handleConnection(c, onConnection); err != nil {
+					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+						if onError != nil {
+							onError(err)
+						}
+					}
+				}
+				l.Lock()
+				l.closeConnection(conn)
+				l.Unlock()
+			}(conn)
+		}
+		wg.Wait()
+	}()
+}
+
+func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
 	if err != nil {
 		return fmt.Errorf("creating decoder failed: %w", err)
@@ -261,8 +317,12 @@ func (l *streamListener) read(conn net.Conn) error {
 			break
 		}
 
+		src := conn.RemoteAddr()
+		if l.path != "" {
+			src = &net.UnixAddr{Name: l.path, Net: "unix"}
+		}
 		data := scanner.Bytes()
-		l.OnData(data)
+		onData(src, data)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -278,4 +338,84 @@ func (l *streamListener) read(conn net.Conn) error {
 		return err
 	}
 	return nil
+}
+
+func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
+	src := conn.RemoteAddr()
+	if l.path != "" {
+		src = &net.UnixAddr{Name: l.path, Net: "unix"}
+	}
+
+	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
+	if err != nil {
+		return fmt.Errorf("creating decoder failed: %w", err)
+	}
+
+	timeout := time.Duration(l.ReadTimeout)
+	// Set the read deadline, if any, then start reading. The read
+	// will accept the deadline and return if no or insufficient data
+	// arrived in time. We need to set the deadline in every cycle as
+	// it is an ABSOLUTE time and not a timeout.
+	if timeout > 0 {
+		deadline := time.Now().Add(timeout)
+		if err := conn.SetReadDeadline(deadline); err != nil {
+			return fmt.Errorf("setting read deadline failed: %w", err)
+		}
+	}
+
+	buf, err := io.ReadAll(decoder)
+	if err != nil {
+		return fmt.Errorf("read on %s failed: %w", src, err)
+	}
+	onData(src, buf)
+
+	return nil
+}
+
+func (l *streamListener) handleConnection(conn net.Conn, onConnection CallbackConnection) error {
+	// Prepare the data decoder for the connection
+	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
+	if err != nil {
+		return fmt.Errorf("creating decoder failed: %w", err)
+	}
+
+	// Get the remote address
+	src := conn.RemoteAddr()
+	if l.path != "" {
+		src = &net.UnixAddr{Name: l.path, Net: "unix"}
+	}
+
+	// Create a pipe and feed it to the callback
+	reader, writer := io.Pipe()
+	defer writer.Close()
+	go onConnection(src, reader)
+
+	timeout := time.Duration(l.ReadTimeout)
+	buf := make([]byte, 4096) // 4kb
+	for {
+		// Set the read deadline, if any, then start reading. The read
+		// will accept the deadline and return if no or insufficient data
+		// arrived in time. We need to set the deadline in every cycle as
+		// it is an ABSOLUTE time and not a timeout.
+		if timeout > 0 {
+			deadline := time.Now().Add(timeout)
+			if err := conn.SetReadDeadline(deadline); err != nil {
+				return fmt.Errorf("setting read deadline failed: %w", err)
+			}
+		}
+
+		// Copy the data
+		n, err := decoder.Read(buf)
+		if err != nil {
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				if !errors.Is(err, os.ErrDeadlineExceeded) && errors.Is(err, net.ErrClosed) {
+					writer.CloseWithError(err)
+				}
+			}
+			return nil
+		}
+		if _, err := writer.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
 }

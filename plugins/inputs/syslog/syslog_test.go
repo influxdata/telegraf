@@ -3,10 +3,10 @@ package syslog
 import (
 	"crypto/tls"
 	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -16,8 +16,8 @@ import (
 	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
@@ -25,50 +25,61 @@ import (
 
 var pki = testutil.NewPKI("../../../testutil/pki")
 
-func TestInitFail(t *testing.T) {
-	tests := []struct {
-		name     string
-		address  string
-		expected string
-	}{
-		{
-			name:     "no address",
-			expected: "missing protocol within address",
-		},
-		{
-			name:     "missing protocol",
-			address:  "localhost:6514",
-			expected: "missing protocol within address",
-		},
-		{
-			name:     "unknown protocol",
-			address:  "unsupported://example.com:6514",
-			expected: "unknown protocol",
-		},
+func TestAddressMissingProtocol(t *testing.T) {
+	plugin := &Syslog{
+		Address: "localhost:6514",
+		Log:     testutil.Logger{},
 	}
+	require.ErrorContains(t, plugin.Init(), "missing protocol within address")
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &Syslog{
-				Address: tt.address,
-			}
-			var acc testutil.Accumulator
-			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
-		})
+func TestAddressUnknownProtocol(t *testing.T) {
+	plugin := &Syslog{
+		Address: "unsupported://example.com:6514",
+		Log:     testutil.Logger{},
 	}
+	require.ErrorContains(t, plugin.Init(), "unknown protocol")
+}
+
+func TestAddressDefault(t *testing.T) {
+	plugin := &Syslog{Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+
+	require.Equal(t, "tcp://127.0.0.1:6514", plugin.url.String())
 }
 
 func TestAddressDefaultPort(t *testing.T) {
 	plugin := &Syslog{
 		Address: "tcp://localhost",
+		Log:     testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
+
+	// Default port is 6514
+	require.Equal(t, "tcp://localhost:6514", plugin.url.String())
+}
+
+func TestReadTimeoutWarning(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+	plugin := &Syslog{
+		Address: "tcp://localhost:6514",
+		Config: socket.Config{
+			ReadTimeout: config.Duration(time.Second),
+		},
+		Log: logger,
+	}
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
+	plugin.Stop()
 
-	// Default port is 6514
-	require.Equal(t, "localhost:6514", plugin.Address)
+	require.Eventually(t, func() bool {
+		return logger.NMessages() > 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	warnings := logger.Warnings()
+	require.Contains(t, warnings, "W! [] "+readTimeoutMsg)
 }
 
 func TestUnixgram(t *testing.T) {
@@ -83,16 +94,12 @@ func TestUnixgram(t *testing.T) {
 	defer f.Close()
 
 	// Setup plugin and start it
-	timeout := config.Duration(defaultReadTimeout)
 	plugin := &Syslog{
-		Address:        "unixgram://" + sock,
-		Framing:        framing.OctetCounting,
-		ReadTimeout:    &timeout,
-		Separator:      "_",
-		SyslogStandard: "RFC5424",
-		Trailer:        nontransparent.LF,
-		now:            getNanoNow,
+		Address: "unixgram://" + sock,
+		Trailer: nontransparent.LF,
+		Log:     testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
@@ -152,15 +159,9 @@ func TestCases(t *testing.T) {
 
 	// Register the plugin
 	inputs.Add("syslog", func() telegraf.Input {
-		defaultTimeout := config.Duration(defaultReadTimeout)
 		return &Syslog{
-			Address:        ":6514",
-			now:            getNanoNow,
-			ReadTimeout:    &defaultTimeout,
-			Framing:        framing.OctetCounting,
-			SyslogStandard: syslogRFC5424,
-			Trailer:        nontransparent.LF,
-			Separator:      "_",
+			Trailer: nontransparent.LF,
+			Log:     testutil.Logger{},
 		}
 	})
 
@@ -173,7 +174,7 @@ func TestCases(t *testing.T) {
 		t.Run(f.Name(), func(t *testing.T) {
 			testcasePath := filepath.Join("testcases", f.Name())
 			configFilename := filepath.Join(testcasePath, "telegraf.conf")
-			inputFilename := filepath.Join(testcasePath, "input.txt")
+			inputFilenamePattern := filepath.Join(testcasePath, "input*.txt")
 			expectedFilename := filepath.Join(testcasePath, "expected.out")
 			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
@@ -182,8 +183,16 @@ func TestCases(t *testing.T) {
 			require.NoError(t, parser.Init())
 
 			// Read the input data
-			inputData, err := os.ReadFile(inputFilename)
+			inputFiles, err := filepath.Glob(inputFilenamePattern)
 			require.NoError(t, err)
+			require.NotEmpty(t, inputFiles)
+			sort.Strings(inputFiles)
+			messages := make([][]byte, 0, len(inputFiles))
+			for _, fn := range inputFiles {
+				data, err := os.ReadFile(fn)
+				require.NoErrorf(t, err, "failed file: %s", fn)
+				messages = append(messages, data)
+			}
 
 			// Read the expected output if any
 			var expected []telegraf.Metric
@@ -214,25 +223,22 @@ func TestCases(t *testing.T) {
 
 			// Determine server properties. We need to parse the address before
 			// calling Start() as it is modified in this function.
-			u, err := url.Parse(plugin.Address)
-			require.NoError(t, err)
-			if u.Scheme == "unix" {
+			if strings.HasPrefix(plugin.Address, "unix://") {
 				// Use a random socket
-				sock := testutil.TempSocket(t)
+				sock := filepath.ToSlash(testutil.TempSocket(t))
+				if !strings.HasPrefix(sock, "/") {
+					sock = "/" + sock
+				}
 				plugin.Address = "unix://" + sock
 			}
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
 			// Get the address
-			var addr string
-			if plugin.isStream {
-				addr = plugin.tcpListener.Addr().String()
-			} else {
-				addr = plugin.udpListener.LocalAddr().String()
-			}
+			addr := plugin.socket.Address().String()
 
 			// Create a fake sender
 			var client net.Conn
@@ -241,17 +247,19 @@ func TestCases(t *testing.T) {
 				require.NoError(t, err)
 				tlscfg.ServerName = "localhost"
 
-				client, err = tls.Dial(u.Scheme, addr, tlscfg)
+				client, err = tls.Dial(plugin.url.Scheme, addr, tlscfg)
 				require.NoError(t, err)
 			} else {
-				client, err = net.Dial(u.Scheme, addr)
+				client, err = net.Dial(plugin.url.Scheme, addr)
 				require.NoError(t, err)
 			}
 			defer client.Close()
 
 			// Send the data and afterwards stop client and plugin
-			_, err = client.Write(inputData)
-			require.NoError(t, err)
+			for i, msg := range messages {
+				_, err := client.Write(msg)
+				require.NoErrorf(t, err, "message %d failed with content %q", i, string(msg))
+			}
 			client.Close()
 
 			// Check the metric nevertheless as we might get some metrics despite errors.
@@ -276,4 +284,70 @@ func TestCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSocketClosed(t *testing.T) {
+	// Setup the plugin
+	plugin := &Syslog{
+		Address: "tcp://127.0.0.1:0",
+		Config:  socket.Config{},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Get the address
+	addr := plugin.socket.Address().String()
+
+	// Create a fake sender
+	client, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	defer client.Close()
+
+	// Send a message to check if the socket is really active
+	msg := []byte(`72 <13>1 2024-02-15T11:12:24.718151+01:00 Hugin sven - - [] Connection test`)
+	_, err = client.Write(msg)
+	require.NoError(t, err)
+
+	// Stop the plugin and check if the socket is closed and unreachable
+	plugin.Stop()
+
+	require.Eventually(t, func() bool {
+		_, err := client.Write(msg)
+		return err != nil
+	}, 3*time.Second, 100*time.Millisecond)
+}
+
+func TestIssue10121(t *testing.T) {
+	// Setup the plugin
+	plugin := &Syslog{
+		Address: "tcp://127.0.0.1:0",
+		Config: socket.Config{
+			ReadTimeout: config.Duration(10 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Get the address
+	addr := plugin.socket.Address().String()
+
+	// Create a fake sender
+	client, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	defer client.Close()
+
+	// Messages should eventually timeout
+	msg := []byte(`72 <13>1 2024-02-15T11:12:24.718151+01:00 Hugin sven - - [] Connection test`)
+	require.Eventually(t, func() bool {
+		_, err := client.Write(msg)
+		return err != nil
+	}, 3*time.Second, 250*time.Millisecond)
 }

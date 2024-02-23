@@ -1,18 +1,15 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package syslog
 
 import (
-	"crypto/tls"
 	_ "embed"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 	"unicode"
 
 	"github.com/influxdata/go-syslog/v3"
@@ -22,57 +19,101 @@ import (
 	"github.com/influxdata/go-syslog/v3/rfc5424"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	framing "github.com/influxdata/telegraf/internal/syslog"
-	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-type syslogRFC string
-
-const defaultReadTimeout = time.Second * 5
-const ipMaxPacketSize = 64 * 1024
-const syslogRFC3164 = "RFC3164"
-const syslogRFC5424 = "RFC5424"
+const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 // Syslog is a syslog plugin
 type Syslog struct {
-	tlsConfig.ServerConfig
-	Address         string `toml:"server"`
-	KeepAlivePeriod *config.Duration
-	MaxConnections  int
-	ReadTimeout     *config.Duration
-	Framing         framing.Framing
-	SyslogStandard  syslogRFC
-	Trailer         nontransparent.TrailerType
-	BestEffort      bool
-	Separator       string `toml:"sdparam_separator"`
-
-	now      func() time.Time
-	lastTime time.Time
+	Address        string                     `toml:"server"`
+	Framing        string                     `toml:"framing"`
+	SyslogStandard string                     `toml:"syslog_standard"`
+	Trailer        nontransparent.TrailerType `toml:"trailer"`
+	BestEffort     bool                       `toml:"best_effort"`
+	Separator      string                     `toml:"sdparam_separator"`
+	Log            telegraf.Logger            `toml:"-"`
+	socket.Config
 
 	mu sync.Mutex
 	wg sync.WaitGroup
-	io.Closer
 
-	isStream      bool
-	tcpListener   net.Listener
-	tlsConfig     *tls.Config
-	connections   map[string]net.Conn
-	connectionsMu sync.Mutex
-
-	udpListener net.PacketConn
+	url    *url.URL
+	socket *socket.Socket
 }
 
 func (*Syslog) SampleConfig() string {
 	return sampleConfig
 }
 
+func (s *Syslog) Init() error {
+	// Check settings and set defaults
+	switch s.Framing {
+	case "":
+		s.Framing = "octet-counting"
+	case "octet-counting", "non-transparent":
+	default:
+		return fmt.Errorf("invalid 'framing' %q", s.Framing)
+	}
+
+	switch s.SyslogStandard {
+	case "":
+		s.SyslogStandard = "RFC5424"
+	case "RFC3164", "RFC5424":
+	default:
+		return fmt.Errorf("invalid 'syslog_standard' %q", s.SyslogStandard)
+	}
+
+	if s.Separator == "" {
+		s.Separator = "_"
+	}
+
+	// Check and parse address, set default if necessary
+	if s.Address == "" {
+		s.Address = "tcp://127.0.0.1:6514"
+	}
+
+	if !strings.Contains(s.Address, "://") {
+		return fmt.Errorf("missing protocol within address %q", s.Address)
+	}
+
+	u, err := url.Parse(s.Address)
+	if err != nil {
+		return fmt.Errorf("parsing address %q failed: %w", s.Address, err)
+	}
+
+	// Check if we do have a port and add the default one if not
+	if u.Port() == "" {
+		u.Host += ":6514"
+	}
+	s.url = u
+
+	switch s.url.Scheme {
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
+		if s.ReadTimeout > 0 {
+			s.Log.Warn(readTimeoutMsg)
+		}
+	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+	default:
+		return fmt.Errorf("unknown protocol %q in %q", u.Scheme, s.Address)
+	}
+
+	// Create a socket
+	sock, err := s.Config.NewSocket(u.String(), nil, s.Log)
+	if err != nil {
+		return err
+	}
+	s.socket = sock
+
+	return nil
+}
+
 // Gather ...
-func (s *Syslog) Gather(_ telegraf.Accumulator) error {
+func (*Syslog) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -81,53 +122,26 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	scheme, host, err := getAddressParts(s.Address)
-	if err != nil {
+	// Setup the listener
+	if err := s.socket.Setup(); err != nil {
 		return err
 	}
-	s.Address = host
+	addr := s.socket.Address()
+	s.Log.Infof("Listening on %s://%s", addr.Network(), addr.String())
 
-	switch scheme {
+	// Setup the callbacks and start listening
+	onError := func(err error) {
+		acc.AddError(err)
+	}
+	switch s.url.Scheme {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		s.isStream = true
+		onConnection := s.createStreamDataHandler(acc)
+		s.socket.ListenConnection(onConnection, onError)
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		s.isStream = false
+		onData := s.createDatagramDataHandler(acc)
+		s.socket.Listen(onData, onError)
 	default:
-		return fmt.Errorf("unknown protocol %q in %q", scheme, s.Address)
-	}
-
-	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
-		os.Remove(s.Address)
-	}
-
-	if s.isStream {
-		l, err := net.Listen(scheme, s.Address)
-		if err != nil {
-			return err
-		}
-		s.Closer = l
-		s.tcpListener = l
-		s.tlsConfig, err = s.TLSConfig()
-		if err != nil {
-			return err
-		}
-
-		s.wg.Add(1)
-		go s.listenStream(acc)
-	} else {
-		l, err := net.ListenPacket(scheme, s.Address)
-		if err != nil {
-			return err
-		}
-		s.Closer = l
-		s.udpListener = l
-
-		s.wg.Add(1)
-		go s.listenPacket(acc)
-	}
-
-	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
-		s.Closer = unixCloser{path: s.Address, closer: s.Closer}
+		return fmt.Errorf("unknown protocol %q in %q", s.url.Scheme, s.Address)
 	}
 
 	return nil
@@ -138,312 +152,185 @@ func (s *Syslog) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.Closer != nil {
-		s.Close()
-	}
+	s.socket.Close()
 	s.wg.Wait()
 }
 
-// getAddressParts returns the address scheme and host
-// it also sets defaults for them when missing
-// when the input address does not specify the protocol it returns an error
-func getAddressParts(a string) (scheme string, host string, err error) {
-	parts := strings.SplitN(a, "://", 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("missing protocol within address %q", a)
-	}
-
-	u, err := url.Parse(filepath.ToSlash(a)) //convert backslashes to slashes (to make Windows path a valid URL)
-	if err != nil {
-		return "", "", fmt.Errorf("could not parse address %q: %w", a, err)
-	}
-	switch u.Scheme {
-	case "unix", "unixpacket", "unixgram":
-		return parts[0], parts[1], nil
-	}
-
-	if u.Hostname() != "" {
-		host = u.Hostname()
-	}
-	host += ":"
-	if u.Port() == "" {
-		host += "6514"
-	} else {
-		host += u.Port()
-	}
-
-	return u.Scheme, host, nil
-}
-
-func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
-	defer s.wg.Done()
-	b := make([]byte, ipMaxPacketSize)
-	var p syslog.Machine
-	switch {
-	case !s.BestEffort && s.SyslogStandard == syslogRFC5424:
-		p = rfc5424.NewParser()
-	case s.BestEffort && s.SyslogStandard == syslogRFC5424:
-		p = rfc5424.NewParser(rfc5424.WithBestEffort())
-	case !s.BestEffort && s.SyslogStandard == syslogRFC3164:
-		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}))
-	case s.BestEffort && s.SyslogStandard == syslogRFC3164:
-		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}), rfc3164.WithBestEffort())
-	}
-	for {
-		n, sourceAddr, err := s.udpListener.ReadFrom(b)
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				acc.AddError(err)
-			}
-			break
-		}
-
-		message, err := p.Parse(b[:n])
-		if message != nil {
-			acc.AddFields("syslog", fields(message, s), tags(message, sourceAddr), s.currentTime())
-		}
-		if err != nil {
-			acc.AddError(err)
-		}
-		if err == nil && message == nil {
-			acc.AddError(fmt.Errorf("unable to parse message: %s", string(b[:n])))
-		}
-	}
-}
-
-func (s *Syslog) listenStream(acc telegraf.Accumulator) {
-	defer s.wg.Done()
-
-	s.connections = map[string]net.Conn{}
-
-	for {
-		conn, err := s.tcpListener.Accept()
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				acc.AddError(err)
-			}
-			break
-		}
-		var tcpConn, _ = conn.(*net.TCPConn)
-		if s.tlsConfig != nil {
-			conn = tls.Server(conn, s.tlsConfig)
-		}
-
-		s.connectionsMu.Lock()
-		if s.MaxConnections > 0 && len(s.connections) >= s.MaxConnections {
-			s.connectionsMu.Unlock()
-			if err := conn.Close(); err != nil {
-				acc.AddError(err)
-			}
-			continue
-		}
-		s.connections[conn.RemoteAddr().String()] = conn
-		s.connectionsMu.Unlock()
-
-		if err := s.setKeepAlive(tcpConn); err != nil {
-			acc.AddError(fmt.Errorf("unable to configure keep alive %q: %w", s.Address, err))
-		}
-
-		go s.handle(conn, acc)
-	}
-
-	s.connectionsMu.Lock()
-	for _, c := range s.connections {
-		if err := c.Close(); err != nil {
-			acc.AddError(err)
-		}
-	}
-	s.connectionsMu.Unlock()
-}
-
-func (s *Syslog) removeConnection(c net.Conn) {
-	s.connectionsMu.Lock()
-	delete(s.connections, c.RemoteAddr().String())
-	s.connectionsMu.Unlock()
-}
-
-func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
-	defer func() {
-		s.removeConnection(conn)
-		conn.Close()
-	}()
-
-	var p syslog.Parser
-
-	emit := func(r *syslog.Result) {
-		s.store(*r, conn.RemoteAddr(), acc)
-		if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
-			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
-				acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
-			}
-		}
-	}
-
+func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.CallbackConnection {
 	// Create parser options
-	opts := []syslog.ParserOption{
-		syslog.WithListener(emit),
-	}
+	var opts []syslog.ParserOption
 	if s.BestEffort {
 		opts = append(opts, syslog.WithBestEffort())
 	}
-
-	// Select the parser to use depending on transport framing
-	if s.Framing == framing.OctetCounting {
-		// Octet counting transparent framing
-		p = octetcounting.NewParser(opts...)
-	} else {
-		// Non-transparent framing
+	if s.Framing == "non-transparent" {
 		opts = append(opts, nontransparent.WithTrailer(s.Trailer))
-		p = nontransparent.NewParser(opts...)
 	}
 
-	p.Parse(conn)
-
-	if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
-		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
-			acc.AddError(fmt.Errorf("setting read deadline failed: %w", err))
+	return func(src net.Addr, reader io.ReadCloser) {
+		// Create the parser depending on transport framing and other settings
+		var parser syslog.Parser
+		switch s.Framing {
+		case "octet-counting":
+			parser = octetcounting.NewParser(opts...)
+		case "non-transparent":
+			parser = nontransparent.NewParser(opts...)
 		}
+
+		// Remove port from address
+		var addr string
+		if src.Network() != "unix" {
+			var err error
+			if addr, _, err = net.SplitHostPort(src.String()); err != nil {
+				addr = src.String()
+			}
+		}
+
+		parser.WithListener(func(r *syslog.Result) {
+			if r.Error != nil {
+				acc.AddError(r.Error)
+			}
+			if r.Message == nil {
+				return
+			}
+
+			// Extract message information
+			acc.AddFields("syslog", fields(r.Message, s.Separator), tags(r.Message, addr))
+		})
+		parser.Parse(reader)
 	}
 }
 
-func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
-	if s.KeepAlivePeriod == nil {
-		return nil
+func (s *Syslog) createDatagramDataHandler(acc telegraf.Accumulator) socket.CallbackData {
+	// Create the parser depending on syslog standard and other settings
+	var parser syslog.Machine
+	switch s.SyslogStandard {
+	case "RFC3164":
+		parser = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}))
+	case "RFC5424":
+		parser = rfc5424.NewParser()
+	}
+	if s.BestEffort {
+		parser.WithBestEffort()
 	}
 
-	if *s.KeepAlivePeriod == 0 {
-		return c.SetKeepAlive(false)
+	// Return the OnData function
+	return func(src net.Addr, data []byte) {
+		message, err := parser.Parse(data)
+		if err != nil {
+			acc.AddError(err)
+		} else if message == nil {
+			acc.AddError(fmt.Errorf("unable to parse message: %s", string(data)))
+		}
+		if message == nil {
+			return
+		}
+
+		// Extract message information
+		var addr string
+		if src.Network() != "unixgram" {
+			var err error
+			if addr, _, err = net.SplitHostPort(src.String()); err != nil {
+				addr = src.String()
+			}
+		}
+		acc.AddFields("syslog", fields(message, s.Separator), tags(message, addr))
 	}
-	if err := c.SetKeepAlive(true); err != nil {
-		return err
-	}
-	return c.SetKeepAlivePeriod(time.Duration(*s.KeepAlivePeriod))
 }
 
-func (s *Syslog) store(res syslog.Result, remoteAddr net.Addr, acc telegraf.Accumulator) {
-	if res.Error != nil {
-		acc.AddError(res.Error)
+func tags(msg syslog.Message, src string) map[string]string {
+	// Extract message information
+	tags := map[string]string{
+		"severity": *msg.SeverityShortLevel(),
+		"facility": *msg.FacilityLevel(),
 	}
-	if res.Message != nil {
-		acc.AddFields("syslog", fields(res.Message, s), tags(res.Message, remoteAddr), s.currentTime())
+
+	if src != "" {
+		tags["source"] = src
 	}
-}
 
-func tags(msg syslog.Message, sourceAddr net.Addr) map[string]string {
-	ts := map[string]string{}
-
-	// Not checking assuming a minimally valid message
-	ts["severity"] = *msg.SeverityShortLevel()
-	ts["facility"] = *msg.FacilityLevel()
-
-	switch m := msg.(type) {
+	switch msg := msg.(type) {
 	case *rfc5424.SyslogMessage:
-		populateCommonTags(&m.Base, ts)
+		if msg.Hostname != nil {
+			tags["hostname"] = *msg.Hostname
+		}
+		if msg.Appname != nil {
+			tags["appname"] = *msg.Appname
+		}
 	case *rfc3164.SyslogMessage:
-		populateCommonTags(&m.Base, ts)
-	}
-
-	if sourceAddr != nil {
-		if source, _, err := net.SplitHostPort(sourceAddr.String()); err == nil {
-			ts["source"] = source
+		if msg.Hostname != nil {
+			tags["hostname"] = *msg.Hostname
+		}
+		if msg.Appname != nil {
+			tags["appname"] = *msg.Appname
 		}
 	}
 
-	return ts
+	return tags
 }
 
-func fields(msg syslog.Message, s *Syslog) map[string]interface{} {
-	flds := map[string]interface{}{}
-
-	switch m := msg.(type) {
+func fields(msg syslog.Message, separator string) map[string]interface{} {
+	var fields map[string]interface{}
+	switch msg := msg.(type) {
 	case *rfc5424.SyslogMessage:
-		populateCommonFields(&m.Base, flds)
-		// Not checking assuming a minimally valid message
-		flds["version"] = m.Version
-
-		if m.StructuredData != nil {
-			for sdid, sdparams := range *m.StructuredData {
+		fields = map[string]interface{}{
+			"facility_code": int(*msg.Facility),
+			"severity_code": int(*msg.Severity),
+			"version":       msg.Version,
+		}
+		if msg.Timestamp != nil {
+			fields["timestamp"] = (*msg.Timestamp).UnixNano()
+		}
+		if msg.ProcID != nil {
+			fields["procid"] = *msg.ProcID
+		}
+		if msg.MsgID != nil {
+			fields["msgid"] = *msg.MsgID
+		}
+		if msg.Message != nil {
+			fields["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
+				return unicode.IsSpace(r)
+			})
+		}
+		if msg.StructuredData != nil {
+			for sdid, sdparams := range *msg.StructuredData {
 				if len(sdparams) == 0 {
 					// When SD-ID does not have params we indicate its presence with a bool
-					flds[sdid] = true
+					fields[sdid] = true
 					continue
 				}
-				for name, value := range sdparams {
-					// Using whitespace as separator since it is not allowed by the grammar within SDID
-					flds[sdid+s.Separator+name] = value
+				for k, v := range sdparams {
+					fields[sdid+separator+k] = v
 				}
 			}
 		}
 	case *rfc3164.SyslogMessage:
-		populateCommonFields(&m.Base, flds)
+		fields = map[string]interface{}{
+			"facility_code": int(*msg.Facility),
+			"severity_code": int(*msg.Severity),
+		}
+		if msg.Timestamp != nil {
+			fields["timestamp"] = (*msg.Timestamp).UnixNano()
+		}
+		if msg.ProcID != nil {
+			fields["procid"] = *msg.ProcID
+		}
+		if msg.MsgID != nil {
+			fields["msgid"] = *msg.MsgID
+		}
+		if msg.Message != nil {
+			fields["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
+				return unicode.IsSpace(r)
+			})
+		}
 	}
 
-	return flds
-}
-
-func populateCommonFields(msg *syslog.Base, flds map[string]interface{}) {
-	flds["facility_code"] = int(*msg.Facility)
-	flds["severity_code"] = int(*msg.Severity)
-	if msg.Timestamp != nil {
-		flds["timestamp"] = (*msg.Timestamp).UnixNano()
-	}
-	if msg.ProcID != nil {
-		flds["procid"] = *msg.ProcID
-	}
-	if msg.MsgID != nil {
-		flds["msgid"] = *msg.MsgID
-	}
-	if msg.Message != nil {
-		flds["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
-			return unicode.IsSpace(r)
-		})
-	}
-}
-
-func populateCommonTags(msg *syslog.Base, ts map[string]string) {
-	if msg.Hostname != nil {
-		ts["hostname"] = *msg.Hostname
-	}
-	if msg.Appname != nil {
-		ts["appname"] = *msg.Appname
-	}
-}
-
-type unixCloser struct {
-	path   string
-	closer io.Closer
-}
-
-func (uc unixCloser) Close() error {
-	err := uc.closer.Close()
-	os.Remove(uc.path)
-	return err
-}
-
-func (s *Syslog) currentTime() time.Time {
-	t := s.now()
-	if t == s.lastTime {
-		t = t.Add(time.Nanosecond)
-	}
-	s.lastTime = t
-	return t
-}
-
-func getNanoNow() time.Time {
-	return time.Unix(0, time.Now().UnixNano())
+	return fields
 }
 
 func init() {
-	defaultTimeout := config.Duration(defaultReadTimeout)
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Address:        ":6514",
-			now:            getNanoNow,
-			ReadTimeout:    &defaultTimeout,
-			Framing:        framing.OctetCounting,
-			SyslogStandard: syslogRFC5424,
-			Trailer:        nontransparent.LF,
-			Separator:      "_",
+			Trailer: nontransparent.LF,
 		}
 	})
 }

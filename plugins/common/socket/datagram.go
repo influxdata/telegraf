@@ -3,11 +3,15 @@ package socket
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -18,48 +22,101 @@ type packetListener struct {
 	MaxDecompressionSize int64
 	SocketMode           string
 	ReadBufferSize       int
-	OnData               CallbackData
-	OnError              CallbackError
 	Log                  telegraf.Logger
 
 	conn    net.PacketConn
 	decoder internal.ContentDecoder
 	path    string
+	wg      sync.WaitGroup
 }
 
-func (l *packetListener) listen() {
-	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
-	for {
-		n, _, err := l.conn.ReadFrom(buf)
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				if l.OnError != nil {
-					l.OnError(err)
+func (l *packetListener) listenData(onData CallbackData, onError CallbackError) {
+	l.wg.Add(1)
+
+	go func() {
+		defer l.wg.Done()
+
+		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
+		for {
+			n, src, err := l.conn.ReadFrom(buf)
+			if err != nil {
+				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+					if onError != nil {
+						onError(err)
+					}
 				}
+				break
 			}
-			break
-		}
 
-		body, err := l.decoder.Decode(buf[:n])
-		if err != nil && l.OnError != nil {
-			l.OnError(fmt.Errorf("unable to decode incoming packet: %w", err))
-		}
+			body, err := l.decoder.Decode(buf[:n])
+			if err != nil && onError != nil {
+				onError(fmt.Errorf("unable to decode incoming packet: %w", err))
+			}
 
-		l.OnData(body)
-	}
+			if l.path != "" {
+				src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
+			}
+			onData(src, body)
+		}
+	}()
+}
+
+func (l *packetListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
+	l.wg.Add(1)
+	go func() {
+		defer l.wg.Done()
+		defer l.conn.Close()
+
+		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
+		for {
+			// Wait for packets and read them
+			n, src, err := l.conn.ReadFrom(buf)
+			if err != nil {
+				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+					if onError != nil {
+						onError(err)
+					}
+				}
+				break
+			}
+
+			// Decode the contents depending on the given encoding
+			body, err := l.decoder.Decode(buf[:n])
+			if err != nil && onError != nil {
+				onError(fmt.Errorf("unable to decode incoming packet: %w", err))
+			}
+
+			// Workaround to provide remote endpoints for Unix-type sockets
+			if l.path != "" {
+				src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
+			}
+
+			// Create a pipe and notify the caller via Callback that new data is
+			// available. Afterwards write the data. Please note: Write() will
+			// blocks until all data is consumed!
+			reader, writer := io.Pipe()
+			go onConnection(src, reader)
+			if _, err := writer.Write(body); err != nil && onError != nil {
+				onError(err)
+			}
+			writer.Close()
+		}
+	}()
 }
 
 func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
-	err := os.Remove(u.Path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	l.path = filepath.FromSlash(u.Path)
+	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {
+		l.path = strings.TrimPrefix(l.path, `\`)
+	}
+	if err := os.Remove(l.path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing socket failed: %w", err)
 	}
 
-	conn, err := net.ListenPacket(u.Scheme, u.Path)
+	conn, err := net.ListenPacket(u.Scheme, l.path)
 	if err != nil {
 		return fmt.Errorf("listening (unixgram) failed: %w", err)
 	}
-	l.path = u.Path
 	l.conn = conn
 
 	// Set permissions on socket
@@ -167,10 +224,14 @@ func (l *packetListener) close() error {
 	if err := l.conn.Close(); err != nil {
 		return err
 	}
+	l.wg.Wait()
 
 	if l.path != "" {
-		err := os.Remove(l.path)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
+		fn := filepath.FromSlash(l.path)
+		if runtime.GOOS == "windows" && strings.Contains(fn, ":") {
+			fn = strings.TrimPrefix(fn, `\`)
+		}
+		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
 			// Ignore file-not-exists errors when removing the socket
 			return err
 		}

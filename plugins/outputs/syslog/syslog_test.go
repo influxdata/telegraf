@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
-	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -18,6 +17,7 @@ import (
 func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.initializeSyslogMapper()
 
 	// Init metrics
@@ -41,8 +41,9 @@ func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
 func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.initializeSyslogMapper()
-	s.Framing = framing.NonTransparent
+	s.Framing = "non-transparent"
 
 	// Init metrics
 	m1 := metric.New(
@@ -65,8 +66,9 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.initializeSyslogMapper()
-	s.Framing = framing.NonTransparent
+	s.Framing = "non-transparent"
 	s.Trailer = nontransparent.NUL
 
 	// Init metrics
@@ -92,6 +94,7 @@ func TestSyslogWriteWithTcp(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "tcp://" + listener.Addr().String()
 
 	err = s.Connect()
@@ -108,6 +111,7 @@ func TestSyslogWriteWithUdp(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "udp://" + listener.LocalAddr().String()
 
 	err = s.Connect()
@@ -140,7 +144,7 @@ func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 }
 
 func testSyslogWriteWithPacket(t *testing.T, s *Syslog, lconn net.PacketConn) {
-	s.Framing = framing.NonTransparent
+	s.Framing = "non-transparent"
 	metrics := []telegraf.Metric{}
 	m1 := metric.New(
 		"testmetric",
@@ -168,6 +172,7 @@ func TestSyslogWriteErr(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "tcp://" + listener.Addr().String()
 
 	err = s.Connect()
@@ -199,6 +204,7 @@ func TestSyslogWriteReconnect(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "tcp://" + listener.Addr().String()
 
 	err = s.Connect()
