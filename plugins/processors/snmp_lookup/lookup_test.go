@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/metric"
-	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -93,7 +93,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "table init",
 			plugin: &Lookup{
-				Tags: []si.Field{
+				Tags: []snmp.Field{
 					{
 						Name: "ifName",
 						Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
@@ -187,7 +187,7 @@ func TestUpdateAgent(t *testing.T) {
 		CacheSize:    defaultCacheSize,
 		CacheTTL:     defaultCacheTTL,
 		Log:          testutil.Logger{Name: "processors.snmp_lookup"},
-		Tags: []si.Field{
+		Tags: []snmp.Field{
 			{
 				Name: "ifName",
 				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
@@ -202,7 +202,7 @@ func TestUpdateAgent(t *testing.T) {
 			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
 		},
 	}
-	p.getConnectionFunc = func(string) (snmpConnection, error) {
+	p.getConnectionFunc = func(string) (snmp.Connection, error) {
 		return tsc, nil
 	}
 
@@ -318,7 +318,7 @@ func TestAdd(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
-			plugin.getConnectionFunc = func(string) (snmpConnection, error) {
+			plugin.getConnectionFunc = func(string) (snmp.Connection, error) {
 				return tsc, nil
 			}
 
@@ -347,7 +347,7 @@ func TestExpiry(t *testing.T) {
 		CacheTTL:        defaultCacheTTL,
 		ParallelLookups: defaultParallelLookups,
 		Log:             testutil.Logger{Name: "processors.snmp_lookup"},
-		Tags: []si.Field{
+		Tags: []snmp.Field{
 			{
 				Name: "ifName",
 				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
@@ -373,7 +373,7 @@ func TestExpiry(t *testing.T) {
 	require.NoError(t, p.Start(&acc))
 	defer p.Stop()
 
-	p.getConnectionFunc = func(string) (snmpConnection, error) {
+	p.getConnectionFunc = func(string) (snmp.Connection, error) {
 		return tsc, nil
 	}
 
@@ -460,7 +460,7 @@ func TestOrdered(t *testing.T) {
 		ParallelLookups: defaultParallelLookups,
 		Ordered:         true,
 		Log:             testutil.Logger{Name: "processors.snmp_lookup"},
-		Tags: []si.Field{
+		Tags: []snmp.Field{
 			{
 				Name: "ifName",
 				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
@@ -476,7 +476,7 @@ func TestOrdered(t *testing.T) {
 			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
 		},
 	}
-	plugin.getConnectionFunc = func(agent string) (snmpConnection, error) {
+	plugin.getConnectionFunc = func(agent string) (snmp.Connection, error) {
 		switch agent {
 		case "127.0.0.1":
 		case "a.mycompany.com":

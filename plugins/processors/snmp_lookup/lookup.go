@@ -9,23 +9,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
-
-	"github.com/gosnmp/gosnmp"
 )
 
 //go:embed sample.conf
 var sampleConfig string
-
-// snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
-// We interact through an interface so we can mock it out in tests.
-type snmpConnection interface {
-	Host() string
-	Walk(string, gosnmp.WalkFunc) error
-	Get(oids []string) (*gosnmp.SnmpPacket, error)
-	Reconnect() error
-}
 
 type tagMapRows map[string]map[string]string
 type tagMap struct {
@@ -34,9 +22,9 @@ type tagMap struct {
 }
 
 type Lookup struct {
-	AgentTag string     `toml:"agent_tag"`
-	IndexTag string     `toml:"index_tag"`
-	Tags     []si.Field `toml:"tag"`
+	AgentTag string       `toml:"agent_tag"`
+	IndexTag string       `toml:"index_tag"`
+	Tags     []snmp.Field `toml:"tag"`
 
 	snmp.ClientConfig
 
@@ -48,12 +36,10 @@ type Lookup struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	translator si.Translator
-	table      si.Table
-
+	table             snmp.Table
 	cache             *store
 	backlog           *backlog
-	getConnectionFunc func(string) (snmpConnection, error)
+	getConnectionFunc func(string) (snmp.Connection, error)
 }
 
 const (
@@ -74,7 +60,7 @@ func (l *Lookup) Init() (err error) {
 	}
 
 	// Setup the GOSMI translator
-	l.translator, err = si.NewGosmiTranslator(l.Path, l.Log)
+	translator, err := snmp.NewGosmiTranslator(l.Path, l.Log)
 	if err != nil {
 		return fmt.Errorf("loading translator: %w", err)
 	}
@@ -85,13 +71,12 @@ func (l *Lookup) Init() (err error) {
 	// Initialize the table
 	l.table.Name = "lookup"
 	l.table.IndexAsTag = true
-	l.table.Fields = make([]si.Field, len(l.Tags))
-	for i, tag := range l.Tags {
-		tag.IsTag = true
-		l.table.Fields[i] = tag
+	l.table.Fields = l.Tags
+	for i := range l.table.Fields {
+		l.table.Fields[i].IsTag = true
 	}
 
-	return l.table.Init(l.translator)
+	return l.table.Init(translator)
 }
 
 func (l *Lookup) Start(acc telegraf.Accumulator) error {
@@ -153,7 +138,7 @@ func (l *Lookup) updateAgent(agent string) *tagMap {
 	}
 
 	// Query table including translation
-	table, err := l.table.Build(conn, true, l.translator)
+	table, err := l.table.Build(conn, true)
 	if err != nil {
 		l.Log.Errorf("Building table for %q failed: %v", agent, err)
 		return nil
@@ -173,7 +158,7 @@ func (l *Lookup) updateAgent(agent string) *tagMap {
 	return tm
 }
 
-func (l *Lookup) getConnection(agent string) (snmpConnection, error) {
+func (l *Lookup) getConnection(agent string) (snmp.Connection, error) {
 	conn, err := snmp.NewWrapper(l.ClientConfig)
 	if err != nil {
 		return conn, fmt.Errorf("parsing SNMP client config: %w", err)
