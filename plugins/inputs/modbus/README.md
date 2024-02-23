@@ -305,7 +305,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
       { register="coil",    address=1, name="status_ok"},
       { register="holding", address=0, name="voltage",      type="INT16"   },
       { address=1, name="current",      type="INT32",   scale=0.001 },
-      { address=5, name="energy",       type="FLOAT32", scale=0.001,},
+      { address=5, name="energy",       type="FLOAT32", scale=0.001 },
       { address=7, name="frequency",    type="UINT32",  scale=0.1   },
       { address=8, name="power_factor", type="INT64",   scale=0.01  },
       { address=9, name="firmware",     type="STRING",  length=8    },
@@ -357,6 +357,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## coil registers. This is necessary for some devices see
     ## https://github.com/influxdata/telegraf/issues/8905
     # read_coils_starting_at_zero = false
+
+    ## String byte-location in registers AFTER byte-order conversion
+    ## Some device (e.g. EM340) place the string byte in only the upper or
+    ## lower byte location of a register see
+    ## https://github.com/influxdata/telegraf/issues/14748
+    ## Available settings:
+    ##   lower -- use only lower byte of the register i.e. 00XX 00XX 00XX 00XX
+    ##   upper -- use only upper byte of the register i.e. XX00 XX00 XX00 XX00
+    ## By default both bytes of the register are used i.e. XXXX XXXX.
+    # string_register_location = ""
 ```
 
 ## Notes

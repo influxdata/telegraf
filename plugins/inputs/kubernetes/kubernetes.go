@@ -159,7 +159,7 @@ func getNodeAddress(addresses []v1.NodeAddress) string {
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	summaryMetrics := &SummaryMetrics{}
-	err := k.LoadJSON(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
+	err := k.LoadJSON(baseURL+"/stats/summary", summaryMetrics)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Item, error) {
 	var podAPI Pods
-	err := k.LoadJSON(fmt.Sprintf("%s/pods", baseURL), &podAPI)
+	err := k.LoadJSON(baseURL+"/pods", &podAPI)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 			Transport: &http.Transport{
 				TLSClientConfig: tlsCfg,
 			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 			Timeout: time.Duration(k.ResponseTimeout),

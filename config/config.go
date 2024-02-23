@@ -503,7 +503,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if val, ok := tbl.Fields["agent"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("invalid configuration, error parsing agent table")
+			return errors.New("invalid configuration, error parsing agent table")
 		}
 		if err = c.toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			return fmt.Errorf("error parsing [agent]: %w", err)
@@ -540,7 +540,10 @@ func (c *Config) LoadConfigData(data []byte) error {
 	}
 
 	if len(c.UnusedFields) > 0 {
-		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
+		return fmt.Errorf(
+			"line %d: configuration specified the fields %q, but they were not used. "+
+				"This is either a typo or this config option does not exist in this version.",
+			tbl.Line, keys(c.UnusedFields))
 	}
 
 	// Initialize the file-sorting slices
@@ -575,7 +578,9 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+					return fmt.Errorf(
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
+							"This is either a typo or this config option does not exist in this version.",
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -598,7 +603,9 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+					return fmt.Errorf(
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
+							"This is either a typo or this config option does not exist in this version.",
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -617,7 +624,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 				}
 				if len(c.UnusedFields) > 0 {
 					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
+							"This is either a typo or this config option does not exist in this version.",
 						name,
 						pluginName,
 						subTable.Line,
@@ -639,7 +647,9 @@ func (c *Config) LoadConfigData(data []byte) error {
 						pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used",
+					return fmt.Errorf(
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
+							"This is either a typo or this config option does not exist in this version.",
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -656,7 +666,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("unsupported config format: %s", pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used"
+					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. " +
+						"This is either a typo or this config option does not exist in this version."
 					return fmt.Errorf(msg, name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -794,7 +805,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := aggregators.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("aggregators", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested aggregator: %s", name)
 	}
@@ -980,7 +991,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := processors.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("processors", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested processor: %s", name)
 	}
@@ -1109,7 +1120,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := outputs.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("outputs", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 		return fmt.Errorf("undefined but requested output: %s", name)
 	}
@@ -1191,7 +1202,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		// Handle removed, deprecated plugins
 		if di, deprecated := inputs.Deprecations[name]; deprecated {
 			printHistoricPluginDeprecationNotice("inputs", name, di)
-			return fmt.Errorf("plugin deprecated")
+			return errors.New("plugin deprecated")
 		}
 
 		return fmt.Errorf("undefined but requested input: %s", name)

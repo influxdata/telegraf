@@ -61,7 +61,7 @@ func (p *pki) TLSMinVersion() string {
 }
 
 func (p *pki) TLSMaxVersion() string {
-	return "TLS12"
+	return "TLS13"
 }
 
 func (p *pki) ReadClientCert() string {

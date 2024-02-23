@@ -4,6 +4,7 @@ package cloudwatch_logs
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -100,28 +101,28 @@ func (*CloudWatchLogs) SampleConfig() string {
 // Init initialize plugin with checking configuration parameters
 func (c *CloudWatchLogs) Init() error {
 	if c.LogGroup == "" {
-		return fmt.Errorf("log group is not set")
+		return errors.New("log group is not set")
 	}
 
 	if c.LogStream == "" {
-		return fmt.Errorf("log stream is not set")
+		return errors.New("log stream is not set")
 	}
 
 	if c.LDMetricName == "" {
-		return fmt.Errorf("log data metrics name is not set")
+		return errors.New("log data metrics name is not set")
 	}
 
 	if c.LDSource == "" {
-		return fmt.Errorf("log data source is not set")
+		return errors.New("log data source is not set")
 	}
 	lsSplitArray := strings.Split(c.LDSource, ":")
 	if len(lsSplitArray) != 2 {
-		return fmt.Errorf("log data source is not properly formatted, ':' is missed.\n" +
+		return errors.New("log data source is not properly formatted, ':' is missed.\n" +
 			"Should be 'tag:<tag_mame>' or 'field:<field_name>'")
 	}
 
 	if lsSplitArray[0] != "tag" && lsSplitArray[0] != "field" {
-		return fmt.Errorf("log data source is not properly formatted.\n" +
+		return errors.New("log data source is not properly formatted.\n" +
 			"Should be 'tag:<tag_mame>' or 'field:<field_name>'")
 	}
 
@@ -154,7 +155,7 @@ func (c *CloudWatchLogs) Connect() error {
 		return err
 	}
 	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(string, string, ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
 				PartitionID:   "aws",
 				URL:           c.CredentialConfig.EndpointURL,

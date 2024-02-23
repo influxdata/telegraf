@@ -2,7 +2,6 @@ package starlark
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -97,7 +96,7 @@ func (d FieldDict) Get(key starlark.Value) (v starlark.Value, found bool, err er
 // using x[k]=v syntax, like a dictionary.
 func (d FieldDict) SetKey(k, v starlark.Value) error {
 	if d.fieldIterCount > 0 {
-		return fmt.Errorf("cannot insert during iteration")
+		return errors.New("cannot insert during iteration")
 	}
 
 	key, ok := k.(starlark.String)
@@ -131,7 +130,7 @@ func (d FieldDict) Items() []starlark.Tuple {
 
 func (d FieldDict) Clear() error {
 	if d.fieldIterCount > 0 {
-		return fmt.Errorf("cannot delete during iteration")
+		return errors.New("cannot delete during iteration")
 	}
 
 	keys := make([]string, 0, len(d.metric.FieldList()))
@@ -147,7 +146,7 @@ func (d FieldDict) Clear() error {
 
 func (d FieldDict) PopItem() (starlark.Value, error) {
 	if d.fieldIterCount > 0 {
-		return nil, fmt.Errorf("cannot delete during iteration")
+		return nil, errors.New("cannot delete during iteration")
 	}
 
 	if len(d.metric.FieldList()) == 0 {
@@ -163,7 +162,7 @@ func (d FieldDict) PopItem() (starlark.Value, error) {
 	sk := starlark.String(k)
 	sv, err := asStarlarkValue(v)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert to starlark value")
+		return nil, errors.New("could not convert to starlark value")
 	}
 
 	return starlark.Tuple{sk, sv}, nil
@@ -171,7 +170,7 @@ func (d FieldDict) PopItem() (starlark.Value, error) {
 
 func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
 	if d.fieldIterCount > 0 {
-		return nil, false, fmt.Errorf("cannot delete during iteration")
+		return nil, false, errors.New("cannot delete during iteration")
 	}
 
 	if key, ok := k.(starlark.String); ok {

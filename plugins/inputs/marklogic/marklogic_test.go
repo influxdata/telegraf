@@ -7,13 +7,14 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestMarklogic(t *testing.T) {
 	// Create a test server with the const response JSON
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintln(w, response)
 		require.NoError(t, err)

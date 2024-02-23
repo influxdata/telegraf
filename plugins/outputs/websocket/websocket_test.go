@@ -101,7 +101,8 @@ func initWebSocket(s *testServer) *WebSocket {
 	w := newWebSocket()
 	w.Log = testutil.Logger{}
 	w.URL = s.URL
-	w.Headers = map[string]string{testHeaderName: testHeaderValue}
+	headerSecret := config.NewSecret([]byte(testHeaderValue))
+	w.Headers = map[string]*config.Secret{testHeaderName: &headerSecret}
 	w.SetSerializer(newTestSerializer())
 	return w
 }

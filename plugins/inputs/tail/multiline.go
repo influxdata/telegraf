@@ -3,7 +3,6 @@ package tail
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -182,7 +181,7 @@ func (w *MultilineMatchWhichLine) UnmarshalText(data []byte) (err error) {
 		return nil
 	}
 	*w = -1
-	return fmt.Errorf("unknown multiline MatchWhichLine")
+	return errors.New("unknown multiline MatchWhichLine")
 }
 
 // MarshalText implements encoding.TextMarshaler
@@ -191,5 +190,5 @@ func (w MultilineMatchWhichLine) MarshalText() ([]byte, error) {
 	if s != "" {
 		return []byte(s), nil
 	}
-	return nil, fmt.Errorf("unknown multiline MatchWhichLine")
+	return nil, errors.New("unknown multiline MatchWhichLine")
 }

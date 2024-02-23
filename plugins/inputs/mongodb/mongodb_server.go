@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -106,13 +107,13 @@ func (s *Server) gatherTopStatData() (*TopStats, error) {
 
 	totals, ok := dest["totals"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("collection totals not found or not a map")
+		return nil, errors.New("collection totals not found or not a map")
 	}
 	delete(totals, "note")
 
 	recorded, err := bson.Marshal(totals)
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal totals")
+		return nil, errors.New("unable to marshal totals")
 	}
 
 	topInfo := make(map[string]TopStatCollection)

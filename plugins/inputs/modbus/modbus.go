@@ -31,6 +31,7 @@ type ModbusWorkarounds struct {
 	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
 	OnRequestPerField       bool            `toml:"one_request_per_field"`
 	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
+	StringRegisterLocation  string          `toml:"string_register_location"`
 }
 
 // According to github.com/grid-x/serial
@@ -128,11 +129,11 @@ func (m *Modbus) SampleConfig() string {
 func (m *Modbus) Init() error {
 	//check device name
 	if m.Name == "" {
-		return fmt.Errorf("device name is empty")
+		return errors.New("device name is empty")
 	}
 
 	if m.Retries < 0 {
-		return fmt.Errorf("retries cannot be negative")
+		return errors.New("retries cannot be negative")
 	}
 
 	// Determine the configuration style

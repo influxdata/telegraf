@@ -83,6 +83,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Default is 60 seconds.
   # pod_scrape_interval = 60
 
+  ## Content length limit
+  ## When set, telegraf will drop responses with length larger than the configured value.
+  ## Default is "0KB" which means unlimited.
+  # content_length_limit = "0KB"
+
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
@@ -160,6 +165,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Set to true/false to enforce TLS being enabled/disabled. If not set,
   ## enable TLS only if any of the other options are specified.
   # tls_enable = true
+
+  ## This option allows you to report the status of prometheus requests.
+  # enable_request_metrics = false
 
   ## Control pod scraping based on pod namespace annotations
   ## Pass and drop here act like tagpass and tagdrop, but instead
@@ -351,6 +359,14 @@ All metrics receive the `url` tag indicating the related URL specified in the
 Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
+* prometheus_request
+  * tags:
+    * url
+    * address
+  * fields:
+    * response_time (float, seconds)
+    * content_length (int, response body length)
+
 ## Example Output
 
 ### Source
@@ -385,6 +401,7 @@ cpu_usage_user,cpu=cpu0,url=http://example.org:9273/metrics gauge=1.513622603430
 cpu_usage_user,cpu=cpu1,url=http://example.org:9273/metrics gauge=5.829145728641773 1505776751000000000
 cpu_usage_user,cpu=cpu2,url=http://example.org:9273/metrics gauge=2.119071644805144 1505776751000000000
 cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics gauge=1.5228426395944945 1505776751000000000
+prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601 1505776751000000000
 ```
 
 ### Output (when metric_version = 2)
@@ -401,6 +418,7 @@ prometheus,cpu=cpu0,url=http://example.org:9273/metrics cpu_usage_user=1.5136226
 prometheus,cpu=cpu1,url=http://example.org:9273/metrics cpu_usage_user=5.829145728641773 1505776751000000000
 prometheus,cpu=cpu2,url=http://example.org:9273/metrics cpu_usage_user=2.119071644805144 1505776751000000000
 prometheus,cpu=cpu3,url=http://example.org:9273/metrics cpu_usage_user=1.5228426395944945 1505776751000000000
+prometheus_request,result=success,url=http://example.org:9273/metrics content_length=179013i,http_response_code=200i,response_time=0.051521601 1505776751000000000
 ```
 
 ### Output with timestamp included

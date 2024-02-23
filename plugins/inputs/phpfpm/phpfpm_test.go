@@ -19,9 +19,12 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -49,6 +52,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 	url := ts.URL + "?test=ok"
 	r := &phpfpm{
 		Urls: []string{url},
+		Log:  &testutil.Logger{},
 	}
 
 	require.NoError(t, r.Init())
@@ -80,7 +84,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 }
 
 func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(outputSampleJSON)))
 		_, err := fmt.Fprint(w, string(outputSampleJSON))
@@ -96,7 +100,7 @@ func TestPhpFpmGeneratesJSONMetrics_From_Http(t *testing.T) {
 	input := &phpfpm{
 		Urls:   []string{server.URL + "?full&json"},
 		Format: "json",
-		Log:    testutil.Logger{},
+		Log:    &testutil.Logger{},
 	}
 	require.NoError(t, input.Init())
 
@@ -117,8 +121,8 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	//Now we tested again above server
 	r := &phpfpm{
 		Urls: []string{"fcgi://" + tcp.Addr().String() + "/status"},
+		Log:  &testutil.Logger{},
 	}
-
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
@@ -161,12 +165,11 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 
 	r := &phpfpm{
 		Urls: []string{tcp.Addr().String()},
+		Log:  &testutil.Logger{},
 	}
-
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
-
 	require.NoError(t, acc.GatherError(r.Gather))
 
 	tags := map[string]string{
@@ -214,14 +217,12 @@ func TestPhpFpmGeneratesMetrics_From_Multiple_Sockets_With_Glob(t *testing.T) {
 
 	r := &phpfpm{
 		Urls: []string{"/tmp/test-fpm[\\-0-9]*.sock"},
+		Log:  &testutil.Logger{},
 	}
-
 	require.NoError(t, r.Init())
 
 	var acc1, acc2 testutil.Accumulator
-
 	require.NoError(t, acc1.GatherError(r.Gather))
-
 	require.NoError(t, acc2.GatherError(r.Gather))
 
 	tags1 := map[string]string{
@@ -267,12 +268,11 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 
 	r := &phpfpm{
 		Urls: []string{tcp.Addr().String() + ":custom-status-path"},
+		Log:  &testutil.Logger{},
 	}
-
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
-
 	require.NoError(t, acc.GatherError(r.Gather))
 
 	tags := map[string]string{
@@ -300,15 +300,14 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 // When not passing server config, we default to localhost
 // We just want to make sure we did request stat from localhost
 func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
-	r := &phpfpm{Urls: []string{"http://bad.localhost:62001/status"}}
-
+	r := &phpfpm{
+		Urls: []string{"http://bad.localhost:62001/status"},
+		Log:  &testutil.Logger{},
+	}
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
-
-	err := acc.GatherError(r.Gather)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "/status")
+	require.ErrorContains(t, acc.GatherError(r.Gather), "/status")
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t *testing.T) {
@@ -318,30 +317,25 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	r := &phpfpm{
 		Urls: []string{"http://aninvalidone"},
+		Log:  &testutil.Logger{},
 	}
-
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
-
 	err := acc.GatherError(r.Gather)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), `unable to connect to phpfpm status page 'http://aninvalidone'`)
-	require.Contains(t, err.Error(), `lookup aninvalidone`)
+	require.ErrorContains(t, err, `unable to connect to phpfpm status page 'http://aninvalidone'`)
+	require.ErrorContains(t, err, `lookup aninvalidone`)
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testing.T) {
 	r := &phpfpm{
 		Urls: []string{"/tmp/invalid.sock"},
+		Log:  &testutil.Logger{},
 	}
-
 	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
-
-	err := acc.GatherError(r.Gather)
-	require.Error(t, err)
-	require.Equal(t, `socket doesn't exist "/tmp/invalid.sock"`, err.Error())
+	require.ErrorContains(t, acc.GatherError(r.Gather), `socket doesn't exist "/tmp/invalid.sock"`)
 }
 
 const outputSample = `
@@ -388,4 +382,49 @@ func TestPhpFpmParseJSON_Log_Error_Without_Panic_When_When_JSON_Is_Invalid(t *te
 	invalidJSON := []byte("X")
 	require.NotPanics(t, func() { p.parseJSON(bytes.NewReader(invalidJSON), &testutil.NopAccumulator{}, "") })
 	require.Contains(t, logOutput.String(), "E! Unable to decode JSON response: invalid character 'X' looking for beginning of value")
+}
+
+func TestGatherDespiteUnavailable(t *testing.T) {
+	// Let OS find an available port
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "Cannot initialize test server")
+	defer tcp.Close()
+
+	s := statServer{}
+	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
+
+	//Now we tested again above server
+	r := &phpfpm{
+		Urls: []string{"fcgi://" + tcp.Addr().String() + "/status", "/lala"},
+		Log:  &testutil.Logger{},
+	}
+	require.NoError(t, r.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"phpfpm",
+			map[string]string{
+				"pool": "www",
+				"url":  r.Urls[0],
+			},
+			map[string]interface{}{
+				"start_since":          int64(1991),
+				"accepted_conn":        int64(3),
+				"listen_queue":         int64(1),
+				"max_listen_queue":     int64(0),
+				"listen_queue_len":     int64(0),
+				"idle_processes":       int64(1),
+				"active_processes":     int64(1),
+				"total_processes":      int64(2),
+				"max_active_processes": int64(1),
+				"max_children_reached": int64(2),
+				"slow_requests":        int64(1),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.ErrorContains(t, acc.GatherError(r.Gather), "socket doesn't exist")
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }

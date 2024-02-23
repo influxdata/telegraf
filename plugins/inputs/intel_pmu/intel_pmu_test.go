@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	ia "github.com/intel/iaevents"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestInitialization(t *testing.T) {
@@ -135,7 +136,7 @@ func TestGather(t *testing.T) {
 	})
 
 	t.Run("error while reading entities", func(t *testing.T) {
-		errMock := fmt.Errorf("houston we have a problem")
+		errMock := errors.New("houston we have a problem")
 		mEntitiesValuesReader.On("readEntities", mIntelPMU.CoreEntities, mIntelPMU.UncoreEntities).
 			Return(nil, nil, errMock).Once()
 
@@ -440,7 +441,7 @@ func TestReadMaxFD(t *testing.T) {
 		maxFD   uint64
 		failMsg string
 	}{
-		{"read file error", fmt.Errorf("mock error"), nil, 0, openErrorMsg},
+		{"read file error", errors.New("mock error"), nil, 0, openErrorMsg},
 		{"file content parse error", nil, []byte("wrong format"), 0, parseErrorMsg},
 		{"negative value reading", nil, []byte("-10000"), 0, parseErrorMsg},
 		{"max uint exceeded", nil, []byte("18446744073709551616"), 0, parseErrorMsg},

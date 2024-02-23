@@ -193,6 +193,15 @@ func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
+func TestConfig_LoadSingleInput_WithCommentInArray(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_comment_in_array.toml"))
+	require.Len(t, c.Inputs, 1)
+
+	input := c.Inputs[0].Input.(*MockupInputPlugin)
+	require.ElementsMatch(t, input.Servers, []string{"localhost"})
+}
+
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := config.NewConfig()
 
@@ -373,52 +382,62 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 		{
 			name:     "in input plugin without parser",
 			filename: "./testdata/invalid_field.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in input plugin with parser",
 			filename: "./testdata/invalid_field_with_parser.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in input plugin with parser func",
 			filename: "./testdata/invalid_field_with_parserfunc.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of input plugin",
 			filename: "./testdata/invalid_field_in_parser_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of input plugin with parser-func",
 			filename: "./testdata/invalid_field_in_parserfunc_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin without parser",
 			filename: "./testdata/invalid_field_processor.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin with parser",
 			filename: "./testdata/invalid_field_processor_with_parser.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin with parser func",
 			filename: "./testdata/invalid_field_processor_with_parserfunc.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of processor plugin",
 			filename: "./testdata/invalid_field_processor_in_parser_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of processor plugin with parser-func",
 			filename: "./testdata/invalid_field_processor_in_parserfunc_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 	}
 
@@ -497,7 +516,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 }
 
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("[agent]\ndebug = true"))
 	}))

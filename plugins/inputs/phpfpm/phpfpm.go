@@ -73,17 +73,17 @@ type JSONMetrics struct {
 	} `json:"processes"`
 }
 
-type metric map[string]int64
-type poolStat map[string]metric
+type metricStat map[string]int64
+type poolStat map[string]metricStat
 
 type phpfpm struct {
 	Format  string          `toml:"format"`
 	Timeout config.Duration `toml:"timeout"`
 	Urls    []string        `toml:"urls"`
-
+	Log     telegraf.Logger `toml:"-"`
 	tls.ClientConfig
+
 	client *http.Client
-	Log    telegraf.Logger
 }
 
 func (*phpfpm) SampleConfig() string {
@@ -91,6 +91,10 @@ func (*phpfpm) SampleConfig() string {
 }
 
 func (p *phpfpm) Init() error {
+	if len(p.Urls) == 0 {
+		p.Urls = []string{"http://127.0.0.1/status"}
+	}
+
 	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -117,18 +121,8 @@ func (p *phpfpm) Init() error {
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *phpfpm) Gather(acc telegraf.Accumulator) error {
-	if len(p.Urls) == 0 {
-		return p.gatherServer("http://127.0.0.1/status", acc)
-	}
-
 	var wg sync.WaitGroup
-
-	urls, err := expandUrls(p.Urls)
-	if err != nil {
-		return err
-	}
-
-	for _, serv := range urls {
+	for _, serv := range expandUrls(acc, p.Urls) {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
@@ -259,7 +253,7 @@ func parseLines(r io.Reader, acc telegraf.Accumulator, addr string) {
 		// We start to gather data for a new pool here
 		if fieldName == PfPool {
 			currentPool = strings.Trim(keyvalue[1], " ")
-			stats[currentPool] = make(metric)
+			stats[currentPool] = make(metricStat)
 			continue
 		}
 
@@ -347,7 +341,7 @@ func (p *phpfpm) parseJSON(r io.Reader, acc telegraf.Accumulator, addr string) {
 	}
 }
 
-func expandUrls(urls []string) ([]string, error) {
+func expandUrls(acc telegraf.Accumulator, urls []string) []string {
 	addrs := make([]string, 0, len(urls))
 	for _, address := range urls {
 		if isNetworkURL(address) {
@@ -356,11 +350,12 @@ func expandUrls(urls []string) ([]string, error) {
 		}
 		paths, err := globUnixSocket(address)
 		if err != nil {
-			return nil, err
+			acc.AddError(err)
+			continue
 		}
 		addrs = append(addrs, paths...)
 	}
-	return addrs, nil
+	return addrs
 }
 
 func globUnixSocket(address string) ([]string, error) {

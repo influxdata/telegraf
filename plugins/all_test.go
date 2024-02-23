@@ -99,7 +99,7 @@ func testBuildTags(t *testing.T, buildComment string, pluginCategory string, plu
 // For ex ["!custom", "inputs", "inputs.docker"] returns "inputs.docker"
 func getPluginBuildTag(tags []string, pluginCategory string) string {
 	for _, tag := range tags {
-		if strings.HasPrefix(tag, fmt.Sprintf("%s.", pluginCategory)) {
+		if strings.HasPrefix(tag, pluginCategory+".") {
 			return tag
 		}
 	}

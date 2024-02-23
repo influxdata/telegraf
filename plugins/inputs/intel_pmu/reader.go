@@ -3,6 +3,7 @@
 package intel_pmu
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -88,10 +89,10 @@ func (ie *iaEntitiesValuesReader) readEntities(coreEntities []*CoreEventEntity, 
 
 func (ie *iaEntitiesValuesReader) readCoreEvents(entity *CoreEventEntity) ([]coreMetric, error) {
 	if ie.eventReader == nil || ie.timer == nil {
-		return nil, fmt.Errorf("event values reader or timer is nil")
+		return nil, errors.New("event values reader or timer is nil")
 	}
 	if entity == nil {
-		return nil, fmt.Errorf("entity is nil")
+		return nil, errors.New("entity is nil")
 	}
 	metrics := make([]coreMetric, len(entity.activeEvents))
 	errGroup := errgroup.Group{}
@@ -101,7 +102,7 @@ func (ie *iaEntitiesValuesReader) readCoreEvents(entity *CoreEventEntity) ([]cor
 		actualEvent := event
 
 		if event == nil || event.PerfEvent == nil {
-			return nil, fmt.Errorf("active event or corresponding perf event is nil")
+			return nil, errors.New("active event or corresponding perf event is nil")
 		}
 
 		errGroup.Go(func() error {
@@ -130,7 +131,7 @@ func (ie *iaEntitiesValuesReader) readCoreEvents(entity *CoreEventEntity) ([]cor
 
 func (ie *iaEntitiesValuesReader) readUncoreEvents(entity *UncoreEventEntity) ([]uncoreMetric, error) {
 	if entity == nil {
-		return nil, fmt.Errorf("entity is nil")
+		return nil, errors.New("entity is nil")
 	}
 	var uncoreMetrics []uncoreMetric
 
@@ -158,10 +159,10 @@ func (ie *iaEntitiesValuesReader) readUncoreEvents(entity *UncoreEventEntity) ([
 
 func (ie *iaEntitiesValuesReader) readMultiEventSeparately(multiEvent multiEvent) ([]uncoreMetric, error) {
 	if ie.eventReader == nil || ie.timer == nil {
-		return nil, fmt.Errorf("event values reader or timer is nil")
+		return nil, errors.New("event values reader or timer is nil")
 	}
 	if len(multiEvent.activeEvents) < 1 || multiEvent.perfEvent == nil {
-		return nil, fmt.Errorf("no active events or perf event is nil")
+		return nil, errors.New("no active events or perf event is nil")
 	}
 	activeEvents := multiEvent.activeEvents
 	perfEvent := multiEvent.perfEvent
@@ -199,10 +200,10 @@ func (ie *iaEntitiesValuesReader) readMultiEventSeparately(multiEvent multiEvent
 
 func (ie *iaEntitiesValuesReader) readMultiEventAgg(multiEvent multiEvent) (uncoreMetric, error) {
 	if ie.eventReader == nil || ie.timer == nil {
-		return uncoreMetric{}, fmt.Errorf("event values reader or timer is nil")
+		return uncoreMetric{}, errors.New("event values reader or timer is nil")
 	}
 	if len(multiEvent.activeEvents) < 1 || multiEvent.perfEvent == nil {
-		return uncoreMetric{}, fmt.Errorf("no active events or perf event is nil")
+		return uncoreMetric{}, errors.New("no active events or perf event is nil")
 	}
 	activeEvents := multiEvent.activeEvents
 	perfEvent := multiEvent.perfEvent

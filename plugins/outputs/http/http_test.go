@@ -62,7 +62,7 @@ func TestMethod(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -132,7 +132,7 @@ func TestHTTPClientConfig(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -172,7 +172,7 @@ func TestHTTPClientConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			})
 
@@ -201,7 +201,7 @@ func TestStatusCode(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -265,7 +265,7 @@ func TestStatusCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			})
 
@@ -287,9 +287,10 @@ func TestContentType(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
+	headerSecret := config.NewSecret([]byte("application/json"))
 	tests := []struct {
 		name     string
 		plugin   *HTTP
@@ -306,7 +307,7 @@ func TestContentType(t *testing.T) {
 			name: "overwrite content_type",
 			plugin: &HTTP{
 				URL:     u.String(),
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string]*config.Secret{"Content-Type": &headerSecret},
 			},
 			expected: "application/json",
 		},
@@ -335,7 +336,7 @@ func TestContentEncodingGzip(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -396,7 +397,7 @@ func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -453,7 +454,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 
 	var token = "2YotnFZFEjr1zCsicMWpAA"
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -485,7 +486,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 					},
 				},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)
@@ -513,7 +514,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 					},
 				},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)
@@ -556,7 +557,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tmpDir := t.TempDir()
@@ -616,7 +617,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				URL:             u.String() + "/write",
 				CredentialsFile: tmpFile.Name(),
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				authHeader := fmt.Sprintf(`{"id_token":%q}`, token)
 				_, err = w.Write([]byte(authHeader))
@@ -654,7 +655,7 @@ func TestDefaultUserAgent(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	t.Run("default-user-agent", func(t *testing.T) {
@@ -683,7 +684,7 @@ func TestBatchedUnbatched(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	client := &HTTP{
@@ -704,7 +705,7 @@ func TestBatchedUnbatched(t *testing.T) {
 
 	for name, serializer := range s {
 		var requests int
-		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			requests++
 			w.WriteHeader(http.StatusOK)
 		})
@@ -734,7 +735,7 @@ func TestAwsCredentials(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {

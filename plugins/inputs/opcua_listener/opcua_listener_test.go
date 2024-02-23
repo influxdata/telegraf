@@ -274,12 +274,12 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 		"DateTime",
 	}
 	testopcquality := []string{
-		"OK (0x0)",
-		"OK (0x0)",
-		"OK (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
 		"User does not have permission to perform the requested operation. StatusBadUserAccessDenied (0x801F0000)",
-		"OK (0x0)",
-		"OK (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
+		"The operation succeeded. StatusGood (0x0)",
 	}
 	expectedopcmetrics := []telegraf.Metric{}
 	for i, x := range testopctags {

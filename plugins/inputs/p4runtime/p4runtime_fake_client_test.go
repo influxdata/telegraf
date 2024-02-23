@@ -15,9 +15,7 @@ type fakeP4RuntimeClient struct {
 	) (*p4v1.WriteResponse, error)
 
 	readFn func(
-		ctx context.Context,
 		in *p4v1.ReadRequest,
-		opts ...grpc.CallOption,
 	) (p4v1.P4Runtime_ReadClient, error)
 
 	setForwardingPipelineConfigFn func(
@@ -26,11 +24,7 @@ type fakeP4RuntimeClient struct {
 		opts ...grpc.CallOption,
 	) (*p4v1.SetForwardingPipelineConfigResponse, error)
 
-	getForwardingPipelineConfigFn func(
-		ctx context.Context,
-		in *p4v1.GetForwardingPipelineConfigRequest,
-		opts ...grpc.CallOption,
-	) (*p4v1.GetForwardingPipelineConfigResponse, error)
+	getForwardingPipelineConfigFn func() (*p4v1.GetForwardingPipelineConfigResponse, error)
 
 	streamChannelFn func(
 		ctx context.Context,
@@ -59,14 +53,14 @@ func (c *fakeP4RuntimeClient) Write(
 }
 
 func (c *fakeP4RuntimeClient) Read(
-	ctx context.Context,
+	_ context.Context,
 	in *p4v1.ReadRequest,
-	opts ...grpc.CallOption,
+	_ ...grpc.CallOption,
 ) (p4v1.P4Runtime_ReadClient, error) {
 	if c.readFn == nil {
 		panic("No mock defined for Read RPC")
 	}
-	return c.readFn(ctx, in, opts...)
+	return c.readFn(in)
 }
 
 func (c *fakeP4RuntimeClient) SetForwardingPipelineConfig(
@@ -81,14 +75,14 @@ func (c *fakeP4RuntimeClient) SetForwardingPipelineConfig(
 }
 
 func (c *fakeP4RuntimeClient) GetForwardingPipelineConfig(
-	ctx context.Context,
-	in *p4v1.GetForwardingPipelineConfigRequest,
-	opts ...grpc.CallOption,
+	context.Context,
+	*p4v1.GetForwardingPipelineConfigRequest,
+	...grpc.CallOption,
 ) (*p4v1.GetForwardingPipelineConfigResponse, error) {
 	if c.getForwardingPipelineConfigFn == nil {
 		panic("No mock defined for GetForwardingPipelineConfig RPC")
 	}
-	return c.getForwardingPipelineConfigFn(ctx, in, opts...)
+	return c.getForwardingPipelineConfigFn()
 }
 
 func (c *fakeP4RuntimeClient) StreamChannel(

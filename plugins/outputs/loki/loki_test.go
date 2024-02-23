@@ -3,7 +3,6 @@ package loki
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -64,7 +63,7 @@ func TestStatusCode(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -117,7 +116,7 @@ func TestStatusCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			})
 
@@ -133,7 +132,7 @@ func TestContentType(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -178,7 +177,7 @@ func TestContentEncodingGzip(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -244,7 +243,7 @@ func TestMetricNameLabel(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -294,7 +293,7 @@ func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -341,7 +340,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 
 	var token = "2YotnFZFEjr1zCsicMWpAA"
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -369,7 +368,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				TokenURL:     u.String() + "/token",
 				Scopes:       []string{"urn:opc:idm:__myscopes__"},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)
@@ -408,7 +407,7 @@ func TestDefaultUserAgent(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	t.Run("default-user-agent", func(t *testing.T) {
@@ -432,7 +431,7 @@ func TestMetricSorting(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	t.Run("out of order metrics", func(t *testing.T) {

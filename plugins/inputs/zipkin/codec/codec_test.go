@@ -1,7 +1,7 @@
 package codec
 
 import (
-	"fmt"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -253,7 +253,7 @@ func Test_parentID(t *testing.T) {
 		{
 			name: "bad parent value",
 			span: &MockSpan{
-				Error: fmt.Errorf("Mommie Dearest"),
+				Error: errors.New("mommie dearest"),
 			},
 			wantErr: true,
 		},
@@ -468,7 +468,7 @@ func TestNewTrace(t *testing.T) {
 			name: "span has no id",
 			spans: []Span{
 				&MockSpan{
-					Error: fmt.Errorf("Span has no id"),
+					Error: errors.New("span has no id"),
 				},
 			},
 			wantErr: true,

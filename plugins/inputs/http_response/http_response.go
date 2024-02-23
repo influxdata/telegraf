@@ -77,7 +77,7 @@ func getProxyFunc(httpProxy string) func(*http.Request) (*url.URL, error) {
 			return nil, errors.New("bad proxy: " + err.Error())
 		}
 	}
-	return func(r *http.Request) (*url.URL, error) {
+	return func(*http.Request) (*url.URL, error) {
 		return proxyURL, nil
 	}
 }
@@ -110,7 +110,7 @@ func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 	}
 
 	if !h.FollowRedirects {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
@@ -282,8 +282,8 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
 		return fields, tags, nil
 	} else if err != nil {
-		h.setBodyReadError(fmt.Sprintf("Failed to read body of HTTP Response : %s", err.Error()), bodyBytes, fields, tags)
-		return fields, tags, nil
+		h.setBodyReadError("Failed to read body of HTTP Response : "+err.Error(), bodyBytes, fields, tags)
+		return fields, tags, nil //nolint:nilerr // error is handled properly
 	}
 
 	// Add the body of the response if expected

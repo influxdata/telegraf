@@ -1,6 +1,7 @@
 package regex
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -989,4 +990,105 @@ func TestAnyFieldConversion(t *testing.T) {
 		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
 		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
+}
+
+func TestTrackedMetricNotLost(t *testing.T) {
+	now := time.Now()
+
+	// Setup raw input and expected output
+	inputRaw := testutil.MustMetric(
+		"access_log",
+		map[string]string{
+			"verb":      "GET",
+			"resp_code": "200",
+		},
+		map[string]interface{}{
+			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+			"ignore_number": int64(200),
+			"ignore_bool":   true,
+		},
+		now,
+	)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"access_log",
+			map[string]string{
+				"verb":            "GET",
+				"resp_code":       "200",
+				"resp_code_group": "2xx",
+				"resp_code_text":  "OK",
+			},
+			map[string]interface{}{
+				"request":         "/api/search/?category=plugins&q=regex&sort=asc",
+				"method":          "/search/",
+				"search_category": "plugins",
+				"ignore_number":   int64(200),
+				"ignore_bool":     true,
+			},
+			now,
+		),
+	}
+
+	// Create fake notification for testing
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, 1)
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	// Convert raw input to tracking metric
+	input, _ := metric.WithTracking(inputRaw, notify)
+
+	// Prepare and start the plugin
+	regex := Regex{
+		Tags: []converter{
+			{
+				Key:         "resp_code",
+				Pattern:     "^(\\d)\\d\\d$",
+				Replacement: "${1}xx",
+				ResultKey:   "resp_code_group",
+			},
+			{
+				Key:         "resp_code_group",
+				Pattern:     "2xx",
+				Replacement: "OK",
+				ResultKey:   "resp_code_text",
+			},
+		},
+		Fields: []converter{
+			{
+				Key:         "request",
+				Pattern:     "^/api(?P<method>/[\\w/]+)\\S*",
+				Replacement: "${method}",
+				ResultKey:   "method",
+			},
+			{
+				Key:         "request",
+				Pattern:     ".*category=(\\w+).*",
+				Replacement: "${1}",
+				ResultKey:   "search_category",
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, regex.Init())
+
+	// Process expected metrics and compare with resulting metrics
+	actual := regex.Apply(input)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(delivered) == 1
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

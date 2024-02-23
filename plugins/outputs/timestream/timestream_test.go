@@ -2,6 +2,7 @@ package timestream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -64,11 +65,11 @@ func (m *mockTimestreamClient) DescribeDatabase(
 	*timestreamwrite.DescribeDatabaseInput,
 	...func(*timestreamwrite.Options),
 ) (*timestreamwrite.DescribeDatabaseOutput, error) {
-	return nil, fmt.Errorf("hello from DescribeDatabase")
+	return nil, errors.New("hello from DescribeDatabase")
 }
 
 func TestConnectValidatesConfigParameters(t *testing.T) {
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamClient{}, nil
 	}
 	// checking base arguments
@@ -226,7 +227,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -283,7 +284,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -418,7 +419,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	result := plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
-	require.EqualValues(t, result[0], expectedResultMultiTable)
+	require.EqualValues(t, expectedResultMultiTable, result[0])
 
 	require.True(t, arrayContains(result, expectedResultMultiTable), "Expected that the list of requests to Timestream: %+v\n "+
 		"will contain request: %+v\n\n", result, expectedResultMultiTable)
@@ -443,7 +444,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	result = plugin.TransformMetrics([]telegraf.Metric{input1, input2, input3, input4, input5, input6})
 	require.Len(t, result, 1, "Expected 1 WriteRecordsInput requests")
 
-	require.EqualValues(t, result[0], expectedResultSingleTable)
+	require.EqualValues(t, expectedResultSingleTable, result[0])
 
 	require.True(t, arrayContains(result, expectedResultSingleTable), "Expected that the list of requests to Timestream: %+v\n "+
 		"will contain request: %+v\n\n", result, expectedResultSingleTable)
@@ -552,7 +553,7 @@ func (m *mockTimestreamErrorClient) DescribeDatabase(
 }
 
 func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.ThrottlingException{Message: aws.String("Throttling Test")},
 		}, nil
@@ -578,7 +579,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 }
 
 func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.RejectedRecordsException{Message: aws.String("RejectedRecords Test")},
 		}, nil
@@ -609,7 +610,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -648,7 +649,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 

@@ -1,7 +1,7 @@
 package json
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -840,7 +840,7 @@ func TestTimeErrors(t *testing.T) {
 	actual, err = parser.Parse([]byte(testString2))
 	require.Error(t, err)
 	require.Empty(t, actual)
-	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
+	require.Equal(t, errors.New("JSON time key could not be found"), err)
 }
 
 func TestShareTimestamp(t *testing.T) {
@@ -1488,7 +1488,7 @@ func FuzzParserJSON(f *testing.F) {
 	parser := &Parser{MetricName: "testing"}
 	require.NoError(f, parser.Init())
 
-	f.Fuzz(func(t *testing.T, input []byte) {
+	f.Fuzz(func(_ *testing.T, input []byte) {
 		_, _ = parser.Parse(input)
 	})
 }

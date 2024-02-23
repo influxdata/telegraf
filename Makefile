@@ -174,7 +174,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -249,8 +249,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.21.6 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.21.6
+	docker build -t quay.io/influxdb/telegraf-ci:1.22.0 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.22.0
 
 .PHONY: install
 install: $(buildbin)
@@ -368,10 +368,10 @@ $(include_packages):
 			--after-remove scripts/rpm/post-remove.sh \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
-			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--rpm-os ${GOOS} \
+			--rpm-tag "Requires(pre): /usr/sbin/useradd" \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \

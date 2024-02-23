@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -77,7 +78,7 @@ func (m *Ipmi) Init() error {
 // Gather is the main execution function for the plugin
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	if len(m.Path) == 0 {
-		return fmt.Errorf("ipmitool not found: verify that ipmitool is installed and that ipmitool is in your PATH")
+		return errors.New("ipmitool not found: verify that ipmitool is installed and that ipmitool is in your PATH")
 	}
 
 	if len(m.Servers) > 0 {

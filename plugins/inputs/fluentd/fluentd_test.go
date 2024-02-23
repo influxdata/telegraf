@@ -169,7 +169,7 @@ func Test_parse(t *testing.T) {
 func Test_Gather(t *testing.T) {
 	t.Logf("Start HTTP mock (%s) with sampleJSON", fluentdTest.Endpoint)
 
-	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(w, "%s", string(sampleJSON))
 		require.NoError(t, err)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -85,6 +86,9 @@ func (a *NebiusCloudMonitoring) Init() error {
 	}
 	if a.service == "" {
 		a.service = "custom"
+	}
+	if service := os.Getenv("NEBIUS_SERVICE"); service != "" {
+		a.service = service
 	}
 	if a.metadataTokenURL == "" {
 		a.metadataTokenURL = defaultMetadataTokenURL

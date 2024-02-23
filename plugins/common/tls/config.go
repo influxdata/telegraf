@@ -10,8 +10,9 @@ import (
 	"os"
 	"strings"
 
+	"go.step.sm/crypto/pemutil"
+
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/youmark/pkcs8"
 )
 
 const TLSMinVersionDefault = tls.VersionTLS12
@@ -242,19 +243,26 @@ func loadCertificate(config *tls.Config, certFile, keyFile, privateKeyPassphrase
 		if privateKeyPassphrase == "" {
 			return errors.New("missing password for PKCS#8 encrypted private key")
 		}
-		var decryptedKey *rsa.PrivateKey
-		decryptedKey, err = pkcs8.ParsePKCS8PrivateKeyRSA(keyPEMBlock.Bytes, []byte(privateKeyPassphrase))
+		rawDecryptedKey, err := pemutil.DecryptPKCS8PrivateKey(keyPEMBlock.Bytes, []byte(privateKeyPassphrase))
 		if err != nil {
-			return fmt.Errorf("failed to parse encrypted PKCS#8 private key: %w", err)
+			return fmt.Errorf("failed to decrypt PKCS#8 private key: %w", err)
 		}
-		cert, err = tls.X509KeyPair(certBytes, pem.EncodeToMemory(&pem.Block{Type: keyPEMBlock.Type, Bytes: x509.MarshalPKCS1PrivateKey(decryptedKey)}))
+		decryptedKey, err := x509.ParsePKCS8PrivateKey(rawDecryptedKey)
+		if err != nil {
+			return fmt.Errorf("failed to parse decrypted PKCS#8 private key: %w", err)
+		}
+		privateKey, ok := decryptedKey.(*rsa.PrivateKey)
+		if !ok {
+			return fmt.Errorf("decrypted key is not a RSA private key: %T", decryptedKey)
+		}
+		cert, err = tls.X509KeyPair(certBytes, pem.EncodeToMemory(&pem.Block{Type: keyPEMBlock.Type, Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}))
 		if err != nil {
 			return fmt.Errorf("failed to load cert/key pair: %w", err)
 		}
 	} else if keyPEMBlock.Headers["Proc-Type"] == "4,ENCRYPTED" {
 		// The key is an encrypted private key with the DEK-Info header.
 		// This is currently unsupported because of the deprecation of x509.IsEncryptedPEMBlock and x509.DecryptPEMBlock.
-		return fmt.Errorf("password-protected keys in pkcs#1 format are not supported")
+		return errors.New("password-protected keys in pkcs#1 format are not supported")
 	} else {
 		cert, err = tls.X509KeyPair(certBytes, keyBytes)
 		if err != nil {

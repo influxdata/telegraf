@@ -4,6 +4,7 @@ package redis_sentinel
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -238,14 +239,14 @@ func (client *RedisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) (
 	for _, master := range masters {
 		master, ok := master.([]interface{})
 		if !ok {
-			return masterNames, fmt.Errorf("unable to process master response")
+			return masterNames, errors.New("unable to process master response")
 		}
 
 		m := toMap(master)
 
 		masterName, ok := m["name"]
 		if !ok {
-			return masterNames, fmt.Errorf("unable to resolve master name")
+			return masterNames, errors.New("unable to resolve master name")
 		}
 		masterNames = append(masterNames, masterName)
 
@@ -279,7 +280,7 @@ func (client *RedisSentinelClient) gatherReplicaStats(acc telegraf.Accumulator, 
 	for _, replica := range replicas {
 		replica, ok := replica.([]interface{})
 		if !ok {
-			return fmt.Errorf("unable to process replica response")
+			return errors.New("unable to process replica response")
 		}
 
 		rm := toMap(replica)
@@ -311,7 +312,7 @@ func (client *RedisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator,
 	for _, sentinel := range sentinels {
 		sentinel, ok := sentinel.([]interface{})
 		if !ok {
-			return fmt.Errorf("unable to process sentinel response")
+			return errors.New("unable to process sentinel response")
 		}
 
 		sm := toMap(sentinel)

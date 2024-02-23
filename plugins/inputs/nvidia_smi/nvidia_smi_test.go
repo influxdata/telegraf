@@ -11,6 +11,51 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestErrorBehaviorError(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath:              "/random/non-existent/path",
+		Log:                  &testutil.Logger{},
+		StartupErrorBehavior: "error",
+	}
+	require.Error(t, plugin.Init())
+}
+
+func TestErrorBehaviorDefault(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	require.Error(t, plugin.Init())
+}
+
+func TestErorBehaviorIgnore(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath:              "/random/non-existent/path",
+		Log:                  &testutil.Logger{},
+		StartupErrorBehavior: "ignore",
+	}
+	require.NoError(t, plugin.Init())
+	acc := testutil.Accumulator{}
+	require.NoError(t, plugin.Gather(&acc))
+}
+
+func TestErrorBehaviorInvalidOption(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath:              "/random/non-existent/path",
+		Log:                  &testutil.Logger{},
+		StartupErrorBehavior: "giveup",
+	}
+	require.Error(t, plugin.Init())
+}
+
 func TestGatherValidXML(t *testing.T) {
 	tests := []struct {
 		name     string

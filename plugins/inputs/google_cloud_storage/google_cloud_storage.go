@@ -238,7 +238,7 @@ func (gcs *GCS) setUpDefaultClient() error {
 
 func (gcs *GCS) setOffset() error {
 	if gcs.client == nil {
-		return fmt.Errorf("CANNOT SET OFFSET IF CLIENT IS NOT SET")
+		return errors.New("CANNOT SET OFFSET IF CLIENT IS NOT SET")
 	}
 
 	if gcs.OffsetKey != "" {

@@ -7,10 +7,11 @@ import (
 	"time"
 
 	mb "github.com/grid-x/modbus"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/tbrandon/mbserver"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestRequest(t *testing.T) {
@@ -2300,7 +2301,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 	defer serv.Close()
 
 	serv.RegisterFunctionHandler(3,
-		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+		func(_ *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
 			tcpframe, ok := frame.(*mbserver.TCPFrame)
 			if !ok {
 				return nil, &mbserver.IllegalFunction

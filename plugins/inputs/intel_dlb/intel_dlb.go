@@ -7,6 +7,7 @@ package intel_dlb
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -308,7 +309,7 @@ func (d *IntelDLB) setInitMessageLength() error {
 		return d.closeSocketAndThrowError("custom", fmt.Errorf("failed to read InitMessage from socket: %w", err))
 	}
 	if messageLength > len(buf) {
-		return d.closeSocketAndThrowError("custom", fmt.Errorf("socket reply length is bigger than default buffer length"))
+		return d.closeSocketAndThrowError("custom", errors.New("socket reply length is bigger than default buffer length"))
 	}
 
 	var initMsg initMessage
@@ -339,7 +340,7 @@ func (d *IntelDLB) writeReadSocketMessage(messageToWrite string) (int, []byte, e
 	}
 
 	if replyMsgLen == 0 {
-		return 0, nil, d.closeSocketAndThrowError("message", fmt.Errorf("message length is empty"))
+		return 0, nil, d.closeSocketAndThrowError("message", errors.New("message length is empty"))
 	}
 
 	return replyMsgLen, socketReply, nil
@@ -347,13 +348,13 @@ func (d *IntelDLB) writeReadSocketMessage(messageToWrite string) (int, []byte, e
 
 func (d *IntelDLB) parseJSON(replyMsgLen int, socketReply []byte, parsedDeviceInfo interface{}) error {
 	if len(socketReply) == 0 {
-		return d.closeSocketAndThrowError("json", fmt.Errorf("socket reply is empty"))
+		return d.closeSocketAndThrowError("json", errors.New("socket reply is empty"))
 	}
 	if replyMsgLen > len(socketReply) {
-		return d.closeSocketAndThrowError("json", fmt.Errorf("socket reply length is bigger than it should be"))
+		return d.closeSocketAndThrowError("json", errors.New("socket reply length is bigger than it should be"))
 	}
 	if replyMsgLen == 0 {
-		return d.closeSocketAndThrowError("json", fmt.Errorf("socket reply message is empty"))
+		return d.closeSocketAndThrowError("json", errors.New("socket reply message is empty"))
 	}
 	// Assign reply to variable, e.g.:  {"/eventdev/dev_list": [0, 1]}
 	jsonDeviceIndexes := socketReply[:replyMsgLen]
@@ -405,7 +406,7 @@ func (d *IntelDLB) closeSocketAndThrowError(errType string, err error) error {
 
 func (d *IntelDLB) checkAndAddDLBDevice() error {
 	if d.rasReader == nil {
-		return fmt.Errorf("rasreader was not initialized")
+		return errors.New("rasreader was not initialized")
 	}
 	filePaths, err := d.rasReader.gatherPaths(dlbDeviceIDLocation)
 	if err != nil {

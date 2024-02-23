@@ -14,7 +14,7 @@ import (
 )
 
 // initialize test data
-var sysDrive = fmt.Sprintf(`%s\`, os.Getenv("SystemDrive")) // C:\
+var sysDrive = os.Getenv("SystemDrive") + `\` // C:\
 
 // include Name as a tag, FreeSpace as a field, and Purpose as a known-null class property
 var testQuery = Query{

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -532,7 +532,7 @@ func (m *mockOutput) Write(metrics []telegraf.Metric) error {
 	m.Lock()
 	defer m.Unlock()
 	if m.failWrite {
-		return fmt.Errorf("failed write")
+		return errors.New("failed write")
 	}
 
 	if m.metrics == nil {
@@ -572,7 +572,7 @@ func (m *perfOutput) SampleConfig() string {
 
 func (m *perfOutput) Write(_ []telegraf.Metric) error {
 	if m.failWrite {
-		return fmt.Errorf("failed write")
+		return errors.New("failed write")
 	}
 	return nil
 }

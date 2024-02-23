@@ -57,7 +57,7 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 	defer testServer.Close()
 
 	check := NewNginxUpstreamCheck()
-	check.URL = fmt.Sprintf("%s/status", testServer.URL)
+	check.URL = testServer.URL + "/status"
 
 	var accumulator testutil.Accumulator
 
@@ -68,34 +68,34 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 		test,
 		"nginx_upstream_check",
 		map[string]interface{}{
-			"status":      string("up"),
+			"status":      "up",
 			"status_code": uint8(1),
 			"rise":        uint64(1000),
 			"fall":        uint64(0),
 		},
 		map[string]string{
-			"upstream": string("upstream-1"),
-			"type":     string("http"),
-			"name":     string("127.0.0.1:8081"),
-			"port":     string("0"),
-			"url":      fmt.Sprintf("%s/status", testServer.URL),
+			"upstream": "upstream-1",
+			"type":     "http",
+			"name":     "127.0.0.1:8081",
+			"port":     "0",
+			"url":      testServer.URL + "/status",
 		})
 
 	accumulator.AssertContainsTaggedFields(
 		test,
 		"nginx_upstream_check",
 		map[string]interface{}{
-			"status":      string("down"),
+			"status":      "down",
 			"status_code": uint8(2),
 			"rise":        uint64(0),
 			"fall":        uint64(2000),
 		},
 		map[string]string{
-			"upstream": string("upstream-2"),
-			"type":     string("tcp"),
-			"name":     string("127.0.0.1:8082"),
-			"port":     string("8080"),
-			"url":      fmt.Sprintf("%s/status", testServer.URL),
+			"upstream": "upstream-2",
+			"type":     "tcp",
+			"name":     "127.0.0.1:8082",
+			"port":     "8080",
+			"url":      testServer.URL + "/status",
 		})
 }
 
@@ -119,7 +119,7 @@ func TestNginxUpstreamCheckRequest(test *testing.T) {
 	defer testServer.Close()
 
 	check := NewNginxUpstreamCheck()
-	check.URL = fmt.Sprintf("%s/status", testServer.URL)
+	check.URL = testServer.URL + "/status"
 	check.Headers["X-test"] = "test-value"
 	check.HostHeader = "status.local"
 	check.Username = "user"

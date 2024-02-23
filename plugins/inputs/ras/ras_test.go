@@ -3,7 +3,6 @@
 package ras
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,14 +22,14 @@ func TestUpdateCounters(t *testing.T) {
 		if metric == processorBase {
 			// processor_base_errors is sum of other seven errors: internal_timer_errors, smm_handler_code_access_violation_errors,
 			// internal_parity_errors, frc_errors, external_mce_errors, microcode_rom_parity_errors and unclassified_mce_errors
-			require.Equal(t, int64(7), value, fmt.Sprintf("%s should have value of 7", processorBase))
+			require.Equal(t, int64(7), value, processorBase+" should have value of 7")
 		} else {
-			require.Equal(t, int64(1), value, fmt.Sprintf("%s should have value of 1", metric))
+			require.Equal(t, int64(1), value, metric+" should have value of 1")
 		}
 	}
 
 	for metric, value := range ras.serverCounters {
-		require.Equal(t, int64(1), value, fmt.Sprintf("%s should have value of 1", metric))
+		require.Equal(t, int64(1), value, metric+" should have value of 1")
 	}
 }
 
@@ -102,9 +101,9 @@ func TestMultipleSockets(t *testing.T) {
 	for _, metricData := range ras.cpuSocketCounters {
 		for metric, value := range metricData {
 			if metric == levelTwoCache {
-				require.Equal(t, int64(1), value, fmt.Sprintf("%s should have value of 1", levelTwoCache))
+				require.Equal(t, int64(1), value, levelTwoCache+" should have value of 1")
 			} else {
-				require.Equal(t, int64(0), value, fmt.Sprintf("%s should have value of 0", metric))
+				require.Equal(t, int64(0), value, metric+" should have value of 0")
 			}
 		}
 	}
@@ -125,11 +124,11 @@ func TestEmptyDatabase(t *testing.T) {
 	require.Len(t, ras.serverCounters, 2, "Should contain default counters for server")
 
 	for metric, value := range ras.cpuSocketCounters[0] {
-		require.Equal(t, int64(0), value, fmt.Sprintf("%s should have value of 0", metric))
+		require.Equal(t, int64(0), value, metric+" should have value of 0")
 	}
 
 	for metric, value := range ras.serverCounters {
-		require.Equal(t, int64(0), value, fmt.Sprintf("%s should have value of 0", metric))
+		require.Equal(t, int64(0), value, metric+" should have value of 0")
 	}
 }
 

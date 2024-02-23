@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 func TestSampleConfig(t *testing.T) {
@@ -125,7 +126,7 @@ func TestGetNonExisting(t *testing.T) {
 
 func TestResolver404(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 		}))
 	defer server.Close()

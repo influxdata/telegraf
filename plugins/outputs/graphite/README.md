@@ -26,8 +26,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If multiple endpoints are configured, the output will be load balanced.
   ## Only one of the endpoints will be written to with each iteration.
   servers = ["localhost:2003"]
+
+  ## Local address to bind when connecting to the server
+  ## If empty or not set, the local address is automatically chosen.
+  # local_address = ""
+
   ## Prefix metrics name
   prefix = ""
+
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"

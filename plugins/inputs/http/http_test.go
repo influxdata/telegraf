@@ -3,6 +3,7 @@ package http_test
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/influxdata/telegraf/config"
 	"io"
 	"math/rand"
 	"net"
@@ -82,9 +83,10 @@ func TestHTTPHeaders(t *testing.T) {
 	defer fakeServer.Close()
 
 	address := fakeServer.URL + "/endpoint"
+	headerSecret := config.NewSecret([]byte(headerValue))
 	plugin := &httpplugin.HTTP{
 		URLs:    []string{address},
-		Headers: map[string]string{header: headerValue},
+		Headers: map[string]*config.Secret{header: &headerSecret},
 		Log:     testutil.Logger{},
 	}
 
@@ -116,7 +118,7 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 	address := fakeServer.URL + "/endpoint"
 	plugin := &httpplugin.HTTP{
 		URLs:    []string{address},
-		Headers: map[string]string{},
+		Headers: map[string]*config.Secret{},
 		Body:    "{}",
 		Log:     testutil.Logger{},
 	}
@@ -133,7 +135,7 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 }
 
 func TestInvalidStatusCode(t *testing.T) {
-	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer fakeServer.Close()
@@ -156,7 +158,7 @@ func TestInvalidStatusCode(t *testing.T) {
 }
 
 func TestSuccessStatusCodes(t *testing.T) {
-	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer fakeServer.Close()
@@ -221,7 +223,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	address := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+	address := "http://" + ts.Listener.Addr().String()
 
 	tests := []struct {
 		name             string
@@ -320,7 +322,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 
 	var token = "2YotnFZFEjr1zCsicMWpAA"
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -354,7 +356,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				},
 				Log: testutil.Logger{},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)

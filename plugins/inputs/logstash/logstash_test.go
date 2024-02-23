@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var logstashTest = NewLogstash()
@@ -25,7 +26,7 @@ var (
 )
 
 func Test_Logstash5GatherProcessStats(test *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash5ProcessJSON))
 		require.NoError(test, err)
@@ -70,7 +71,7 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 }
 
 func Test_Logstash6GatherProcessStats(test *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash6ProcessJSON))
 		require.NoError(test, err)
@@ -116,7 +117,7 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 
 func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	logstash5accPipelineStats.SetDebug(true)
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash5PipelineJSON))
 		require.NoError(test, err)
@@ -214,7 +215,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 
 func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.SetDebug(true)
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash6PipelinesJSON))
 		require.NoError(test, err)
@@ -556,7 +557,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 }
 
 func Test_Logstash5GatherJVMStats(test *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash5JvmJSON))
 		require.NoError(test, err)
@@ -620,7 +621,7 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 }
 
 func Test_Logstash6GatherJVMStats(test *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
 		require.NoError(test, err)
@@ -684,7 +685,7 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 }
 
 func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "%s", string(logstash7PipelinesJSON))
 		if err != nil {

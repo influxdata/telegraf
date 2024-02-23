@@ -217,7 +217,7 @@ func (p *PointParser) reset(buf []byte) {
 
 func init() {
 	parsers.Add("wavefront",
-		func(_ string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		})
 }

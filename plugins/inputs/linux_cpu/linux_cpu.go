@@ -58,7 +58,7 @@ func (g *LinuxCPU) Init() error {
 
 	if len(g.Metrics) == 0 {
 		// The user has not enabled any of the metrics
-		return fmt.Errorf("no metrics selected")
+		return errors.New("no metrics selected")
 	}
 
 	cpus, err := g.discoverCpus()
@@ -66,7 +66,7 @@ func (g *LinuxCPU) Init() error {
 		return err
 	} else if len(cpus) == 0 {
 		// Although the user has specified metrics to collect, `discoverCpus` failed to find the required metrics
-		return fmt.Errorf("no CPUs detected to track")
+		return errors.New("no CPUs detected to track")
 	}
 	g.cpus = cpus
 
@@ -208,7 +208,7 @@ func readUintFromFile(propPath string) (uint64, error) {
 	if err != nil && !errors.Is(err, io.EOF) {
 		return 0, fmt.Errorf("error on reading file: %w", err)
 	} else if n == 0 {
-		return 0, fmt.Errorf("error on reading file: file is empty")
+		return 0, errors.New("error on reading file: file is empty")
 	}
 
 	return strconv.ParseUint(string(buffer[:n-1]), 10, 64)

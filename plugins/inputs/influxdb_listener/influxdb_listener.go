@@ -197,7 +197,7 @@ func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request)
 }
 
 func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
+	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.queriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
@@ -343,7 +343,7 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		case 1:
 			partialErrorString = firstParseErrorStr
 		case 2:
-			partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
+			partialErrorString = firstParseErrorStr + " (and 1 other parse error)"
 		default:
 			partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 		}
@@ -459,7 +459,7 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		case 1:
 			partialErrorString = firstParseErrorStr
 		case 2:
-			partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
+			partialErrorString = firstParseErrorStr + " (and 1 other parse error)"
 		default:
 			partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 		}

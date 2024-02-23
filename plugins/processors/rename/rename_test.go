@@ -1,6 +1,7 @@
 package rename
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func newMetric(name string, tags map[string]string, fields map[string]interface{}) telegraf.Metric {
@@ -59,4 +61,69 @@ func TestFieldRename(t *testing.T) {
 	results := r.Apply(m)
 
 	require.Equal(t, map[string]interface{}{"time": int64(1250), "snakes": true}, results[0].Fields(), "should change field 'time_msec' to 'time'")
+}
+
+func TestTracking(t *testing.T) {
+	inputRaw := []telegraf.Metric{
+		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 99}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 11}, time.Unix(0, 0)),
+	}
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"foo",
+			map[string]string{},
+			map[string]interface{}{"new_value": 42},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"bar",
+			map[string]string{},
+			map[string]interface{}{"new_value": 99},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"baz",
+			map[string]string{},
+			map[string]interface{}{"new_value": 11},
+			time.Unix(0, 0),
+		),
+	}
+
+	plugin := &Rename{
+		Replaces: []Replace{
+			{Field: "value", Dest: "new_value"},
+		},
+	}
+
+	// Process expected metrics and compare with resulting metrics
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

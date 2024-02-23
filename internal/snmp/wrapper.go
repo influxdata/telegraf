@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -9,6 +10,16 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 )
+
+// Connection is an interface which wraps a *gosnmp.GoSNMP object.
+// We interact through an interface so we can mock it out in tests.
+type Connection interface {
+	Host() string
+	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
+	Walk(string, gosnmp.WalkFunc) error
+	Get(oids []string) (*gosnmp.SnmpPacket, error)
+	Reconnect() error
+}
 
 // GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
 type GosnmpWrapper struct {
@@ -46,7 +57,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	case 1:
 		gs.Version = gosnmp.Version1
 	default:
-		return GosnmpWrapper{}, fmt.Errorf("invalid version")
+		return GosnmpWrapper{}, errors.New("invalid version")
 	}
 
 	if s.Version < 3 {
@@ -74,7 +85,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 		case "authpriv":
 			gs.MsgFlags = gosnmp.AuthPriv
 		default:
-			return GosnmpWrapper{}, fmt.Errorf("invalid secLevel")
+			return GosnmpWrapper{}, errors.New("invalid secLevel")
 		}
 
 		sp.UserName = s.SecName
@@ -95,7 +106,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 		case "":
 			sp.AuthenticationProtocol = gosnmp.NoAuth
 		default:
-			return GosnmpWrapper{}, fmt.Errorf("invalid authProtocol")
+			return GosnmpWrapper{}, errors.New("invalid authProtocol")
 		}
 
 		sp.AuthenticationPassphrase = s.AuthPassword
@@ -116,7 +127,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 		case "":
 			sp.PrivacyProtocol = gosnmp.NoPriv
 		default:
-			return GosnmpWrapper{}, fmt.Errorf("invalid privProtocol")
+			return GosnmpWrapper{}, errors.New("invalid privProtocol")
 		}
 
 		sp.PrivacyPassphrase = s.PrivPassword

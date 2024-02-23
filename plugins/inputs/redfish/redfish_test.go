@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -422,8 +423,8 @@ func TestDellApis(t *testing.T) {
 	}
 	plugin := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "System.Embedded.1",
 		IncludeMetrics:   []string{"thermal", "power"},
 	}
@@ -601,10 +602,107 @@ func TestHPApis(t *testing.T) {
 
 	hpPlugin := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "1",
 		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, hpPlugin.Init())
+	var hpAcc testutil.Accumulator
+
+	err = hpPlugin.Gather(&hpAcc)
+	require.NoError(t, err)
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
+}
+
+func TestHPilo4Apis(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/Chassis/1/Thermal":
+			http.ServeFile(w, r, "testdata/hp_thermal_ilo4.json")
+		case "/redfish/v1/Chassis/1/Power":
+			http.ServeFile(w, r, "testdata/hp_power.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp_systems.json")
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp_chassis.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
+	expectedMetricsHp := []telegraf.Metric{
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "01-Inlet Ambient",
+				"member_id": "0",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          19.0,
+				"upper_threshold_critical": 42.0,
+				"upper_threshold_fatal":    47.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "44-P/S 2 Zone",
+				"member_id": "42",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          34.0,
+				"upper_threshold_critical": 75.0,
+				"upper_threshold_fatal":    80.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"address":   address,
+				"health":    "OK",
+				"member_id": "",
+				"name":      "Fan 1",
+				"source":    "tpa-hostname",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 17,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	hpPlugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal"},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
@@ -642,8 +740,8 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 
 	r := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "System.Embedded.1",
 		IncludeMetrics:   []string{"thermal", "power"},
 	}
@@ -744,8 +842,8 @@ func TestInvalidDellJSON(t *testing.T) {
 
 			plugin := &Redfish{
 				Address:          ts.URL,
-				Username:         "test",
-				Password:         "test",
+				Username:         config.NewSecret([]byte("test")),
+				Password:         config.NewSecret([]byte("test")),
 				ComputerSystemID: "System.Embedded.1",
 				IncludeMetrics:   []string{"thermal", "power"},
 			}
@@ -815,8 +913,8 @@ func TestInvalidHPJSON(t *testing.T) {
 
 			plugin := &Redfish{
 				Address:          ts.URL,
-				Username:         "test",
-				Password:         "test",
+				Username:         config.NewSecret([]byte("test")),
+				Password:         config.NewSecret([]byte("test")),
 				ComputerSystemID: "System.Embedded.2",
 				IncludeMetrics:   []string{"thermal", "power"},
 			}
@@ -1099,8 +1197,8 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 
 	hpPlugin := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "1",
 		IncludeTagSets:   []string{"chassis", "chassis.location"},
 		IncludeMetrics:   []string{"thermal", "power"},

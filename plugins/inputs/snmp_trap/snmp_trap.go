@@ -4,6 +4,7 @@ package snmp_trap
 import (
 	_ "embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -105,7 +106,7 @@ func (s *SnmpTrap) Init() error {
 	case "netsnmp":
 		s.transl = newNetsnmpTranslator(s.Timeout)
 	default:
-		return fmt.Errorf("invalid translator value")
+		return errors.New("invalid translator value")
 	}
 
 	if err != nil {
@@ -156,14 +157,14 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			authenticationProtocol = gosnmp.MD5
 		case "sha":
 			authenticationProtocol = gosnmp.SHA
-		//case "sha224":
-		//	authenticationProtocol = gosnmp.SHA224
-		//case "sha256":
-		//	authenticationProtocol = gosnmp.SHA256
-		//case "sha384":
-		//	authenticationProtocol = gosnmp.SHA384
-		//case "sha512":
-		//	authenticationProtocol = gosnmp.SHA512
+		case "sha224":
+			authenticationProtocol = gosnmp.SHA224
+		case "sha256":
+			authenticationProtocol = gosnmp.SHA256
+		case "sha384":
+			authenticationProtocol = gosnmp.SHA384
+		case "sha512":
+			authenticationProtocol = gosnmp.SHA512
 		case "":
 			authenticationProtocol = gosnmp.NoAuth
 		default:

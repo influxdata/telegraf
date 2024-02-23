@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"sync/atomic"
@@ -20,9 +21,11 @@ var unlinkedSecrets = make([]*Secret, 0)
 // secretStorePattern is a regex to validate secret-store IDs
 var secretStorePattern = regexp.MustCompile(`^\w+$`)
 
-// secretPattern is a regex to extract references to secrets stored
-// in a secret-store.
+// secretPattern is a regex to extract references to secrets store in a secret-store
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
+
+// secretCandidatePattern is a regex to find secret candidates to warn users on invalid characters in references
+var secretCandidatePattern = regexp.MustCompile(`@\{.+?:.+?}`)
 
 // secretCount is the number of secrets use in Telegraf
 var secretCount atomic.Int64
@@ -125,8 +128,18 @@ func (s *Secret) init(secret []byte) {
 	// Remember if the secret is completely empty
 	s.notempty = len(secret) != 0
 
-	// Find all parts that need to be resolved and return them
-	s.unlinked = secretPattern.FindAllString(string(secret), -1)
+	// Find all secret candidates and check if they are really a valid
+	// reference. Otherwise issue a warning to let the user know that there is
+	// a potential issue with their secret instead of silently ignoring it.
+	candidates := secretCandidatePattern.FindAllString(string(secret), -1)
+	s.unlinked = make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		if secretPattern.MatchString(c) {
+			s.unlinked = append(s.unlinked, c)
+		} else {
+			log.Printf("W! Secret %q contains invalid character(s), only letters, digits and underscores are allowed.", c)
+		}
+	}
 	s.resolvers = nil
 
 	// Setup the container implementation

@@ -475,7 +475,7 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
+			msg := "found unexpected measurement " + measurement
 			require.Fail(t, msg)
 		}
 	}

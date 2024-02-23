@@ -4,6 +4,7 @@ package synproxy
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -62,7 +63,7 @@ func (k *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 		}
 	}
 	if len(hname) == 0 {
-		return nil, fmt.Errorf("invalid data")
+		return nil, errors.New("invalid data")
 	}
 	// Read data rows
 	for scanner.Scan() {

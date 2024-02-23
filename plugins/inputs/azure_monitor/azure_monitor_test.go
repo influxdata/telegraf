@@ -3,16 +3,18 @@ package azure_monitor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type mockAzureClientsManager struct{}
@@ -98,7 +100,7 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 		return responses, nil
 	}
 
-	return nil, fmt.Errorf("resource group was not found")
+	return nil, errors.New("resource group was not found")
 }
 
 func (mamdc *mockAzureMetricDefinitionsClient) List(
@@ -139,7 +141,7 @@ func (mamdc *mockAzureMetricDefinitionsClient) List(
 		}, nil
 	}
 
-	return armmonitor.MetricDefinitionsClientListResponse{}, fmt.Errorf("resource ID was not found")
+	return armmonitor.MetricDefinitionsClientListResponse{}, errors.New("resource ID was not found")
 }
 
 func (mamc *mockAzureMetricsClient) List(
@@ -192,7 +194,7 @@ func (mamc *mockAzureMetricsClient) List(
 		}, nil
 	}
 
-	return armmonitor.MetricsClientListResponse{}, fmt.Errorf("resource ID was not found")
+	return armmonitor.MetricsClientListResponse{}, errors.New("resource ID was not found")
 }
 
 func TestInit_ResourceTargetsOnly(t *testing.T) {

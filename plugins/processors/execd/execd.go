@@ -92,7 +92,7 @@ func (e *Execd) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	// We cannot maintain tracking metrics at the moment because input/output
 	// is done asynchronously and we don't have any metric metadata to tie the
 	// output metric back to the original input metric.
-	m.Drop()
+	m.Accept()
 	return nil
 }
 

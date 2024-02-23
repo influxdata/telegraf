@@ -2,6 +2,7 @@ package opcua_listener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -30,8 +31,8 @@ type SubscribeClient struct {
 	dataNotifications  chan *opcua.PublishNotificationData
 	metrics            chan telegraf.Metric
 
-	processingCtx    context.Context
-	processingCancel context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
@@ -44,9 +45,9 @@ func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
 		params.DeadbandType != input.Percent:
 		return fmt.Errorf("deadband_type '%s' not supported", params.DeadbandType)
 	case params.DeadbandValue == nil:
-		return fmt.Errorf("deadband_value was not set")
+		return errors.New("deadband_value was not set")
 	case *params.DeadbandValue < 0:
-		return fmt.Errorf("negative deadband_value not supported")
+		return errors.New("negative deadband_value not supported")
 	default:
 		return nil
 	}
@@ -90,6 +91,7 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 		return nil, err
 	}
 
+	processingCtx, processingCancel := context.WithCancel(context.Background())
 	subClient := &SubscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
@@ -99,6 +101,8 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 		// the same time. It could be made dependent on the number of nodes subscribed to and the subscription interval.
 		dataNotifications: make(chan *opcua.PublishNotificationData, 100),
 		metrics:           make(chan telegraf.Metric, 100),
+		ctx:               processingCtx,
+		cancel:            processingCancel,
 	}
 
 	log.Debugf("Creating monitored items")
@@ -115,13 +119,13 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 }
 
 func (o *SubscribeClient) Connect() error {
-	err := o.OpcUAClient.Connect()
+	err := o.OpcUAClient.Connect(o.ctx)
 	if err != nil {
 		return err
 	}
 
 	o.Log.Debugf("Creating OPC UA subscription")
-	o.sub, err = o.Client.Subscribe(&opcua.SubscriptionParameters{
+	o.sub, err = o.Client.Subscribe(o.ctx, &opcua.SubscriptionParameters{
 		Interval: time.Duration(o.Config.SubscriptionInterval),
 	}, o.dataNotifications)
 	if err != nil {
@@ -144,7 +148,7 @@ func (o *SubscribeClient) Stop(ctx context.Context) <-chan struct{} {
 		}
 	}
 	closing := o.OpcUAInputClient.Stop(ctx)
-	o.processingCancel()
+	o.cancel()
 	return closing
 }
 
@@ -166,19 +170,26 @@ func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegra
 		return nil, err
 	}
 
-	resp, err := o.sub.MonitorWithContext(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
+	resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start monitoring items: %w", err)
 	}
 	o.Log.Debug("Monitoring items")
 
-	for _, res := range resp.Results {
+	for idx, res := range resp.Results {
 		if !o.StatusCodeOK(res.StatusCode) {
+			// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
+			if len(o.OpcUAInputClient.NodeIDs) > idx {
+				o.Log.Debugf("Failed to create monitored item for node %v (%v)",
+					o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, o.OpcUAInputClient.NodeIDs[idx].String())
+			} else {
+				o.Log.Debugf("Failed to create monitored item for node %v (%v)", o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, '?')
+			}
+
 			return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
 		}
 	}
 
-	o.processingCtx, o.processingCancel = context.WithCancel(context.Background())
 	go o.processReceivedNotifications()
 
 	return o.metrics, nil
@@ -187,7 +198,7 @@ func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegra
 func (o *SubscribeClient) processReceivedNotifications() {
 	for {
 		select {
-		case <-o.processingCtx.Done():
+		case <-o.ctx.Done():
 			o.Log.Debug("Processing received notifications stopped")
 			return
 

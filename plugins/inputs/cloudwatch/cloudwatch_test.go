@@ -400,7 +400,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
 	require.Len(t, params.MetricDataQueries, 5)
 	require.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
-	require.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
+	require.EqualValues(t, 60, *params.MetricDataQueries[0].MetricStat.Period)
 }
 
 func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
@@ -441,7 +441,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
 	require.Len(t, params.MetricDataQueries, 2)
 	require.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
-	require.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
+	require.EqualValues(t, 60, *params.MetricDataQueries[0].MetricStat.Period)
 }
 
 func TestMetricsCacheTimeout(t *testing.T) {

@@ -3,9 +3,9 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.21.6"
-GO_VERSION_SHA_arm64="0ff541fb37c38e5e5c5bcecc8f4f43c5ffd5e3a6c33a5d3e4003ded66fcfb331" # from https://golang.org/dl
-GO_VERSION_SHA_amd64="31d6ecca09010ab351e51343a5af81d678902061fee871f912bdd5ef4d778850" # from https://golang.org/dl
+GO_VERSION="1.22.0"
+GO_VERSION_SHA_arm64="bf8e388b09134164717cd52d3285a4ab3b68691b80515212da0e9f56f518fb1e" # from https://golang.org/dl
+GO_VERSION_SHA_amd64="ebca81df938d2d1047cc992be6c6c759543cf309d401b86af38a6aed3d4090f4" # from https://golang.org/dl
 
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"
@@ -38,6 +38,7 @@ setup_go () {
 
 if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
+    cd
     v=$(go version | { read -r _ _ v _; echo "${v#go}"; })
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then

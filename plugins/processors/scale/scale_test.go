@@ -1,11 +1,13 @@
 package scale
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -469,4 +471,81 @@ func TestErrorCasesMinMax(t *testing.T) {
 			require.ErrorContains(t, err, tt.expectedErrorMsg)
 		})
 	}
+}
+
+func TestTracking(t *testing.T) {
+	inputRaw := []telegraf.Metric{
+		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 99}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 1}, time.Unix(0, 0)),
+	}
+
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"foo",
+			map[string]string{},
+			map[string]interface{}{"value": float64(92)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"bar",
+			map[string]string{},
+			map[string]interface{}{"value": float64(149)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"baz",
+			map[string]string{},
+			map[string]interface{}{"value": float64(51)},
+			time.Unix(0, 0),
+		),
+	}
+
+	inMin := float64(0)
+	inMax := float64(50)
+	outMin := float64(50)
+	outMax := float64(100)
+
+	plugin := &Scale{
+		Scalings: []Scaling{
+			{
+				InMin:  &inMin,
+				InMax:  &inMax,
+				OutMin: &outMin,
+				OutMax: &outMax,
+				Fields: []string{"value"},
+			},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Process expected metrics and compare with resulting metrics
+	actual := plugin.Apply(input...)
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

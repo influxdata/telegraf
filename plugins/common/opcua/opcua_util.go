@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -34,16 +35,16 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	dir, _ := newTempDir()
 
 	if len(host) == 0 {
-		return "", "", fmt.Errorf("missing required host parameter")
+		return "", "", errors.New("missing required host parameter")
 	}
 	if rsaBits == 0 {
 		rsaBits = 2048
 	}
 	if len(certFile) == 0 {
-		certFile = fmt.Sprintf("%s/cert.pem", dir)
+		certFile = dir + "/cert.pem"
 	}
 	if len(keyFile) == 0 {
-		keyFile = fmt.Sprintf("%s/key.pem", dir)
+		keyFile = dir + "/key.pem"
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
@@ -181,7 +182,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		} else {
 			pk, ok := c.PrivateKey.(*rsa.PrivateKey)
 			if !ok {
-				return nil, fmt.Errorf("invalid private key")
+				return nil, errors.New("invalid private key")
 			}
 			cert = c.Certificate[0]
 			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
@@ -276,7 +277,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	}
 
 	if serverEndpoint == nil { // Didn't find an endpoint with matching policy and mode.
-		return nil, fmt.Errorf("unable to find suitable server endpoint with selected sec-policy and sec-mode")
+		return nil, errors.New("unable to find suitable server endpoint with selected sec-policy and sec-mode")
 	}
 
 	secPolicy = serverEndpoint.SecurityPolicyURI

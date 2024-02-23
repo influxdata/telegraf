@@ -46,6 +46,13 @@ func (c *ConfigurationPerRequest) SampleConfigPart() string {
 }
 
 func (c *ConfigurationPerRequest) Check() error {
+	switch c.workarounds.StringRegisterLocation {
+	case "", "both", "lower", "upper":
+		// Do nothing as those are valid
+	default:
+		return fmt.Errorf("invalid 'string_register_location' %q", c.workarounds.StringRegisterLocation)
+	}
+
 	seed := maphash.MakeSeed()
 	seenFields := make(map[uint64]bool)
 
@@ -349,7 +356,7 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 		return field{}, err
 	}
 
-	f.converter, err = determineConverter(inType, order, outType, def.Scale)
+	f.converter, err = determineConverter(inType, order, outType, def.Scale, c.workarounds.StringRegisterLocation)
 	if err != nil {
 		return field{}, err
 	}

@@ -1,7 +1,7 @@
 package libvirt
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -68,7 +68,7 @@ func TestLibvirt_Gather(t *testing.T) {
 			Log:        testutil.Logger{},
 			utils:      &mockLibvirtUtils,
 		}
-		mockLibvirtUtils.On("EnsureConnected", mock.Anything).Return(fmt.Errorf("failed to connect")).Once()
+		mockLibvirtUtils.On("EnsureConnected", mock.Anything).Return(errors.New("failed to connect")).Once()
 		err := l.Gather(&acc)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to connect")
@@ -84,7 +84,7 @@ func TestLibvirt_Gather(t *testing.T) {
 			StatisticsGroups: []string{"state"},
 		}
 		mockLibvirtUtils.On("EnsureConnected", mock.Anything).Return(nil).Once().
-			On("GatherAllDomains", mock.Anything).Return(nil, fmt.Errorf("gather domain error")).Once().
+			On("GatherAllDomains", mock.Anything).Return(nil, errors.New("gather domain error")).Once().
 			On("Disconnect").Return(nil).Once()
 
 		err := l.Gather(&acc)
@@ -120,7 +120,7 @@ func TestLibvirt_Gather(t *testing.T) {
 		mockLibvirtUtils.On("EnsureConnected", mock.Anything).Return(nil).Once().
 			On("GatherAllDomains", mock.Anything).Return(domains, nil).Once().
 			On("GatherStatsForDomains", mock.Anything, mock.Anything).
-			Return(nil, fmt.Errorf("gathering metric by number error")).Once().
+			Return(nil, errors.New("gathering metric by number error")).Once().
 			On("Disconnect").Return(nil).Once()
 
 		err := l.Init()
@@ -312,10 +312,6 @@ func TestLibvirt_filterDomains(t *testing.T) {
 
 		result := l.filterDomains(domains)
 		require.NotEmpty(t, result)
-	})
-
-	t.Run("failed on something", func(t *testing.T) {
-
 	})
 }
 

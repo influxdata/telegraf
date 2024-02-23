@@ -58,7 +58,7 @@ func TestActivateEntities(t *testing.T) {
 func TestActivateUncoreEvents(t *testing.T) {
 	mActivator := &mockEventsActivator{}
 	mMaker := &mockPlacementMaker{}
-	errMock := fmt.Errorf("error mock")
+	errMock := errors.New("error mock")
 
 	t.Run("entity is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}
@@ -155,7 +155,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 func TestActivateCoreEvents(t *testing.T) {
 	mMaker := &mockPlacementMaker{}
 	mActivator := &mockEventsActivator{}
-	errMock := fmt.Errorf("error mock")
+	errMock := errors.New("error mock")
 
 	t.Run("entity is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}

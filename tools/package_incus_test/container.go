@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -25,7 +26,7 @@ type Container struct {
 // create container with given name and image
 func (c *Container) Create(image string) error {
 	if c.Name == "" {
-		return fmt.Errorf("unable to create container: no name given")
+		return errors.New("unable to create container: no name given")
 	}
 
 	c.client = IncusClient{}
@@ -82,7 +83,7 @@ func (c *Container) Install(packageName ...string) error {
 	case "dnf":
 		cmd = append([]string{"dnf", "install", "-y"}, packageName...)
 	case "zypper":
-		cmd = append([]string{"zypper", "install", "-y"}, packageName...)
+		cmd = append([]string{"zypper", "--gpg-auto-import-keys", "install", "-y"}, packageName...)
 	}
 
 	err := c.client.Exec(c.Name, cmd...)
@@ -136,7 +137,7 @@ func (c *Container) CheckStatus(serviceName string) error {
 
 func (c *Container) UploadAndInstall(filename string) error {
 	basename := filepath.Base(filename)
-	destination := fmt.Sprintf("/root/%s", basename)
+	destination := "/root/" + basename
 
 	if err := c.client.Push(c.Name, filename, destination); err != nil {
 		return err
@@ -247,7 +248,8 @@ func (c *Container) configureDnf() error {
 func (c *Container) configureZypper() error {
 	err := c.client.Exec(
 		c.Name,
-		"echo", fmt.Sprintf("%q", influxDataRPMRepo), ">", "/etc/zypp/repos.d/influxdata.repo",
+		"bash", "-c", "--",
+		fmt.Sprintf("echo -e %q > /etc/zypp/repos.d/influxdata.repo", influxDataRPMRepo),
 	)
 	if err != nil {
 		return err
@@ -259,7 +261,7 @@ func (c *Container) configureZypper() error {
 		"cat /etc/zypp/repos.d/influxdata.repo",
 	)
 
-	return c.client.Exec(c.Name, "zypper", "refresh")
+	return c.client.Exec(c.Name, "zypper", "--no-gpg-checks", "refresh")
 }
 
 // Determine if the system uses yum or apt for software
@@ -285,7 +287,13 @@ func (c *Container) detectPackageManager() error {
 		return nil
 	}
 
-	return fmt.Errorf("unable to determine package manager")
+	err = c.client.Exec(c.Name, "which", "zypper")
+	if err == nil {
+		c.packageManager = "zypper"
+		return nil
+	}
+
+	return errors.New("unable to determine package manager")
 }
 
 // Configure the system with InfluxData repo
@@ -332,5 +340,5 @@ func (c *Container) waitForNetwork() error {
 		attempts++
 	}
 
-	return fmt.Errorf("timeout reached waiting for network on container")
+	return errors.New("timeout reached waiting for network on container")
 }

@@ -5,6 +5,7 @@ package conntrack
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -110,7 +111,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if len(stats) == 0 {
-			acc.AddError(fmt.Errorf("conntrack input failed to collect stats"))
+			acc.AddError(errors.New("conntrack input failed to collect stats"))
 		}
 
 		cpuTag := "all"
@@ -146,8 +147,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if len(fields) == 0 {
-		return fmt.Errorf("Conntrack input failed to collect metrics. " +
-			"Is the conntrack kernel module loaded?")
+		return errors.New("conntrack input failed to collect metrics, make sure that the kernel module is loaded")
 	}
 
 	acc.AddFields(inputName, fields, nil)

@@ -24,8 +24,8 @@ type Call struct {
 }
 
 type MockStackdriverClient struct {
-	ListMetricDescriptorsF func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error)
-	ListTimeSeriesF        func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error)
+	ListMetricDescriptorsF func() (<-chan *metricpb.MetricDescriptor, error)
+	ListTimeSeriesF        func() (<-chan *monitoringpb.TimeSeries, error)
 	CloseF                 func() error
 
 	calls []*Call
@@ -40,7 +40,7 @@ func (m *MockStackdriverClient) ListMetricDescriptors(
 	m.Lock()
 	m.calls = append(m.calls, call)
 	m.Unlock()
-	return m.ListMetricDescriptorsF(ctx, req)
+	return m.ListMetricDescriptorsF()
 }
 
 func (m *MockStackdriverClient) ListTimeSeries(
@@ -51,7 +51,7 @@ func (m *MockStackdriverClient) ListTimeSeries(
 	m.Lock()
 	m.calls = append(m.calls, call)
 	m.Unlock()
-	return m.ListTimeSeriesF(ctx, req)
+	return m.ListTimeSeriesF()
 }
 
 func (m *MockStackdriverClient) Close() error {
@@ -719,13 +719,13 @@ func TestGather(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			listMetricDescriptorsF := func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
+			listMetricDescriptorsF := func() (<-chan *metricpb.MetricDescriptor, error) {
 				ch := make(chan *metricpb.MetricDescriptor, 1)
 				ch <- tt.descriptor
 				close(ch)
 				return ch, nil
 			}
-			listTimeSeriesF := func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
+			listTimeSeriesF := func() (<-chan *monitoringpb.TimeSeries, error) {
 				ch := make(chan *monitoringpb.TimeSeries, 1)
 				ch <- tt.timeseries
 				close(ch)
@@ -841,13 +841,13 @@ func TestGatherAlign(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			client := &MockStackdriverClient{
-				ListMetricDescriptorsF: func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
+				ListMetricDescriptorsF: func() (<-chan *metricpb.MetricDescriptor, error) {
 					ch := make(chan *metricpb.MetricDescriptor, 1)
 					ch <- tt.descriptor
 					close(ch)
 					return ch, nil
 				},
-				ListTimeSeriesF: func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
+				ListTimeSeriesF: func() (<-chan *monitoringpb.TimeSeries, error) {
 					ch := make(chan *monitoringpb.TimeSeries, 1)
 					ch <- tt.timeseries[listCall]
 					close(ch)
@@ -1172,13 +1172,13 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			client := &MockStackdriverClient{
-				ListMetricDescriptorsF: func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
+				ListMetricDescriptorsF: func() (<-chan *metricpb.MetricDescriptor, error) {
 					ch := make(chan *metricpb.MetricDescriptor, 1)
 					ch <- tt.descriptor
 					close(ch)
 					return ch, nil
 				},
-				ListTimeSeriesF: func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
+				ListTimeSeriesF: func() (<-chan *monitoringpb.TimeSeries, error) {
 					ch := make(chan *monitoringpb.TimeSeries, 1)
 					ch <- createTimeSeries(
 						&monitoringpb.Point{

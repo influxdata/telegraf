@@ -239,7 +239,7 @@ func TestChildServeCleansUp(t *testing.T) {
 		rc := nopWriteCloser{bytes.NewBuffer(input)}
 		done := make(chan bool)
 		c := newChild(rc, http.HandlerFunc(func(
-			w http.ResponseWriter,
+			_ http.ResponseWriter,
 			r *http.Request,
 		) {
 			// block on reading body of request

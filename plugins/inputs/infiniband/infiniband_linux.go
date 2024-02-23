@@ -3,10 +3,11 @@
 package infiniband
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
 
 	"github.com/Mellanox/rdmamap"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -15,7 +16,7 @@ func (i *Infiniband) Gather(acc telegraf.Accumulator) error {
 	rdmaDevices := rdmamap.GetRdmaDeviceList()
 
 	if len(rdmaDevices) == 0 {
-		return fmt.Errorf("no InfiniBand devices found in /sys/class/infiniband/")
+		return errors.New("no InfiniBand devices found in /sys/class/infiniband/")
 	}
 
 	for _, dev := range rdmaDevices {

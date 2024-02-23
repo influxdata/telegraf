@@ -4,6 +4,7 @@ package leofs
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -206,7 +207,7 @@ func (l *LeoFS) gatherServer(
 	defer internal.WaitTimeout(cmd, time.Second*5) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 	scanner := bufio.NewScanner(stdout)
 	if !scanner.Scan() {
-		return fmt.Errorf("unable to retrieve the node name")
+		return errors.New("unable to retrieve the node name")
 	}
 	nodeName, err := retrieveTokenAfterColon(scanner.Text())
 	if err != nil {
