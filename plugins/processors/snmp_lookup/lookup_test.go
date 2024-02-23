@@ -46,7 +46,7 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 }
 
 func (tsc *testSNMPConnection) Reconnect() error {
-	return nil
+	return errors.New("Not implemented")
 }
 
 func TestRegistry(t *testing.T) {

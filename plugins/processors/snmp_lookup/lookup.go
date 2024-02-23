@@ -132,10 +132,6 @@ func (l *Lookup) updateAgent(agent string) *tagMap {
 		l.Log.Errorf("Getting connection for %q failed: %v", agent, err)
 		return nil
 	}
-	if err := conn.Reconnect(); err != nil {
-		l.Log.Errorf("Connecting to %q failed:%v", agent, err)
-		return nil
-	}
 
 	// Query table including translation
 	table, err := l.table.Build(conn, true)
