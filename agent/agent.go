@@ -136,7 +136,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		aggC := next
-		if len(a.Config.AggProcessors) != 0 {
+		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
 			aggC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
@@ -1013,7 +1013,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
-		if len(a.Config.AggProcessors) != 0 {
+		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
@@ -1112,7 +1112,7 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
-		if len(a.Config.AggProcessors) != 0 {
+		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err

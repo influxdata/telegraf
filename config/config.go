@@ -265,6 +265,11 @@ type AgentConfig struct {
 	// Flag to always keep tags explicitly defined in the global tags section
 	// and ensure those tags always pass filtering.
 	AlwaysIncludeGlobalTags bool `toml:"always_include_global_tags"`
+
+	// Flag to skip running processors after aggregators
+	// By default, processors are run a second time after aggregators. Changing
+	// this setting to true will skip the second run of processors.
+	SkipProcessorsAfterAggregators bool `toml:"skip_processors_after_aggregators"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
