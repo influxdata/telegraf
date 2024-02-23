@@ -32,6 +32,9 @@ func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
 
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	tsc.calls.Add(1)
+	if len(tsc.values) == 0 {
+		return errors.New("No values")
+	}
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
 			if err := wf(gosnmp.SnmpPDU{
@@ -196,12 +199,7 @@ func TestUpdateAgent(t *testing.T) {
 	}
 	require.NoError(t, p.Init())
 
-	tsc := &testSNMPConnection{
-		values: map[string]string{
-			".1.3.6.1.2.1.31.1.1.1.1.0": "eth0",
-			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
-		},
-	}
+	var tsc *testSNMPConnection
 	p.getConnectionFunc = func(string) (snmp.Connection, error) {
 		return tsc, nil
 	}
@@ -210,12 +208,41 @@ func TestUpdateAgent(t *testing.T) {
 	require.NoError(t, p.Start(&acc))
 	defer p.Stop()
 
-	tm := p.updateAgent("127.0.0.1")
-	require.Equal(t, tagMapRows{
-		"0": {"ifName": "eth0"},
-		"1": {"ifName": "eth1"},
-	}, tm.rows)
-	require.EqualValues(t, 1, tsc.calls.Load())
+	t.Run("success", func(t *testing.T) {
+		tsc = &testSNMPConnection{
+			values: map[string]string{
+				".1.3.6.1.2.1.31.1.1.1.1.0": "eth0",
+				".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
+			},
+		}
+
+		start := time.Now()
+		tm := p.updateAgent("127.0.0.1")
+		end := time.Now()
+
+		require.Equal(t, tagMapRows{
+			"0": {"ifName": "eth0"},
+			"1": {"ifName": "eth1"},
+		}, tm.rows)
+		require.WithinRange(t, tm.created, start, end)
+		require.EqualValues(t, 1, tsc.calls.Load())
+	})
+
+	t.Run("table build fail", func(t *testing.T) {
+		tsc = &testSNMPConnection{}
+
+		require.Nil(t, p.updateAgent("127.0.0.1"))
+		require.EqualValues(t, 1, tsc.calls.Load())
+	})
+
+	t.Run("connection fail", func(t *testing.T) {
+		p.getConnectionFunc = func(s string) (snmp.Connection, error) {
+			return nil, errors.New("Random connection error")
+		}
+
+		require.Nil(t, p.updateAgent("127.0.0.1"))
+	})
+
 }
 
 func TestAdd(t *testing.T) {
