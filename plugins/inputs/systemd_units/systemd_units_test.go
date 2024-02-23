@@ -800,8 +800,7 @@ type fakeClient struct {
 func (c *fakeClient) fixPropertyTypes() {
 	for unit, u := range c.units {
 		for k, value := range u.properties {
-			switch {
-			case strings.HasPrefix(k, "Memory"):
+			if strings.HasPrefix(k, "Memory") {
 				u.properties[k], _ = internal.ToUint64(value)
 			}
 		}
