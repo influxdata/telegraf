@@ -265,14 +265,8 @@ func init() {
 			AgentTag:           "agent",
 			CacheSize:          100,
 			MaxParallelLookups: 100,
-			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Community:      "public",
-			},
-			CacheTTL: config.Duration(8 * time.Hour),
+			ClientConfig:       *snmp.DefaultClientConfig(),
+			CacheTTL:           config.Duration(8 * time.Hour),
 		}
 	})
 }

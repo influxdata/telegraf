@@ -28,11 +28,7 @@ func TestTableIntegration(t *testing.T) {
 	tab, err := d.makeTable("1.3.6.1.2.1.2.2.1.2")
 	require.NoError(t, err)
 
-	clientConfig := snmp.ClientConfig{
-		Version: 2,
-		Timeout: config.Duration(5 * time.Second), // Doesn't work with 0 timeout
-	}
-	gs, err := snmp.NewWrapper(clientConfig)
+	gs, err := snmp.NewWrapper(*snmp.DefaultClientConfig())
 	require.NoError(t, err)
 	err = gs.SetAgent("127.0.0.1")
 	require.NoError(t, err)
@@ -54,14 +50,11 @@ func TestIfNameIntegration(t *testing.T) {
 	t.Skip("Skipping test due to connect failures")
 
 	d := IfName{
-		SourceTag: "ifIndex",
-		DestTag:   "ifName",
-		AgentTag:  "agent",
-		CacheSize: 1000,
-		ClientConfig: snmp.ClientConfig{
-			Version: 2,
-			Timeout: config.Duration(5 * time.Second), // Doesn't work with 0 timeout
-		},
+		SourceTag:    "ifIndex",
+		DestTag:      "ifName",
+		AgentTag:     "agent",
+		CacheSize:    1000,
+		ClientConfig: *snmp.DefaultClientConfig(),
 	}
 	err := d.Init()
 	require.NoError(t, err)
