@@ -556,8 +556,6 @@ func (a *Agent) gatherLoop(
 	ticker Ticker,
 	interval time.Duration,
 ) {
-	defer panicRecover(input)
-
 	for {
 		select {
 		case <-ticker.Elapsed():
@@ -581,6 +579,7 @@ func (a *Agent) gatherOnce(
 ) error {
 	done := make(chan error)
 	go func() {
+		defer panicRecover(input)
 		done <- input.Gather(acc)
 	}()
 
@@ -1200,7 +1199,7 @@ func panicRecover(input *models.RunningInput) {
 		runtime.Stack(trace, true)
 		log.Printf("E! FATAL: [%s] panicked: %s, Stack:\n%s",
 			input.LogName(), err, trace)
-		log.Println("E! PLEASE REPORT THIS PANIC ON GITHUB with " +
+		log.Fatalln("E! PLEASE REPORT THIS PANIC ON GITHUB with " +
 			"stack trace, configuration, and OS information: " +
 			"https://github.com/influxdata/telegraf/issues/new/choose")
 	}
