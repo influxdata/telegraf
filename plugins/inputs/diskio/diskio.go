@@ -176,8 +176,4 @@ func init() {
 	inputs.Add("diskio", func() telegraf.Input {
 		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})
-	// Backwards compatible alias
-	inputs.Add("io", func() telegraf.Input {
-		return &DiskIO{ps: ps, SkipSerialNumber: true}
-	})
 }
