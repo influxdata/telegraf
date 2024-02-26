@@ -1,6 +1,16 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- The default read-timeout of `inputs.syslog` of five seconds is not a sensible
+  default as the plugin will close the connection if the time between
+  consecutive messages exceeds the timeout.
+  [#14837](https://github.com/influxdata/telegraf/pull/14828) sets the timeout
+  to infinite (i.e zero) as this is the expected behavior.
+
 ## v1.29.5 [2024-02-20]
 
 ### Bugfixes
