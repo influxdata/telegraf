@@ -556,8 +556,6 @@ func (a *Agent) gatherLoop(
 	ticker Ticker,
 	interval time.Duration,
 ) {
-	defer panicRecover(input)
-
 	for {
 		select {
 		case <-ticker.Elapsed():
