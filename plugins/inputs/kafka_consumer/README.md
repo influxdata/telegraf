@@ -3,9 +3,6 @@
 The [Kafka][kafka] consumer plugin reads from Kafka
 and creates metrics using one of the supported [input data formats][].
 
-For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
-plugin and use the old zookeeper connection method.
-
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
 This plugin is a service input. Normal plugins gather metrics determined by the
@@ -199,7 +196,6 @@ to use them.
 ```
 
 [kafka]: https://kafka.apache.org
-[kafka_consumer_legacy]: /plugins/inputs/kafka_consumer_legacy/README.md
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Metrics
