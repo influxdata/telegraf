@@ -5,6 +5,20 @@
 
 ### Important Changes
 
+- This version removes the following deprecated plugins
+  - `inputs.cassandra` in [#14859](https://github.com/influxdata/telegraf/pull/14859)
+  - `inputs.httpjson` in [#14860](https://github.com/influxdata/telegraf/pull/14860)
+  - `inputs.io` in [#14861](https://github.com/influxdata/telegraf/pull/14861)
+  - `inputs.jolokia` in [#14862](https://github.com/influxdata/telegraf/pull/14862)
+  - `inputs.kafka_consumer_legacy` in [#14863](https://github.com/influxdata/telegraf/pull/14863)
+  - `inputs.snmp_legacy` in [#14864](https://github.com/influxdata/telegraf/pull/14864)
+  - `inputs.tcp_listener` in [#14865](https://github.com/influxdata/telegraf/pull/14865)
+  - `inputs.udp_listener` in [#14866](https://github.com/influxdata/telegraf/pull/14866)
+  - `outputs.riemann_legacy` in [#14867](https://github.com/influxdata/telegraf/pull/14867)
+
+  Replacements do exist, so please migrate your configuration in case you are
+  still using one of those plugins. The `telegraf config migrate` command might
+  be able to assist with the procedure.
 - The default read-timeout of `inputs.syslog` of five seconds is not a sensible
   default as the plugin will close the connection if the time between
   consecutive messages exceeds the timeout.
