@@ -87,7 +87,7 @@ If you for example want to remove the `inputs.logparser` plugin you should add
     },
 ```
 
-to `plugins/inputs.deprecations.go`. By doing this, Telegraf will show a
+to `plugins/inputs/deprecations.go`. By doing this, Telegraf will show a
 deprecation warning to the user starting from version `1.15.0` including the
 `Notice` you provided. The plugin can then be remove in version `1.40.0`.
 
