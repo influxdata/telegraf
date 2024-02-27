@@ -25,29 +25,38 @@ In the deprecation phase a warning will be shown at Telegraf startup with the
 following content
 
 ```text
-Plugin "inputs.logparser" deprecated since version 1.15.0 and will be removed in 2.0.0: use 'inputs.tail' with 'grok' data format instead
+Plugin "inputs.logparser" deprecated since version 1.15.0 and will be removed in 1.40.0: use 'inputs.tail' with 'grok' data format instead
 ```
 
 Similar warnings will be shown when removing plugin options or option values.
 This provides users with time to replace the deprecated plugin in their
 configuration file.
 
-After the shown release (`v2.0.0` in this case) the warning will be promoted
+After the shown release (`v1.40.0` in this case) the warning will be promoted
 to an error preventing Telegraf from starting. The user now has to adapt the
 configuration file to start Telegraf.
 
+## Time frames and considerations
+
+When deprecating parts of Telegraf, it is important to provide users with enough
+time to migrate to alternative solutions before actually removing those parts.
+
+In general, plugins, plugin options or option values should only be deprecated
+if a suitable alternative exists! In those cases, the deprecations should
+predate the removal by at least one and a half year. In current release terms
+this corresponds to six minor-versions. However, there might be circumstances
+requiring a pro-longed time between deprecation and removal to ensure a smooth
+transition for users.
+
 ## Deprecation Process
 
-After reaching an agreement in the issue, you can start the deprecation process
-by following the steps below.
+The deprecation process comprises the following the steps below.
 
 ### File issue
 
 In the filed issue you should outline which plugin, plugin option or feature
 you want to deprecate and *why*! Determine in which version the plugin should
 be removed.
-Consider moving the plugin to the Influx community repository as an external
-plugin if there is no straight-forward replacement.
 
 Try to reach an agreement in the issue before continuing and get a sign off
 from the maintainers!
@@ -96,7 +105,7 @@ deprecated at the top (e.g. ***DEPRECATED***).
 
 #### Deprecating an option
 
-To deprecate a plugin open, remove the option from the `sample.conf` file and
+To deprecate a plugin option, remove the option from the `sample.conf` file and
 add the deprecation information to the structure field in the code. If you for
 for example want to deprecate the `ssl_enabled` option in `inputs.example` you
 should add
@@ -153,18 +162,6 @@ old version.
 
 Make sure you add an `Important Changes` sections to the `CHANGELOG.md` file
 describing the removal with a reference to your PR.
-
-### Time frames and considerations
-
-When deprecating parts of Telegraf, it is important to provide users with enough
-time to migrate to alternative solutions before actually removing those parts.
-
-In general, plugins, plugin options or option values should only be deprecated
-if a suitable alternative exists! In those cases, the deprecations should
-predate the removal by at least one and a half year. In current release terms
-this corresponds to six minor-versions. However, there might be circumstances
-requiring a pro-longed time between deprecation and removal to ensure a smooth
-transition for users.
 
 ## Deprecation Framework
 
