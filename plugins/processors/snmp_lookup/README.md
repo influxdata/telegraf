@@ -2,7 +2,7 @@
 
 The `snmp_lookup` plugin looks up extra tags using SNMP and caches them.
 
-Telegraf minimum version: Telegraf 1.29.0
+Telegraf minimum version: Telegraf 1.30.0
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
