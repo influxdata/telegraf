@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -94,4 +95,11 @@ func PrintMetrics(m []telegraf.Metric) {
 		panic(err)
 	}
 	fmt.Println(string(buf))
+}
+
+// DefaultSampleConfig returns the sample config with the default parameters
+// uncommented to also be able to test the validity of default setting.
+func DefaultSampleConfig(sampleConfig string) []byte {
+	re := regexp.MustCompile(`(?m)(^\s+)#\s*`)
+	return []byte(re.ReplaceAllString(sampleConfig, "$1"))
 }

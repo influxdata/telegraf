@@ -28,6 +28,7 @@ require (
 	github.com/PaesslerAG/gval v1.2.2
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
+	github.com/alitto/pond v1.8.3
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.563
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.3
@@ -104,6 +105,7 @@ require (
 	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
 	github.com/hashicorp/consul/api v1.26.1
 	github.com/hashicorp/go-uuid v1.0.3
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.5.6
 	github.com/influxdata/influxdb-observability/influx2otel v0.5.6

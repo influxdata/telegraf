@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"time"
+
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -36,4 +38,20 @@ type ClientConfig struct {
 	EngineID     string `toml:"-"`
 	EngineBoots  uint32 `toml:"-"`
 	EngineTime   uint32 `toml:"-"`
+}
+
+func DefaultClientConfig() *ClientConfig {
+	return &ClientConfig{
+		Timeout:        config.Duration(5 * time.Second),
+		Retries:        3,
+		Version:        2,
+		Path:           []string{"/usr/share/snmp/mibs"},
+		Translator:     "gosmi",
+		Community:      "public",
+		MaxRepetitions: 10,
+		SecLevel:       "authNoPriv",
+		SecName:        "myuser",
+		AuthProtocol:   "MD5",
+		AuthPassword:   "pass",
+	}
 }

@@ -40,6 +40,7 @@ following works:
 - github.com/aerospike/aerospike-client-go [Apache License 2.0](https://github.com/aerospike/aerospike-client-go/blob/master/LICENSE)
 - github.com/alecthomas/participle [MIT License](https://github.com/alecthomas/participle/blob/master/COPYING)
 - github.com/alecthomas/units [MIT License](https://github.com/alecthomas/units/blob/master/COPYING)
+- github.com/alitto/pond [MIT License](https://github.com/alitto/pond/blob/master/LICENSE)
 - github.com/aliyun/alibaba-cloud-sdk-go [Apache License 2.0](https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/LICENSE)
 - github.com/amir/raidman [The Unlicense](https://github.com/amir/raidman/blob/master/UNLICENSE)
 - github.com/antchfx/jsonquery [MIT License](https://github.com/antchfx/jsonquery/blob/master/LICENSE)
