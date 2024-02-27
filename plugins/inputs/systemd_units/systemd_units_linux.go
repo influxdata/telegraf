@@ -158,15 +158,6 @@ func (s *SystemdUnits) Init() error {
 	}
 	s.UnitType = strings.ToUpper(s.UnitType[0:1]) + strings.ToLower(s.UnitType[1:])
 
-	// Check the sub-command
-	switch s.SubCommand {
-	case "":
-		s.SubCommand = "list-units"
-	case "list-units", "show":
-	default:
-		return fmt.Errorf("invalid 'subcommand' %q", s.SubCommand)
-	}
-
 	s.pattern = strings.Split(s.Pattern, " ")
 	f, err := filter.Compile(s.pattern)
 	if err != nil {
@@ -310,82 +301,50 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Create the metrics
-	switch s.SubCommand {
-	case "list-units":
-		for _, u := range units {
-			// Map the state names to numerical values
-			load, ok := loadMap[u.state.LoadState]
-			if !ok {
-				acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", u.state.LoadState))
-				continue
-			}
-			active, ok := activeMap[u.state.ActiveState]
-			if !ok {
-				acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", u.state.ActiveState))
-				continue
-			}
-			subState, ok := subMap[u.state.SubState]
-			if !ok {
-				acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", u.state.SubState))
-				continue
-			}
-
-			// Create the metric
-			tags := map[string]string{
-				"name":   u.name,
-				"load":   u.state.LoadState,
-				"active": u.state.ActiveState,
-				"sub":    u.state.SubState,
-			}
-
-			fields := map[string]interface{}{
-				"load_code":   load,
-				"active_code": active,
-				"sub_code":    subState,
-			}
-			acc.AddFields("systemd_units", fields, tags)
+	for _, u := range units {
+		// Map the state names to numerical values
+		load, ok := loadMap[u.state.LoadState]
+		if !ok {
+			acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", u.state.LoadState))
+			continue
 		}
-	case "show":
-		for _, u := range units {
-			// Map the state names to numerical values
-			load, ok := loadMap[u.state.LoadState]
-			if !ok {
-				acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", u.state.LoadState))
-				continue
-			}
-			active, ok := activeMap[u.state.ActiveState]
-			if !ok {
-				acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", u.state.ActiveState))
-				continue
-			}
-			subState, ok := subMap[u.state.SubState]
-			if !ok {
-				acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", u.state.SubState))
-				continue
-			}
+		active, ok := activeMap[u.state.ActiveState]
+		if !ok {
+			acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", u.state.ActiveState))
+			continue
+		}
+		subState, ok := subMap[u.state.SubState]
+		if !ok {
+			acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", u.state.SubState))
+			continue
+		}
 
-			// Create the metric
-			tags := map[string]string{
-				"name":        u.name,
-				"load":        u.state.LoadState,
-				"active":      u.state.ActiveState,
-				"sub":         u.state.SubState,
-				"file_state":  u.unitFileState,
-				"file_preset": u.unitFilePreset,
-			}
-			fields := map[string]interface{}{
-				"load_code":    load,
-				"active_code":  active,
-				"sub_code":     subState,
-				"status_errno": u.properties["StatusErrno"],
-				"restarts":     u.properties["NRestarts"],
-				"mem_current":  u.properties["MemoryCurrent"],
-				"mem_peak":     u.properties["MemoryPeak"],
-				"swap_current": u.properties["MemorySwapCurrent"],
-				"swap_peak":    u.properties["MemorySwapPeak"],
-				"mem_avail":    u.properties["MemoryAvailable"],
-				"pid":          u.properties["MainPID"],
-			}
+		// Create the metric
+		tags := map[string]string{
+			"name":   u.name,
+			"load":   u.state.LoadState,
+			"active": u.state.ActiveState,
+			"sub":    u.state.SubState,
+		}
+
+		fields := map[string]interface{}{
+			"load_code":   load,
+			"active_code": active,
+			"sub_code":    subState,
+		}
+
+		if s.Details {
+			tags["file_state"] = u.unitFileState
+			tags["file_preset"] = u.unitFilePreset
+
+			fields["status_errno"] = u.properties["StatusErrno"]
+			fields["restarts"] = u.properties["NRestarts"]
+			fields["pid"] = u.properties["MainPID"]
+			fields["mem_current"] = u.properties["MemoryCurrent"]
+			fields["mem_peak"] = u.properties["MemoryPeak"]
+			fields["swap_current"] = u.properties["MemorySwapCurrent"]
+			fields["swap_peak"] = u.properties["MemorySwapPeak"]
+			fields["mem_avail"] = u.properties["MemoryAvailable"]
 
 			// Sanitize unset memory fields
 			for k, value := range fields {
@@ -397,9 +356,8 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 			}
-
-			acc.AddFields("systemd_units", fields, tags)
 		}
+		acc.AddFields("systemd_units", fields, tags)
 	}
 
 	return nil

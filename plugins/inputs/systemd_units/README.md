@@ -31,11 +31,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## automount, swap, timer, path, slice" and scope
   # unittype = "service"
 
-  ## Level of detail of the selected information
-  ## Available settings are:
-  ##   list-units -- collect the unit's running and loading states only
-  ##   show       -- collect detailed information about the unit
-  # subcommand = "list-units"
+  ## Collect detailed information for the units
+  # details = false
 
   ## Timeout for state-collection
   # timeout = "1s"
@@ -43,25 +40,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 This plugin supports two modes of operation:
 
-### `list-units` mode
+### Non-detailed mode
 
-This is the default mode. It collect data on the unit's status only and
-will supply less compared to `show`.
+This is the default mode, collecting data on the unit's status only without
+further details on the unit.
 
-The results are tagged with the unit name and provide enumerated fields for
-loaded, active and running fields, indicating the unit's health.
+### Detailed mode
 
-### `show` mode
-
-This mode can be enabled by setting the configuration option `subcommand` to
-`show`. It plugin will collect data on the unit's status similar to the
-`list-units` mode but will provide additional information such as memory usage,
-restart-counts etc. See the [metrics section](#metrics) below for a list of
-all properties collected.
-
-The results are tagged with the unit name, unit status, preset status and
-provide enumerated fields for loaded, active and running fields, as well as the
-restart count and memory usage of the unit.
+This mode can be enabled by setting the configuration option `details` to
+`true`. In this mode the plugin collects all information of the non-detailed
+mode but provides additional unit information such as memory usage,
+restart-counts, PID, etc. See the [metrics section](#metrics) below for a list
+of all properties collected.
 
 ## Metrics
 
@@ -78,7 +68,7 @@ These metrics are available in both modes:
     - active_code (int, see below)
     - sub_code (int, see below)
 
-The following additional metrics are available using the `show` mode:
+The following *additional* metrics are available with `details = true`:
 
 - systemd_units:
   - tags:
@@ -199,7 +189,7 @@ were removed, tables are hex aligned to keep some space for future values
 
 ## Example Output
 
-### Output in `list-units` mode
+### Output in non-detailed mode
 
 ```text
 systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
@@ -207,7 +197,7 @@ systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=
 systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
 ```
 
-### Output in `show` mode
+### Output in detailed mode
 
 ```text
 systemd_units,active=active,host=host1.example.com,load=loaded,name=dbus.service,sub=running,file_preset=disabled,file_state=static active_code=0i,load_code=0i,mem_avail=6470856704i,mem_current=2691072i,mem_peak=3895296i,pid=481i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=794624i,swap_peak=884736i 1533730725000000000

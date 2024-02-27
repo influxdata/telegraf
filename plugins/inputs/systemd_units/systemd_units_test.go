@@ -503,9 +503,9 @@ func TestShow(t *testing.T) {
 			// Setup plugin. Do NOT call Start() as this would connect to
 			// the real systemd daemon.
 			plugin := &SystemdUnits{
-				Pattern:    "examp*",
-				SubCommand: "show",
-				Timeout:    config.Duration(time.Second),
+				Pattern: "examp*",
+				Details: true,
+				Timeout: config.Duration(time.Second),
 			}
 			require.NoError(t, plugin.Init())
 

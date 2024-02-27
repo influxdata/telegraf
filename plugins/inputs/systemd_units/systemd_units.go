@@ -15,11 +15,11 @@ var sampleConfig string
 
 // SystemdUnits is a telegraf plugin to gather systemd unit status
 type SystemdUnits struct {
-	Pattern    string          `toml:"pattern"`
-	UnitType   string          `toml:"unittype"`
-	SubCommand string          `toml:"subcommand"`
-	Timeout    config.Duration `toml:"timeout"`
-	Log        telegraf.Logger `toml:"-"`
+	Pattern  string          `toml:"pattern"`
+	UnitType string          `toml:"unittype"`
+	Details  bool            `toml:"details"`
+	Timeout  config.Duration `toml:"timeout"`
+	Log      telegraf.Logger `toml:"-"`
 	archParams
 }
 
