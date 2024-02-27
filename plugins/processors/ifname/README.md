@@ -1,8 +1,11 @@
 # Network Interface Name Processor Plugin
 
+**DEPRECATED: As of version 1.30 the `ifname` plugin has been deprecated in
+favor of the [snmp_lookup][] plugin.**
+
 The `ifname` plugin looks up network interface names using SNMP.
 
-Telegraf minimum version: Telegraf 1.15.0
+[snmp_lookup]: ../snmp_lookup/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
