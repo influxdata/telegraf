@@ -269,6 +269,20 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	}
 	states = append(states, disabledStates...)
 
+	// Add special information about unused static units
+	for _, name := range static {
+		if !strings.EqualFold(strings.TrimPrefix(path.Ext(name), "."), s.UnitType) {
+			continue
+		}
+
+		states = append(states, dbus.UnitStatus{
+			Name:        name,
+			LoadState:   "stub",
+			ActiveState: "inactive",
+			SubState:    "dead",
+		})
+	}
+
 	// Merge the unit information into one struct
 	units := make([]unitInfo, 0, len(states))
 	for _, state := range states {
@@ -293,23 +307,6 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		units = append(units, u)
-	}
-
-	// Add special information about unused static units
-	for _, name := range static {
-		if !strings.EqualFold(strings.TrimPrefix(path.Ext(name), "."), s.UnitType) {
-			continue
-		}
-
-		units = append(units, unitInfo{
-			name: name,
-			state: dbus.UnitStatus{
-				Name:        name,
-				LoadState:   "stub",
-				ActiveState: "inactive",
-				SubState:    "dead",
-			},
-		})
 	}
 
 	// Create the metrics
@@ -369,12 +366,12 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 
 			// Create the metric
 			tags := map[string]string{
-				"name":      u.name,
-				"load":      u.state.LoadState,
-				"active":    u.state.ActiveState,
-				"sub":       u.state.SubState,
-				"uf_state":  u.unitFileState,
-				"uf_preset": u.unitFilePreset,
+				"name":        u.name,
+				"load":        u.state.LoadState,
+				"active":      u.state.ActiveState,
+				"sub":         u.state.SubState,
+				"file_state":  u.unitFileState,
+				"file_preset": u.unitFilePreset,
 			}
 			fields := map[string]interface{}{
 				"load_code":    load,
