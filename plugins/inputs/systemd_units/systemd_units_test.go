@@ -258,12 +258,12 @@ func TestShow(t *testing.T) {
 				metric.New(
 					"systemd_units",
 					map[string]string{
-						"name":        "example.service",
-						"load":        "loaded",
-						"active":      "active",
-						"sub":         "running",
-						"file_state":  "enabled",
-						"file_preset": "disabled",
+						"name":   "example.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "running",
+						"state":  "enabled",
+						"preset": "disabled",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -306,12 +306,12 @@ func TestShow(t *testing.T) {
 				metric.New(
 					"systemd_units",
 					map[string]string{
-						"name":        "example.service",
-						"load":        "loaded",
-						"active":      "active",
-						"sub":         "exited",
-						"file_state":  "enabled",
-						"file_preset": "disabled",
+						"name":   "example.service",
+						"load":   "loaded",
+						"active": "active",
+						"sub":    "exited",
+						"state":  "enabled",
+						"preset": "disabled",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -358,12 +358,12 @@ func TestShow(t *testing.T) {
 				metric.New(
 					"systemd_units",
 					map[string]string{
-						"name":        "example.service",
-						"load":        "loaded",
-						"active":      "failed",
-						"sub":         "failed",
-						"file_state":  "enabled",
-						"file_preset": "disabled",
+						"name":   "example.service",
+						"load":   "loaded",
+						"active": "failed",
+						"sub":    "failed",
+						"state":  "enabled",
+						"preset": "disabled",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -403,12 +403,12 @@ func TestShow(t *testing.T) {
 				metric.New(
 					"systemd_units",
 					map[string]string{
-						"name":        "example.service",
-						"load":        "not-found",
-						"active":      "inactive",
-						"sub":         "dead",
-						"file_state":  "enabled",
-						"file_preset": "disabled",
+						"name":   "example.service",
+						"load":   "not-found",
+						"active": "inactive",
+						"sub":    "dead",
+						"state":  "enabled",
+						"preset": "disabled",
 					},
 					map[string]interface{}{
 						"load_code":    2,
@@ -473,12 +473,12 @@ func TestShow(t *testing.T) {
 				metric.New(
 					"systemd_units",
 					map[string]string{
-						"name":        "example.service",
-						"load":        "loaded",
-						"active":      "inactive",
-						"sub":         "dead",
-						"file_state":  "disabled",
-						"file_preset": "disabled",
+						"name":   "example.service",
+						"load":   "loaded",
+						"active": "inactive",
+						"sub":    "dead",
+						"state":  "disabled",
+						"preset": "disabled",
 					},
 					map[string]interface{}{
 						"load_code":    0,

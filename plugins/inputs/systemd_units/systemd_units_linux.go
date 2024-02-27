@@ -334,8 +334,8 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if s.Details {
-			tags["file_state"] = u.unitFileState
-			tags["file_preset"] = u.unitFilePreset
+			tags["state"] = u.unitFileState
+			tags["preset"] = u.unitFilePreset
 
 			fields["status_errno"] = u.properties["StatusErrno"]
 			fields["restarts"] = u.properties["NRestarts"]

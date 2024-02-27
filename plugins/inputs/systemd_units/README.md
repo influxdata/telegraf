@@ -72,8 +72,8 @@ The following *additional* metrics are available with `details = true`:
 
 - systemd_units:
   - tags:
-    - file_state (string, unit file state)
-    - file_preset (string, unit file preset state)
+    - state (string, unit file state)
+    - preset (string, unit file preset state)
   - fields:
     - status_errno (int, last error)
     - restarts (int, number of restarts)
@@ -200,7 +200,7 @@ systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,
 ### Output in detailed mode
 
 ```text
-systemd_units,active=active,host=host1.example.com,load=loaded,name=dbus.service,sub=running,file_preset=disabled,file_state=static active_code=0i,load_code=0i,mem_avail=6470856704i,mem_current=2691072i,mem_peak=3895296i,pid=481i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=794624i,swap_peak=884736i 1533730725000000000
+systemd_units,active=active,host=host1.example.com,load=loaded,name=dbus.service,sub=running,preset=disabled,state=static active_code=0i,load_code=0i,mem_avail=6470856704i,mem_current=2691072i,mem_peak=3895296i,pid=481i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=794624i,swap_peak=884736i 1533730725000000000
 systemd_units,active=inactive,host=host1.example.com,load=not-found,name=networking.service,sub=dead active_code=2i,load_code=2i,pid=0i,restarts=0i,status_errno=0i,sub_code=1i 1533730725000000000
-systemd_units,active=active,host=host1.example.com,load=loaded,name=pcscd.service,sub=running,file_preset=disabled,file_state=indirect active_code=0i,load_code=0i,mem_avail=6370541568i,mem_current=512000i,mem_peak=4399104i,pid=1673i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=3149824i,swap_peak=3149824i 1533730725000000000
+systemd_units,active=active,host=host1.example.com,load=loaded,name=pcscd.service,sub=running,preset=disabled,state=indirect active_code=0i,load_code=0i,mem_avail=6370541568i,mem_current=512000i,mem_peak=4399104i,pid=1673i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=3149824i,swap_peak=3149824i 1533730725000000000
 ```
