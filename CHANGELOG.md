@@ -24,6 +24,9 @@
   consecutive messages exceeds the timeout.
   [#14837](https://github.com/influxdata/telegraf/pull/14828) sets the timeout
   to infinite (i.e zero) as this is the expected behavior.
+- With correctly sanitizing PostgreSQL addresses ([PR #14829](https://github.com/influxdata/telegraf/pull/14829))
+  the `server` tag value for a URI-format address might change in case it
+  contains spaces, backslashes or single-quotes in non-redacted parameters.
 
 ## v1.29.5 [2024-02-20]
 
@@ -72,9 +75,6 @@
 - [#14771](https://github.com/influxdata/telegraf/pull/14771) `deps` Bump tj-actions/changed-files from 41 to 42
 - [#14757](https://github.com/influxdata/telegraf/pull/14757) `deps` Get rid of golang.org/x/exp and use stable versions instead
 - [#14753](https://github.com/influxdata/telegraf/pull/14753) `deps` Use github.com/coreos/go-systemd/v22 instead of git version
-- With correctly sanitizing PostgreSQL addresses ([PR #14829](https://github.com/influxdata/telegraf/pull/14829))
-  the `server` tag value for a URI-format address might change in case it
-  contains spaces, backslashes or single-quotes in non-redacted parameters.
 
 ## v1.29.4 [2024-01-31]
 
