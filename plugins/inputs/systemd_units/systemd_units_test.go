@@ -42,11 +42,13 @@ func TestListFiles(t *testing.T) {
 	tests := []struct {
 		name        string
 		properties  map[string]properties
+		line        string
 		expected    []telegraf.Metric
 		expectedErr string
 	}{
 		{
 			name: "example loaded active running",
+			line: "example.service                loaded active running  example service description",
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
@@ -78,6 +80,7 @@ func TestListFiles(t *testing.T) {
 		},
 		{
 			name: "example loaded active exited",
+			line: "example.service                loaded active exited  example service description",
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
@@ -109,6 +112,7 @@ func TestListFiles(t *testing.T) {
 		},
 		{
 			name: "example loaded failed failed",
+			line: "example.service                loaded failed failed  example service description",
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
@@ -140,6 +144,7 @@ func TestListFiles(t *testing.T) {
 		},
 		{
 			name: "example not-found inactive dead",
+			line: "example.service                not-found inactive dead  example service description",
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
@@ -171,6 +176,7 @@ func TestListFiles(t *testing.T) {
 		},
 		{
 			name: "example unknown unknown unknown",
+			line: "example.service                unknown unknown unknown  example service description",
 			properties: map[string]properties{
 				"example.service": {
 					utype: "Service",
@@ -188,6 +194,16 @@ func TestListFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Run a meta-test for finding regressions compared to metrics
+			// emitted by previous versions
+			old, err := oldParseListUnits(tt.line)
+			if tt.expectedErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+			testutil.RequireMetricsEqual(t, old, tt.expected, testutil.IgnoreTime())
+
 			// Setup plugin. Do NOT call Start() as this would connect to
 			// the real systemd daemon.
 			plugin := &SystemdUnits{
@@ -207,7 +223,7 @@ func TestListFiles(t *testing.T) {
 
 			// Run gather
 			var acc testutil.Accumulator
-			err := acc.GatherError(plugin.Gather)
+			err = acc.GatherError(plugin.Gather)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return
@@ -894,4 +910,45 @@ func (c *fakeClient) ListUnitsContext(_ context.Context) ([]sdbus.UnitStatus, er
 		}
 	}
 	return units, nil
+}
+
+// Slightly adapted version of 'parseListUnits()' function of 'subcommand_list.go'
+func oldParseListUnits(line string) ([]telegraf.Metric, error) {
+	data := strings.Fields(line)
+	if len(data) < 4 {
+		return nil, fmt.Errorf("parsing line failed (expected at least 4 fields): %s", line)
+	}
+	name := data[0]
+	load := data[1]
+	active := data[2]
+	sub := data[3]
+	tags := map[string]string{
+		"name":   name,
+		"load":   load,
+		"active": active,
+		"sub":    sub,
+	}
+
+	var (
+		loadCode   int
+		activeCode int
+		subCode    int
+		ok         bool
+	)
+	if loadCode, ok = loadMap[load]; !ok {
+		return nil, fmt.Errorf("parsing field 'load' failed, value not in map: %s", load)
+	}
+	if activeCode, ok = activeMap[active]; !ok {
+		return nil, fmt.Errorf("parsing field field 'active' failed, value not in map: %s", active)
+	}
+	if subCode, ok = subMap[sub]; !ok {
+		return nil, fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", sub)
+	}
+	fields := map[string]interface{}{
+		"load_code":   loadCode,
+		"active_code": activeCode,
+		"sub_code":    subCode,
+	}
+
+	return []telegraf.Metric{metric.New("systemd_units", tags, fields, time.Now())}, nil
 }
