@@ -7,7 +7,7 @@ including values of those settings or features.
 
 ## Keywords
 
-procedure, framework, all plugins
+procedure, removal, all plugins
 
 ## Overview
 
@@ -48,6 +48,20 @@ this corresponds to six minor-versions. However, there might be circumstances
 requiring a pro-longed time between deprecation and removal to ensure a smooth
 transition for users.
 
+Versions between deprecation and removal of plugins, plugin options or option
+values, Telegraf must log a *warning* on startup including information about
+the version introducing the deprecation, the version of removal and an
+user-facing hint on suitable replacements. In this phase Telegraf should
+operate normally even with deprecated plugins, plugin options or option values
+being set in the configuration files.
+
+Starting from the removal version, Telegraf must show an *error* message for
+deprecated plugins present in the configuration including all information listed
+above. Removed plugin options and option values should be handled as invalid
+settings in the configuration files and must lead to an error. In this phase,
+Telegraf should *stop running* until all deprecated plugins, plugin options and
+option values are removed from the configuration files.
+
 ## Deprecation Process
 
 The deprecation process comprises the following the steps below.
@@ -69,9 +83,6 @@ comprises different locations and steps as detailed below.
 
 Once the deprecation pull-request is merged and Telegraf is released, we have
 to wait for the targeted Telegraf version for actually removing the code.
-
-You should consider writing a blog-post to make users aware of the scheduled
-removal of plugins, plugin options or option values.
 
 #### Deprecating a plugin
 
@@ -101,7 +112,14 @@ deprecation warning to the user starting from version `1.15.0` including the
 `Notice` you provided. The plugin can then be remove in version `1.40.0`.
 
 Additionally, you should update the plugin's `README.md` stating the plugin is
-deprecated at the top (e.g. ***DEPRECATED***).
+deprecated by adding a `***DEPRECATED***` tag next to the plugin title at the
+top *and* by adding a small section mentioning since when the plugin is
+deprecated, when it will be removed and a hint to alternatives like
+
+```
+**Deprecated in Telegraf 1.15 and scheduled for removal in v1.40.0**:
+Please use the [tail][] plugin along with the [`grok` data format][grok parser]
+```
 
 #### Deprecating an option
 
@@ -162,17 +180,3 @@ old version.
 
 Make sure you add an `Important Changes` sections to the `CHANGELOG.md` file
 describing the removal with a reference to your PR.
-
-## Deprecation Framework
-
-Telegraf should provide a framework to notify users about deprecated plugins,
-plugin options and option values including the version introducing the
-deprecation (i.e. since when), the planned version for removal and a hint for
-alternative approaches or  replacements.
-
-This notification should be a log-message with *warning_*severity starting form
-the deprecation version (since) up to the removal version. In this time,
-Telegraf should operate normally even with deprecated plugins, plugin options
-or option values being set in the configuration files. Starting from the removal
-version, Telegraf will show an *error* message for the deprecated parts in the
-configuration and stops running until those parts are removed.
