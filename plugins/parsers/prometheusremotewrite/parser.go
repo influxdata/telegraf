@@ -45,6 +45,20 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		delete(tags, model.MetricNameLabel)
 
+		for _, h := range ts.Histograms {
+			fmt.Printf("Found histogram: %s\n", metricName)
+			fmt.Printf("timestmap: %d\n", h.Timestamp)
+			fmt.Printf("sum:       %f\n", h.GetSum())
+			fmt.Printf("count:     %f\n", h.GetCountFloat())
+			fmt.Printf("+span:  %v\n", h.PositiveSpans)
+			fmt.Printf("+delta: %v\n", h.PositiveDeltas)
+			fmt.Printf("+count: %v\n", h.PositiveCounts)
+			fmt.Printf("-span:  %v\n", h.NegativeSpans)
+			fmt.Printf("-delta: %v\n", h.NegativeDeltas)
+			fmt.Printf("+count: %v\n", h.NegativeCounts)
+			fmt.Println()
+		}
+
 		for _, s := range ts.Samples {
 			fields := make(map[string]interface{})
 			if !math.IsNaN(s.Value) {
