@@ -428,6 +428,34 @@ func TestSanitizeAddressKeyValue(t *testing.T) {
 			name:  "two escaped backslashes",
 			value: `'foo bar\\\\'`,
 		},
+		{
+			name:  "multiple inline spaces",
+			value: "'foo     \t bar'",
+		},
+		{
+			name:  "leading space",
+			value: `' foo bar'`,
+		},
+		{
+			name:  "trailing space",
+			value: `'foo bar '`,
+		},
+		{
+			name:  "multiple equal signs",
+			value: `'foo===bar'`,
+		},
+		{
+			name:  "leading equal sign",
+			value: `'=foo bar'`,
+		},
+		{
+			name:  "trailing equal sign",
+			value: `'foo bar='`,
+		},
+		{
+			name:  "mix of equal signs and spaces",
+			value: "'foo = a\t===\tbar'",
+		},
 	}
 
 	for _, tt := range tests {
