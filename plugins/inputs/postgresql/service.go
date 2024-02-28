@@ -165,10 +165,10 @@ func (p *Service) SanitizedAddress() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("getting address for sanitization failed: %w", err)
 	}
-	addr := addrSecret.String()
-	addrSecret.Destroy()
+	defer addrSecret.Destroy()
 
 	// Make sure we convert URI-formatted strings into key-values
+	addr := addrSecret.TemporaryString()
 	if strings.HasPrefix(addr, "postgres://") || strings.HasPrefix(addr, "postgresql://") {
 		if addr, err = toKeyValue(addr); err != nil {
 			return "", err
