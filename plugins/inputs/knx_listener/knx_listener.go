@@ -131,18 +131,23 @@ func (kl *KNXListener) Stop() {
 }
 
 func (kl *KNXListener) listen() {
+	kl.Log.Info("listening...")
 	for msg := range kl.client.Inbound() {
+		kl.Log.Info("got messages, starting unpacking and parsing...")
 		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
+		kl.Log.Infof("ga: %s\n", ga)
 		target, ok := kl.gaTargetMap[ga]
 		if !ok {
 			if !kl.gaLogbook[ga] {
 				kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
 				kl.gaLogbook[ga] = true
 			}
+			kl.Log.Infof("Ignoring message")
 			continue
 		}
 
+		kl.Log.Info("unpacking msg")
 		// Extract the value from the data-frame
 		err := target.datapoint.Unpack(msg.Data)
 		if err != nil {
