@@ -116,7 +116,7 @@ deprecated by adding a `***DEPRECATED***` tag next to the plugin title at the
 top *and* by adding a small section mentioning since when the plugin is
 deprecated, when it will be removed and a hint to alternatives like
 
-```
+```text
 **Deprecated in Telegraf 1.15 and scheduled for removal in v1.40.0**:
 Please use the [tail][] plugin along with the [`grok` data format][grok parser]
 ```
