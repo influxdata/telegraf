@@ -4,7 +4,7 @@ Telegraf's `custom_builder` is a tool to select the plugins compiled into the
 Telegraf binary. By doing so, Telegraf can become smaller, saving both disk
 space and memory if only a sub-set of plugins is selected.
 
-### Requirements
+## Requirements
 
 For compiling the customized binary you need the
 [Golang language](https://go.dev/) as well as the `make` build system.
