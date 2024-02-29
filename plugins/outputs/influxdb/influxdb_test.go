@@ -53,8 +53,7 @@ func (c *MockClient) SetLogger(log telegraf.Logger) {
 func TestDeprecatedURLSupport(t *testing.T) {
 	var actual *influxdb.UDPConfig
 	output := influxdb.InfluxDB{
-		URL: "udp://localhost:8089",
-
+		URLs: []string{"udp://localhost:8089"},
 		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{}, nil
