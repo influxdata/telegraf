@@ -111,10 +111,9 @@ to `plugins/inputs/deprecations.go`. By doing this, Telegraf will show a
 deprecation warning to the user starting from version `1.15.0` including the
 `Notice` you provided. The plugin can then be remove in version `1.40.0`.
 
-Additionally, you should update the plugin's `README.md` stating the plugin is
-deprecated by adding a `***DEPRECATED***` tag next to the plugin title at the
-top *and* by adding a small section mentioning since when the plugin is
-deprecated, when it will be removed and a hint to alternatives like
+Additionally, you should update the plugin's `README.md` adding a paragraph
+mentioning since when the plugin is deprecated, when it will be removed and a
+hint to alternatives or replacements. The paragraph should look like this
 
 ```text
 **Deprecated in Telegraf 1.15 and scheduled for removal in v1.40.0**:
