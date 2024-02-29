@@ -1062,7 +1062,7 @@ func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
 	}
 
 	output := influxdb.InfluxDB{
-		URL:         u.String(),
+		URLs:        []string{u.String()},
 		Database:    "telegraf",
 		DatabaseTag: "database",
 		Log:         testutil.Logger{},
@@ -1149,7 +1149,7 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 	}
 
 	output := influxdb.InfluxDB{
-		URL:         u.String(),
+		URLs:        []string{u.String()},
 		Database:    "telegraf",
 		DatabaseTag: "database",
 		Log:         testutil.Logger{},
@@ -1203,7 +1203,7 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 
 	logger := &testutil.CaptureLogger{}
 	output := influxdb.InfluxDB{
-		URL:                  u.String(),
+		URLs:                 []string{u.String()},
 		Database:             "telegraf",
 		DatabaseTag:          "database",
 		SkipDatabaseCreation: true,

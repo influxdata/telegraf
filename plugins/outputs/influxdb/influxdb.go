@@ -36,7 +36,6 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                       string            `toml:"url" deprecated:"0.1.9;1.30.0;use 'urls' instead"`
 	URLs                      []string          `toml:"urls"`
 	Username                  config.Secret     `toml:"username"`
 	Password                  config.Secret     `toml:"password"`
@@ -55,16 +54,14 @@ type InfluxDB struct {
 	ContentEncoding           string            `toml:"content_encoding"`
 	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
+	Precision                 string            `toml:"precision" deprecated:"1.0.0;option is ignored"`
+	Log                       telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
-
-	Precision string `toml:"precision" deprecated:"1.0.0;option is ignored"`
 
 	clients []Client
 
 	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
-
-	Log telegraf.Logger
 }
 
 func (*InfluxDB) SampleConfig() string {
@@ -74,17 +71,11 @@ func (*InfluxDB) SampleConfig() string {
 func (i *InfluxDB) Connect() error {
 	ctx := context.Background()
 
-	urls := make([]string, 0, len(i.URLs))
-	urls = append(urls, i.URLs...)
-	if i.URL != "" {
-		urls = append(urls, i.URL)
+	if len(i.URLs) == 0 {
+		i.URLs = []string{defaultURL}
 	}
 
-	if len(urls) == 0 {
-		urls = append(urls, defaultURL)
-	}
-
-	for _, u := range urls {
+	for _, u := range i.URLs {
 		parts, err := url.Parse(u)
 		if err != nil {
 			return fmt.Errorf("error parsing url [%q]: %w", u, err)
