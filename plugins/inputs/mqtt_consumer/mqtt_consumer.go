@@ -48,7 +48,9 @@ type Client interface {
 	AddRoute(topic string, callback mqtt.MessageHandler)
 	Disconnect(quiesce uint)
 }
+
 type ClientFactory func(o *mqtt.ClientOptions) Client
+
 type TopicParsingConfig struct {
 	Topic       string            `toml:"topic"`
 	Measurement string            `toml:"measurement"`
@@ -61,6 +63,7 @@ type TopicParsingConfig struct {
 	SplitFields      []string
 	SplitTopic       []string
 }
+
 type MQTTConsumer struct {
 	Servers                []string             `toml:"servers"`
 	Topics                 []string             `toml:"topics"`
@@ -72,15 +75,12 @@ type MQTTConsumer struct {
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
 	ClientTrace            bool                 `toml:"client_trace"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
-	parser                 telegraf.Parser
-
-	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;1.30.0;option is ignored"`
-	PersistentSession bool
-	ClientID          string `toml:"client_id"`
-
+	PersistentSession      bool                 `toml:"persistent_session"`
+	ClientID               string               `toml:"client_id"`
+	Log                    telegraf.Logger      `toml:"-"`
 	tls.ClientConfig
 
-	Log           telegraf.Logger
+	parser        telegraf.Parser
 	clientFactory ClientFactory
 	client        Client
 	opts          *mqtt.ClientOptions
