@@ -37,26 +37,20 @@ func (e natsError) Error() string {
 }
 
 type natsConsumer struct {
-	QueueGroup  string   `toml:"queue_group"`
-	Subjects    []string `toml:"subjects"`
-	Servers     []string `toml:"servers"`
-	Secure      bool     `toml:"secure"`
-	Username    string   `toml:"username"`
-	Password    string   `toml:"password"`
-	Credentials string   `toml:"credentials"`
-	NkeySeed    string   `toml:"nkey_seed"`
-	JsSubjects  []string `toml:"jetstream_subjects"`
-
+	QueueGroup             string          `toml:"queue_group"`
+	Subjects               []string        `toml:"subjects"`
+	Servers                []string        `toml:"servers"`
+	Secure                 bool            `toml:"secure"`
+	Username               string          `toml:"username"`
+	Password               string          `toml:"password"`
+	Credentials            string          `toml:"credentials"`
+	NkeySeed               string          `toml:"nkey_seed"`
+	JsSubjects             []string        `toml:"jetstream_subjects"`
+	PendingMessageLimit    int             `toml:"pending_message_limit"`
+	PendingBytesLimit      int             `toml:"pending_bytes_limit"`
+	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
+	Log                    telegraf.Logger `toml:"-"`
 	tls.ClientConfig
-
-	Log telegraf.Logger
-
-	// Client pending limits:
-	PendingMessageLimit int `toml:"pending_message_limit"`
-	PendingBytesLimit   int `toml:"pending_bytes_limit"`
-
-	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
-	MetricBuffer           int `toml:"metric_buffer" deprecated:"0.10.3;1.30.0;option is ignored"`
 
 	conn   *nats.Conn
 	jsConn nats.JetStreamContext
