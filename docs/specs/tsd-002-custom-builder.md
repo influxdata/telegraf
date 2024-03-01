@@ -12,7 +12,7 @@ tool, binary size, customization
 ## Overview
 
 The Telegraf binary continues to grow as new plugins and features are added
-and dependencies are updated. Users running on resource constraint systems
+and dependencies are updated. Users running on resource constrained systems
 such as embedded-systems or inside containers might suffer from the growth.
 
 This document specifies a tool to build a smaller Telegraf binary tailored to
