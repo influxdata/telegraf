@@ -24,6 +24,9 @@
   consecutive messages exceeds the timeout.
   [#14837](https://github.com/influxdata/telegraf/pull/14828) sets the timeout
   to infinite (i.e zero) as this is the expected behavior.
+- With correctly sanitizing PostgreSQL addresses ([PR #14829](https://github.com/influxdata/telegraf/pull/14829))
+  the `server` tag value for a URI-format address might change in case it
+  contains spaces, backslashes or single-quotes in non-redacted parameters.
 
 ## v1.29.5 [2024-02-20]
 
