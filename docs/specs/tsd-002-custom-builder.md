@@ -55,7 +55,7 @@ binary. Distribution packages or containers are *not* targeted.
 
 [rawkode/bring-your-own-telegraf](https://github.com/rawkode/bring-your-own-telegraf)
 
-- Users docker
+- Uses docker
 
 ## Additional information
 
