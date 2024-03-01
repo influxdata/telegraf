@@ -116,8 +116,9 @@ mentioning since when the plugin is deprecated, when it will be removed and a
 hint to alternatives or replacements. The paragraph should look like this
 
 ```text
-**Deprecated in Telegraf 1.15 and scheduled for removal in v1.40.0**:
-Please use the [tail][] plugin along with the [`grok` data format][grok parser]
+**Deprecated in version v1.15.0 and scheduled for removal in v1.40.0**:
+Please use the [tail][] plugin with the [`grok` data format][grok parser]
+instead!
 ```
 
 #### Deprecating an option
