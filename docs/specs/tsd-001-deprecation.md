@@ -45,7 +45,7 @@ In general, plugins, plugin options or option values should only be deprecated
 if a suitable alternative exists! In those cases, the deprecations should
 predate the removal by at least one and a half years. In current release terms
 this corresponds to six minor-versions. However, there might be circumstances
-requiring a pro-longed time between deprecation and removal to ensure a smooth
+requiring a prolonged time between deprecation and removal to ensure a smooth
 transition for users.
 
 Versions between deprecation and removal of plugins, plugin options or option
