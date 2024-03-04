@@ -706,6 +706,21 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) ([]telegraf.Fiel
 		return fields, nil
 	}
 
+	// Fallback to IPFIX mappings as some devices seem to send IPFIX elements in
+	// Netflow v9 packets. See https://github.com/influxdata/telegraf/issues/14902
+	// and https://github.com/influxdata/telegraf/issues/14903.
+	if mappings, found := fieldMappingsIPFIX[elementID]; found {
+		var fields []telegraf.Field
+		for _, m := range mappings {
+			v, err := m.decoder(raw)
+			if err != nil {
+				return nil, err
+			}
+			fields = append(fields, telegraf.Field{Key: m.name, Value: v})
+		}
+		return fields, nil
+	}
+
 	// Return the raw data if no mapping was found
 	key := fmt.Sprintf("type_%d", elementID)
 	if !d.logged[key] {
