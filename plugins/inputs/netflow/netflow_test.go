@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/netsampler/goflow2/v2/decoders/netflow"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -153,7 +154,7 @@ func TestMissingTemplate(t *testing.T) {
 
 	var found bool
 	for _, w := range logger.Warnings() {
-		found = found || strings.Contains(w, "No info template 261 found for and domain id 231; skipping packet")
+		found = found || strings.Contains(w, netflow.ErrorTemplateNotFound.Error()+"; skipping packet")
 	}
 	require.True(t, found, "warning not found")
 }

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/netsampler/goflow2/decoders/netflow"
+	"github.com/netsampler/goflow2/v2/decoders/netflow"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -533,7 +533,7 @@ type netflowDecoder struct {
 	PENFiles []string
 	Log      telegraf.Logger
 
-	templates     map[string]*netflow.BasicTemplateSystem
+	templates     map[string]netflow.NetFlowTemplateSystem
 	mappingsV9    map[uint16]fieldMapping
 	mappingsIPFIX map[uint16]fieldMapping
 	mappingsPEN   map[string]fieldMapping
@@ -557,11 +557,11 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	d.Unlock()
 
 	// Decode the overall message
+	var msg9 netflow.NFv9Packet
+	var msg10 netflow.IPFIXPacket
 	buf := bytes.NewBuffer(payload)
-	packet, err := netflow.DecodeMessage(buf, templates)
-	if err != nil {
-		var terr *netflow.ErrorTemplateNotFound
-		if errors.As(err, &terr) {
+	if err := netflow.DecodeMessageVersion(buf, templates, &msg9, &msg10); err != nil {
+		if errors.Is(err, netflow.ErrorTemplateNotFound) {
 			d.Log.Warnf("%v; skipping packet", err)
 			return nil, nil
 		}
@@ -569,8 +569,9 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	}
 
 	// Extract metrics
-	switch msg := packet.(type) {
-	case netflow.NFv9Packet:
+	switch {
+	case msg9.Version == 9:
+		msg := msg9
 		for _, flowsets := range msg.FlowSets {
 			switch fs := flowsets.(type) {
 			case netflow.TemplateFlowSet:
@@ -597,7 +598,8 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				}
 			}
 		}
-	case netflow.IPFIXPacket:
+	case msg10.Version == 10:
+		msg := msg10
 		for _, flowsets := range msg.FlowSets {
 			switch fs := flowsets.(type) {
 			case netflow.TemplateFlowSet:
@@ -626,7 +628,7 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			}
 		}
 	default:
-		return nil, fmt.Errorf("invalid message of type %T", packet)
+		return nil, errors.New("invalid message of type")
 	}
 
 	return metrics, nil
@@ -640,7 +642,7 @@ func (d *netflowDecoder) Init() error {
 		return fmt.Errorf("initializing IPv4 options mapping failed: %w", err)
 	}
 
-	d.templates = make(map[string]*netflow.BasicTemplateSystem)
+	d.templates = make(map[string]netflow.NetFlowTemplateSystem)
 	d.mappingsV9 = make(map[uint16]fieldMapping)
 	d.mappingsIPFIX = make(map[uint16]fieldMapping)
 	d.mappingsPEN = make(map[string]fieldMapping)
