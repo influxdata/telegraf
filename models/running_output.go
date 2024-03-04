@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -157,7 +158,7 @@ func (r *RunningOutput) Connect() error {
 	r.StartupErrors.Incr(1)
 
 	// Check if the plugin reports a retry-able error, otherwise we exit.
-	var serr *telegraf.StartupError
+	var serr *internal.StartupError
 	if !errors.As(err, &serr) || !serr.Retry {
 		return err
 	}
@@ -169,7 +170,7 @@ func (r *RunningOutput) Connect() error {
 		r.log.Infof("Connect failed: %v; retrying...", err)
 		return nil
 	case "ignore":
-		return &telegraf.FatalError{Err: serr}
+		return &internal.FatalError{Err: serr}
 	default:
 		r.log.Errorf("Invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
 	}
@@ -241,7 +242,7 @@ func (r *RunningOutput) Write() error {
 		r.retries++
 		if err := r.Output.Connect(); err != nil {
 			r.StartupErrors.Incr(1)
-			return telegraf.ErrNotConnected
+			return internal.ErrNotConnected
 		}
 		r.started = true
 		r.log.Debugf("Successfully connected after %d attempts", r.retries)
@@ -284,7 +285,7 @@ func (r *RunningOutput) WriteBatch() error {
 		r.retries++
 		if err := r.Output.Connect(); err != nil {
 			r.StartupErrors.Incr(1)
-			return telegraf.ErrNotConnected
+			return internal.ErrNotConnected
 		}
 		r.started = true
 		r.log.Debugf("Successfully connected after %d attempts", r.retries)
