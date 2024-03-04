@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -139,6 +140,12 @@ func (r *RunningOutput) ID() string {
 }
 
 func (r *RunningOutput) Init() error {
+	switch r.Config.StartupErrorBehavior {
+	case "", "error", "retry", "ignore":
+	default:
+		return fmt.Errorf("invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
+	}
+
 	if p, ok := r.Output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
