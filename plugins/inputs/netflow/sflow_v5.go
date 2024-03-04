@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/netsampler/goflow2/decoders/sflow"
+	"github.com/netsampler/goflow2/v2/decoders/sflow"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -38,18 +38,13 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	src := srcIP.String()
 
 	// Decode the message
+	var msg sflow.Packet
 	buf := bytes.NewBuffer(payload)
-	packet, err := sflow.DecodeMessage(buf)
-	if err != nil {
+	if err := sflow.DecodeMessageVersion(buf, &msg); err != nil {
 		return nil, err
 	}
 
 	// Extract metrics
-	msg, ok := packet.(sflow.Packet)
-	if !ok {
-		return nil, fmt.Errorf("unexpected message type %T", packet)
-	}
-
 	metrics := make([]telegraf.Metric, 0, len(msg.Samples))
 	for _, s := range msg.Samples {
 		tags := map[string]string{
@@ -70,6 +65,7 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				"in_snmp":           sample.Input,
 			}
 
+			var err error
 			fields["agent_ip"], err = decodeIP(msg.AgentIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'agent_ip' failed: %w", err)
@@ -107,6 +103,8 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				"sampling_drops":    sample.Drops,
 				"in_snmp":           sample.InputIfValue,
 			}
+
+			var err error
 			fields["agent_ip"], err = decodeIP(msg.AgentIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'agent_ip' failed: %w", err)
@@ -140,6 +138,8 @@ func (d *sflowv5Decoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 				"agent_subid": msg.SubAgentId,
 				"seq_number":  sample.Header.SampleSequenceNumber,
 			}
+
+			var err error
 			fields["agent_ip"], err = decodeIP(msg.AgentIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'agent_ip' failed: %w", err)
@@ -196,38 +196,38 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 			fields["datalink_frame_type"] = layers.EthernetType(record.EthType & 0x0000ffff).String()
 		case sflow.SampledIPv4:
 			var err error
-			fields["ipv4_total_len"] = record.Base.Length
-			fields["protocol"] = mapL4Proto(uint8(record.Base.Protocol & 0x000000ff))
-			fields["src"], err = decodeIP(record.Base.SrcIP)
+			fields["ipv4_total_len"] = record.Length
+			fields["protocol"] = mapL4Proto(uint8(record.Protocol & 0x000000ff))
+			fields["src"], err = decodeIP(record.SrcIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'src' failed: %w", err)
 			}
-			fields["dst"], err = decodeIP(record.Base.DstIP)
+			fields["dst"], err = decodeIP(record.DstIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'dst' failed: %w", err)
 			}
-			fields["src_port"] = record.Base.SrcPort
-			fields["dst_port"] = record.Base.DstPort
+			fields["src_port"] = record.SrcPort
+			fields["dst_port"] = record.DstPort
 			fields["src_tos"] = record.Tos
-			fields["tcp_flags"], err = decodeTCPFlags([]byte{byte(record.Base.TcpFlags & 0x000000ff)})
+			fields["tcp_flags"], err = decodeTCPFlags([]byte{byte(record.TcpFlags & 0x000000ff)})
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'tcp_flags' failed: %w", err)
 			}
 		case sflow.SampledIPv6:
 			var err error
-			fields["ipv6_total_len"] = record.Base.Length
-			fields["protocol"] = mapL4Proto(uint8(record.Base.Protocol & 0x000000ff))
-			fields["src"], err = decodeIP(record.Base.SrcIP)
+			fields["ipv6_total_len"] = record.Length
+			fields["protocol"] = mapL4Proto(uint8(record.Protocol & 0x000000ff))
+			fields["src"], err = decodeIP(record.SrcIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'src' failed: %w", err)
 			}
-			fields["dst"], err = decodeIP(record.Base.DstIP)
+			fields["dst"], err = decodeIP(record.DstIP)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'dst' failed: %w", err)
 			}
-			fields["src_port"] = record.Base.SrcPort
-			fields["dst_port"] = record.Base.DstPort
-			fields["tcp_flags"], err = decodeTCPFlags([]byte{byte(record.Base.TcpFlags & 0x000000ff)})
+			fields["src_port"] = record.SrcPort
+			fields["dst_port"] = record.DstPort
+			fields["tcp_flags"], err = decodeTCPFlags([]byte{byte(record.TcpFlags & 0x000000ff)})
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'tcp_flags' failed: %w", err)
 			}
@@ -445,7 +445,7 @@ func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (ma
 				"errors_symbols":          record.Dot3StatsSymbolErrors,
 			}
 			return fields, nil
-		case *sflow.FlowRecordRaw:
+		case sflow.RawRecord:
 			switch r.Header.DataFormat {
 			case 1005:
 				// Openflow port-name
