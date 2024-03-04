@@ -157,7 +157,7 @@ require (
 	github.com/pion/dtls/v2 v2.2.8
 	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/prometheus/client_golang v1.18.0
-	github.com/prometheus/client_model v0.5.0
+	github.com/prometheus/client_model v0.6.0
 	github.com/prometheus/common v0.45.0
 	github.com/prometheus/procfs v0.12.0
 	github.com/prometheus/prometheus v0.48.1
