@@ -49,7 +49,6 @@ type RunningOutput struct {
 
 	MetricsFiltered selfstat.Stat
 	WriteTime       selfstat.Stat
-	BufferFullness  selfstat.Stat
 	StartupErrors   selfstat.Stat
 
 	BatchReady chan time.Time
@@ -109,11 +108,6 @@ func NewRunningOutput(
 		WriteTime: selfstat.RegisterTiming(
 			"write",
 			"write_time_ns",
-			tags,
-		),
-		BufferFullness: selfstat.Register(
-			"write",
-			"buffer_usage",
 			tags,
 		),
 		StartupErrors: selfstat.Register(
@@ -333,7 +327,6 @@ func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 func (r *RunningOutput) LogBufferStatus() {
 	nBuffer := r.buffer.Len()
 	r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
-	r.BufferFullness.Set(int64(nBuffer))
 }
 
 func (r *RunningOutput) Log() telegraf.Logger {
