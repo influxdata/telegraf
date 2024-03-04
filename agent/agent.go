@@ -794,8 +794,8 @@ func (a *Agent) startOutputs(
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
 		if err := a.connectOutput(ctx, output); err != nil {
-			var serr *telegraf.StartupError
-			if errors.As(err, &serr) && serr.RemovePlugin {
+			var fatalErr *telegraf.FatalError
+			if errors.As(err, &fatalErr) {
 				// If the model tells us to remove the plugin we do so without error
 				log.Printf("I! [agent] Failed to connect to [%s], error was %q;  shutting down plugin...", output.LogName(), err)
 				output.Close()

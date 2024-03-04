@@ -169,8 +169,7 @@ func (r *RunningOutput) Connect() error {
 		r.log.Infof("Connect failed: %v; retrying...", err)
 		return nil
 	case "ignore":
-		serr.RemovePlugin = true
-		return serr
+		return &telegraf.FatalError{Err: serr}
 	default:
 		r.log.Errorf("Invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
 	}

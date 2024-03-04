@@ -10,9 +10,8 @@ var ErrNotConnected = errors.New("not connected")
 // depending on the configured startup-error-behavior. The 'RemovePlugin'
 // flag denotes if the agent should remove the plugin from further processing.
 type StartupError struct {
-	Err          error
-	Retry        bool
-	RemovePlugin bool
+	Err   error
+	Retry bool
 }
 
 func (e *StartupError) Error() string {
@@ -20,5 +19,20 @@ func (e *StartupError) Error() string {
 }
 
 func (e *StartupError) Unwrap() error {
+	return e.Err
+}
+
+// FatalError indicates a not-recoverable error in the plugin. The corresponding
+// plugin should be remove by the agent stopping any further processing for that
+// plugin instance.
+type FatalError struct {
+	Err error
+}
+
+func (e *FatalError) Error() string {
+	return e.Err.Error()
+}
+
+func (e *FatalError) Unwrap() error {
 	return e.Err
 }
