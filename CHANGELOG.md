@@ -16,6 +16,12 @@
   - `inputs.udp_listener` in [#14866](https://github.com/influxdata/telegraf/pull/14866)
   - `outputs.riemann_legacy` in [#14867](https://github.com/influxdata/telegraf/pull/14867)
 
+  Furthermore, the following deprecated plugin options are removed
+  - `mountpoints` of `inputs.disk` in [#14913](https://github.com/influxdata/telegraf/pull/14913)
+  - `metric_buffer` of `inputs.mqtt_consumer` in [#14914](https://github.com/influxdata/telegraf/pull/14914)
+  - `metric_buffer` of `inputs.nats_consumer` in [#14915](https://github.com/influxdata/telegraf/pull/14915)
+  - `url` of `outputs.influxdb` in [#14916](https://github.com/influxdata/telegraf/pull/14916)
+
   Replacements do exist, so please migrate your configuration in case you are
   still using one of those plugins. The `telegraf config migrate` command might
   be able to assist with the procedure.
