@@ -54,7 +54,9 @@ must *not* fail on startup-errors and should continue running. Telegraf must
 retry to startup the failed plugin in each gather- or write-cycle, for inputs
 or for outputs respectively, for an unlimited number of times. Neither the
 plugin's `Gather()` nor `Write()` method is called as long as the startup did
-not succeed.
+not succeed. Metrics sent to an output plugin will be buffered until the plugin
+is actually started.
+**If the metric-buffer limit is reached metrics might be dropped**!
 
 ### `retry-partial` behavior
 
@@ -70,13 +72,6 @@ When using the `ignore` setting for the `startup_error_behavior` option Telegraf
 must *not* fail on startup-errors and should continue running. On startup error,
 Telegraf must ignore the plugin as-if it was not configured at all, i.e. the
 plugin must be completely removed from processing.
-
-### Custom behaviors
-
-Plugins are free to indicate no-startup-error and implement their own startup
-error-handling if necessary. This might or might not make use of the mechanisms
-defined above. However, this should be an exception for cases that cannot be
-handled by the proposed general framework.
 
 ## Plugin Requirements
 
