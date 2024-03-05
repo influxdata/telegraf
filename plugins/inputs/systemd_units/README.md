@@ -28,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Filter for a specific unit type
   ## Available settings are: service, socket, target, device, mount,
-  ## automount, swap, timer, path, slice" and scope
+  ## automount, swap, timer, path, slice and scope
   # unittype = "service"
 
   ## Collect detailed information for the units
