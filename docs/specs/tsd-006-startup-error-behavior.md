@@ -27,8 +27,13 @@ startup-error is *retry-able*. This comprises for example network errors
 indicating that the host or service is not reachable (yet) or external
 resources, like a machine or file, which are not yet available but might become
 available later. To indicate a retry-able startup-error the plugin should return
-a predefined error-type, potentially including an explicit flag. Additionally,
-the plugin might indicate partial connects to signal
+a predefined error-type, potentially including an explicit flag denoting the
+retry-ability of the error.
+
+In cases where the retry-ability of an error cannot be generally determined by
+the plugin, i.e. where an error code indicates a fatal, non-recoverable error
+in one case but a non-fatal, recoverable error in another case, the plugin might
+add configuration settings to let the user configure that property.
 
 ## Configuration Options and Behaviors
 
