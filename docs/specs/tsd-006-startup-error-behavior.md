@@ -55,16 +55,13 @@ retry to startup the failed plugin in each gather- or write-cycle, for inputs
 or for outputs respectively, for an unlimited number of times. Neither the
 plugin's `Gather()` nor `Write()` method is called as long as the startup did
 not succeed. Metrics sent to an output plugin will be buffered until the plugin
-is actually started.
-**If the metric-buffer limit is reached metrics might be dropped**!
+is actually started. If the metric-buffer limit is reached **metrics might be
+dropped**!
 
-### `retry-partial` behavior
-
-The `retry-partial` setting for the `startup_error_behavior` option is similar
-to the `retry` setting but the plugin's `Gather()` or `Write()` method is
-called as-soon-as the startup was successful or the returned startup-error
-indicates a partially successful connection, e.g. a subset of the given
-endpoints are reachable.
+In case a plugin signals a partially successful startup, e.g. a subset of the
+given endpoints are reachable, Telegraf must try to fully startup the remaining
+endpoints by calling `Start()` or `Connect()`, respectively, until full startup
+is reached **and** trigger the plugin's `Gather()` nor `Write()` methods.
 
 ### `ignore` behavior
 
