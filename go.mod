@@ -41,16 +41,16 @@ require (
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/awnumar/memguard v0.22.4
 	github.com/aws/aws-sdk-go-v2 v1.25.2
-	github.com/aws/aws-sdk-go-v2/config v1.26.6
-	github.com/aws/aws-sdk-go-v2/credentials v1.16.16
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.11
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.32.2
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.31.0
+	github.com/aws/aws-sdk-go-v2/config v1.27.5
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.5
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.15.2
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.36.1
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.34.2
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.30.2
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.146.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.149.3
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.27.1
-	github.com/aws/aws-sdk-go-v2/service/sts v1.26.7
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.23.7
+	github.com/aws/aws-sdk-go-v2/service/sts v1.28.2
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.25.2
 	github.com/aws/smithy-go v1.20.1
 	github.com/benbjohnson/clock v1.3.5
 	github.com/blues/jsonata-go v1.5.4
@@ -263,21 +263,21 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/awnumar/memcall v0.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.1 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.12.16 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.15 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.13.7 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.7 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.2.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.18.7 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.20.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.2.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.16.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.48.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.18.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.20.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.1 // indirect
 	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
