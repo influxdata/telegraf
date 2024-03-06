@@ -30,6 +30,7 @@ var sampleConfig string
 
 // WinEventLog config
 type WinEventLog struct {
+	PluginName             string          `toml:"plugin_name"`
 	Locale                 uint32          `toml:"locale"`
 	EventlogName           string          `toml:"eventlog_name"`
 	Query                  string          `toml:"xpath_query"`
@@ -244,7 +245,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Pass collected metrics
-			acc.AddFields("win_eventlog", fields, tags, timeStamp)
+			acc.AddFields(w.PluginName, fields, tags, timeStamp)
 		}
 	}
 
@@ -556,6 +557,7 @@ func openPublisherMetadata(
 func init() {
 	inputs.Add("win_eventlog", func() telegraf.Input {
 		return &WinEventLog{
+			PluginName:             "win_eventlog",
 			ProcessUserData:        true,
 			ProcessEventData:       true,
 			Separator:              "_",
