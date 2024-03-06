@@ -4,6 +4,7 @@ package procstat
 
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 
 	"github.com/shirou/gopsutil/v3/process"
@@ -55,3 +56,29 @@ func queryPidWithWinServiceName(winServiceName string) (uint32, error) {
 }
 
 func collectMemmap(Process, string, map[string]any) {}
+
+func findBySystemdUnits(_ []string) ([]processGroup, error) {
+	return nil, nil
+}
+
+func findByWindowsServices(services []string) ([]processGroup, error) {
+	groups := make([]processGroup, 0, len(services))
+	for _, service := range services {
+		pid, err := queryPidWithWinServiceName(service)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query PID of service %q: %w", service, err)
+		}
+
+		p, err := process.NewProcess(int32(pid))
+		if err != nil {
+			return nil, fmt.Errorf("failed to find process for PID %d of service %q: %w", pid, service, err)
+		}
+
+		groups = append(groups, processGroup{
+			processes: []*process.Process{p},
+			tags:      map[string]string{"win_service": service},
+		})
+	}
+
+	return groups, nil
+}
