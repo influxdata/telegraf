@@ -44,7 +44,8 @@ per-plugin basis and defines how Telegraf behaves on startup errors.
 
 For all config option values Telegraf might retry to start the plugin for a
 limited number of times during the startup phase before actually processing
-data.
+data. This corresponds to the current behavior of Telegraf to retry three times
+with a fifteen second interval before continuing processing of the plugins.
 
 ### `error` behavior
 
