@@ -43,6 +43,7 @@ type Parser struct {
 	PrintDocument       bool              `toml:"xpath_print_document"`
 	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
 	NativeTypes         bool              `toml:"xpath_native_types"`
+	Trace               bool              `toml:"xpath_trace"`
 	Configs             []Config          `toml:"xpath"`
 	DefaultMetricName   string            `toml:"-"`
 	DefaultTags         map[string]string `toml:"-"`
@@ -623,7 +624,7 @@ func (p *Parser) constructFieldName(root, node dataNode, name string, expand boo
 }
 
 func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {
-	if p.Log == nil {
+	if p.Log == nil || !p.Trace {
 		return
 	}
 

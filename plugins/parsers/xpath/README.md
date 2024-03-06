@@ -135,6 +135,10 @@ XPath expressions.
   ## Currently, CBOR, protobuf, msgpack and JSON support native data-types.
   # xpath_native_types = false
 
+  ## Trace empty node selections for debugging
+  ## This will only produce output in debugging mode.
+  # xpath_trace = false
+
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
