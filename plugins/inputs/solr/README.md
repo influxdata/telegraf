@@ -43,6 +43,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
+## Example Output
+
 ```text
 solr_core,core=main,handler=searcher,host=testhost deleted_docs=17616645i,max_docs=261848363i,num_docs=244231718i 1478214949000000000
 solr_core,core=main,handler=core,host=testhost deleted_docs=0i,max_docs=0i,num_docs=0i 1478214949000000000

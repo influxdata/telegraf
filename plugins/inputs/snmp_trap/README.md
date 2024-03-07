@@ -43,6 +43,20 @@ details.
 
 [AGENT]: ../../../docs/CONFIGURATION.md#agent
 
+## SNMP backend: gosmi and netsnmp
+
+Telegraf has two backends to translate SNMP objects. By default, Telegraf will
+use `netsnmp`, however, this option is deprecated and it is encouraged that
+users migrate to `gosmi`. If users find issues with `gosmi` that do not occur
+with `netsnmp` please open a project issue on GitHub.
+
+The SNMP backend setting is a global-level setting that applies to all use of
+SNMP in Telegraf. Users can set this option in the `[agent]` configuration via
+the `snmp_translator` option. See the [agent configuration][AGENT] for more
+details.
+
+[AGENT]: ../../../docs/CONFIGURATION.md#agent
+
 ## Configuration
 
 ```toml @sample.conf

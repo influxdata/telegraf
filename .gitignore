@@ -21,3 +21,15 @@ process.yml
 resource.syso
 versioninfo.json
 .uuid
+vscode.sh
+issues.json
+test.json
+/.config
+/.clusters
+/cmd/telegraf/__debug_bin
+heap.out
+profile.out
+profile*.png
+test.sh
+metrics
+hosts.json

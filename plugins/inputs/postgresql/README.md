@@ -20,6 +20,7 @@ See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md
 
 ## Configuration
 
