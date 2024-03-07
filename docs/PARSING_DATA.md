@@ -44,7 +44,7 @@ specified as a tag.
 
 ## Timestamp
 
-To parser a timestamp, at the very least the users needs to specify which field
+To parse a timestamp, at the very least the users needs to specify which field
 has the timestamp and what the format of the timestamp is. The format can either
 by a predefined Unix timestamp or parsed using a custom format based on Go
 reference time.
