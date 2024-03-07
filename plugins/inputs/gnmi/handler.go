@@ -40,7 +40,7 @@ type handler struct {
 	trace               bool
 	canonicalFieldNames bool
 	trimSlash           bool
-	guessPathTag        bool
+	guessPathStrategy   string
 	log                 telegraf.Logger
 }
 
@@ -198,7 +198,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 	// Some devices do not provide a prefix, so do some guesswork based
 	// on the paths of the fields
-	if headerTags["path"] == "" && h.guessPathTag {
+	if headerTags["path"] == "" && h.guessPathStrategy == "common path" {
 		if prefixPath := guessPrefixFromUpdate(valueFields); prefixPath != "" {
 			headerTags["path"] = prefixPath
 		}
@@ -231,6 +231,10 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			}
 		}
 		aliasInfo := newInfoFromString(aliasPath)
+
+		if tags["path"] == "" && h.guessPathStrategy == "subscription" {
+			tags["path"] = aliasInfo.String()
+		}
 
 		// Group metrics
 		var key string
