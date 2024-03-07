@@ -30,8 +30,8 @@ there are three different parsers capable of reading JSON data:
   look at the other two options.
 * `json_v2`: The v2 parser was created out of the need to parse JSON objects. It
   can take on more advanced cases, at the cost of additional configuration.
-* `xpath`: The xpath parser is the most capable of the three options. While the
-  xpath name may imply XML data, it can parse a variety of data types using
+* `xpath_json`: The xpath parser is the most capable of the three options. While
+  the xpath name may imply XML data, it can parse a variety of data types using
   XPath expressions.
 
 ## Tags and fields
