@@ -166,7 +166,9 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		informerfactory[p.PodNamespace] = f
 	}
 
-	p.nsStore = f.Core().V1().Namespaces().Informer().GetStore()
+	if p.nsAnnotationPass != nil || p.nsAnnotationDrop != nil {
+		p.nsStore = f.Core().V1().Namespaces().Informer().GetStore()
+	}
 
 	podinformer := f.Core().V1().Pods()
 	_, err := podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -335,9 +337,6 @@ func podHasMatchingFieldSelector(pod *corev1.Pod, fieldSelector fields.Selector)
 
 // Get corev1.Namespace object by name
 func getNamespaceObject(name string, p *Prometheus) *corev1.Namespace {
-	if p.nsStore == nil { // can happen in tests
-		return nil
-	}
 	nsObj, exists, err := p.nsStore.GetByKey(name)
 	if err != nil {
 		p.Log.Errorf("Err fetching namespace '%s': %v", name, err)
@@ -354,9 +353,13 @@ func getNamespaceObject(name string, p *Prometheus) *corev1.Namespace {
 }
 
 func namespaceAnnotationMatch(nsName string, p *Prometheus) bool {
+	// In case of no filtering or any issues with acquiring namespace information
+	// just let it pass trough...
+	if (p.nsAnnotationPass == nil && p.nsAnnotationDrop == nil) || p.nsStore == nil {
+		return true
+	}
 	ns := getNamespaceObject(nsName, p)
 	if ns == nil {
-		// in case of errors or other problems let it through
 		return true
 	}
 
