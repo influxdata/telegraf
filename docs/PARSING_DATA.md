@@ -105,7 +105,7 @@ csv_timestamp_column = "time"
 csv_timestamp_format = "2006-01-02T15:04:05Z"
 ```
 
-```s
+```text
 file,node=node1 temp=32.3,humidity=23i,alarm=false 1678121543000000000
 file,node=node2 temp=22.6,humidity=44i,alarm=false 1678121543000000000
 file,node=node3 temp=17.9,humidity=56i,alarm=true 1678121543000000000
@@ -133,7 +133,7 @@ json_time_format = "unix_ns"
 
 ```
 
-```s
+```text
 file,node=node temp=32.3,humidity=23 1709572232123456789
 ```
 
@@ -176,7 +176,7 @@ data_format = "json_v2"
     type = "bool"
 ```
 
-```s
+```text
 file,node=node1 temp=32.3,humidity=23i,alarm=false 1678121543000000000
 file,node=node2 temp=22.6,humidity=44i,alarm=false 1678121543000000000
 file,node=node3 temp=17.9,humidity=56i,alarm=true 1678121543000000000
@@ -211,6 +211,6 @@ data_format = "xpath_json"
   timestamp_format = "2006-01-02T15:04:05.999999999Z"
 ```
 
-```s
+```text
 measurement,node=node1 alarm="false",humidity="23",temp="32.3" 1709547032123456000
 ```
