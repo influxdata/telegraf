@@ -224,6 +224,15 @@ require (
 )
 
 require (
+	github.com/aws/aws-sdk-go v1.45.25 // indirect
+	github.com/dennwc/varint v1.0.0 // indirect
+	github.com/go-kit/log v0.2.1 // indirect
+	github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd // indirect
+	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
+	github.com/prometheus/common/sigv4 v0.1.0 // indirect
+)
+
+require (
 	cloud.google.com/go v0.112.0 // indirect
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
