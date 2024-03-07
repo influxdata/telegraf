@@ -4,10 +4,11 @@ Telegraf has the ability to take data in a variety of formats. Telegraf requires
 configuration from the user in order to correctly parse, store, and send the
 original data. Telegraf does not take the raw data and maintain it internally.
 
-Telegraf uses [line protocol][] to store data. This means that data needs to be
-broken up into a metric name, tags, fields, and a timestamp. While all of these
-options are not required, they are available to the user and be necessary to
-define to ensure the data is correctly represented.
+Telegraf uses an internal metric representation consisting of the metric name,
+tags, fields and a timestamp. This is very similar to [line protocol][]. This
+means that data needs to be broken up into a metric name, tags, fields, and a
+timestamp. While all of these options are not required, they are available to
+the user and be necessary to define to ensure the data is correctly represented.
 
 [line protocol]: https://docs.influxdata.com/influxdb/cloud/reference/syntax/line-protocol/
 
@@ -25,7 +26,7 @@ applicable to the data.
 There is an exception when it comes to JSON data. Instead of a single parser,
 there are three different parsers capable of reading JSON data:
 
-* `json`: This parser is great for flat JSON data. If your JSON is more complex
+* `json`: This parser is great for flat JSON data. If the JSON is more complex
   and for example, has other objects or nested arrays, then do not use this and
   look at the other two options.
 * `json_v2`: The v2 parser was created out of the need to parse JSON objects. It
@@ -58,9 +59,29 @@ For Unix timestamps Telegraf understand the following settings:
 | `1709572232123456`    | `unix_us` |
 | `1709572232123456789` | `unix_ns` |
 
-To use a custom timestamp, a user must provide the [Go reference time][]
-notation. Here are a few example timestamps and their Go reference time
-equivalent:
+There are some named formats available as well:
+
+| Timestamp                             | Named Format  |
+|---------------------------------------|---------------|
+| `Mon Jan _2 15:04:05 2006`            | `ANSIC`       |
+| `Mon Jan _2 15:04:05 MST 2006`        | `UnixDate`    |
+| `Mon Jan 02 15:04:05 -0700 2006`      | `RubyDate`    |
+| `02 Jan 06 15:04 MST`                 | `RFC822`      |
+| `02 Jan 06 15:04 -0700`               | `RFC822Z`     |
+| `Monday, 02-Jan-06 15:04:05 MST`      | `RFC850`      |
+| `Mon, 02 Jan 2006 15:04:05 MST`       | `RFC1123`     |
+| `Mon, 02 Jan 2006 15:04:05 -0700`     | `RFC1123Z`    |
+| `2006-01-02T15:04:05Z07:00`           | `RFC3339`     |
+| `2006-01-02T15:04:05.999999999Z07:00` | `RFC3339Nano` |
+| `Jan _2 15:04:05`                     | `Stamp`       |
+| `Jan _2 15:04:05.000`                 | `StampMilli`  |
+| `Jan _2 15:04:05.000000`              | `StampMicro`  |
+| `Jan _2 15:04:05.000000000`           | `StampNano`   |
+
+If the timestamp does not conform to any of the above, then the user can specify
+a custom timestamp format, in which the user must provide the timestamp in
+[Go reference time][] notation. Here are a few example timestamps and their Go
+reference time equivalent:
 
 | Timestamp                     | Go reference time             |
 |-------------------------------|-------------------------------|
