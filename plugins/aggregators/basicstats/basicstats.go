@@ -14,13 +14,8 @@ import (
 var sampleConfig string
 
 type BasicStats struct {
-	Stats       []string `toml:"stats"`
-	CountSuffix string   `toml:"count_suffix"`
-	MinSuffix   string   `toml:"min_suffix"`
-	MaxSuffix   string   `toml:"max_suffix"`
-	MeanSuffix  string   `toml:"mean_suffix"`
-	SumSuffix   string   `toml:"sum_suffix"`
-	Log         telegraf.Logger
+	Stats []string `toml:"stats"`
+	Log   telegraf.Logger
 
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -163,35 +158,19 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
 			if b.statsConfig.count {
-				fields[k+b.CountSuffix] = v.count
+				fields[k+"_count"] = v.count
 			}
 			if b.statsConfig.min {
-				fields[k+b.MinSuffix] = v.min
+				fields[k+"_min"] = v.min
 			}
 			if b.statsConfig.max {
-				fields[k+b.MaxSuffix] = v.max
+				fields[k+"_max"] = v.max
 			}
 			if b.statsConfig.mean {
-				fields[k+b.MeanSuffix] = v.mean
+				fields[k+"_mean"] = v.mean
 			}
 			if b.statsConfig.sum {
-				fields[k+b.SumSuffix] = v.sum
-			}
-
-			if b.statsConfig.count {
-				fields[k+b.CountSuffix] = v.count
-			}
-			if b.statsConfig.min {
-				fields[k+b.MinSuffix] = v.min
-			}
-			if b.statsConfig.max {
-				fields[k+b.MaxSuffix] = v.max
-			}
-			if b.statsConfig.mean {
-				fields[k+b.MeanSuffix] = v.mean
-			}
-			if b.statsConfig.sum {
-				fields[k+b.SumSuffix] = v.sum
+				fields[k+"_sum"] = v.sum
 			}
 
 			//v.count always >=1

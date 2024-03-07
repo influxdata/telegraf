@@ -155,11 +155,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## This cane be of help, in case debugging dimension filters, or partial coverage of
     ## discovery scope vs monitoring scope
     # allow_dps_without_discovery = false
-  ## Allow metrics without discovery data, if discovery is enabled.
-  ## If set to true, then metric without discovery data would be emitted, otherwise dropped.
-  ## This cane be of help, in case debugging dimension filters, or partial coverage of
-  ## discovery scope vs monitoring scope
-  # allow_dps_without_discovery = false
 ```
 
 ### Requirements and Terminology

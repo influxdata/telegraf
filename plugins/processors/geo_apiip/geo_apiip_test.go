@@ -30,6 +30,9 @@ func calculateProcessedTags(processor GeoAPI, m telegraf.Metric) map[string]stri
 func TestGetLocation(t *testing.T) {
 	p := New()
 	p.APIKey = os.Getenv("APIIP_API_KEY")
+	if p.APIKey == "" {
+		t.Skip("APIIP_API_KEY not set")
+	}
 	p.Log = &testutil.Logger{}
 	go p.cache.Start()
 
@@ -44,6 +47,9 @@ func TestGetLocation(t *testing.T) {
 func TestAddTagsIP(t *testing.T) {
 	p := New()
 	p.APIKey = os.Getenv("APIIP_API_KEY")
+	if p.APIKey == "" {
+		t.Skip("APIIP_API_KEY not set")
+	}
 	p.IP = "69.6.30.203"
 	p.Log = &testutil.Logger{}
 	go p.cache.Start()
@@ -65,6 +71,9 @@ func TestAddTagsIP(t *testing.T) {
 func TestAddTagsOrigin(t *testing.T) {
 	p := New()
 	p.APIKey = os.Getenv("APIIP_API_KEY")
+	if p.APIKey == "" {
+		t.Skip("APIIP_API_KEY not set")
+	}
 	p.Log = &testutil.Logger{}
 	go p.cache.Start()
 
@@ -82,6 +91,9 @@ func TestAddTagsOrigin(t *testing.T) {
 func TestAddTagsIPTag(t *testing.T) {
 	p := New()
 	p.APIKey = os.Getenv("APIIP_API_KEY")
+	if p.APIKey == "" {
+		t.Skip("APIIP_API_KEY not set")
+	}
 	p.IPTag = "source_ip"
 	p.Log = &testutil.Logger{}
 	go p.cache.Start()
@@ -103,6 +115,9 @@ func TestAddTagsIPTag(t *testing.T) {
 func TestAddTagsIPCache(t *testing.T) {
 	p := New()
 	p.APIKey = os.Getenv("APIIP_API_KEY")
+	if p.APIKey == "" {
+		t.Skip("APIIP_API_KEY not set")
+	}
 	p.IP = "69.6.30.203"
 	p.Log = &testutil.Logger{}
 	p.UpdateInterval = config.Duration(time.Second * time.Duration(5))

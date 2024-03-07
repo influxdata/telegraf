@@ -1,4 +1,4 @@
-//go:build !custom || processors || processors.apiip
+//go:build !custom || processors || processors.geo_apiip
 
 package all
 
