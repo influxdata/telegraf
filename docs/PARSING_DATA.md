@@ -95,6 +95,12 @@ reference time equivalent:
 Note for fractional second values, the user can use either a `9` or `0`. Using a
 `0` forces a certain length, but using `9`s do not.
 
+Please note, that timezone abbreviations are ambiguous! For example `MST`, can
+stand for either Mountain Standard Time (UTC-07) or Malaysia Standard Time
+(UTC+08). As such, avoid abbreviated timezones if possible.
+
+Unix timestamps use UTC, there is no concept of a timezone for a Unix timestamp.
+
 [Go reference time]: https://pkg.go.dev/time#pkg-constants
 
 ## Examples
