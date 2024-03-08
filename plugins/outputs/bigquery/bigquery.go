@@ -89,13 +89,11 @@ func (s *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
-	defer cancel()
 
 	if s.CredentialsFile != "" {
 		credentialsOption = option.WithCredentialsFile(s.CredentialsFile)
 	} else {
-		creds, err := google.FindDefaultCredentials(ctx)
+		creds, err := google.FindDefaultCredentials(ctx, bigquery.Scope)
 		if err != nil {
 			return fmt.Errorf(
 				"unable to find Google Cloud Platform Application Default Credentials: %w. "+
