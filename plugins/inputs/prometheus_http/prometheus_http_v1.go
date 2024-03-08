@@ -154,7 +154,7 @@ func (p *PrometheusHttpV1) processVector(res *PrometheusHttpV1Response, when tim
 
 func (p *PrometheusHttpV1) GetData(query string, period *PrometheusHttpPeriod, push PrometheusHttpPushFunc) error {
 
-	gid := utils.GetRoutineID()
+	gid := utils.GoRoutineID()
 	p.log.Debugf("[%v] %s prometheus query => %s", gid, p.name, query)
 
 	params := make(url.Values)

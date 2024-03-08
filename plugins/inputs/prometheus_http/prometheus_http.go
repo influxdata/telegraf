@@ -447,7 +447,7 @@ func (p *PrometheusHttp) addFields(name string, value interface{}) map[string]in
 func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 	ds PrometheusHttpDatasource, callback func(err error)) {
 
-	gid := utils.GetRoutineID()
+	gid := utils.GoRoutineID()
 	p.Log.Debugf("[%d] %s start gathering %s...", gid, p.Name, pm.Name)
 
 	timeout := pm.Timeout
@@ -582,7 +582,7 @@ func (ptt *PrometheusHttpTextTemplate) FCacheRegexMatchObjectNameByField(obj map
 		}
 	}
 	r := ""
-	v := ptt.template.RegexMatchObjectNameByField(obj, field, value)
+	v := ptt.template.RegexMatchObjectByField(obj, field, value)
 	if v != nil && ptt.input.cache != nil {
 		m := ptt.input.cache[ptt.hash]
 		if m == nil {
@@ -793,7 +793,7 @@ func (p *PrometheusHttp) Gather(acc telegraf.Accumulator) error {
 	p.acc = acc
 
 	var ds PrometheusHttpDatasource = nil
-	gid := utils.GetRoutineID()
+	gid := utils.GoRoutineID()
 	// Gather data
 	err := p.gatherMetrics(gid, ds)
 	return err
@@ -805,7 +805,7 @@ func (p *PrometheusHttp) Printf(format string, v ...interface{}) {
 
 func (p *PrometheusHttp) Init() error {
 
-	gid := utils.GetRoutineID()
+	gid := utils.GoRoutineID()
 
 	if p.Name == "" {
 		p.Name = "unknown"
