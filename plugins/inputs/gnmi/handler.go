@@ -236,9 +236,9 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		var key string
 		if h.canonicalFieldNames {
 			// Strip the origin is any for the field names
-			if parts := strings.SplitN(strings.ReplaceAll(field.path.String(), "-", "_"), ":", 2); len(parts) == 2 {
-				key = parts[1]
-			}
+			field.path.origin = ""
+			key = field.path.String()
+			key = strings.ReplaceAll(key, "-", "_")
 		} else {
 			// If the alias is a subpath of the field path and the alias is
 			// shorter than the full path to avoid an empty key, then strip the
