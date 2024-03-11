@@ -62,7 +62,7 @@ func buildWqlStatements(s *Wmi) {
 	}
 }
 
-func (q *Query) doQuery(acc telegraf.Accumulator) error {
+func (q *Query) execute(acc telegraf.Accumulator) error {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -110,27 +110,27 @@ func (q *Query) doQuery(acc telegraf.Accumulator) error {
 	result := resultRaw.ToIDispatch()
 	defer resultRaw.Clear()
 
-	count, err := oleInt64(result, "Count")
+	countRaw, err := oleutil.GetProperty(result, "Count")
 	if err != nil {
 		return fmt.Errorf("failed getting Count: %w", err)
 	}
+	count := countRaw.Val
+	defer countRaw.Clear()
 
 	for i := int64(0); i < count; i++ {
-		// item is a SWbemObject
 		itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
 		if err != nil {
 			return fmt.Errorf("failed calling method ItemIndex: %w", err)
 		}
 
-		err = q.extractProperties(itemRaw, acc)
-		if err != nil {
+		if err := q.extractProperties(acc, itemRaw); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (q *Query) extractProperties(itemRaw *ole.VARIANT, acc telegraf.Accumulator) error {
+func (q *Query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT) error {
 	tags, fields := map[string]string{}, map[string]interface{}{}
 
 	item := itemRaw.ToIDispatch()
@@ -172,14 +172,4 @@ func (q *Query) extractProperties(itemRaw *ole.VARIANT, acc telegraf.Accumulator
 	}
 	acc.AddFields(q.ClassName, fields, tags)
 	return nil
-}
-
-func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
-	v, err := oleutil.GetProperty(item, prop)
-	if err != nil {
-		return 0, err
-	}
-	defer v.Clear()
-
-	return v.Val, nil
 }

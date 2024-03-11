@@ -39,7 +39,7 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(q Query) {
 			defer wg.Done()
-			err := q.doQuery(acc)
+			err := q.execute(acc)
 			if err != nil {
 				acc.AddError(err)
 			}
