@@ -1462,8 +1462,8 @@ func TestHexEncoding(t *testing.T) {
 	}
 
 	parser := &Parser{
-		Endianness:  "be",
-		HexEncoding: true,
+		Endianness: "be",
+		Encoding:   "hex",
 		Configs: []Config{
 			{
 				Entries: []Entry{dummyEntry},
