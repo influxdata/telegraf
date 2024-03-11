@@ -88,6 +88,8 @@ func (s *BigQuery) Connect() error {
 func (s *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
+	// https://cloud.google.com/go/docs/reference/cloud.google.com/go/0.94.1#hdr-Timeouts_and_Cancellation
+	// Do not attempt to add timeout to this context for the bigquery client.
 	ctx := context.Background()
 
 	if s.CredentialsFile != "" {
