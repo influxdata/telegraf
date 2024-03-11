@@ -700,6 +700,49 @@ func TestUntypedtartupBehaviorIgnore(t *testing.T) {
 	}
 }
 
+func TestPartiallyStarted(t *testing.T) {
+	serr := &internal.StartupError{
+		Err:     errors.New("partial err"),
+		Retry:   true,
+		Partial: true,
+	}
+	mo := &mockOutput{
+		startupErrorCount: 2,
+		startupError:      serr,
+	}
+	ro := NewRunningOutput(
+		mo,
+		&OutputConfig{
+			Filter:               Filter{},
+			Name:                 "test_name",
+			Alias:                "test_alias",
+			StartupErrorBehavior: "retry",
+		},
+		5, 10,
+	)
+	require.NoError(t, ro.Init())
+
+	// For retry, Connect() should succeed even though there is an error but
+	// should return an error on Write() until we successfully connect.
+	require.NoError(t, ro.Connect(), serr)
+	require.False(t, ro.started)
+
+	ro.AddMetric(testutil.TestMetric(1))
+	require.NoError(t, ro.Write())
+	require.False(t, ro.started)
+	require.Equal(t, 1, mo.writes)
+
+	ro.AddMetric(testutil.TestMetric(2))
+	require.NoError(t, ro.Write())
+	require.True(t, ro.started)
+	require.Equal(t, 2, mo.writes)
+
+	ro.AddMetric(testutil.TestMetric(3))
+	require.NoError(t, ro.Write())
+	require.True(t, ro.started)
+	require.Equal(t, 3, mo.writes)
+}
+
 type mockOutput struct {
 	sync.Mutex
 
