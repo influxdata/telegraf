@@ -4,6 +4,7 @@ package win_wmi
 
 import (
 	_ "embed"
+	"fmt"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -24,7 +25,14 @@ const sFalse = 0x00000001
 
 // Init function
 func (s *Wmi) Init() error {
-	return compileInputs(s)
+	for i := range s.Queries {
+		q := &s.Queries[i]
+		if err := q.prepare(); err != nil {
+			return fmt.Errorf("preparing query %q failed: %w", q.ClassName, err)
+		}
+	}
+
+	return nil
 }
 
 // SampleConfig function

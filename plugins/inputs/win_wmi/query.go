@@ -27,39 +27,22 @@ type Query struct {
 	query     string
 }
 
-func compileInputs(s *Wmi) error {
-	buildWqlStatements(s)
-	return compileTagFilters(s)
-}
-
-func compileTagFilters(s *Wmi) error {
-	for i, q := range s.Queries {
-		var err error
-		s.Queries[i].tagFilter, err = compileTagFilter(q)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func compileTagFilter(q Query) (filter.Filter, error) {
-	tagFilter, err := filter.NewIncludeExcludeFilterDefaults(q.TagPropertiesInclude, nil, false, false)
+func (q *Query) prepare() error {
+	// Compile the filter
+	f, err := filter.Compile(q.TagPropertiesInclude)
 	if err != nil {
-		return nil, fmt.Errorf("creating tag filter failed: %w", err)
+		return fmt.Errorf("compiling tag-filter failed: %w", err)
 	}
-	return tagFilter, nil
-}
+	q.tagFilter = f
 
-// build a WMI query from input configuration
-func buildWqlStatements(s *Wmi) {
-	for i, q := range s.Queries {
-		wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
-		if len(q.Filter) > 0 {
-			wql = fmt.Sprintf("%s WHERE %s", wql, q.Filter)
-		}
-		s.Queries[i].query = wql
+	// Construct the overall query from the given parts
+	wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
+	if len(q.Filter) > 0 {
+		wql += " WHERE " + q.Filter
 	}
+	q.query = wql
+
+	return nil
 }
 
 func (q *Query) execute(acc telegraf.Accumulator) error {
