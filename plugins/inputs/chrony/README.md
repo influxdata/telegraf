@@ -17,7 +17,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Get standard chrony metrics, requires chronyc executable.
+# Get standard chrony metrics.
 [[inputs.chrony]]
   ## Server address of chronyd with address scheme
   ## If empty or not set, the plugin will mimic the behavior of chronyc and
