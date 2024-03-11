@@ -35,7 +35,7 @@ func (p *Parser) Init() error {
 	}
 	if p.HexEncoding {
 		if p.Encoding != "" && p.Encoding != "hex" {
-			return fmt.Errorf("conflicting settings between 'hex_encoding' and 'binary_encoding'")
+			return errors.New("conflicting settings between 'hex_encoding' and 'binary_encoding'")
 		}
 		p.Encoding = "hex"
 	}
