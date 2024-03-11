@@ -127,7 +127,7 @@ func (q *Query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT
 		value := propertyRaw.Value()
 		propertyRaw.Clear()
 
-		if q.tagFilter.Match(name) {
+		if q.tagFilter != nil && q.tagFilter.Match(name) {
 			s, err := internal.ToString(value)
 			if err != nil {
 				return fmt.Errorf("converting property %q failed: %w", s, err)
