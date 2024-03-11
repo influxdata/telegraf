@@ -62,8 +62,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # trim_field_names = false
 
   ## Guess the path-tag if an update does not contain a prefix-path
-  ## If enabled, the common-path of all elements in the update is used.
-  # guess_path_tag = false
+  ## Supported values are
+  ##   none         -- do not add a 'path' tag
+  ##   common path  -- use the common path elements of all fields in an update
+  ##   subscription -- use the subscription path
+  # path_guessing_strategy = "none"
 
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = false
@@ -163,12 +166,14 @@ ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=
 
 ## Troubleshooting
 
+### Empty metric-name warning
+
 Some devices (e.g. Juniper) report spurious data with response paths not
 corresponding to any subscription. In those cases, Telegraf will not be able
 to determine the metric name for the response and you get an
 *empty metric-name warning*
 
-For examplem if you subscribe to `/junos/system/linecard/cpu/memory` but the
+For example if you subscribe to `/junos/system/linecard/cpu/memory` but the
 corresponding response arrives with path
 `/components/component/properties/property/...` To avoid those issues, you can
 manually map the response to a metric name using the `aliases` option like
@@ -190,3 +195,14 @@ manually map the response to a metric name using the `aliases` option like
 
 If this does *not* solve the issue, please follow the warning instructions and
 open an issue with the response, your configuration and the metric you expect.
+
+### Missing `path` tag
+
+Some devices (e.g. Arista) omit the prefix and specify the path in the update
+if there is only one value reported. This leads to a missing `path` tag for
+the resulting metrics. In those cases you should set `path_guessing_strategy`
+to `subscription` to use the subscription path as `path` tag.
+
+Other devices might omit the prefix in updates altogether. Here setting
+`path_guessing_strategy` to `common path` can help to infer the `path` tag by
+using the part of the path that is common to all values in the update.
