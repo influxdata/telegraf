@@ -16,17 +16,17 @@ var sampleConfig string
 
 // Wmi struct
 type Wmi struct {
-	Queries []Query `toml:"query"`
-	Log     telegraf.Logger
+	Queries []Query         `toml:"query"`
+	Log     telegraf.Logger `toml:"-"`
 }
 
 // S_FALSE is returned by CoInitializeEx if it was already called on this thread.
 const sFalse = 0x00000001
 
 // Init function
-func (s *Wmi) Init() error {
-	for i := range s.Queries {
-		q := &s.Queries[i]
+func (w *Wmi) Init() error {
+	for i := range w.Queries {
+		q := &w.Queries[i]
 		if err := q.prepare(); err != nil {
 			return fmt.Errorf("preparing query %q failed: %w", q.ClassName, err)
 		}
@@ -36,21 +36,18 @@ func (s *Wmi) Init() error {
 }
 
 // SampleConfig function
-func (s *Wmi) SampleConfig() string {
+func (*Wmi) SampleConfig() string {
 	return sampleConfig
 }
 
 // Gather function
-func (s *Wmi) Gather(acc telegraf.Accumulator) error {
+func (w *Wmi) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	for _, query := range s.Queries {
+	for _, query := range w.Queries {
 		wg.Add(1)
 		go func(q Query) {
 			defer wg.Done()
-			err := q.execute(acc)
-			if err != nil {
-				acc.AddError(err)
-			}
+			acc.AddError(q.execute(acc))
 		}(query)
 	}
 	wg.Wait()
