@@ -136,51 +136,42 @@ func (q *Query) extractProperties(itemRaw *ole.VARIANT, acc telegraf.Accumulator
 	item := itemRaw.ToIDispatch()
 	defer item.Release()
 
-	for _, wmiProperty := range q.Properties {
-		propertyValue, err := getPropertyValue(item, wmiProperty)
+	for _, name := range q.Properties {
+		propertyRaw, err := oleutil.GetProperty(item, name)
 		if err != nil {
-			return err
+			return fmt.Errorf("getting property %q failed: %w", name, err)
+		}
+		value := propertyRaw.Value()
+		propertyRaw.Clear()
+
+		if q.tagFilter.Match(name) {
+			s, err := internal.ToString(value)
+			if err != nil {
+				return fmt.Errorf("converting property %q failed: %w", s, err)
+			}
+			tags[name] = s
+			continue
 		}
 
-		if q.tagFilter.Match(wmiProperty) {
-			valStr, err := internal.ToString(propertyValue)
-			if err != nil {
-				return fmt.Errorf("converting property %q failed: %w", wmiProperty, err)
-			}
-			tags[wmiProperty] = valStr
-		} else {
-			var fieldValue interface{}
-			switch v := propertyValue.(type) {
-			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-				fieldValue = v
-			case string:
-				fieldValue = v
-			case bool:
-				fieldValue = v
-			case []byte:
-				fieldValue = string(v)
-			case fmt.Stringer:
-				fieldValue = v.String()
-			case nil:
-				fieldValue = nil
-			default:
-				return fmt.Errorf("property %q of type \"%T\" unsupported", wmiProperty, v)
-			}
-			fields[wmiProperty] = fieldValue
+		switch v := value.(type) {
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			fields[name] = v
+		case string:
+			fields[name] = v
+		case bool:
+			fields[name] = v
+		case []byte:
+			fields[name] = string(v)
+		case fmt.Stringer:
+			fields[name] = v.String()
+		case nil:
+			fields[name] = nil
+		default:
+			return fmt.Errorf("property %q of type \"%T\" unsupported", name, v)
 		}
 	}
 	acc.AddFields(q.ClassName, fields, tags)
 	return nil
-}
-
-func getPropertyValue(item *ole.IDispatch, wmiProperty string) (interface{}, error) {
-	prop, err := oleutil.GetProperty(item, wmiProperty)
-	if err != nil {
-		return nil, fmt.Errorf("failed GetProperty: %w", err)
-	}
-	defer prop.Clear()
-
-	return prop.Value(), nil
 }
 
 func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
