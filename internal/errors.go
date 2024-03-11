@@ -10,8 +10,9 @@ var ErrNotConnected = errors.New("not connected")
 // depending on the configured startup-error-behavior. The 'RemovePlugin'
 // flag denotes if the agent should remove the plugin from further processing.
 type StartupError struct {
-	Err   error
-	Retry bool
+	Err     error
+	Retry   bool
+	Partial bool
 }
 
 func (e *StartupError) Error() string {

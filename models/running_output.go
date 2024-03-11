@@ -248,11 +248,16 @@ func (r *RunningOutput) Write() error {
 	if !r.started {
 		r.retries++
 		if err := r.Output.Connect(); err != nil {
-			r.StartupErrors.Incr(1)
-			return internal.ErrNotConnected
+			var serr *internal.StartupError
+			if !errors.As(err, &serr) || !serr.Retry || !serr.Partial {
+				r.StartupErrors.Incr(1)
+				return internal.ErrNotConnected
+			}
+			r.log.Debugf("Partially connected after %d attempts", r.retries)
+		} else {
+			r.started = true
+			r.log.Debugf("Successfully connected after %d attempts", r.retries)
 		}
-		r.started = true
-		r.log.Debugf("Successfully connected after %d attempts", r.retries)
 	}
 
 	if output, ok := r.Output.(telegraf.AggregatingOutput); ok {
