@@ -5,10 +5,10 @@ configuration from the user in order to correctly parse, store, and send the
 original data. Telegraf does not take the raw data and maintain it internally.
 
 Telegraf uses an internal metric representation consisting of the metric name,
-tags, fields and a timestamp. This is very similar to [line protocol][]. This
+tags, fields and a timestamp, very similar to [line protocol][]. This
 means that data needs to be broken up into a metric name, tags, fields, and a
-timestamp. While all of these options are not required, they are available to
-the user and be necessary to define to ensure the data is correctly represented.
+timestamp. While none of these options are required, they are available to
+the user and might be necessary to ensure the data is represented correctly.
 
 [line protocol]: https://docs.influxdata.com/influxdb/cloud/reference/syntax/line-protocol/
 
@@ -47,10 +47,10 @@ specified as a tag.
 
 To parse a timestamp, at the very least the users needs to specify which field
 has the timestamp and what the format of the timestamp is. The format can either
-by a predefined Unix timestamp or parsed using a custom format based on Go
+be a predefined Unix timestamp or parsed using a custom format based on Go
 reference time.
 
-For Unix timestamps Telegraf understand the following settings:
+For Unix timestamps Telegraf understands the following settings:
 
 | Timestamp             | Timestamp Format |
 |-----------------------|------------------|
