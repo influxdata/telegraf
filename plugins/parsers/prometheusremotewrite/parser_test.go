@@ -94,8 +94,27 @@ func generateTestHistogram(i int) *histogram.Histogram {
 	}
 }
 
+func generateTestFloatHistogram(i int) *histogram.FloatHistogram {
+	return &histogram.FloatHistogram{
+		Count:         12 + float64(i*9),
+		ZeroCount:     2 + float64(i),
+		ZeroThreshold: 0.001,
+		Sum:           18.4 * float64(i+1),
+		Schema:        1,
+		PositiveSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		PositiveBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
+		NegativeSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		NegativeBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
+	}
+}
+
 func TestHistograms(t *testing.T) {
-	//histograms :=
 	prompbInput := prompb.WriteRequest{
 		Timeseries: []prompb.TimeSeries{
 			{
@@ -103,9 +122,15 @@ func TestHistograms(t *testing.T) {
 					{Name: "__name__", Value: "test_metric_seconds"},
 				},
 				Histograms: []prompb.Histogram{
-					// Use this for float testing
-					//remote.FloatHistogramToHistogramProto(0, generateTestFloatHistogram(1))
 					remote.HistogramToHistogramProto(0, generateTestHistogram(1)),
+				},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "test_float_metric_seconds"},
+				},
+				Histograms: []prompb.Histogram{
+					remote.FloatHistogramToHistogramProto(0, generateTestFloatHistogram(2)),
 				},
 			},
 		},
@@ -131,6 +156,22 @@ func TestHistograms(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
+		testutil.MustMetric(
+			"prometheus_remote_write",
+			map[string]string{},
+			map[string]interface{}{
+				"test_float_metric_seconds_sum": float64(55.199999999999996),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"prometheus_remote_write",
+			map[string]string{},
+			map[string]interface{}{
+				"test_float_metric_seconds_count": float64(30),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
 	parser := Parser{
@@ -138,7 +179,7 @@ func TestHistograms(t *testing.T) {
 	}
 	metrics, err := parser.Parse(inoutBytes)
 	require.NoError(t, err)
-	require.Len(t, metrics, 11)
+	require.Len(t, metrics, 22)
 	testutil.RequireMetricsSubset(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 

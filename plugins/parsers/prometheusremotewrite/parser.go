@@ -69,6 +69,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			} else {
 				h = remote.HistogramProtoToFloatHistogram(hp)
 			}
+
 			if hp.Timestamp > 0 {
 				t = time.Unix(0, hp.Timestamp*1000000)
 			}
@@ -86,19 +87,18 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			iter := h.AllBucketIterator()
 			for iter.Next() {
 				bucket := iter.At()
-				fmt.Println(bucket.String())
+				fields = make(map[string]interface{}, 1)
+				fields[metricName] = bucket.Count
 				localTags := make(map[string]string, len(tags)+1)
 				localTags[metricName+"_le"] = fmt.Sprintf("%g", bucket.Upper)
 				for k, v := range tags {
 					localTags[k] = v
 				}
-				fields = make(map[string]interface{})
-				fields[metricName] = bucket.Count
+
 				m := metric.New("prometheus_remote_write", localTags, fields, t)
 				metrics = append(metrics, m)
 			}
 		}
-		fmt.Println()
 	}
 	return metrics, err
 }
