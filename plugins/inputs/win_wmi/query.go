@@ -10,7 +10,9 @@ import (
 
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 )
@@ -23,17 +25,43 @@ type Query struct {
 	Filter               string   `toml:"filter"`
 	TagPropertiesInclude []string `toml:"tag_properties"`
 
-	tagFilter filter.Filter
-	query     string
+	host             string
+	query            string
+	connectionParams []interface{}
+	tagFilter        filter.Filter
 }
 
-func (q *Query) prepare() error {
+func (q *Query) prepare(host string, username, password config.Secret) error {
 	// Compile the filter
 	f, err := filter.Compile(q.TagPropertiesInclude)
 	if err != nil {
 		return fmt.Errorf("compiling tag-filter failed: %w", err)
 	}
 	q.tagFilter = f
+
+	q.host = host
+	if q.host != "" {
+		q.connectionParams = append(q.connectionParams, q.host)
+	} else {
+		q.connectionParams = append(q.connectionParams, nil)
+	}
+	q.connectionParams = append(q.connectionParams, q.Namespace)
+	if !username.Empty() {
+		u, err := username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username secret failed: %w", err)
+		}
+		q.connectionParams = append(q.connectionParams, u.String())
+		username.Destroy()
+	}
+	if !password.Empty() {
+		p, err := password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password secret failed: %w", err)
+		}
+		q.connectionParams = append(q.connectionParams, p.String())
+		password.Destroy()
+	}
 
 	// Construct the overall query from the given parts
 	wql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.Properties, ", "), q.ClassName)
@@ -78,7 +106,8 @@ func (q *Query) execute(acc telegraf.Accumulator) error {
 	defer wmi.Release()
 
 	// service is a SWbemServices
-	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, q.Namespace)
+	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", q.connectionParams...)
+
 	if err != nil {
 		return fmt.Errorf("failed calling method ConnectServer: %w", err)
 	}
@@ -115,6 +144,10 @@ func (q *Query) execute(acc telegraf.Accumulator) error {
 
 func (q *Query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT) error {
 	tags, fields := map[string]string{}, map[string]interface{}{}
+
+	if q.host != "" {
+		tags["source"] = q.host
+	}
 
 	item := itemRaw.ToIDispatch()
 	defer item.Release()

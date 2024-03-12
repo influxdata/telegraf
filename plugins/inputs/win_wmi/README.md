@@ -19,12 +19,27 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
 # Input plugin to query Windows Management Instrumentation
 # This plugin ONLY supports Windows
 [[inputs.win_wmi]]
+  ## Hostname or IP for remote connections, by default the local machine is queried
+  # host = ""
+  ## Credentials for the connection, by default no credentials are used
+  # username = ""
+  # password = ""
+
   [[inputs.win_wmi.query]]
     # a string representing the WMI namespace to be queried
     namespace = "root\\cimv2"

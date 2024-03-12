@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -17,8 +18,11 @@ var sampleConfig string
 
 // Wmi struct
 type Wmi struct {
-	Queries []Query         `toml:"query"`
-	Log     telegraf.Logger `toml:"-"`
+	Host     string          `toml:"host"`
+	Username config.Secret   `toml:"username"`
+	Password config.Secret   `toml:"password"`
+	Queries  []Query         `toml:"query"`
+	Log      telegraf.Logger `toml:"-"`
 }
 
 // S_FALSE is returned by CoInitializeEx if it was already called on this thread.
@@ -28,7 +32,7 @@ const sFalse = 0x00000001
 func (w *Wmi) Init() error {
 	for i := range w.Queries {
 		q := &w.Queries[i]
-		if err := q.prepare(); err != nil {
+		if err := q.prepare(w.Host, w.Username, w.Password); err != nil {
 			return fmt.Errorf("preparing query %q failed: %w", q.ClassName, err)
 		}
 	}
