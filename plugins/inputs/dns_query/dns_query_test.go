@@ -57,6 +57,9 @@ func TestGatheringMxRecord(t *testing.T) {
 	queryTime, ok := m.Fields["query_time_ms"].(float64)
 	require.True(t, ok)
 	require.NotEqual(t, float64(0), queryTime)
+	preference, ok := m.Fields["preference"].(uint16)
+	require.True(t, ok)
+	require.NotEqual(t, 0, preference)
 }
 
 func TestGatheringRootDomain(t *testing.T) {

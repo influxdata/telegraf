@@ -155,8 +155,13 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	tags["result"] = "success"
 	fields["result_code"] = uint64(Success)
 
+	// Fill out custom fields for specific record types
 	for _, record := range r.Answer {
 		switch d.RecordType {
+		case "MX":
+			if mx, ok := record.(*dns.MX); ok {
+				fields["preference"] = mx.Preference
+			}
 		case "SOA":
 			if soa, ok := record.(*dns.SOA); ok {
 				fields["serial"] = soa.Serial
