@@ -13,6 +13,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `auth_password` and
+`priv_password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -59,7 +68,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The maximum number of SNMP requests to make at the same time.
   # max_parallel_lookups = 16
 
-  ## The amount of agents to cache entries for. If limit is reached, 
+  ## The amount of agents to cache entries for. If limit is reached,
   ## oldest will be removed first. 0 means no limit.
   # max_cache_entries = 100
 

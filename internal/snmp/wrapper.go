@@ -109,7 +109,14 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			return GosnmpWrapper{}, errors.New("invalid authProtocol")
 		}
 
-		sp.AuthenticationPassphrase = s.AuthPassword
+		if !s.AuthPassword.Empty() {
+			p, err := s.AuthPassword.Get()
+			if err != nil {
+				return GosnmpWrapper{}, fmt.Errorf("getting authentication password failed: %w", err)
+			}
+			sp.AuthenticationPassphrase = p.String()
+			p.Destroy()
+		}
 
 		switch strings.ToLower(s.PrivProtocol) {
 		case "des":
@@ -130,12 +137,16 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			return GosnmpWrapper{}, errors.New("invalid privProtocol")
 		}
 
-		sp.PrivacyPassphrase = s.PrivPassword
-
+		if !s.PrivPassword.Empty() {
+			p, err := s.PrivPassword.Get()
+			if err != nil {
+				return GosnmpWrapper{}, fmt.Errorf("getting private password failed: %w", err)
+			}
+			sp.PrivacyPassphrase = p.String()
+			p.Destroy()
+		}
 		sp.AuthoritativeEngineID = s.EngineID
-
 		sp.AuthoritativeEngineBoots = s.EngineBoots
-
 		sp.AuthoritativeEngineTime = s.EngineTime
 	}
 	return gs, nil
