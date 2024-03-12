@@ -23,6 +23,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   password = "mypassword"
   secret = "mysecret"
 
+  ## Request source server IP, normally the server running telegraf.
+  # request_ip = ""
+
   ## Maximum time to receive response.
   # response_timeout = "5s"
 ```
