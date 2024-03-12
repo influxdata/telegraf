@@ -220,7 +220,8 @@ func (p *PrometheusHttp) getTemplateValue(t *toolsRender.TextTemplate, value flo
 func (p *PrometheusHttp) fRenderMetricTag(template string, obj interface{}) interface{} {
 
 	t, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
-		Content: template,
+		Content:     template,
+		FilterFuncs: true,
 	}, p)
 	if err != nil {
 		p.Log.Error(err)
@@ -582,7 +583,8 @@ func (ptt *PrometheusHttpTextTemplate) FCacheRegexMatchObjectNameByField(obj map
 		}
 	}
 	r := ""
-	v := ptt.template.RegexMatchObjectByField(obj, field, value)
+	v := ptt.template.RegexMatchFindKeys(obj, field, value)
+	//v := ptt.template.RegexMatchObjectNameByField(obj, field, value)
 	if v != nil && ptt.input.cache != nil {
 		m := ptt.input.cache[ptt.hash]
 		if m == nil {
@@ -608,9 +610,10 @@ func (p *PrometheusHttp) getDefaultTemplate(m *PrometheusHttpMetric, name, value
 	funcs["regexMatchObjectNameByField"] = ptt.FCacheRegexMatchObjectNameByField
 
 	tpl, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
-		Name:    fmt.Sprintf("%s_template", name),
-		Content: value,
-		Funcs:   funcs,
+		Name:        fmt.Sprintf("%s_template", name),
+		Content:     value,
+		Funcs:       funcs,
+		FilterFuncs: true,
 	}, p)
 
 	if err != nil {
