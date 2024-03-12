@@ -203,6 +203,7 @@ func (o *OpenStack) Start(_ telegraf.Accumulator) error {
 			if err != nil {
 				return fmt.Errorf("unable to create V3 volume client: %w", err)
 			}
+			hasBlockStorage = true
 		}
 	}
 
@@ -786,7 +787,7 @@ func (o *OpenStack) gatherServers(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unable to extract servers: %w", err)
 		}
 		for _, server := range extractedServers {
-			if o.services["server"] {
+			if o.services["servers"] {
 				o.accumulateServer(acc, server, hypervisor.HypervisorHostname)
 			}
 			if o.ServerDiagnotics && server.Status == "ACTIVE" {
