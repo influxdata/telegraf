@@ -155,6 +155,19 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 	tags["result"] = "success"
 	fields["result_code"] = uint64(Success)
 
+	for _, record := range r.Answer {
+		switch d.RecordType {
+		case "SOA":
+			if soa, ok := record.(*dns.SOA); ok {
+				fields["serial"] = soa.Serial
+				fields["refresh"] = soa.Refresh
+				fields["retry"] = soa.Retry
+				fields["expire"] = soa.Expire
+				fields["minttl"] = soa.Minttl
+			}
+		}
+	}
+
 	if d.fieldEnabled["first_ip"] {
 		for _, record := range r.Answer {
 			if ip, found := extractIP(record); found {
