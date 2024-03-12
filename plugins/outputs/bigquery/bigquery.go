@@ -88,14 +88,14 @@ func (s *BigQuery) Connect() error {
 func (s *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
+	// https://cloud.google.com/go/docs/reference/cloud.google.com/go/0.94.1#hdr-Timeouts_and_Cancellation
+	// Do not attempt to add timeout to this context for the bigquery client.
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
-	defer cancel()
 
 	if s.CredentialsFile != "" {
 		credentialsOption = option.WithCredentialsFile(s.CredentialsFile)
 	} else {
-		creds, err := google.FindDefaultCredentials(ctx)
+		creds, err := google.FindDefaultCredentials(ctx, bigquery.Scope)
 		if err != nil {
 			return fmt.Errorf(
 				"unable to find Google Cloud Platform Application Default Credentials: %w. "+
