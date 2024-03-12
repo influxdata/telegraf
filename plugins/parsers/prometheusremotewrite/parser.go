@@ -74,21 +74,28 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				t = time.Unix(0, hp.Timestamp*1000000)
 			}
 
-			fields := make(map[string]interface{})
-			fields[metricName+"_sum"] = h.Sum
+			fields := map[string]any{
+				metricName + "_sum": h.Sum,
+			}
 			m := metric.New("prometheus_remote_write", tags, fields, t)
 			metrics = append(metrics, m)
 
-			fields = make(map[string]interface{})
-			fields[metricName+"_count"] = h.Count
+			fields = map[string]any{
+				metricName + "_count": h.Count,
+			}
 			m = metric.New("prometheus_remote_write", tags, fields, t)
 			metrics = append(metrics, m)
 
+			count := 0.0
 			iter := h.AllBucketIterator()
 			for iter.Next() {
 				bucket := iter.At()
-				fields = make(map[string]interface{}, 1)
-				fields[metricName] = bucket.Count
+
+				count = count + bucket.Count
+				fields = map[string]any{
+					metricName: count,
+				}
+
 				localTags := make(map[string]string, len(tags)+1)
 				localTags[metricName+"_le"] = fmt.Sprintf("%g", bucket.Upper)
 				for k, v := range tags {
