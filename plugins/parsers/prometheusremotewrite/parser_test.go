@@ -4,7 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/prompb"
+	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -70,6 +72,115 @@ func TestParse(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 2)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func generateTestHistogram(i int) *histogram.Histogram {
+	return &histogram.Histogram{
+		Count:         12 + uint64(i*9),
+		ZeroCount:     2 + uint64(i),
+		ZeroThreshold: 0.001,
+		Sum:           18.4 * float64(i+1),
+		Schema:        1,
+		PositiveSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		PositiveBuckets: []int64{int64(i + 1), 1, -1, 0},
+		NegativeSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		NegativeBuckets: []int64{int64(i + 1), 1, -1, 0},
+	}
+}
+
+func generateTestFloatHistogram(i int) *histogram.FloatHistogram {
+	return &histogram.FloatHistogram{
+		Count:         12 + float64(i*9),
+		ZeroCount:     2 + float64(i),
+		ZeroThreshold: 0.001,
+		Sum:           18.4 * float64(i+1),
+		Schema:        1,
+		PositiveSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		PositiveBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
+		NegativeSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		NegativeBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
+	}
+}
+
+func TestHistograms(t *testing.T) {
+	prompbInput := prompb.WriteRequest{
+		Timeseries: []prompb.TimeSeries{
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "test_metric_seconds"},
+				},
+				Histograms: []prompb.Histogram{
+					remote.HistogramToHistogramProto(0, generateTestHistogram(1)),
+				},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "test_float_metric_seconds"},
+				},
+				Histograms: []prompb.Histogram{
+					remote.FloatHistogramToHistogramProto(0, generateTestFloatHistogram(2)),
+				},
+			},
+		},
+	}
+
+	inoutBytes, err := prompbInput.Marshal()
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus_remote_write",
+			map[string]string{},
+			map[string]interface{}{
+				"test_metric_seconds_sum": float64(36.8),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"prometheus_remote_write",
+			map[string]string{},
+			map[string]interface{}{
+				"test_metric_seconds_count": float64(21),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"prometheus_remote_write",
+			map[string]string{},
+			map[string]interface{}{
+				"test_float_metric_seconds_sum": float64(55.199999999999996),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"prometheus_remote_write",
+			map[string]string{},
+			map[string]interface{}{
+				"test_float_metric_seconds_count": float64(30),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	parser := Parser{
+		DefaultTags: map[string]string{},
+	}
+	metrics, err := parser.Parse(inoutBytes)
+	require.NoError(t, err)
+	require.Len(t, metrics, 22)
+	testutil.RequireMetricsSubset(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestDefaultTags(t *testing.T) {

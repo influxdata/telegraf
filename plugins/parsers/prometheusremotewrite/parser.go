@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/prompb"
+	"github.com/prometheus/prometheus/storage/remote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -44,7 +46,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, fmt.Errorf("metric name %q not found in tag-set or empty", model.MetricNameLabel)
 		}
 		delete(tags, model.MetricNameLabel)
-
+		t := now
 		for _, s := range ts.Samples {
 			fields := make(map[string]interface{})
 			if !math.IsNaN(s.Value) {
@@ -52,11 +54,55 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			}
 			// converting to telegraf metric
 			if len(fields) > 0 {
-				t := now
 				if s.Timestamp > 0 {
 					t = time.Unix(0, s.Timestamp*1000000)
 				}
 				m := metric.New("prometheus_remote_write", tags, fields, t)
+				metrics = append(metrics, m)
+			}
+		}
+
+		for _, hp := range ts.Histograms {
+			var h *histogram.FloatHistogram
+			if hp.IsFloatHistogram() {
+				h = remote.FloatHistogramProtoToFloatHistogram(hp)
+			} else {
+				h = remote.HistogramProtoToFloatHistogram(hp)
+			}
+
+			if hp.Timestamp > 0 {
+				t = time.Unix(0, hp.Timestamp*1000000)
+			}
+
+			fields := map[string]any{
+				metricName + "_sum": h.Sum,
+			}
+			m := metric.New("prometheus_remote_write", tags, fields, t)
+			metrics = append(metrics, m)
+
+			fields = map[string]any{
+				metricName + "_count": h.Count,
+			}
+			m = metric.New("prometheus_remote_write", tags, fields, t)
+			metrics = append(metrics, m)
+
+			count := 0.0
+			iter := h.AllBucketIterator()
+			for iter.Next() {
+				bucket := iter.At()
+
+				count = count + bucket.Count
+				fields = map[string]any{
+					metricName: count,
+				}
+
+				localTags := make(map[string]string, len(tags)+1)
+				localTags[metricName+"_le"] = fmt.Sprintf("%g", bucket.Upper)
+				for k, v := range tags {
+					localTags[k] = v
+				}
+
+				m := metric.New("prometheus_remote_write", localTags, fields, t)
 				metrics = append(metrics, m)
 			}
 		}
