@@ -23,8 +23,9 @@ user-specified configurations.
   ## where "host" means the same endianness as the machine running Telegraf.
   # endianness = "host"
 
-  ## Interpret input as string containing hex-encoded data.
-  # hex_encoding = false
+  ## Interpret input using the specified encoding
+  ## Available values are "none" (raw bytes), "hex" and "base64"
+  # binary_encoding = "none"
 
   ## Multiple parsing sections are allowed
   [[inputs.file.binary]]
@@ -112,11 +113,17 @@ machine share the same endianness.
 Alternatively, you can explicitly specify big-endian format (`"be"`) or
 little-endian format (`"le"`).
 
-#### `hex_encoding` (optional)
+#### `binary_encoding` (optional)
 
-If `true`, the input data is interpreted as a string containing hex-encoded
-data like `C0 C7 21 A9`. The value is _case insensitive_ and can handle spaces,
-however prefixes like `0x` or `x` are _not_ allowed.
+If this option is not specified or set to `none`, the input data contains the
+binary data as raw bytes. This is the default.
+
+If set to `hex`, the input data is interpreted as a string containing
+hex-encoded data like `C0 C7 21 A9`. The value is _case insensitive_ and can
+handle spaces and prefixes like `0x` or `x`.
+
+If set to `base64` the input data is interpreted as a string containing
+padded base64 data `RDLAAA==`.
 
 ### Non-byte aligned value extraction
 
