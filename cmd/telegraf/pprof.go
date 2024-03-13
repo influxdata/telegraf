@@ -36,7 +36,7 @@ func (p *PprofServer) Start(address string) {
 		server := &http.Server{
 			Addr:         address,
 			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
+			WriteTimeout: 60 * time.Second,
 		}
 
 		if err := server.ListenAndServe(); err != nil {

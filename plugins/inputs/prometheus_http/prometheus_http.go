@@ -583,7 +583,7 @@ func (ptt *PrometheusHttpTextTemplate) FCacheRegexMatchObjectNameByField(obj map
 		}
 	}
 	r := ""
-	v := ptt.template.RegexMatchFindKeys(obj, field, value)
+	v := ptt.template.RegexMatchFindKey(obj, field, value)
 	//v := ptt.template.RegexMatchObjectNameByField(obj, field, value)
 	if v != nil && ptt.input.cache != nil {
 		m := ptt.input.cache[ptt.hash]
