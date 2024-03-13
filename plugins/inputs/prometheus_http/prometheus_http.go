@@ -607,7 +607,8 @@ func (p *PrometheusHttp) getDefaultTemplate(m *PrometheusHttpMetric, name, value
 
 	funcs := make(map[string]any)
 	funcs["renderMetricTag"] = p.fRenderMetricTag
-	funcs["regexMatchObjectNameByField"] = ptt.FCacheRegexMatchObjectNameByField
+	//funcs["regexMatchObjectNameByField"] = ptt.FCacheRegexMatchObjectNameByField
+	funcs["regexMatchFindKey"] = ptt.FCacheRegexMatchObjectNameByField
 
 	tpl, err := toolsRender.NewTextTemplate(toolsRender.TemplateOptions{
 		Name:        fmt.Sprintf("%s_template", name),
