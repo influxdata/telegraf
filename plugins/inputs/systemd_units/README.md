@@ -35,7 +35,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # details = false
 
   ## Timeout for state-collection
-  # timeout = "1s"
+  # timeout = "5s"
 ```
 
 This plugin supports two modes of operation:

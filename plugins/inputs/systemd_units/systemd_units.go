@@ -29,6 +29,6 @@ func (*SystemdUnits) SampleConfig() string {
 
 func init() {
 	inputs.Add("systemd_units", func() telegraf.Input {
-		return &SystemdUnits{Timeout: config.Duration(time.Second)}
+		return &SystemdUnits{Timeout: config.Duration(5 * time.Second)}
 	})
 }
