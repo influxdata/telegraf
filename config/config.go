@@ -477,8 +477,11 @@ func (c *Config) LoadAll(configFiles ...string) error {
 		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
-	// Check if there is enough lockable memory for the secret
-	c.NumberSecrets = uint64(secretCount.Load())
+	// Check if there is enough lockable memory for the secret. This can return
+	// a negative value.
+	if secretCount.Load() > 0 {
+		c.NumberSecrets = uint64(secretCount.Load())
+	}
 
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()
