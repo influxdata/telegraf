@@ -479,8 +479,9 @@ func (c *Config) LoadAll(configFiles ...string) error {
 
 	// Check if there is enough lockable memory for the secret. This can return
 	// a negative value.
-	if secretCount.Load() > 0 {
-		c.NumberSecrets = uint64(secretCount.Load())
+	secrets := secretCount.Load()
+	if secrets > 0 {
+		c.NumberSecrets = uint64(secrets)
 	}
 
 	// Let's link all secrets to their secret-stores
