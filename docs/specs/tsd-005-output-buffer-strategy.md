@@ -21,6 +21,7 @@ output plugins, agent configuration, persist to disk
 ## Agent Configuration
 
 The configuration is at the agent-level, with options for:
+
 - **Memory**, the current implementation, with no persistance to disk
 - **Write-through**, all metrics are also written to disk using a
   Write Ahead Log (WAL) file
@@ -60,6 +61,7 @@ strategy to work at all, but as a backup option for the user in the event
 that files linger across multiple runs of Telegraf.
 
 ## Is/Is-not
+
 - Is a way to increase the durability of metrics and reduce the potential
   for metrics to be dropped due to a full in-memory buffer
 - Is not a way to guarantee data safety in the event of a crash or system failure
