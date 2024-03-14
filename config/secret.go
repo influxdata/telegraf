@@ -155,10 +155,10 @@ func (s *Secret) Destroy() {
 	if s.container != nil {
 		s.container.Destroy()
 		s.container = nil
-	}
 
-	// Keep track of the number of secrets...
-	secretCount.Add(-1)
+		// Keep track of the number of used secrets...
+		secretCount.Add(-1)
+	}
 }
 
 // Empty return if the secret is completely empty
