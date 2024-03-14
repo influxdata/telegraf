@@ -150,11 +150,6 @@ func main() {
 			Replace:  "$1:" + version,
 		},
 		{
-			FileName: ".github/workflows/govulncheck.yml",
-			Regex:    `(go-version-input).*`,
-			Replace:  "$1: " + version,
-		},
-		{
 			FileName: "go.mod",
 			Regex:    `(go)\s(\d.\d*)`,
 			Replace:  "$1 " + noPatchVersion,
