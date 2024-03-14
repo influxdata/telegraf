@@ -236,6 +236,14 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 			seen[name] = true
+
+			// Detect disabled multi-instance units and declare them as static
+			_, suffix, found := strings.Cut(name, "@")
+			instance, _, _ := strings.Cut(suffix, ".")
+			if found && instance == "" {
+				static = append(static, name)
+				continue
+			}
 			disabled = append(disabled, name)
 		case "static":
 			// Make sure we filter already loaded static multi-instance units
@@ -280,7 +288,17 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		// Filter units of the wrong type
 		props, err := s.client.GetUnitTypePropertiesContext(ctx, state.Name, s.UnitType)
 		if err != nil {
-			continue
+			// Skip units returning "Unknown interface" errors as those indicate
+			// that the unit is of the wrong type.
+			if strings.Contains(err.Error(), "Unknown interface") {
+				continue
+			}
+			// For other units we make up properties, usually those are
+			// disabled multi-instance units
+			props = map[string]interface{}{
+				"StatusErrno": int64(-1),
+				"NRestarts":   uint64(0),
+			}
 		}
 
 		u := unitInfo{
