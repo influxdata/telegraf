@@ -157,21 +157,16 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 
 	// Fill out custom fields for specific record types
 	for _, record := range r.Answer {
-		switch d.RecordType {
-		case "MX":
-			if mx, ok := record.(*dns.MX); ok {
-				fields["preference"] = mx.Preference
-			}
-		case "SOA":
-			if soa, ok := record.(*dns.SOA); ok {
-				fields["serial"] = soa.Serial
-				fields["refresh"] = soa.Refresh
-				fields["retry"] = soa.Retry
-				fields["expire"] = soa.Expire
-				fields["minttl"] = soa.Minttl
-			}
+		switch x := record.(type) {
+		case *dns.MX:
+			fields["preference"] = x.Preference
+		case *dns.SOA:
+			fields["serial"] = x.Serial
+			fields["refresh"] = x.Refresh
+			fields["retry"] = x.Retry
+			fields["expire"] = x.Expire
+			fields["minttl"] = x.Minttl
 		}
-	}
 
 	if d.fieldEnabled["first_ip"] {
 		for _, record := range r.Answer {
