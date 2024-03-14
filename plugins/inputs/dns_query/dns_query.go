@@ -167,6 +167,7 @@ func (d *DNSQuery) query(domain string, server string) (map[string]interface{}, 
 			fields["expire"] = x.Expire
 			fields["minttl"] = x.Minttl
 		}
+	}
 
 	if d.fieldEnabled["first_ip"] {
 		for _, record := range r.Answer {
