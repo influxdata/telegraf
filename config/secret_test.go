@@ -352,6 +352,7 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 }
 
 func TestSecretCount(t *testing.T) {
+	secretCount.Store(0)
 	cfg := []byte(`
 [[inputs.mockup]]
 
