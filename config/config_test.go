@@ -1293,6 +1293,7 @@ type MockupInputPlugin struct {
 	MaxBodySize  config.Size     `toml:"max_body_size"`
 	Paths        []string        `toml:"paths"`
 	Port         int             `toml:"port"`
+	Password     config.Secret   `toml:"password"`
 	Command      string
 	Files        []string
 	PidFile      string
