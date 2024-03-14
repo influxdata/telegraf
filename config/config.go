@@ -478,7 +478,12 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	}
 
 	// Check if there is enough lockable memory for the secret
-	c.NumberSecrets = uint64(secretCount.Load())
+	count := secretCount.Load()
+	if count < 0 {
+		log.Printf("E! Invalid secret count %d, please report this incident including your configuration!", count)
+		count = 0
+	}
+	c.NumberSecrets = uint64(count)
 
 	// Let's link all secrets to their secret-stores
 	return c.LinkSecrets()
