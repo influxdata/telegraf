@@ -351,6 +351,31 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 	require.EqualValues(t, "an env secret", secret.TemporaryString())
 }
 
+func TestSecretCount(t *testing.T) {
+	secretCount.Store(0)
+	cfg := []byte(`
+[[inputs.mockup]]
+
+[[inputs.mockup]]
+  secret = "a secret"
+
+[[inputs.mockup]]
+  secret = "another secret"
+`)
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfigData(cfg))
+	require.Len(t, c.Inputs, 3)
+	require.Equal(t, int64(2), secretCount.Load())
+
+	// Remove all secrets and check
+	for _, ri := range c.Inputs {
+		input := ri.Input.(*MockupSecretPlugin)
+		input.Secret.Destroy()
+	}
+	require.Equal(t, int64(0), secretCount.Load())
+}
+
 func TestSecretStoreStatic(t *testing.T) {
 	cfg := []byte(
 		`
