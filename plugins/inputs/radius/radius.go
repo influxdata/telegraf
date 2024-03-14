@@ -45,7 +45,10 @@ func (r *Radius) Init() error {
 		Retry: 0,
 	}
 
-	if r.RequestIP != "" && net.ParseIP(r.RequestIP) == nil {
+	if r.RequestIP == "" {
+		r.RequestIP = "127.0.0.1"
+	}
+	if net.ParseIP(r.RequestIP) == nil {
 		return fmt.Errorf("invalid ip address provided for request_ip: %s", r.RequestIP)
 	}
 

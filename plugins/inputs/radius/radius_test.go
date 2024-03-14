@@ -283,3 +283,62 @@ func TestRadiusIntegration(t *testing.T) {
 		})
 	}
 }
+
+func TestRadiusIntegrationInvalidSourceIP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	clients, err := filepath.Abs("testdata/invalidSourceIP/clients.conf")
+	require.NoError(t, err, "determining absolute path of test-data clients.conf failed")
+	authorize, err := filepath.Abs("testdata/invalidSourceIP/mods-config/files/authorize")
+	require.NoError(t, err, "determining absolute path of test-data authorize failed")
+	radiusd, err := filepath.Abs("testdata/invalidSourceIP/radiusd.conf")
+	require.NoError(t, err, "determining absolute path of test-data radiusd.conf failed")
+
+	container := testutil.Container{
+		Image:        "freeradius/freeradius-server",
+		ExposedPorts: []string{"1812/udp"},
+		Files: map[string]string{
+			"/etc/raddb/clients.conf":                clients,
+			"/etc/raddb/mods-config/files/authorize": authorize,
+			"/etc/raddb/radiusd.conf":                radiusd,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to process requests"),
+		),
+	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer container.Terminate()
+
+	port := container.Ports["1812"]
+	plugin := &Radius{
+		ResponseTimeout: config.Duration(time.Second * 1),
+		Servers:         []string{container.Address + ":" + port},
+		Username:        config.NewSecret([]byte(`testusername`)),
+		Password:        config.NewSecret([]byte(`testpassword`)),
+		Secret:          config.NewSecret([]byte(`testsecret`)),
+		Log:             testutil.Logger{},
+	}
+
+	expected := testutil.MustMetric(
+		"radius",
+		map[string]string{
+			"source":        container.Address,
+			"source_port":   port,
+			"response_code": "timeout",
+		},
+		map[string]interface{}{
+			"responsetime_ms": 1000,
+		},
+		time.Time{},
+	)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Gather(&acc))
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 1)
+	testutil.RequireMetricEqual(t, expected, metrics[0], testutil.IgnoreTime())
+}
