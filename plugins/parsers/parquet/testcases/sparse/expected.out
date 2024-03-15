@@ -1,0 +1,6 @@
+test,tag=row1 float_field=64 1709313032000000000
+test,tag=row2 float_field=65 1709399432000000000
+test,tag=row3 int_field=65 1709485832000000000
+test,tag=row4 uint_field=5 1709572232000000000
+test,tag=row5 bool_field=true 1709658632000000000
+test,str_field=blargh,tag=multi_field bool_field=false 1709831432000000000
