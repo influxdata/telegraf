@@ -43,6 +43,7 @@ following works:
 - github.com/alitto/pond [MIT License](https://github.com/alitto/pond/blob/master/LICENSE)
 - github.com/aliyun/alibaba-cloud-sdk-go [Apache License 2.0](https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/LICENSE)
 - github.com/amir/raidman [The Unlicense](https://github.com/amir/raidman/blob/master/UNLICENSE)
+- github.com/andybalholm/brotli [MIT License](https://github.com/andybalholm/brotli/blob/master/LICENSE)
 - github.com/antchfx/jsonquery [MIT License](https://github.com/antchfx/jsonquery/blob/master/LICENSE)
 - github.com/antchfx/xmlquery [MIT License](https://github.com/antchfx/xmlquery/blob/master/LICENSE)
 - github.com/antchfx/xpath [MIT License](https://github.com/antchfx/xpath/blob/master/LICENSE)

@@ -1,0 +1,2 @@
+row1,byteArray=Short,fixedLengthByteArray=STRING boolean=true,float32=1,float64=64,int32=-2147483648i,int64=-9223372036854775808i 1710697199000000000
+row2,byteArray=Much\ longer\ string\ here...,fixedLengthByteArray=FOOBAR boolean=false,float32=1.1234568357467651,float64=65.1234567891212,int32=2147483647i,int64=9223372036854775807i 551812924000000000
