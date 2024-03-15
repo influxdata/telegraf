@@ -52,6 +52,10 @@ var (
 		// see https://support.industry.siemens.com/cs/document/36479/date_and_time-format-for-s7-?dti=0&lc=en-DE
 		"DT": 0x0F, // Date and time (7 byte)
 	}
+
+	ConnectTypePG = 1
+	ConnectTypeOP = 2
+	ConnectTypeS7Basic = 3
 )
 
 type metricFieldDefinition struct {
@@ -84,6 +88,7 @@ type S7comm struct {
 	Server          string             `toml:"server"`
 	Rack            int                `toml:"rack"`
 	Slot            int                `toml:"slot"`
+	ConnectType     int                `toml:"connect_type"`
 	BatchMaxSize    int                `toml:"pdu_size"`
 	Timeout         config.Duration    `toml:"timeout"`
 	DebugConnection bool               `toml:"debug_connection"`
@@ -113,6 +118,13 @@ func (s *S7comm) Init() error {
 	if s.Slot < 0 {
 		return errors.New("'slot' has to be specified")
 	}
+	if s.ConnectType < 0 || s.ConnectType >3 {
+		return errors.New("'connectType' unrecognizable")
+	}
+	if s.ConnectType == 0 {
+		//Compatible with the problem of not having this parameter in the old config 
+		s.ConnectType = ConnectTypePG 
+	}
 	if len(s.Configs) == 0 {
 		return errors.New("no metric defined")
 	}
@@ -127,7 +139,7 @@ func (s *S7comm) Init() error {
 	}
 
 	// Create handler for the connection
-	s.handler = gos7.NewTCPClientHandler(s.Server, s.Rack, s.Slot)
+	s.handler = gos7.NewTCPClientHandlerWithConnectType(s.Server, s.Rack, s.Slot,s.ConnectType)
 	s.handler.Timeout = time.Duration(s.Timeout)
 	if s.DebugConnection {
 		s.handler.Logger = log.New(os.Stderr, "D! [inputs.s7comm]", log.LstdFlags)
