@@ -12,7 +12,7 @@ import (
 func TestDiskInfo(t *testing.T) {
 	plugin := &DiskIO{
 		infoCache: map[string]diskInfoCache{
-			"null": diskInfoCache{
+			"null": {
 				modifiedAt:   0,
 				udevDataPath: "testdata/udev.txt",
 				sysBlockPath: "testdata",
@@ -51,7 +51,7 @@ func TestDiskIOStats_diskName(t *testing.T) {
 			plugin := DiskIO{
 				NameTemplates: tc.templates,
 				infoCache: map[string]diskInfoCache{
-					"null": diskInfoCache{
+					"null": {
 						modifiedAt:   0,
 						udevDataPath: "testdata/udev.txt",
 						sysBlockPath: "testdata",
@@ -71,7 +71,7 @@ func TestDiskIOStats_diskTags(t *testing.T) {
 	plugin := &DiskIO{
 		DeviceTags: []string{"MY_PARAM_2"},
 		infoCache: map[string]diskInfoCache{
-			"null": diskInfoCache{
+			"null": {
 				modifiedAt:   0,
 				udevDataPath: "testdata/udev.txt",
 				sysBlockPath: "testdata",
