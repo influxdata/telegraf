@@ -22,6 +22,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   server = "127.0.0.1:102"
   rack = 0
   slot = 0
+  
+  ## connectionType(driveType/driveGroup in s7 protocol) : 1 connect as PG/PC ;2 connect as OP ; 3 connect as S7 basic
+  # connect_type = 2
 
   ## Max count of fields to be bundled in one batch-request. (PDU size)
   # pdu_size = 20
