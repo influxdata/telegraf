@@ -27,7 +27,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Available options are "PD" (programming  device), "OP" (operator panel) or "basic" (S7 basic communication).
   # connection_type = "PD"
 
-
   ## Max count of fields to be bundled in one batch-request. (PDU size)
   # pdu_size = 20
 
