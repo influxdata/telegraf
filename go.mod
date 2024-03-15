@@ -31,7 +31,7 @@ require (
 	github.com/alitto/pond v1.8.3
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.563
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
-	github.com/antchfx/jsonquery v1.3.3
+	github.com/antchfx/jsonquery v1.3.4-0.20240315124402-5db0be839244
 	github.com/antchfx/xmlquery v1.3.18
 	github.com/antchfx/xpath v1.2.5
 	github.com/apache/arrow/go/v13 v13.0.0
