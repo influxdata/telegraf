@@ -134,6 +134,10 @@ func (kl *KNXListener) listen() {
 	for msg := range kl.client.Inbound() {
 		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
+		if msg.Command == knx.GroupRead {
+			kl.Log.Debugf("Ignoring GroupRead for GA %q from %q", ga, msg.Source.String())
+			continue
+		}
 		target, ok := kl.gaTargetMap[ga]
 		if !ok {
 			if !kl.gaLogbook[ga] {
