@@ -1,0 +1,4 @@
+E:MY_PARAM_1=myval1
+E:MY_PARAM_2=myval2
+S:foo/bar/devlink
+S:foo/bar/devlink1
