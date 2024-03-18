@@ -36,13 +36,13 @@ func setValue(data dpt.DatapointValue, value interface{}) error {
 	return nil
 }
 
-type TestMessage struct {
+type message struct {
 	address string
 	dpt     string
 	value   interface{}
 }
 
-func ProduceKnxEvent(t *testing.T, address string, datapoint string, value interface{}) *knx.GroupEvent {
+func produceKnxEvent(t *testing.T, address string, datapoint string, value interface{}) *knx.GroupEvent {
 	addr, err := cemi.NewGroupAddrString(address)
 	require.NoError(t, err)
 
@@ -60,7 +60,7 @@ func ProduceKnxEvent(t *testing.T, address string, datapoint string, value inter
 
 func TestRegularReceives_DPT(t *testing.T) {
 	// Define the test-cases
-	var testcases = []TestMessage{
+	var testcases = []message{
 		{"1/0/1", "1.001", true},
 		{"1/0/2", "1.002", false},
 		{"1/0/3", "1.003", true},
@@ -101,6 +101,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 		Measurements: measurements,
 		Log:          testutil.Logger{Name: "knx_listener"},
 	}
+	require.NoError(t, listener.Init())
 
 	// Setup the listener to test
 	err := listener.Start(acc)
@@ -111,7 +112,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 
 	// Send the defined test data
 	for _, testcase := range testcases {
-		event := ProduceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
+		event := produceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
 		client.Send(*event)
 	}
 
@@ -147,6 +148,7 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 		},
 		Log: testutil.Logger{Name: "knx_listener"},
 	}
+	require.NoError(t, listener.Init())
 
 	acc := &testutil.Accumulator{}
 
@@ -155,7 +157,7 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 	require.NoError(t, err)
 	client := listener.client.(*KNXDummyInterface)
 
-	testMessages := []TestMessage{
+	testMessages := []message{
 		{"1/1/1", "1.001", true},
 		{"1/1/1", "1.001", false},
 		{"1/1/2", "1.001", false},
@@ -163,7 +165,7 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 	}
 
 	for _, testcase := range testMessages {
-		event := ProduceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
+		event := produceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
 		client.Send(*event)
 	}
 
@@ -189,4 +191,66 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 	v, ok = acc.Metrics[1].Fields["value"].(bool)
 	require.Truef(t, ok, "bool type expected, got '%T' with '%v' value instead", acc.Metrics[1].Fields["value"], acc.Metrics[1].Fields["value"])
 	require.False(t, v)
+}
+
+func TestReconnect(t *testing.T) {
+	listener := KNXListener{
+		ServiceType: "dummy",
+		Measurements: []Measurement{
+			{"temperature", "1.001", []string{"1/1/1"}},
+		},
+		Log: testutil.Logger{Name: "knx_listener"},
+	}
+	require.NoError(t, listener.Init())
+
+	var acc testutil.Accumulator
+
+	// Setup the listener to test
+	require.NoError(t, listener.Start(&acc))
+	defer listener.Stop()
+	client := listener.client.(*KNXDummyInterface)
+
+	testMessages := []message{
+		{"1/1/1", "1.001", true},
+		{"1/1/1", "1.001", false},
+		{"1/1/2", "1.001", false},
+		{"1/1/2", "1.001", true},
+	}
+
+	for _, testcase := range testMessages {
+		event := produceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
+		client.Send(*event)
+	}
+
+	// Give the accumulator some time to collect the data
+	require.Eventuallyf(t, func() bool {
+		return acc.NMetrics() >= 2
+	}, 3*time.Second, 100*time.Millisecond, "expected 2 metric but got %d", acc.NMetrics())
+	require.True(t, listener.connected.Load())
+
+	client.Close()
+
+	require.Eventually(t, func() bool {
+		return !listener.connected.Load()
+	}, 3*time.Second, 100*time.Millisecond, "no disconnect")
+	acc.Lock()
+	err := acc.FirstError()
+	acc.Unlock()
+	require.ErrorContains(t, err, "disconnected from bus")
+
+	require.NoError(t, listener.Gather(&acc))
+	require.Eventually(t, func() bool {
+		return listener.connected.Load()
+	}, 3*time.Second, 100*time.Millisecond, "no reconnect")
+	client = listener.client.(*KNXDummyInterface)
+
+	for _, testcase := range testMessages {
+		event := produceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
+		client.Send(*event)
+	}
+
+	// Give the accumulator some time to collect the data
+	require.Eventuallyf(t, func() bool {
+		return acc.NMetrics() >= 2
+	}, 3*time.Second, 100*time.Millisecond, "expected 2 metric but got %d", acc.NMetrics())
 }
