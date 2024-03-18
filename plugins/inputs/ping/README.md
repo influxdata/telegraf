@@ -80,6 +80,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## etc) will be ignored.
   # arguments = ["-c", "3"]
 
+  ## Use only IPv4 addresses when resolving a hostname.
+  # ipv4 = false
+
   ## Use only IPv6 addresses when resolving a hostname.
   # ipv6 = false
 
