@@ -132,6 +132,12 @@ func (kl *KNXListener) Stop() {
 
 func (kl *KNXListener) listen() {
 	for msg := range kl.client.Inbound() {
+		if msg.Command == knx.GroupRead {
+			// Ignore GroupValue_Read requests as they would either
+			// - fail to unpack due to invalid data length (DPT != 1) or
+			// - create invalid `false` values as their data always unpacks `0` (DPT 1)
+			continue
+		}
 		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
 		target, ok := kl.gaTargetMap[ga]
@@ -140,10 +146,6 @@ func (kl *KNXListener) listen() {
 				kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
 				kl.gaLogbook[ga] = true
 			}
-			continue
-		}
-		if msg.Command == knx.GroupRead {
-			kl.Log.Debugf("Ignoring GroupRead for GA %q from %q", ga, msg.Source.String())
 			continue
 		}
 
