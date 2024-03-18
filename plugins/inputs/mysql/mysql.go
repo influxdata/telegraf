@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -947,7 +948,7 @@ func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc tel
 		return err
 	}
 
-	read, err := getColSlice(len(cols))
+	read, err := getColSlice(rows)
 	if err != nil {
 		return err
 	}
@@ -995,7 +996,13 @@ func columnsToLower(s []string, e error) ([]string, error) {
 }
 
 // getColSlice returns an in interface slice that can be used in the row.Scan().
-func getColSlice(l int) ([]interface{}, error) {
+func getColSlice(rows *sql.Rows) ([]interface{}, error) {
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, err
+	}
+	l := len(columnTypes)
+
 	// list of all possible column names
 	var (
 		user                     string
@@ -1111,30 +1118,26 @@ func getColSlice(l int) ([]interface{}, error) {
 			&emptyQueries,
 		}, nil
 	case 22: // percona
-		return []interface{}{
-			&user,
-			&totalConnections,
-			&concurrentConnections,
-			&connectedTime,
-			&busyTime,
-			&cpuTime,
-			&bytesReceived,
-			&bytesSent,
-			&binlogBytesWritten,
-			&rowsFetched,
-			&rowsUpdated,
-			&tableRowsRead,
-			&selectCommands,
-			&updateCommands,
-			&otherCommands,
-			&commitTransactions,
-			&rollbackTransactions,
-			&deniedConnections,
-			&lostConnections,
-			&accessDenied,
-			&emptyQueries,
-			&totalSslConnections,
-		}, nil
+		cols := make([]interface{}, 0, 22)
+		for i, ct := range columnTypes {
+			// The first column is the user and has to be a string
+			if i == 0 {
+				cols = append(cols, new(string))
+				continue
+			}
+
+			// Percona 8 has some special fields that are float instead of ints
+			// see: https://github.com/influxdata/telegraf/issues/7360
+			switch ct.ScanType().Kind() {
+			case reflect.Float32, reflect.Float64:
+				cols = append(cols, new(float64))
+			default:
+				// Keep old type for backward compatibility
+				cols = append(cols, new(int64))
+			}
+		}
+
+		return cols, nil
 	}
 
 	return nil, fmt.Errorf("not Supported - %d columns", l)
