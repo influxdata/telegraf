@@ -16,7 +16,7 @@ const (
 )
 
 func guessPluginType(filename string) plugin {
-	// Switch takes `plugins/inputs/amd_rocm_smi/README.md`` and converts it to
+	// Switch takes `plugins/inputs/amd_rocm_smi/README.md` and converts it to
 	// `plugins/inputs`. This avoids parsing READMEs that are under a plugin
 	// like those found in test folders as actual plugin readmes.
 	switch filepath.Dir(filepath.Dir(filename)) {
