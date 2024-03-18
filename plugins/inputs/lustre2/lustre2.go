@@ -9,6 +9,7 @@ package lustre2
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,7 +24,7 @@ import (
 var sampleConfig string
 
 type tags struct {
-	name, job, client string
+	name, brwSection, bucket, job, client string
 }
 
 // Lustre proc files can change between versions, so we want to future-proof
@@ -32,7 +33,7 @@ type Lustre2 struct {
 	OstProcfiles []string `toml:"ost_procfiles"`
 	MdsProcfiles []string `toml:"mds_procfiles"`
 
-	// allFields maps and OST name to the metric fields associated with that OST
+	// allFields maps an OST name to the metric fields associated with that OST
 	allFields map[tags]map[string]interface{}
 }
 
@@ -47,6 +48,29 @@ type mapping struct {
 	inProc   string // What to look for at the start of a line in /proc/fs/lustre/*
 	field    uint32 // which field to extract from that line
 	reportAs string // What measurement name to use
+}
+
+var wantedBrwstatsFields = []*mapping{
+	{
+		inProc:   "pages per bulk r/w",
+		reportAs: "pages_per_bulk_rw",
+	},
+	{
+		inProc:   "discontiguous pages",
+		reportAs: "discontiguous_pages",
+	},
+	{
+		inProc:   "disk I/Os in flight",
+		reportAs: "disk_ios_in_flight",
+	},
+	{
+		inProc:   "I/O time (1/1000s)",
+		reportAs: "io_time",
+	},
+	{
+		inProc:   "disk I/O size",
+		reportAs: "disk_io_size",
+	},
 }
 
 var wantedOstFields = []*mapping{
@@ -408,10 +432,10 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 				}
 
 				var fields map[string]interface{}
-				fields, ok := l.allFields[tags{name, jobid, client}]
+				fields, ok := l.allFields[tags{name, "", "", jobid, client}]
 				if !ok {
 					fields = make(map[string]interface{})
-					l.allFields[tags{name, jobid, client}] = fields
+					l.allFields[tags{name, "", "", jobid, client}] = fields
 				}
 
 				for _, wanted := range wantedFields {
@@ -440,6 +464,98 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 	return nil
 }
 
+func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping) error {
+	files, err := filepath.Glob(fileglob)
+	if err != nil {
+		return fmt.Errorf("failed to find files matching glob %s: %w", fileglob, err)
+	}
+
+	for _, file := range files {
+		// Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar into just the object store target name
+		// This assumes that the target name is always second to last, which is true in Lustre 2.1->2.12
+		path := strings.Split(file, "/")
+		if len(path) < 2 {
+			continue
+		}
+		name := path[len(path)-2]
+
+		wholeFile, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", file, err)
+		}
+		lines := strings.Split(string(wholeFile), "\n")
+
+		var headerName string
+		for _, line := range lines {
+			// There are four types of lines in a brw_stats file:
+			// 1. Header lines - contain the category of metric (e.g. disk I/Os in flight, disk I/O time)
+			// 2. Bucket lines - follow headers, contain the bucket value (e.g. 4K, 1M) and metric values
+			// 3. Empty lines - these will simply be filtered out
+			// 4. snapshot_time line - this will be filtered out, as it "looks" like a bucket line
+			if len(line) < 1 {
+				continue
+			}
+			parts := strings.Fields(line)
+
+			// This is a header line
+			// Set report name for use by the buckets that follow
+			if !strings.Contains(parts[0], ":") {
+				nameParts := strings.Split(line, "  ")
+				headerName = nameParts[0]
+				continue
+			}
+
+			// snapshot_time should be discarded
+			if strings.Contains(parts[0], "snapshot_time") {
+				continue
+			}
+
+			// This is a bucket for a given header
+			for _, wanted := range wantedFields {
+				if headerName != wanted.inProc {
+					continue
+				}
+				bucket := strings.TrimSuffix(parts[0], ":")
+
+				// brw_stats columns are static and don't need configurable fields
+				readIos, err := strconv.ParseUint(parts[1], 10, 64)
+				if err != nil {
+					return fmt.Errorf("failed to parse read_ios: %w", err)
+				}
+				readPercent, err := strconv.ParseUint(parts[2], 10, 64)
+				if err != nil {
+					return fmt.Errorf("failed to parse read_percent: %w", err)
+				}
+				writeIos, err := strconv.ParseUint(parts[5], 10, 64)
+				if err != nil {
+					return fmt.Errorf("failed to parse write_ios: %w", err)
+				}
+				writePercent, err := strconv.ParseUint(parts[6], 10, 64)
+				if err != nil {
+					return fmt.Errorf("failed to parse write_percent: %w", err)
+				}
+				reportName := headerName
+				if wanted.reportAs != "" {
+					reportName = wanted.reportAs
+				}
+
+				tag := tags{name, reportName, bucket, "", ""}
+				fields, ok := l.allFields[tag]
+				if !ok {
+					fields = make(map[string]interface{})
+					l.allFields[tag] = fields
+				}
+
+				fields["read_ios"] = readIos
+				fields["read_percent"] = readPercent
+				fields["write_ios"] = writeIos
+				fields["write_percent"] = writePercent
+			}
+		}
+	}
+	return nil
+}
+
 // Gather reads stats from all lustre targets
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	l.allFields = make(map[tags]map[string]interface{})
@@ -460,6 +576,16 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+		// bulk read/wrote statistics for ldiskfs
+		err = l.getLustreProcBrwStats("/proc/fs/lustre/osd-ldiskfs/*/brw_stats", wantedBrwstatsFields)
+		if err != nil {
+			return err
+		}
+		// bulk read/write statistics for zfs
+		err = l.getLustreProcBrwStats("/proc/fs/lustre/osd-zfs/*/brw_stats", wantedBrwstatsFields)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(l.MdsProcfiles) == 0 {
@@ -477,29 +603,51 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, procfile := range l.OstProcfiles {
-		ostFields := wantedOstFields
-		if strings.HasSuffix(procfile, "job_stats") {
-			ostFields = wantedOstJobstatsFields
-		}
-		err := l.GetLustreProcStats(procfile, ostFields)
-		if err != nil {
-			return err
+		if strings.HasSuffix(procfile, "brw_stats") {
+			err := l.getLustreProcBrwStats(procfile, wantedBrwstatsFields)
+			if err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(procfile, "job_stats") {
+			err := l.GetLustreProcStats(procfile, wantedOstJobstatsFields)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := l.GetLustreProcStats(procfile, wantedOstFields)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	for _, procfile := range l.MdsProcfiles {
-		mdtFields := wantedMdsFields
-		if strings.HasSuffix(procfile, "job_stats") {
-			mdtFields = wantedMdtJobstatsFields
-		}
-		err := l.GetLustreProcStats(procfile, mdtFields)
-		if err != nil {
-			return err
+		if strings.HasSuffix(procfile, "brw_stats") {
+			err := l.getLustreProcBrwStats(procfile, wantedBrwstatsFields)
+			if err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(procfile, "job_stats") {
+			err := l.GetLustreProcStats(procfile, wantedMdtJobstatsFields)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := l.GetLustreProcStats(procfile, wantedMdsFields)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	for tgs, fields := range l.allFields {
 		tags := map[string]string{
 			"name": tgs.name,
+		}
+		if len(tgs.brwSection) > 0 {
+			tags["brw_section"] = tgs.brwSection
+		}
+		if len(tgs.bucket) > 0 {
+			tags["bucket"] = tgs.bucket
 		}
 		if len(tgs.job) > 0 {
 			tags["jobid"] = tgs.job
