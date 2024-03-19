@@ -118,7 +118,7 @@ require (
 	github.com/intel/powertelemetry v1.0.1
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgio v1.0.0
-	github.com/jackc/pgtype v1.14.0
+	github.com/jackc/pgtype v1.14.2
 	github.com/jackc/pgx/v4 v4.18.2
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jhump/protoreflect v1.15.6
