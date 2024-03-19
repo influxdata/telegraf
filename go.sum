@@ -800,8 +800,8 @@ github.com/apache/arrow/go/v13 v13.0.0 h1:kELrvDQuKZo8csdWYqBQfyi431x6Zs/YJTEgUu
 github.com/apache/arrow/go/v13 v13.0.0/go.mod h1:W69eByFNO0ZR30q1/7Sr9d83zcVZmF2MiP3fFYAWJOc=
 github.com/apache/arrow/go/v14 v14.0.2 h1:N8OkaJEOfI3mEZt07BIkvo4sC6XDbL+48MBPWO5IONw=
 github.com/apache/arrow/go/v14 v14.0.2/go.mod h1:u3fgh3EdgN/YQ8cVQRguVW3R+seMybFg8QBQ5LU+eBY=
-github.com/apache/arrow/go/v16 v16.0.0-20240315193239-681be03cfc63 h1:bBsF9liMo7HBT6NYrIMuWfgJDwZIOaAwLMIGMCmAMc0=
-github.com/apache/arrow/go/v16 v16.0.0-20240315193239-681be03cfc63/go.mod h1:PxACazaW6dC6h6zF0yCFwv6m9RVhPYFODEQan5SlFQo=
+github.com/apache/arrow/go/v16 v16.0.0-20240319161736-1ee3da0064a0 h1:XbC214lVvnAnDzowGV7dYiv4f4Aa6jhtIby08OgbcUg=
+github.com/apache/arrow/go/v16 v16.0.0-20240319161736-1ee3da0064a0/go.mod h1:VVbdJivCXZAJ6IhOSCSzk/RVQ/PlcitjskAWEST3Sc0=
 github.com/apache/iotdb-client-go v1.2.0-tsbs h1:hezGUydAkDSceCvsetYorI87S2e8HZ4hTQHmGZgOGDY=
 github.com/apache/iotdb-client-go v1.2.0-tsbs/go.mod h1:3D6QYkqRmASS/4HsjU+U/3fscyc5M9xKRfywZsKuoZY=
 github.com/apache/thrift v0.15.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
