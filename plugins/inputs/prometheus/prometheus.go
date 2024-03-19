@@ -492,6 +492,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 		Header:          resp.Header,
 		MetricVersion:   p.MetricVersion,
 		IgnoreTimestamp: p.IgnoreTimestamp,
+		Log:             p.Log,
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {

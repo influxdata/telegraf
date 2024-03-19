@@ -38,7 +38,7 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 			data = append(data, []byte("\n")...)
 		}
 	case expfmt.FmtUnknown:
-		p.Log.Warnf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
+		p.Log.Debugf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
 	}
 	buf := bytes.NewBuffer(data)
 	decoder := expfmt.NewDecoder(buf, format)
