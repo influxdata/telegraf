@@ -65,7 +65,7 @@ require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/couchbase/go-couchbase v0.1.1
-	github.com/devopsext/tools v0.14.1
+	github.com/devopsext/tools v0.14.3
 	github.com/devopsext/utils v0.4.0
 	github.com/digitalocean/go-libvirt v0.0.0-20221205150000-2939327a8519
 	github.com/dimchansky/utfbom v1.1.1
