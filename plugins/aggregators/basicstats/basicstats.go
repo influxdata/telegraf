@@ -35,6 +35,7 @@ type configuredStats struct {
 	nonNegativeRate bool
 	percentChange   bool
 	interval        bool
+	last            bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -58,8 +59,9 @@ type basicstats struct {
 	diff     float64
 	rate     float64
 	interval time.Duration
+	last     float64
 	M2       float64   //intermediate value for variance/stdev
-	LAST     float64   //intermediate value for diff
+	PREVIOUS float64   //intermediate value for diff
 	TIME     time.Time //intermediate value for rate
 }
 
@@ -79,16 +81,17 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 		for _, field := range in.FieldList() {
 			if fv, ok := convert(field.Value); ok {
 				a.fields[field.Key] = basicstats{
-					count: 1,
-					min:   fv,
-					max:   fv,
-					mean:  fv,
-					sum:   fv,
-					diff:  0.0,
-					rate:  0.0,
-					M2:    0.0,
-					LAST:  fv,
-					TIME:  in.Time(),
+					count:    1,
+					min:      fv,
+					max:      fv,
+					mean:     fv,
+					sum:      fv,
+					diff:     0.0,
+					rate:     0.0,
+					last:     fv,
+					M2:       0.0,
+					PREVIOUS: fv,
+					TIME:     in.Time(),
 				}
 			}
 		}
@@ -107,8 +110,9 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 						diff:     0.0,
 						rate:     0.0,
 						interval: 0,
+						last:     fv,
 						M2:       0.0,
-						LAST:     fv,
+						PREVIOUS: fv,
 						TIME:     in.Time(),
 					}
 					continue
@@ -139,13 +143,15 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				//sum compute
 				tmp.sum += fv
 				//diff compute
-				tmp.diff = fv - tmp.LAST
+				tmp.diff = fv - tmp.PREVIOUS
 				//interval compute
 				tmp.interval = in.Time().Sub(tmp.TIME)
 				//rate compute
 				if !in.Time().Equal(tmp.TIME) {
 					tmp.rate = tmp.diff / tmp.interval.Seconds()
 				}
+				//last compute
+				tmp.last = fv
 				//store final data
 				b.cache[id].fields[field.Key] = tmp
 			}
@@ -172,6 +178,9 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 			if b.statsConfig.sum {
 				fields[k+"_sum"] = v.sum
 			}
+			if b.statsConfig.last {
+				fields[k+"_last"] = v.last
+			}
 
 			//v.count always >=1
 			if v.count > 1 {
@@ -193,7 +202,7 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 					fields[k+"_rate"] = v.rate
 				}
 				if b.statsConfig.percentChange {
-					fields[k+"_percent_change"] = v.diff / v.LAST * 100
+					fields[k+"_percent_change"] = v.diff / v.PREVIOUS * 100
 				}
 				if b.statsConfig.nonNegativeRate && v.diff >= 0 {
 					fields[k+"_non_negative_rate"] = v.rate
@@ -243,6 +252,8 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.percentChange = true
 		case "interval":
 			parsed.interval = true
+		case "last":
+			parsed.last = true
 		default:
 			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)
 		}
@@ -261,10 +272,13 @@ func (b *BasicStats) getConfiguredStats() {
 			variance:        true,
 			stdev:           true,
 			sum:             false,
+			diff:            false,
 			nonNegativeDiff: false,
 			rate:            false,
 			nonNegativeRate: false,
 			percentChange:   false,
+			interval:        false,
+			last:            false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()
