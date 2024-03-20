@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -19,6 +20,10 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var ignoredErrors = []string{
+	"NXDOMAIN",
+}
 
 type ResultType uint64
 
@@ -87,7 +92,7 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 				defer wg.Done()
 
 				fields, tags, err := d.query(domain, server)
-				if err != nil {
+				if err != nil && !slices.Contains(ignoredErrors, tags["rcode"]) {
 					var opErr *net.OpError
 					if !errors.As(err, &opErr) || !opErr.Timeout() {
 						acc.AddError(err)
