@@ -385,6 +385,76 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "94.02.71.40.72",
 					},
 					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/usr/lib/Xorg",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(835),
+						"used_memory": int64(550),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/usr/bin/gnome-shell",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(1481),
+						"used_memory": int64(18),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/opt/microsoft/msedge/msedge --type=gpu-process " +
+							"--crashpad-handler-pid=2176 --enable-crash-reporter=, " +
+							"--change-stack-guard-on-fork=enable --gpu-preferences=" +
+							"WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAAAAAA4AAAAAAAAAAA" +
+							"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAGAAAAAAAAAAYAA" +
+							"AAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files " +
+							"--field-trial-handle=0,i,3110290512380155730," +
+							"7457693378709978105,262144 --variations-seed-version",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(2214),
+						"used_memory": int64(79),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/usr/lib/firefox/firefox",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(4044),
+						"used_memory": int64(541),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/opt/visual-studio-code/code --type=gpu-process " +
+							"--enable-crash-reporter=6f39585a-ecc4-42e2-b899-9456cbe56b44" +
+							",no_channel --user-data-dir=/home/powersj/.config/Code " +
+							"--gpu-preferences=WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABg" +
+							"AAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+							"ABAAAAGAAAAAAAAAAYAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== " +
+							"--shared-files --field-trial-handle=0,i,685715063932313394," +
+							"4769839452661094675,262144 --disable-features=" +
+							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(42416),
+						"used_memory": int64(159),
+					},
+					time.Unix(1689872450, 0)),
 			},
 		},
 		{

@@ -778,6 +778,46 @@
 			</supported_mem_clock>
 		</supported_clocks>
 		<processes>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>835</pid>
+				<type>G</type>
+				<process_name>/usr/lib/Xorg</process_name>
+				<used_memory>550 MiB</used_memory>
+			</process_info>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>1481</pid>
+				<type>G</type>
+				<process_name>/usr/bin/gnome-shell</process_name>
+				<used_memory>18 MiB</used_memory>
+			</process_info>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>2214</pid>
+				<type>G</type>
+				<process_name>/opt/microsoft/msedge/msedge --type=gpu-process --crashpad-handler-pid=2176 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --gpu-preferences=WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAGAAAAAAAAAAYAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --field-trial-handle=0,i,3110290512380155730,7457693378709978105,262144 --variations-seed-version</process_name>
+				<used_memory>79 MiB</used_memory>
+			</process_info>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>4044</pid>
+				<type>G</type>
+				<process_name>/usr/lib/firefox/firefox</process_name>
+				<used_memory>541 MiB</used_memory>
+			</process_info>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>42416</pid>
+				<type>G</type>
+				<process_name>/opt/visual-studio-code/code --type=gpu-process --enable-crash-reporter=6f39585a-ecc4-42e2-b899-9456cbe56b44,no_channel --user-data-dir=/home/powersj/.config/Code --gpu-preferences=WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAGAAAAAAAAAAYAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --field-trial-handle=0,i,685715063932313394,4769839452661094675,262144 --disable-features=CalculateNativeWinOcclusion,SpareRendererForSitePerProcess</process_name>
+				<used_memory>159 MiB</used_memory>
+			</process_info>
 		</processes>
 		<accounted_processes>
 		</accounted_processes>
