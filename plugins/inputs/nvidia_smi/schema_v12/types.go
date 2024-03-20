@@ -226,10 +226,17 @@ type smi struct {
 			MinPowerLimit      string `xml:"min_power_limit"`
 			MaxPowerLimit      string `xml:"max_power_limit"`
 		} `xml:"power_readings"`
-		Processes           struct{} `xml:"processes"`
-		ProductArchitecture string   `xml:"product_architecture"`
-		ProductBrand        string   `xml:"product_brand"`
-		ProductName         string   `xml:"product_name"`
+		Processes struct {
+			ProcessInfo []struct {
+				Pid         string `xml:"pid"`
+				Type        string `xml:"type"`
+				ProcessName string `xml:"process_name"`
+				UsedMemory  string `xml:"used_memory"`
+			} `xml:"process_info"`
+		} `xml:"processes"`
+		ProductArchitecture string `xml:"product_architecture"`
+		ProductBrand        string `xml:"product_brand"`
+		ProductName         string `xml:"product_name"`
 		RemappedRows        struct {
 			// Manually added
 			Correctable   string `xml:"remapped_row_corr"`
