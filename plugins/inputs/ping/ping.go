@@ -73,6 +73,9 @@ type Ping struct {
 	// other options (ping_interval, timeout, etc.) will be ignored
 	Arguments []string
 
+	// Whether to resolve addresses using ipv4 or not.
+	IPv4 bool
+
 	// Whether to resolve addresses using ipv6 or not.
 	IPv6 bool
 
@@ -129,7 +132,11 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	pinger.SetPrivileged(true)
 
-	if p.IPv6 {
+	if p.IPv4 && p.IPv6 {
+		pinger.SetNetwork("ip")
+	} else if p.IPv4 {
+		pinger.SetNetwork("ip4")
+	} else if p.IPv6 {
 		pinger.SetNetwork("ip6")
 	}
 
