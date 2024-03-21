@@ -157,23 +157,23 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 	require.NoError(t, err, "Cannot initialize test server")
 	defer tcp.Close()
 
+	const timeout = 200 * time.Millisecond
+
 	go func() {
 		conn, err := tcp.Accept()
 		if err != nil {
 			return // ignore the returned error as we cannot do anything about it anyway
 		}
 		defer conn.Close()
-		
-		// Sleep longer than the timeout
-		time.Sleep(time.Second)
-	}()
 
-	const timeout = time.Second
+		// Sleep longer than the timeout
+		time.Sleep(2 * timeout)
+	}()
 
 	//Now we tested again above server
 	r := &phpfpm{
 		Urls:    []string{"fcgi://" + tcp.Addr().String() + "/status"},
-		Timeout: config.Duration(200*time.Millisecond),
+		Timeout: config.Duration(timeout),
 		Log:     &testutil.Logger{},
 	}
 	require.NoError(t, r.Init())
@@ -181,7 +181,7 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 	start := time.Now()
 
 	var acc testutil.Accumulator
-	require.NoError(t, acc.GatherError(r.Gather))
+	require.Error(t, acc.GatherError(r.Gather))
 
 	require.Empty(t, acc.GetTelegrafMetrics())
 	require.GreaterOrEqual(t, time.Since(start), timeout)

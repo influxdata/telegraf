@@ -78,6 +78,12 @@ READ_LOOP:
 			}
 			break
 		}
+		if err1 != nil && strings.Contains(err1.Error(), "i/o timeout") {
+			if !errors.Is(err1, io.EOF) {
+				err = err1
+			}
+			break
+		}
 
 		switch {
 		case rec.h.Type == typeStdout:
