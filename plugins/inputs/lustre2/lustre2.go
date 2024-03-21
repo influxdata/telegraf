@@ -380,13 +380,13 @@ func (*Lustre2) SampleConfig() string {
 }
 
 func (l *Lustre2) GetLustreHealth() error {
-	filename := filepath.Join(l.rootdir, "/sys/fs/lustre/health_check")
+	filename := filepath.Join(l.rootdir, "sys", "fs", "lustre", "health_check")
 	if _, err := os.Stat(filename); err != nil {
 		// try falling back to the old procfs location
 		// it was moved in https://github.com/lustre/lustre-release/commit/5d368bd0b2
-		filename = filepath.Join(l.rootdir, "/proc/fs/lustre/health_check")
+		filename = filepath.Join(l.rootdir, "proc", "fs", "lustre", "health_check")
 		if _, err = os.Stat(filename); err != nil {
-			return nil
+			return nil //nolint: nilerr // we don't want to return an error if the file doesn't exist
 		}
 	}
 	contents, err := os.ReadFile(filename)
@@ -395,7 +395,7 @@ func (l *Lustre2) GetLustreHealth() error {
 	}
 
 	value := strings.TrimSpace(string(contents))
-	var health uint64 = 0
+	var health uint64
 	if value == "healthy" {
 		health = 1
 	}
