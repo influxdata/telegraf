@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -148,6 +149,47 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "phpfpm", fields, tags)
+}
+
+func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
+	// Let OS find an available port
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "Cannot initialize test server")
+	defer tcp.Close()
+
+	go func() {
+		// Just accept the connection and do nothing with it
+		var clientSockets []net.Conn
+
+		for {
+			rw, err := tcp.Accept()
+			if err != nil {
+				return // ignore the returned error as we cannot do anything about it anyway
+			}
+
+			// Kept the socket reachable from GC to make sure GC don't close the connection.
+			clientSockets = append(clientSockets, rw)
+			_ = clientSockets // Kept linter happy about the fact we don't use clientSockets
+		}
+	}()
+
+	const timeout = time.Second
+
+	//Now we tested again above server
+	r := &phpfpm{
+		Urls:    []string{"fcgi://" + tcp.Addr().String() + "/status"},
+		Timeout: config.Duration(timeout),
+		Log:     &testutil.Logger{},
+	}
+	require.NoError(t, r.Init())
+
+	start := time.Now()
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(r.Gather))
+
+	acc.AssertDoesNotContainMeasurement(t, "phpfpm")
+	require.GreaterOrEqual(t, time.Since(start), timeout)
 }
 
 func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
