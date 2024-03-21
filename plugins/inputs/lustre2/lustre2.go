@@ -564,44 +564,26 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	l.allFields = make(map[tags]map[string]interface{})
 
 	if len(l.OstProcfiles) == 0 {
-		// read/write bytes are in obdfilter/<ost_name>/stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/stats", wantedOstFields)
-		if err != nil {
-			return err
-		}
-		// cache counters are in osd-ldiskfs/<ost_name>/stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/osd-ldiskfs/*/stats", wantedOstFields)
-		if err != nil {
-			return err
-		}
-		// per job statistics are in obdfilter/<ost_name>/job_stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/job_stats", wantedOstJobstatsFields)
-		if err != nil {
-			return err
-		}
-		// bulk read/wrote statistics for ldiskfs
-		err = l.getLustreProcBrwStats("/proc/fs/lustre/osd-ldiskfs/*/brw_stats", wantedBrwstatsFields)
-		if err != nil {
-			return err
-		}
-		// bulk read/write statistics for zfs
-		err = l.getLustreProcBrwStats("/proc/fs/lustre/osd-zfs/*/brw_stats", wantedBrwstatsFields)
-		if err != nil {
-			return err
+		l.OstProcfiles = []string{
+			// read/write bytes are in obdfilter/<ost_name>/stats
+			"/proc/fs/lustre/obdfilter/*/stats",
+			// cache counters are in osd-ldiskfs/<ost_name>/stats
+			"/proc/fs/lustre/osd-ldiskfs/*/stats",
+			// per job statistics are in obdfilter/<ost_name>/job_stats
+			"/proc/fs/lustre/obdfilter/*/job_stats",
+			// bulk read/write statistics for ldiskfs
+			"/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
+			// bulk read/write statistics for zfs
+			"/proc/fs/lustre/osd-zfs/*/brw_stats",
 		}
 	}
 
 	if len(l.MdsProcfiles) == 0 {
-		// Metadata server stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/mdt/*/md_stats", wantedMdsFields)
-		if err != nil {
-			return err
-		}
-
-		// Metadata target job stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/mdt/*/job_stats", wantedMdtJobstatsFields)
-		if err != nil {
-			return err
+		l.MdsProcfiles = []string{
+			// Metadata server stats
+			"/proc/fs/lustre/mdt/*/md_stats",
+			// Metadata target job stats
+			"/proc/fs/lustre/mdt/*/job_stats",
 		}
 	}
 
