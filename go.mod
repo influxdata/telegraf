@@ -21,7 +21,7 @@ require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/IBM/nzgo/v12 v12.0.9-0.20231115043259-49c27f2dfe48
-	github.com/IBM/sarama v1.42.2
+	github.com/IBM/sarama v1.43.1-0.20240308091436-f21c5125746f
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/Mellanox/rdmamap v1.1.0
@@ -200,7 +200,7 @@ require (
 	go.step.sm/crypto v0.43.0
 	golang.org/x/crypto v0.21.0
 	golang.org/x/mod v0.14.0
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.22.0
 	golang.org/x/oauth2 v0.17.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/sys v0.18.0
@@ -305,7 +305,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
-	github.com/eapache/go-resiliency v1.5.0 // indirect
+	github.com/eapache/go-resiliency v1.6.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
