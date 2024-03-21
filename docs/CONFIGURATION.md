@@ -840,7 +840,7 @@ tags and the agent `host` tag.
 #### Routing metrics to different outputs based on the input
 
 Metrics are tagged with `influxdb_database` in the input, which is then used to
-select the output.  The tag is removed in the outputs before writing.
+select the output.  The tag is removed in the outputs before writing with `tagexclude`.
 
 ```toml
 [[outputs.influxdb]]
