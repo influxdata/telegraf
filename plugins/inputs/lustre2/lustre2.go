@@ -501,7 +501,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 }
 
 func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping) error {
-	files, err := filepath.Glob(fileglob)
+	files, err := filepath.Glob(filepath.Join(l.rootdir, fileglob))
 	if err != nil {
 		return fmt.Errorf("failed to find files matching glob %s: %w", fileglob, err)
 	}

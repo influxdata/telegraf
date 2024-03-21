@@ -501,7 +501,8 @@ func TestLustre2GeneratesBrwstatsMetrics(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	tempdir := tmpdir + "/telegraf/proc/fs/lustre/"
+	rootdir := tmpdir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre"
 	ostname := "OST0001"
 
 	osddir := tempdir + "/osd-ldiskfs/"
@@ -511,9 +512,7 @@ func TestLustre2GeneratesBrwstatsMetrics(t *testing.T) {
 	err = os.WriteFile(osddir+"/"+ostname+"/brw_stats", []byte(brwstatsProcContents), 0640)
 	require.NoError(t, err)
 
-	m := &Lustre2{
-		OstProcfiles: []string{osddir + "/*/brw_stats"},
-	}
+	m := &Lustre2{rootdir: rootdir}
 
 	var acc testutil.Accumulator
 
