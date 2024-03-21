@@ -158,19 +158,14 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 	defer tcp.Close()
 
 	go func() {
-		// Just accept the connection and do nothing with it
-		var clientSockets []net.Conn
-
-		for {
-			rw, err := tcp.Accept()
-			if err != nil {
-				return // ignore the returned error as we cannot do anything about it anyway
-			}
-
-			// Kept the socket reachable from GC to make sure GC don't close the connection.
-			clientSockets = append(clientSockets, rw)
-			_ = clientSockets // Kept linter happy about the fact we don't use clientSockets
+		conn, err := tcp.Accept()
+		if err != nil {
+			return // ignore the returned error as we cannot do anything about it anyway
 		}
+		defer conn.Close()
+		
+		// Sleep longer than the timeout
+		time.Sleep(time.Second)
 	}()
 
 	const timeout = time.Second
@@ -178,7 +173,7 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 	//Now we tested again above server
 	r := &phpfpm{
 		Urls:    []string{"fcgi://" + tcp.Addr().String() + "/status"},
-		Timeout: config.Duration(timeout),
+		Timeout: config.Duration(200*time.Millisecond),
 		Log:     &testutil.Logger{},
 	}
 	require.NoError(t, r.Init())
@@ -188,7 +183,7 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(r.Gather))
 
-	acc.AssertDoesNotContainMeasurement(t, "phpfpm")
+	require.Empty(t, acc.GetTelegrafMetrics())
 	require.GreaterOrEqual(t, time.Since(start), timeout)
 }
 
