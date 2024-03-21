@@ -34,7 +34,7 @@ type dbh interface {
 var sampleConfig string
 
 type Postgresql struct {
-	Connection                 string                  `toml:"connection"`
+	Connection                 config.Secret           `toml:"connection"`
 	Schema                     string                  `toml:"schema"`
 	TagsAsForeignKeys          bool                    `toml:"tags_as_foreign_keys"`
 	TagTableSuffix             string                  `toml:"tag_table_suffix"`
@@ -130,11 +130,17 @@ func (p *Postgresql) Init() error {
 	p.fieldsJSONColumn = utils.Column{Name: "fields", Type: PgJSONb, Role: utils.FieldColType}
 	p.tagsJSONColumn = utils.Column{Name: "tags", Type: PgJSONb, Role: utils.TagColType}
 
-	var err error
-	if p.dbConfig, err = pgxpool.ParseConfig(p.Connection); err != nil {
+	connectionSecret, err := p.Connection.Get()
+	if err != nil {
+		return fmt.Errorf("getting address failed: %w", err)
+	}
+	connection := connectionSecret.String()
+	defer connectionSecret.Destroy()
+
+	if p.dbConfig, err = pgxpool.ParseConfig(connection); err != nil {
 		return err
 	}
-	parsedConfig, _ := pgx.ParseConfig(p.Connection)
+	parsedConfig, _ := pgx.ParseConfig(connection)
 	if _, ok := parsedConfig.Config.RuntimeParams["pool_max_conns"]; !ok {
 		// The pgx default for pool_max_conns is 4. However we want to default to 1.
 		p.dbConfig.MaxConns = 1

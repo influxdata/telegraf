@@ -17,6 +17,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 	"github.com/influxdata/telegraf/testutil"
@@ -231,7 +232,7 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 	require.NoError(tb, err, "failed to start container")
 
 	p := newPostgresql()
-	p.Connection = fmt.Sprintf(
+	connection := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s",
 		container.Address,
 		container.Ports[servicePort],
@@ -239,6 +240,7 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 		password,
 		testDatabaseName,
 	)
+	p.Connection = config.NewSecret([]byte(connection))
 	logger := NewLogAccumulator(tb)
 	p.Logger = logger
 	p.LogLevel = "debug"
@@ -260,7 +262,11 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 	require.EqualValues(t, 1, p.db.Stat().MaxConns())
 
 	p = newPostgresqlTest(t)
-	p.Connection += " pool_max_conns=2"
+	connection, err := p.Connection.Get()
+	require.NoError(t, err)
+	p.Connection = config.NewSecret([]byte(connection.String() + " pool_max_conns=2"))
+	connection.Destroy()
+
 	_ = p.Init()
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 2, p.db.Stat().MaxConns())
