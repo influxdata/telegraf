@@ -128,6 +128,10 @@ func (t *Telegraf) runAsWindowsService() error {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", fConfigDirectory)
 		}
 
+		if t.watchConfig != "" {
+			svcConfig.Arguments = append(svcConfig.Arguments, "--watch-config", t.watchConfig)
+		}
+
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
 		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", t.serviceName)
 
