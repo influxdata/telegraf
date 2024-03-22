@@ -29,25 +29,19 @@ var sampleConfig string
 
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
-	URL string
-
-	// Bearer Token authorization file path
-	BearerToken       string `toml:"bearer_token"`
-	BearerTokenString string `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
-
-	LabelInclude []string `toml:"label_include"`
-	LabelExclude []string `toml:"label_exclude"`
-
-	labelFilter filter.Filter
-
-	// HTTP Timeout specified as a string - 3s, 1m, 1h
-	ResponseTimeout config.Duration
+	URL               string          `toml:"url"`
+	BearerToken       string          `toml:"bearer_token"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
+	NodeMetricName    string          `toml:"node_metric_name"`
+	LabelInclude      []string        `toml:"label_include"`
+	LabelExclude      []string        `toml:"label_exclude"`
+	ResponseTimeout   config.Duration `toml:"response_timeout"`
+	Log               telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
 
-	Log telegraf.Logger `toml:"-"`
-
-	httpClient *http.Client
+	labelFilter filter.Filter
+	httpClient  *http.Client
 }
 
 const (
@@ -81,6 +75,10 @@ func (k *Kubernetes) Init() error {
 
 	if k.URL == "" {
 		k.InsecureSkipVerify = true
+	}
+
+	if k.NodeMetricName == "" {
+		k.NodeMetricName = "kubernetes_node"
 	}
 
 	return nil
@@ -169,7 +167,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		return err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
-	buildNodeMetrics(summaryMetrics, acc)
+	buildNodeMetrics(summaryMetrics, acc, k.NodeMetricName)
 	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
@@ -196,7 +194,7 @@ func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Ac
 	}
 }
 
-func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator, metricName string) {
 	tags := map[string]string{
 		"node_name": summaryMetrics.Node.NodeName,
 	}
@@ -219,7 +217,7 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	fields["runtime_image_fs_available_bytes"] = summaryMetrics.Node.Runtime.ImageFileSystem.AvailableBytes
 	fields["runtime_image_fs_capacity_bytes"] = summaryMetrics.Node.Runtime.ImageFileSystem.CapacityBytes
 	fields["runtime_image_fs_used_bytes"] = summaryMetrics.Node.Runtime.ImageFileSystem.UsedBytes
-	acc.AddFields("kubernetes_node", fields, tags)
+	acc.AddFields(metricName, fields, tags)
 }
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Item, error) {
