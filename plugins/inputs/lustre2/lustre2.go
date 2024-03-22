@@ -380,11 +380,19 @@ func (*Lustre2) SampleConfig() string {
 }
 
 func (l *Lustre2) GetLustreHealth() error {
-	filename := filepath.Join(l.rootdir, "/sys", "fs", "lustre", "health_check")
+	// the linter complains about using an element containing '/' in filepath.Join()
+	// so we explicitly set the rootdir default to '/' in this function rather than
+	// starting the second element with a '/'.
+	rootdir := l.rootdir
+	if rootdir == "" {
+		rootdir = "/"
+	}
+
+	filename := filepath.Join(rootdir, "sys", "fs", "lustre", "health_check")
 	if _, err := os.Stat(filename); err != nil {
 		// try falling back to the old procfs location
 		// it was moved in https://github.com/lustre/lustre-release/commit/5d368bd0b2
-		filename = filepath.Join(l.rootdir, "/proc", "fs", "lustre", "health_check")
+		filename = filepath.Join(rootdir, "proc", "fs", "lustre", "health_check")
 		if _, err = os.Stat(filename); err != nil {
 			return nil //nolint: nilerr // we don't want to return an error if the file doesn't exist
 		}
