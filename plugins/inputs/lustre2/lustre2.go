@@ -30,6 +30,7 @@ type tags struct {
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2 struct {
+	MgsProcfiles []string `toml:"mgs_procfiles"`
 	OstProcfiles []string `toml:"ost_procfiles"`
 	MdsProcfiles []string `toml:"mds_procfiles"`
 
@@ -600,6 +601,44 @@ func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping
 	return nil
 }
 
+func (l *Lustre2) getLustreEvictionCount(fileglob string) error {
+	files, err := filepath.Glob(filepath.Join(l.rootdir, fileglob))
+	if err != nil {
+		return fmt.Errorf("failed to find files matching glob %s: %w", fileglob, err)
+	}
+
+	for _, file := range files {
+		// Turn /sys/fs/lustre/*/<mgt/mdt/ost_name>/eviction_count into just the object store target name
+		// This assumes that the target name is always second to last, which is true in Lustre 2.1->2.12
+		path := strings.Split(file, "/")
+		if len(path) < 2 {
+			continue
+		}
+		name := path[len(path)-2]
+
+		contents, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", file, err)
+		}
+
+		value, err := strconv.ParseUint(strings.TrimSpace(string(contents)), 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse file %s: %w", file, err)
+		}
+
+		tag := tags{name, "", "", "", ""}
+		fields, ok := l.allFields[tag]
+		if !ok {
+			fields = make(map[string]interface{})
+			l.allFields[tag] = fields
+		}
+
+		fields["evictions"] = value
+	}
+	return nil
+
+}
+
 // Gather reads stats from all lustre targets
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	l.allFields = make(map[tags]map[string]interface{})
@@ -607,6 +646,13 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	err := l.GetLustreHealth()
 	if err != nil {
 		return err
+	}
+
+	if len(l.MgsProcfiles) == 0 {
+		l.MgsProcfiles = []string{
+			// eviction count
+			"/sys/fs/lustre/mgs/*/eviction_count",
+		}
 	}
 
 	if len(l.OstProcfiles) == 0 {
@@ -621,6 +667,8 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 			"/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
 			// bulk read/write statistics for zfs
 			"/proc/fs/lustre/osd-zfs/*/brw_stats",
+			// eviction count
+			"/sys/fs/lustre/obdfilter/*/eviction_count",
 		}
 	}
 
@@ -630,9 +678,21 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 			"/proc/fs/lustre/mdt/*/md_stats",
 			// Metadata target job stats
 			"/proc/fs/lustre/mdt/*/job_stats",
+			// eviction count
+			"/sys/fs/lustre/mdt/*/eviction_count",
 		}
 	}
 
+	for _, procfile := range l.MgsProcfiles {
+		if strings.HasSuffix(procfile, "eviction_count") {
+			err := l.getLustreEvictionCount(procfile)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("no handler found for mgs procfile pattern \"%s\"", procfile)
+		}
+	}
 	for _, procfile := range l.OstProcfiles {
 		if strings.HasSuffix(procfile, "brw_stats") {
 			err := l.getLustreProcBrwStats(procfile, wantedBrwstatsFields)
@@ -641,6 +701,11 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 			}
 		} else if strings.HasSuffix(procfile, "job_stats") {
 			err := l.GetLustreProcStats(procfile, wantedOstJobstatsFields)
+			if err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(procfile, "eviction_count") {
+			err := l.getLustreEvictionCount(procfile)
 			if err != nil {
 				return err
 			}
@@ -659,6 +724,11 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 			}
 		} else if strings.HasSuffix(procfile, "job_stats") {
 			err := l.GetLustreProcStats(procfile, wantedMdtJobstatsFields)
+			if err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(procfile, "eviction_count") {
+			err := l.getLustreEvictionCount(procfile)
 			if err != nil {
 				return err
 			}

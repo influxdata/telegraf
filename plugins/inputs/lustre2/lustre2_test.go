@@ -3,7 +3,9 @@
 package lustre2
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/influxdata/toml"
@@ -568,5 +570,48 @@ func TestLustre2GeneratesBrwstatsMetrics(t *testing.T) {
 			t.Log("\n", fields)
 			acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
 		}
+	}
+}
+
+func TestLustre2GeneratesEvictionMetrics(t *testing.T) {
+	rootdir, err := os.MkdirTemp("", "telegraf-lustre-evictions")
+	require.NoError(t, err)
+	defer os.RemoveAll(rootdir)
+
+	// setup files in mock sysfs
+	type fileEntry struct {
+		targetType string
+		targetName string
+		value      uint64
+	}
+	fileEntries := []fileEntry{
+		{"mdt", "fs-MDT0000", 101},
+		{"mgs", "MGS", 202},
+		{"obdfilter", "fs-OST0001", 303},
+	}
+	for _, f := range fileEntries {
+		d := filepath.Join(rootdir, "sys/fs/lustre", f.targetType, f.targetName)
+		err := os.MkdirAll(d, 0750)
+		require.NoError(t, err)
+		err = os.WriteFile(filepath.Join(d, "eviction_count"), []byte(fmt.Sprintf("%d\n", f.value)), 0640)
+		require.NoError(t, err)
+	}
+
+	// gather metrics
+	m := &Lustre2{rootdir: rootdir}
+	var acc testutil.Accumulator
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	// compare with expectations
+	for _, f := range fileEntries {
+		acc.AssertContainsTaggedFields(
+			t,
+			"lustre2",
+			map[string]interface{}{
+				"evictions": f.value,
+			},
+			map[string]string{"name": f.targetName},
+		)
 	}
 }
