@@ -33,6 +33,9 @@ type Lustre2 struct {
 	OstProcfiles []string `toml:"ost_procfiles"`
 	MdsProcfiles []string `toml:"mds_procfiles"`
 
+	// used by the testsuite to generate mock sysfs and procfs files
+	rootdir string
+
 	// allFields maps an OST name to the metric fields associated with that OST
 	allFields map[tags]map[string]interface{}
 }
@@ -376,8 +379,49 @@ func (*Lustre2) SampleConfig() string {
 	return sampleConfig
 }
 
+func (l *Lustre2) GetLustreHealth() error {
+	// the linter complains about using an element containing '/' in filepath.Join()
+	// so we explicitly set the rootdir default to '/' in this function rather than
+	// starting the second element with a '/'.
+	rootdir := l.rootdir
+	if rootdir == "" {
+		rootdir = "/"
+	}
+
+	filename := filepath.Join(rootdir, "sys", "fs", "lustre", "health_check")
+	if _, err := os.Stat(filename); err != nil {
+		// try falling back to the old procfs location
+		// it was moved in https://github.com/lustre/lustre-release/commit/5d368bd0b2
+		filename = filepath.Join(rootdir, "proc", "fs", "lustre", "health_check")
+		if _, err = os.Stat(filename); err != nil {
+			return nil //nolint: nilerr // we don't want to return an error if the file doesn't exist
+		}
+	}
+	contents, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	value := strings.TrimSpace(string(contents))
+	var health uint64
+	if value == "healthy" {
+		health = 1
+	}
+
+	t := tags{}
+	var fields map[string]interface{}
+	fields, ok := l.allFields[t]
+	if !ok {
+		fields = make(map[string]interface{})
+		l.allFields[t] = fields
+	}
+
+	fields["health"] = health
+	return nil
+}
+
 func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) error {
-	files, err := filepath.Glob(fileglob)
+	files, err := filepath.Glob(filepath.Join(l.rootdir, fileglob))
 	if err != nil {
 		return err
 	}
@@ -465,7 +509,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 }
 
 func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping) error {
-	files, err := filepath.Glob(fileglob)
+	files, err := filepath.Glob(filepath.Join(l.rootdir, fileglob))
 	if err != nil {
 		return fmt.Errorf("failed to find files matching glob %s: %w", fileglob, err)
 	}
@@ -560,45 +604,32 @@ func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	l.allFields = make(map[tags]map[string]interface{})
 
+	err := l.GetLustreHealth()
+	if err != nil {
+		return err
+	}
+
 	if len(l.OstProcfiles) == 0 {
-		// read/write bytes are in obdfilter/<ost_name>/stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/stats", wantedOstFields)
-		if err != nil {
-			return err
-		}
-		// cache counters are in osd-ldiskfs/<ost_name>/stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/osd-ldiskfs/*/stats", wantedOstFields)
-		if err != nil {
-			return err
-		}
-		// per job statistics are in obdfilter/<ost_name>/job_stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/job_stats", wantedOstJobstatsFields)
-		if err != nil {
-			return err
-		}
-		// bulk read/wrote statistics for ldiskfs
-		err = l.getLustreProcBrwStats("/proc/fs/lustre/osd-ldiskfs/*/brw_stats", wantedBrwstatsFields)
-		if err != nil {
-			return err
-		}
-		// bulk read/write statistics for zfs
-		err = l.getLustreProcBrwStats("/proc/fs/lustre/osd-zfs/*/brw_stats", wantedBrwstatsFields)
-		if err != nil {
-			return err
+		l.OstProcfiles = []string{
+			// read/write bytes are in obdfilter/<ost_name>/stats
+			"/proc/fs/lustre/obdfilter/*/stats",
+			// cache counters are in osd-ldiskfs/<ost_name>/stats
+			"/proc/fs/lustre/osd-ldiskfs/*/stats",
+			// per job statistics are in obdfilter/<ost_name>/job_stats
+			"/proc/fs/lustre/obdfilter/*/job_stats",
+			// bulk read/write statistics for ldiskfs
+			"/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
+			// bulk read/write statistics for zfs
+			"/proc/fs/lustre/osd-zfs/*/brw_stats",
 		}
 	}
 
 	if len(l.MdsProcfiles) == 0 {
-		// Metadata server stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/mdt/*/md_stats", wantedMdsFields)
-		if err != nil {
-			return err
-		}
-
-		// Metadata target job stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/mdt/*/job_stats", wantedMdtJobstatsFields)
-		if err != nil {
-			return err
+		l.MdsProcfiles = []string{
+			// Metadata server stats
+			"/proc/fs/lustre/mdt/*/md_stats",
+			// Metadata target job stats
+			"/proc/fs/lustre/mdt/*/job_stats",
 		}
 	}
 
@@ -640,8 +671,9 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for tgs, fields := range l.allFields {
-		tags := map[string]string{
-			"name": tgs.name,
+		tags := map[string]string{}
+		if len(tgs.name) > 0 {
+			tags["name"] = tgs.name
 		}
 		if len(tgs.brwSection) > 0 {
 			tags["brw_section"] = tgs.brwSection
