@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -148,6 +149,42 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "phpfpm", fields, tags)
+}
+
+func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
+	// Let OS find an available port
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "Cannot initialize test server")
+	defer tcp.Close()
+
+	const timeout = 200 * time.Millisecond
+
+	go func() {
+		conn, err := tcp.Accept()
+		if err != nil {
+			return // ignore the returned error as we cannot do anything about it anyway
+		}
+		defer conn.Close()
+
+		// Sleep longer than the timeout
+		time.Sleep(2 * timeout)
+	}()
+
+	//Now we tested again above server
+	r := &phpfpm{
+		Urls:    []string{"fcgi://" + tcp.Addr().String() + "/status"},
+		Timeout: config.Duration(timeout),
+		Log:     &testutil.Logger{},
+	}
+	require.NoError(t, r.Init())
+
+	start := time.Now()
+
+	var acc testutil.Accumulator
+	require.Error(t, acc.GatherError(r.Gather))
+
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.GreaterOrEqual(t, time.Since(start), timeout)
 }
 
 func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
