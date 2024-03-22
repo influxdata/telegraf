@@ -636,7 +636,6 @@ func (l *Lustre2) getLustreEvictionCount(fileglob string) error {
 		fields["evictions"] = value
 	}
 	return nil
-
 }
 
 // Gather reads stats from all lustre targets
@@ -684,13 +683,12 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, procfile := range l.MgsProcfiles {
-		if strings.HasSuffix(procfile, "eviction_count") {
-			err := l.getLustreEvictionCount(procfile)
-			if err != nil {
-				return err
-			}
-		} else {
+		if !strings.HasSuffix(procfile, "eviction_count") {
 			return fmt.Errorf("no handler found for mgs procfile pattern \"%s\"", procfile)
+		}
+		err := l.getLustreEvictionCount(procfile)
+		if err != nil {
+			return err
 		}
 	}
 	for _, procfile := range l.OstProcfiles {

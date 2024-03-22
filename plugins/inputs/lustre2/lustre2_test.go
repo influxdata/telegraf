@@ -590,7 +590,7 @@ func TestLustre2GeneratesEvictionMetrics(t *testing.T) {
 		{"obdfilter", "fs-OST0001", 303},
 	}
 	for _, f := range fileEntries {
-		d := filepath.Join(rootdir, "sys/fs/lustre", f.targetType, f.targetName)
+		d := filepath.Join(rootdir, "sys", "fs", "lustre", f.targetType, f.targetName)
 		err := os.MkdirAll(d, 0750)
 		require.NoError(t, err)
 		err = os.WriteFile(filepath.Join(d, "eviction_count"), []byte(fmt.Sprintf("%d\n", f.value)), 0640)
