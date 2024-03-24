@@ -800,6 +800,7 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 	})
 
 	subClient, err := subscribeConfig.CreateSubscribeClient(testutil.Logger{})
+	subClient.Connect()
 	require.NoError(t, err)
 	require.Equal(t, &ua.MonitoringParameters{
 		SamplingInterval: 50,

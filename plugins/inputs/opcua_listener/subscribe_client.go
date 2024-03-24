@@ -87,15 +87,11 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 		return nil, err
 	}
 
-	if err := client.InitNodeIDs(); err != nil {
-		return nil, err
-	}
-
 	processingCtx, processingCancel := context.WithCancel(context.Background())
 	subClient := &SubscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
-		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs)),
+		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, len(client.NodeMetricMapping)),
 		// 100 was chosen to make sure that the channels will not block when multiple changes come in at the same time.
 		// The channel size should be increased if reports come in on Telegraf blocking when many changes come in at
 		// the same time. It could be made dependent on the number of nodes subscribed to and the subscription interval.
@@ -105,16 +101,6 @@ func (sc *SubscribeClientConfig) CreateSubscribeClient(log telegraf.Logger) (*Su
 		cancel:            processingCancel,
 	}
 
-	log.Debugf("Creating monitored items")
-	for i, nodeID := range client.NodeIDs {
-		// The node id index (i) is used as the handle for the monitored item
-		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
-		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
-			return nil, err
-		}
-		subClient.monitoredItemsReqs[i] = req
-	}
-
 	return subClient, nil
 }
 
@@ -122,6 +108,22 @@ func (o *SubscribeClient) Connect() error {
 	err := o.OpcUAClient.Connect(o.ctx)
 	if err != nil {
 		return err
+	}
+
+	// Make sure we setup the node-ids correctly after reconnect
+	// as the server might be restarted and IDs changed
+	o.Log.Debugf("Creating monitored items on first connection")
+	if err := o.OpcUAInputClient.InitNodeIDs(o.ctx); err != nil {
+		return err
+	}
+
+	for i, nodeID := range o.OpcUAInputClient.NodeIDs {
+		// The node id index (i) is used as the handle for the monitored item
+		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
+		if err := assignConfigValuesToRequest(req, &o.OpcUAInputClient.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
+			return err
+		}
+		o.monitoredItemsReqs[i] = req
 	}
 
 	o.Log.Debugf("Creating OPC UA subscription")

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	gopcua_id "github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -57,6 +58,7 @@ type NodeSettings struct {
 	TagsSlice        [][]string           `toml:"tags" deprecated:"1.25.0;use 'default_tags' instead"`
 	DefaultTags      map[string]string    `toml:"default_tags"`
 	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
+	Browse           bool                 `toml:"browse"`
 }
 
 // NodeID returns the OPC UA node id
@@ -69,6 +71,7 @@ type NodeGroupSettings struct {
 	MetricName       string            `toml:"name"`            // Overrides plugin's setting
 	Namespace        string            `toml:"namespace"`       // Can be overridden by node setting
 	IdentifierType   string            `toml:"identifier_type"` // Can be overridden by node setting
+	Browse           bool              `toml:"browse"`          // Can be overridden by node setting, although only to true state
 	Nodes            []NodeSettings    `toml:"nodes"`
 	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;use default_tags"`
 	DefaultTags      map[string]string `toml:"default_tags"`
@@ -352,6 +355,9 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 			if node.MonitoringParams.SamplingInterval == 0 {
 				node.MonitoringParams.SamplingInterval = group.SamplingInterval
 			}
+			if node.Browse == false {
+				node.Browse = group.Browse
+			}
 
 			nmm, err := NewNodeMetricMapping(group.MetricName, node, groupTags)
 			if err != nil {
@@ -368,17 +374,109 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	return nil
 }
 
-func (o *OpcUAInputClient) InitNodeIDs() error {
+func (o *OpcUAInputClient) InitNodeIDs(ctx context.Context) error {
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
 	for _, node := range o.NodeMetricMapping {
-		nid, err := ua.ParseNodeID(node.Tag.NodeID())
-		if err != nil {
-			return err
+		var nid *ua.NodeID = nil
+
+		if node.Tag.Browse && node.Tag.IdentifierType == "s" {
+			browsedNodeID, err := o.browseNode(ctx, node.Tag.Namespace, node.Tag.Identifier)
+			if err != nil {
+				o.Log.Errorf("Error browsing node %s: %s", node.Tag.FieldName, err)
+				// continue, other nodes may be browseable
+				// also, add the node as a string identifier. The server will not be able to return data
+				// but we must add a node to the o.NodeIDs array in order for it to match the o.NodeMetricMappings
+				parsedNodeID, err := ua.ParseNodeID(node.Tag.NodeID())
+				if err != nil {
+					return err
+				}
+				nid = parsedNodeID
+			} else {
+				nid = browsedNodeID
+			}
+		} else {
+			parsedNodeID, err := ua.ParseNodeID(node.Tag.NodeID())
+			if err != nil {
+				return err
+			}
+			nid = parsedNodeID
 		}
+
 		o.NodeIDs = append(o.NodeIDs, nid)
 	}
 
 	return nil
+}
+
+func parseNamespaceId(ns string) (uint16, error) {
+	nsId, err := strconv.ParseUint(ns, 10, 16)
+	if err != nil {
+		return 0, fmt.Errorf("invalid namespace number: %s", err)
+	}
+
+	return uint16(nsId), nil
+}
+
+// Parse a browse path somewhat as specified in OPC UA Part 4, Annex A.
+// basically a list of segments of ns:BrowseName separated by slashes.
+// for example: 4:Folder/3:Object/Member.Value
+// Use the initialNamespace as the namespace if no ns is specified in the path segment
+func parseBrowsePath(initialNamespace string, browsePath string) ([]*ua.QualifiedName, error) {
+	segmentSplitter := func(r rune) bool {
+		return r == '/' || r == '.'
+	}
+	segments := strings.FieldsFunc(browsePath, segmentSplitter)
+
+	ns, err := parseNamespaceId(initialNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	pathNames := make([]*ua.QualifiedName, 0, len(segments))
+
+	for _, segment := range segments {
+		browseName := strings.Split(segment, ":")
+
+		segmentNs := ns
+		segmentName := ""
+
+		if len(browseName) == 1 {
+			segmentName = browseName[0]
+		} else if len(browseName) == 2 {
+			segmentNs, err = parseNamespaceId(browseName[0])
+			if err != nil {
+				return nil, fmt.Errorf("Namespace part of segment %s cannot be parsed as an namespace id: %s", segment, err)
+			}
+			segmentName = browseName[1]
+		} else {
+			return nil, fmt.Errorf("Browse name segment %s contains more than one colon", segment)
+		}
+
+		pathNames = append(pathNames, &ua.QualifiedName{
+			NamespaceIndex: segmentNs,
+			Name:           segmentName,
+		})
+	}
+
+	return pathNames, nil
+}
+
+func (o *OpcUAInputClient) browseNode(ctx context.Context, ns string, browsePath string) (*ua.NodeID, error) {
+	o.Log.Infof("Browsing node %s", browsePath)
+
+	objectsFolderId := ua.NewNumericNodeID(0, gopcua_id.ObjectsFolder)
+
+	pathNames, err := parseBrowsePath(ns, browsePath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid browse path, %s", err)
+	}
+
+	targetNodeId, err := o.Client.Node(objectsFolderId).TranslateBrowsePathsToNodeIDs(ctx, pathNames)
+	if err != nil {
+		return nil, fmt.Errorf("unable to browse for node, %s", err)
+	}
+
+	return targetNodeId, nil
 }
 
 func (o *OpcUAInputClient) initLastReceivedValues() {

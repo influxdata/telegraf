@@ -89,6 +89,11 @@ to use them.
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## tags              - extra tags to be added to the output metric (optional); deprecated in 1.25.0; use default_tags
   ## default_tags      - extra tags to be added to the output metric (optional)
+  ## browse            - browse the OPC tag using BrowseName attributes (optional).
+  ##                     identifier_type must be "s" and identifier must be set to a valid browse path according to OPC UA Part 4, Annex A,
+  ##                     e.g.: 3:Folder/4:SubFolder/4:Object.Member.Value 
+  ##                     Objects are browsed starting from the ObjectsFolder folder.
+  ##                     The namespace in the namespace field is used as the initial namespace, but may be overridden by the browse path
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
@@ -96,6 +101,7 @@ to use them.
   # nodes = [
   #   {name="", namespace="", identifier_type="", identifier="", tags=[["tag1", "value1"], ["tag2", "value2"]},
   #   {name="", namespace="", identifier_type="", identifier=""},
+  #   {name="", namespace="", identifier_type="s", identifier="3:Folder/4:SubFolder/4:Object.Member.Value", browse=true}
   # ]
   #
   ## Bracketed notation
@@ -104,6 +110,7 @@ to use them.
   #   namespace = ""
   #   identifier_type = ""
   #   identifier = ""
+  #   browse = false
   #   default_tags = { tag1 = "value1", tag2 = "value2" }
   #
   # [[inputs.opcua.nodes]]
