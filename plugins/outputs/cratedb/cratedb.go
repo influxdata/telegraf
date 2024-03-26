@@ -31,7 +31,8 @@ type CrateDB struct {
 	Table        string          `toml:"table"`
 	TableCreate  bool            `toml:"table_create"`
 	KeySeparator string          `toml:"key_separator"`
-	DB           *sql.DB
+
+	db *sql.DB
 }
 
 func (*CrateDB) SampleConfig() string {
@@ -72,7 +73,7 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 			return err
 		}
 	}
-	c.DB = db
+	c.db = db
 	return nil
 }
 
@@ -85,7 +86,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	_, err = c.DB.ExecContext(ctx, generatedSQL)
+	_, err = c.db.ExecContext(ctx, generatedSQL)
 	if err != nil {
 		return err
 	}
@@ -237,7 +238,7 @@ func hashID(m telegraf.Metric) int64 {
 }
 
 func (c *CrateDB) Close() error {
-	return c.DB.Close()
+	return c.db.Close()
 }
 
 func init() {
