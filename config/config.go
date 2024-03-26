@@ -1486,6 +1486,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	c.getFieldString(tbl, "name_override", &oc.NameOverride)
 	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
 	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
+	c.getFieldString(tbl, "startup_error_behavior", &oc.StartupErrorBehavior)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1510,7 +1511,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",
 		"pass", "period", "precision",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags":
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior":
 
 	// Secret-store options to ignore
 	case "id":

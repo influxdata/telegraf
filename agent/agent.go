@@ -793,10 +793,17 @@ func (a *Agent) startOutputs(
 	src := make(chan telegraf.Metric, 100)
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
-		err := a.connectOutput(ctx, output)
-		if err != nil {
-			for _, output := range unit.outputs {
+		if err := a.connectOutput(ctx, output); err != nil {
+			var fatalErr *internal.FatalError
+			if errors.As(err, &fatalErr) {
+				// If the model tells us to remove the plugin we do so without error
+				log.Printf("I! [agent] Failed to connect to [%s], error was %q;  shutting down plugin...", output.LogName(), err)
 				output.Close()
+				continue
+			}
+
+			for _, unitOutput := range unit.outputs {
+				unitOutput.Close()
 			}
 			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 		}
@@ -810,18 +817,14 @@ func (a *Agent) startOutputs(
 // connectOutputs connects to all outputs.
 func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
-	err := output.Output.Connect()
-	if err != nil {
-		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
-			"error was %q", output.LogName(), err)
+	if err := output.Connect(); err != nil {
+		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, error was %q", output.LogName(), err)
 
-		err := internal.SleepContext(ctx, 15*time.Second)
-		if err != nil {
+		if err := internal.SleepContext(ctx, 15*time.Second); err != nil {
 			return err
 		}
 
-		err = output.Output.Connect()
-		if err != nil {
+		if err = output.Connect(); err != nil {
 			return fmt.Errorf("error connecting to output %q: %w", output.LogName(), err)
 		}
 	}
