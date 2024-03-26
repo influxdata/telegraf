@@ -121,7 +121,14 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 	return nil
 }
 
-func (s *Starlark) Stop() {
+func (s *Starlark) Stop() {}
+
+func (s *Starlark) GetState() interface{} {
+	return s.Common.GetState()
+}
+
+func (s *Starlark) SetState(state interface{}) error {
+	return s.Common.SetState(state)
 }
 
 func containsMetric(metrics []telegraf.Metric, target telegraf.Metric) bool {

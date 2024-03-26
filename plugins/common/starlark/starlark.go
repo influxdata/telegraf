@@ -159,6 +159,19 @@ func (s *Common) LogError(err error) {
 	}
 }
 
+func (s *Common) GetState() interface{} {
+	return s.globals["state"]
+}
+
+func (s *Common) SetState(state interface{}) error {
+	dict, ok := state.(*starlark.Dict)
+	if !ok {
+		return errors.New("state must be a starlark dict")
+	}
+	s.globals["state"] = dict
+	return nil
+}
+
 func LoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {
 	switch module {
 	case "json.star":

@@ -102,6 +102,14 @@ func (s *Starlark) Reset() {
 	}
 }
 
+func (s *Starlark) GetState() interface{} {
+	return s.Common.GetState()
+}
+
+func (s *Starlark) SetState(state interface{}) error {
+	return s.Common.SetState(state)
+}
+
 // init initializes starlark aggregator plugin
 func init() {
 	aggregators.Add("starlark", func() telegraf.Aggregator {
