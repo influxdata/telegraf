@@ -9,6 +9,7 @@ package lustre2
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,9 +31,10 @@ type tags struct {
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2 struct {
-	MgsProcfiles []string `toml:"mgs_procfiles"`
-	OstProcfiles []string `toml:"ost_procfiles"`
-	MdsProcfiles []string `toml:"mds_procfiles"`
+	MgsProcfiles []string        `toml:"mgs_procfiles"`
+	OstProcfiles []string        `toml:"ost_procfiles"`
+	MdsProcfiles []string        `toml:"mds_procfiles"`
+	Log          telegraf.Logger `toml:"-"`
 
 	// used by the testsuite to generate mock sysfs and procfs files
 	rootdir string
@@ -526,6 +528,10 @@ func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping
 
 		wholeFile, err := os.ReadFile(file)
 		if err != nil {
+			if errors.Is(err, os.ErrPermission) {
+				l.Log.Debugf("%s", err)
+				continue
+			}
 			return fmt.Errorf("failed to read file %s: %w", file, err)
 		}
 		lines := strings.Split(string(wholeFile), "\n")
