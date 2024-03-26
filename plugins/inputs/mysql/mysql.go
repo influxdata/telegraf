@@ -55,8 +55,9 @@ type Mysql struct {
 
 	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
-	lastT          time.Time
-	getStatusQuery string
+	lastT               time.Time
+	getStatusQuery      string
+	loggedConvertFields map[string]bool
 }
 
 const (
@@ -84,6 +85,8 @@ func (m *Mysql) Init() error {
 		s := config.NewSecret([]byte(localhost))
 		m.Servers = append(m.Servers, &s)
 	}
+
+	m.loggedConvertFields = make(map[string]bool)
 
 	// Register the TLS configuration. Due to the registry being a global
 	// one for the mysql package, we need to define unique IDs to avoid
@@ -773,7 +776,24 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			for _, mapped := range v1.Mappings {
 				if strings.HasPrefix(key, mapped.OnServer) {
 					// convert numeric values to integer
-					i, _ := strconv.Atoi(string(val))
+					var i int
+					v := string(val)
+					switch v {
+					case "ON", "true":
+						i = 1
+					case "OFF", "false":
+						i = 0
+					default:
+						if i, err = strconv.Atoi(v); err != nil {
+							// Make the value a <nil> value to prevent adding
+							// the field containing nonsense values.
+							i = 0
+							if !m.loggedConvertFields[key] {
+								m.Log.Warnf("Cannot convert value %q for key %q to integer outputting zero...", v, key)
+								m.loggedConvertFields[key] = true
+							}
+						}
+					}
 					fields[mapped.InExport+key[len(mapped.OnServer):]] = i
 					found = true
 				}
