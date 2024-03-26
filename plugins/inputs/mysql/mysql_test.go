@@ -38,8 +38,10 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 
 	dsn := fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])
 	s := config.NewSecret([]byte(dsn))
+	defer s.Destroy()
 	m := &Mysql{
 		Servers: []*config.Secret{&s},
+		Log:     &testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -74,11 +76,13 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 
 	dsn := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
 	s := config.NewSecret([]byte(dsn))
+	defer s.Destroy()
 	m := &Mysql{
 		Servers:          []*config.Secret{&s},
 		IntervalSlow:     config.Duration(30 * time.Second),
 		GatherGlobalVars: true,
 		MetricVersion:    2,
+		Log:              &testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -93,6 +97,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	m2 := &Mysql{
 		Servers:       []*config.Secret{&s2},
 		MetricVersion: 2,
+		Log:           &testutil.Logger{},
 	}
 	require.NoError(t, m2.Init())
 
@@ -126,9 +131,11 @@ func TestPercona8Integration(t *testing.T) {
 
 	dsn := fmt.Sprintf("root:secret@tcp(%s:%s)/", container.Address, container.Ports[servicePort])
 	s := config.NewSecret([]byte(dsn))
+	defer s.Destroy()
 	plugin := &Mysql{
 		Servers:              []*config.Secret{&s},
 		GatherUserStatistics: true,
+		Log:                  &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -139,6 +146,44 @@ func TestPercona8Integration(t *testing.T) {
 	require.True(t, acc.HasFloatField("mysql_user_stats", "connected_time"))
 	require.True(t, acc.HasFloatField("mysql_user_stats", "cpu_time"))
 	require.True(t, acc.HasFloatField("mysql_user_stats", "busy_time"))
+}
+
+func TestGaleraIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "bitnami/mariadb-galera",
+		Env:          map[string]string{"ALLOW_EMPTY_PASSWORD": "yes"},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Synchronized with group, ready for connections"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	dsn := fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])
+	s := config.NewSecret([]byte(dsn))
+	defer s.Destroy()
+	plugin := &Mysql{
+		Servers: []*config.Secret{&s},
+		Log:     &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+	require.True(t, acc.HasIntField("mysql", "wsrep_ready"))
+	for _, m := range acc.GetTelegrafMetrics() {
+		if v, found := m.GetField("wsrep_ready"); found {
+			require.EqualValues(t, 1, v, "invalid value for field wsrep_ready")
+			break
+		}
+	}
 }
 
 func TestMysqlGetDSNTag(t *testing.T) {
