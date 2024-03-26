@@ -26,16 +26,28 @@ var sampleConfig string
 const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
-	URL          string
-	Timeout      config.Duration
-	Table        string
-	TableCreate  bool   `toml:"table_create"`
-	KeySeparator string `toml:"key_separator"`
+	URL          string          `toml:"url"`
+	Timeout      config.Duration `toml:"timeout"`
+	Table        string          `toml:"table"`
+	TableCreate  bool            `toml:"table_create"`
+	KeySeparator string          `toml:"key_separator"`
 	DB           *sql.DB
 }
 
 func (*CrateDB) SampleConfig() string {
 	return sampleConfig
+}
+
+func (c *CrateDB) Init() error {
+	// Set defaults
+	if c.KeySeparator == "" {
+		c.KeySeparator = "_"
+	}
+	if c.Table == "" {
+		c.Table = "metrics"
+	}
+
+	return nil
 }
 
 func (c *CrateDB) Connect() error {
