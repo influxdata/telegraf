@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -24,6 +25,18 @@ import (
 var sampleConfig string
 
 const MaxInt64 = int64(^uint64(0) >> 1)
+
+const tableCreationQuery = `
+CREATE TABLE IF NOT EXISTS %s (
+	"hash_id" LONG INDEX OFF,
+	"timestamp" TIMESTAMP,
+	"name" STRING,
+	"tags" OBJECT(DYNAMIC),
+	"fields" OBJECT(DYNAMIC),
+	"day" TIMESTAMP GENERATED ALWAYS AS date_trunc('day', "timestamp"),
+	PRIMARY KEY ("timestamp", "hash_id","day")
+) PARTITIONED BY("day");
+`
 
 type CrateDB struct {
 	URL          string          `toml:"url"`
@@ -52,28 +65,24 @@ func (c *CrateDB) Init() error {
 }
 
 func (c *CrateDB) Connect() error {
-	db, err := sql.Open("pgx", c.URL)
-	if err != nil {
-		return err
-	} else if c.TableCreate {
-		query := `
-CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
-	"hash_id" LONG INDEX OFF,
-	"timestamp" TIMESTAMP,
-	"name" STRING,
-	"tags" OBJECT(DYNAMIC),
-	"fields" OBJECT(DYNAMIC),
-	"day" TIMESTAMP GENERATED ALWAYS AS date_trunc('day', "timestamp"),
-	PRIMARY KEY ("timestamp", "hash_id","day")
-) PARTITIONED BY("day");
-`
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
-		defer cancel()
-		if _, err := db.ExecContext(ctx, query); err != nil {
+	if c.db == nil {
+		db, err := sql.Open("pgx", c.URL)
+		if err != nil {
 			return err
 		}
+		c.db = db
 	}
-	c.db = db
+
+	if c.TableCreate {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
+		defer cancel()
+
+		query := fmt.Sprintf(tableCreationQuery, c.Table)
+		if _, err := c.db.ExecContext(ctx, query); err != nil {
+			return &internal.StartupError{Err: err, Retry: true}
+		}
+	}
+
 	return nil
 }
 
@@ -238,6 +247,9 @@ func hashID(m telegraf.Metric) int64 {
 }
 
 func (c *CrateDB) Close() error {
+	if c.db == nil {
+		return nil
+	}
 	return c.db.Close()
 }
 
