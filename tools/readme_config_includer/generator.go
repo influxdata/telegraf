@@ -189,6 +189,8 @@ func main() {
 						log.Printf("heading without lines: %s", string(rawnode.Text(readme)))
 						stop = start // safety measure to prevent removing all text
 					}
+					// Make sure we also iterate the present heading
+					rawnode = h.PreviousSibling()
 					break
 				}
 			}
