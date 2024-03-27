@@ -43,6 +43,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   name = "temperature"
   #   ## Datapoint-Type (DPT) of the KNX messages
   #   dpt = "9.001"
+  #   ## Use the string representation instead of the numerical value for the
+  #   ## datapoint-type and the addresses below
+  #   # as_string = false
   #   ## List of Group-Addresses (GAs) assigned to the measurement
   #   addresses = ["5/5/1"]
 

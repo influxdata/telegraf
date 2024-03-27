@@ -26,13 +26,15 @@ type KNXInterface interface {
 
 type addressTarget struct {
 	measurement string
-	datapoint   dpt.DatapointValue
+	asstring    bool
+	datapoint   dpt.Datapoint
 }
 
 type Measurement struct {
-	Name      string
-	Dpt       string
-	Addresses []string
+	Name      string   `toml:"name"`
+	Dpt       string   `toml:"dpt"`
+	AsString  bool     `toml:"as_string"`
+	Addresses []string `toml:"addresses"`
 }
 
 type KNXListener struct {
@@ -83,7 +85,7 @@ func (kl *KNXListener) Init() error {
 			if !ok {
 				return fmt.Errorf("cannot create datapoint-type %q for address %q", m.Dpt, ga)
 			}
-			kl.gaTargetMap[ga] = addressTarget{m.Name, d}
+			kl.gaTargetMap[ga] = addressTarget{measurement: m.Name, asstring: m.AsString, datapoint: d}
 		}
 	}
 
@@ -164,8 +166,7 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 		}
 
 		// Extract the value from the data-frame
-		err := target.datapoint.Unpack(msg.Data)
-		if err != nil {
+		if err := target.datapoint.Unpack(msg.Data); err != nil {
 			kl.Log.Errorf("Unpacking data failed: %v", err)
 			continue
 		}
@@ -175,19 +176,23 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 		// as otherwise telegraf will not push out the metrics and eat it
 		// silently.
 		var value interface{}
-		vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
-		switch vi.Kind() {
-		case reflect.Bool:
-			value = vi.Bool()
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			value = vi.Int()
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			value = vi.Uint()
-		case reflect.Float32, reflect.Float64:
-			value = vi.Float()
-		default:
-			kl.Log.Errorf("Type conversion %v failed for address %q", vi.Kind(), ga)
-			continue
+		if !target.asstring {
+			vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
+			switch vi.Kind() {
+			case reflect.Bool:
+				value = vi.Bool()
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				value = vi.Int()
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				value = vi.Uint()
+			case reflect.Float32, reflect.Float64:
+				value = vi.Float()
+			default:
+				kl.Log.Errorf("Type conversion %v failed for address %q", vi.Kind(), ga)
+				continue
+			}
+		} else {
+			value = target.datapoint.String()
 		}
 
 		// Compose the actual data to be pushed out
