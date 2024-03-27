@@ -56,7 +56,6 @@ func TestCases(t *testing.T) {
 
 			// Process expected metrics and compare with resulting metrics
 			actual := acc.GetTelegrafMetrics()
-			testutil.PrintMetrics(actual)
 			testutil.RequireMetricsEqual(t, plugin.Expected, actual, options...)
 		})
 	}

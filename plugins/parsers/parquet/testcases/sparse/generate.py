@@ -1,8 +1,3 @@
-# Dense
-
-The test file was created via the following:
-
-```python
 #!/usr/bin/env python
 import pandas as pd
 import pyarrow as pa
@@ -21,5 +16,5 @@ df = pandas.DataFrame({
         "2024-03-07T17:10:32",
     ]
 })
+
 pyarrow.parquet.write_table(pyarrow.Table.from_pandas(df), "input.parquet")
-```

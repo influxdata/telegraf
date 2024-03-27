@@ -1,8 +1,3 @@
-# Datatypes
-
-The test file was created via the following:
-
-```python
 #!/usr/bin/env python
 import pandas as pd
 import pyarrow as pa
@@ -36,4 +31,3 @@ schema = pyarrow.schema([
 ])
 
 pyarrow.parquet.write_table(pyarrow.Table.from_pandas(df, schema), "input.parquet")
-```

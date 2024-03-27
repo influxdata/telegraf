@@ -21,7 +21,7 @@ The Parquet parser allows for the parsing of Parquet files that were read in.
   # measurement_column = ""
 
   ## Timestamp column is the column containing the time that should be used to
-  ## create the metric.
+  ## create the metric. If not set, then the time of parsing is used.
   # timestamp_column = ""
 
   ## Timestamp format is the time layout that should be used to interpret the
