@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate"
@@ -72,33 +73,8 @@ type Postgresql struct {
 	tagsJSONColumn   utils.Column
 }
 
-func init() {
-	outputs.Add("postgresql", func() telegraf.Output { return newPostgresql() })
-}
-
-func newPostgresql() *Postgresql {
-	p := &Postgresql{
-		Schema:                     "public",
-		TagTableSuffix:             "_tag",
-		TagCacheSize:               100000,
-		Uint64Type:                 PgNumeric,
-		CreateTemplates:            []*sqltemplate.Template{{}},
-		AddColumnTemplates:         []*sqltemplate.Template{{}},
-		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
-		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
-		RetryMaxBackoff:            config.Duration(time.Second * 15),
-		Logger:                     models.NewLogger("outputs", "postgresql", ""),
-		LogLevel:                   "warn",
-	}
-
-	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
-	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
-	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
-	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
-		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
-	)
-
-	return p
+func (p *Postgresql) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Postgresql) Init() error {
@@ -169,8 +145,6 @@ func (p *Postgresql) Init() error {
 	return nil
 }
 
-func (p *Postgresql) SampleConfig() string { return sampleConfig }
-
 // Connect establishes a connection to the target database and prepares the cache
 func (p *Postgresql) Connect() error {
 	// Yes, we're not supposed to store the context. However since we don't receive a context, we have to.
@@ -178,8 +152,11 @@ func (p *Postgresql) Connect() error {
 	var err error
 	p.db, err = pgxpool.ConnectConfig(p.dbContext, p.dbConfig)
 	if err != nil {
-		p.Logger.Errorf("Couldn't connect to server\n%v", err)
-		return err
+		p.dbContextCancel()
+		return &internal.StartupError{
+			Err:   err,
+			Retry: true,
+		}
 	}
 	p.tableManager = NewTableManager(p)
 
@@ -234,7 +211,9 @@ func (p *Postgresql) Close() error {
 
 	// Die!
 	p.dbContextCancel()
-	p.db.Close()
+	if p.db != nil {
+		p.db.Close()
+	}
 	p.tableManager = nil
 	return nil
 }
@@ -492,4 +471,33 @@ func (p *Postgresql) writeTagTable(ctx context.Context, db dbh, tableSource *Tab
 
 	ttsrc.UpdateCache()
 	return nil
+}
+
+func newPostgresql() *Postgresql {
+	p := &Postgresql{
+		Schema:                     "public",
+		TagTableSuffix:             "_tag",
+		TagCacheSize:               100000,
+		Uint64Type:                 PgNumeric,
+		CreateTemplates:            []*sqltemplate.Template{{}},
+		AddColumnTemplates:         []*sqltemplate.Template{{}},
+		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
+		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
+		RetryMaxBackoff:            config.Duration(time.Second * 15),
+		Logger:                     models.NewLogger("outputs", "postgresql", ""),
+		LogLevel:                   "warn",
+	}
+
+	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
+	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
+	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
+	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
+		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
+	)
+
+	return p
+}
+
+func init() {
+	outputs.Add("postgresql", func() telegraf.Output { return newPostgresql() })
 }

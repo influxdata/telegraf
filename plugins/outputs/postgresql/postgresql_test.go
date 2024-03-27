@@ -18,7 +18,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -270,6 +272,80 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 	_ = p.Init()
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 2, p.db.Stat().MaxConns())
+}
+
+func TestConnectionIssueAtStartup(t *testing.T) {
+	// Test case for https://github.com/influxdata/telegraf/issues/14365
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	servicePort := "5432"
+	username := "postgres"
+	password := "postgres"
+	testDatabaseName := "telegraf_test"
+
+	container := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_USER":     username,
+			"POSTGRES_PASSWORD": password,
+			"POSTGRES_DB":       "telegraf_test",
+		},
+		WaitingFor: wait.ForAll(
+			// the database comes up twice, once right away, then again a second
+			// time after the docker entrypoint starts configuration
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Pause the container for connectivity issues
+	require.NoError(t, container.Pause())
+
+	// Create a model to be able to use the startup retry strategy
+	dsn := config.NewSecret([]byte(fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s  connect_timeout=1",
+		container.Address,
+		container.Ports[servicePort],
+		username,
+		password,
+		testDatabaseName,
+	)))
+	defer dsn.Destroy()
+	plugin := newPostgresql()
+	plugin.Connection = dsn
+	plugin.Logger = NewLogAccumulator(t)
+	plugin.LogLevel = "debug"
+	model := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "postgres",
+			StartupErrorBehavior: "retry",
+		},
+		1000, 1000,
+	)
+	require.NoError(t, model.Init())
+
+	// The connect call should succeed even though the table creation was not
+	// successful due to the "retry" strategy
+	require.NoError(t, model.Connect())
+
+	// Writing the metrics in this state should fail because we are not fully
+	// started up
+	metrics := testutil.MockMetrics()
+	for _, m := range metrics {
+		model.AddMetric(m)
+	}
+	require.ErrorIs(t, model.WriteBatch(), internal.ErrNotConnected)
+
+	// Unpause the container, now writes should succeed
+	require.NoError(t, container.Resume())
+	require.NoError(t, model.WriteBatch())
+	model.Close()
 }
 
 func newMetric(
