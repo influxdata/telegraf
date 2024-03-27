@@ -7,7 +7,7 @@ import (
 	"github.com/apache/arrow/go/v16/parquet/file"
 )
 
-func newColumnParser(reader file.ColumnChunkReader) *ColumnParser {
+func newColumnParser(reader file.ColumnChunkReader) *columnParser {
 	batchSize := 128
 
 	var valueBuffer interface{}
@@ -28,7 +28,7 @@ func newColumnParser(reader file.ColumnChunkReader) *ColumnParser {
 		valueBuffer = make([]parquet.FixedLenByteArray, batchSize)
 	}
 
-	return &ColumnParser{
+	return &columnParser{
 		name:        reader.Descriptor().Name(),
 		reader:      reader,
 		batchSize:   int64(batchSize),
@@ -38,7 +38,7 @@ func newColumnParser(reader file.ColumnChunkReader) *ColumnParser {
 	}
 }
 
-type ColumnParser struct {
+type columnParser struct {
 	name           string
 	reader         file.ColumnChunkReader
 	batchSize      int64
@@ -53,45 +53,51 @@ type ColumnParser struct {
 	valueBuffer interface{}
 }
 
-func (c *ColumnParser) readNextBatch() {
+func (c *columnParser) readNextBatch() error {
+	var err error
+
 	switch reader := c.reader.(type) {
 	case *file.BooleanColumnChunkReader:
 		values := c.valueBuffer.([]bool)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	case *file.Int32ColumnChunkReader:
 		values := c.valueBuffer.([]int32)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	case *file.Int64ColumnChunkReader:
 		values := c.valueBuffer.([]int64)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	case *file.Float32ColumnChunkReader:
 		values := c.valueBuffer.([]float32)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	case *file.Float64ColumnChunkReader:
 		values := c.valueBuffer.([]float64)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	case *file.ByteArrayColumnChunkReader:
 		values := c.valueBuffer.([]parquet.ByteArray)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	case *file.FixedLenByteArrayColumnChunkReader:
 		values := c.valueBuffer.([]parquet.FixedLenByteArray)
-		c.levelsBuffered, c.valuesBuffered, _ = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
+		c.levelsBuffered, c.valuesBuffered, err = reader.ReadBatch(c.batchSize, values, c.defLevels, c.repLevels)
 	}
 
 	c.valueOffset = 0
 	c.levelOffset = 0
+
+	return err
 }
 
-func (c *ColumnParser) HasNext() bool {
+func (c *columnParser) HasNext() bool {
 	return c.levelOffset < c.levelsBuffered || c.reader.HasNext()
 }
 
-func (c *ColumnParser) Next() (interface{}, bool) {
+func (c *columnParser) Next() (interface{}, bool) {
 	if c.levelOffset == c.levelsBuffered {
 		if !c.HasNext() {
 			return nil, false
 		}
-		c.readNextBatch()
+		if err := c.readNextBatch(); err != nil {
+			return nil, false
+		}
 		if c.levelsBuffered == 0 {
 			return nil, false
 		}

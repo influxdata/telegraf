@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/apache/arrow/go/v16/parquet/file"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
@@ -49,25 +50,21 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create parquet reader: %w", err)
 	}
-	metadata := parquetReader.MetaData()
-	selectedColumns := make([]int, 0)
-	for i := 0; i < metadata.Schema.NumColumns(); i++ {
-		selectedColumns = append(selectedColumns, i)
-	}
 
-	columns := make([]string, len(selectedColumns))
-	data := make(map[int][]any, metadata.Schema.NumColumns())
+	metadata := parquetReader.MetaData()
+	columns := make([]string, metadata.Schema.NumColumns())
+	data := make([][]any, metadata.Schema.NumColumns())
 	for i := 0; i < parquetReader.NumRowGroups(); i++ {
 		rowGroup := parquetReader.RowGroup(i)
-		scanners := make([]*ColumnParser, len(selectedColumns))
-		for idx, j := range selectedColumns {
-			col, err := rowGroup.Column(j)
+		scanners := make([]*columnParser, metadata.Schema.NumColumns())
+		for colIndex := range metadata.Schema.NumColumns() {
+			col, err := rowGroup.Column(colIndex)
 			if err != nil {
-				return nil, fmt.Errorf("unable to fetch column %q: %w", j, err)
+				return nil, fmt.Errorf("unable to fetch column %q: %w", colIndex, err)
 			}
 
-			scanners[idx] = newColumnParser(col)
-			columns[idx] = col.Descriptor().Name()
+			scanners[colIndex] = newColumnParser(col)
+			columns[colIndex] = col.Descriptor().Name()
 		}
 
 		for i, s := range scanners {
@@ -79,7 +76,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 
+	if len(data) == 0 {
+		return nil, nil
+	}
+
 	metrics := make([]telegraf.Metric, len(data[0]))
+	now := time.Now()
 	for colIndex, col := range data {
 		for i, val := range col {
 			if val == nil {
@@ -87,18 +89,29 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			}
 
 			if metrics[i] == nil {
-				metrics[i] = metric.New(p.metricName, p.defaultTags, nil, time.Now())
+				metrics[i] = metric.New(p.metricName, p.defaultTags, nil, now)
 			}
 
 			if p.MeasurementColumn != "" && columns[colIndex] == p.MeasurementColumn {
-				metrics[i].SetName(fmt.Sprintf("%v", val))
-			} else if p.TagColumns != nil && slices.Contains(p.TagColumns, columns[colIndex]) {
-				metrics[i].AddTag(columns[colIndex], fmt.Sprintf("%v", val))
-			} else if p.TimestampColumn != "" && columns[colIndex] == p.TimestampColumn {
-				rawTime := fmt.Sprintf("%v", val)
-				timestamp, err := internal.ParseTimestamp(p.TimestampFormat, rawTime, p.location)
+				valStr, err := internal.ToString(val)
 				if err != nil {
-					return nil, fmt.Errorf("could not parse '%s' to '%s'", rawTime, p.TimestampFormat)
+					return nil, fmt.Errorf("could not convert value to string: %w", err)
+				}
+				metrics[i].SetName(valStr)
+			} else if p.TagColumns != nil && slices.Contains(p.TagColumns, columns[colIndex]) {
+				valStr, err := internal.ToString(val)
+				if err != nil {
+					return nil, fmt.Errorf("could not convert value to string: %w", err)
+				}
+				metrics[i].AddTag(columns[colIndex], valStr)
+			} else if p.TimestampColumn != "" && columns[colIndex] == p.TimestampColumn {
+				valStr, err := internal.ToString(val)
+				if err != nil {
+					return nil, fmt.Errorf("could not convert value to string: %w", err)
+				}
+				timestamp, err := internal.ParseTimestamp(p.TimestampFormat, valStr, p.location)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse '%s' to '%s'", valStr, p.TimestampFormat)
 				}
 				metrics[i].SetTime(timestamp)
 			} else {
@@ -116,7 +129,10 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, err
 	}
 
-	if len(metrics) != 1 {
+	if len(metrics) < 1 {
+		return nil, nil
+	}
+	if len(metrics) > 1 {
 		return nil, errors.New("line contains multiple metrics")
 	}
 

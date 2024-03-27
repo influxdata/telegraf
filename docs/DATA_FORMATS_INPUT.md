@@ -17,6 +17,7 @@ Protocol, JSON format, or Apache Avro format.
 - [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [Parquet](/plugins/parsers/parquet)
 - [Prometheus](/plugins/parsers/prometheus)
 - [PrometheusRemoteWrite](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
