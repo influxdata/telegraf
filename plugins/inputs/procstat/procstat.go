@@ -47,6 +47,7 @@ type Procstat struct {
 	Mode                   string          `toml:"mode"`
 	TagWith                []string        `toml:"tag_with"`
 	Log                    telegraf.Logger `toml:"-"`
+	MultiCriterias         bool            `toml:"multi_criterias"`
 
 	solarisMode bool
 	finder      PIDFinder
@@ -249,29 +250,71 @@ func (p *Procstat) findPids() ([]PidsTags, error) {
 		}
 		tags := map[string]string{"pidfile": p.PidFile}
 		return []PidsTags{{pids, tags}}, nil
-	case p.Exe != "":
-		pids, err := p.finder.Pattern(p.Exe)
+	default:
+		filterFound := false
+		tags := map[string]string{}
+		err := p.finder.Init()
 		if err != nil {
 			return nil, err
 		}
-		tags := map[string]string{"exe": p.Exe}
-		return []PidsTags{{pids, tags}}, nil
-	case p.Pattern != "":
-		pids, err := p.finder.FullPattern(p.Pattern)
+		switch {
+		case p.MultiCriterias:
+			if p.Exe != "" {
+				filterFound = true
+				err := p.finder.Pattern(p.Exe)
+				if err != nil {
+					return nil, err
+				}
+				tags = map[string]string{"exe": p.Exe}
+			}
+			if p.Pattern != "" {
+				filterFound = true
+				err := p.finder.FullPattern(p.Pattern)
+				if err != nil {
+					return nil, err
+				}
+				tags = map[string]string{"pattern": p.Pattern}
+			}
+			if p.User != "" {
+				filterFound = true
+				err := p.finder.UID(p.User)
+				if err != nil {
+					return nil, err
+				}
+				tags = map[string]string{"user": p.User}
+			}
+		case p.Exe != "":
+			filterFound = true
+			err := p.finder.Pattern(p.Exe)
+			if err != nil {
+				return nil, err
+			}
+			tags = map[string]string{"exe": p.Exe}
+		case p.Pattern != "":
+			filterFound = true
+			err := p.finder.FullPattern(p.Pattern)
+			if err != nil {
+				return nil, err
+			}
+			tags = map[string]string{"pattern": p.Pattern}
+		case p.User != "":
+			filterFound = true
+			err := p.finder.UID(p.User)
+			if err != nil {
+				return nil, err
+			}
+			tags = map[string]string{"user": p.User}
+		}
+		if !filterFound {
+			return nil, errors.New("no filter option set")
+		}
+
+		pids, err := p.finder.GetResult()
 		if err != nil {
 			return nil, err
 		}
-		tags := map[string]string{"pattern": p.Pattern}
-		return []PidsTags{{pids, tags}}, nil
-	case p.User != "":
-		pids, err := p.finder.UID(p.User)
-		if err != nil {
-			return nil, err
-		}
-		tags := map[string]string{"user": p.User}
 		return []PidsTags{{pids, tags}}, nil
 	}
-	return nil, errors.New("no filter option set")
 }
 
 func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
