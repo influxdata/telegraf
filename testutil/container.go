@@ -156,3 +156,21 @@ func (c *Container) Terminate() {
 
 	c.PrintLogs()
 }
+
+func (c *Container) Pause() error {
+	provider, err := testcontainers.NewDockerProvider()
+	if err != nil {
+		return fmt.Errorf("getting provider failed: %w", err)
+	}
+
+	return provider.Client().ContainerPause(c.ctx, c.container.GetContainerID())
+}
+
+func (c *Container) Resume() error {
+	provider, err := testcontainers.NewDockerProvider()
+	if err != nil {
+		return fmt.Errorf("getting provider failed: %w", err)
+	}
+
+	return provider.Client().ContainerUnpause(c.ctx, c.container.GetContainerID())
+}

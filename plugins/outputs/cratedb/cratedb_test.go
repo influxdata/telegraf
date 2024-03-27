@@ -12,7 +12,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -46,7 +48,6 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	defer container.Terminate()
 	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
 
-	fmt.Println(url)
 	db, err := sql.Open("pgx", url)
 	require.NoError(t, err)
 	defer db.Close()
@@ -75,6 +76,76 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	require.NoError(t, c.Close())
+}
+
+func TestConnectionIssueAtStartup(t *testing.T) {
+	// Test case for https://github.com/influxdata/telegraf/issues/13278
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "crate",
+		ExposedPorts: []string{servicePort},
+		Entrypoint: []string{
+			"/docker-entrypoint.sh",
+			"-Cdiscovery.type=single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("recovered [0] indices into cluster_state"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	url := fmt.Sprintf("postgres://crate@%s:%s/test", container.Address, container.Ports[servicePort])
+
+	// Pause the container for connectivity issues
+	require.NoError(t, container.Pause())
+
+	// Create a model to be able to use the startup retry strategy
+	plugin := &CrateDB{
+		URL:         url,
+		Table:       "testing",
+		Timeout:     config.Duration(time.Second * 5),
+		TableCreate: true,
+	}
+	model := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "cratedb",
+			StartupErrorBehavior: "retry",
+		},
+		1000, 1000,
+	)
+	require.NoError(t, model.Init())
+
+	// The connect call should succeed even though the table creation was not
+	// successful due to the "retry" strategy
+	require.NoError(t, model.Connect())
+
+	// Writing the metrics in this state should fail because we are not fully
+	// started up
+	metrics := testutil.MockMetrics()
+	for _, m := range metrics {
+		model.AddMetric(m)
+	}
+	require.ErrorIs(t, model.WriteBatch(), internal.ErrNotConnected)
+
+	// Unpause the container, now writes should succeed
+	require.NoError(t, container.Resume())
+	require.NoError(t, model.WriteBatch())
+	defer model.Close()
+
+	// Verify that the metrics were actually written
+	for _, m := range metrics {
+		mid := hashID(m)
+		row := plugin.db.QueryRow("SELECT hash_id FROM testing WHERE hash_id = ? AND timestamp = ?", mid, m.Time())
+
+		var id int64
+		require.NoError(t, row.Scan(&id))
+		require.Equal(t, id, mid)
+	}
 }
 
 func TestInsertSQL(t *testing.T) {
