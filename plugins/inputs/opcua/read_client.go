@@ -61,7 +61,7 @@ func (o *ReadClient) Connect() error {
 
 	// Make sure we setup the node-ids correctly after reconnect
 	// as the server might be restarted and IDs changed
-	if err := o.OpcUAInputClient.InitNodeIDs(); err != nil {
+	if err := o.OpcUAInputClient.InitNodeIDs(o.ctx); err != nil {
 		return fmt.Errorf("initializing node IDs failed: %w", err)
 	}
 
