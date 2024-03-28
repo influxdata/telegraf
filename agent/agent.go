@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
 // Agent runs a set of plugins.
@@ -974,7 +974,8 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s := &influx.Serializer{SortFields: true}
+		s := &json.Serializer{}
+		s.Init()
 		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {
