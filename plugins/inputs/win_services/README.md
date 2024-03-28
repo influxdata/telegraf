@@ -20,13 +20,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Input plugin to report Windows services info.
 # This plugin ONLY supports Windows
 [[inputs.win_services]]
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted. Case sensitive.
+  ## Names of the services to monitor. Leave empty to monitor all the available
+  ## services on the host. Globs accepted. Case insensitive.
   service_names = [
     "LanmanServer",
     "TermService",
     "Win*",
   ]
-  excluded_service_names = ['WinRM'] # optional, list of service names to exclude
+
+  # optional, list of service names to exclude
+  excluded_service_names = ['WinRM']
 ```
 
 ## Metrics
