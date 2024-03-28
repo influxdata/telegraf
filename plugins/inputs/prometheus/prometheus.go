@@ -74,9 +74,8 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout      config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
-	ContentLengthLimit   config.Size     `toml:"content_length_limit"`
-	EnableRequestMetrics bool            `toml:"enable_request_metrics"`
+	ContentLengthLimit   config.Size `toml:"content_length_limit"`
+	EnableRequestMetrics bool        `toml:"enable_request_metrics"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -213,9 +212,6 @@ func (p *Prometheus) Init() error {
 	}
 
 	ctx := context.Background()
-	if p.ResponseTimeout != 0 {
-		p.HTTPClientConfig.Timeout = p.ResponseTimeout
-	}
 
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
 	if err != nil {
@@ -405,9 +401,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 					return c, err
 				},
 			},
-		}
-		if p.ResponseTimeout != 0 {
-			uClient.Timeout = time.Duration(p.ResponseTimeout)
 		}
 	} else {
 		if u.URL.Path == "" {
