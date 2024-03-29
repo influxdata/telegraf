@@ -172,13 +172,11 @@ func TestDeviceHelperProcess(t *testing.T) {
 		filename = "testcases_device/nvme/response.json"
 	} else if slices.Contains(args, "/dev/sda") {
 		filename = "testcases_device/usb/response.json"
+	} else if slices.Contains(args, "/dev/bus/6") {
+		filename = "testcases_device/megaraid/response.json"
 	} else {
-		panic("unknown device")
-	}
-
-	if filename == "" {
 		fmt.Fprint(os.Stdout, "unknown filename")
-		os.Exit(1) //nolint:revive // os.Exit called intentionally
+		os.Exit(42) //nolint:revive // os.Exit called intentionally
 	}
 
 	scanBytes, err := os.ReadFile(filename)

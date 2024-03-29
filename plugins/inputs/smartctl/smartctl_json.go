@@ -15,10 +15,6 @@ type smartctlDeviceJSON struct {
 		} `json:"messages"`
 		ExitStatus int `json:"exit_status"`
 	} `json:"smartctl"`
-	LocalTime struct {
-		TimeT   int    `json:"time_t"`
-		Asctime string `json:"asctime"`
-	} `json:"local_time"`
 	Device struct {
 		Name     string `json:"name"`
 		InfoName string `json:"info_name"`
@@ -34,53 +30,11 @@ type smartctlDeviceJSON struct {
 		Oui int   `json:"oui"`
 		ID  int64 `json:"id"`
 	} `json:"wwn"`
-	NvmePciVendor struct {
-		ID          int `json:"id"`
-		SubsystemID int `json:"subsystem_id"`
-	} `json:"nvme_pci_vendor"`
-	NvmeIeeeOuiIdentifier   int   `json:"nvme_ieee_oui_identifier"`
-	NvmeTotalCapacity       int64 `json:"nvme_total_capacity"`
-	NvmeUnallocatedCapacity int   `json:"nvme_unallocated_capacity"`
-	NvmeControllerID        int   `json:"nvme_controller_id"`
-	NvmeVersion             struct {
-		String string `json:"string"`
-		Value  int    `json:"value"`
-	} `json:"nvme_version"`
-	NvmeNumberOfNamespaces int `json:"nvme_number_of_namespaces"`
-	NvmeNamespaces         []struct {
-		ID   int `json:"id"`
-		Size struct {
-			Blocks int   `json:"blocks"`
-			Bytes  int64 `json:"bytes"`
-		} `json:"size"`
-		Capacity struct {
-			Blocks int   `json:"blocks"`
-			Bytes  int64 `json:"bytes"`
-		} `json:"capacity"`
-		Utilization struct {
-			Blocks int   `json:"blocks"`
-			Bytes  int64 `json:"bytes"`
-		} `json:"utilization"`
-		FormattedLbaSize int `json:"formatted_lba_size"`
-		Eui64            struct {
-			Oui   int   `json:"oui"`
-			ExtID int64 `json:"ext_id"`
-		} `json:"eui64"`
-	} `json:"nvme_namespaces"`
 	UserCapacity struct {
-		Blocks int   `json:"blocks"`
-		Bytes  int64 `json:"bytes"`
+		Bytes int64 `json:"bytes"`
 	} `json:"user_capacity"`
-	LogicalBlockSize int `json:"logical_block_size"`
-	SmartSupport     struct {
-		Available bool `json:"available"`
-		Enabled   bool `json:"enabled"`
-	} `json:"smart_support"`
 	SmartStatus struct {
 		Passed bool `json:"passed"`
-		Nvme   struct {
-			Value int `json:"value"`
-		} `json:"nvme"`
 	} `json:"smart_status"`
 	NvmeSmartHealthInformationLog struct {
 		CriticalWarning         int `json:"critical_warning"`
@@ -104,39 +58,6 @@ type smartctlDeviceJSON struct {
 	Temperature struct {
 		Current int `json:"current"`
 	} `json:"temperature"`
-	PowerCycleCount int `json:"power_cycle_count"`
-	PowerOnTime     struct {
-		Hours int `json:"hours"`
-	} `json:"power_on_time"`
-	NvmeErrorInformationLog struct {
-		Size   int `json:"size"`
-		Read   int `json:"read"`
-		Unread int `json:"unread"`
-		Table  []struct {
-			ErrorCount        int `json:"error_count"`
-			SubmissionQueueID int `json:"submission_queue_id"`
-			CommandID         int `json:"command_id"`
-			StatusField       struct {
-				Value          int    `json:"value"`
-				DoNotRetry     bool   `json:"do_not_retry"`
-				StatusCodeType int    `json:"status_code_type"`
-				StatusCode     int    `json:"status_code"`
-				String         string `json:"string"`
-			} `json:"status_field"`
-			PhaseTag          bool `json:"phase_tag"`
-			ParmErrorLocation int  `json:"parm_error_location"`
-			Lba               struct {
-				Value int `json:"value"`
-			} `json:"lba"`
-			Nsid int `json:"nsid"`
-		} `json:"table"`
-	} `json:"nvme_error_information_log"`
-	NvmeSelfTestLog struct {
-		CurrentSelfTestOperation struct {
-			Value  int    `json:"value"`
-			String string `json:"string"`
-		} `json:"current_self_test_operation"`
-	} `json:"nvme_self_test_log"`
 	AtaSmartAttributes struct {
 		Revision int `json:"revision"`
 		Table    []struct {

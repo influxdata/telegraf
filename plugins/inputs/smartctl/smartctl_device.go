@@ -18,21 +18,22 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName string, devic
 
 	var device smartctlDeviceJSON
 	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(s.Timeout))
-	if err != nil {
-		// Try to still unmarshal the output to see if a specific message can
-		// be extracted from the output.
-		if err := json.Unmarshal(out, &device); err == nil {
-			if len(device.Smartctl.Messages) > 0 && device.Smartctl.Messages[0].String != "" {
-				return fmt.Errorf("error running smartctl with %s: %s", args, device.Smartctl.Messages[0].String)
-			}
-		}
+
+	// Error running the command and unable to parse the JSON, then bail
+	if jsonErr := json.Unmarshal(out, &device); jsonErr != nil {
 		return fmt.Errorf("error running smartctl with %s: %w", args, err)
 	}
-	t := time.Now()
 
-	if err := json.Unmarshal(out, &device); err != nil {
-		return fmt.Errorf("error unmarshalling smartctl output: %w", err)
+	// If we were able to parse the result, then only exit if we get an error
+	// as sometimes we can get warnings, that still produce data.
+	if err != nil &&
+		len(device.Smartctl.Messages) > 0 &&
+		device.Smartctl.Messages[0].Severity == "error" &&
+		device.Smartctl.Messages[0].String != "" {
+		return fmt.Errorf("error running smartctl with %s got smartctl error message: %s", args, device.Smartctl.Messages[0].String)
 	}
+
+	t := time.Now()
 
 	tags := map[string]string{
 		"name":   device.Device.Name,
