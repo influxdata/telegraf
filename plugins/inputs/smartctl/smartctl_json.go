@@ -37,23 +37,23 @@ type smartctlDeviceJSON struct {
 		Passed bool `json:"passed"`
 	} `json:"smart_status"`
 	NvmeSmartHealthInformationLog struct {
-		CriticalWarning         int `json:"critical_warning"`
-		Temperature             int `json:"temperature"`
-		AvailableSpare          int `json:"available_spare"`
-		AvailableSpareThreshold int `json:"available_spare_threshold"`
-		PercentageUsed          int `json:"percentage_used"`
-		DataUnitsRead           int `json:"data_units_read"`
-		DataUnitsWritten        int `json:"data_units_written"`
-		HostReads               int `json:"host_reads"`
-		HostWrites              int `json:"host_writes"`
-		ControllerBusyTime      int `json:"controller_busy_time"`
-		PowerCycles             int `json:"power_cycles"`
-		PowerOnHours            int `json:"power_on_hours"`
-		UnsafeShutdowns         int `json:"unsafe_shutdowns"`
-		MediaErrors             int `json:"media_errors"`
-		NumErrLogEntries        int `json:"num_err_log_entries"`
-		WarningTempTime         int `json:"warning_temp_time"`
-		CriticalCompTime        int `json:"critical_comp_time"`
+		CriticalWarning         int64 `json:"critical_warning"`
+		Temperature             int64 `json:"temperature"`
+		AvailableSpare          int64 `json:"available_spare"`
+		AvailableSpareThreshold int64 `json:"available_spare_threshold"`
+		PercentageUsed          int64 `json:"percentage_used"`
+		DataUnitsRead           int64 `json:"data_units_read"`
+		DataUnitsWritten        int64 `json:"data_units_written"`
+		HostReads               int64 `json:"host_reads"`
+		HostWrites              int64 `json:"host_writes"`
+		ControllerBusyTime      int64 `json:"controller_busy_time"`
+		PowerCycles             int64 `json:"power_cycles"`
+		PowerOnHours            int64 `json:"power_on_hours"`
+		UnsafeShutdowns         int64 `json:"unsafe_shutdowns"`
+		MediaErrors             int64 `json:"media_errors"`
+		NumErrLogEntries        int64 `json:"num_err_log_entries"`
+		WarningTempTime         int64 `json:"warning_temp_time"`
+		CriticalCompTime        int64 `json:"critical_comp_time"`
 	} `json:"nvme_smart_health_information_log"`
 	Temperature struct {
 		Current int `json:"current"`
@@ -61,14 +61,14 @@ type smartctlDeviceJSON struct {
 	AtaSmartAttributes struct {
 		Revision int `json:"revision"`
 		Table    []struct {
-			ID         int    `json:"id"`
+			ID         int64  `json:"id"`
 			Name       string `json:"name"`
-			Value      int    `json:"value"`
-			Worst      int    `json:"worst"`
-			Thresh     int    `json:"thresh"`
+			Value      int64  `json:"value"`
+			Worst      int64  `json:"worst"`
+			Thresh     int64  `json:"thresh"`
 			WhenFailed string `json:"when_failed"`
 			Flags      struct {
-				Value         int    `json:"value"`
+				Value         int64  `json:"value"`
 				String        string `json:"string"`
 				Prefailure    bool   `json:"prefailure"`
 				UpdatedOnline bool   `json:"updated_online"`
@@ -78,7 +78,7 @@ type smartctlDeviceJSON struct {
 				AutoKeep      bool   `json:"auto_keep"`
 			} `json:"flags"`
 			Raw struct {
-				Value  int    `json:"value"`
+				Value  int64  `json:"value"`
 				String string `json:"string"`
 			} `json:"raw"`
 		} `json:"table"`
