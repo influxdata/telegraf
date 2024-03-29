@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" //nolint:gosec // Import for pprof, only enabled via CLI flag
 	"strings"
 	"time"
 )
