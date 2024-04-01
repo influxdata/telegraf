@@ -34,6 +34,7 @@ func TestCasesScan(t *testing.T) {
 		}
 		testcasePath := filepath.Join("testcases_scan", f.Name())
 		configFilename := filepath.Join(testcasePath, "telegraf.toml")
+		scanFilename := filepath.Join(testcasePath, "response.json")
 		expectedFilename := filepath.Join(testcasePath, "expected.out")
 
 		t.Run(f.Name(), func(t *testing.T) {
@@ -61,6 +62,7 @@ func TestCasesScan(t *testing.T) {
 			plugin := cfg.Inputs[0].Input.(*Smartctl)
 			require.NoError(t, plugin.Init())
 
+			scanArgs = append(scanArgs, scanFilename)
 			devices, err := plugin.scan()
 			require.NoError(t, err)
 			require.Len(t, devices, expected)
@@ -80,11 +82,16 @@ func TestScanHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
+	args := os.Args
 
-	scanBytes, err := os.ReadFile("testcases_scan/scan.json")
-	require.NoError(t, err)
+	scanBytes, err := os.ReadFile(args[len(args)-1])
+	if err != nil {
+		//nolint:revive // os.Exit called intentionally
+		fmt.Fprint(os.Stdout, "unknown filename")
+		os.Exit(42)
+	}
+
 	fmt.Fprint(os.Stdout, string(scanBytes))
-
 	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
 }

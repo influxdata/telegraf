@@ -8,15 +8,22 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func (s *Smartctl) scan() (map[string]string, error) {
-	args := []string{"--json", "--scan"}
-	cmd := execCommand(s.Path, args...)
+// This is here so we can override it during testing
+var scanArgs = []string{"--json", "--scan"}
+
+type scanDevice struct {
+	Name string
+	Type string
+}
+
+func (s *Smartctl) scan() ([]scanDevice, error) {
+	cmd := execCommand(s.Path, scanArgs...)
 	if s.UseSudo {
-		cmd = execCommand("sudo", append([]string{"-n", s.Path}, args...)...)
+		cmd = execCommand("sudo", append([]string{"-n", s.Path}, scanArgs...)...)
 	}
 	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
-		return nil, fmt.Errorf("error running smartctl with %s: %w", args, err)
+		return nil, fmt.Errorf("error running smartctl with %s: %w", scanArgs, err)
 	}
 
 	var scan smartctlScanJSON
@@ -24,10 +31,14 @@ func (s *Smartctl) scan() (map[string]string, error) {
 		return nil, fmt.Errorf("error unmarshalling smartctl scan output: %w", err)
 	}
 
-	devices := make(map[string]string, len(scan.Devices))
+	devices := make([]scanDevice, 0)
 	for _, device := range scan.Devices {
 		if s.deviceFilter.Match(device.Name) {
-			devices[device.Name] = device.Type
+			device := scanDevice{
+				Name: device.Name,
+				Type: device.Type,
+			}
+			devices = append(devices, device)
 		}
 	}
 
