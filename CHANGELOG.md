@@ -1,6 +1,53 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.30.1 [2024-04-01]
+
+### Bugfixes
+
+- [#14966](https://github.com/influxdata/telegraf/pull/14966) `inputs.chrony` Remove chronyc dependency in documentation
+- [#15003](https://github.com/influxdata/telegraf/pull/15003) `inputs.diskio` Add missing udev properties
+- [#14979](https://github.com/influxdata/telegraf/pull/14979) `inputs.dns_query` Fill out additional record fields
+- [#15025](https://github.com/influxdata/telegraf/pull/15025) `inputs.dns_query` Include the canonical CNAME target
+- [#15007](https://github.com/influxdata/telegraf/pull/15007) `inputs.knx_listener` Ignore GroupValueRead requests
+- [#14959](https://github.com/influxdata/telegraf/pull/14959) `inputs.knx_listener` Reconnect after connection loss
+- [#15063](https://github.com/influxdata/telegraf/pull/15063) `inputs.mysql` Parse boolean values in metric v1 correctly
+- [#15012](https://github.com/influxdata/telegraf/pull/15012) `inputs.mysql` Use correct column-types for Percona 8 user stats
+- [#15023](https://github.com/influxdata/telegraf/pull/15023) `inputs.nvidia_smi` Add process info metrics
+- [#14977](https://github.com/influxdata/telegraf/pull/14977) `inputs.openstack` Resolve regression in block storage and server info
+- [#15036](https://github.com/influxdata/telegraf/pull/15036) `inputs.phpfpm` Add timeout for fcgi
+- [#15011](https://github.com/influxdata/telegraf/pull/15011) `inputs.ping` Add option to force ipv4
+- [#15021](https://github.com/influxdata/telegraf/pull/15021) `inputs.prometheus` Initialize logger of parser
+- [#14996](https://github.com/influxdata/telegraf/pull/14996) `inputs.smart` Improve regexp to support flags with a plus
+- [#14987](https://github.com/influxdata/telegraf/pull/14987) `inputs.systemd_units` Handle disabled multi-instance units correctly
+- [#14958](https://github.com/influxdata/telegraf/pull/14958) `outputs.bigquery` Add scope to bigquery and remove timeout context
+- [#14991](https://github.com/influxdata/telegraf/pull/14991) `secrets` Avoid count underflow by only counting initialized secrets
+- [#15040](https://github.com/influxdata/telegraf/pull/15040) `windows` Ensure watch-config is passed to Windows service
+
+### Dependency Updates
+
+- [#15071](https://github.com/influxdata/telegraf/pull/15071) `deps` Bump github.com/IBM/sarama from v1.42.2 to v1.43.1
+- [#15017](https://github.com/influxdata/telegraf/pull/15017) `deps` Bump github.com/aws/aws-sdk-go-v2 from 1.25.3 to 1.26.0
+- [#15058](https://github.com/influxdata/telegraf/pull/15058) `deps` Bump github.com/aws/aws-sdk-go-v2/config from 1.27.5 to 1.27.9
+- [#15060](https://github.com/influxdata/telegraf/pull/15060) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.15.2 to 1.16.0
+- [#14969](https://github.com/influxdata/telegraf/pull/14969) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.34.2 to 1.34.3
+- [#15014](https://github.com/influxdata/telegraf/pull/15014) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.149.3 to 1.151.1
+- [#14971](https://github.com/influxdata/telegraf/pull/14971) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.28.2 to 1.28.4
+- [#15029](https://github.com/influxdata/telegraf/pull/15029) `deps` Bump github.com/docker/docker from 25.0.0+incompatible to 25.0.5+incompatible
+- [#15016](https://github.com/influxdata/telegraf/pull/15016) `deps` Bump github.com/jackc/pgtype from 1.14.0 to 1.14.2
+- [#14978](https://github.com/influxdata/telegraf/pull/14978) `deps` Bump github.com/jackc/pgx/v4 from 4.18.1 to 4.18.2
+- [#14968](https://github.com/influxdata/telegraf/pull/14968) `deps` Bump github.com/klauspost/compress from 1.17.6 to 1.17.7
+- [#14967](https://github.com/influxdata/telegraf/pull/14967) `deps` Bump github.com/pion/dtls/v2 from 2.2.8 to 2.2.10
+- [#15059](https://github.com/influxdata/telegraf/pull/15059) `deps` Bump github.com/prometheus-community/pro-bing from 0.3.0 to 0.4.0
+- [#14970](https://github.com/influxdata/telegraf/pull/14970) `deps` Bump github.com/prometheus/procfs from 0.12.0 to 0.13.0
+- [#15009](https://github.com/influxdata/telegraf/pull/15009) `deps` Bump github.com/stretchr/testify v1.8.4 to v1.9.0
+- [#15061](https://github.com/influxdata/telegraf/pull/15061) `deps` Bump go.step.sm/crypto from 0.43.0 to 0.44.1
+- [#15018](https://github.com/influxdata/telegraf/pull/15018) `deps` Bump golang.org/x/crypto from 0.20.0 to 0.21.0
+- [#15015](https://github.com/influxdata/telegraf/pull/15015) `deps` Bump gonum.org/v1/gonum from 0.14.0 to 0.15.0
+- [#15057](https://github.com/influxdata/telegraf/pull/15057) `deps` Bump google.golang.org/api from 0.165.0 to 0.171.0
+- [#14989](https://github.com/influxdata/telegraf/pull/14989) `deps` Bump google.golang.org/protobuf from 1.32.0 to 1.33.0
+- [#15013](https://github.com/influxdata/telegraf/pull/15013) `deps` Bump tj-actions/changed-files from 42 to 43
+
 ## v1.30.0 [2024-03-11]
 
 ### Deprecation Removals
