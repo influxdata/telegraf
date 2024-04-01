@@ -78,7 +78,7 @@ func fakeScanExecCommand(command string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func TestScanHelperProcess(t *testing.T) {
+func TestScanHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -86,8 +86,8 @@ func TestScanHelperProcess(t *testing.T) {
 
 	scanBytes, err := os.ReadFile(args[len(args)-1])
 	if err != nil {
-		//nolint:revive // os.Exit called intentionally
 		fmt.Fprint(os.Stdout, "unknown filename")
+		//nolint:revive // os.Exit called intentionally
 		os.Exit(42)
 	}
 
