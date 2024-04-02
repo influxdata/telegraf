@@ -21,6 +21,8 @@ type smartctlDeviceJSON struct {
 		Type     string `json:"type"`
 		Protocol string `json:"protocol"`
 	} `json:"device"`
+	Vendor          string `json:"vendor"`
+	Product         string `json:"product"`
 	ModelFamily     string `json:"model_family"`
 	ModelName       string `json:"model_name"`
 	SerialNumber    string `json:"serial_number"`
@@ -83,6 +85,35 @@ type smartctlDeviceJSON struct {
 			} `json:"raw"`
 		} `json:"table"`
 	} `json:"ata_smart_attributes"`
+	ScsiErrorCounterLog struct {
+		Read struct {
+			ErrorsCorrectedByEccfast         int    `json:"errors_corrected_by_eccfast"`
+			ErrorsCorrectedByEccdelayed      int    `json:"errors_corrected_by_eccdelayed"`
+			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
+			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
+			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
+			GigabytesProcessed               string `json:"gigabytes_processed"`
+			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
+		} `json:"read"`
+		Write struct {
+			ErrorsCorrectedByEccfast         int    `json:"errors_corrected_by_eccfast"`
+			ErrorsCorrectedByEccdelayed      int    `json:"errors_corrected_by_eccdelayed"`
+			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
+			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
+			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
+			GigabytesProcessed               string `json:"gigabytes_processed"`
+			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
+		} `json:"write"`
+		Verify struct {
+			ErrorsCorrectedByEccfast         int    `json:"errors_corrected_by_eccfast"`
+			ErrorsCorrectedByEccdelayed      int    `json:"errors_corrected_by_eccdelayed"`
+			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
+			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
+			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
+			GigabytesProcessed               string `json:"gigabytes_processed"`
+			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
+		} `json:"verify"`
+	} `json:"scsi_error_counter_log"`
 }
 
 type smartctlScanJSON struct {

@@ -46,6 +46,10 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName string, devic
 		"serial": device.SerialNumber,
 	}
 
+	if device.Vendor != "" {
+		tags["vendor"] = device.Vendor
+	}
+
 	// The JSON WWN is in decimal and needs to be converted to hex
 	if device.Wwn.ID != 0 && device.Wwn.Naa != 0 && device.Wwn.Oui != 0 {
 		tags["wwn"] = fmt.Sprintf("%01x%06x%09x", device.Wwn.Naa, device.Wwn.Oui, device.Wwn.ID)
@@ -97,6 +101,50 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName string, devic
 		}
 
 		acc.AddFields("smartctl_attributes", fields, attributeTags, t)
+	}
+
+	// Check for SCSI error counter entries
+	if device.Device.Type == "scsi" {
+		counterTags := make(map[string]string, len(tags)+1)
+		for k, v := range tags {
+			counterTags[k] = v
+		}
+
+		counterTags["page"] = "read"
+		fields := map[string]interface{}{
+			"errors_corrected_by_eccfast":          device.ScsiErrorCounterLog.Read.ErrorsCorrectedByEccfast,
+			"errors_corrected_by_eccdelayed":       device.ScsiErrorCounterLog.Read.ErrorsCorrectedByEccdelayed,
+			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Read.ErrorsCorrectedByRereadsRewrites,
+			"total_errors_corrected":               device.ScsiErrorCounterLog.Read.TotalErrorsCorrected,
+			"correction_algorithm_invocations":     device.ScsiErrorCounterLog.Read.CorrectionAlgorithmInvocations,
+			"gigabytes_processed":                  device.ScsiErrorCounterLog.Read.GigabytesProcessed,
+			"total_uncorrected_errors":             device.ScsiErrorCounterLog.Read.TotalUncorrectedErrors,
+		}
+		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
+
+		counterTags["page"] = "write"
+		fields = map[string]interface{}{
+			"errors_corrected_by_eccfast":          device.ScsiErrorCounterLog.Write.ErrorsCorrectedByEccfast,
+			"errors_corrected_by_eccdelayed":       device.ScsiErrorCounterLog.Write.ErrorsCorrectedByEccdelayed,
+			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Write.ErrorsCorrectedByRereadsRewrites,
+			"total_errors_corrected":               device.ScsiErrorCounterLog.Write.TotalErrorsCorrected,
+			"correction_algorithm_invocations":     device.ScsiErrorCounterLog.Write.CorrectionAlgorithmInvocations,
+			"gigabytes_processed":                  device.ScsiErrorCounterLog.Write.GigabytesProcessed,
+			"total_uncorrected_errors":             device.ScsiErrorCounterLog.Write.TotalUncorrectedErrors,
+		}
+		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
+
+		counterTags["page"] = "verify"
+		fields = map[string]interface{}{
+			"errors_corrected_by_eccfast":          device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByEccfast,
+			"errors_corrected_by_eccdelayed":       device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByEccdelayed,
+			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByRereadsRewrites,
+			"total_errors_corrected":               device.ScsiErrorCounterLog.Verify.TotalErrorsCorrected,
+			"correction_algorithm_invocations":     device.ScsiErrorCounterLog.Verify.CorrectionAlgorithmInvocations,
+			"gigabytes_processed":                  device.ScsiErrorCounterLog.Verify.GigabytesProcessed,
+			"total_uncorrected_errors":             device.ScsiErrorCounterLog.Verify.TotalUncorrectedErrors,
+		}
+		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
 	}
 
 	return nil
