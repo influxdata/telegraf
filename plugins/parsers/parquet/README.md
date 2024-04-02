@@ -48,7 +48,4 @@ The Parquet parser allows for the parsing of Parquet files that were read in.
   ##      https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   ##   3. UTC                 -- or blank/unspecified, will return timestamp in UTC
   # timestamp_timezone = ""
-
-  ## Optional, default values for given tags
-  # tags = { "application": "hermes", "region": "central" }
 ```
