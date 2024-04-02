@@ -35,7 +35,7 @@ require (
 	github.com/antchfx/xmlquery v1.3.18
 	github.com/antchfx/xpath v1.2.5
 	github.com/apache/arrow/go/v13 v13.0.0
-	github.com/apache/iotdb-client-go v0.12.2-0.20220722111104-cd17da295b46
+	github.com/apache/iotdb-client-go v1.2.0-tsbs
 	github.com/apache/thrift v0.18.1
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
