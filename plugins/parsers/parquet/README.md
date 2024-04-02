@@ -30,11 +30,11 @@ The Parquet parser allows for the parsing of Parquet files that were read in.
   ## the values from the "reference time" in the example to match the format
   ## you will be using.  For more information on the "reference time", visit
   ## https://golang.org/pkg/time/#Time.Format
-  ##   ex: json_time_format = "Mon Jan 2 15:04:05 -0700 MST 2006"
-  ##       json_time_format = "2006-01-02T15:04:05Z07:00"
-  ##       json_time_format = "01/02/2006 15:04:05"
-  ##       json_time_format = "unix"
-  ##       json_time_format = "unix_ms"
+  ##   ex: timestamp_format = "Mon Jan 2 15:04:05 -0700 MST 2006"
+  ##       timestamp_format = "2006-01-02T15:04:05Z07:00"
+  ##       timestamp_format = "01/02/2006 15:04:05"
+  ##       timestamp_format = "unix"
+  ##       timestamp_format = "unix_ms"
   # timestamp_format = ""
 
   ## Timezone allows you to provide an override for timestamps that
