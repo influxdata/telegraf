@@ -179,7 +179,7 @@ require (
 	github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55
 	github.com/stretchr/testify v1.9.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/testcontainers/testcontainers-go v0.27.0
+	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.26.1-0.20231116140448-68d5f8983d09
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.17.0
@@ -199,7 +199,7 @@ require (
 	go.starlark.net v0.0.0-20231121155337-90ade8b19d09
 	go.step.sm/crypto v0.44.1
 	golang.org/x/crypto v0.21.0
-	golang.org/x/mod v0.14.0
+	golang.org/x/mod v0.16.0
 	golang.org/x/net v0.22.0
 	golang.org/x/oauth2 v0.18.0
 	golang.org/x/sync v0.6.0
@@ -289,7 +289,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.15.2
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
-	github.com/containerd/containerd v1.7.11 // indirect
+	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
@@ -408,7 +408,7 @@ require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.84.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
+	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
