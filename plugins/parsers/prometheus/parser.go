@@ -30,14 +30,14 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	// Determine the metric transport-type derived from the response header and
 	// create a matching decoder.
 	format := expfmt.ResponseFormat(p.Header)
-	switch format {
-	case expfmt.FmtProtoText:
+	switch format.FormatType() {
+	case expfmt.TypeProtoText:
 		// Make sure we have a finishing newline but no trailing one
 		data = bytes.TrimPrefix(data, []byte("\n"))
 		if !bytes.HasSuffix(data, []byte("\n")) {
 			data = append(data, []byte("\n")...)
 		}
-	case expfmt.FmtUnknown:
+	case expfmt.TypeUnknown:
 		p.Log.Debugf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
 	}
 	buf := bytes.NewBuffer(data)

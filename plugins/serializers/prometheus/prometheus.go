@@ -76,7 +76,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 	var buf bytes.Buffer
 	for _, mf := range coll.GetProto() {
-		enc := expfmt.NewEncoder(&buf, expfmt.FmtText)
+		enc := expfmt.NewEncoder(&buf, expfmt.NewFormat(expfmt.TypeTextPlain))
 		err := enc.Encode(mf)
 		if err != nil {
 			return nil, err

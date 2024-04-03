@@ -246,7 +246,6 @@ following works:
 - github.com/mattn/go-colorable [MIT License](https://github.com/mattn/go-colorable/blob/master/LICENSE)
 - github.com/mattn/go-ieproxy [MIT License](https://github.com/mattn/go-ieproxy/blob/master/LICENSE)
 - github.com/mattn/go-isatty [MIT License](https://github.com/mattn/go-isatty/blob/master/LICENSE)
-- github.com/matttproud/golang_protobuf_extensions [Apache License 2.0](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/mdlayher/apcupsd [MIT License](https://github.com/mdlayher/apcupsd/blob/master/LICENSE.md)
 - github.com/mdlayher/genetlink [MIT License](https://github.com/mdlayher/genetlink/blob/master/LICENSE.md)
 - github.com/mdlayher/netlink [MIT License](https://github.com/mdlayher/netlink/blob/master/LICENSE.md)
