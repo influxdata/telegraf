@@ -74,7 +74,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - fields:
     - verification_code (int)
     - verification_error (string)
-    - expiry (int, seconds)
+    - expiry (int, seconds) - Time when the certificate will expire, in seconds since the Unix epoch. `SELECT (expiry / 60 / 60 / 24) as "expiry_in_days"`
     - age (int, seconds)
     - startdate (int, seconds)
     - enddate (int, seconds)
