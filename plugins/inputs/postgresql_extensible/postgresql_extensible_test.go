@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func queryRunner(t *testing.T, q query) *testutil.Accumulator {
+func queryRunner(t *testing.T, q []query) *testutil.Accumulator {
 	servicePort := "5432"
 	container := testutil.Container{
 		Image:        "postgres:alpine",
@@ -62,12 +62,13 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	acc := queryRunner(t, query{{
+	acc := queryRunner(t, []query{{
 		Sqlquery:   "select * from pg_stat_database",
 		MinVersion: 901,
 		Withdbname: false,
 		Tagvalue:   "",
 	}})
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 
 	intMetrics := []string{
 		"xact_commit",
@@ -162,7 +163,7 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 	}
 
 	for q, assertions := range examples {
-		acc := queryRunner(t, query{{
+		acc := queryRunner(t, []query{{
 			Sqlquery:   q,
 			MinVersion: 901,
 			Withdbname: false,
@@ -179,7 +180,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	acc := queryRunner(t, query{{
+	acc := queryRunner(t, []query{{
 		Sqlquery:   "select * from pg_stat_database",
 		MinVersion: 901,
 		Withdbname: false,
@@ -237,7 +238,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 }
 
 func TestPostgresqlSqlScript(t *testing.T) {
-	q := query{{
+	q := []query{{
 		Script:     "testdata/test.sql",
 		MinVersion: 901,
 		Withdbname: false,
@@ -258,10 +259,11 @@ func TestPostgresqlSqlScript(t *testing.T) {
 		Databases: []string{"postgres"},
 		Query:     q,
 	}
-	var acc testutil.Accumulator
 	require.NoError(t, p.Init())
-	require.NoError(t, p.Start(&acc))
 
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
 	require.NoError(t, acc.GatherError(p.Gather))
 }
 
@@ -288,8 +290,8 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	defer p.Stop()
 	require.NoError(t, acc.GatherError(p.Gather))
 
-	require.NotEmpty(t, p.IgnoredColumns())
-	for col := range p.IgnoredColumns() {
+	require.NotEmpty(t, ignoredColumns)
+	for col := range ignoredColumns {
 		require.False(t, acc.HasMeasurement(col))
 	}
 }
@@ -335,7 +337,8 @@ func TestAccRow(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		require.NoError(t, p.accRow("pgTEST", tt.fields, &acc, columns))
+		q := query{Measurement: "pgTEST", additionalTags: make(map[string]bool)}
+		require.NoError(t, p.accRow(&acc, tt.fields, columns, q))
 		require.Len(t, acc.Metrics, 1)
 		metric := acc.Metrics[0]
 		require.Equal(t, tt.dbName, metric.Tags["db"])
