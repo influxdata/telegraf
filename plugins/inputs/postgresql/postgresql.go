@@ -31,22 +31,13 @@ func (*Postgresql) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Postgresql) IgnoredColumns() map[string]bool {
-	return ignoredColumns
-}
-
 func (p *Postgresql) Init() error {
 	p.Service.IsPgBouncer = !p.PreparedStatements
 	return nil
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	var (
-		err     error
-		query   string
-		columns []string
-	)
-
+	var query string
 	if len(p.Databases) == 0 && len(p.IgnoredDatabases) == 0 {
 		query = `SELECT * FROM pg_stat_database`
 	} else if len(p.IgnoredDatabases) != 0 {
@@ -65,7 +56,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	defer rows.Close()
 
 	// grab the column information from the result
-	if columns, err = rows.Columns(); err != nil {
+	columns, err := rows.Columns()
+	if err != nil {
 		return err
 	}
 

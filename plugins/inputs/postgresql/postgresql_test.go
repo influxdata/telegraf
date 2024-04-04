@@ -222,7 +222,7 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	require.NoError(t, p.Start(&acc))
 	require.NoError(t, p.Gather(&acc))
 
-	for col := range p.IgnoredColumns() {
+	for col := range ignoredColumns {
 		require.False(t, acc.HasMeasurement(col))
 	}
 }
