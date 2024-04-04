@@ -80,7 +80,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, nil
 	}
 
-	metrics := make([]telegraf.Metric, len(data[0]))
+	metrics := make([]telegraf.Metric, metadata.NumRows)
 	now := time.Now()
 	for colIndex, col := range data {
 		for i, val := range col {
