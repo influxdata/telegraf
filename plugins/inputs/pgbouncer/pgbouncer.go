@@ -11,17 +11,18 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
 type PgBouncer struct {
-	postgresql.Service
 	ShowCommands []string `toml:"show_commands"`
+	postgresql.Config
+
+	service *postgresql.Service
 }
 
 var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode": true,
@@ -31,6 +32,23 @@ var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode"
 
 func (*PgBouncer) SampleConfig() string {
 	return sampleConfig
+}
+
+func (p *PgBouncer) Init() error {
+	service, err := p.Config.CreateService()
+	if err != nil {
+		return err
+	}
+	p.service = service
+	return nil
+}
+
+func (p *PgBouncer) Start(_ telegraf.Accumulator) error {
+	return p.service.Start()
+}
+
+func (p *PgBouncer) Stop() {
+	p.service.Stop()
 }
 
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
@@ -103,19 +121,13 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string, ma
 		dbname.WriteString("pgbouncer")
 	}
 
-	var tagAddress string
-	tagAddress, err = p.SanitizedAddress()
-	if err != nil {
-		return nil, nil, fmt.Errorf("couldn't get connection data: %w", err)
-	}
-
 	// Return basic tags and the mapped columns
-	return map[string]string{"server": tagAddress, "db": dbname.String()}, columnMap, nil
+	return map[string]string{"server": p.service.SanitizedAddress, "db": dbname.String()}, columnMap, nil
 }
 
 func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 	// STATS
-	rows, err := p.DB.Query(`SHOW STATS`)
+	rows, err := p.service.DB.Query(`SHOW STATS`)
 	if err != nil {
 		return fmt.Errorf("execution error 'show stats': %w", err)
 	}
@@ -163,7 +175,7 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 
 func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 	// POOLS
-	poolRows, err := p.DB.Query(`SHOW POOLS`)
+	poolRows, err := p.service.DB.Query(`SHOW POOLS`)
 	if err != nil {
 		return fmt.Errorf("execution error 'show pools': %w", err)
 	}
@@ -209,7 +221,7 @@ func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 
 func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 	// LISTS
-	rows, err := p.DB.Query(`SHOW LISTS`)
+	rows, err := p.service.DB.Query(`SHOW LISTS`)
 	if err != nil {
 		return fmt.Errorf("execution error 'show lists': %w", err)
 	}
@@ -250,7 +262,7 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 
 func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 	// DATABASES
-	rows, err := p.DB.Query(`SHOW DATABASES`)
+	rows, err := p.service.DB.Query(`SHOW DATABASES`)
 	if err != nil {
 		return fmt.Errorf("execution error 'show database': %w", err)
 	}
@@ -298,10 +310,9 @@ func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("pgbouncer", func() telegraf.Input {
 		return &PgBouncer{
-			Service: postgresql.Service{
+			Config: postgresql.Config{
 				MaxIdle:     1,
 				MaxOpen:     1,
-				MaxLifetime: config.Duration(0),
 				IsPgBouncer: true,
 			},
 		}
