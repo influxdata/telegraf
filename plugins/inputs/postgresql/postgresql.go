@@ -11,7 +11,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -19,10 +19,12 @@ import (
 var sampleConfig string
 
 type Postgresql struct {
-	Service
 	Databases          []string `toml:"databases"`
 	IgnoredDatabases   []string `toml:"ignored_databases"`
 	PreparedStatements bool     `toml:"prepared_statements"`
+	postgresql.Config
+
+	service *postgresql.Service
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
@@ -32,8 +34,23 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
-	p.Service.IsPgBouncer = !p.PreparedStatements
+	p.IsPgBouncer = !p.PreparedStatements
+
+	service, err := p.Config.CreateService()
+	if err != nil {
+		return err
+	}
+	p.service = service
+
 	return nil
+}
+
+func (p *Postgresql) Start(_ telegraf.Accumulator) error {
+	return p.service.Start()
+}
+
+func (p *Postgresql) Stop() {
+	p.service.Stop()
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
@@ -48,7 +65,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			strings.Join(p.Databases, "','"))
 	}
 
-	rows, err := p.DB.Query(query)
+	rows, err := p.service.DB.Query(query)
 	if err != nil {
 		return err
 	}
@@ -70,7 +87,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	query = `SELECT * FROM pg_stat_bgwriter`
 
-	bgWriterRow, err := p.DB.Query(query)
+	bgWriterRow, err := p.service.DB.Query(query)
 	if err != nil {
 		return err
 	}
@@ -112,15 +129,8 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 		columnVars = append(columnVars, columnMap[columns[i]])
 	}
 
-	tagAddress, err := p.SanitizedAddress()
-	if err != nil {
-		return err
-	}
-
 	// deconstruct array of variables and send to Scan
-	err = row.Scan(columnVars...)
-
-	if err != nil {
+	if err := row.Scan(columnVars...); err != nil {
 		return err
 	}
 	if columnMap["datname"] != nil {
@@ -132,13 +142,10 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 			dbname.WriteString("postgres_global")
 		}
 	} else {
-		database, err := p.GetConnectDatabase(tagAddress)
-		if err != nil {
-			return err
-		}
-		dbname.WriteString(database)
+		dbname.WriteString(p.service.ConnectionDatabase)
 	}
 
+	tagAddress := p.service.SanitizedAddress
 	tags := map[string]string{"server": tagAddress, "db": dbname.String()}
 
 	fields := make(map[string]interface{})
@@ -156,10 +163,9 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{
-			Service: Service{
-				MaxIdle:     1,
-				MaxOpen:     1,
-				MaxLifetime: config.Duration(0),
+			Config: postgresql.Config{
+				MaxIdle: 1,
+				MaxOpen: 1,
 			},
 			PreparedStatements: true,
 		}
