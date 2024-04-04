@@ -11,7 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
+	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -29,8 +29,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 		),
 	}
 
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	addr := fmt.Sprintf(
@@ -41,18 +40,20 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 
 	p := &Postgresql{
 		Log: testutil.Logger{},
-		Service: postgresql.Service{
+		Config: postgresql.Config{
 			Address:     config.NewSecret([]byte(addr)),
 			IsPgBouncer: false,
 		},
 		Databases: []string{"postgres"},
 		Query:     q,
 	}
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
-	require.NoError(t, p.Init())
 	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
 	require.NoError(t, acc.GatherError(p.Gather))
+
 	return &acc
 }
 
@@ -250,7 +251,7 @@ func TestPostgresqlSqlScript(t *testing.T) {
 
 	p := &Postgresql{
 		Log: testutil.Logger{},
-		Service: postgresql.Service{
+		Config: postgresql.Config{
 			Address:     config.NewSecret([]byte(addr)),
 			IsPgBouncer: false,
 		},
@@ -276,15 +277,17 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 
 	p := &Postgresql{
 		Log: testutil.Logger{},
-		Service: postgresql.Service{
+		Config: postgresql.Config{
 			Address: config.NewSecret([]byte(addr)),
 		},
 	}
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
-
 	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
 	require.NoError(t, acc.GatherError(p.Gather))
+
 	require.NotEmpty(t, p.IgnoredColumns())
 	for col := range p.IgnoredColumns() {
 		require.False(t, acc.HasMeasurement(col))
@@ -294,10 +297,12 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 func TestAccRow(t *testing.T) {
 	p := Postgresql{
 		Log: testutil.Logger{},
-		Service: postgresql.Service{
+		Config: postgresql.Config{
+			Address:       config.NewSecret(nil),
 			OutputAddress: "server",
 		},
 	}
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
 	columns := []string{"datname", "cat"}

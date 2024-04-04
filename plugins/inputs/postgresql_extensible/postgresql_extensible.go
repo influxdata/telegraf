@@ -15,24 +15,24 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
 type Postgresql struct {
-	postgresql.Service
 	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query
 	Debug              bool
 	PreparedStatements bool `toml:"prepared_statements"`
+	Log                telegraf.Logger
+	postgresql.Config
 
-	Log telegraf.Logger
+	service *postgresql.Service
 }
 
 type query []struct {
@@ -66,8 +66,23 @@ func (p *Postgresql) Init() error {
 			p.Query[i].MinVersion = p.Query[i].Version
 		}
 	}
-	p.Service.IsPgBouncer = !p.PreparedStatements
+	p.Config.IsPgBouncer = !p.PreparedStatements
+
+	service, err := p.Config.CreateService()
+	if err != nil {
+		return err
+	}
+	p.service = service
+
 	return nil
+}
+
+func (p *Postgresql) Start(_ telegraf.Accumulator) error {
+	return p.service.Start()
+}
+
+func (p *Postgresql) Stop() {
+	p.service.Stop()
 }
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
@@ -90,7 +105,6 @@ func ReadQueryFromFile(filePath string) (string, error) {
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var (
-		err        error
 		sqlQuery   string
 		queryAddon string
 		dbVersion  int
@@ -100,7 +114,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	// Retrieving the database version
 	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
-	if err = p.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
 		dbVersion = 0
 	}
 
@@ -138,7 +152,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery string, tagValue string, timestamp string, measName string) {
 	var columns []string
 
-	rows, err := p.DB.Query(sqlQuery)
+	rows, err := p.service.DB.Query(sqlQuery)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -175,10 +189,8 @@ type scanner interface {
 
 func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulator, columns []string) error {
 	var (
-		err        error
-		dbname     bytes.Buffer
-		tagAddress string
-		timestamp  time.Time
+		dbname    bytes.Buffer
+		timestamp time.Time
 	)
 
 	// this is where we'll store the column name with its *interface{}
@@ -194,10 +206,6 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		columnVars = append(columnVars, columnMap[columns[i]])
 	}
 
-	if tagAddress, err = p.SanitizedAddress(); err != nil {
-		return err
-	}
-
 	// deconstruct array of variables and send to Scan
 	if err := row.Scan(columnVars...); err != nil {
 		return err
@@ -209,23 +217,15 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		case string:
 			dbname.WriteString(datname)
 		default:
-			database, err := p.GetConnectDatabase(tagAddress)
-			if err != nil {
-				return err
-			}
-			dbname.WriteString(database)
+			dbname.WriteString(p.service.ConnectionDatabase)
 		}
 	} else {
-		database, err := p.GetConnectDatabase(tagAddress)
-		if err != nil {
-			return err
-		}
-		dbname.WriteString(database)
+		dbname.WriteString(p.service.ConnectionDatabase)
 	}
 
 	// Process the additional tags
 	tags := map[string]string{
-		"server": tagAddress,
+		"server": p.service.SanitizedAddress,
 		"db":     dbname.String(),
 	}
 
@@ -280,11 +280,9 @@ COLUMN:
 func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
-			Service: postgresql.Service{
-				MaxIdle:     1,
-				MaxOpen:     1,
-				MaxLifetime: config.Duration(0),
-				IsPgBouncer: false,
+			Config: postgresql.Config{
+				MaxIdle: 1,
+				MaxOpen: 1,
 			},
 			PreparedStatements: true,
 		}
