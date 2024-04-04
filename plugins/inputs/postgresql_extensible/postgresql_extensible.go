@@ -5,9 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"io"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,36 +13,36 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
 type Postgresql struct {
-	postgresql.Service
-	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	AdditionalTags     []string
-	Timestamp          string
-	Query              query
-	Debug              bool
-	PreparedStatements bool `toml:"prepared_statements"`
+	Databases          []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	Query              []query         `toml:"query"`
+	PreparedStatements bool            `toml:"prepared_statements"`
+	Log                telegraf.Logger `toml:"-"`
+	postgresql.Config
 
-	Log telegraf.Logger
+	service *postgresql.Service
 }
 
-type query []struct {
-	Sqlquery    string
-	Script      string
-	Version     int  `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
-	MinVersion  int  `toml:"min_version"`
-	MaxVersion  int  `toml:"max_version"`
-	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	Tagvalue    string
-	Measurement string
-	Timestamp   string
+type query struct {
+	Sqlquery    string `toml:"sqlquery"`
+	Script      string `toml:"script"`
+	Version     int    `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
+	MinVersion  int    `toml:"min_version"`
+	MaxVersion  int    `toml:"max_version"`
+	Withdbname  bool   `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	Tagvalue    string `toml:"tagvalue"`
+	Measurement string `toml:"measurement"`
+	Timestamp   string `toml:"timestamp"`
+
+	additionalTags map[string]bool
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
@@ -54,133 +52,105 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
-	var err error
-	for i := range p.Query {
-		if p.Query[i].Sqlquery == "" {
-			p.Query[i].Sqlquery, err = ReadQueryFromFile(p.Query[i].Script)
+	// Set defaults for the queries
+	for i, q := range p.Query {
+		if q.Sqlquery == "" {
+			query, err := os.ReadFile(q.Script)
 			if err != nil {
 				return err
 			}
+			q.Sqlquery = string(query)
 		}
-		if p.Query[i].MinVersion == 0 {
-			p.Query[i].MinVersion = p.Query[i].Version
+		if q.MinVersion == 0 {
+			q.MinVersion = q.Version
 		}
-	}
-	p.Service.IsPgBouncer = !p.PreparedStatements
-	return nil
-}
-
-func (p *Postgresql) IgnoredColumns() map[string]bool {
-	return ignoredColumns
-}
-
-func ReadQueryFromFile(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	query, err := io.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-	return string(query), err
-}
-
-func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	var (
-		err        error
-		sqlQuery   string
-		queryAddon string
-		dbVersion  int
-		query      string
-		measName   string
-	)
-
-	// Retrieving the database version
-	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
-	if err = p.DB.QueryRow(query).Scan(&dbVersion); err != nil {
-		dbVersion = 0
-	}
-
-	// We loop in order to process each query
-	// Query is not run if Database version does not match the query version.
-	for i := range p.Query {
-		sqlQuery = p.Query[i].Sqlquery
-
-		if p.Query[i].Measurement != "" {
-			measName = p.Query[i].Measurement
-		} else {
-			measName = "postgresql"
+		if q.Measurement == "" {
+			q.Measurement = "postgresql"
 		}
 
-		if p.Query[i].Withdbname {
+		var queryAddon string
+		if q.Withdbname {
 			if len(p.Databases) != 0 {
 				queryAddon = fmt.Sprintf(` IN ('%s')`, strings.Join(p.Databases, "','"))
 			} else {
 				queryAddon = " is not null"
 			}
-		} else {
-			queryAddon = ""
 		}
-		sqlQuery += queryAddon
+		q.Sqlquery += queryAddon
 
-		maxVer := p.Query[i].MaxVersion
+		q.additionalTags = make(map[string]bool)
+		if q.Tagvalue != "" {
+			for _, tag := range strings.Split(q.Tagvalue, ",") {
+				q.additionalTags[tag] = true
+			}
+		}
+		p.Query[i] = q
+	}
+	p.Config.IsPgBouncer = !p.PreparedStatements
 
-		if p.Query[i].MinVersion <= dbVersion && (maxVer == 0 || maxVer > dbVersion) {
-			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
+	// Create a service to access the PostgreSQL server
+	service, err := p.Config.CreateService()
+	if err != nil {
+		return err
+	}
+	p.service = service
+
+	return nil
+}
+
+func (p *Postgresql) Start(_ telegraf.Accumulator) error {
+	return p.service.Start()
+}
+
+func (p *Postgresql) Stop() {
+	p.service.Stop()
+}
+
+func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
+	// Retrieving the database version
+	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
+	var dbVersion int
+	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+		dbVersion = 0
+	}
+
+	// We loop in order to process each query
+	// Query is not run if Database version does not match the query version.
+	for _, q := range p.Query {
+		if q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion) {
+			acc.AddError(p.gatherMetricsFromQuery(acc, q))
 		}
 	}
 	return nil
 }
 
-func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery string, tagValue string, timestamp string, measName string) {
-	var columns []string
-
-	rows, err := p.DB.Query(sqlQuery)
+func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query) error {
+	rows, err := p.service.DB.Query(q.Sqlquery)
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	defer rows.Close()
 
 	// grab the column information from the result
-	if columns, err = rows.Columns(); err != nil {
-		acc.AddError(err)
-		return
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
 	}
-
-	p.AdditionalTags = nil
-	if tagValue != "" {
-		tagList := strings.Split(tagValue, ",")
-		p.AdditionalTags = append(p.AdditionalTags, tagList...)
-	}
-
-	p.Timestamp = timestamp
 
 	for rows.Next() {
-		err = p.accRow(measName, rows, acc, columns)
-		if err != nil {
-			acc.AddError(err)
-			break
+		if err := p.accRow(acc, rows, columns, q); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulator, columns []string) error {
-	var (
-		err        error
-		dbname     bytes.Buffer
-		tagAddress string
-		timestamp  time.Time
-	)
-
+func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []string, q query) error {
 	// this is where we'll store the column name with its *interface{}
 	columnMap := make(map[string]*interface{})
 
@@ -194,46 +164,34 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		columnVars = append(columnVars, columnMap[columns[i]])
 	}
 
-	if tagAddress, err = p.SanitizedAddress(); err != nil {
-		return err
-	}
-
 	// deconstruct array of variables and send to Scan
 	if err := row.Scan(columnVars...); err != nil {
 		return err
 	}
 
+	var dbname bytes.Buffer
 	if c, ok := columnMap["datname"]; ok && *c != nil {
 		// extract the database name from the column map
 		switch datname := (*c).(type) {
 		case string:
 			dbname.WriteString(datname)
 		default:
-			database, err := p.GetConnectDatabase(tagAddress)
-			if err != nil {
-				return err
-			}
-			dbname.WriteString(database)
+			dbname.WriteString(p.service.ConnectionDatabase)
 		}
 	} else {
-		database, err := p.GetConnectDatabase(tagAddress)
-		if err != nil {
-			return err
-		}
-		dbname.WriteString(database)
+		dbname.WriteString(p.service.ConnectionDatabase)
 	}
 
 	// Process the additional tags
 	tags := map[string]string{
-		"server": tagAddress,
+		"server": p.service.SanitizedAddress,
 		"db":     dbname.String(),
 	}
 
 	// set default timestamp to Now
-	timestamp = time.Now()
+	timestamp := time.Now()
 
 	fields := make(map[string]interface{})
-COLUMN:
 	for col, val := range columnMap {
 		p.Log.Debugf("Column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
@@ -241,30 +199,21 @@ COLUMN:
 			continue
 		}
 
-		if col == p.Timestamp {
+		if col == q.Timestamp {
 			if v, ok := (*val).(time.Time); ok {
 				timestamp = v
 			}
 			continue
 		}
 
-		for _, tag := range p.AdditionalTags {
-			if col != tag {
-				continue
-			}
-			switch v := (*val).(type) {
-			case string:
+		if q.additionalTags[col] {
+			v, err := internal.ToString(*val)
+			if err != nil {
+				p.Log.Debugf("Failed to add %q as additional tag: %v", col, err)
+			} else {
 				tags[col] = v
-			case []byte:
-				tags[col] = string(v)
-			case int64, int32, int:
-				tags[col] = fmt.Sprintf("%d", v)
-			case bool:
-				tags[col] = strconv.FormatBool(v)
-			default:
-				p.Log.Debugf("Failed to add %q as additional tag", col)
 			}
-			continue COLUMN
+			continue
 		}
 
 		if v, ok := (*val).([]byte); ok {
@@ -273,18 +222,16 @@ COLUMN:
 			fields[col] = *val
 		}
 	}
-	acc.AddFields(measName, fields, tags, timestamp)
+	acc.AddFields(q.Measurement, fields, tags, timestamp)
 	return nil
 }
 
 func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
-			Service: postgresql.Service{
-				MaxIdle:     1,
-				MaxOpen:     1,
-				MaxLifetime: config.Duration(0),
-				IsPgBouncer: false,
+			Config: postgresql.Config{
+				MaxIdle: 1,
+				MaxOpen: 1,
 			},
 			PreparedStatements: true,
 		}
