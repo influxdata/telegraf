@@ -3,6 +3,7 @@ package pgbouncer
 
 import (
 	"bytes"
+	"database/sql"
 	_ "embed"
 	"fmt"
 	"strconv"
@@ -35,6 +36,19 @@ func (*PgBouncer) SampleConfig() string {
 }
 
 func (p *PgBouncer) Init() error {
+	// Set defaults and check settings
+	if len(p.ShowCommands) == 0 {
+		p.ShowCommands = []string{"stats", "pools"}
+	}
+	for _, cmd := range p.ShowCommands {
+		switch cmd {
+		case "stats", "pools", "lists", "databases":
+		default:
+			return fmt.Errorf("invalid setting %q for 'show_command'", cmd)
+		}
+	}
+
+	// Create a postgres service for the queries
 	service, err := p.Config.CreateService()
 	if err != nil {
 		return err
@@ -52,33 +66,23 @@ func (p *PgBouncer) Stop() {
 }
 
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
-	if len(p.ShowCommands) == 0 {
-		if err := p.showStats(acc); err != nil {
-			return err
-		}
-
-		if err := p.showPools(acc); err != nil {
-			return err
-		}
-	} else {
-		for _, cmd := range p.ShowCommands {
-			switch {
-			case cmd == "stats":
-				if err := p.showStats(acc); err != nil {
-					return err
-				}
-			case cmd == "pools":
-				if err := p.showPools(acc); err != nil {
-					return err
-				}
-			case cmd == "lists":
-				if err := p.showLists(acc); err != nil {
-					return err
-				}
-			case cmd == "databases":
-				if err := p.showDatabase(acc); err != nil {
-					return err
-				}
+	for _, cmd := range p.ShowCommands {
+		switch cmd {
+		case "stats":
+			if err := p.showStats(acc); err != nil {
+				return err
+			}
+		case "pools":
+			if err := p.showPools(acc); err != nil {
+				return err
+			}
+		case "lists":
+			if err := p.showLists(acc); err != nil {
+				return err
+			}
+		case "databases":
+			if err := p.showDatabase(acc); err != nil {
+				return err
 			}
 		}
 	}
@@ -86,11 +90,7 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-type scanner interface {
-	Scan(dest ...interface{}) error
-}
-
-func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string, map[string]*interface{}, error) {
+func (p *PgBouncer) accRow(row *sql.Rows, columns []string) (map[string]string, map[string]*interface{}, error) {
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
