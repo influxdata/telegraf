@@ -31,6 +31,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## automount, swap, timer, path, slice and scope
   # unittype = "service"
 
+  ## Only process units loaded by systemd
+  ## This speeds up the gathering process significantly but setting it to true
+  ## will not produce metrics for disabled or static units.
+  # loaded_only = false
+
   ## Collect detailed information for the units
   # details = false
 

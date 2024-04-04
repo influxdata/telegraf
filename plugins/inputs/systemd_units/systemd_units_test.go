@@ -810,6 +810,41 @@ func TestMultiInstance(t *testing.T) {
 	}
 }
 
+func BenchmarkAllUnitsIntegration(b *testing.B) {
+	plugin := &SystemdUnits{
+		Timeout: config.Duration(3 * time.Second),
+	}
+	require.NoError(b, plugin.Init())
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, plugin.Start(acc))
+	require.NoError(b, acc.GatherError(plugin.Gather))
+	require.NotZero(b, acc.NMetrics())
+	b.Logf("produced %d metrics", acc.NMetrics())
+
+	for n := 0; n < b.N; n++ {
+		_ = plugin.Gather(acc)
+	}
+}
+
+func BenchmarkAllLoadedUnitsIntegration(b *testing.B) {
+	plugin := &SystemdUnits{
+		LoadedOnly: true,
+		Timeout:    config.Duration(3 * time.Second),
+	}
+	require.NoError(b, plugin.Init())
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, plugin.Start(acc))
+	require.NoError(b, acc.GatherError(plugin.Gather))
+	require.NotZero(b, acc.NMetrics())
+	b.Logf("produced %d metrics", acc.NMetrics())
+
+	for n := 0; n < b.N; n++ {
+		_ = plugin.Gather(acc)
+	}
+}
+
 // Fake client implementation
 type fakeClient struct {
 	units     map[string]properties

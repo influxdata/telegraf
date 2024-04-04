@@ -115,14 +115,6 @@ var subMap = map[string]int{
 	"elapsed": 0x00a0,
 }
 
-type unitInfo struct {
-	name           string
-	state          dbus.UnitStatus
-	properties     map[string]interface{}
-	unitFileState  string
-	unitFilePreset string
-}
-
 type client interface {
 	Connected() bool
 	Close()
@@ -205,15 +197,18 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("listing loaded units failed: %w", err)
 	}
 
-	// List all unit files matching the pattern to also get disabled units
-	list := []string{"enabled", "disabled", "static"}
-	files, err := s.client.ListUnitFilesByPatternsContext(ctx, list, s.pattern)
-	if err != nil {
-		return fmt.Errorf("listing unit files failed: %w", err)
+	var files []dbus.UnitFile
+	if !s.LoadedOnly {
+		// List all unit files matching the pattern to also get disabled units
+		list := []string{"enabled", "disabled", "static"}
+		files, err = s.client.ListUnitFilesByPatternsContext(ctx, list, s.pattern)
+		if err != nil {
+			return fmt.Errorf("listing unit files failed: %w", err)
+		}
 	}
 
 	// Collect all matching units, the loaded ones and the disabled ones
-	states := make([]dbus.UnitStatus, 0, len(files))
+	states := make([]dbus.UnitStatus, 0, len(loaded))
 
 	// Match all loaded units first
 	seen := make(map[string]bool)
@@ -235,68 +230,69 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 
 	// Now split the unit-files into disabled ones and static ones, ignore
 	// enabled units as those are already contained in the "loaded" list.
-	disabled := make([]string, 0, len(files))
-	static := make([]string, 0, len(files))
-	for _, f := range files {
-		name := path.Base(f.Path)
+	if len(files) > 0 {
+		disabled := make([]string, 0, len(files))
+		static := make([]string, 0, len(files))
+		for _, f := range files {
+			name := path.Base(f.Path)
 
-		switch f.Type {
-		case "disabled":
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
+			switch f.Type {
+			case "disabled":
+				if seen[name] {
+					continue
+				}
+				seen[name] = true
 
-			// Detect disabled multi-instance units and declare them as static
-			_, suffix, found := strings.Cut(name, "@")
-			instance, _, _ := strings.Cut(suffix, ".")
-			if found && instance == "" {
+				// Detect disabled multi-instance units and declare them as static
+				_, suffix, found := strings.Cut(name, "@")
+				instance, _, _ := strings.Cut(suffix, ".")
+				if found && instance == "" {
+					static = append(static, name)
+					continue
+				}
+				disabled = append(disabled, name)
+			case "static":
+				// Make sure we filter already loaded static multi-instance units
+				instance := name
+				if strings.Contains(name, "@") {
+					prefix, _, _ := strings.Cut(name, "@")
+					suffix := path.Ext(name)
+					instance = prefix + "@" + suffix
+				}
+				if seen[instance] || seen[name] {
+					continue
+				}
+				seen[instance] = true
 				static = append(static, name)
-				continue
 			}
-			disabled = append(disabled, name)
-		case "static":
-			// Make sure we filter already loaded static multi-instance units
-			instance := name
-			if strings.Contains(name, "@") {
-				prefix, _, _ := strings.Cut(name, "@")
-				suffix := path.Ext(name)
-				instance = prefix + "@" + suffix
-			}
-			if seen[instance] || seen[name] {
-				continue
-			}
-			seen[instance] = true
-			static = append(static, name)
-		}
-	}
-
-	// Resolve the disabled and remaining static units
-	disabledStates, err := s.client.ListUnitsByNamesContext(ctx, disabled)
-	if err != nil {
-		return fmt.Errorf("listing unit states failed: %w", err)
-	}
-	states = append(states, disabledStates...)
-
-	// Add special information about unused static units
-	for _, name := range static {
-		if !strings.EqualFold(strings.TrimPrefix(path.Ext(name), "."), s.UnitType) {
-			continue
 		}
 
-		states = append(states, dbus.UnitStatus{
-			Name:        name,
-			LoadState:   "stub",
-			ActiveState: "inactive",
-			SubState:    "dead",
-		})
+		// Resolve the disabled and remaining static units
+		disabledStates, err := s.client.ListUnitsByNamesContext(ctx, disabled)
+		if err != nil {
+			return fmt.Errorf("listing unit states failed: %w", err)
+		}
+		states = append(states, disabledStates...)
+
+		// Add special information about unused static units
+		for _, name := range static {
+			if !strings.EqualFold(strings.TrimPrefix(path.Ext(name), "."), s.UnitType) {
+				continue
+			}
+
+			states = append(states, dbus.UnitStatus{
+				Name:        name,
+				LoadState:   "stub",
+				ActiveState: "inactive",
+				SubState:    "dead",
+			})
+		}
 	}
 
 	// Merge the unit information into one struct
-	units := make([]unitInfo, 0, len(states))
 	for _, state := range states {
 		// Filter units of the wrong type
-		props, err := s.client.GetUnitTypePropertiesContext(ctx, state.Name, s.UnitType)
+		properties, err := s.client.GetUnitTypePropertiesContext(ctx, state.Name, s.UnitType)
 		if err != nil {
 			// Skip units returning "Unknown interface" errors as those indicate
 			// that the unit is of the wrong type.
@@ -305,54 +301,45 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			}
 			// For other units we make up properties, usually those are
 			// disabled multi-instance units
-			props = map[string]interface{}{
+			properties = map[string]interface{}{
 				"StatusErrno": int64(-1),
 				"NRestarts":   uint64(0),
 			}
 		}
 
-		u := unitInfo{
-			name:       state.Name,
-			state:      state,
-			properties: props,
-		}
-
 		// Get required unit file properties
+		var unitFileState string
 		if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFileState"); err == nil {
-			u.unitFileState = strings.Trim(v.Value.String(), `'"`)
+			unitFileState = strings.Trim(v.Value.String(), `'"`)
 		}
+		var unitFilePreset string
 		if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFilePreset"); err == nil {
-			u.unitFilePreset = strings.Trim(v.Value.String(), `'"`)
+			unitFilePreset = strings.Trim(v.Value.String(), `'"`)
 		}
 
-		units = append(units, u)
-	}
-
-	// Create the metrics
-	for _, u := range units {
 		// Map the state names to numerical values
-		load, ok := loadMap[u.state.LoadState]
+		load, ok := loadMap[state.LoadState]
 		if !ok {
-			acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", u.state.LoadState))
+			acc.AddError(fmt.Errorf("parsing field 'load' failed, value not in map: %s", state.LoadState))
 			continue
 		}
-		active, ok := activeMap[u.state.ActiveState]
+		active, ok := activeMap[state.ActiveState]
 		if !ok {
-			acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", u.state.ActiveState))
+			acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", state.ActiveState))
 			continue
 		}
-		subState, ok := subMap[u.state.SubState]
+		subState, ok := subMap[state.SubState]
 		if !ok {
-			acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", u.state.SubState))
+			acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", state.SubState))
 			continue
 		}
 
 		// Create the metric
 		tags := map[string]string{
-			"name":   u.name,
-			"load":   u.state.LoadState,
-			"active": u.state.ActiveState,
-			"sub":    u.state.SubState,
+			"name":   state.Name,
+			"load":   state.LoadState,
+			"active": state.ActiveState,
+			"sub":    state.SubState,
 		}
 
 		fields := map[string]interface{}{
@@ -362,17 +349,17 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if s.Details {
-			tags["state"] = u.unitFileState
-			tags["preset"] = u.unitFilePreset
+			tags["state"] = unitFileState
+			tags["preset"] = unitFilePreset
 
-			fields["status_errno"] = u.properties["StatusErrno"]
-			fields["restarts"] = u.properties["NRestarts"]
-			fields["pid"] = u.properties["MainPID"]
-			fields["mem_current"] = u.properties["MemoryCurrent"]
-			fields["mem_peak"] = u.properties["MemoryPeak"]
-			fields["swap_current"] = u.properties["MemorySwapCurrent"]
-			fields["swap_peak"] = u.properties["MemorySwapPeak"]
-			fields["mem_avail"] = u.properties["MemoryAvailable"]
+			fields["status_errno"] = properties["StatusErrno"]
+			fields["restarts"] = properties["NRestarts"]
+			fields["pid"] = properties["MainPID"]
+			fields["mem_current"] = properties["MemoryCurrent"]
+			fields["mem_peak"] = properties["MemoryPeak"]
+			fields["swap_current"] = properties["MemorySwapCurrent"]
+			fields["swap_peak"] = properties["MemorySwapPeak"]
+			fields["mem_avail"] = properties["MemoryAvailable"]
 
 			// Sanitize unset memory fields
 			for k, value := range fields {
