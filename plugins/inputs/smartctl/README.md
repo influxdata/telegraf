@@ -28,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from SMART storage devices using smartclt's JSON output
 [[inputs.smartctl]]
     ## Optionally specify the path to the smartctl executable
-    # path = "/usr/bin/smartctl"
+    # path = "/usr/sbin/smartctl"
 
     ## Use sudo
     ## On most platforms used, smartctl requires root access. Setting 'use_sudo'
@@ -76,7 +76,7 @@ And to update the `/etc/sudoers` file to allow running smartctl:
 ```bash
 $ visudo
 # Add the following lines:
-Cmnd_Alias SMARTCTL = /usr/bin/smartctl
+Cmnd_Alias SMARTCTL = /usr/sbin/smartctl
 telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
 Defaults!SMARTCTL !logfile, !syslog, !pam_session
 ```

@@ -39,7 +39,7 @@ func (*Smartctl) SampleConfig() string {
 
 func (s *Smartctl) Init() error {
 	if s.Path == "" {
-		s.Path = "/usr/bin/smartctl"
+		s.Path = "/usr/sbin/smartctl"
 	}
 
 	switch s.NoCheck {
