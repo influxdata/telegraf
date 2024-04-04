@@ -8,9 +8,6 @@ import (
 	"fmt"
 	"strconv"
 
-	// Required for SQL framework driver
-	_ "github.com/jackc/pgx/v4/stdlib"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"

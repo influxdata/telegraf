@@ -3,6 +3,9 @@ package postgresql
 import (
 	"database/sql"
 	"time"
+
+	// Blank import required to register driver
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 // Service common functionality shared between the postgresql and postgresql_extensible

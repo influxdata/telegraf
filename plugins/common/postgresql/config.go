@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/stdlib"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)

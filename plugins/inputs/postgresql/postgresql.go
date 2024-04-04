@@ -3,12 +3,10 @@ package postgresql
 
 import (
 	"bytes"
+	"database/sql"
 	_ "embed"
 	"fmt"
 	"strings"
-
-	// Blank import required to register driver
-	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
@@ -100,8 +98,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for bgWriterRow.Next() {
-		err = p.accRow(bgWriterRow, acc, columns)
-		if err != nil {
+		if err := p.accRow(bgWriterRow, acc, columns); err != nil {
 			return err
 		}
 	}
@@ -109,11 +106,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	return bgWriterRow.Err()
 }
 
-type scanner interface {
-	Scan(dest ...interface{}) error
-}
-
-func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []string) error {
+func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []string) error {
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
