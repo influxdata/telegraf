@@ -117,16 +117,6 @@ to use them.
   # cookie_auth_renewal = "5m"
 ```
 
-### Optional Cookie Authentication Settings:
-
-The optional Cookie Authentication Settings will retrieve a cookie from the
-given authorization endpoint, and use it in subsequent API requests. This is
-useful for services that do not provide OAuth or Basic Auth authentication,
-e.g. the [Tesla Powerwall API](https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network),
-which uses a Cookie Auth Body to retrieve an authorization cookie. The Cookie
-Auth Renewal interval will renew the authorization by retrieving a new cookie
-at the given interval.
-
 ## Metrics
 
 - http_response
@@ -169,3 +159,14 @@ a successful connection.
 ```text
 http_response,method=GET,result=success,server=http://github.com,status_code=200 content_length=87878i,http_response_code=200i,response_time=0.937655534,result_code=0i,result_type="success" 1565839598000000000
 ```
+
+## Optional Cookie Authentication Settings
+
+The optional Cookie Authentication Settings will retrieve a cookie from the
+given authorization endpoint, and use it in subsequent API requests.  This is
+useful for services that do not provide OAuth or Basic Auth authentication,
+e.g. the [Tesla Powerwall API][tesla], which uses a Cookie Auth Body to retrieve
+an authorization cookie.  The Cookie Auth Renewal interval will renew the
+authorization by retrieving a new cookie at the given interval.
+
+[tesla]: https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network
