@@ -50,10 +50,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create parquet reader: %w", err)
 	}
-
 	metadata := parquetReader.MetaData()
-	columns := make([]string, metadata.Schema.NumColumns())
-	data := make([][]any, metadata.Schema.NumColumns())
+
+	now := time.Now()
+	metrics := make([]telegraf.Metric, 0, metadata.NumRows)
 	for i := 0; i < parquetReader.NumRowGroups(); i++ {
 		rowGroup := parquetReader.RowGroup(i)
 		scanners := make([]*columnParser, metadata.Schema.NumColumns())
@@ -64,60 +64,57 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			}
 
 			scanners[colIndex] = newColumnParser(col)
-			columns[colIndex] = col.Descriptor().Name()
 		}
 
-		for i, s := range scanners {
+		rowIndex := 0
+		rowGroupMetrics := make([]telegraf.Metric, rowGroup.NumRows())
+		for _, s := range scanners {
 			for s.HasNext() {
-				if val, ok := s.Next(); ok {
-					data[i] = append(data[i], val)
+				if rowIndex%int(rowGroup.NumRows()) == 0 {
+					rowIndex = 0
 				}
+
+				val, ok := s.Next()
+				if !ok || val == nil {
+					rowIndex++
+					continue
+				}
+
+				if rowGroupMetrics[rowIndex] == nil {
+					rowGroupMetrics[rowIndex] = metric.New(p.metricName, p.defaultTags, nil, now)
+				}
+
+				if p.MeasurementColumn != "" && s.name == p.MeasurementColumn {
+					valStr, err := internal.ToString(val)
+					if err != nil {
+						return nil, fmt.Errorf("could not convert value to string: %w", err)
+					}
+					rowGroupMetrics[rowIndex].SetName(valStr)
+				} else if p.TagColumns != nil && slices.Contains(p.TagColumns, s.name) {
+					valStr, err := internal.ToString(val)
+					if err != nil {
+						return nil, fmt.Errorf("could not convert value to string: %w", err)
+					}
+					rowGroupMetrics[rowIndex].AddTag(s.name, valStr)
+				} else if p.TimestampColumn != "" && s.name == p.TimestampColumn {
+					valStr, err := internal.ToString(val)
+					if err != nil {
+						return nil, fmt.Errorf("could not convert value to string: %w", err)
+					}
+					timestamp, err := internal.ParseTimestamp(p.TimestampFormat, valStr, p.location)
+					if err != nil {
+						return nil, fmt.Errorf("could not parse '%s' to '%s'", valStr, p.TimestampFormat)
+					}
+					rowGroupMetrics[rowIndex].SetTime(timestamp)
+				} else {
+					rowGroupMetrics[rowIndex].AddField(s.name, val)
+				}
+
+				rowIndex++
 			}
 		}
-	}
 
-	if len(data) == 0 {
-		return nil, nil
-	}
-
-	metrics := make([]telegraf.Metric, metadata.NumRows)
-	now := time.Now()
-	for colIndex, col := range data {
-		for i, val := range col {
-			if val == nil {
-				continue
-			}
-
-			if metrics[i] == nil {
-				metrics[i] = metric.New(p.metricName, p.defaultTags, nil, now)
-			}
-
-			if p.MeasurementColumn != "" && columns[colIndex] == p.MeasurementColumn {
-				valStr, err := internal.ToString(val)
-				if err != nil {
-					return nil, fmt.Errorf("could not convert value to string: %w", err)
-				}
-				metrics[i].SetName(valStr)
-			} else if p.TagColumns != nil && slices.Contains(p.TagColumns, columns[colIndex]) {
-				valStr, err := internal.ToString(val)
-				if err != nil {
-					return nil, fmt.Errorf("could not convert value to string: %w", err)
-				}
-				metrics[i].AddTag(columns[colIndex], valStr)
-			} else if p.TimestampColumn != "" && columns[colIndex] == p.TimestampColumn {
-				valStr, err := internal.ToString(val)
-				if err != nil {
-					return nil, fmt.Errorf("could not convert value to string: %w", err)
-				}
-				timestamp, err := internal.ParseTimestamp(p.TimestampFormat, valStr, p.location)
-				if err != nil {
-					return nil, fmt.Errorf("could not parse '%s' to '%s'", valStr, p.TimestampFormat)
-				}
-				metrics[i].SetTime(timestamp)
-			} else {
-				metrics[i].AddField(columns[colIndex], val)
-			}
-		}
+		metrics = append(metrics, rowGroupMetrics...)
 	}
 
 	return metrics, nil
