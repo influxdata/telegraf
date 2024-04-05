@@ -632,20 +632,26 @@ func (p *PrometheusHttp) ifTemplate(s string) (bool, string) {
 
 	only := ""
 	if strings.TrimSpace(s) == "" {
-		return false, only
+		return false, ""
 	}
 	// find {{ }} to pass templates
 	l := len("{{")
 	idx1 := strings.Index(s, "{{")
 	if idx1 == -1 {
-		return false, only
+		return false, ""
 	}
 	s1 := s[idx1+l:]
 	idx2 := strings.LastIndex(s1, "}}")
 	if idx2 == -1 {
-		return false, only
+		return false, ""
 	}
 	s2 := strings.TrimSpace(s1[0:idx2])
+	if !utils.IsEmpty(s2) {
+		idx3 := strings.Index(s2, "}}")
+		if idx3 > -1 {
+			return true, ""
+		}
+	}
 	arr := strings.Split(s2, " ")
 	if len(arr) == 1 {
 		if idx1 == 0 && strings.HasPrefix(arr[0], ".") {
