@@ -85,7 +85,7 @@ func (am *AzureMonitor) Init() error {
 	}
 
 	if err = am.receiver.SplitResourceTargetsMetricsByMinTimeGrain(); err != nil {
-		return fmt.Errorf("error spliting resource targets metrics by min time grain: %w", err)
+		return fmt.Errorf("error splitting resource targets metrics by min time grain: %w", err)
 	}
 
 	am.receiver.SplitResourceTargetsWithMoreThanMaxMetrics()

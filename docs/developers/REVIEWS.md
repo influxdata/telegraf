@@ -15,7 +15,7 @@ The review process is roughly structured as follows:
 1. Submit a pull request.
 Please check that you signed the [CLA](https://www.influxdata.com/legal/cla/) (and [Corporate CLA](https://www.influxdata.com/legal/ccla/) if you are contributing code on as an employee of your company). Provide a short description of your submission and reference issues that you potentially close. Make sure the CI tests are all green and there are no linter-issues.
 1. Get feedback from a first reviewer and a `ready for final review` tag.
-Please constructively work with the reviewer to get your code into a mergable state (see also [below](#reviewing-plugin-code)).
+Please constructively work with the reviewer to get your code into a mergeable state (see also [below](#reviewing-plugin-code)).
 1. Get a final review by one of the InfluxData maintainers.
 Please fix any issue raised.
 1. Wait for the pull-request to be merged.
@@ -154,7 +154,7 @@ one series be item in the list.
 Counters retrieved from other projects often are in one of two styles,
 monotonically increasing without reset and reset on each interval.  No attempt
 should be made to switch between these two styles but if given the option it
-is preferred to use the non-reseting variant.  This style is more resilient in
+is preferred to use the non-resetting variant.  This style is more resilient in
 the face of downtime and does not contain a fixed time element.
 
 ### Source tag

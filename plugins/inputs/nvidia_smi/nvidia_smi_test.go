@@ -32,7 +32,7 @@ func TestErrorBehaviorDefault(t *testing.T) {
 	require.Error(t, plugin.Init())
 }
 
-func TestErorBehaviorIgnore(t *testing.T) {
+func TestErrorBehaviorIgnore(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
 	plugin := &NvidiaSMI{

@@ -137,7 +137,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  ## settings are valid:
   #  ##   unconditional -- always match
   #  ##   name          -- match by the "name" key
-  #  ##                    This resembles the previsou 'tag-only' behavior.
+  #  ##                    This resembles the previous 'tag-only' behavior.
   #  ##   elements      -- match by the keys in the path filtered by the path
   #  ##                    parts specified `elements` below
   #  ## By default, 'elements' is used if the 'elements' option is provided,

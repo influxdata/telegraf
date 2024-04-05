@@ -186,7 +186,7 @@ of the examples below.
 - `filter_query`: Lucene query to filter the results (default: "\*")
 - `metric_fields`: The list of fields to perform metric aggregation (these must
   be indexed as numeric fields)
-- `metric_funcion`: The single-value metric aggregation function to be performed
+- `metric_function`: The single-value metric aggregation function to be performed
   on the `metric_fields` defined. Currently supported aggregations are "avg",
   "min", "max", "sum". (see the [aggregation docs][agg]
 - `tags`: The list of fields to be used as tags (these must be indexed as

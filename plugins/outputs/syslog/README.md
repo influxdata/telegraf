@@ -112,7 +112,7 @@ syslog messages.
 | APP-NAME | appname | - | default_appname = "Telegraf" |
 | TIMESTAMP | - | timestamp | Metric's own timestamp |
 | VERSION | - | version | 1 |
-| PRI | - | serverity_code + (8 * facility_code)| default_severity_code=5 (notice), default_facility_code=1 (user-level)|
+| PRI | - | severity_code + (8 * facility_code)| default_severity_code=5 (notice), default_facility_code=1 (user-level)|
 | HOSTNAME | hostname OR source OR host | - | os.Hostname() |
 | MSGID | - | msgid | Metric name |
 | PROCID | - | procid | - |

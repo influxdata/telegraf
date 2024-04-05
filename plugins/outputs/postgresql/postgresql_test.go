@@ -769,7 +769,7 @@ func TestWriteIntegration_tagError(t *testing.T) {
 	require.EqualValues(t, 2, dump[1]["v"])
 }
 
-// Verify that when using TagsAsForeignKeys and ForeignTagConstraing and a tag can't be written, that we drop the metrics.
+// Verify that when using TagsAsForeignKeys and ForeignTagConstraint and a tag can't be written, that we drop the metrics.
 func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

@@ -354,12 +354,12 @@ type CephStatus struct {
 		DataBytes               float64 `json:"data_bytes"`
 		DegradedObjects         float64 `json:"degraded_objects"`
 		DegradedRatio           float64 `json:"degraded_ratio"`
-		DegraedTotal            float64 `json:"degraded_total"`
+		DegradedTotal           float64 `json:"degraded_total"`
 		InactivePGsRatio        float64 `json:"inactive_pgs_ratio"`
 		NumBytesRecovered       float64 `json:"num_bytes_recovered"`
 		NumKeysRecovered        float64 `json:"num_keys_recovered"`
 		NumObjects              float64 `json:"num_objects"`
-		NumOjbectRecovered      float64 `json:"num_objects_recovered"`
+		NumObjectRecovered      float64 `json:"num_objects_recovered"`
 		NumPGs                  float64 `json:"num_pgs"`
 		NumPools                float64 `json:"num_pools"`
 		OpPerSec                float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
@@ -470,11 +470,11 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 		"data_bytes":                 data.PGMap.DataBytes,
 		"degraded_objects":           data.PGMap.DegradedObjects,
 		"degraded_ratio":             data.PGMap.DegradedRatio,
-		"degraded_total":             data.PGMap.DegraedTotal,
+		"degraded_total":             data.PGMap.DegradedTotal,
 		"inactive_pgs_ratio":         data.PGMap.InactivePGsRatio,
 		"num_bytes_recovered":        data.PGMap.NumBytesRecovered,
 		"num_keys_recovered":         data.PGMap.NumKeysRecovered,
-		"num_objects_recovered":      data.PGMap.NumOjbectRecovered,
+		"num_objects_recovered":      data.PGMap.NumObjectRecovered,
 		"num_objects":                data.PGMap.NumObjects,
 		"num_pgs":                    data.PGMap.NumPGs,
 		"num_pools":                  data.PGMap.NumPools,
