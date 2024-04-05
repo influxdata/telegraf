@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
+import pandas
+import pyarrow
+import pyarrow.parquet
 
 df = pandas.DataFrame({
     'value': [1.1, 2.2, 3.3],

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
+import pandas
+import pyarrow
+import pyarrow.parquet
 
 df = pandas.DataFrame({
     'tag': ["row1", "row2", "row3", "row4", "row5", "row6", "multi_field"],
