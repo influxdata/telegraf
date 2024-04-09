@@ -62,6 +62,10 @@ func (w *WinEventLog) Init() error {
 		w.subscriptionFlag = EvtSubscribeStartAtOldestRecord
 	}
 
+	if w.Query == "" {
+		w.Query = "*"
+	}
+
 	bookmark, err := _EvtCreateBookmark(nil)
 	if err != nil {
 		return err
