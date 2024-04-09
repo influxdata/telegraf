@@ -326,3 +326,54 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 	require.False(t, foundTemplate0)
 	require.True(t, foundTemplate1)
 }
+
+func TestInitialConnectivityIssueIntegration(t *testing.T) {
+	// Test case for https://github.com/influxdata/telegraf/issues/8586
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	container := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		WaitingFor: wait.ForAll(
+			// the database comes up twice, once right away, then again a second
+			// time after the docker entrypoint starts configuration
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Pause the container to simulate connectivity issues
+	require.NoError(t, container.Pause())
+
+	// Setup and start the plugin. This should work as the SQL framework will
+	// not connect immediately but on the first query/access to the server
+	addr := fmt.Sprintf("host=%s port=%s user=postgres sslmode=disable connect_timeout=1", container.Address, container.Ports[servicePort])
+	plugin := &Postgresql{
+		Config: postgresql.Config{
+			Address: config.NewSecret([]byte(addr)),
+		},
+		IgnoredDatabases: []string{"template0"},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Startup the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// This should fail because we cannot connect
+	require.ErrorContains(t, acc.GatherError(plugin.Gather), "failed to connect")
+
+	// Unpause the container, now gather should succeed
+	require.NoError(t, container.Resume())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.NotEmpty(t, acc.GetTelegrafMetrics())
+}
