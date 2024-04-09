@@ -126,7 +126,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		} else if p.Convert.ConversionStyle == "literal" {
 			datatype = p.Convert.Unsigned
 		} else {
-			p.Log.Errorf("unknown converstaion style: %s", p.Convert.ConversionStyle)
+			p.Log.Errorf("unknown conversion style: %s", p.Convert.ConversionStyle)
 		}
 	case float64:
 		datatype = p.Convert.Real

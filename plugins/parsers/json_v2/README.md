@@ -92,7 +92,7 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 the `field` and `tag` config tables to gather a single value or an array of
 values that all share the same type and name. With this you can add a field or
 tag to a line protocol from data stored anywhere in your JSON. If you define the
-GJSON path to return a single value then you will get a single resutling line
+GJSON path to return a single value then you will get a single resulting line
 protocol that contains the field/tag. If you define the GJSON path to return an
 array of values, then each field/tag will be put into a separate line protocol
 (you use the # character to retrieve JSON arrays, find examples
@@ -177,7 +177,7 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 * **field (OPTIONAL, defined in TOML as an array table using double brackets)**: Identical to the [field](#field) table you can define, but with two key differences. The path supports arrays and objects and is defined under the object table and therefore will adhere to how the JSON is structured. You want to use this if you want the field/tag to be added as it would if it were in the included_key list, but then use the GJSON path syntax.
 * **tag (OPTIONAL, defined in TOML as an array table using double brackets)**: Identical to the [tag](#tag) table you can define, but with two key differences. The path supports arrays and objects and is defined under the object table and therefore will adhere to how the JSON is structured. You want to use this if you want the field/tag to be added as it would if it were in the included_key list, but then use the GJSON path syntax.
 
-*Configuration to modify the resutling line protocol:*
+*Configuration to modify the resulting line protocol:*
 
 * **disable_prepend_keys (OPTIONAL)**: Set to true to prevent resulting nested data to contain the parent key prepended to its key **NOTE**: duplicate names can overwrite each other when this is enabled
 * **renames (OPTIONAL, defined in TOML as a table using single bracket)**: A table matching the json key with the desired name (opposed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results

@@ -64,7 +64,7 @@ func (z *Zabbix) Connect() error {
 	return nil
 }
 
-// Init initilizes LLD and autoregister maps. Copy config values to them. Configure Logger.
+// Init initializes LLD and autoregister maps. Copy config values to them. Configure Logger.
 func (z *Zabbix) Init() error {
 	// Add port to address if not present
 	if _, _, err := net.SplitHostPort(z.Address); err != nil {

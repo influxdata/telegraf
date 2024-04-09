@@ -91,8 +91,8 @@ func TestTrim(t *testing.T) {
 func TestTracking(t *testing.T) {
 	inputRaw := []telegraf.Metric{
 		metric.New("foo", map[string]string{"tag": "testing"}, map[string]interface{}{"value": 42}, time.Unix(0, 0)),
-		metric.New("bar", map[string]string{"tag": "other", "host": "locahost"}, map[string]interface{}{"value": 23}, time.Unix(0, 0)),
-		metric.New("baz", map[string]string{"tag": "value", "host": "locahost", "module": "main"}, map[string]interface{}{"value": 99}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{"tag": "other", "host": "localhost"}, map[string]interface{}{"value": 23}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{"tag": "value", "host": "localhost", "module": "main"}, map[string]interface{}{"value": 99}, time.Unix(0, 0)),
 	}
 
 	var mu sync.Mutex
@@ -118,13 +118,13 @@ func TestTracking(t *testing.T) {
 		),
 		metric.New(
 			"bar",
-			map[string]string{"tag": "other", "host": "locahost"},
+			map[string]string{"tag": "other", "host": "localhost"},
 			map[string]interface{}{"value": 23},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"baz",
-			map[string]string{"tag": "value", "host": "locahost"},
+			map[string]string{"tag": "value", "host": "localhost"},
 			map[string]interface{}{"value": 99},
 			time.Unix(0, 0),
 		),

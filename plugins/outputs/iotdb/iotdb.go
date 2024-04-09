@@ -23,7 +23,7 @@ import (
 var sampleConfig string
 
 // matches any word that has a non valid backtick
-// `word`  							 <- dosen't match
+// `word`  							 <- doesn't match
 // “word , `wo`rd` , `word , word`   <- match
 var forbiddenBacktick = regexp.MustCompile("^[^\x60].*?[\x60]+.*?[^\x60]$|^[\x60].*[\x60]+.*[\x60]$|^[\x60]+.*[^\x60]$|^[^\x60].*[\x60]+$")
 var allowedBacktick = regexp.MustCompile("^[\x60].*[\x60]$")

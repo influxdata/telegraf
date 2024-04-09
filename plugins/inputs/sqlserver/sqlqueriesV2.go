@@ -11,7 +11,7 @@ import (
 // (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
 /*
-The SQL scripts use a series of IF and CASE statemens to choose the correct query based on edition and version of SQL Server, below the meaning of the numbers:
+The SQL scripts use a series of IF and CASE statements to choose the correct query based on edition and version of SQL Server, below the meaning of the numbers:
 EngineEdition:
 1 = Personal or Desktop Engine (Not available in SQL Server 2005 (9.x) and later versions.)
 2 = Standard (This is returned for Standard, Web, and Business Intelligence.)
