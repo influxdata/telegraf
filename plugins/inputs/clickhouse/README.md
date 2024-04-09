@@ -67,7 +67,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##          <replica><host>clickhouse-eu-1.local</host><port>9000</port></replica>
   ##          <replica><host>clickhouse-eu-2.local</host><port>9000</port></replica>
   ##        </shard>
-  ##    </my-onw-cluster>
+  ##    </my-own-cluster>
   ##  </remote_servers>
   ##
   ## </yandex>

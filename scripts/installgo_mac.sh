@@ -15,7 +15,7 @@ elif [ "$ARCH" = 'x86_64' ]; then
     GO_VERSION_SHA=${GO_VERSION_SHA_amd64}
 fi
 
-# This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
+# This path is cacheable. (Saving in /usr/local/ would cause issues restoring the cache.)
 path="/usr/local/Cellar"
 sudo mkdir -p ${path}
 

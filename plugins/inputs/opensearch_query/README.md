@@ -108,7 +108,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - `filter_query`: Lucene query to filter the results (default: "\*")
 - `metric_fields`: The list of fields to perform metric aggregation (these must
   be indexed as numeric fields)
-- `metric_funcion`: The single-value metric aggregation function to be performed
+- `metric_function`: The single-value metric aggregation function to be performed
   on the `metric_fields` defined. Currently supported aggregations are "avg",
   "min", "max", "sum", "value_count", "stats", "extended_stats", "percentiles".
   (see the [aggregation docs][agg]

@@ -28,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## you'll want to consider memory use.
   cache_ttl = "24h"
 
-  ## lookup_timeout is how long should you wait for a single dns request to repsond.
+  ## lookup_timeout is how long should you wait for a single dns request to respond.
   ## this is also the maximum acceptable latency for a metric travelling through
   ## the reverse_dns processor. After lookup_timeout is exceeded, a metric will
   ## be passed on unaltered.
