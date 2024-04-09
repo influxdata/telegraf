@@ -74,9 +74,8 @@ type Prometheus struct {
 
 	HTTPHeaders map[string]string `toml:"http_headers"`
 
-	ResponseTimeout      config.Duration `toml:"response_timeout" deprecated:"1.26.0;use 'timeout' instead"`
-	ContentLengthLimit   config.Size     `toml:"content_length_limit"`
-	EnableRequestMetrics bool            `toml:"enable_request_metrics"`
+	ContentLengthLimit   config.Size `toml:"content_length_limit"`
+	EnableRequestMetrics bool        `toml:"enable_request_metrics"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -213,15 +212,21 @@ func (p *Prometheus) Init() error {
 	}
 
 	ctx := context.Background()
-	if p.ResponseTimeout != 0 {
-		p.HTTPClientConfig.Timeout = p.ResponseTimeout
-	}
 
 	client, err := p.HTTPClientConfig.CreateClient(ctx, p.Log)
 	if err != nil {
 		return err
 	}
 	p.client = client
+	if p.HTTPClientConfig.ResponseHeaderTimeout != 0 {
+		p.Log.Warn(
+			"Config option response_timeout was set to non-zero value. This option's behavior was " +
+				"changed in Telegraf 1.30.2 and now controls the HTTP client's header timeout and " +
+				"not the Prometheus timeout. Users can ignore this warning if that was the intention. " +
+				"Otherwise, please use the timeout config option for the Prometheus timeout.",
+		)
+	}
+
 	p.headers = map[string]string{
 		"User-Agent": internal.ProductToken(),
 		"Accept":     acceptHeader,
@@ -405,9 +410,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 					return c, err
 				},
 			},
-		}
-		if p.ResponseTimeout != 0 {
-			uClient.Timeout = time.Duration(p.ResponseTimeout)
 		}
 	} else {
 		if u.URL.Path == "" {

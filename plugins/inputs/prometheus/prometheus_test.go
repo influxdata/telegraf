@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -241,10 +240,12 @@ func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:             testutil.Logger{},
-		URLs:            []string{ts.URL},
-		URLTag:          "url",
-		ResponseTimeout: config.Duration(time.Second * 5),
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
+		client: &http.Client{
+			Timeout: time.Second * 5,
+		},
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -271,10 +272,12 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:             testutil.Logger{},
-		URLs:            []string{ts.URL},
-		URLTag:          "url",
-		ResponseTimeout: config.Duration(time.Second * 5),
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
+		client: &http.Client{
+			Timeout: time.Second * 5,
+		},
 	}
 	err := p.Init()
 	require.NoError(t, err)

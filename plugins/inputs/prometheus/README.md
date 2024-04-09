@@ -141,6 +141,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "5s"
 
   ## deprecated in 1.26; use the timeout option
+  ## This option is now used by the HTTP client to set the header response
+  ## timeout, not the overall HTTP timeout.
   # response_timeout = "5s"
 
   ## HTTP Proxy support
