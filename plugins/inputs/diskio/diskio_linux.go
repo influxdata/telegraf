@@ -74,6 +74,8 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		for k, v := range devInfo {
 			info[k] = v
 		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
 
 	d.infoCache[devName] = diskInfoCache{
