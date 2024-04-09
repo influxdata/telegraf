@@ -127,9 +127,10 @@ type client interface {
 }
 
 type archParams struct {
-	client  client
-	pattern []string
-	filter  filter.Filter
+	client       client
+	pattern      []string
+	filter       filter.Filter
+	unitTypeDBus string
 }
 
 func (s *SystemdUnits) Init() error {
@@ -148,7 +149,7 @@ func (s *SystemdUnits) Init() error {
 	default:
 		return fmt.Errorf("invalid 'unittype' %q", s.UnitType)
 	}
-	s.UnitType = strings.ToUpper(s.UnitType[0:1]) + strings.ToLower(s.UnitType[1:])
+	s.unitTypeDBus = strings.ToUpper(s.UnitType[0:1]) + strings.ToLower(s.UnitType[1:])
 
 	s.pattern = strings.Split(s.Pattern, " ")
 	f, err := filter.Compile(s.pattern)
@@ -292,29 +293,8 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	// Merge the unit information into one struct
 	for _, state := range states {
 		// Filter units of the wrong type
-		properties, err := s.client.GetUnitTypePropertiesContext(ctx, state.Name, s.UnitType)
-		if err != nil {
-			// Skip units returning "Unknown interface" errors as those indicate
-			// that the unit is of the wrong type.
-			if strings.Contains(err.Error(), "Unknown interface") {
-				continue
-			}
-			// For other units we make up properties, usually those are
-			// disabled multi-instance units
-			properties = map[string]interface{}{
-				"StatusErrno": int64(-1),
-				"NRestarts":   uint64(0),
-			}
-		}
-
-		// Get required unit file properties
-		var unitFileState string
-		if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFileState"); err == nil {
-			unitFileState = strings.Trim(v.Value.String(), `'"`)
-		}
-		var unitFilePreset string
-		if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFilePreset"); err == nil {
-			unitFilePreset = strings.Trim(v.Value.String(), `'"`)
+		if idx := strings.LastIndex(state.Name, "."); idx < 0 || state.Name[idx+1:] != s.UnitType {
+			continue
 		}
 
 		// Map the state names to numerical values
@@ -325,12 +305,12 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 		active, ok := activeMap[state.ActiveState]
 		if !ok {
-			acc.AddError(fmt.Errorf("parsing field field 'active' failed, value not in map: %s", state.ActiveState))
+			acc.AddError(fmt.Errorf("parsing field 'active' failed, value not in map: %s", state.ActiveState))
 			continue
 		}
 		subState, ok := subMap[state.SubState]
 		if !ok {
-			acc.AddError(fmt.Errorf("parsing field field 'sub' failed, value not in map: %s", state.SubState))
+			acc.AddError(fmt.Errorf("parsing field 'sub' failed, value not in map: %s", state.SubState))
 			continue
 		}
 
@@ -349,6 +329,32 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if s.Details {
+			properties, err := s.client.GetUnitTypePropertiesContext(ctx, state.Name, s.unitTypeDBus)
+			if err != nil {
+				// Skip units returning "Unknown interface" errors as those indicate
+				// that the unit is of the wrong type.
+				if strings.Contains(err.Error(), "Unknown interface") {
+					fmt.Println("mismatch in", state.Name)
+					continue
+				}
+				// For other units we make up properties, usually those are
+				// disabled multi-instance units
+				properties = map[string]interface{}{
+					"StatusErrno": int64(-1),
+					"NRestarts":   uint64(0),
+				}
+			}
+
+			// Get required unit file properties
+			var unitFileState string
+			if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFileState"); err == nil {
+				unitFileState = strings.Trim(v.Value.String(), `'"`)
+			}
+			var unitFilePreset string
+			if v, err := s.client.GetUnitPropertyContext(ctx, state.Name, "UnitFilePreset"); err == nil {
+				unitFilePreset = strings.Trim(v.Value.String(), `'"`)
+			}
+
 			tags["state"] = unitFileState
 			tags["preset"] = unitFilePreset
 
