@@ -209,6 +209,7 @@ func TestListFiles(t *testing.T) {
 			plugin := &SystemdUnits{
 				Pattern: "examp*",
 				Timeout: config.Duration(time.Second),
+				Log:     testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -522,6 +523,7 @@ func TestShow(t *testing.T) {
 				Pattern: "examp*",
 				Details: true,
 				Timeout: config.Duration(time.Second),
+				Log:     testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -715,6 +717,7 @@ func TestMultiInstance(t *testing.T) {
 			plugin := &SystemdUnits{
 				Pattern: tt.pattern,
 				Timeout: config.Duration(time.Second),
+				Log:     testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -825,7 +828,7 @@ func (c *fakeClient) fixPropertyTypes() {
 }
 
 func (c *fakeClient) Connected() bool {
-	return !c.connected
+	return c.connected
 }
 
 func (c *fakeClient) Close() {
