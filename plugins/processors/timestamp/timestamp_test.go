@@ -22,7 +22,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "field does not exist",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "2006-01-02T15:04:05Z",
 				DestinationFormat: "unix",
 			},
@@ -32,7 +32,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "field to unix",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "2006-01-02T15:04:05Z",
 				DestinationFormat: "unix",
 			},
@@ -52,7 +52,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "field to unix_ms",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "2006-01-02T15:04:05Z",
 				DestinationFormat: "unix_ms",
 			},
@@ -72,7 +72,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "field to unix_us",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "2006-01-02T15:04:05Z",
 				DestinationFormat: "unix_us",
 			},
@@ -92,7 +92,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "field to unix_ns",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "2006-01-02T15:04:05Z",
 				DestinationFormat: "unix_ns",
 			},
@@ -112,7 +112,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "field to custom format",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "2006-01-02T15:04:05Z",
 				DestinationFormat: "2006-01-02T15:04:05",
 			},
@@ -132,7 +132,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "unix_ns to unix",
 			timestamp: Timestamp{
-				SourceField:       "timestamp",
+				Field:             "timestamp",
 				SourceFormat:      "unix_ns",
 				DestinationFormat: "unix",
 			},

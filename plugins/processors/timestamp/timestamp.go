@@ -16,12 +16,14 @@ import (
 var sampleConfig string
 
 type Timestamp struct {
-	SourceField       string `toml:"source_timestamp_field"`
-	SourceFormat      string `toml:"source_timestamp_format"`
-	SourceTimezone    string `toml:"source_timestamp_timezone"`
-	DestinationFormat string `toml:"destination_timestamp_format"`
+	Field               string `toml:"field"`
+	SourceFormat        string `toml:"source_timestamp_format"`
+	SourceTimezone      string `toml:"source_timestamp_timezone"`
+	DestinationFormat   string `toml:"destination_timestamp_format"`
+	DestinationTimezone string `toml:"destination_timestamp_timezone"`
 
-	location *time.Location
+	sourceLocation      *time.Location
+	destinationLocation *time.Location
 }
 
 func (*Timestamp) SampleConfig() string {
@@ -49,63 +51,48 @@ func (t *Timestamp) Init() error {
 		}
 	}
 
+	if t.SourceTimezone == "" {
+		t.SourceTimezone = "UTC"
+	}
+
 	// LoadLocation returns UTC if timezone is the empty string.
 	var err error
-	t.location, err = time.LoadLocation(t.SourceTimezone)
-	return err
+	t.sourceLocation, err = time.LoadLocation(t.SourceTimezone)
+	if err != nil {
+		return fmt.Errorf("invalid source_timestamp_timezone %q: %w", t.SourceTimezone, err)
+	}
+
+	if t.DestinationTimezone == "" {
+		t.DestinationTimezone = "UTC"
+	}
+	t.destinationLocation, err = time.LoadLocation(t.DestinationTimezone)
+	if err != nil {
+		return fmt.Errorf("invalid source_timestamp_timezone %q: %w", t.DestinationTimezone, err)
+	}
+
+	return nil
 }
 
 func (t *Timestamp) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
-		if field, ok := point.GetField(t.SourceField); ok {
-			var timestamp time.Time
-			switch t.SourceFormat {
-			case "unix":
-				ts, err := internal.ToInt64(field)
-				if err != nil {
-					continue
-				}
-				timestamp = time.Unix(ts, 0)
-			case "unix_ms":
-				ts, err := internal.ToInt64(field)
-				if err != nil {
-					continue
-				}
-				timestamp = time.UnixMilli(ts)
-			case "unix_us":
-				ts, err := internal.ToInt64(field)
-				if err != nil {
-					continue
-				}
-				timestamp = time.UnixMilli(ts)
-			case "unix_ns":
-				ts, err := internal.ToInt64(field)
-				if err != nil {
-					continue
-				}
-				timestamp = time.Unix(0, ts)
-			default:
-				stringField, err := internal.ToString(field)
-				if err != nil {
-					continue
-				}
-				timestamp, err = time.ParseInLocation(t.SourceFormat, stringField, t.location)
-				if err != nil {
-					continue
-				}
+		if field, ok := point.GetField(t.Field); ok {
+			timestamp, err := internal.ParseTimestamp(t.SourceFormat, field, t.sourceLocation)
+			if err != nil {
+				continue
 			}
 
 			switch t.DestinationFormat {
 			case "unix":
-				point.AddField(t.SourceField, timestamp.Unix())
+				point.AddField(t.Field, timestamp.Unix())
 			case "unix_ms":
-				point.AddField(t.SourceField, timestamp.UnixNano()/1000000)
+				point.AddField(t.Field, timestamp.UnixNano()/1000000)
 			case "unix_us":
-				point.AddField(t.SourceField, timestamp.UnixNano()/1000)
+				point.AddField(t.Field, timestamp.UnixNano()/1000)
 			case "unix_ns":
-				point.AddField(t.SourceField, timestamp.UnixNano())
+				point.AddField(t.Field, timestamp.UnixNano())
 			default:
-				point.AddField(t.SourceField, timestamp.Format(t.DestinationFormat))
+				inLocation := timestamp.In(t.destinationLocation)
+				point.AddField(t.Field, inLocation.Format(t.DestinationFormat))
 			}
 		}
 	}
@@ -115,8 +102,6 @@ func (t *Timestamp) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func init() {
 	processors.Add("timestamp", func() telegraf.Processor {
-		return &Timestamp{
-			SourceTimezone: "UTC",
-		}
+		return &Timestamp{}
 	})
 }
