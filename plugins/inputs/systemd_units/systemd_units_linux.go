@@ -183,9 +183,19 @@ func (s *SystemdUnits) Stop() {
 	if s.client != nil && s.client.Connected() {
 		s.client.Close()
 	}
+	s.client = nil
 }
 
 func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
+	// Reconnect in case the connection was lost
+	if !s.client.Connected() {
+		s.Log.Debug("Connection to systemd daemon lost, trying to reconnect...")
+		s.Stop()
+		if err := s.Start(acc); err != nil {
+			return err
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 	defer cancel()
 
