@@ -59,7 +59,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		return nil, err
 	}
 
-	// Read additional device properties
+	// Read additional (optional) device properties
 	var sysBlockPath string
 	if ok && len(ic.sysBlockPath) > 0 {
 		// We can reuse the /sys block path from a "previous" entry.
@@ -67,17 +67,15 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		sysBlockPath = ic.sysBlockPath
 	} else {
 		sysBlockPath = "/sys/block/" + devName
-		if _, err := os.Stat(sysBlockPath); err != nil {
-			// Giving up, cannot retrieve additional info
-			return nil, err
-		}
 	}
+
 	devInfo, err := readDevData(sysBlockPath)
-	if err != nil {
+	if err == nil {
+		for k, v := range devInfo {
+			info[k] = v
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
-	}
-	for k, v := range devInfo {
-		info[k] = v
 	}
 
 	d.infoCache[devName] = diskInfoCache{
