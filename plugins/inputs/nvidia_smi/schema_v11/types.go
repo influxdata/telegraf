@@ -80,7 +80,8 @@ type UtilizationStats struct {
 
 // PowerReadings defines the structure of the power_readings portion of the smi output.
 type PowerReadings struct {
-	PowerDraw string `xml:"power_draw"` // float
+	PowerDraw  string `xml:"power_draw"`  // float
+	PowerLimit string `xml:"power_limit"` // float
 }
 
 // PCI defines the structure of the pci portion of the smi output.
