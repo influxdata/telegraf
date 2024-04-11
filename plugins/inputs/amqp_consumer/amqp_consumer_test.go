@@ -103,6 +103,7 @@ func TestIntegration(t *testing.T) {
 		Brokers:      []string{url},
 		Username:     config.NewSecret([]byte("guest")),
 		Password:     config.NewSecret([]byte("guest")),
+		Timeout:      config.Duration(3 * time.Second),
 		Exchange:     exchange,
 		ExchangeType: exchangeType,
 		Queue:        queueName,
