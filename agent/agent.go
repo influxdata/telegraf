@@ -339,27 +339,32 @@ func (a *Agent) startInputs(
 	}
 
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not normally subject to timestamp
-			// rounding except for when precision is set on the input plugin.
-			//
-			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator does apply rounding according to the
-			// precision and interval agent/plugin settings.
-			var interval time.Duration
-			var precision time.Duration
-			if input.Config.Precision != 0 {
-				precision = input.Config.Precision
+		// Service input plugins are not normally subject to timestamp
+		// rounding except for when precision is set on the input plugin.
+		//
+		// This only applies to the accumulator passed to Start(), the
+		// Gather() accumulator does apply rounding according to the
+		// precision and interval agent/plugin settings.
+		var interval time.Duration
+		var precision time.Duration
+		if input.Config.Precision != 0 {
+			precision = input.Config.Precision
+		}
+
+		acc := NewAccumulator(input, dst)
+		acc.SetPrecision(getPrecision(precision, interval))
+
+		if err := input.Start(acc); err != nil {
+			// If the model tells us to remove the plugin we do so without error
+			var fatalErr *internal.FatalError
+			if errors.As(err, &fatalErr) {
+				log.Printf("I! [agent] Failed to start [%s], error was %q;  shutting down plugin...", input.LogName(), err)
+				continue
 			}
 
-			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(getPrecision(precision, interval))
+			stopRunningInputs(unit.inputs)
 
-			err := si.Start(acc)
-			if err != nil {
-				stopServiceInputs(unit.inputs)
-				return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
-			}
+			return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
 		}
 		unit.inputs = append(unit.inputs, input)
 	}
@@ -424,7 +429,7 @@ func (a *Agent) runInputs(
 	wg.Wait()
 
 	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
+	stopRunningInputs(unit.inputs)
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
@@ -444,18 +449,15 @@ func (a *Agent) testStartInputs(
 	}
 
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not subject to timestamp rounding.
-			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator does apply rounding according to the
-			// precision agent setting.
-			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(time.Nanosecond)
+		// Service input plugins are not subject to timestamp rounding.
+		// This only applies to the accumulator passed to Start(), the
+		// Gather() accumulator does apply rounding according to the
+		// precision agent setting.
+		acc := NewAccumulator(input, dst)
+		acc.SetPrecision(time.Nanosecond)
 
-			err := si.Start(acc)
-			if err != nil {
-				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
-			}
+		if err := input.Start(acc); err != nil {
+			log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
 		}
 
 		unit.inputs = append(unit.inputs, input)
@@ -525,18 +527,16 @@ func (a *Agent) testRunInputs(
 	}
 
 	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
+	stopRunningInputs(unit.inputs)
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
 }
 
-// stopServiceInputs stops all service inputs.
-func stopServiceInputs(inputs []*models.RunningInput) {
+// stopRunningInputs stops all service inputs.
+func stopRunningInputs(inputs []*models.RunningInput) {
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			si.Stop()
-		}
+		input.Stop()
 	}
 }
 

@@ -1432,6 +1432,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	c.getFieldDuration(tbl, "precision", &cp.Precision)
 	c.getFieldDuration(tbl, "collection_jitter", &cp.CollectionJitter)
 	c.getFieldDuration(tbl, "collection_offset", &cp.CollectionOffset)
+	c.getFieldString(tbl, "startup_error_behavior", &cp.StartupErrorBehavior)
 	c.getFieldString(tbl, "name_prefix", &cp.MeasurementPrefix)
 	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &cp.NameOverride)
