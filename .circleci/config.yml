@@ -93,7 +93,6 @@ jobs:
     executor: telegraf-ci
     steps:
       - checkout
-      - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
       - run: 'make deps'
       - run: 'make tidy'
@@ -102,6 +101,7 @@ jobs:
       - run:
           name: "Install golangci-lint"
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
+      - check-changed-files-or-halt
       - run:
           name: "golangci-lint/Linux"
           command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
