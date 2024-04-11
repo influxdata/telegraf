@@ -8,7 +8,6 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	"github.com/rabbitmq/amqp091-go"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -178,7 +177,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 
 	// Pause the container for simulating connectivity issues
 	require.NoError(t, container.Pause())
-	defer container.Resume()
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 
 	// Setup the plugin with an Influx line-protocol parser
 	plugin := &AMQPConsumer{
@@ -240,7 +239,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 
 	// Pause the container for simulating connectivity issues
 	require.NoError(t, container.Pause())
-	defer container.Resume()
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 
 	// Setup the plugin with an Influx line-protocol parser
 	plugin := &AMQPConsumer{
@@ -307,7 +306,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 
 	// Pause the container for simulating connectivity issues
 	require.NoError(t, container.Pause())
-	defer container.Resume()
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 
 	// Setup the plugin with an Influx line-protocol parser
 	plugin := &AMQPConsumer{
@@ -384,18 +383,18 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 }
 
 type producer struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
-	queue   amqp.Queue
+	conn    *amqp091.Connection
+	channel *amqp091.Channel
+	queue   amqp091.Queue
 }
 
 func newProducer(url, vhost, exchange, exchangeType, queueName, key string) (*producer, error) {
-	cfg := amqp.Config{
+	cfg := amqp091.Config{
 		Vhost:      vhost,
-		Properties: amqp.NewConnectionProperties(),
+		Properties: amqp091.NewConnectionProperties(),
 	}
 	cfg.Properties.SetClientConnectionName("test-producer")
-	conn, err := amqp.DialConfig(url, cfg)
+	conn, err := amqp091.DialConfig(url, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -431,8 +430,8 @@ func (p *producer) close() {
 }
 
 func (p *producer) write(exchange, key string, payload []byte) error {
-	msg := amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
+	msg := amqp091.Publishing{
+		DeliveryMode: amqp091.Persistent,
 		Timestamp:    time.Now(),
 		ContentType:  "text/plain",
 		Body:         payload,
