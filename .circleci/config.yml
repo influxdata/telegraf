@@ -94,11 +94,11 @@ jobs:
     steps:
       - checkout
       - run: ./scripts/make_docs.sh
+      - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
-      - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
