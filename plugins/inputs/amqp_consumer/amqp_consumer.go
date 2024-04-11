@@ -234,7 +234,10 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	}
 
 	if a.conn == nil {
-		return nil, errors.New("could not connect to any broker")
+		return nil, &internal.StartupError{
+			Err:   errors.New("could not connect to any broker"),
+			Retry: true,
+		}
 	}
 
 	ch, err := a.conn.Channel()

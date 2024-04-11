@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -140,6 +141,239 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expexted))
+	}, 3*time.Second, 100*time.Millisecond)
+
+	client.close()
+	plugin.Stop()
+	testutil.RequireMetricsEqual(t, expexted, acc.GetTelegrafMetrics())
+}
+
+func TestStartupErrorBehaviorError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Define common properties
+	servicePort := "5672"
+	vhost := "/"
+	exchange := "telegraf"
+	exchangeType := "direct"
+	queueName := "test"
+	bindingKey := "test"
+
+	// Setup the container
+	container := testutil.Container{
+		Image:        "rabbitmq",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Server startup complete"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+
+	// Pause the container for simulating connectivity issues
+	require.NoError(t, container.Pause())
+	defer container.Resume()
+
+	// Setup the plugin with an Influx line-protocol parser
+	plugin := &AMQPConsumer{
+		Brokers:      []string{url},
+		Username:     config.NewSecret([]byte("guest")),
+		Password:     config.NewSecret([]byte("guest")),
+		Timeout:      config.Duration(1 * time.Second),
+		Exchange:     exchange,
+		ExchangeType: exchangeType,
+		Queue:        queueName,
+		BindingKey:   bindingKey,
+		Log:          testutil.Logger{},
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name: "amqp",
+		},
+	)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail with an error because the container
+	// is paused.
+	var acc testutil.Accumulator
+	require.ErrorContains(t, model.Start(&acc), "could not connect to any broker")
+}
+
+func TestStartupErrorBehaviorIgnore(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Define common properties
+	servicePort := "5672"
+	vhost := "/"
+	exchange := "telegraf"
+	exchangeType := "direct"
+	queueName := "test"
+	bindingKey := "test"
+
+	// Setup the container
+	container := testutil.Container{
+		Image:        "rabbitmq",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Server startup complete"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+
+	// Pause the container for simulating connectivity issues
+	require.NoError(t, container.Pause())
+	defer container.Resume()
+
+	// Setup the plugin with an Influx line-protocol parser
+	plugin := &AMQPConsumer{
+		Brokers:      []string{url},
+		Username:     config.NewSecret([]byte("guest")),
+		Password:     config.NewSecret([]byte("guest")),
+		Timeout:      config.Duration(1 * time.Second),
+		Exchange:     exchange,
+		ExchangeType: exchangeType,
+		Queue:        queueName,
+		BindingKey:   bindingKey,
+		Log:          testutil.Logger{},
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "amqp",
+			StartupErrorBehavior: "ignore",
+		},
+	)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail because the container is paused.
+	// The model code should convert it to a fatal error for the agent to remove
+	// the plugin.
+	var acc testutil.Accumulator
+	err := model.Start(&acc)
+	require.ErrorContains(t, err, "could not connect to any broker")
+	var fatalErr *internal.FatalError
+	require.ErrorAs(t, err, &fatalErr)
+}
+
+func TestStartupErrorBehaviorRetry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Define common properties
+	servicePort := "5672"
+	vhost := "/"
+	exchange := "telegraf"
+	exchangeType := "direct"
+	queueName := "test"
+	bindingKey := "test"
+
+	// Setup the container
+	container := testutil.Container{
+		Image:        "rabbitmq",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Server startup complete"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+
+	// Pause the container for simulating connectivity issues
+	require.NoError(t, container.Pause())
+	defer container.Resume()
+
+	// Setup the plugin with an Influx line-protocol parser
+	plugin := &AMQPConsumer{
+		Brokers:      []string{url},
+		Username:     config.NewSecret([]byte("guest")),
+		Password:     config.NewSecret([]byte("guest")),
+		Timeout:      config.Duration(1 * time.Second),
+		Exchange:     exchange,
+		ExchangeType: exchangeType,
+		Queue:        queueName,
+		BindingKey:   bindingKey,
+		Log:          testutil.Logger{},
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "amqp",
+			StartupErrorBehavior: "retry",
+		},
+	)
+	require.NoError(t, model.Init())
+
+	// Setup the metrics
+	metrics := []string{
+		"test,source=A value=0i 1712780301000000000",
+		"test,source=B value=1i 1712780301000000100",
+		"test,source=C value=2i 1712780301000000200",
+	}
+	expexted := make([]telegraf.Metric, 0, len(metrics))
+	for _, x := range metrics {
+		m, err := parser.Parse([]byte(x))
+		require.NoError(t, err)
+		expexted = append(expexted, m...)
+	}
+
+	// Starting the plugin should succeed as we will retry to startup later
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+
+	// There should be no metrics as the plugin is not fully started up yet
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	require.Equal(t, int64(2), model.StartupErrors.Get())
+
+	// Unpause the container, now writes should succeed
+	require.NoError(t, container.Resume())
+	require.NoError(t, model.Gather(&acc))
+	defer model.Stop()
+
+	// Setup a AMQP producer and send messages
+	client, err := newProducer(url, vhost, exchange, exchangeType, queueName, bindingKey)
+	require.NoError(t, err)
+	defer client.close()
+
+	// Write metrics
+	for _, x := range metrics {
+		require.NoError(t, client.write(exchange, queueName, []byte(x)))
+	}
+
+	// Verify that the metrics were actually collected
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= uint64(len(expexted))
 	}, 3*time.Second, 100*time.Millisecond)
