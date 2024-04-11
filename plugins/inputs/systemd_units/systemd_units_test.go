@@ -715,9 +715,10 @@ func TestMultiInstance(t *testing.T) {
 			// Setup plugin. Do NOT call Start() as this would connect to
 			// the real systemd daemon.
 			plugin := &SystemdUnits{
-				Pattern: tt.pattern,
-				Timeout: config.Duration(time.Second),
-				Log:     testutil.Logger{},
+				Pattern:         tt.pattern,
+				CollectDisabled: true,
+				Timeout:         config.Duration(time.Second),
+				Log:             testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
