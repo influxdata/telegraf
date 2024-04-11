@@ -38,6 +38,7 @@ type PrometheusHttpMetric struct {
 	Name        string `toml:"name"`
 	Query       string `toml:"query"`
 	Transform   string `toml:"transform"`
+	Round       *int   `toml:"round"`
 	template    *toolsRender.TextTemplate
 	Duration    config.Duration   `toml:"duration"`
 	From        string            `toml:"from"`
@@ -498,10 +499,15 @@ func (p *PrometheusHttp) setMetrics(w *sync.WaitGroup, pm *PrometheusHttpMetric,
 
 		tags = p.getExtraMetricTags(gid, tags, pm)
 
-		if math.IsNaN(value) || math.IsInf(value, 0) {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
 			bs, _ := json.Marshal(tags)
 			p.Log.Debugf("[%d] %s skipped NaN/Inf value for: %v[%v]", gid, p.Name, pm.Name, string(bs))
 			return
+		}
+
+		if pm.Round != nil {
+			ratio := math.Pow(10, float64(*pm.Round))
+			v = math.Round(v*ratio) / ratio
 		}
 		p.acc.AddFields(p.Prefix, p.addFields(pm.Name, v), tags, stamp)
 	}
