@@ -4,7 +4,7 @@
 
 counter=0
 
-while read LINE; do
+while read -r _; do
     echo "counter_bash count=${counter}"
     counter=$((counter+1))
 done
