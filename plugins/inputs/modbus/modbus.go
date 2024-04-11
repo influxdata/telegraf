@@ -25,6 +25,8 @@ var sampleConfigStart string
 //go:embed sample_general_end.conf
 var sampleConfigEnd string
 
+var errAddressOverflow = errors.New("address overflow")
+
 type ModbusWorkarounds struct {
 	AfterConnectPause       config.Duration `toml:"pause_after_connect"`
 	PollPause               config.Duration `toml:"pause_between_requests"`
