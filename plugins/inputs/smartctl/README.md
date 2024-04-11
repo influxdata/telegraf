@@ -13,6 +13,16 @@ releases.
 
 See smartmontools (<https://www.smartmontools.org/>) for more information.
 
+## smart vs smartctl
+
+The smartctl plugin is an alternative to the smart plugin. The biggest
+difference is that the smart plugin can also call `nvmectl` to collect
+additional details about NVMe devices as well as some vendor specific device
+information.
+
+This plugin will also require a version of the `smartctl` command that supports
+JSON output versus the smart plugin will parse the raw output.
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
