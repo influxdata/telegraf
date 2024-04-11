@@ -450,6 +450,7 @@ ensure to check additional setup section in this documentation.
 - SQLServerAvailabilityReplicaStates: Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerDatabaseReplicaStates: Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerRecentBackups: Collects latest full, differential and transaction log backup date and size from `msdb.dbo.backupset`
+- SQLServerPersistentVersionStore: Collects persistent version store information from `sys.dm_tran_persistent_version_store_stats` for databases with Accelerated Database Recovery enabled
 
 ### Output Measures
 
