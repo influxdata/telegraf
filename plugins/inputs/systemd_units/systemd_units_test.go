@@ -812,7 +812,8 @@ func TestMultiInstance(t *testing.T) {
 
 func BenchmarkAllUnitsIntegration(b *testing.B) {
 	plugin := &SystemdUnits{
-		Timeout: config.Duration(3 * time.Second),
+		CollectDisabled: true,
+		Timeout:         config.Duration(3 * time.Second),
 	}
 	require.NoError(b, plugin.Init())
 
@@ -829,8 +830,7 @@ func BenchmarkAllUnitsIntegration(b *testing.B) {
 
 func BenchmarkAllLoadedUnitsIntegration(b *testing.B) {
 	plugin := &SystemdUnits{
-		LoadedOnly: true,
-		Timeout:    config.Duration(3 * time.Second),
+		Timeout: config.Duration(3 * time.Second),
 	}
 	require.NoError(b, plugin.Init())
 

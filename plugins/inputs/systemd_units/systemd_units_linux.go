@@ -199,7 +199,7 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var files []dbus.UnitFile
-	if !s.LoadedOnly {
+	if s.CollectDisabled {
 		// List all unit files matching the pattern to also get disabled units
 		list := []string{"enabled", "disabled", "static"}
 		files, err = s.client.ListUnitFilesByPatternsContext(ctx, list, s.pattern)
