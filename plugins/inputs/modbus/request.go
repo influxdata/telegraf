@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"math"
 	"sort"
 
 	"github.com/influxdata/telegraf"
@@ -33,10 +34,16 @@ func splitMaxBatchSize(g request, maxBatchSize uint16) []request {
 
 		// Initialize the end to a safe value avoiding infinite loops
 		end := g.address + g.length
+		var batchEnd uint16
+		if start >= math.MaxUint16-maxBatchSize {
+			batchEnd = math.MaxUint16
+		} else {
+			batchEnd = start + maxBatchSize
+		}
 		for _, f := range g.fields[idx:] {
 			// If the current field exceeds the batch size we need to split
 			// the request here
-			if f.address+f.length > start+maxBatchSize {
+			if f.address+f.length > batchEnd {
 				break
 			}
 			// End of field still fits into the batch so add it to the request

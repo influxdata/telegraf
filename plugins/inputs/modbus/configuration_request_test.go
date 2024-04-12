@@ -3303,3 +3303,28 @@ func TestRequestOverlap(t *testing.T) {
 	require.Len(t, plugin.requests, 1)
 	require.Len(t, plugin.requests[1].holding, 1)
 }
+
+func TestRequestAddressOverflow(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               logger,
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "field",
+					InputType: "UINT64",
+					Address:   uint16(65534),
+				},
+			},
+		},
+	}
+	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
+}

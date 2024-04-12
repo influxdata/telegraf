@@ -318,3 +318,30 @@ func TestMetricResult(t *testing.T) {
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
+
+func TestMetricAddressOverflow(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+	plugin := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "metric",
+		Log:               logger,
+		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+	}
+	plugin.Metrics = []metricDefinition{
+		{
+			SlaveID:     1,
+			ByteOrder:   "ABCD",
+			Measurement: "test",
+			Fields: []metricFieldDefinition{
+				{
+					Name:         "field",
+					Address:      uint16(65534),
+					InputType:    "UINT64",
+					RegisterType: "holding",
+				},
+			},
+		},
+	}
+	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
+}
