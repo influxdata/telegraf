@@ -13,7 +13,8 @@ aggregators:
 * tags
 
 Select the metrics to modify using the standard [metric
-filtering](../../../docs/CONFIGURATION.md#metric-filtering) options.
+filtering](../../../docs/CONFIGURATION.md#metric-filtering) options. Filtering
+options apply to both the clone and the original.
 
 Values of *name_override*, *name_prefix*, *name_suffix* and already present
 *tags* with conflicting keys will be overwritten. Absent *tags* will be
