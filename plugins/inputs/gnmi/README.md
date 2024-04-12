@@ -52,6 +52,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## redial in case of failures after
   # redial = "10s"
 
+  ## gRPC Keepalive settings
+  ## See https://pkg.go.dev/google.golang.org/grpc/keepalive
+  ## After a duration of this time if the client doesn't see any activity it
+  ## pings the server to see if the transport is still alive.
+  ## If set and set below 10s, a minimum value of 10s will be used instead.
+  ## If not set, none of the other keepalive values will be configured.
+  # keepalive_time = "10s"
+
+  ## After having pinged for keepalive check, the client waits for a duration
+  ## of Timeout and if no activity is seen even after that the connection is
+  ## closed.
+  ## The current default value in GRPC is 20 seconds.
+  ## keepalive_timeout = "20s"
+
+  ## If true, client sends keepalive pings even with no active RPCs. If false,
+  ## when there are no active RPCs, Time and Timeout will be ignored and no
+  ## keepalive pings will be sent.
+  ## false by default in GRPC
+  # keepalive_permit_without_stream = false
+
   ## gRPC Maximum Message Size
   # max_msg_size = "4MB"
 
