@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
+	"math"
 
 	"github.com/influxdata/telegraf"
 )
@@ -247,6 +248,11 @@ func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metric
 		if fieldLength, err = c.determineFieldLength(def.InputType, def.Length); err != nil {
 			return field{}, err
 		}
+	}
+
+	// Check for address overflow
+	if def.Address > math.MaxUint16-fieldLength {
+		return field{}, fmt.Errorf("%w for field %q", errAddressOverflow, def.Name)
 	}
 
 	// Initialize the field
