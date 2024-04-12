@@ -334,7 +334,6 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 				// Skip units returning "Unknown interface" errors as those indicate
 				// that the unit is of the wrong type.
 				if strings.Contains(err.Error(), "Unknown interface") {
-					fmt.Println("mismatch in", state.Name)
 					continue
 				}
 				// For other units we make up properties, usually those are

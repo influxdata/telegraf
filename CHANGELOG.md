@@ -7,11 +7,11 @@
 
 - [PR #15108](https://github.com/influxdata/telegraf/pull/15108) reverts the
   behavior of `inputs.systemd_units` back to pre-v1.30.0 to only collect units
-  already loaded by systemd, i.e. not collecting disabled units. This was
-  necessary because using unspecific filters will cause significant load on the
-  system as systemd needs to read all unit-files matching the pattern in each
-  gather cycle. If you do use specific patterns and want to collect non-loaded
-  units, please set the new `collect_disabled_units` option to `true`.
+  already loaded by systemd, i.e. not collecting disabled or static units. This
+  was necessary because using unspecific filters will cause significant load on
+  the system as systemd needs to read all unit-files matching the pattern in
+  each gather cycle. If you use specific patterns and want to collect non-loaded
+  units, please set the `collect_disabled_units` option to `true`.
 
 ## v1.30.1 [2024-04-01]
 

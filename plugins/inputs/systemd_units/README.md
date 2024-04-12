@@ -31,7 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## automount, swap, timer, path, slice and scope
   # unittype = "service"
 
-  ## Collect also units not loaded by systemd
+  ## Collect also units not loaded by systemd, i.e. disabled or static units
   ## Enabling this feature might introduce significant load when used with
   ## unspecific patterns (such as '*') as systemd will need to load all
   ## matching unit files.
