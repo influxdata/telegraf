@@ -93,8 +93,8 @@ jobs:
     executor: telegraf-ci
     steps:
       - checkout
-      - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
+      - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
