@@ -58,10 +58,10 @@ type GNMI struct {
 	GuessPathTag                 bool              `toml:"guess_path_tag" deprecated:"1.30.0;use 'path_guessing_strategy' instead"`
 	GuessPathStrategy            string            `toml:"path_guessing_strategy"`
 	EnableTLS                    bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
-	Log                          telegraf.Logger   `toml:"-"`
 	KeepaliveTime                config.Duration   `toml:"keepalive_time"`
 	KeepaliveTimeout             config.Duration   `toml:"keepalive_timeout"`
 	KeepalivePermitWithoutStream bool              `toml:"keepalive_permit_without_stream"`
+	Log                          telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
