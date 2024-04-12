@@ -715,9 +715,10 @@ func TestMultiInstance(t *testing.T) {
 			// Setup plugin. Do NOT call Start() as this would connect to
 			// the real systemd daemon.
 			plugin := &SystemdUnits{
-				Pattern: tt.pattern,
-				Timeout: config.Duration(time.Second),
-				Log:     testutil.Logger{},
+				Pattern:         tt.pattern,
+				CollectDisabled: true,
+				Timeout:         config.Duration(time.Second),
+				Log:             testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -807,6 +808,41 @@ func TestMultiInstance(t *testing.T) {
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 		})
+	}
+}
+
+func BenchmarkAllUnitsIntegration(b *testing.B) {
+	plugin := &SystemdUnits{
+		CollectDisabled: true,
+		Timeout:         config.Duration(3 * time.Second),
+	}
+	require.NoError(b, plugin.Init())
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, plugin.Start(acc))
+	require.NoError(b, acc.GatherError(plugin.Gather))
+	require.NotZero(b, acc.NMetrics())
+	b.Logf("produced %d metrics", acc.NMetrics())
+
+	for n := 0; n < b.N; n++ {
+		_ = plugin.Gather(acc)
+	}
+}
+
+func BenchmarkAllLoadedUnitsIntegration(b *testing.B) {
+	plugin := &SystemdUnits{
+		Timeout: config.Duration(3 * time.Second),
+	}
+	require.NoError(b, plugin.Init())
+
+	acc := &testutil.Accumulator{Discard: true}
+	require.NoError(b, plugin.Start(acc))
+	require.NoError(b, acc.GatherError(plugin.Gather))
+	require.NotZero(b, acc.NMetrics())
+	b.Logf("produced %d metrics", acc.NMetrics())
+
+	for n := 0; n < b.N; n++ {
+		_ = plugin.Gather(acc)
 	}
 }
 
