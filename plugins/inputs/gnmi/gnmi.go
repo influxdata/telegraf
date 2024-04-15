@@ -38,30 +38,29 @@ var supportedExtensions = []string{"juniper_header"}
 
 // gNMI plugin instance
 type GNMI struct {
-	Addresses                    []string          `toml:"addresses"`
-	Subscriptions                []Subscription    `toml:"subscription"`
-	TagSubscriptions             []TagSubscription `toml:"tag_subscription"`
-	Aliases                      map[string]string `toml:"aliases"`
-	Encoding                     string            `toml:"encoding"`
-	Origin                       string            `toml:"origin"`
-	Prefix                       string            `toml:"prefix"`
-	Target                       string            `toml:"target"`
-	UpdatesOnly                  bool              `toml:"updates_only"`
-	VendorSpecific               []string          `toml:"vendor_specific"`
-	Username                     string            `toml:"username"`
-	Password                     string            `toml:"password"`
-	Redial                       config.Duration   `toml:"redial"`
-	MaxMsgSize                   config.Size       `toml:"max_msg_size"`
-	Trace                        bool              `toml:"dump_responses"`
-	CanonicalFieldNames          bool              `toml:"canonical_field_names"`
-	TrimFieldNames               bool              `toml:"trim_field_names"`
-	GuessPathTag                 bool              `toml:"guess_path_tag" deprecated:"1.30.0;use 'path_guessing_strategy' instead"`
-	GuessPathStrategy            string            `toml:"path_guessing_strategy"`
-	EnableTLS                    bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
-	KeepaliveTime                config.Duration   `toml:"keepalive_time"`
-	KeepaliveTimeout             config.Duration   `toml:"keepalive_timeout"`
-	KeepalivePermitWithoutStream bool              `toml:"keepalive_permit_without_stream"`
-	Log                          telegraf.Logger   `toml:"-"`
+	Addresses           []string          `toml:"addresses"`
+	Subscriptions       []Subscription    `toml:"subscription"`
+	TagSubscriptions    []TagSubscription `toml:"tag_subscription"`
+	Aliases             map[string]string `toml:"aliases"`
+	Encoding            string            `toml:"encoding"`
+	Origin              string            `toml:"origin"`
+	Prefix              string            `toml:"prefix"`
+	Target              string            `toml:"target"`
+	UpdatesOnly         bool              `toml:"updates_only"`
+	VendorSpecific      []string          `toml:"vendor_specific"`
+	Username            string            `toml:"username"`
+	Password            string            `toml:"password"`
+	Redial              config.Duration   `toml:"redial"`
+	MaxMsgSize          config.Size       `toml:"max_msg_size"`
+	Trace               bool              `toml:"dump_responses"`
+	CanonicalFieldNames bool              `toml:"canonical_field_names"`
+	TrimFieldNames      bool              `toml:"trim_field_names"`
+	GuessPathTag        bool              `toml:"guess_path_tag" deprecated:"1.30.0;use 'path_guessing_strategy' instead"`
+	GuessPathStrategy   string            `toml:"path_guessing_strategy"`
+	EnableTLS           bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
+	KeepaliveTime       config.Duration   `toml:"keepalive_time"`
+	KeepaliveTimeout    config.Duration   `toml:"keepalive_timeout"`
+	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
@@ -240,7 +239,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				ClientParameters: keepalive.ClientParameters{
 					Time:                time.Duration(c.KeepaliveTime),
 					Timeout:             time.Duration(c.KeepaliveTimeout),
-					PermitWithoutStream: c.KeepalivePermitWithoutStream,
+					PermitWithoutStream: false,
 				},
 			}
 			for ctx.Err() == nil {
