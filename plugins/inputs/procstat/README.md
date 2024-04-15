@@ -98,6 +98,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #    # patterns = ['.*']
   #    ## List of users owning the process (wildcards are supported)
   #    # users = ['*']
+  #    ## List of executable paths of the process (wildcards are supported)
+  #    # executables = ['*']
+  #    ## List of process names (wildcards are supported)
+  #    # process_names = ['*']
   #    ## Recursion depth for determining children of the matched processes
   #    ## A negative value means all children with infinite depth
   #    #recursion_depth = 0
