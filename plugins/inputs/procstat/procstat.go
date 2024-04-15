@@ -292,6 +292,11 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 		for _, g := range groups {
 			count += len(g.processes)
 			for _, gp := range g.processes {
+				// Skip over non-running processes
+				if running, err := gp.IsRunning(); err != nil || !running {
+					continue
+				}
+
 				// Use the cached processes as we need the existing instances
 				// to compute delta-metrics (e.g. cpu-usage).
 				pid := PID(gp.Pid)

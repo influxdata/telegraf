@@ -14,17 +14,21 @@ import (
 type Filter struct {
 	Name            string   `toml:"name"`
 	PidFiles        []string `toml:"pid_files"`
-	Patterns        []string `toml:"patterns"`
-	Users           []string `toml:"users"`
-	CGroups         []string `toml:"cgroups"`
 	SystemdUnits    []string `toml:"systemd_units"`
 	SupervisorUnits []string `toml:"supervisor_units"`
 	WinService      []string `toml:"win_services"`
+	CGroups         []string `toml:"cgroups"`
+	Patterns        []string `toml:"patterns"`
+	Users           []string `toml:"users"`
+	Executables     []string `toml:"executables"`
+	ProcessNames    []string `toml:"process_names"`
 	RecursionDepth  int      `toml:"recursion_depth"`
 
+	filterSupervisorUnit string
 	filterCmds           []*regexp.Regexp
 	filterUser           filter.Filter
-	filterSupervisorUnit string
+	filterExecutable     filter.Filter
+	filterProcessName    filter.Filter
 }
 
 func (f *Filter) Init() error {
@@ -63,11 +67,18 @@ func (f *Filter) Init() error {
 		f.filterCmds = append(f.filterCmds, re)
 	}
 
+	f.filterSupervisorUnit = strings.TrimSpace(strings.Join(f.SupervisorUnits, " "))
+
 	var err error
 	if f.filterUser, err = filter.Compile(f.Users); err != nil {
-		return fmt.Errorf("compiling users of filter %q failed: %w", f.Name, err)
+		return fmt.Errorf("compiling users filter for %q failed: %w", f.Name, err)
 	}
-	f.filterSupervisorUnit = strings.TrimSpace(strings.Join(f.SupervisorUnits, " "))
+	if f.filterExecutable, err = filter.Compile(f.Executables); err != nil {
+		return fmt.Errorf("compiling executables filter for %q failed: %w", f.Name, err)
+	}
+	if f.filterProcessName, err = filter.Compile(f.ProcessNames); err != nil {
+		return fmt.Errorf("compiling process-names filter for %q failed: %w", f.Name, err)
+	}
 
 	return nil
 }
@@ -122,12 +133,22 @@ func (f *Filter) ApplyFilter() ([]processGroup, error) {
 		for _, p := range g.processes {
 			// Users
 			if f.filterUser != nil {
-				username, err := p.Username()
-				if err != nil {
-					// This can happen if we don't have permissions or the process no longer exists
+				if username, err := p.Username(); err != nil || !f.filterUser.Match(username) {
+					// Errors can happen if we don't have permissions or the process no longer exists
 					continue
 				}
-				if !f.filterUser.Match(username) {
+			}
+
+			// Executables
+			if f.filterExecutable != nil {
+				if exe, err := p.Exe(); err != nil || !f.filterExecutable.Match(exe) {
+					continue
+				}
+			}
+
+			// Process names
+			if f.filterProcessName != nil {
+				if name, err := p.Name(); err != nil || !f.filterProcessName.Match(name) {
 					continue
 				}
 			}
