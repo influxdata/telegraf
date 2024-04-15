@@ -358,7 +358,7 @@ func (a *Agent) startInputs(
 			// If the model tells us to remove the plugin we do so without error
 			var fatalErr *internal.FatalError
 			if errors.As(err, &fatalErr) {
-				log.Printf("I! [agent] Failed to start [%s], error was %q;  shutting down plugin...", input.LogName(), err)
+				log.Printf("I! [agent] Failed to start %s, shutting down plugin: %s", input.LogName(), err)
 				continue
 			}
 
