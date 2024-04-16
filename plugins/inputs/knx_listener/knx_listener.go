@@ -187,6 +187,8 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 				value = vi.Uint()
 			case reflect.Float32, reflect.Float64:
 				value = vi.Float()
+			case reflect.String:
+				value = vi.String()
 			default:
 				kl.Log.Errorf("Type conversion %v failed for address %q", vi.Kind(), ga)
 				continue
