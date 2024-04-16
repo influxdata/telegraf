@@ -6,13 +6,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/keepalive"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/gnxi/utils/xpath"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"

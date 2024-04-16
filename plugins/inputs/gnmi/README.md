@@ -56,13 +56,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## See https://pkg.go.dev/google.golang.org/grpc/keepalive
   ## The client will ping the server to see if the transport is still alive if it has
   ## not see any activity for the given time.
-  ## If set below 10 seconds, a minimum value of 10s will be used instead.
   ## If not set, none of the keep-alive setting (including those below) will be applied.
-  # keepalive_time = "10s"
+  ## If set and set below 10 seconds, the gRPC library will apply a minimum value of 10s will be used instead.
+  # keepalive_time = ""
 
   ## Timeout for seeing any activity after the keep-alive probe was
   ## sent. If no activity is seen the connection is closed.
-  ## keepalive_timeout = "20s"
+  # keepalive_timeout = ""
 
   ## gRPC Maximum Message Size
   # max_msg_size = "4MB"
