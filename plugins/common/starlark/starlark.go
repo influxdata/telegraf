@@ -26,6 +26,55 @@ type Common struct {
 	globals    starlark.StringDict
 	functions  map[string]*starlark.Function
 	parameters map[string]starlark.Tuple
+	state      *starlark.Dict
+}
+
+func (s *Common) GetState() interface{} {
+	if s.state == nil {
+		return nil
+	}
+	state := make(map[string]interface{}, s.state.Len())
+	items := s.state.Items()
+	for _, item := range items {
+		if len(item) != 2 {
+			// We do expect key-value pairs in the state so there should be
+			// two items.
+			s.Log.Errorf("state item %+v does not contain a key-value pair", item)
+			continue
+		}
+		k, ok := item.Index(0).(starlark.String)
+		if !ok {
+			s.Log.Errorf("state item %+v has invalid key type %T", item, item.Index(0))
+			continue
+		}
+		v, err := asGoValue(item.Index(1))
+		if err != nil {
+			s.Log.Errorf("state item %+v value cannot be converted: %v", item, err)
+			continue
+		}
+		state[k.GoString()] = v
+	}
+
+	return state
+}
+
+func (s *Common) SetState(state interface{}) error {
+	dict, ok := state.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected type %T for state", state)
+	}
+
+	s.state = starlark.NewDict(len(dict))
+	for k, v := range dict {
+		sv, err := asStarlarkValue(v)
+		if err != nil {
+			return fmt.Errorf("value %v of state item %q cannot be set: %w", v, k, err)
+		}
+		if err := s.state.SetKey(starlark.String(k), sv); err != nil {
+			return fmt.Errorf("state item %q cannot be set: %w", k, err)
+		}
+	}
+	return nil
 }
 
 func (s *Common) Init() error {
@@ -47,14 +96,27 @@ func (s *Common) Init() error {
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 	builtins["catch"] = starlark.NewBuiltin("catch", catch)
-	err := s.addConstants(&builtins)
-	if err != nil {
+
+	if err := s.addConstants(&builtins); err != nil {
 		return err
 	}
 
+	// Insert the persisted state if any
+	if s.state != nil {
+		builtins["state"] = s.state
+	}
+
+	// Load the program. In case of an error we can try to insert the state
+	// which can be used implicitly e.g. when persisting states
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
-		return err
+		// Try again with state persistence
+		builtins["state"] = starlark.NewDict(0)
+		p, serr := s.sourceProgram(builtins)
+		if serr != nil {
+			return err
+		}
+		program = p
 	}
 
 	// Execute source
@@ -62,12 +124,13 @@ func (s *Common) Init() error {
 	if err != nil {
 		return err
 	}
+
 	// Make available a shared state to the apply function
 	globals["state"] = starlark.NewDict(0)
 
-	// Freeze the global state.  This prevents modifications to the processor
+	// Freeze the global state. This prevents modifications to the processor
 	// state and prevents scripts from containing errors storing tracking
-	// metrics.  Tasks that require global state will not be possible due to
+	// metrics. Tasks that require global state will not be possible due to
 	// this, so maybe we should relax this in the future.
 	globals.Freeze()
 
@@ -107,6 +170,9 @@ func (s *Common) AddFunction(name string, params ...starlark.Value) error {
 // Add all the constants defined in the plugin as constants of the script
 func (s *Common) addConstants(builtins *starlark.StringDict) error {
 	for key, val := range s.Constants {
+		if key == "state" {
+			return errors.New("'state' constant uses reserved name")
+		}
 		sVal, err := asStarlarkValue(val)
 		if err != nil {
 			return fmt.Errorf("converting type %T failed: %w", val, err)

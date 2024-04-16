@@ -3563,6 +3563,184 @@ def apply(metric):
 	}
 }
 
+func TestGlobalState(t *testing.T) {
+	source := `
+def apply(metric):
+  count = state.get("count", 0)
+  count += 1
+  state["count"] = count
+
+  metric.fields["count"] = count
+
+  return metric
+`
+	// Define the metrics
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 30),
+		)}
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42, "count": 1},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42, "count": 2},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42, "count": 3},
+			time.Unix(1713188113, 30),
+		),
+	}
+
+	// Configure the plugin
+	plugin := &Starlark{
+		Common: common.Common{
+			StarlarkLoadFunc: testLoadFunc,
+			Source:           source,
+			Log:              testutil.Logger{},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Do the processing
+	for _, m := range input {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	plugin.Stop()
+
+	// Check
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestStatePersistence(t *testing.T) {
+	source := `
+def apply(metric):
+  count = state.get("count", 0)
+  count += 1
+  state["count"] = count
+
+  metric.fields["count"] = count
+  metric.tags["instance"] = state.get("instance", "unknown")
+
+  return metric
+`
+	// Define the metrics
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 30),
+		)}
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"instance": "myhost"},
+			map[string]interface{}{"value": 42, "count": 1},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{"instance": "myhost"},
+			map[string]interface{}{"value": 42, "count": 2},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{"instance": "myhost"},
+			map[string]interface{}{"value": 42, "count": 3},
+			time.Unix(1713188113, 30),
+		),
+	}
+
+	// Configure the plugin
+	plugin := &Starlark{
+		Common: common.Common{
+			StarlarkLoadFunc: testLoadFunc,
+			Source:           source,
+			Log:              testutil.Logger{},
+		},
+	}
+
+	// Setup the "persisted" state
+	var pi telegraf.StatefulPlugin = plugin
+	require.NoError(t, pi.SetState(map[string]interface{}{"instance": "myhost"}))
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Do the processing
+	for _, m := range input {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	plugin.Stop()
+
+	// Check
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Check getting the persisted state
+	expectedState := map[string]interface{}{"instance": "myhost", "count": int64(3)}
+	require.EqualValues(t, expectedState, pi.GetState())
+}
+
+func TestUsePredefinedStateName(t *testing.T) {
+	source := `
+def apply(metric):
+  return metric
+`
+	// Configure the plugin
+	plugin := &Starlark{
+		Common: common.Common{
+			StarlarkLoadFunc: testLoadFunc,
+			Source:           source,
+			Constants:        map[string]interface{}{"state": "invalid"},
+			Log:              testutil.Logger{},
+		},
+	}
+	require.ErrorContains(t, plugin.Init(), "'state' constant uses reserved name")
+}
+
 // parses metric lines out of line protocol following a header, with a trailing blank line
 func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []telegraf.Metric) {
 	parser := &influx.Parser{}
