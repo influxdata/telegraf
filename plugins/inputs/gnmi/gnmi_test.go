@@ -140,8 +140,8 @@ func TestUsernamePassword(t *testing.T) {
 	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
-		Username:  "theusername",
-		Password:  "thepassword",
+		Username:  config.NewSecret([]byte("theusername")),
+		Password:  config.NewSecret([]byte("thepassword")),
 		Encoding:  "proto",
 		Redial:    config.Duration(1 * time.Second),
 	}
