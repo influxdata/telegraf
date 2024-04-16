@@ -17,7 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
@@ -43,7 +42,6 @@ type handler struct {
 	trimSlash           bool
 	guessPathStrategy   string
 	log                 telegraf.Logger
-	keepalive.ClientParameters
 }
 
 // SubscribeGNMI and extract telemetry data
@@ -62,10 +60,6 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 		opts = append(opts, grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(h.maxMsgSize),
 		))
-	}
-
-	if h.ClientParameters.Time > 0 {
-		opts = append(opts, grpc.WithKeepaliveParams(h.ClientParameters))
 	}
 
 	client, err := grpc.DialContext(ctx, h.address, opts...)
