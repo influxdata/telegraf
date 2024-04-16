@@ -879,8 +879,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.1/go.mod h1:
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.3 h1:fpFzBoro/MetYBk+8kxoQGMeKSkXbymnbUh2gy6nVgk=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.3/go.mod h1:qmQPbMe5NQk/nEmpkl8iHyCSREJjEbRUrnqHpHabLlM=
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.1.0/go.mod h1:enkU5tq2HoXY+ZMiQprgF3Q83T3PbO77E83yXXzRZWE=
-github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.3 h1:/MpYoYvgshlGMFmSyfzGWf6HKoEo/DrKBoHxXR3vh+U=
-github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.3/go.mod h1:1Pf5vPqk8t9pdYB3dmUMRE/0m8u0IHHg8ESSiutJd0I=
+github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.6 h1:6tayEze2Y+hiL3kdnEUxSPsP+pJsUfwLSFspFl1ru9Q=
+github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.6/go.mod h1:qVNb/9IOVsLCZh0x2lnagrBwQ9fxajUpXS7OZfIsKn0=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.2.3/go.mod h1:7gcsONBmFoCcKrAqrm95trrMd2+C/ReYKP7Vfu8yHHA=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.27/go.mod h1:EOwBD4J4S5qYszS5/3DpkejfuK+Z5/1uzICfPaZLtqw=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.6 h1:b+E7zIUHMmcB4Dckjpkapoy47W6C9QBv/zoUP+Hn8Kc=
@@ -903,8 +903,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.6.2/go.mod h1:RBhoMJB8yFToaCnbe0jNq5
 github.com/aws/aws-sdk-go-v2/service/sts v1.19.0/go.mod h1:BgQOMsg8av8jset59jelyPW7NoZcZXLVpDsXunGDrk8=
 github.com/aws/aws-sdk-go-v2/service/sts v1.28.5 h1:J/PpTf/hllOjx8Xu9DMflff3FajfLxqM5+tepvVXmxg=
 github.com/aws/aws-sdk-go-v2/service/sts v1.28.5/go.mod h1:0ih0Z83YDH/QeQ6Ori2yGE2XvWYv/Xm+cZc01LC6oK0=
-github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.25.2 h1:Xql+xXJrd+paS/uLYJrTYLBsv/F+bQfIZPqAQKFTMDw=
-github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.25.2/go.mod h1:oPx/H/vQjcZRewmATXiHLodl2ACxqV533CcyWlrgzRE=
+github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.25.5 h1:0Ty3j3QkLoqkZ+VagFisIsKYxGAzjv9hIQb84nlt/Jc=
+github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.25.5/go.mod h1:9R1IlrgiivwTCZdbKgMPkseFS+moUM+DLh0TEjO6pvE=
 github.com/aws/smithy-go v1.7.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.8.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.9.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
