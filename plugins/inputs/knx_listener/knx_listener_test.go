@@ -30,6 +30,8 @@ func setValue(data dpt.DatapointValue, value interface{}) error {
 		d.SetInt(v)
 	case uint64:
 		d.SetUint(v)
+	case string:
+		d.SetString(v)
 	default:
 		return fmt.Errorf("unknown type '%T' when setting value for DPT", value)
 	}
@@ -104,6 +106,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 		{"14/0/4", "14.004", false, 1.00794, 1.00794},
 		{"14/1/0", "14.010", false, 5963.78, 5963.78},
 		{"14/1/1", "14.011", false, 150.95, 150.95},
+		{"16/0/0", "16.000", false, "hello world", "hello world"},
 	}
 	acc := &testutil.Accumulator{}
 
