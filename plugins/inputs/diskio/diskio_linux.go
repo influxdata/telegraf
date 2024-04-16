@@ -66,7 +66,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		// This allows us to also "poison" it during test scenarios
 		sysBlockPath = ic.sysBlockPath
 	} else {
-		sysBlockPath = "/sys/block/" + devName
+		sysBlockPath = "/sys/class/block/" + devName
 	}
 
 	devInfo, err := readDevData(sysBlockPath)
