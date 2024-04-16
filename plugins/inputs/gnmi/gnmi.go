@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/gnxi/utils/xpath"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
@@ -57,6 +58,8 @@ type GNMI struct {
 	GuessPathTag        bool              `toml:"guess_path_tag" deprecated:"1.30.0;use 'path_guessing_strategy' instead"`
 	GuessPathStrategy   string            `toml:"path_guessing_strategy"`
 	EnableTLS           bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
+	KeepaliveTime       config.Duration   `toml:"keepalive_time"`
+	KeepaliveTimeout    config.Duration   `toml:"keepalive_timeout"`
 	Log                 telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
@@ -233,6 +236,11 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				trimSlash:           c.TrimFieldNames,
 				guessPathStrategy:   c.GuessPathStrategy,
 				log:                 c.Log,
+				ClientParameters: keepalive.ClientParameters{
+					Time:                time.Duration(c.KeepaliveTime),
+					Timeout:             time.Duration(c.KeepaliveTimeout),
+					PermitWithoutStream: false,
+				},
 			}
 			for ctx.Err() == nil {
 				if err := h.subscribeGNMI(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {
