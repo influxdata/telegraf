@@ -48,8 +48,8 @@ type GNMI struct {
 	Target              string            `toml:"target"`
 	UpdatesOnly         bool              `toml:"updates_only"`
 	VendorSpecific      []string          `toml:"vendor_specific"`
-	Username            string            `toml:"username"`
-	Password            string            `toml:"password"`
+	Username            config.Secret     `toml:"username"`
+	Password            config.Secret     `toml:"password"`
 	Redial              config.Duration   `toml:"redial"`
 	MaxMsgSize          config.Size       `toml:"max_msg_size"`
 	Trace               bool              `toml:"dump_responses"`
@@ -214,8 +214,23 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	// Prepare the context, optionally with credentials
 	var ctx context.Context
 	ctx, c.cancel = context.WithCancel(context.Background())
-	if len(c.Username) > 0 {
-		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
+
+	if !c.Username.Empty() {
+		usernameSecret, err := c.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		username := usernameSecret.String()
+		usernameSecret.Destroy()
+
+		passwordSecret, err := c.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		password := passwordSecret.String()
+		passwordSecret.Destroy()
+
+		ctx = metadata.AppendToOutgoingContext(ctx, "username", username, "password", password)
 	}
 
 	// Create a goroutine for each device, dial and subscribe
