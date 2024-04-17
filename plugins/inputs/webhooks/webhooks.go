@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/zabbix"
 )
 
 //go:embed sample.conf
@@ -51,6 +52,7 @@ type Webhooks struct {
 	Papertrail  *papertrail.PapertrailWebhook   `toml:"papertrail"`
 	Particle    *particle.ParticleWebhook       `toml:"particle"`
 	Artifactory *artifactory.ArtifactoryWebhook `toml:"artifactory"`
+	Zabbix      *zabbix.ZabbixWebhook 	`toml:"zabbix"`
 
 	Log telegraf.Logger `toml:"-"`
 
