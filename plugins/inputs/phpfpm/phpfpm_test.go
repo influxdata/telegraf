@@ -187,6 +187,35 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 	require.GreaterOrEqual(t, time.Since(start), timeout)
 }
 
+// TestPhpFpmCrashWithTimeout_From_Fcgi show issue #15175: when timeout is enabled
+// and nothing is listenning on specified port, a nil pointer was dereferenced.
+func TestPhpFpmCrashWithTimeout_From_Fcgi(t *testing.T) {
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "Cannot initialize test server")
+
+	tcpAddress := tcp.Addr().String()
+
+	// Yes close the tcp port now. The listenner is only used to find a free
+	// port and then make it free. This test hope that nothing will re-use the
+	// port in meantime.
+	tcp.Close()
+
+	const timeout = 200 * time.Millisecond
+
+	//Now we tested again above server
+	r := &phpfpm{
+		Urls:    []string{"fcgi://" + tcpAddress + "/status"},
+		Timeout: config.Duration(timeout),
+		Log:     &testutil.Logger{},
+	}
+	require.NoError(t, r.Init())
+
+	var acc testutil.Accumulator
+	require.Error(t, acc.GatherError(r.Gather))
+
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
 func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	// Create a socket in /tmp because we always have write permission and if the
 	// removing of socket fail when system restart /tmp is clear so
