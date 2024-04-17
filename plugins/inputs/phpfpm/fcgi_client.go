@@ -29,7 +29,10 @@ func newFcgiClient(timeout time.Duration, h string, args ...interface{}) (*conn,
 		laddr := net.UnixAddr{Name: args[0].(string), Net: h}
 		con, err = net.DialUnix(h, nil, &laddr)
 	default:
-		err = errors.New("fcgi: we only accept int (port) or string (socket) params")
+		return nil, errors.New("fcgi: we only accept int (port) or string (socket) params")
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	if timeout != 0 {
@@ -38,11 +41,7 @@ func newFcgiClient(timeout time.Duration, h string, args ...interface{}) (*conn,
 		}
 	}
 
-	fcgi := &conn{
-		rwc: con,
-	}
-
-	return fcgi, err
+	return &conn{rwc: con}, nil
 }
 
 func (c *conn) Request(env map[string]string, requestData string) (retout []byte, reterr []byte, err error) {
