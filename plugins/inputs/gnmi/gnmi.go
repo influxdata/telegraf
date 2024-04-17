@@ -212,21 +212,21 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var ctx context.Context
 	ctx, c.cancel = context.WithCancel(context.Background())
 
-	usernameSecret, err := c.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %w", err)
-	}
-	defer usernameSecret.Destroy()
-	username := usernameSecret.String()
+	if !c.Username.Empty() {
+		usernameSecret, err := c.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		username := usernameSecret.String()
+		usernameSecret.Destroy()
 
-	passwordSecret, err := c.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %w", err)
-	}
-	defer passwordSecret.Destroy()
-	password := passwordSecret.String()
+		passwordSecret, err := c.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		password := passwordSecret.String()
+		passwordSecret.Destroy()
 
-	if len(username) > 0 {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", username, "password", password)
 	}
 
