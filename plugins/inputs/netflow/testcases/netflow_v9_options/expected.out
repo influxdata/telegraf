@@ -1,0 +1,8 @@
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=1u,interface="Te0/0/0",interface_desc="TenGigabitEthernet0/0/0",out_snmp=1u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=2u,interface="Te0/0/1",interface_desc="TenGigabitEthernet0/0/1",out_snmp=2u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=3u,interface="Te0/0/2",interface_desc="TenGigabitEthernet0/0/2",out_snmp=3u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=4u,interface="Te0/0/3",interface_desc="TenGigabitEthernet0/0/3",out_snmp=4u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=5u,interface="Te0/0/4",interface_desc="TenGigabitEthernet0/0/4",out_snmp=5u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=6u,interface="Te0/0/5",interface_desc="TenGigabitEthernet0/0/5",out_snmp=6u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=7u,interface="Gi0",interface_desc="GigabitEthernet0",out_snmp=7u 1713379378304536264
+netflow_options,source=127.0.0.1,version=NetFlowV9 in_bytes=169952189u,in_snmp=10u,interface="Lo0",interface_desc="Loopback0",out_snmp=10u 1713379378304536264
