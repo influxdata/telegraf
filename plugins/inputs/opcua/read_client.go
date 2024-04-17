@@ -30,8 +30,8 @@ type ReadClient struct {
 	Workarounds ReadClientWorkarounds
 
 	// internal values
-	req *ua.ReadRequest
-	ctx context.Context
+	reqIDs []*ua.ReadValueID
+	ctx    context.Context
 }
 
 func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, error) {
@@ -65,10 +65,10 @@ func (o *ReadClient) Connect() error {
 		return fmt.Errorf("initializing node IDs failed: %w", err)
 	}
 
-	readValueIDs := make([]*ua.ReadValueID, 0, len(o.NodeIDs))
+	o.reqIDs = make([]*ua.ReadValueID, 0, len(o.NodeIDs))
 	if o.Workarounds.UseUnregisteredReads {
 		for _, nid := range o.NodeIDs {
-			readValueIDs = append(readValueIDs, &ua.ReadValueID{NodeID: nid})
+			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
 		regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
@@ -79,14 +79,8 @@ func (o *ReadClient) Connect() error {
 		}
 
 		for _, v := range regResp.RegisteredNodeIDs {
-			readValueIDs = append(readValueIDs, &ua.ReadValueID{NodeID: v})
+			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: v})
 		}
-	}
-
-	o.req = &ua.ReadRequest{
-		MaxAge:             2000,
-		TimestampsToReturn: ua.TimestampsToReturnBoth,
-		NodesToRead:        readValueIDs,
 	}
 
 	if err := o.read(); err != nil {
@@ -136,7 +130,13 @@ func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
 }
 
 func (o *ReadClient) read() error {
-	resp, err := o.Client.Read(o.ctx, o.req)
+	req := &ua.ReadRequest{
+		MaxAge:             2000,
+		TimestampsToReturn: ua.TimestampsToReturnBoth,
+		NodesToRead:        o.reqIDs,
+	}
+
+	resp, err := o.Client.Read(o.ctx, req)
 	if err != nil {
 		o.ReadError.Incr(1)
 		return fmt.Errorf("RegisterNodes Read failed: %w", err)
