@@ -1,6 +1,8 @@
 package starlark
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"os"
@@ -3703,7 +3705,9 @@ def apply(metric):
 
 	// Setup the "persisted" state
 	var pi telegraf.StatefulPlugin = plugin
-	require.NoError(t, pi.SetState(map[string]interface{}{"instance": "myhost"}))
+	var buf bytes.Buffer
+	require.NoError(t, gob.NewEncoder(&buf).Encode(map[string]interface{}{"instance": "myhost"}))
+	require.NoError(t, pi.SetState(buf.Bytes()))
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
@@ -3721,7 +3725,12 @@ def apply(metric):
 
 	// Check getting the persisted state
 	expectedState := map[string]interface{}{"instance": "myhost", "count": int64(3)}
-	require.EqualValues(t, expectedState, pi.GetState())
+
+	var actualState map[string]interface{}
+	stateData, ok := pi.GetState().([]byte)
+	require.True(t, ok, "state is not a bytes array")
+	require.NoError(t, gob.NewDecoder(bytes.NewBuffer(stateData)).Decode(&actualState))
+	require.EqualValues(t, expectedState, actualState, "mismatch in state")
 }
 
 func TestUsePredefinedStateName(t *testing.T) {

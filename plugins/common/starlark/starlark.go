@@ -1,6 +1,8 @@
 package starlark
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"strings"
@@ -30,9 +32,13 @@ type Common struct {
 }
 
 func (s *Common) GetState() interface{} {
+	// Return the actual byte-type instead of nil allowing the persister
+	// to guess instantiate variable of the appropriate type
 	if s.state == nil {
-		return nil
+		return []byte{}
 	}
+
+	// Convert the starlark dict into a golang dictionary for serialization
 	state := make(map[string]interface{}, s.state.Len())
 	items := s.state.Items()
 	for _, item := range items {
@@ -55,15 +61,32 @@ func (s *Common) GetState() interface{} {
 		state[k.GoString()] = v
 	}
 
-	return state
+	// Do a binary GOB encoding to preserve types
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(state); err != nil {
+		s.Log.Errorf("encoding state failed: %v", err)
+		return []byte{}
+	}
+
+	return buf.Bytes()
 }
 
 func (s *Common) SetState(state interface{}) error {
-	dict, ok := state.(map[string]interface{})
+	data, ok := state.([]byte)
 	if !ok {
 		return fmt.Errorf("unexpected type %T for state", state)
 	}
+	if len(data) == 0 {
+		return nil
+	}
 
+	// Decode the binary GOB encoding
+	var dict map[string]interface{}
+	if err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(&dict); err != nil {
+		return fmt.Errorf("decoding state failed: %w", err)
+	}
+
+	// Convert the golang dict back to starlark types
 	s.state = starlark.NewDict(len(dict))
 	for k, v := range dict {
 		sv, err := asStarlarkValue(v)
@@ -74,6 +97,7 @@ func (s *Common) SetState(state interface{}) error {
 			return fmt.Errorf("state item %q cannot be set: %w", k, err)
 		}
 	}
+
 	return nil
 }
 
@@ -110,8 +134,10 @@ func (s *Common) Init() error {
 	// which can be used implicitly e.g. when persisting states
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
-		// Try again with state persistence
-		builtins["state"] = starlark.NewDict(0)
+		// Try again with a declared state. This might be necessary for
+		// state persistence.
+		s.state = starlark.NewDict(0)
+		builtins["state"] = s.state
 		p, serr := s.sourceProgram(builtins)
 		if serr != nil {
 			return err
@@ -125,8 +151,11 @@ func (s *Common) Init() error {
 		return err
 	}
 
-	// Make available a shared state to the apply function
-	globals["state"] = starlark.NewDict(0)
+	// In case the program declares a global "state" we should insert it to
+	// avoid warnings about inserting into a frozen variable
+	if _, found := globals["state"]; found {
+		globals["state"] = starlark.NewDict(0)
+	}
 
 	// Freeze the global state. This prevents modifications to the processor
 	// state and prevents scripts from containing errors storing tracking

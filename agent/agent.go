@@ -106,11 +106,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
-	log.Printf("D! [agent] Initializing plugins")
-	if err := a.initPlugins(); err != nil {
-		return err
-	}
-
 	if a.Config.Persister != nil {
 		log.Printf("D! [agent] Initializing plugin states")
 		if err := a.initPersister(); err != nil {
@@ -122,6 +117,11 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 			log.Print("I! [agent] State file does not exist... Skip restoring states...")
 		}
+	}
+
+	log.Printf("D! [agent] Initializing plugins")
+	if err := a.initPlugins(); err != nil {
+		return err
 	}
 
 	startTime := time.Now()
