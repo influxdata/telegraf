@@ -44,6 +44,7 @@ endif
 MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
+GOBUILDMODE := default
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 INTERNAL_PKG=github.com/influxdata/telegraf/internal
 LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
@@ -57,7 +58,17 @@ endif
 ifneq ($(GOARCH), 386)
 	race_detector := -race
 endif
-
+ifeq ($(GOARCH),amd64)
+	GOBUILDMODE := pie
+else ifeq ($(GOARCH),arm64)
+	GOBUILDMODE := pie
+else ifeq ($(GOARCH),ppc64el)
+	GOBUILDMODE := pie
+else ifeq ($(GOARCH),riscv64)
+	GOBUILDMODE := pie
+else ifeq ($(GOARCH),s390x)
+	GOBUILDMODE := pie
+endif
 
 GOFILES ?= $(shell git ls-files '*.go')
 GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
@@ -129,7 +140,7 @@ docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processo
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -tags "$(BUILDTAGS)" -buildmode "$(GOBUILDMODE)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
 telegraf: build
@@ -276,7 +287,7 @@ install: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -buildmode "$(GOBUILDMODE)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
