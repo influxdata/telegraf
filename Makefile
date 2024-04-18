@@ -47,7 +47,7 @@ GOARCH ?= $(shell go env GOARCH)
 GOBUILDMODE := default
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 INTERNAL_PKG=github.com/influxdata/telegraf/internal
-LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
+LDFLAGS := $(LDFLAGS) -linkmode=internal -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
 ifneq ($(tag),)
 	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)
 else
@@ -58,15 +58,11 @@ endif
 ifneq ($(GOARCH), 386)
 	race_detector := -race
 endif
+
+# Enable PIE only on select architectures
 ifeq ($(GOARCH),amd64)
 	GOBUILDMODE := pie
 else ifeq ($(GOARCH),arm64)
-	GOBUILDMODE := pie
-else ifeq ($(GOARCH),ppc64el)
-	GOBUILDMODE := pie
-else ifeq ($(GOARCH),riscv64)
-	GOBUILDMODE := pie
-else ifeq ($(GOARCH),s390x)
 	GOBUILDMODE := pie
 endif
 
