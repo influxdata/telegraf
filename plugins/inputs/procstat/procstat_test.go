@@ -347,8 +347,6 @@ func TestGather_ProcessName(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, p.Gather(&acc))
-
-	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 	require.Equal(t, "custom_name", acc.TagValue("procstat", "process_name"))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }

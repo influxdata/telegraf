@@ -104,6 +104,11 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
+	if rc, wc, err := collectCachedReadWrite(p); err == nil {
+		fields[prefix+"cached_read_bytes"] = rc
+		fields[prefix+"cached_write_bytes"] = wc
+	}
+
 	createdAt, err := p.CreateTime() // returns epoch in ms
 	if err == nil {
 		fields[prefix+"created_at"] = createdAt * 1000000 // ms to ns
