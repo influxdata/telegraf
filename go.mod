@@ -224,6 +224,8 @@ require (
 	modernc.org/sqlite v1.29.5
 )
 
+require github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
+
 require (
 	cloud.google.com/go v0.112.0 // indirect
 	cloud.google.com/go/compute v1.23.4 // indirect
