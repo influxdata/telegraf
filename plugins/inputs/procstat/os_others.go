@@ -17,3 +17,11 @@ func queryPidWithWinServiceName(_ string) (uint32, error) {
 }
 
 func collectMemmap(Process, string, map[string]any) {}
+
+func findBySystemdUnits(_ []string) ([]processGroup, error) {
+	return nil, nil
+}
+
+func findByWindowsServices(_ []string) ([]processGroup, error) {
+	return nil, nil
+}
