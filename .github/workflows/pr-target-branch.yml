@@ -7,9 +7,12 @@ jobs:
   check-target-branch:
     name: Check target branch to be master
     runs-on: ubuntu-latest
-    if: github.event.pull_request.base.ref != 'master'
     steps:
+      - name: success
+        if: github.event.pull_request.base.ref == 'master'
+        run: exit 0
       - name: error
+        if: github.event.pull_request.base.ref != 'master'
         run: |
           echo "Pull-request is not based on master, please rebase"
           exit 1
