@@ -253,3 +253,65 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }
+
+func TestDisconnectedServerOnConnect(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	e := &Opensearch{
+		URLs:            urls,
+		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		Timeout:         config.Duration(time.Second * 5),
+		EnableGzip:      false,
+		ManageTemplate:  false,
+		Log:             testutil.Logger{},
+		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
+	}
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+
+	// Close the server right before we try to connect.
+	ts.Close()
+	require.Error(t, e.Connect())
+}
+
+func TestDisconnectedServerOnWrite(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/_bulk":
+			require.Equal(t, "Bearer 0123456789abcdef", r.Header.Get("Authorization"))
+			_, err := w.Write([]byte("{}"))
+			require.NoError(t, err)
+			return
+		default:
+			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
+			require.NoError(t, err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	e := &Opensearch{
+		URLs:            urls,
+		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		Timeout:         config.Duration(time.Second * 5),
+		EnableGzip:      false,
+		ManageTemplate:  false,
+		Log:             testutil.Logger{},
+		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
+	}
+	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+
+	require.NoError(t, e.Connect())
+
+	err := e.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+
+	// Close the server right before we try to write a second time.
+	ts.Close()
+
+	err = e.Write(testutil.MockMetrics())
+	require.Error(t, err)
+}
