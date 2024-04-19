@@ -34,7 +34,7 @@ func TestFloatItem(t *testing.T) {
 	tags := map[string]string{
 		"item":          "ICMP: ICMP ping",
 		"host_raw":      "10.248.65.148",
-		"hostgroups":    "UPS,SNMP",
+		"hostgroups":    "SNMP,UPS",
 		"hostname":      "server1",
 		"tag_component": "health,network",
 		"itemid":        "54988",
@@ -59,7 +59,7 @@ func TestStringItem(t *testing.T) {
 		"item":          "ICMP: ICMP ping",
 		"host_raw":      "10.248.65.148",
 		"hostname":      "server1",
-		"hostgroups":    "UPS,SNMP",
+		"hostgroups":    "SNMP,UPS",
 		"tag_component": "health,network",
 		"itemid":        "54988",
 	}
@@ -82,7 +82,7 @@ func TestMultibleItems(t *testing.T) {
 	tags := map[string]string{
 		"item":          "ICMP: ICMP ping",
 		"host_raw":      "10.248.65.148",
-		"hostgroups":    "UPS,SNMP",
+		"hostgroups":    "SNMP,UPS",
 		"hostname":      "server1",
 		"tag_component": "health,network",
 		"itemid":        "54988",
@@ -111,7 +111,7 @@ func TestIgnoreTextItems(t *testing.T) {
 	tags := map[string]string{
 		"item":          "ICMP: ICMP ping",
 		"host_raw":      "10.248.65.148",
-		"hostgroups":    "UPS,SNMP",
+		"hostgroups":    "SNMP,UPS",
 		"hostname":      "server1",
 		"tag_component": "health,network",
 		"itemid":        "54988",

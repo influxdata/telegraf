@@ -41,6 +41,7 @@ func (ni *zabbix_item) NameFromTag(t string) string {
 }
 
 func (ni *zabbix_item) Tags() map[string]string {
+	sort.Strings(ni.Groups)
 	res := map[string]string{
 		"item":       ni.Itemname,
 		"host_raw":   ni.Host.Host,
@@ -48,14 +49,20 @@ func (ni *zabbix_item) Tags() map[string]string {
 		"hostgroups": strings.Join(ni.Groups[:], ","),
 		"itemid":     strconv.Itoa(ni.Itemid),
 	}
+	tag_map := map[string][]string{}
 	for _, s := range ni.ItemTags {
 		var tag_name = "tag_" + s.Tag
-		if val, ok := res[tag_name]; ok {
-			res[tag_name] = val + "," + s.Value
+		if _, ok := tag_map[tag_name]; ok {
+			tag_map[tag_name] = append(tag_map[tag_name], s.Value)
 		} else {
-			res[tag_name] = s.Value
+			tag_map[tag_name] = []string{s.Value}
 		}
 	}
+	for k, v := range tag_map {
+		sort.Strings(v)
+		res[k] = strings.Join(v[:], ",")
+	}
+	
 	return res
 }
 
