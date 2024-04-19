@@ -15,6 +15,9 @@ import (
 	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
 	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
+	// Register integrated auth for mssql
+	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
