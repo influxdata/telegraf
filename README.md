@@ -43,8 +43,9 @@ Telegraf shares the same [minimum requirements][] as Go:
 
 ## Installation:
 
-You can download the binaries directly from the [downloads](https://www.influxdata.com/downloads) page
-or from the [releases](https://github.com/influxdata/telegraf/releases) section.
+By following the instructions below, you will install Hayden AI's fork of the Telegraf repository, which requires access to private extensions.
+
+If you need to install the current master branch, it is available on GitHub at https://github.com/influxdata/telegraf.
 
 ### Ansible Role:
 
@@ -58,13 +59,14 @@ Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
 2. Clone the Telegraf repository:
    ```
    cd ~/src
-   git clone https://github.com/influxdata/telegraf.git
+   git clone git@github.com:HaydenAI/telegraf.git
    ```
 3. Run `make` from the source directory
    ```
    cd ~/src/telegraf
    make
    ```
+Note: if you encounter issues while cloning Hayden AI's private repositories, please contact a person who can add you to the Hayden AI organisation on GitHub.
 
 ### Changelog
 
