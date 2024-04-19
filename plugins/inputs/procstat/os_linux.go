@@ -80,7 +80,7 @@ func findByWindowsServices(_ []string) ([]processGroup, error) {
 	return nil, nil
 }
 
-func collectCachedReadWrite(proc Process) (r, w uint64, err error) {
+func collectTotalReadWrite(proc Process) (r, w uint64, err error) {
 	path := procfs.DefaultMountPoint
 	if hp := os.Getenv("HOST_PROC"); hp != "" {
 		path = hp
