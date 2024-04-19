@@ -62,7 +62,7 @@ func (ni *zabbix_item) Tags() map[string]string {
 		sort.Strings(v)
 		res[k] = strings.Join(v[:], ",")
 	}
-	
+
 	return res
 }
 
