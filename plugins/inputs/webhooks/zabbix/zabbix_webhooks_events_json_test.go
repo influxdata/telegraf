@@ -1,6 +1,6 @@
 package zabbix
 
-import(
+import (
 	"strings"
 )
 
@@ -31,9 +31,8 @@ func ItemValueFloatJSON() string {
 		"ns": 304061973,
 		"value": 1,
 		"type": 3
-	}`,"\n"," ",-1)
+	}`, "\n", " ", -1)
 }
-
 
 func ItemValueTextJSON() string {
 	return strings.Replace(`
@@ -62,5 +61,5 @@ func ItemValueTextJSON() string {
 		"ns": 304061973,
 		"value": "up",
 		"type": 4
-		}`,"\n"," ",-1)
+		}`, "\n", " ", -1)
 }

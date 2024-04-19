@@ -52,7 +52,7 @@ type Webhooks struct {
 	Papertrail  *papertrail.PapertrailWebhook   `toml:"papertrail"`
 	Particle    *particle.ParticleWebhook       `toml:"particle"`
 	Artifactory *artifactory.ArtifactoryWebhook `toml:"artifactory"`
-	Zabbix      *zabbix.ZabbixWebhook 	`toml:"zabbix"`
+	Zabbix      *zabbix.ZabbixWebhook           `toml:"zabbix"`
 
 	Log telegraf.Logger `toml:"-"`
 

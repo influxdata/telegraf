@@ -32,17 +32,16 @@ func TestFloatItem(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"item":				"ICMP: ICMP ping",
- 		"host_raw":       "10.248.65.148",
- 		"hostgroups":	"UPS,SNMP",
- 		"hostname":		"server1",
-		"tag_component": 	"health,network",
- 		"itemid":			"54988",
+		"item":          "ICMP: ICMP ping",
+		"host_raw":      "10.248.65.148",
+		"hostgroups":    "UPS,SNMP",
+		"hostname":      "server1",
+		"tag_component": "health,network",
+		"itemid":        "54988",
 	}
 
 	acc.AssertContainsTaggedFields(t, "zabbix_component_health_network", fields, tags)
 }
-
 
 func TestStringItem(t *testing.T) {
 	var acc testutil.Accumulator
@@ -57,22 +56,21 @@ func TestStringItem(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"item":				"ICMP: ICMP ping",
-		"host_raw":   "10.248.65.148",
-		"hostname":		"server1",
-		"hostgroups":	"UPS,SNMP",
-		"tag_component": 	"health,network",
-		"itemid":			"54988",
+		"item":          "ICMP: ICMP ping",
+		"host_raw":      "10.248.65.148",
+		"hostname":      "server1",
+		"hostgroups":    "UPS,SNMP",
+		"tag_component": "health,network",
+		"itemid":        "54988",
 	}
 
 	acc.AssertContainsTaggedFields(t, "zabbix_component_health_network", fields, tags)
 }
 
-
 func TestMultibleItems(t *testing.T) {
 	var acc testutil.Accumulator
 	zb := &ZabbixWebhook{Path: "/zabbix", acc: &acc}
-	resp := postWebhooks(zb, ItemValueFloatJSON() +"\n" + ItemValueTextJSON())
+	resp := postWebhooks(zb, ItemValueFloatJSON()+"\n"+ItemValueTextJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -82,12 +80,12 @@ func TestMultibleItems(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"item":				"ICMP: ICMP ping",
- 		"host_raw":       "10.248.65.148",
- 		"hostgroups":	"UPS,SNMP",
- 		"hostname":		"server1",
-		"tag_component": 	"health,network",
- 		"itemid":			"54988",
+		"item":          "ICMP: ICMP ping",
+		"host_raw":      "10.248.65.148",
+		"hostgroups":    "UPS,SNMP",
+		"hostname":      "server1",
+		"tag_component": "health,network",
+		"itemid":        "54988",
 	}
 
 	acc.AssertContainsTaggedFields(t, "zabbix_component_health_network", fields, tags)
@@ -101,7 +99,7 @@ func TestMultibleItems(t *testing.T) {
 func TestIgnoreTextItems(t *testing.T) {
 	var acc testutil.Accumulator
 	zb := &ZabbixWebhook{Path: "/zabbix", IgnoreText: true, acc: &acc}
-	resp := postWebhooks(zb, ItemValueFloatJSON() +"\n" + ItemValueTextJSON())
+	resp := postWebhooks(zb, ItemValueFloatJSON()+"\n"+ItemValueTextJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -111,12 +109,12 @@ func TestIgnoreTextItems(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"item":				"ICMP: ICMP ping",
- 		"host_raw":       "10.248.65.148",
- 		"hostgroups":	"UPS,SNMP",
- 		"hostname":		"server1",
-		"tag_component": 	"health,network",
- 		"itemid":			"54988",
+		"item":          "ICMP: ICMP ping",
+		"host_raw":      "10.248.65.148",
+		"hostgroups":    "UPS,SNMP",
+		"hostname":      "server1",
+		"tag_component": "health,network",
+		"itemid":        "54988",
 	}
 
 	acc.AssertContainsTaggedFields(t, "zabbix_component_health_network", fields, tags)

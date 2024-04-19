@@ -1,23 +1,23 @@
 package zabbix
 
 import (
-	"encoding/json"
 	"bufio"
-	"net/http"
+	"encoding/json"
 	"fmt"
-	"strings"
 	"github.com/gorilla/mux"
+	"net/http"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type ZabbixWebhook struct {
-	Path string
-	IgnoreText bool `toml:"ignore_text"`
+	Path           string
+	IgnoreText     bool   `toml:"ignore_text"`
 	CreateNameFrom string `toml:"create_name_from_tag"`
-	acc  telegraf.Accumulator
-	log  telegraf.Logger
+	acc            telegraf.Accumulator
+	log            telegraf.Logger
 	auth.BasicAuth
 }
 
@@ -32,21 +32,20 @@ func (zb *ZabbixWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	createNameFrom := "component"
-	if(zb.CreateNameFrom != "") {
+	if zb.CreateNameFrom != "" {
 		createNameFrom = zb.CreateNameFrom
 	}
-	
 
 	if !zb.Verify(r) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	
+
 	scanner := bufio.NewScanner(r.Body)
 	for scanner.Scan() {
-		var err error 
+		var err error
 		line := []byte(scanner.Text())
-		if(len(line) <= 10) {
+		if len(line) <= 10 {
 			continue
 		}
 		var item zabbix_item
@@ -56,15 +55,14 @@ func (zb *ZabbixWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("Unmarshal Item faild: %s", err.Error())
 			continue
 		}
-		if(!(item.Type == 0 || item.Type == 3) && zb.IgnoreText) {
+		if !(item.Type == 0 || item.Type == 3) && zb.IgnoreText {
 			continue
 		}
-		zb.acc.AddFields(strings.ToLower("zabbix_" + item.NameFromTag(createNameFrom)), item.Fields(), item.Tags(), item.Time())
+		zb.acc.AddFields(strings.ToLower("zabbix_"+item.NameFromTag(createNameFrom)), item.Fields(), item.Tags(), item.Time())
 
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, "{\"response\": \"success\"}")
 }
-
