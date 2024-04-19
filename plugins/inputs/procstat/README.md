@@ -104,7 +104,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #    # process_names = ['*']
   #    ## Recursion depth for determining children of the matched processes
   #    ## A negative value means all children with infinite depth
-  #    #recursion_depth = 0
+  #    # recursion_depth = 0
 ```
 
 ### Windows support
