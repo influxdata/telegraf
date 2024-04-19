@@ -1,0 +1,14 @@
+name: "PR target branch"
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+
+jobs:
+  check-target-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check target branch to be master
+        run: if [ ${{ github.base_ref }} != "master" ]; then
+          echo "Pull-request is not based on master but ${{ github.base_ref }}, please rebase"
+          exit 1
+        fi
