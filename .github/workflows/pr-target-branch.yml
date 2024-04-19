@@ -5,10 +5,10 @@ on:
 
 jobs:
   check-target-branch:
+    name: Check target branch to be master
     runs-on: ubuntu-latest
     steps:
-      - name: Check target branch to be master
-        run: if [ ${{ github.base_ref }} != "master" ]; then
-          echo "Pull-request is not based on master but ${{ github.base_ref }}, please rebase"
+        if: github.base_ref != 'master'
+        run: |
+          echo "Pull-request is not based on master, please rebase"
           exit 1
-        fi
