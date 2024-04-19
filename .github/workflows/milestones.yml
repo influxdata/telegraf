@@ -1,4 +1,4 @@
-name: milestones
+name: Milestones
 on:
   pull_request_target:
     types:
