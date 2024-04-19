@@ -437,7 +437,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	}
 
 	for key, value := range p.HTTPHeaders {
-		req.Header.Set(key, value)
+		if strings.EqualFold(key, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(key, value)
+		}
 	}
 
 	var err error
