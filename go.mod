@@ -200,7 +200,7 @@ require (
 	go.starlark.net v0.0.0-20231121155337-90ade8b19d09
 	go.step.sm/crypto v0.44.1
 	golang.org/x/crypto v0.21.0
-	golang.org/x/mod v0.16.0
+	golang.org/x/mod v0.17.0
 	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.6.0
