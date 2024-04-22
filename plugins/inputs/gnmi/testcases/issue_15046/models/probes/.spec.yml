@@ -1,0 +1,7 @@
+- name: openconfig-probes
+  docs:
+    - yang/probes/openconfig-probes-types.yang
+    - yang/probes/openconfig-probes.yang
+  build:
+    - yang/probes/openconfig-probes.yang
+  run-ci: true

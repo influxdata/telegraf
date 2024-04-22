@@ -1,0 +1,1329 @@
+module openconfig-interfaces {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/interfaces";
+
+  prefix "oc-if";
+
+  // import some basic types
+  import ietf-interfaces { prefix ietf-if; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-transport-types { prefix oc-opt-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Model for managing network interfaces and subinterfaces.  This
+    module also defines convenience types / groupings for other
+    models to create references to interfaces:
+
+      base-interface-ref (type) -  reference to a base interface
+      interface-ref (grouping) -  container for reference to a
+        interface + subinterface
+      interface-ref-state (grouping) - container for read-only
+        (opstate) reference to interface + subinterface
+
+    This model reuses data items defined in the IETF YANG model for
+    interfaces described by RFC 7223 with an alternate structure
+    (particularly for operational state data) and with
+    additional configuration items.
+
+    Portions of this code were derived from IETF RFC 7223.
+    Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "3.7.0";
+
+  revision "2023-11-06" {
+      description
+        "Clarify description for admin-status TESTING.";
+      reference
+        "3.7.0";
+  }
+
+  revision "2023-08-29" {
+      description
+        "Add augment for penalty-based additive-increase, exponential-decrease link damping algorithm.";
+      reference
+        "3.6.0";
+  }
+
+  revision "2023-07-14" {
+    description
+      "Move counters which apply to both interfaces and subinterfaces to
+      a common grouping.  Deprecate physical counters from subinterface";
+    reference "3.5.0";
+  }
+
+  revision "2023-02-06" {
+    description
+      "Add further specification to interface-ref type to
+       clarify that the interface and subinterface leaves
+       are how an interface is referenced, regardless of
+       context.";
+    reference "3.0.2";
+  }
+
+  revision "2022-10-25" {
+    description
+      "change loopback-mode to align with available modes";
+    reference "3.0.1";
+  }
+
+  revision "2021-04-06" {
+    description
+      "Add leaves for management and cpu interfaces";
+    reference "2.5.0";
+  }
+
+  revision "2019-11-19" {
+    description
+      "Update description of interface name.";
+    reference "2.4.3";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Remove redundant nanosecond units statements to reflect
+      universal definition of timeticks64 type.";
+    reference "2.4.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "2.4.1";
+  }
+
+  revision "2018-08-07" {
+    description
+      "Add leaf to indicate whether an interface is physical or
+      logical.";
+    reference "2.4.0";
+  }
+
+  revision "2018-07-02" {
+    description
+      "Add in-pkts and out-pkts in counters";
+    reference "2.3.2";
+  }
+
+  revision "2018-04-24" {
+    description
+      "Clarified behavior of last-change state leaf";
+    reference "2.3.1";
+  }
+
+  revision "2018-01-05" {
+    description
+      "Add logical loopback to interface.";
+    reference "2.3.0";
+  }
+
+  revision "2017-12-22" {
+    description
+      "Add IPv4 proxy ARP configuration.";
+    reference "2.2.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Added IPv6 router advertisement configuration.";
+    reference "2.1.0";
+  }
+
+  revision "2017-07-14" {
+    description
+      "Added Ethernet/IP state data; Add dhcp-client;
+      migrate to OpenConfig types modules; Removed or
+      renamed opstate values";
+    reference "2.0.0";
+  }
+
+  revision "2017-04-03" {
+    description
+      "Update copyright notice.";
+    reference "1.1.1";
+  }
+
+  revision "2016-12-22" {
+    description
+      "Fixes to Ethernet interfaces model";
+    reference "1.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // typedef statements
+
+  typedef base-interface-ref {
+    type leafref {
+      path "/oc-if:interfaces/oc-if:interface/oc-if:name";
+    }
+    description
+      "Reusable type for by-name reference to a base interface.
+      This type may be used in cases where ability to reference
+      a subinterface is not required.";
+  }
+
+  typedef interface-id {
+    type string;
+    description
+      "User-defined identifier for an interface, generally used to
+      name a interface reference.  The id can be arbitrary but a
+      useful convention is to use a combination of base interface
+      name and subinterface index.";
+  }
+
+  // grouping statements
+
+  grouping interface-ref-common {
+    description
+      "Reference leafrefs to interface / subinterface";
+
+    leaf interface {
+      type leafref {
+        path "/oc-if:interfaces/oc-if:interface/oc-if:name";
+      }
+      description
+        "Reference to a base interface.  If a reference to a
+        subinterface is required, this leaf must be specified
+        to indicate the base interface.";
+    }
+
+    leaf subinterface {
+      type leafref {
+        path "/oc-if:interfaces/" +
+          "oc-if:interface[oc-if:name=current()/../interface]/" +
+          "oc-if:subinterfaces/oc-if:subinterface/oc-if:index";
+      }
+      description
+        "Reference to a subinterface -- this requires the base
+        interface to be specified using the interface leaf in
+        this container.  If only a reference to a base interface
+        is requuired, this leaf should not be set.";
+    }
+  }
+
+  grouping interface-ref-state-container {
+    description
+      "Reusable opstate w/container for a reference to an
+      interface or subinterface";
+
+    container state {
+      config false;
+      description
+        "Operational state for interface-ref";
+
+      uses interface-ref-common;
+    }
+  }
+
+  grouping interface-ref {
+    description
+      "Reusable definition for a reference to an interface or
+      subinterface";
+
+    container interface-ref {
+      description
+        "Reference to an interface or subinterface. The interface
+        that is being referenced is uniquely referenced based on
+        the specified interface and subinterface leaves. In contexts
+        where a Layer 3 interface is to be referenced, both the
+        interface and subinterface leaves must be populated, as
+        Layer 3 configuration within the OpenConfig models is
+        associated with a subinterface. In the case where a
+        Layer 2 interface is to be referenced, only the
+        interface is specified.
+
+        The interface/subinterface leaf tuple must be used as
+        the means by which the interface is specified, regardless
+        of any other context information (e.g., key in a list).";
+
+      container config {
+        description
+          "Configured reference to interface / subinterface";
+        oc-ext:telemetry-on-change;
+
+        uses interface-ref-common;
+      }
+
+      uses interface-ref-state-container;
+    }
+  }
+
+  grouping interface-ref-state {
+    description
+      "Reusable opstate w/container for a reference to an
+      interface or subinterface";
+
+    container interface-ref {
+      description
+        "Reference to an interface or subinterface";
+
+      uses interface-ref-state-container;
+    }
+  }
+
+  grouping base-interface-ref-state {
+    description
+      "Reusable opstate w/container for a reference to a
+      base interface (no subinterface).";
+
+      container state {
+        config false;
+        description
+          "Operational state for base interface reference";
+
+        leaf interface {
+          type base-interface-ref;
+          description
+            "Reference to a base interface.";
+        }
+      }
+  }
+
+
+  grouping interface-common-config {
+    description
+      "Configuration data data nodes common to physical interfaces
+      and subinterfaces";
+
+    leaf description {
+      type string;
+      description
+        "A textual description of the interface.
+
+        A server implementation MAY map this leaf to the ifAlias
+        MIB object.  Such an implementation needs to use some
+        mechanism to handle the differences in size and characters
+        allowed between this leaf and ifAlias.  The definition of
+        such a mechanism is outside the scope of this document.
+
+        Since ifAlias is defined to be stored in non-volatile
+        storage, the MIB implementation MUST map ifAlias to the
+        value of 'description' in the persistently stored
+        datastore.
+
+        Specifically, if the device supports ':startup', when
+        ifAlias is read the device MUST return the value of
+        'description' in the 'startup' datastore, and when it is
+        written, it MUST be written to the 'running' and 'startup'
+        datastores.  Note that it is up to the implementation to
+
+        decide whether to modify this single leaf in 'startup' or
+        perform an implicit copy-config from 'running' to
+        'startup'.
+
+        If the device does not support ':startup', ifAlias MUST
+        be mapped to the 'description' leaf in the 'running'
+        datastore.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifAlias";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "This leaf contains the configured, desired state of the
+        interface.
+
+        Systems that implement the IF-MIB use the value of this
+        leaf in the 'running' datastore to set
+        IF-MIB.ifAdminStatus to 'up' or 'down' after an ifEntry
+        has been initialized, as described in RFC 2863.
+
+        Changes in this leaf in the 'running' datastore are
+        reflected in ifAdminStatus, but if ifAdminStatus is
+        changed over SNMP, this leaf is not affected.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifAdminStatus";
+    }
+
+  }
+
+  grouping interface-phys-config {
+    description
+      "Configuration data for physical interfaces";
+
+    leaf name {
+      type string;
+      description
+        "The name of the interface.
+
+        A device MAY restrict the allowed values for this leaf,
+        possibly depending on the type of the interface.
+        For system-controlled interfaces, this leaf is the
+        device-specific name of the interface.  The 'config false'
+        list interfaces/interface[name]/state contains the currently
+        existing interfaces on the device.
+
+        If a client tries to create configuration for a
+        system-controlled interface that is not present in the
+        corresponding state list, the server MAY reject
+        the request if the implementation does not support
+        pre-provisioning of interfaces or if the name refers to
+        an interface that can never exist in the system.  A
+        NETCONF server MUST reply with an rpc-error with the
+        error-tag 'invalid-value' in this case.
+
+        The IETF model in RFC 7223 provides YANG features for the
+        following (i.e., pre-provisioning and arbitrary-names),
+        however they are omitted here:
+
+          If the device supports pre-provisioning of interface
+          configuration, the 'pre-provisioning' feature is
+          advertised.
+
+          If the device allows arbitrarily named user-controlled
+          interfaces, the 'arbitrary-names' feature is advertised.
+
+        When a configured user-controlled interface is created by
+        the system, it is instantiated with the same name in the
+        /interfaces/interface[name]/state list.";
+    }
+
+    leaf type {
+      type identityref {
+        base ietf-if:interface-type;
+      }
+      mandatory true;
+      description
+        "The type of the interface.
+
+        When an interface entry is created, a server MAY
+        initialize the type leaf with a valid value, e.g., if it
+        is possible to derive the type from the name of the
+        interface.
+
+        If a client tries to set the type of an interface to a
+        value that can never be used by the system, e.g., if the
+        type is not supported or if the type does not match the
+        name of the interface, the server MUST reject the request.
+        A NETCONF server MUST reply with an rpc-error with the
+        error-tag 'invalid-value' in this case.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifType";
+    }
+
+    leaf mtu {
+      type uint16;
+      description
+        "Set the max transmission unit size in octets
+        for the physical interface.  If this is not set, the mtu is
+        set to the operational default -- e.g., 1514 bytes on an
+        Ethernet interface.";
+    }
+
+    leaf loopback-mode {
+      type oc-opt-types:loopback-mode-type;
+      description
+        "Sets the loopback type on the interface. Setting the
+        mode to something besides NONE activates the loopback in
+        the specified mode.";
+    }
+
+    uses interface-common-config;
+  }
+
+  grouping interface-phys-holdtime-config {
+    description
+      "Configuration data for interface hold-time settings --
+      applies to physical interfaces.";
+
+    leaf up {
+      type uint32;
+      units milliseconds;
+      default 0;
+      description
+        "Dampens advertisement when the interface
+        transitions from down to up.  A zero value means dampening
+        is turned off, i.e., immediate notification.";
+    }
+
+    leaf down {
+      type uint32;
+      units milliseconds;
+      default 0;
+      description
+        "Dampens advertisement when the interface transitions from
+        up to down.  A zero value means dampening is turned off,
+        i.e., immediate notification.";
+    }
+  }
+
+  grouping interface-phys-holdtime-state {
+    description
+      "Operational state data for interface hold-time.";
+  }
+
+  grouping interface-phys-holdtime-top {
+    description
+      "Top-level grouping for setting link transition
+      dampening on physical and other types of interfaces.";
+
+    container hold-time {
+      description
+        "Top-level container for hold-time settings to enable
+        dampening advertisements of interface transitions.";
+
+      container config {
+        description
+          "Configuration data for interface hold-time settings.";
+        oc-ext:telemetry-on-change;
+
+        uses interface-phys-holdtime-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for interface hold-time.";
+
+        uses interface-phys-holdtime-config;
+        uses interface-phys-holdtime-state;
+      }
+    }
+  }
+
+  grouping interface-link-damping-config {
+    description
+      "Configuration data for interface link damping settings.";
+
+    leaf max-suppress-time {
+      type uint32;
+      units milliseconds;
+      default 0;
+      description
+        "Maximum time an interface can remain damped since the last link down event no matter how unstable it has been prior to this period of stability. In a damped state, the interface’s state change will not be advertised.";
+    }
+
+    leaf decay-half-life {
+      type uint32;
+      units milliseconds;
+      default 0;
+        description
+          "The amount of time after which an interface’s penalty is decreased by half. Decay-half-time should not be more than max-suppress-time.";
+    }
+
+    leaf suppress-threshold {
+      type uint32;
+      default 0;
+        description
+          "The accumulated penalty that triggers the damping of an interface. A value of 0 indicates config is disabled.";
+    }
+
+    leaf reuse-threshold {
+      type uint32;
+      default 0;
+      description
+        "When the accumulated penalty decreases to this reuse threshold, the interface is not damped anymore. Interface state changes are advertised to applications. A value of 0 indicates config is disabled.";
+    }
+
+    leaf flap-penalty {
+      type uint32;
+      default 0;
+      description
+        "A penalty that each down event costs. A value of 0 indicates the config is disabled.";
+    }
+  }
+  grouping interface-link-damping-state {
+    description
+      "Operational state data for interface link damping settings.";
+  }
+  grouping link-damping-top {
+    description
+      "Top level grouping for link damping parameters.";
+
+    container penalty-based-aied {
+      description
+        "Top level container to suppress UP->DOWN link events using a penalty based additive-increase, exponential-decrease algorithm.";
+
+      container config {
+        description
+          "Configuration data for link damping settings.";
+          uses interface-link-damping-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for link damping settings.";
+        uses interface-link-damping-config;
+        uses interface-link-damping-state;
+      }
+    }
+  }
+
+  grouping interface-common-state {
+    description
+      "Operational state data (in addition to intended configuration)
+      at the global level for this interface";
+
+    oc-ext:operational;
+
+    leaf ifindex {
+      type uint32;
+      description
+        "System assigned number for each interface.  Corresponds to
+        ifIndex object in SNMP Interface MIB";
+      reference
+        "RFC 2863 - The Interfaces Group MIB";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf admin-status {
+      type enumeration {
+        enum UP {
+          description
+            "Ready to pass packets.";
+        }
+        enum DOWN {
+          description
+            "Not ready to pass packets and not in some test mode.";
+        }
+        enum TESTING {
+          description
+            "The interface should be treated as if in admin-down state for
+            control plane protocols.  In addition, while in TESTING state the
+            device should remove the interface from aggregate interfaces.
+            An interface transition to the TESTING state based on a qualification
+            workflow, or internal device triggered action - such as the gNOI Link
+            Qualification service";
+            reference
+              "gNOI Link Qualification Service
+               https://github.com/openconfig/gnoi/blob/main/packet_link_qualification/index.md";
+        }
+      }
+      //TODO:consider converting to an identity to have the
+      //flexibility to remove some values defined by RFC 7223 that
+      //are not used or not implemented consistently.
+      mandatory true;
+      description
+        "The desired state of the interface.  In RFC 7223 this leaf
+        has the same read semantics as ifAdminStatus.  Here, it
+        reflects the administrative state as set by enabling or
+        disabling the interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifAdminStatus";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf oper-status {
+      type enumeration {
+        enum UP {
+          value 1;
+          description
+            "Ready to pass packets.";
+        }
+        enum DOWN {
+          value 2;
+          description
+            "The interface does not pass any packets.";
+        }
+        enum TESTING {
+          value 3;
+          description
+            "In test mode.  No operational packets can
+             be passed.";
+        }
+        enum UNKNOWN {
+          value 4;
+          description
+            "Status cannot be determined for some reason.";
+        }
+        enum DORMANT {
+          value 5;
+          description
+            "Waiting for some external event.";
+        }
+        enum NOT_PRESENT {
+          value 6;
+          description
+            "Some component (typically hardware) is missing.";
+        }
+        enum LOWER_LAYER_DOWN {
+          value 7;
+          description
+            "Down due to state of lower-layer interface(s).";
+        }
+      }
+      //TODO:consider converting to an identity to have the
+      //flexibility to remove some values defined by RFC 7223 that
+      //are not used or not implemented consistently.
+      mandatory true;
+      description
+        "The current operational state of the interface.
+
+         This leaf has the same semantics as ifOperStatus.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifOperStatus";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf last-change {
+      type oc-types:timeticks64;
+      description
+        "This timestamp indicates the absolute time of the last
+        state change of the interface (e.g., up-to-down transition).
+        This is different than the SNMP ifLastChange object in the
+        standard interface MIB in that it is not relative to the
+        system boot time (i.e,. sysUpTime).
+
+        The value is the timestamp in nanoseconds relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf logical {
+      type boolean;
+      description
+        "When set to true, the interface is a logical interface
+        which does not have an associated physical port or
+        channel on the system.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf management {
+      type boolean;
+      description
+        "When set to true, the interface is a dedicated
+        management interface that is not connected to dataplane
+        interfaces.  It may be used to connect the system to an
+        out-of-band management network, for example.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf cpu {
+      type boolean;
+      description
+        "When set to true, the interface is for traffic
+        that is handled by the system CPU, sometimes also called the
+        control plane interface.  On systems that represent the CPU
+        interface as an Ethernet interface, for example, this leaf
+        should be used to distinguish the CPU interface from dataplane
+        interfaces.";
+      oc-ext:telemetry-on-change;
+    }
+  }
+
+  grouping interface-common-counters-state {
+    description
+      "Operational state representing interface counters and statistics
+      applicable to (physical) interfaces and (logical) subinterfaces.";
+
+    leaf in-octets {
+      type oc-yang:counter64;
+      description
+        "The total number of octets received on the interface,
+        including framing characters.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCInOctets.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf in-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets received on the interface,
+        including all unicast, multicast, broadcast and bad packets
+        etc.";
+      reference
+        "RFC 2819: Remote Network Monitoring Management Information Base.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf in-unicast-pkts {
+      type oc-yang:counter64;
+      description
+        "The number of packets, delivered by this sub-layer to a
+        higher (sub-)layer, that were not addressed to a
+        multicast or broadcast address at this sub-layer.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCInUcastPkts.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf in-broadcast-pkts {
+      type oc-yang:counter64;
+      description
+        "The number of packets, delivered by this sub-layer to a
+        higher (sub-)layer, that were addressed to a broadcast
+        address at this sub-layer.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCInBroadcastPkts.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf in-multicast-pkts {
+      type oc-yang:counter64;
+      description
+        "The number of packets, delivered by this sub-layer to a
+        higher (sub-)layer, that were addressed to a multicast
+        address at this sub-layer.  For a MAC-layer protocol,
+        this includes both Group and Functional addresses.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCInMulticastPkts.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf in-errors {
+      type oc-yang:counter64;
+      description
+        "For packet-oriented interfaces, the number of inbound
+        packets that contained errors preventing them from being
+        deliverable to a higher-layer protocol.  For character-
+        oriented or fixed-length interfaces, the number of
+        inbound transmission units that contained errors
+        preventing them from being deliverable to a higher-layer
+        protocol.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifInErrors.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf in-discards {
+      type oc-yang:counter64;
+      description
+        "The number of inbound packets that were chosen to be
+        discarded even though no errors had been detected to
+        prevent their being deliverable to a higher-layer
+        protocol.  One possible reason for discarding such a
+        packet could be to free up buffer space.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+
+
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifInDiscards.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-octets {
+      type oc-yang:counter64;
+      description
+        "The total number of octets transmitted out of the
+        interface, including framing characters.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCOutOctets.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets transmitted out of the
+        interface, including all unicast, multicast, broadcast,
+        and bad packets etc.";
+      reference
+        "RFC 2819: Remote Network Monitoring Management Information Base.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-unicast-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets that higher-level protocols
+        requested be transmitted, and that were not addressed
+        to a multicast or broadcast address at this sub-layer,
+        including those that were discarded or not sent.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCOutUcastPkts.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-broadcast-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets that higher-level protocols
+        requested be transmitted, and that were addressed to a
+        broadcast address at this sub-layer, including those
+        that were discarded or not sent.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCOutBroadcastPkts.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-multicast-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets that higher-level protocols
+        requested be transmitted, and that were addressed to a
+        multicast address at this sub-layer, including those
+        that were discarded or not sent.  For a MAC-layer
+        protocol, this includes both Group and Functional
+        addresses.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifHCOutMulticastPkts.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-discards {
+      type oc-yang:counter64;
+      description
+        "The number of outbound packets that were chosen to be
+        discarded even though no errors had been detected to
+        prevent their being transmitted.  One possible reason
+        for discarding such a packet could be to free up buffer
+        space.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifOutDiscards.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf out-errors {
+      type oc-yang:counter64;
+      description
+        "For packet-oriented interfaces, the number of outbound
+        packets that could not be transmitted because of errors.
+        For character-oriented or fixed-length interfaces, the
+        number of outbound transmission units that could not be
+        transmitted because of errors.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifOutErrors.
+        RFC 4293: Management Information Base for the
+        Internet Protocol (IP).";
+    }
+
+    leaf last-clear {
+      type oc-types:timeticks64;
+      description
+        "Timestamp of the last time the interface counters were
+        cleared.
+
+        The value is the timestamp in nanoseconds relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+      oc-ext:telemetry-on-change;
+    }
+  }
+
+  grouping interface-counters-state {
+    description
+      "Operational state representing interface counters
+      and statistics.";
+
+    oc-ext:operational;
+
+    leaf in-unknown-protos {
+      type oc-yang:counter64;
+      description
+        "For packet-oriented interfaces, the number of packets
+        received via the interface that were discarded because
+        of an unknown or unsupported protocol.  For
+        character-oriented or fixed-length interfaces that
+        support protocol multiplexing, the number of
+        transmission units received via the interface that were
+        discarded because of an unknown or unsupported protocol.
+        For any interface that does not support protocol
+        multiplexing, this counter is not present.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifInUnknownProtos";
+    }
+
+    leaf in-fcs-errors {
+      type oc-yang:counter64;
+      description
+        "Number of received packets which had errors in the
+        frame check sequence (FCS), i.e., framing errors.
+
+        Discontinuities in the value of this counter can occur
+        when the device is re-initialization as indicated by the
+        value of 'last-clear'.";
+    }
+
+    leaf carrier-transitions {
+      type oc-yang:counter64;
+      description
+        "Number of times the interface state has transitioned
+        between up and down since the time the device restarted
+        or the last-clear time, whichever is most recent.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf resets {
+      type oc-yang:counter64;
+      description
+        "Number of times the interface hardware has been reset.  The
+        triggers and effects of this event are hardware-specifc.";
+      oc-ext:telemetry-on-change;
+
+    }
+  }
+
+  grouping subinterfaces-counters-state {
+    description
+      "Operational state representing counters unique to subinterfaces";
+
+    oc-ext:operational;
+    leaf in-unknown-protos {
+      type oc-yang:counter64;
+      status deprecated;
+      description
+        "For packet-oriented interfaces, the number of packets
+        received via the interface that were discarded because
+        of an unknown or unsupported protocol.  For
+        character-oriented or fixed-length interfaces that
+        support protocol multiplexing, the number of
+        transmission units received via the interface that were
+        discarded because of an unknown or unsupported protocol.
+        For any interface that does not support protocol
+        multiplexing, this counter is not present.
+
+        Discontinuities in the value of this counter can occur
+        at re-initialization of the management system, and at
+        other times as indicated by the value of
+        'last-clear'.";
+      reference
+        "RFC 2863: The Interfaces Group MIB - ifInUnknownProtos";
+    }
+
+    leaf in-fcs-errors {
+      type oc-yang:counter64;
+      status deprecated;
+      description
+        "Number of received packets which had errors in the
+        frame check sequence (FCS), i.e., framing errors.
+
+        Discontinuities in the value of this counter can occur
+        when the device is re-initialization as indicated by the
+        value of 'last-clear'.";
+    }
+
+    leaf carrier-transitions {
+      type oc-yang:counter64;
+      status deprecated;
+      description
+        "Number of times the interface state has transitioned
+        between up and down since the time the device restarted
+        or the last-clear time, whichever is most recent.";
+      oc-ext:telemetry-on-change;
+    }
+
+  }
+
+  // data definition statements
+
+  grouping sub-unnumbered-config {
+    description
+      "Configuration data for unnumbered subinterfaces";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Indicates that the subinterface is unnumbered.  By default
+        the subinterface is numbered, i.e., expected to have an
+        IP address configuration.";
+    }
+  }
+
+  grouping sub-unnumbered-state {
+    description
+      "Operational state data unnumbered subinterfaces";
+  }
+
+  grouping sub-unnumbered-top {
+    description
+      "Top-level grouping unnumbered subinterfaces";
+
+    container unnumbered {
+      description
+        "Top-level container for setting unnumbered interfaces.
+        Includes reference the interface that provides the
+        address information";
+
+      container config {
+        description
+          "Configuration data for unnumbered interface";
+        oc-ext:telemetry-on-change;
+
+        uses sub-unnumbered-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for unnumbered interfaces";
+
+        uses sub-unnumbered-config;
+        uses sub-unnumbered-state;
+      }
+
+      uses oc-if:interface-ref;
+    }
+  }
+
+  grouping subinterfaces-config {
+    description
+      "Configuration data for subinterfaces";
+
+    leaf index {
+      type uint32;
+      default 0;
+      description
+        "The index of the subinterface, or logical interface number.
+        On systems with no support for subinterfaces, or not using
+        subinterfaces, this value should default to 0, i.e., the
+        default subinterface.";
+    }
+
+    uses interface-common-config;
+
+  }
+
+  grouping subinterfaces-state {
+    description
+      "Operational state data for subinterfaces";
+
+    oc-ext:operational;
+
+    leaf name {
+      type string;
+      description
+        "The system-assigned name for the sub-interface.  This MAY
+        be a combination of the base interface name and the
+        subinterface index, or some other convention used by the
+        system.";
+      oc-ext:telemetry-on-change;
+    }
+
+    uses interface-common-state;
+
+    container counters {
+      description
+        "A collection of interface specific statistics entitites which are
+        not common to subinterfaces.";
+
+      uses interface-common-counters-state;
+      uses subinterfaces-counters-state;
+     }
+  }
+
+  grouping subinterfaces-top {
+    description
+      "Subinterface data for logical interfaces associated with a
+      given interface";
+
+    container subinterfaces {
+      description
+        "Enclosing container for the list of subinterfaces associated
+        with a physical interface";
+
+      list subinterface {
+        key "index";
+
+        description
+          "The list of subinterfaces (logical interfaces) associated
+          with a physical interface";
+
+        leaf index {
+          type leafref {
+            path "../config/index";
+          }
+          description
+            "The index number of the subinterface -- used to address
+            the logical interface";
+        }
+
+        container config {
+          description
+            "Configurable items at the subinterface level";
+          oc-ext:telemetry-on-change;
+
+          uses subinterfaces-config;
+        }
+
+        container state {
+
+          config false;
+          description
+            "Operational state data for logical interfaces";
+
+          uses subinterfaces-config;
+          uses subinterfaces-state;
+        }
+      }
+    }
+  }
+
+  grouping interfaces-top {
+    description
+      "Top-level grouping for interface configuration and
+      operational state data";
+
+    container interfaces {
+      description
+        "Top level container for interfaces, including configuration
+        and state data.";
+
+
+      list interface {
+        key "name";
+
+        description
+          "The list of named interfaces on the device.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "References the name of the interface";
+            //TODO: need to consider whether this should actually
+            //reference the name in the state subtree, which
+            //presumably would be the system-assigned name, or the
+            //configured name.  Points to the config/name now
+            //because of YANG 1.0 limitation that the list
+            //key must have the same "config" as the list, and
+            //also can't point to a non-config node.
+        }
+
+        container config {
+          description
+            "Configurable items at the global, physical interface
+            level";
+          oc-ext:telemetry-on-change;
+
+          uses interface-phys-config;
+        }
+
+        container state {
+
+          config false;
+          description
+            "Operational state data at the global interface level";
+
+          uses interface-phys-config;
+          uses interface-common-state;
+
+          container counters {
+            description
+              "A collection of interface specific statistics entitites which are
+              not common to subinterfaces.";
+
+            uses interface-common-counters-state;
+            uses interface-counters-state;
+          }
+        }
+
+        uses interface-phys-holdtime-top {
+          when "./penalty-based-aied/config/suppress-threshold = 0
+          or ./penalty-based-aied/config/reuse-threshold = 0
+          or ./penalty-based-aied/config/flap-penalty = 0" {
+          description
+            "Hold time and penalty-based-aied are two algorithms to suppress
+            link transitions and must be mutually exclusive.";
+          }
+        }
+        uses link-damping-top;
+        uses subinterfaces-top;
+      }
+    }
+  }
+
+  uses interfaces-top;
+
+}

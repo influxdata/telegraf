@@ -1,0 +1,318 @@
+module openconfig-if-8021x {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/interfaces/8021x";
+
+  prefix "oc-1x";
+
+  // import some basic types
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-if-ethernet { prefix oc-eth; }
+  import openconfig-vlan { prefix oc-vlan; }
+  import openconfig-vlan-types { prefix oc-vlan-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Model for managing 8021X. Augments the OpenConfig models for
+    wired interfaces and wireless SSIDs for configuration and state.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2020-01-28" {
+    description
+      "Initial draft of model, including only the most common 802.1X
+      configuration and state use-cases.";
+    reference "0.0.1";
+  }
+
+  // grouping statements
+
+  grouping vlan-map-config {
+    description
+      "Configuration data for mapping from VLAN name to VLAN id.";
+
+    leaf vlan-name {
+     type string;
+     mandatory true;
+     description
+       "The VLAN name to be mapped to the VLAN id.";
+    }
+
+    leaf id {
+     type oc-vlan-types:vlan-id;
+     mandatory true;
+     description
+       "The VLAN id to be mapped to the VLAN name.";
+    }
+  }
+
+  grouping dot1x-port-config {
+    description
+      "802.1X port-based configuration.";
+
+    leaf authenticate-port {
+      type boolean;
+      description
+        "Enable 802.1X port control on an interface.";
+    }
+
+    leaf host-mode {
+      type enumeration {
+        enum SINGLE_HOST {
+          description
+            "Only single supplicant can communicate through the port.
+            If the supplicant logs off or the port state is changed,
+            the port becomes unauthenticated.";
+        }
+        enum MULTI_HOST {
+          description
+            "Multiple hosts can communicate over a single port.
+            Only the first supplicant is authenticated while
+            subsequent hosts have network access without having to
+            authenticate.";
+        }
+        enum MULTI_DOMAIN {
+          description
+            "Allows for authentication of multiple clients
+            individually on one authenticator port.";
+        }
+      }
+      description
+        "Allow for single or multiple hosts to communicate through
+        an 802.1X controlled port.";
+    }
+
+    leaf reauthenticate-interval {
+      type uint16;
+      units seconds;
+      description
+        "Enable periodic re-authentication of the device connected
+        to this port. Setting a value of 0 disabled reauthentication
+        on this port.";
+    }
+
+    leaf retransmit-interval {
+      type uint16;
+      units seconds;
+      description
+        "How long the interface waits for a response from an
+        EAPoL Start before restarting 802.1X authentication on the
+        port.";
+    }
+
+    leaf supplicant-timeout {
+      type uint16;
+      units seconds;
+      description
+        "Time to wait for a response from the supplicant before
+        restarting the 802.1X authentication process.";
+    }
+
+    leaf max-requests {
+      type uint16;
+      description
+        "Maximum number of times an EAPoL request packet is retransmitted
+        to the supplicant before the authentication session fails.";
+    }
+
+    leaf server-fail-vlan {
+      type union {
+        type string;
+        type oc-vlan-types:vlan-id;
+      }
+      description
+        "If RADIUS is unresponsive, the supplicant shall be placed in
+        this VLAN. If this VLAN is configured as a VLAN name, the
+        vlan-map must be populated for the Authenticator to map this
+        VLAN name to a VLAN id.";
+    }
+
+    leaf auth-fail-vlan {
+      type union {
+        type string;
+        type oc-vlan-types:vlan-id;
+      }
+      description
+        "Upon failure to authenticate, the port is set to this VLAN.
+        If this VLAN is a configured as a VLAN name, the vlan-map must
+        be populated for the Authenticator to map this VLAN name to a
+        VLAN id.";
+    }
+  }
+
+  grouping vlan-map-top {
+    description
+      "Top-level grouping for vlan-map configuration and Operational
+      state data.";
+
+    container dot1x-vlan-map {
+      description
+        "Enclosing container for mapping a VLAN name to VLAN id";
+
+      list vlan-name {
+        key "vlan-name";
+        description
+         "A list of mappings from VLAN name to VLAN id.
+          Entries in this list are utilized for DVA using a VLAN
+          name; eg when RADIUS returns a VLAN name as the
+          tunnel-private-group-id.";
+        reference
+         "RFC 2868: RADIUS Attributes for Tunnel Protocol Support";
+
+        leaf vlan-name {
+          type leafref  {
+            path "../config/vlan-name";
+          }
+          description "References the configured VLAN name";
+        }
+
+        container config {
+          description "Configuration data for each configured VLAN
+          name in the VLAN ID to VLAN name mapping";
+
+          uses vlan-map-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for each VLAN id
+            to VLAN name mapping.";
+
+          uses vlan-map-config;
+        }
+      }
+    }
+  }
+
+  grouping dot1x-sessions-top {
+    description
+      "Top-level grouping for 802.1X sessions.";
+    container authenticated-sessions {
+        description
+          "Top level container for authenticated sessions state data.";
+
+      list authenticated-session {
+        key "mac";
+        config false;
+        description
+          "The list of authenticated sessions on this device.";
+
+        leaf mac {
+          type leafref {
+            path "../state/mac";
+          }
+          description
+            "Device MAC address.";
+        }
+
+        container state {
+          config false;
+          description
+            "Top level state container for 802.1X.";
+
+          leaf mac {
+            type oc-yang:mac-address;
+            description
+              "Device MAC address.";
+          }
+          uses dot1x-sessions-state;
+        }
+      }
+    }
+  }
+
+  grouping dot1x-sessions-state {
+    description
+      "Grouping for 802.1X sessions State data.";
+
+    leaf session-id {
+      type string;
+      description
+        "The locally-significant session id which this authenticated
+        session applies to. Typically used for RADIUS accounting or
+        other system level telemetry.";
+      }
+
+    leaf status {
+      type enumeration {
+        enum AUTHENTICATED {
+          description
+            "The session has succesfully completed one of the authentication
+            methods allowed on the port.";
+        }
+        enum AUTHENTICATING {
+          description
+            "The session is in the process of authenticating.";
+        }
+        enum FAILED_AUTHENTICATION {
+          description
+            "An authentication has been attempted for this session,
+            and has failed.";
+        }
+        enum SUPPLICANT_TIMEOUT {
+          description
+            "An authentication has been attempted for this session,
+            however the supplicant has not responded. This is likely
+            due to the attached devices lack of 802.1X support.";
+        }
+      }
+      description
+        "The status of the 802.1X session for a device.";
+    }
+  }
+
+  grouping dot1x-top {
+    description
+      "Top-level grouping for 802.1X configuration and operational
+      state data.";
+
+    container dot1x {
+      description
+        "Top level container for 802.1X configuration and
+        state data.";
+
+      container config {
+        description
+          "Top level configuration container for 802.1X.";
+
+        uses dot1x-port-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Top level state container for 802.1X.";
+
+        uses dot1x-port-config;
+      }
+    }
+    uses dot1x-sessions-top;
+  }
+
+  // Augment statements
+  augment "/oc-if:interfaces/oc-if:interface/oc-eth:ethernet" {
+    description
+      "Adds 802.1X settings to individual Ethernet interfaces";
+
+    uses dot1x-top;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-eth:ethernet/" +
+          "oc-vlan:switched-vlan" {
+    description
+      "Adds vlan-map to switched-vlans.";
+
+    uses vlan-map-top;
+  }
+}

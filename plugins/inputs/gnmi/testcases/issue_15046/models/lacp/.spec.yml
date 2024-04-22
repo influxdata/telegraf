@@ -1,0 +1,6 @@
+- name: openconfig-lacp
+  docs:
+    - yang/lacp/openconfig-lacp.yang
+  build:
+    - yang/lacp/openconfig-lacp.yang
+  run-ci: true

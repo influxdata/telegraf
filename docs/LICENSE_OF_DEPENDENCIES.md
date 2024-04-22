@@ -292,6 +292,7 @@ following works:
 - github.com/olivere/elastic [MIT License](https://github.com/olivere/elastic/blob/release-branch.v7/LICENSE)
 - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/LICENSE)
 - github.com/openconfig/gnmi [Apache License 2.0](https://github.com/openconfig/gnmi/blob/master/LICENSE)
+- github.com/openconfig/goyang [Apache License 2.0](https://github.com/openconfig/goyang/blob/master/LICENSE)
 - github.com/opencontainers/go-digest [Apache License 2.0](https://github.com/opencontainers/go-digest/blob/master/LICENSE)
 - github.com/opencontainers/image-spec [Apache License 2.0](https://github.com/opencontainers/image-spec/blob/master/LICENSE)
 - github.com/opensearch-project/opensearch-go [Apache License 2.0](https://github.com/opensearch-project/opensearch-go/blob/main/LICENSE.txt)

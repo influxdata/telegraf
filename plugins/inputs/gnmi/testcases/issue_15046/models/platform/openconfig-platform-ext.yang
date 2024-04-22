@@ -1,0 +1,82 @@
+module openconfig-platform-ext {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform/extension";
+
+  prefix "oc-platform-ext";
+
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines optional extensions to the OpenConfig
+    platform model.";
+
+  oc-ext:openconfig-version "0.1.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2018-01-18" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+
+  grouping platform-component-ext-state {
+    description
+      "Operational state data for platform components";
+
+    leaf entity-id {
+      type uint32;
+      description
+        "A unique numeric identifier assigned by the system to the
+        component. This identifier may be used to represent the
+        corresponding SNMP Entity MIB identifier.";
+    }
+  }
+
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-platform:components/oc-platform:component/" +
+    "oc-platform:state" {
+    description
+      "Adding extension state data to components";
+
+    uses platform-component-ext-state;
+  }
+
+  // rpc statements
+
+  // notification statements
+
+}
+

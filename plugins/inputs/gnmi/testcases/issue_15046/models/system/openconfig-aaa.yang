@@ -1,0 +1,847 @@
+module openconfig-aaa {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/aaa";
+
+  prefix "oc-aaa";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-aaa-types { prefix oc-aaa-types; }
+
+  include openconfig-aaa-tacacs;
+  include openconfig-aaa-radius;
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    related to authorization, authentication, and accounting (AAA)
+    management.
+
+    Portions of this model reuse data definitions or structure from
+    RFC 7317 - A YANG Data Model for System Management";
+
+  oc-ext:openconfig-version "1.0.0";
+
+  revision "2022-07-29" {
+    description
+      "Update user role to be mandatory.";
+      reference "1.0.0";
+  }
+
+  revision "2020-07-30" {
+    description
+      "Add secret-key-hashed for TACACS and RADIUS.";
+    reference "0.5.0";
+  }
+
+  revision "2019-10-28" {
+    description
+      "Fix bug in when statement path";
+    reference "0.4.3";
+  }
+
+  revision "2019-08-20" {
+    description
+      "Fix identity prefixes and when statement paths";
+    reference "0.4.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.1";
+  }
+
+  revision "2018-04-12" {
+    description
+      "Add when conditions, correct identities";
+    reference "0.4.0";
+  }
+
+  revision "2017-09-18" {
+    description
+      "Updated to use OpenConfig types modules";
+    reference "0.3.0";
+  }
+
+  revision "2017-07-06" {
+    description
+      "Move to oc-inet types, add IETF attribution, add RADIUS
+      counters, changed password leaf names to indicate hashed";
+    reference "0.2.0";
+  }
+
+  revision "2017-01-29" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  // grouping statements
+  grouping aaa-servergroup-common-config {
+    description
+      "Configuration data for AAA server groups";
+
+    leaf name {
+      type string;
+      description
+        "Name for the server group";
+    }
+
+    leaf type {
+      type identityref {
+        base oc-aaa-types:AAA_SERVER_TYPE;
+      }
+      description
+        "AAA server type -- all servers in the group must be of this
+        type";
+    }
+  }
+
+  grouping aaa-servergroup-common-state {
+    description
+      "Operational state data for AAA server groups";
+
+    //TODO: add list of group members as opstate
+  }
+
+  grouping aaa-servergroup-common-top {
+    description
+      "Top-level grouping for AAA server groups";
+
+    container server-groups {
+      description
+        "Enclosing container for AAA server groups";
+
+      list server-group {
+        key "name";
+        description
+          "List of AAA server groups.  All servers in a group
+          must have the same type as indicated by the server
+          type.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to configured name of the server group";
+        }
+
+        container config {
+          description
+            "Configuration data for each server group";
+
+          uses aaa-servergroup-common-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for each server group";
+
+          uses aaa-servergroup-common-config;
+          uses aaa-servergroup-common-state;
+        }
+
+        uses aaa-server-top;
+      }
+    }
+  }
+
+  grouping aaa-server-config {
+    description
+      "Common configuration data for AAA servers";
+
+    leaf name {
+      type string;
+      description
+        "Name assigned to the server";
+    }
+
+
+    leaf address {
+      type oc-inet:ip-address;
+      description "Address of the authentication server";
+    }
+
+    leaf timeout {
+      type uint16;
+      units seconds;
+      description
+        "Set the timeout in seconds on responses from the AAA
+        server";
+    }
+  }
+
+  grouping aaa-server-state {
+    description
+      "Common operational state data for AAA servers";
+
+    leaf connection-opens {
+      type oc-yang:counter64;
+      description
+        "Number of new connection requests sent to the server, e.g.
+        socket open";
+    }
+
+    leaf connection-closes {
+      type oc-yang:counter64;
+      description
+        "Number of connection close requests sent to the server, e.g.
+        socket close";
+    }
+
+    leaf connection-aborts {
+      type oc-yang:counter64;
+      description
+        "Number of aborted connections to the server.  These do
+        not include connections that are close gracefully.";
+    }
+
+    leaf connection-failures {
+      type oc-yang:counter64;
+      description
+        "Number of connection failures to the server";
+    }
+
+    leaf connection-timeouts {
+      type oc-yang:counter64;
+      description
+        "Number of connection timeouts to the server";
+    }
+
+    leaf messages-sent {
+      type oc-yang:counter64;
+      description
+        "Number of messages sent to the server";
+    }
+
+    leaf messages-received {
+      type oc-yang:counter64;
+      description
+        "Number of messages received by the server";
+    }
+
+    leaf errors-received {
+      type oc-yang:counter64;
+      description
+        "Number of error messages received from the server";
+    }
+
+  }
+
+  grouping aaa-server-top {
+    description
+      "Top-level grouping for list of AAA servers";
+
+    container servers {
+      description
+        "Enclosing container the list of servers";
+
+      list server {
+        key "address";
+        description
+          "List of AAA servers";
+
+        leaf address {
+          type leafref {
+            path "../config/address";
+          }
+          description
+            "Reference to the configured address of the AAA server";
+        }
+
+        container config {
+          description
+            "Configuration data ";
+
+          uses aaa-server-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data ";
+
+          uses aaa-server-config;
+          uses aaa-server-state;
+        }
+
+        uses aaa-tacacs-server-top {
+          when "../../config/type = 'oc-aaa:TACACS'";
+        }
+
+        uses aaa-radius-server-top {
+          when "../../config/type = 'oc-aaa:RADIUS'";
+        }
+      }
+    }
+  }
+
+  grouping aaa-admin-config {
+    description
+      "Configuration data for the system built-in
+      administrator / root user account";
+
+    leaf admin-password {
+      type string;
+      oc-ext:openconfig-hashed-value;
+      description
+        "The admin/root password, supplied as a cleartext string.
+        The system should hash and only store the password as a
+        hashed value.";
+    }
+
+    leaf admin-password-hashed {
+      type oc-aaa-types:crypt-password-type;
+      description
+        "The admin/root password, supplied as a hashed value
+        using the notation described in the definition of the
+        crypt-password-type.";
+    }
+  }
+
+  grouping aaa-admin-state {
+    description
+      "Operational state data for the root user";
+
+    leaf admin-username {
+      type string;
+      description
+        "Name of the administrator user account, e.g., admin, root,
+        etc.";
+    }
+  }
+
+  grouping aaa-authentication-admin-top {
+    description
+      "Top-level grouping for root user configuration and state
+      data";
+
+    container admin-user {
+      description
+        "Top-level container for the system root or admin user
+        configuration and operational state";
+
+      container config {
+        description
+          "Configuration data for the root user account";
+
+        uses aaa-admin-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for the root user account";
+
+        uses aaa-admin-config;
+        uses aaa-admin-state;
+      }
+    }
+  }
+  grouping aaa-authentication-user-config {
+    description
+      "Configuration data for local users";
+
+    leaf username {
+      type string;
+      description
+        "Assigned username for this user";
+    }
+
+    leaf password {
+      type string;
+      oc-ext:openconfig-hashed-value;
+      description
+        "The user password, supplied as cleartext.  The system
+        must hash the value and only store the hashed value.";
+    }
+
+    leaf password-hashed {
+      type oc-aaa-types:crypt-password-type;
+      description
+        "The user password, supplied as a hashed value
+        using the notation described in the definition of the
+        crypt-password-type.";
+    }
+
+    leaf ssh-key {
+      type string;
+      description
+        "SSH public key for the user (RSA or DSA)";
+    }
+
+    leaf role {
+      type union {
+        type string;
+        type identityref {
+          base oc-aaa-types:SYSTEM_DEFINED_ROLES;
+        }
+      }
+      mandatory true;
+      description
+        "Role assigned to the user.  The role must be supplied
+        as a role defined by the SYSTEM_DEFINED_ROLES
+        identity or a string that matches a user defined role.";
+    }
+  }
+
+  grouping aaa-authentication-user-state {
+    description
+      "Operational state data for local users";
+  }
+
+  grouping aaa-authentication-user-top {
+    description
+      "Top-level grouping for local users";
+
+    container users {
+      description
+        "Enclosing container list of local users";
+
+      list user {
+        key "username";
+        description
+          "List of local users on the system";
+
+        leaf username {
+          type leafref {
+            path "../config/username";
+          }
+          description
+            "References the configured username for the user";
+        }
+
+        container config {
+          description
+            "Configuration data for local users";
+
+          uses aaa-authentication-user-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for local users";
+
+          uses aaa-authentication-user-config;
+          uses aaa-authentication-user-state;
+        }
+      }
+
+    }
+  }
+
+  grouping aaa-accounting-methods-common {
+    description
+      "Common definitions for accounting methods";
+
+    leaf-list accounting-method {
+      type union {
+        type identityref {
+          base oc-aaa-types:AAA_METHOD_TYPE;
+        }
+        type string;
+        //TODO:  in YANG 1.1 this should be converted to a leafref to
+        //point to the server group name.
+      }
+      ordered-by user;
+      description
+        "An ordered list of methods used for AAA accounting for this
+        event type.  The method is defined by the destination for
+        accounting data, which may be specified as the group of
+        all TACACS+/RADIUS servers, a defined server group, or
+        the local system.";
+    }
+  }
+
+
+  grouping aaa-accounting-events-config {
+    description
+      "Configuration data for AAA accounting events";
+
+    leaf event-type {
+      type identityref {
+        base oc-aaa-types:AAA_ACCOUNTING_EVENT_TYPE;
+      }
+      description
+        "The type of activity to record at the AAA accounting
+        server";
+    }
+
+    leaf record {
+      type enumeration {
+        enum START_STOP {
+          description
+            "Send START record to the accounting server at the
+            beginning of the activity, and STOP record at the
+            end of the activity.";
+        }
+        enum STOP {
+          description
+            "Send STOP record to the accounting server when the
+            user activity completes";
+        }
+      }
+      description
+        "Type of record to send to the accounting server for this
+        activity type";
+    }
+  }
+
+  grouping aaa-accounting-events-state {
+    description
+      "Operational state data for accounting events";
+  }
+
+  grouping aaa-accounting-events-top {
+    description
+      "Top-level grouping for accounting events";
+
+    container events {
+      description
+        "Enclosing container for defining handling of events
+        for accounting";
+
+      list event {
+        key "event-type";
+        description
+          "List of events subject to accounting";
+
+        leaf event-type {
+          type leafref {
+            path "../config/event-type";
+          }
+          description
+            "Reference to the event-type being logged at the
+            accounting server";
+        }
+
+        container config {
+          description
+            "Configuration data for accounting events";
+
+          uses aaa-accounting-events-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for accounting events";
+
+          uses aaa-accounting-events-config;
+          uses aaa-accounting-events-state;
+        }
+      }
+    }
+  }
+
+  grouping aaa-accounting-config {
+    description
+      "Configuration data for event accounting";
+
+    uses aaa-accounting-methods-common;
+
+  }
+
+  grouping aaa-accounting-state {
+    description
+      "Operational state data for event accounting services";
+  }
+
+  grouping aaa-accounting-top {
+    description
+      "Top-level grouping for user activity accounting";
+
+    container accounting {
+      description
+        "Top-level container for AAA accounting";
+
+      container config {
+        description
+          "Configuration data for user activity accounting.";
+
+        uses aaa-accounting-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for user accounting.";
+
+        uses aaa-accounting-config;
+        uses aaa-accounting-state;
+      }
+
+      uses aaa-accounting-events-top;
+
+    }
+  }
+
+  grouping aaa-authorization-methods-config {
+    description
+      "Common definitions for authorization methods for global
+      and per-event type";
+
+    leaf-list authorization-method {
+      type union {
+        type identityref {
+          base oc-aaa-types:AAA_METHOD_TYPE;
+        }
+        type string;
+      }
+      ordered-by user;
+      description
+        "Ordered list of methods for authorizing commands.  The first
+        method that provides a response (positive or negative) should
+        be used.  The list may contain a well-defined method such
+        as the set of all TACACS or RADIUS servers, or the name of
+        a defined AAA server group.  The system must validate
+        that the named server group exists.";
+    }
+  }
+
+  grouping aaa-authorization-events-config {
+    description
+      "Configuration data for AAA authorization events";
+
+    leaf event-type {
+      type identityref {
+        base oc-aaa-types:AAA_AUTHORIZATION_EVENT_TYPE;
+      }
+      description
+        "The type of event to record at the AAA authorization
+        server";
+    }
+  }
+
+  grouping aaa-authorization-events-state {
+    description
+      "Operational state data for AAA authorization events";
+  }
+
+  grouping aaa-authorization-events-top {
+    description
+      "Top-level grouping for authorization events";
+
+    container events {
+      description
+        "Enclosing container for the set of events subject
+        to authorization";
+
+      list event {
+        key "event-type";
+        description
+          "List of events subject to AAA authorization";
+
+        leaf event-type {
+          type leafref {
+            path "../config/event-type";
+          }
+          description
+            "Reference to the event-type list key";
+        }
+
+        container config {
+          description
+            "Configuration data for each authorized event";
+
+          uses aaa-authorization-events-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for each authorized activity";
+
+          uses aaa-authorization-events-config;
+          uses aaa-authorization-events-state;
+        }
+      }
+    }
+  }
+
+  grouping aaa-authorization-config {
+    description
+      "Configuration data for AAA authorization";
+
+    uses aaa-authorization-methods-config;
+  }
+
+  grouping aaa-authorization-state {
+    description
+      "Operational state data for AAA authorization";
+  }
+
+  grouping aaa-authorization-top {
+    description
+      "Top-level grouping for AAA authorization";
+
+    container authorization {
+      description
+        "Top-level container for AAA authorization configuration
+        and operational state data";
+
+      container config {
+        description
+          "Configuration data for authorization based on AAA
+          methods";
+
+        uses aaa-authorization-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for authorization based on AAA";
+
+        uses aaa-authorization-config;
+        uses aaa-authorization-state;
+      }
+
+      uses aaa-authorization-events-top;
+
+    }
+  }
+
+  grouping aaa-authentication-config {
+    description
+      "Configuration data for global authentication";
+
+    leaf-list authentication-method {
+      type union {
+        type identityref {
+          base oc-aaa-types:AAA_METHOD_TYPE;
+        }
+        type string;
+        //TODO: string should be a leafref to a defined
+        //server group.  this will be possible in YANG 1.1
+        //type leafref {
+          //path "/aaa/server-groups/server-group/config/name";
+        //}
+      }
+      ordered-by user;
+      description
+        "Ordered list of authentication methods for users.  This
+        can be either a reference to a server group, or a well-
+        defined designation in the AAA_METHOD_TYPE identity.  If
+        authentication fails with one method, the next defined
+        method is tried -- failure of all methods results in the
+        user being denied access.";
+    }
+  }
+
+  grouping aaa-authentication-state {
+    description
+      "Operational state data for global authentication";
+  }
+
+  grouping aaa-authentication-top {
+    description
+      "Top-level grouping for top-level authentication";
+
+    container authentication {
+      description
+        "Top-level container for global authentication data";
+
+      container config {
+        description
+          "Configuration data for global authentication services";
+
+        uses aaa-authentication-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for global authentication
+          services";
+
+        uses aaa-authentication-config;
+        uses aaa-authentication-state;
+      }
+
+      uses aaa-authentication-admin-top;
+      uses aaa-authentication-user-top;
+    }
+  }
+
+  grouping aaa-config {
+    description
+      "Configuration data for top level AAA";
+  }
+
+  grouping aaa-state {
+    description
+      "Operational state data for top level AAA";
+  }
+
+  grouping aaa-top {
+    description
+      "Top-level grouping for AAA services";
+
+    container aaa {
+      description
+        "Top-level container for AAA services";
+
+      container config {
+        description
+          "Configuration data for top level AAA services";
+
+        uses aaa-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for top level AAA services ";
+
+        uses aaa-config;
+        uses aaa-state;
+      }
+
+      uses aaa-authentication-top;
+      uses aaa-authorization-top;
+      uses aaa-accounting-top;
+      uses aaa-servergroup-common-top;
+
+    }
+  }
+
+
+
+  // data definition statements
+
+
+}

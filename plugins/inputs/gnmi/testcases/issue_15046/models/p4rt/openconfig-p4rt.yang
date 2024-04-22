@@ -1,0 +1,177 @@
+module openconfig-p4rt {
+  yang-version "1";
+
+  prefix "oc-p4rt";
+
+  namespace "http://openconfig.net/yang/p4rt";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-system-grpc { prefix oc-grpc; }
+
+  organization
+    "OpenConfig Working Group";
+
+  contact
+    "www.openconfig.net";
+
+  description
+    "This module defines a set of extensions that provide P4Runtime (P4RT)
+    specific extensions to the OpenConfig data models. Specifically, these
+    parameters for configuration and state provide extensions that control
+    the P4RT service, or allow it to be used alongside other OpenConfig
+    data models.
+
+    The P4RT protocol specification is linked from https://p4.org/specs/
+    under the P4Runtime heading.";
+
+  oc-ext:openconfig-version "1.0.0";
+
+  revision 2023-12-13 {
+    description
+      "Remove unused chassis id";
+    reference "1.0.0";
+  }
+
+  revision 2022-08-19 {
+    description
+      "Add chassis grouping and chassis-id";
+    reference "0.4.0";
+  }
+
+  revision 2022-06-08 {
+    description
+      "Add valid range for interface identifier and update node
+      descriptions per P4 Runtime Specification.";
+    reference "0.3.0";
+  }
+
+  revision 2021-07-20 {
+    description
+      "Add identity for P4RT as a gRPC service.";
+    reference "0.2.0";
+  }
+
+  revision 2021-04-06 {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity P4RT {
+    base "oc-grpc:GRPC_SERVICE";
+    description
+      "P4RT: P4 Runtime (P4RT) Service.";
+  }
+
+  // grouping statements
+
+  grouping p4rt-interface-config {
+    description
+      "Interface-specific configuration that is applicable to devices that
+      are running the P4RT service.";
+
+    leaf id {
+      type uint32 {
+        range 1..4294967039;
+      }
+      description
+        "The numeric identifier (SDN Port) used by the controller to
+        address the interface. This ID is assigned by an
+        external-to-the-device entity (e.g., an SDN management system)
+        to establish an externally deterministic numeric reference for
+        the interface. The programming entity must ensure that the ID is
+        unique within the required context.
+
+        Note that this identifier is used only when a numeric reference
+        to the interface is required, it does not replace the unique
+        name assigned to the interface.
+
+        Ranges:
+
+        0x00000000: Unspecified/Invalid
+        0x00000001: Minimum Port Value
+        0xFFFFFEFF: Maximum Port Value
+
+        Reserved:   0xFFFFFFF0 - 0xFFFFFFFF
+        0xFFFFFFFA: Recirculate
+        0xFFFFFFFD: CPU
+        ";
+      reference
+        "P4 Runtime Specification v1.3.0
+        https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-translation-of-port-numbers";
+    }
+  }
+
+  grouping p4rt-ic-config {
+    description
+      "Integrated-circuit specific configuration that is applicable to devices
+      that are running the P4RT service.";
+
+    leaf node-id {
+      type uint64;
+      description
+        "The numeric ID (device_id) used by the controller to address
+        the integrated circuit, which may be referred to as a 'device',
+        'node' or 'target' by the P4RT specification.
+
+        Each switching ASIC (i.e., node) is addressed by the external
+        entity based on its numeric identifier.
+
+        The node ID is specified in addition to the string identifier
+        assigned to the integrated circuit within the
+        /components/component list.";
+    }
+    reference
+      "P4 Runtime Specification v1.3.0
+      https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-write-rpc";
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:config" {
+    description
+      "Add interface-specific intended configuration for P4RT.";
+
+    uses p4rt-interface-config;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:state" {
+    description
+      "Add interface-specific applied configuration for P4RT.";
+
+    uses p4rt-interface-config;
+  }
+
+  augment "/oc-platform:components/oc-platform:component/" +
+          "oc-platform:integrated-circuit/oc-platform:config" {
+    description
+      "Add integrated circuit specific intended configuration that is required
+      for P4RT.";
+
+    uses p4rt-ic-config;
+  }
+
+  augment "/oc-platform:components/oc-platform:component/" +
+          "oc-platform:integrated-circuit/oc-platform:state" {
+    description
+      "Add integrated circuit specific operational state that is required
+      for P4RT.";
+
+    uses p4rt-ic-config;
+  }
+
+}
+
+  // rpc statements
+
+  // notification statements

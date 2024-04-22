@@ -1,0 +1,237 @@
+module openconfig-alarms {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/alarms";
+
+  prefix "oc-alarms";
+
+  // import some basic types
+  import openconfig-alarm-types { prefix oc-alarm-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-platform { prefix oc-platform; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines operational state data related to alarms
+    that the device is reporting.
+
+    This model reuses some data items defined in the draft IETF
+    YANG Alarm Module:
+    https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02
+
+    Portions of this code were derived from the draft IETF YANG Alarm
+    Module. Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "0.3.2";
+
+  revision "2019-07-09" {
+    description
+      "Clarify relative base for leaves using timeticks64.";
+    reference "0.3.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2018-01-16" {
+      description
+        "Moved alarm identities into separate types module";
+      reference "0.3.0";
+  }
+
+  revision "2018-01-10" {
+    description
+      "Make alarms list read only";
+    reference "0.2.0";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+
+  grouping alarm-state {
+    description
+      "Operational state data for device alarms";
+
+    leaf id {
+      type string;
+      description
+        "Unique ID for the alarm -- this will not be a
+        configurable parameter on many implementations";
+    }
+
+    leaf resource {
+      type string;
+      description
+        "The item that is under alarm within the device. The
+        resource may be a reference to an item which is
+        defined elsewhere in the model. For example, it
+        may be a platform/component, interfaces/interface,
+        terminal-device/logical-channels/channel, etc. In this
+        case the system should match the name of the referenced
+        item exactly. The referenced item could alternatively be
+        the path of the item within the model.";
+      reference
+        "IETF YANG Alarm Module: Draft - typedef resource
+        https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02";
+    }
+
+    leaf text {
+      type string;
+      description
+        "The string used to inform operators about the alarm. This
+         MUST contain enough information for an operator to be able
+         to understand the problem. If this string contains structure,
+         this format should be clearly documented for programs to be
+         able to parse that information";
+      reference
+        "IETF YANG Alarm Module: Draft - typedef alarm-text
+        https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02";
+    }
+
+    leaf time-created {
+      type oc-types:timeticks64;
+      description
+        "The time at which the alarm was raised by the system.
+        This value is expressed relative to the Unix Epoch.";
+    }
+
+    leaf severity {
+      type identityref {
+        base oc-alarm-types:OPENCONFIG_ALARM_SEVERITY;
+      }
+      description
+        "The severity level indicating the criticality and impact
+        of the alarm";
+      reference
+        "IETF YANG Alarm Module: Draft - typedef severity
+        https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02";
+    }
+
+    leaf type-id {
+      type union {
+        type string;
+        type identityref {
+          base oc-alarm-types:OPENCONFIG_ALARM_TYPE_ID;
+        }
+      }
+      description
+        "The abbreviated name of the alarm, for example LOS,
+        EQPT, or OTS. Also referred to in different systems as
+        condition type, alarm identifier, or alarm mnemonic. It
+        is recommended to use the OPENCONFIG_ALARM_TYPE_ID
+        identities where possible and only use the string type
+        when the desired identityref is not yet defined";
+      reference
+        "IETF YANG Alarm Module: Draft - typedef alarm-type-id
+        https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02";
+    }
+  }
+
+  grouping alarm-config {
+    description
+      "Configuration data for device alarms";
+  }
+
+  grouping alarms-top {
+    description
+      "Top-level grouping for device alarms";
+
+    container alarms {
+      description
+        "Top-level container for device alarms";
+
+      config false;
+
+      list alarm {
+        key "id";
+        description
+          "List of alarms, keyed by a unique id";
+
+        leaf id {
+          type leafref {
+            path "../state/id";
+          }
+
+          description
+            "References the unique alarm id";
+        }
+
+        container config {
+          description
+            "Configuration data for each alarm";
+
+          uses alarm-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for a device alarm";
+
+          uses alarm-config;
+          uses alarm-state;
+        }
+      }
+    }
+  }
+
+
+  // augments
+
+  augment "/oc-platform:components/oc-platform:component/oc-platform:state" {
+    description
+      "Adds specific alarms related to a component.";
+
+    leaf equipment-failure {
+      type boolean;
+      default "false";
+      description
+        "If true, the hardware indicates that the component's physical equipment
+        has failed";
+    }
+
+    leaf equipment-mismatch {
+      type boolean;
+      default "false";
+      description
+        "If true, the hardware indicates that the component inserted into the
+        affected component's physical location is of a different type than what
+        is configured";
+    }
+  }
+
+}

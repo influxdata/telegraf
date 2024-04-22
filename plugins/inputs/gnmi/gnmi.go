@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/yangmodel"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -62,11 +63,13 @@ type GNMI struct {
 	EnableTLS            bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
 	KeepaliveTime        config.Duration   `toml:"keepalive_time"`
 	KeepaliveTimeout     config.Duration   `toml:"keepalive_timeout"`
+	YangModelPaths       []string          `toml:"yang_model_paths"`
 	Log                  telegraf.Logger   `toml:"-"`
 	internaltls.ClientConfig
 
 	// Internal state
 	internalAliases map[*pathInfo]string
+	decoder         *yangmodel.Decoder
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 }
@@ -219,6 +222,15 @@ func (c *GNMI) Init() error {
 		return err
 	}
 
+	// Load the YANG models if specified by the user
+	if len(c.YangModelPaths) > 0 {
+		decoder, err := yangmodel.NewDecoder(c.YangModelPaths...)
+		if err != nil {
+			return fmt.Errorf("creating YANG model decoder failed: %w", err)
+		}
+		c.decoder = decoder
+	}
+
 	return nil
 }
 
@@ -275,6 +287,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				trimSlash:           c.TrimFieldNames,
 				tagPathPrefix:       c.PrefixTagKeyWithPath,
 				guessPathStrategy:   c.GuessPathStrategy,
+				decoder:             c.decoder,
 				log:                 c.Log,
 				ClientParameters: keepalive.ClientParameters{
 					Time:                time.Duration(c.KeepaliveTime),

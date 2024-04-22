@@ -1,0 +1,124 @@
+module openconfig-telemetry-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/telemetry-types";
+
+  prefix "oc-telemetry-types";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines type and identities used by the OpenConfig
+    telemetry model.";
+
+  oc-ext:openconfig-version "0.4.2";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes";
+    reference "0.4.1";
+  }
+
+  revision "2017-02-20" {
+    description
+      "Fixes for YANG 1.0 compliance, add types module";
+    reference "0.4.0";
+  }
+
+  revision "2016-04-05" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  identity DATA_ENCODING_METHOD {
+    description
+      "Base identity for supported encoding for configuration and
+      operational state data";
+  }
+
+  identity ENC_XML {
+    base DATA_ENCODING_METHOD;
+    description
+      "XML encoding";
+  }
+
+  identity ENC_JSON_IETF {
+    base DATA_ENCODING_METHOD;
+    description
+      "JSON encoded based on IETF draft standard";
+    reference
+      "draft-ietf-netmod-yang-json";
+  }
+
+  identity ENC_PROTO3 {
+    base DATA_ENCODING_METHOD;
+    description
+      "Protocol buffers v3";
+    reference
+      "https://developers.google.com/protocol-buffers/docs/overview";
+  }
+
+  identity STREAM_PROTOCOL {
+    description "Base identity for a telemetry stream protocol";
+  }
+
+  identity STREAM_SSH {
+    base "STREAM_PROTOCOL";
+    description
+      "Telemetry stream is carried over a SSH connection";
+  }
+
+  identity STREAM_GRPC {
+    base "STREAM_PROTOCOL";
+    description
+      "Telemetry stream is carried over via the gRPC framework";
+  }
+
+  identity STREAM_JSON_RPC {
+    base "STREAM_PROTOCOL";
+      description
+        "Telemetry stream is carried via the JSON-RPC framework";
+  }
+
+  identity STREAM_THRIFT_RPC {
+    base "STREAM_PROTOCOL";
+      description
+        "Telemetry stream is carried via the Apache Thrift framework";
+  }
+
+  identity STREAM_WEBSOCKET_RPC {
+    base "STREAM_PROTOCOL";
+      description
+        "Telemetry stream is carried by the WebSocket framework";
+  }
+
+
+  // typedef statements
+
+
+
+}

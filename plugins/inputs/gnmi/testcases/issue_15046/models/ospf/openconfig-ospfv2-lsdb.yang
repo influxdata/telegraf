@@ -1,0 +1,2434 @@
+submodule openconfig-ospfv2-lsdb {
+
+  belongs-to openconfig-ospfv2 {
+    prefix "oc-ospfv2";
+  }
+
+  // import some basic types
+  import ietf-yang-types { prefix "yang"; }
+  import ietf-inet-types { prefix "inet"; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-ospf-types { prefix "oc-ospf-types"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "An OpenConfig model for the Open Shortest Path First (OSPF)
+    version 2 link-state database (LSDB)";
+
+  oc-ext:openconfig-version "0.5.1";
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "0.5.1";
+  }
+
+  revision "2023-08-25" {
+    description
+      "Add leaf metric to lsdb-summary-lsa-state.";
+    reference "0.5.0";
+}
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "0.4.3";
+  }
+
+  revision "2023-07-05" {
+    description
+      "Fix typo in experimental-te leaf description.";
+    reference "0.4.2";
+  }
+
+  revision "2023-03-06" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.4.1";
+  }
+
+  revision "2022-02-10" {
+    description
+      "Fix spelling error in retransmission-queue-length leaf.";
+    reference "0.4.0";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add prefix to qualify when statements.";
+    reference "0.3.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Revert path changes in when statements in LSDB model";
+    reference "0.2.2";
+  }
+
+  revision "2019-11-05" {
+    description
+      "Fix paths in when statements in LSDB model";
+    reference "0.2.1";
+  }
+
+  revision "2019-07-09" {
+    description
+      "Normalise all timeticks64 to be expressed in nanoseconds.";
+    reference "0.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.3";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Bug fixes in when statements in lsdb";
+    reference "0.1.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "0.1.1";
+  }
+
+  revision "2017-02-28"{
+    description
+      "Initial public release of OSPFv2";
+    reference "0.1.0";
+  }
+
+  revision "2016-06-24" {
+    description
+      "Initial revision";
+    reference "0.0.1";
+  }
+
+  grouping ospfv2-lsdb-common-prefix-properties {
+    description
+      "Common properties used in the LSDB that relate to IPv4 prefixes";
+
+    leaf prefix-length {
+      type uint8 {
+        range "0..32";
+      }
+      description
+        "The length of the IPv4 prefix contained in the Extended Prefix LSA";
+    }
+
+    leaf address-family {
+      // TODO: should this be an identity?
+      type enumeration {
+        enum IPV4_UNICAST {
+          value 0;
+          description
+            "The prefix contained within the Extended Prefix LSA is an IPv4
+            unicast prefix";
+        }
+      }
+      description
+        "The address family of the prefix contained in the Extended Prefix
+        LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-common-link-specification {
+    description
+      "Generic attributes used to identify links within OSPFv2";
+
+    leaf link-id {
+      type yang:dotted-quad;
+      description
+        "The identifier for the link specified. The value of the link
+        identifier is dependent upon the type of the LSA. The value is
+        specified to be, per sub-type:
+          1) Neighbouring router's router ID.
+          2) IP address of DR.
+          3) IP network address.
+          4) Neighbouring router router's ID.";
+    }
+
+    leaf link-data {
+      type union {
+        type yang:dotted-quad;
+        type uint32;
+      }
+      description
+        "The data associated with the link type. The value is
+        dependent upon the subtype of the LSA. When the connection is
+        to a stub network it represents the mask; for p2p connections
+        that are unnumbered it represents the ifIndex value of the
+        router's interface; for all other connections it represents
+        the local system's IP address";
+    }
+
+  }
+
+  grouping ospfv2-lsdb-common-unknown-tlv {
+    description
+      "A generic specification of a TLV to be used when the
+      value cannot be decoded by the local system";
+
+    leaf type {
+      type uint16;
+      description
+        "The type value of the unknown TLV";
+    }
+
+    leaf length {
+      type uint16;
+      description
+        "The length value of the unknown TLV";
+    }
+
+    leaf value {
+      type binary;
+      description
+        "The value portion of the unknwon TLV";
+    }
+  }
+
+  grouping ospfv2-lsdb-common-unknown-tlv-structure {
+    description
+      "A generic specification of an unknown TLV";
+
+    container unknown-tlv {
+      description
+        "An unknown TLV within the context. Unknown TLVs are
+        defined to be the set of TLVs that are not modelled
+        within the OpenConfig model, or are unknown to the
+        local system such that it cannot decode their value.";
+
+      container state {
+        description
+          "Contents of an unknown TLV within the LSA";
+        uses ospfv2-lsdb-common-unknown-tlv;
+      }
+    }
+  }
+
+  grouping ospfv2-lsdb-common-unknown-subtlv-structure {
+    description
+      "A generic specification of an unknown TLV";
+
+    container unknown-subtlv {
+      description
+        "An unknown SubTLV within the context. Unknown Sub-TLV
+        are defined to be the set of SubTLVs that are not modelled
+        by the OpenConfig schema, or are unknown to the local system
+        such that it cannot decode their value.";
+
+      container state {
+        description
+          "Contents of an unknown TLV within the LSA";
+        uses ospfv2-lsdb-common-unknown-tlv;
+      }
+    }
+  }
+
+  grouping ospfv2-lsdb-common-tos-metric {
+    description
+      "Common LSDB LSA parameters for type of service and metric";
+
+    leaf tos {
+      type uint8;
+      description
+        "OSPF encoding of the type of service referred to by this
+        LSA. Encoding for OSPF TOS are described in RFC2328.";
+    }
+
+    leaf metric {
+      type oc-ospf-types:ospf-metric;
+      description
+        "The metric value to be used for the TOS specified. This value
+        represents the cost of use of the link for the specific type
+        of service.";
+    }
+  }
+
+  grouping ospfv2-lsdb-common-sr-sid-spec {
+    description
+      "Re-usable specification of a segment routing SID";
+
+    leaf sid-type {
+      type oc-ospf-types:sr-sid-type;
+      description
+        "The type of the value contained within the sub-TLV";
+    }
+
+    leaf sid-value {
+      type uint32;
+      description
+        "The value of the binding included within the sub-TLV. The type of
+        this binding is indicated by the type leaf.";
+    }
+  }
+
+  grouping ospfv2-lsdb-area-state {
+    description
+      "Per-area operational state parameters for an OSPFv2 area";
+
+    leaf identifier {
+      type oc-ospf-types:ospf-area-identifier;
+      description
+        "An identifier for the area, expressed as a dotted quad or
+        an unsigned 32-bit integer";
+    }
+  }
+
+  grouping ospfv2-lsdb-area-lsa-type-state {
+    description
+      "Per-LSA type operational state parameters for an OSPFv2 area";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:OSPF_LSA_TYPE";
+      }
+      description
+        "The type of LSA being described. The type of the LSA is
+        expressed as a canonical name.";
+    }
+  }
+
+  grouping ospfv2-lsdb-area-lsa-state {
+    description
+      "Generic parameters of an OSPFv2 LSA";
+
+    leaf link-state-id {
+      type yang:dotted-quad;
+      description
+        "The Link State ID for the specified LSA type. The exact
+        defined value of the Link State ID is dependent on the LSA
+        type.";
+    }
+
+    leaf advertising-router {
+      type yang:dotted-quad;
+      description
+        "The router ID of the router that originated the LSA";
+    }
+
+    leaf sequence-number {
+      type int32;
+      description
+        "A signed 32-bit integer used to detect old and duplicate
+        LSAs. The greater the sequence number the more recent the
+        LSA.";
+    }
+
+    leaf checksum {
+      type uint16;
+      description
+        "The checksum of the complete contents of the LSA excluding
+        the age field.";
+    }
+
+    leaf age {
+      type uint16;
+      units seconds;
+      description
+        "The time since the LSA's generation in seconds";
+    }
+  }
+
+  grouping ospfv2-lsdb-router-lsa-structure {
+    description
+      "Structural grouping for Router LSA contents within the LSDB";
+
+    container router-lsa {
+      description
+        "Contents of the router LSA";
+
+      container state {
+        description
+          "State parameters of the router LSA";
+        uses ospfv2-lsdb-router-lsa-state;
+      }
+
+      uses ospfv2-lsdb-generic-lsa-tos-metric-structure;
+    }
+  }
+
+  grouping ospfv2-lsdb-generic-lsa-tos-metric-structure {
+    description
+      "Grouping including a generic TOS/metric structure for an
+      LSA";
+
+    container types-of-service {
+      description
+        "Breakdown of LSA contents specifying multiple
+        TOS values";
+
+      list type-of-service {
+        key "tos";
+        description
+          "Per-type of service parameters for the LSA";
+
+        leaf tos {
+          type leafref {
+            path "../state/tos";
+          }
+          description
+            "Reference to the type of service identifier which is
+            specified in the LSA";
+        }
+
+        container state {
+          description
+            "Per-TOS parameters for the LSA";
+
+          uses ospfv2-lsdb-generic-lsa-tos-metric-state;
+        }
+      }
+    }
+  }
+
+  grouping ospfv2-lsdb-network-lsa-structure {
+    description
+      "Structural grouping for Network LSA contents within the LSDB";
+
+    container network-lsa {
+      description
+        "Contents of the network LSA";
+
+      container state {
+        description
+          "State parameters of the network LSA";
+        uses ospfv2-lsdb-network-lsa-state;
+      }
+    }
+  }
+
+  grouping ospfv2-lsdb-summary-lsa-structure {
+    description
+      "Structural grouping for the Summary LSA contents within the
+      LSDB";
+
+    container summary-lsa {
+      description
+        "Contents of the summary LSA";
+
+      container state {
+        description
+          "State parameters of the summary LSA";
+        uses ospfv2-lsdb-summary-lsa-state;
+      }
+
+      uses ospfv2-lsdb-generic-lsa-tos-metric-structure;
+    }
+  }
+
+  grouping ospfv2-lsdb-asexternal-lsa-structure {
+    description
+      "Structural grouping for the AS External LSA contents within
+      the LSDB";
+
+    container as-external-lsa {
+      description
+        "Contents of the AS External LSA";
+
+      container state {
+        description
+          "State parameters for the AS external LSA";
+        uses ospfv2-lsdb-asexternal-lsa-state;
+      }
+
+      container types-of-service {
+        description
+          "Breakdown of External LSA contents specifying multiple
+          TOS values";
+
+        list type-of-service {
+          key "tos";
+          description
+            "Per-type of service parameters for the AS External LSA";
+
+          leaf tos {
+            type leafref {
+              path "../state/tos";
+            }
+            description
+              "Reference to the type of service identifier which is
+              specified in the AS External LSA";
+          }
+
+          container state {
+            description
+              "Per-TOS parameters for the LSA";
+
+            uses ospfv2-lsdb-asexternal-tos-state;
+          }
+        }
+      }
+
+    }
+  }
+
+  grouping ospfv2-lsdb-nssa-external-lsa-structure {
+    description
+      "Structural grouping for the NSSA External LSA contents within
+      the LSDB";
+
+    container nssa-external-lsa {
+      description
+        "Contents of the NSSA External LSA";
+
+      container state {
+        description
+          "State parameters for the AS external LSA";
+        // Type 7 LSAs are are a super-set of Type 5 LSAs so we simply
+        // include the Type 5
+        uses ospfv2-lsdb-asexternal-lsa-state;
+        uses ospfv2-lsdb-nssa-external-lsa-state;
+      }
+
+      container types-of-service {
+        description
+          "Breakdown of the NSSA External LSA contents specifying multiple
+          TOS values";
+
+        list type-of-service {
+          key "tos";
+          description
+            "Per-type of service parameters for the NSSA external LSA";
+
+          leaf tos {
+            type leafref {
+              path "../state/tos";
+            }
+            description
+              "Reference to the type of services identifier which is specified
+              in the NSSA External LSA";
+          }
+
+          container state {
+            description
+              "Per-TOS parameters for the LSA";
+            uses ospfv2-lsdb-asexternal-tos-state;
+          }
+        }
+      }
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-lsa-structure {
+    description
+      "Structural grouping for Opaque LSA contents within the LSDB";
+
+    container opaque-lsa {
+      description
+        "Contents of the opaque LSA";
+
+      container state {
+        description
+          "State parameters for the opaque LSA";
+        uses ospfv2-lsdb-opaque-lsa-state;
+      }
+
+      container traffic-engineering {
+        when "../state/type = 'oc-ospf-types:TRAFFIC_ENGINEERING'" {
+          description
+            "Include the traffic-engineering information when
+            the Opaque LSA being described is a Traffic Engineering
+            LSA";
+        }
+        description
+          "Contents of the Traffic Engineering Opaque LSA";
+
+        container tlvs {
+          description
+            "The TLVs contained in the TE Opaque LSA";
+          list tlv {
+            // this is an unkeyed list
+            description
+              "The Type-Length-Value tuples included in the TE LSA";
+
+            container state {
+              description
+                "The contents of the TLV tuple within the TE LSA";
+              uses ospfv2-lsdb-opaque-lsa-te-tlv-state;
+            }
+
+            uses ospfv2-lsdb-common-unknown-tlv-structure;
+
+            container router-address {
+              when "../state/type = 'oc-ospf-types:TE_ROUTER_ADDRESS'" {
+                description
+                  "Include the router address container only when the type
+                  of the TLV is Router Address";
+              }
+
+              description
+                "Parameters included in the Router Address TLV";
+
+              container state {
+                description
+                  "State parameters of the router address TLV";
+                uses ospfv2-lsdb-opaque-te-router-address-state;
+              }
+            }
+
+            container link {
+              when "../state/type = 'oc-ospf-types:TE_ROUTER_LINK'" {
+                description
+                  "Include the link container only when the type of the
+                  TLV describes a traffic engineering link";
+              }
+
+              description
+                "Parameters included in the Link TLV";
+              container sub-tlvs {
+                description
+                  "Sub-TLVs included in the Link TLV";
+
+                list sub-tlv {
+                  // unkeyed list
+                  description
+                    "The Sub-TLVs included within the Traffic Engineering
+                    LSA's sub-TLV";
+
+                  container state {
+                    description
+                      "State parameters of the Link Sub-TLV";
+
+                    uses ospfv2-lsdb-opaque-te-link-state;
+                  }
+
+                  uses ospfv2-lsdb-common-unknown-subtlv-structure;
+
+                  container unreserved-bandwidths {
+                    description
+                      "The unreserved link bandwidths for the Traffic
+                      Engineering LSA - utilised when the sub-TLV type
+                      indicates that the sub-TLV describes unreserved
+                      bandwidth";
+
+                    list unreserved-bandwidth {
+                      key "priority";
+
+                      description
+                        "The unreserved bandwidth at each priority level";
+
+                      leaf priority {
+                        type leafref {
+                          path "../state/priority";
+                        }
+                        description
+                          "A reference to the priority level being described";
+                      }
+
+                      container state {
+                        description
+                          "State parameters relating to the unreserved
+                          bandwidth of the link being described";
+                        uses ospfv2-lsdb-opaque-te-link-unreserved-bw-state;
+                      }
+                    }
+                  }
+
+                  container administrative-groups {
+                    description
+                      "The administrative groups that are set for the
+                      Traffic Engineering LSA - utilised when the sub-TLV type
+                      indicates that the sub-TLV describes administrative
+                      groups";
+
+                    list admin-group {
+                      key "bit-index";
+
+                      description
+                        "The administrative group described within the
+                        sub-TLV";
+
+                      leaf bit-index {
+                        type leafref {
+                          path "../state/bit-index";
+                        }
+                        description
+                          "A reference to the bit index being described";
+                      }
+
+                      container state {
+                        description
+                          "State parameters relating to the administrative
+                          groups being described for the link";
+                        uses ospfv2-lsdb-opaque-te-link-admin-group-state;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            container node-attribute {
+              when "../state/type = 'oc-ospf-types:TE_NODE_ATTRIBUTE'" {
+                description
+                  "Include the node-attribute container only when the type of
+                  the TLV describes a node attribute";
+              }
+
+              description
+                "Parameters included in the Node Attribute TLV";
+
+              container sub-tlvs {
+                description
+                  "Sub-TLVs of the Node Attribute TLV of the Traffic
+                  Engineering LSA";
+
+                list sub-tlv {
+                  // unkeyed list
+                  description
+                    "List of the Sub-TLVs contained within the Node Attribute
+                    TLV";
+
+                  container state {
+                    description
+                      "State parameters of the Node Attribute TLV sub-TLV";
+                    uses ospfv2-lsdb-opaque-te-node-attribute-state;
+                  }
+
+                  uses ospfv2-lsdb-common-unknown-subtlv-structure;
+                }
+              }
+            }
+
+            // A set of TLVs are omitted here - based on operational
+            // requirements, these are:
+            // * link-local
+            // * ipv6-address (OSPFv3 only)
+            // * optical-node-property
+          }
+        }
+      } // traffic-engineering
+
+      container grace-lsa {
+        when "../state/type = 'oc-ospf-types:GRACE_LSA'" {
+          description
+            "Include the grace-lsa container when the opaque LSA is specified
+            to be of that type.";
+        }
+
+        description
+          "The Grace LSA is utilised when a remote system is undergoing
+          graceful restart";
+
+        container tlvs {
+          description
+            "TLVs of the Grace LSA";
+
+          list tlv {
+            description
+              "TLV entry in the Grace LSA, advertised by a system undergoing
+              graceful restart";
+
+            // unkeyed list
+            container state {
+              description
+                "Per-TLV state parameters of the Grace LSA";
+              uses ospfv2-lsdb-opaque-grace-state;
+            }
+            uses ospfv2-lsdb-common-unknown-tlv-structure;
+          }
+        }
+      } // grace LSA
+
+      container router-information {
+        when "../state/type = 'oc-ospf-types:ROUTER_INFORMATION_LSA'" {
+          description
+            "Include the router-information container when the opaque LSA
+            type is specified to be an RI LSA";
+        }
+
+        description
+          "The router information LSA is utilised to advertise capabilities
+          of a system to other systems who receive the LSA";
+
+        container tlvs {
+          description
+            "The TLVs included within the Router Information LSA.";
+
+          list tlv {
+            description
+              "TLV entry in the Router Information LSA";
+
+            // unkeyed list
+            container state {
+              description
+                "Per-TLV state parameters of the RI LSA";
+              uses ospfv2-lsdb-opaque-ri-state;
+            }
+
+            uses ospfv2-lsdb-common-unknown-tlv-structure;
+
+            container informational-capabilities {
+              when "../state/type = 'oc-ospf-types:RI_INFORMATIONAL_CAPABILITIES'" {
+                description
+                  "Include the informational capabilities specification when
+                  the TLV of the RI LSA is specified to be of this type";
+              }
+
+              description
+                "Information related to the capabilities of the advertising
+                router within the scope that the opaque RI LSA is being
+                advertised";
+
+              container state {
+                description
+                  "State parameters of the informational capabilitis of the
+                  RI LSA";
+                uses ospfv2-lsdb-opaque-ri-informational-state;
+              }
+            }
+
+            container node-administrative-tags {
+              when "../state/type = 'oc-ospf-types:RI_NODE_ADMIN_TAG'" {
+                description
+                  "Include the node administrative tags specification when
+                  the TLV of the RI LSA is specified to be of this type";
+              }
+
+              description
+                "Per-node administrative tags associated with the local system
+                specified by the operator";
+
+              container state {
+                description
+                  "State parameters of the node administrative tags advertised
+                  in the RI LSA";
+                uses ospfv2-lsdb-opaque-ri-admintag-state;
+              }
+            }
+
+            container segment-routing-algorithm {
+              when "../state/type = 'oc-ospf-types:RI_SR_ALGORITHM'" {
+                description
+                  "Include the segment routing algorithm specific parameters when
+                  the TLV of the RI LSA is specified to be of this type";
+              }
+
+              description
+                "The algorithms supported for Segment Routing by the local system";
+
+              container state {
+                description
+                  "State parameters of the Segment Routing algorithm advertised in
+                  the RI LSA";
+                uses ospfv2-lsdb-opaque-ri-sralgo-state;
+              }
+            }
+
+            container segment-routing-sid-label-range {
+              when "../state/type = 'oc-ospf-types:RI_SR_SID_LABEL_RANGE'" {
+                description
+                  "Include the segment routing SID/Label range TLV specific state when
+                  the TLV of the RI LSA is specified to be of this type";
+              }
+
+              description
+                "The Segment Identifier (SID) or label ranges that are supported by
+                the local system for Segment Routing";
+
+              container tlvs {
+                description
+                  "Sub-TLVs of the SID/Label range TLV of the RI LSA";
+
+                list tlv {
+                  // unkeyed list
+                  description
+                    "Sub-TLVs of the SID/Label range TLV";
+
+                  uses ospfv2-lsdb-common-unknown-tlv-structure;
+
+                  container state {
+                    description
+                      "State parameters of the sub-TLVs of the SR/Label range TLV";
+                    uses ospfv2-lsdb-opaque-ri-srrange-tlv-state;
+                  }
+
+                  container sid-label {
+                    description
+                      "Sub-TLV used to advertise the SID or label associated with the
+                      subset of the SRGB being advertised";
+
+                    container state {
+                      description
+                        "State parameters of the SID/Label sub-TLV of the SR/Label
+                        range TLV of the RI LSA";
+                      uses ospfv2-lsdb-opaque-ri-srrange-sid-label-tlv-state;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } // router-information
+
+      container extended-prefix {
+        when "../state/type = 'oc-ospf-types:OSPFV2_EXTENDED_PREFIX'" {
+          description
+            "Include the extended-prefix container when the opaque LSA
+            type is specified to be an extended prefix LSA";
+        }
+
+        description
+          "An OSPFv2 Extended Prefix Opaque LSA, used to encapsulate
+          TLV attributes associated with a prefix advertised in OSPF.";
+
+        reference "RFC7684 - OSPFv2 Prefix/Link Attribute Advertisement";
+
+        container state {
+          description
+            "State parameters of the Extended Prefix LSA";
+          uses ospfv2-lsdb-extended-prefix-state;
+        }
+
+        container tlvs {
+          description
+            "TLVs contained within the Extended Prefix LSA";
+
+          list tlv {
+            // unkeyed list
+            description
+              "A TLV contained within the extended prefix LSA";
+
+            container state {
+              description
+                "State parameters relating to the sub-TLV of the extended
+                prefix LSA";
+              uses ospfv2-lsdb-extended-prefix-tlv-state;
+            }
+
+            container extended-prefix-range {
+              when "../state/type = 'oc-ospf-types:EXTENDED_PREFIX_RANGE'" {
+                description
+                  "Include the prefix range sub-TLV when the type of the
+                  sub-TLV is specified as such";
+              }
+
+              description
+                "State parameters relating to the extended prefix range
+                sub-TLV of the extended prefix LSA";
+
+              container state {
+                description
+                  "State parameters relating to the Extended Prefix Range
+                  sub-TLV of the Extended Prefix LSA";
+                uses ospfv2-lsdb-extended-prefix-range-state;
+              }
+            }
+
+            container prefix-sid {
+              when "../state/type = 'oc-ospf-types:PREFIX_SID'" {
+                description
+                  "Include parameters relating to the Prefix SID when the type
+                  of the sub-TLV is indicated as such";
+              }
+
+              description
+                "State parameters relating to the Prefix SID sub-TLV of the
+                extended prefix LSA";
+
+              container state {
+                description
+                  "State parameters relating to the Prefix SID sub-TLV of the
+                  extended prefix LSA";
+                uses ospfv2-lsdb-extended-prefix-prefix-sid-state;
+              }
+            } // prefix-sid
+
+            container sid-label-binding {
+              when "../state/type = 'oc-ospf-types:SID_LABEL_BINDING'" {
+                description
+                  "Include parameters relating to the SID/Label binding sub-TLV
+                  only when the type is indicated as such";
+              }
+
+              description
+                "State parameters relating to the SID/Label binding sub-TLV
+                of the extended prefix LSA";
+
+              container state {
+                description
+                  "State parameters relating to the SID/Label binding sub-TLV
+                  of the extended prefix LSA";
+                uses ospfv2-lsdb-extended-prefix-sid-label-binding-state;
+              }
+
+              container tlvs {
+                description
+                  "TLVs contained within the SID/Label Binding sub-TLV of the
+                  SID/Label Binding TLV";
+
+                list tlv {
+                  description
+                    "A TLV contained within the SID/Label Binding sub-TLV";
+
+                  container state {
+                    description
+                      "State parameters relating to the SID/Label Binding
+                      sub-TLV";
+                    uses ospfv2-lsdb-extended-prefix-sid-label-binding-tlv-state;
+                  }
+
+                  container sid-label-binding {
+                    when "../state/type = 'oc-ospf-types:SID_LABEL_BINDING'" {
+                      description
+                        "Include the SID/Label Binding sub-TLV parameters only
+                        when the type is indicated as such";
+                    }
+
+                    description
+                      "Parameters for the SID/Label Binding sub-TLV of the
+                      SID/Label binding TLV";
+
+                    container state {
+                      description
+                        "State parameteres relating to the SID/Label Binding
+                        sub-TLV";
+                      uses ospfv2-lsdb-extprefix-sid-label-binding-state;
+                    }
+                  } // sid-label-binding
+
+                  container ero-metric {
+                    when "../state/type = 'oc-ospf-types:ERO_METRIC'" {
+                      description
+                        "Include the ERO Metric sub-TLV parameters only when
+                        the type is indicated as such";
+                    }
+
+                    description
+                      "Parameters for the ERO Metric Sub-TLV of the SID/Label
+                      binding TLV";
+
+                    container state {
+                      description
+                        "State parameters relating to the ERO Metric Sub-TLV of
+                        the SID/Label binding TLV";
+                      uses ospfv2-lsdb-extprefix-sid-label-ero-metric-state;
+                    }
+                  } // ero-metric
+
+                  container ero-path {
+                    when "../state/type = 'oc-ospf-types:ERO_PATH'" {
+                      description
+                        "Include the ERO Path sub-TLV parameters only when the
+                        type is indicated as such";
+                    }
+
+                    description
+                      "Parameters for the ERO Path Sub-TLV of the SID/Label
+                      binding TLV";
+
+                    container segments {
+                      description
+                        "Segments of the path described within the SID/Label
+                        Binding sub-TLV";
+
+                      list segment {
+                        description
+                          "A segment of the path described within the sub-TLV";
+
+                        container state {
+                          description
+                            "State parameters relating to the path segment
+                            contained within the sub-TLV";
+                          uses ospfv2-lsdb-extprefix-sid-lbl-ero-path-seg-state;
+                        }
+
+                        container ipv4-segment {
+                          when "../state/type = 'oc-ospf-types:IPV4_SEGMENT'" {
+                            description
+                              "Include the IPv4 segment only when the type is
+                              indicated as such";
+                          }
+
+                          description
+                            "Details of the IPv4 segment interface of the ERO";
+
+                          container state {
+                            description
+                              "State parameters of the IPv4 segment of the ERO";
+                            uses ospfv2-lsdb-extprefix-sid-lbl-ero-ipv4-state;
+                          }
+                        } // ipv4-segment
+
+                        container unnumbered-hop {
+                          when "../state/type = 'oc-ospf-types:UNNUMBERED_INTERFACE_SEGMENT'" {
+                            description
+                              "Include the unnumbered segment only when the
+                              type is indicated as such";
+                          }
+
+                          description
+                            "Details of the unnumbered interface segment of the
+                            ERO";
+
+                          container state {
+                            description
+                              "State parameters of the unnumbered interface
+                              segment of the ERO";
+                            uses ospfv2-lsdb-extprefix-sid-lbl-ero-unnum-state;
+                          }
+                        } // unnumbered-hop
+                      } // tlv
+                    } // tlvs
+                  }
+                }
+              }
+            } // sid-label-binding
+
+            uses ospfv2-lsdb-common-unknown-tlv-structure;
+          }
+        }
+      } // extended-prefix
+
+      container extended-link {
+        description
+          "The OSPFv2 Extended Link Opaque LSA, used to encapsulate TLV
+          attributes associated with a link advertised in OSPF.";
+
+        reference "RFC7684 - OSPFv2 Prefix/Link Attribute Advertisement";
+
+        container state {
+          description
+            "State parameters of the Extended Link LSA";
+          uses ospfv2-lsdb-extended-link-state;
+        }
+
+        container tlvs {
+          description
+            "TLVs contained within the Extended Link LSA";
+
+          list tlv {
+            description
+              "List of TLVs within the Extended Link LSA";
+
+            container state {
+              description
+                "State parameters relating to the sub-TLV of the extended link
+                LSA";
+              uses ospfv2-lsdb-extended-link-tlv-state;
+            }
+
+            uses ospfv2-lsdb-common-unknown-tlv-structure;
+
+            container adjacency-sid {
+              when "../state/type = 'oc-ospf-types:ADJACENCY_SID'" {
+                description
+                  "Include the Adjacency SID parameters only when the type of
+                  the sub-TLV is indicated as such";
+              }
+
+              description
+                "Parameters relating to an Adjacency SID sub-TLV of the
+                extended link LSA";
+
+              container state {
+                description
+                  "State parameters relating to an Adjacency SID";
+
+                uses ospfv2-lsdb-extended-link-adj-sid-state;
+              }
+            }
+          }
+        }
+
+      } // extended-link
+
+      uses ospfv2-lsdb-common-unknown-tlv-structure;
+    }
+  }
+
+  grouping ospfv2-lsdb-generic-lsa-tos-metric-state {
+    description
+      "Per-TOS state parameters for the Router LSA";
+
+    uses ospfv2-lsdb-common-tos-metric;
+  }
+
+  grouping ospfv2-lsdb-router-lsa-state {
+    description
+      "Parameters of the router LSA";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:ROUTER_LSA_TYPES";
+      }
+      description
+        "The sub-type of the Router LSA.";
+    }
+
+    uses ospfv2-lsdb-common-link-specification;
+
+    leaf metric {
+      type oc-ospf-types:ospf-metric;
+      description
+        "The cost of utilising the link specified independent of TOS";
+    }
+
+    leaf number-links {
+      type uint16;
+      description
+        "The number of links that are described within the LSA";
+    }
+
+    leaf number-tos-metrics {
+      type uint16;
+      description
+        "The number of different TOS metrics given for this link, not
+        including the link metric (which is referred to as TOS 0).";
+    }
+  }
+
+  grouping ospfv2-lsdb-network-lsa-state {
+    description
+      "Parameters of the Network LSA";
+
+    leaf network-mask {
+      type uint8 {
+        range "0..32";
+      }
+      description
+        "The mask of the network described by the Network LSA
+        represented as a CIDR mask.";
+    }
+
+    leaf-list attached-router {
+      type yang:dotted-quad;
+      description
+        "A list of the router ID of the routers that are attached to
+        the network described by the Network LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-summary-lsa-state {
+    description
+      "Parameters of the Summary LSA";
+
+    leaf network-mask {
+      type uint8 {
+        range "0..32";
+      }
+      description
+        "The mask of the network described by the Summary LSA
+        represented as a CIDR mask.";
+    }
+
+    leaf metric {
+      type oc-ospf-types:ospf-metric;
+      description
+        "The cost of utilising the summary link specified independent of TOS.";
+    }
+
+  }
+
+  grouping ospfv2-lsdb-asexternal-lsa-common-parameters {
+    description
+      "Common parameters that are used for OSPFv2 AS External LSAs";
+
+    leaf forwarding-address {
+      type inet:ipv4-address-no-zone;
+      description
+        "The destination to which traffic for the external prefix
+        should be advertised. When this value is set to 0.0.0.0 then
+        traffic should be forwarded to the LSA's originator";
+    }
+
+    leaf external-route-tag {
+      type uint32;
+      description
+        "An opaque tag that set by the LSA originator to carry
+        information relating to the external route";
+    }
+  }
+
+  grouping ospfv2-lsdb-asexternal-lsa-state {
+    description
+      "Parameters for the AS External LSA";
+
+    leaf mask {
+      type uint8 {
+        range "0..32";
+      }
+      description
+        "The subnet mask for the advertised destination";
+    }
+
+    leaf metric-type {
+      type enumeration {
+        enum "TYPE_1" {
+          description
+            "When the metric of a prefix is specified as Type 1
+            then it is considered to be expressed in the same units as
+            the link-state metrics carried in OSPF. That is to say
+            that the metric advertised is directly compared to the
+            internal cost";
+        }
+        enum "TYPE_2" {
+          description
+            "When the metric of a prefix is specified as Type 2 then
+            it is considered to be expressed as a cost in addition to
+            that of the link-state metric to the advertising router.
+            That is to say that the metric is considered to be the
+            cost to the advertising router plus the advertised metric
+            for the external entity";
+        }
+      }
+      description
+        "The type of metric included within the AS External LSA.";
+    }
+
+    leaf metric {
+      type oc-ospf-types:ospf-metric;
+      description
+        "The cost to reach the external network specified. The exact
+        interpretation of this cost is dependent on the type of
+        metric specified";
+    }
+
+    uses ospfv2-lsdb-asexternal-lsa-common-parameters;
+  }
+
+  grouping ospfv2-lsdb-asexternal-tos-state {
+    description
+      "Per-TOS parameters for the AS External LSA";
+
+    uses ospfv2-lsdb-asexternal-lsa-common-parameters;
+    uses ospfv2-lsdb-common-tos-metric;
+  }
+
+  grouping ospfv2-lsdb-nssa-external-lsa-state {
+    description
+      "Operational state parameters specific to the NSSA External
+      LSA";
+
+    leaf propagate {
+      type boolean;
+      description
+        "When this bit is set to true, an NSSA border router will
+        translate a Type 7 LSA (NSSA External) to a Type 5 LSA
+        (AS External).";
+      reference "RFC3101, Section 2.3";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-lsa-state {
+    description
+      "Operational state parameters specific to an Opaque LSA";
+
+    leaf scope {
+      type enumeration {
+        enum LINK {
+          description
+            "The scope of the LSA is the current link. The LSA
+            is not flooded beyond the local network. This
+            enumeration denotes a Type 9 LSA.";
+        }
+        enum AREA {
+          description
+            "The scope of the LSA is the local area. The LSA
+            is not flooded beyond the area of origin. This
+            enumeration denotes a Type 10 LSA.";
+        }
+        enum AS {
+          description
+            "The scope of the LSA is the local autonomous
+            system (AS). The flooding domain is the same
+            as a Type 5 LSA - it is not flooded into
+            stub areas or NSSAs. This enumeration denotes a
+            Type 11 LSA.";
+        }
+      }
+      description
+        "The scope of the opaque LSA. The type of the LSA
+        indicates its scope - the value of this leaf
+        determines both the flooding domain, and the type
+        of the LSA.";
+    }
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:OSPF_OPAQUE_LSA_TYPE";
+      }
+      description
+        "The Opaque Type of the LSA. This value is used to
+        indicate the type of data carried by the opaque LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-lsa-te-tlv-state {
+    description
+      "The contents of the Traffic Engineering LSA";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:OSPF_TE_LSA_TLV_TYPE";
+      }
+      description
+        "The type of TLV within the Traffic Engineering LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-te-unknown-state {
+    description
+      "The contents of the unknown TLV within the Traffic Engineering LSA";
+
+    uses ospfv2-lsdb-common-unknown-tlv;
+  }
+
+  grouping ospfv2-lsdb-opaque-te-link-state {
+    description
+      "The contents of the sub-TLVs of a Traffic Engineering LSA Link TLV";
+
+    leaf type {
+      type union {
+        type identityref {
+          base "oc-ospf-types:OSPF_TE_LINK_TLV_TYPE";
+        }
+        type enumeration {
+          enum UNKNOWN {
+            description
+              "The sub-TLV received in the LSA is unknown to the local
+              system";
+          }
+        }
+      }
+      description
+        "The sub-TLV type specified in the Link TLV. When the value is
+        known by the local system, a canonical name of the sub-TLV is utilised
+        - the special UNKNOWN value indicates that the system did not
+        support the sub-TLV type received in the LSA.";
+    }
+
+    leaf unknown-type {
+      when "../type = 'UNKNOWN'" {
+        description
+          "Include the unknown type field only when the sub-TLV was not
+          known to the local system";
+      }
+
+      type uint16;
+      description
+        "The value of the type field of an unknown sub-TLV";
+    }
+
+    leaf unknown-value {
+      when "../type = 'UNKNOWN'" {
+        description
+          "Include the unknown value field only when the sub-TLV was not
+          known to the local system";
+      }
+
+      type binary;
+      description
+        "The binary contents of the unknown TLV";
+    }
+
+    leaf link-type {
+      when "../type = 'TE_LINK_TYPE'" {
+        description
+          "Include the link-type field only when the sub-TLV type was a TE
+          link type";
+      }
+
+      type enumeration {
+        enum POINT_TO_POINT {
+          description
+            "The link being described by the TE LSA Link sub-TLV is a
+            point-to-point link to exactly one other system";
+        }
+        enum MULTI_ACCESS {
+          description
+            "The link being described by the TE LSA Link sub-TLV is a
+            multi-access link that supports connectivity to multiple remote
+            systems";
+        }
+        enum UNKNOWN {
+          description
+            "The link type received was unknown to the local system";
+        }
+      }
+      description
+        "The type of the link that is being described by the TE LSA Link
+        sub-TLV";
+    }
+
+    leaf link-id {
+      when "../type = 'TE_LINK_ID'" {
+        description
+          "Include the link ID field only when the sub-TLV type was a TE
+          Link identifier";
+      }
+
+      type yang:dotted-quad;
+      description
+        "The ID of the remote system. For point-to-point links, this is the
+        router ID of the neighbor. For multi-access links it is the address
+        of the designated router.";
+    }
+
+    leaf-list local-ip-address {
+      when "../type = 'oc-ospf-types:TE_LINK_LOCAL_IP'" {
+        description
+          "Include the local IP address field only when the sub-TLV type was
+          a local IP address";
+      }
+
+      type inet:ipv4-address-no-zone;
+      description
+        "The IP address(es) of the local system that correspond to the
+        specified TE link";
+    }
+
+    leaf-list remote-ip-address {
+      when "../type = 'oc-ospf-types:TE_LINK_REMOTE_IP'" {
+        description
+          "Include the remote IP address field only when the sub-TLV type was
+          a remote IP address";
+      }
+
+      type inet:ipv4-address-no-zone;
+      description
+        "The IP address(es) of the remote systems that are attached to the
+        specified TE link";
+    }
+
+    leaf metric {
+      when "../type = 'oc-ospf-types:TE_LINK_METRIC'" {
+        description
+          "Include the traffic engineering metric only when the sub-TLV type
+          is a TE metric";
+      }
+
+      type uint32;
+      description
+        "The metric of the link that should be used for traffic engineering
+        purposes. This link may be different than the standard OSPF link
+        metric.";
+    }
+
+    leaf maximum-bandwidth {
+      when "../type = 'oc-ospf-types:TE_LINK_MAXIMUM_BANDWIDTH'" {
+        description
+          "Include the traffic engineering metric only when the sub-TLV type
+          is the maximum bandwidth";
+      }
+
+      type oc-types:ieeefloat32;
+      units "bytes per second";
+      description
+        "The maximum bandwidth of the link. This value reflects the actual
+        bandwidth of the link expressed asn IEEE 32-bit floating point
+        number";
+    }
+
+    leaf maximum-reservable-bandwidth {
+      when "../type = 'oc-ospf-types:TE_LINK_MAXIUMUM_RESERVABLE_BANDWIDTH'" {
+        description
+          "Include the maximum reservable bandwidth field only when the
+          sub-TLV type is the maximum reservable bandwidth";
+      }
+
+      type oc-types:ieeefloat32;
+      units "bytes per second";
+      description
+        "The maximum reservable bandwidth for the link. This value represents
+        the total bandwidth which may be used for traffic engineering
+        purposes. The value may exceed the maximum-bandwidth value
+        in cases where the link is oversubscribed. The value is reflected as
+        a 32-bit IEEE floating-point number";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-te-link-unreserved-bw-state {
+    description
+      "The per-priority unreserved bandwidth described within the unreserved
+      bandwidth sub-TLV of the Link TLV of the Traffic Engineering LSA";
+
+    leaf priority {
+      type uint8 {
+        range "0..7";
+      }
+      description
+        "The priority level being described";
+    }
+
+    leaf unreserved-bandwidth {
+      type oc-types:ieeefloat32;
+      description
+        "The unreserved bandwidth for at priority level P, where P is
+        equal to the priority of the current list entry. The reservable
+        bandwidth at priority P is equal to the sum of the reservable
+        bandwidth at all levels 0..P.";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-te-link-admin-group-state {
+    description
+      "Per bit administrative group status";
+
+    leaf bit-index {
+      type uint8 {
+        range "0..31";
+      }
+      description
+        "The index of the bit within the 32-bit administrative group field
+        of the Administrative Group sub-TLV of the Traffic Engineering LSA";
+    }
+
+    leaf set {
+      type boolean;
+      default false;
+      description
+        "Whether the bit is set within the administrative group field";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-te-node-attribute-state {
+    description
+      "State parameters relating to the Traffic Engineering Node Attribute
+      TLV of the Traffic Engineering LSA";
+
+    leaf type {
+      type union {
+        type identityref {
+          base "oc-ospf-types:TE_NODE_ATTRIBUTE_TLV_TYPE";
+        }
+        type enumeration {
+          enum UNKNOWN {
+            description
+              "The sub-TLV type received within the TE LSA Node Attribute TLV
+              was unknown the the local system";
+          }
+        }
+      }
+      description
+        "The type of the sub-TLV of the Node Attribute TLV contained within
+        the TE LSA. If the local system can interpret the value received the
+        canonical name of the type is utilised, otherwise the special UNKNOWN
+        value is used";
+    }
+
+    leaf-list local-ipv4-addresses {
+      when "../type = 'oc-ospf-types:NODE_IPV4_LOCAL_ADDRESS'" {
+        description
+          "Include the local IPv4 addresses when the type of the sub-TLV
+          indicates that this is the contained data";
+      }
+
+      type inet:ipv4-prefix;
+      description
+        "The local IPv4 addresses of the node expressed in CIDR notation";
+    }
+
+    leaf-list local-ipv6-addresses {
+      when "../type = 'oc-ospf-types:NODE_LOCAL_IPV6_ADDRESS'" {
+        description
+          "Include the local IPv6 addresses when the type of the sub-TLV
+          indicfates that this is the contained data";
+      }
+
+      type inet:ipv6-prefix;
+      description
+        "The local IPv6 addreses of the node";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-te-router-address-state {
+    description
+      "The contents of the value field of the Router Address TLV of the
+      Traffic Engineering LSA.";
+
+    leaf address {
+      type inet:ipv4-address-no-zone;
+      description
+        "A stable IP address of the advertising router, that is always
+        reachable when the router is connected to the network. Typically this
+        is a loopback address.";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-grace-state {
+    description
+      "State parameters on a per-TLV basis of the Grace LSA";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:GRACE_LSA_TLV_TYPES";
+      }
+      description
+        "The type of the sub-TLV received within the Grace LSA";
+    }
+
+    leaf period {
+      when "../type = 'oc-ospf-types:GRACE_PERIOD'" {
+        description
+          "Include the period specification when the sub-TLV type is indicated
+          to be of this type";
+      }
+
+      type uint32;
+      units seconds;
+      description
+        "The number of seconds that the router's neighbors should advertise
+        the local system as fully adjacent regardless of database
+        synchronization state";
+      reference "RFC3623";
+    }
+
+    leaf reason {
+      when "../type = 'oc-ospf-types:GRACE_RESTART_REASON'" {
+        description
+          "Include the restart reason when the sub-TLV type specifies this
+          is included";
+      }
+
+      type enumeration {
+        enum UNKNOWN {
+          value 0;
+          description
+            "The reason for the graceful restart is unknown";
+        }
+        enum SOFTWARE_RESTART {
+          value 1;
+          description
+            "The local system is restarting due to a software component
+            restart";
+        }
+        enum SOFTWARE_RELOAD_UPGRADE {
+          value 2;
+          description
+            "The local system is restarting due to a software reload or
+            upgrade";
+        }
+        enum CONTROL_PROCESSOR_SWITCH {
+          value 3;
+          description
+            "The local system is restarting due to a switch to a redundant
+            control plane element";
+        }
+      }
+      description
+        "The reason for the graceful restart event occurring, as advertised
+        by the restarting system";
+      reference "RFC3623";
+    }
+
+    leaf ip-interface-address {
+      when "../type = 'oc-ospf-types:GRACE_IP_INTERFACE_ADDRESS'" {
+        description
+          "Include the interface address when the sub-TLV type specifies that
+          it is included";
+      }
+
+      type inet:ipv4-address-no-zone;
+      description
+        "The restarting system's IP address on the interface via which the
+        Grace LSA is being advertised.";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-state {
+    description
+      "State parameters of the Router Information Opaque LSA";
+
+    leaf type {
+      type union {
+        type identityref {
+          base "oc-ospf-types:RI_LSA_TLV_TYPES";
+        }
+        type enumeration {
+          enum UNKNOWN {
+            description
+              "The TLV received within the RI LSA is unknown";
+          }
+        }
+      }
+      description
+        "The type of sub-TLV of the Router Information opaque LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-informational-state {
+    description
+      "State parmaeters of the Router Information Informational Capabilities
+      sub-TLV";
+
+    leaf graceful-restart-capable {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the advertising system is capable of
+        OSPF graceful restart.";
+    }
+
+    leaf graceful-restart-helper {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the advertising system is capable of
+        being a helper for OSPF graceful restart";
+    }
+
+    leaf stub-router {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the advertising system is able to
+        advertise its status as a stub router";
+      reference "RFC6987";
+    }
+
+    leaf traffic-engineering {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the advertising system supports OSPFv2
+        traffic engineering capabilities";
+    }
+
+    leaf point-to-point-over-lan {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the advertising system supports treating
+        LAN adjacencies as though they were point to point";
+      reference "RFC5309";
+    }
+
+    leaf experimental-te {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the advertising system supports the
+        experimental extensions to OSPF for TE described in RFC4973";
+      reference "RFC4973";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-admintag-state {
+    description
+      "State parameters relating to the administrative tags specified for
+      a node within the RI LSA";
+
+    leaf-list administrative-tags {
+      type uint32;
+      description
+        "The set of administrative tags assigned to the local system by
+        the network operator. The meaning of these tags is opaque to OSPF
+        - and their interpretation is per-domain specific";
+      reference "RFC7777";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-unknown-state {
+    description
+      "State parameters relating to an unknown TLV within the RI LSA";
+    uses ospfv2-lsdb-common-unknown-tlv;
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-sralgo-state {
+    description
+      "State parameters relating to the SR Algorithms TLV of the RI LSA";
+
+    leaf-list supported-algorithms {
+      type identityref {
+        base "oc-ospf-types:SR_ALGORITHM";
+      }
+      description
+        "A list of the algorithms that are supported for segment routing
+        by the advertising system";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-srrange-tlv-state {
+    description
+      "State parameters relating to the SR SID/Label range TLV of the
+      RI LSA";
+
+    leaf type {
+      type union {
+        type identityref {
+          base "oc-ospf-types:OSPF_RI_SR_SID_LABEL_TLV_TYPES";
+        }
+        type enumeration {
+          enum UNKNOWN {
+            description
+              "The type of the sub-TLV advertised with the SID/Label range
+              TLV of the RI LSA is unknown to the receiving system";
+          }
+        }
+      }
+      description
+        "The type of the sub-TLV received by the local system within the
+        SR SID/Label Range TLV of the RI LSA";
+    }
+
+    leaf range-size {
+      type uint32 {
+        range "0..16777216";
+      }
+      description
+        "The number of entries within the range being described within the
+        SID/Label range TLV";
+    }
+  }
+
+  grouping ospfv2-lsdb-opaque-ri-srrange-sid-label-tlv-state {
+    description
+      "State parameters relating to the SR SID/Label sub-TLV of the SR SID/Label
+      range TLV of the RI LSA";
+
+    leaf entry-type {
+      type oc-ospf-types:sr-sid-type;
+      description
+        "The type of entry that is contained within the sub-TLV. The range may
+        be represented as either a range of MPLS labels, or numeric segment
+        identifiers";
+    }
+
+    leaf first-value {
+      type uint32;
+      description
+        "The first value within the SRGB range being specified. The type of the
+        entry is determined based on the value of the entry type as this value
+        may represent either a segment identifier or an MPLS label.";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-prefix-state {
+    description
+      "State parameters relating to an Extended Prefix LSA";
+
+    leaf route-type {
+      type enumeration {
+        enum UNSPECIFIED {
+          value 0;
+          description
+            "The prefix described in the extended prefix LSA is of an
+            unspecified type";
+        }
+        enum INTRA_AREA {
+          value 1;
+          description
+            "The prefix described in the extended prefix LSA is an intra-area
+            prefix for the advertising system";
+        }
+        enum INTER_AREA {
+          value 3;
+          description
+            "The prefix described in the extended prefix LSA is an inter-area
+            prefix for the advertising system";
+        }
+        enum AS_EXTERNAL {
+          value 5;
+          description
+            "The prefix described in the extended prefix LSA is external to the
+            autonomous system of the advertising system";
+        }
+        enum NSSA_EXTERNAL {
+          value 7;
+          description
+            "The prefix described in the extended prefix LSA externally
+            advertised from an NSSA area visibile to the advertising system";
+        }
+      }
+      description
+        "The type of prefix that is contained within the Extended Prefix LSA.
+        The information contained in sub-TLVs of the attribute is applicable
+        regardless of this value.";
+    }
+
+    uses ospfv2-lsdb-common-prefix-properties;
+
+    leaf attached {
+      type boolean;
+      default false;
+      description
+        "If this value is set to true, the prefix being advertised was
+        generated by an ABR for an inter-area prefix. The value corresponds
+        to the A-flag of the flags field of the Extended Prefix LSA";
+    }
+
+    leaf node {
+      type boolean;
+      default false;
+      description
+        "If this value is set to true, the prefix being advertised represents
+        the advertising router. Typically, the prefix within the LSA is
+        expected to be globally-reachable prefix associated with a loopback
+        interface";
+    }
+
+    leaf prefix {
+      type inet:ipv4-address-no-zone;
+      description
+        "The IPv4 prefix contained within the extended prefix LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-link-state {
+    description
+      "State parameters related to an extended link LSA";
+
+    leaf link-type {
+      type identityref {
+        base "oc-ospf-types:OSPFV2_ROUTER_LINK_TYPE";
+      }
+      description
+        "The type of link with which extended attributes are associated";
+    }
+
+    uses ospfv2-lsdb-common-link-specification;
+
+  }
+
+  grouping ospfv2-lsdb-extended-link-tlv-state {
+    description
+      "State parameters relating to a sub-TLV of the extended link LSA";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:OSPFV2_EXTENDED_LINK_SUBTLV_TYPE";
+      }
+      description
+        "The type of the sub-TLV contained within the extended link TLV";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-prefix-tlv-state {
+    description
+      "State parameters related to a sub-TLV of an Extended Prefix LSA";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:OSPFV2_EXTENDED_PREFIX_SUBTLV_TYPE";
+      }
+      description
+        "The type of sub-TLV as indicated by the Extended Prefix LSA";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-prefix-range-state {
+    description
+      "Parameters of the Extended Prefix Range SubTLV";
+
+    uses ospfv2-lsdb-common-prefix-properties;
+
+    leaf range-size {
+      type uint16;
+      description
+        "The number of prefixes that are covered by the advertisement.";
+    }
+
+    leaf inter-area {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, then the prefix range is inter-area -
+        the flag is set by the ABR that advertises the Extended Prefix Range
+        TLV";
+    }
+
+    leaf prefix {
+      type inet:ipv4-prefix;
+      description
+        "The first prefix in the range of prefixes being described by the
+        extended prefix range sub-TLV";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-prefix-prefix-sid-state {
+    description
+      "Parameters of the Prefix-SID sub-TLV";
+
+    leaf no-php {
+      type boolean;
+      default false;
+      description
+        "If this leaf is set the advertising system has indicated that the
+        prefix SID must not be popped before delivering packets to it";
+    }
+
+    leaf mapping-server {
+      type boolean;
+      default false;
+      description
+        "If this leaf is set the SID was advertised by a Segment Routing
+        mapping server";
+    }
+
+    leaf explicit-null {
+      type boolean;
+      default false;
+      description
+        "If this leaf is set, the advertising system has requested that the
+        prefix SID value should be replaced with the explicit null label
+        value";
+    }
+
+    leaf sid-value-type {
+      type enumeration {
+        enum ABSOLUTE {
+          description
+            "The SID contained in the Prefix-SID sub-TLV is an absolute
+            value";
+        }
+        enum INDEX {
+          description
+            "The SID contained in the Prefix-SID sub-TLV is an index to the
+            SRGB";
+        }
+      }
+      description
+        "Specifies the type of the value specified within the Prefix SID
+        sub-TLV - in particular, whether the value is an index or an
+        absolute value. This value corresponds with the V-flag of the Prefix
+        SID sub-TLV";
+    }
+
+    leaf sid-scope {
+      type enumeration {
+        enum LOCAL {
+          description
+            "The value of the SID is
+            significant only to the advertising system";
+        }
+        enum GLOBAL {
+          description
+            "The value of the SID is globally significant";
+        }
+      }
+      description
+        "Specifies the scope of the SID advertisement within the Prefix SID
+        sub-TLV. The scope of the SID is independent of whether the SID
+        contained is an index, or an absolute value";
+    }
+
+    leaf multi-topology-identifier {
+      type uint8;
+      description
+        "The identifier for the topology to which the Prefix SID relates. The
+        value of this leaf is a MT-ID as defined in RFC4915";
+    }
+
+    leaf algorithm {
+      type uint8;
+      description
+        "The algorithm that computes the path associated with the Prefix SID";
+    }
+
+    leaf sid-value {
+      type uint32;
+      description
+        "The value of the Prefix SID. The meaning of this value is dependent
+        upon the type of SID, and its scope. The value contained is either a
+        32-bit value indicating the index of the SID, or a 24-bit label where
+        the 20 right-most bits are used for encoding the label value";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-prefix-sid-label-binding-state {
+    description
+      "State parameters relating to the extended prefix SID SID/Label binding
+      sub-TLV";
+
+    leaf mirroring {
+      type boolean;
+      default false;
+      description
+        "When set to true, this indicates that the SID/Label Binding sub-TLV
+        entries contained within this TLV are indicative of a mirroring
+        context";
+    }
+
+    leaf multi-topology-identifier {
+      type uint8;
+      description
+        "The identifier for the topology to which the SID/Label Binding
+        sub-TLV is associated. The value of this leaf is a MT-ID as defined
+        in RFC4915";
+    }
+
+    leaf weight {
+      type uint8;
+      description
+        "The weight of the advertised binding when used for load-balancing
+        purposes";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-prefix-sid-label-binding-tlv-state {
+    description
+      "State parameters directly relating to the SID/Label Binding TLV";
+
+    leaf type {
+      type identityref {
+        base
+         "oc-ospf-types:OSPFV2_EXTENDED_PREFIX_SID_LABEL_BINDING_SUBTLV_TYPE";
+      }
+      description
+        "The type of sub-TLV that is being contained within the SID/Label
+        sub-TLV";
+    }
+  }
+
+  grouping ospfv2-lsdb-extprefix-sid-label-binding-state {
+    description
+      "State parameters relating to the SID/Label binding sub-TLV of the
+      SID/Label/Binding TLV";
+
+    uses ospfv2-lsdb-common-sr-sid-spec;
+  }
+
+  grouping ospfv2-lsdb-extprefix-sid-label-ero-metric-state {
+    description
+      "State parameters relating to the ERO Metric Sub-TLV of the SID/Label
+      Binding TLV";
+
+    leaf metric {
+      type uint32;
+      description
+        "The metric representing the aggregate IGP or TE path cost for the
+        binding included within the SID/Label Binding TLV";
+    }
+  }
+
+  grouping ospfv2-lsdb-extprefix-sid-lbl-ero-path-seg-state {
+    description
+      "State parameters relating to the a segment included within the
+      ERO Path Sub-TLV of the SID/Label Binding TLV";
+
+    leaf type {
+      type identityref {
+        base "oc-ospf-types:OSPFV2_EXTPREFIX_BINDING_ERO_PATH_SEGMENT_TYPE";
+      }
+      description
+        "The type of the segment being specified as part of the ERO";
+    }
+
+    leaf loose {
+      type boolean;
+      default false;
+      description
+        "If this leaf is set the segment is identifier as a loose path
+        segment, otherwise the path strictly follows the path specified";
+    }
+  }
+
+  grouping ospfv2-lsdb-extprefix-sid-lbl-ero-ipv4-state {
+    description
+      "State parameters relating to an IPv4 address segment included within
+      the ERO path";
+
+    leaf address {
+      type inet:ipv4-address-no-zone;
+      description
+        "The IPv4 address of the hop within the ERO";
+    }
+  }
+
+  grouping ospfv2-lsdb-extprefix-sid-lbl-ero-unnum-state {
+    description
+      "State parameters relating to an unnumbered hop within the ERO path";
+
+    leaf router-id {
+      type inet:ipv4-address-no-zone;
+      description
+        "The IPv4 router identtifier of the remote system";
+    }
+
+    leaf interface-id {
+      type uint32;
+      description
+        "The identifier assigned to the link by the remote system";
+    }
+  }
+
+  grouping ospfv2-lsdb-extended-link-adj-sid-state {
+    description
+      "State parameters relating to the Adjacency SID sub-TLV of the
+      Extended Link LSA";
+
+    leaf backup {
+      type boolean;
+      default false;
+      description
+        "When this flag is set, it indicates that the adjacency SID refers to
+        an adjacency which is eligible for protection";
+    }
+
+    leaf group {
+      type boolean;
+      default false;
+      description
+        "When this flag is set it indicates that the adjacency SID refers to
+        a group of adjacencies that have a common value";
+    }
+
+    uses ospfv2-lsdb-common-sr-sid-spec;
+
+    leaf weight {
+      type uint8;
+      description
+        "The weight of the Adjacency SID when used for load-balancing";
+    }
+
+    leaf multi-topology-identifier {
+      type uint8;
+      description
+        "The multi-topology identifier with which the adjacency SID is
+        associated";
+    }
+  }
+
+  grouping ospfv2-lsdb-structure {
+    description
+      "Structural grouping for per-area LSDB contents";
+
+    container lsdb {
+      // Top-level RO, if this were ever to become writeable then
+      // the state containers lower down need config false added
+      config false;
+      description
+        "The link-state database for the OSPFv2 area";
+
+      container state {
+        description
+          "Operational state parameters relating to the OSPFv2
+          area";
+
+        uses ospfv2-lsdb-area-state;
+      }
+
+      container lsa-types {
+        description
+          "Enclosing container for a list of LSA types that are
+          in the LSDB for the specified area";
+
+        list lsa-type {
+          key "type";
+
+          description
+            "List of LSA types in the LSDB for the specified
+            area";
+
+          leaf type {
+            type leafref {
+              path "../state/type";
+            }
+            description
+              "A reference for the LSA type being described within
+              the LSDB";
+          }
+
+          container state {
+            description
+              "Top-level operational state parameters relating to
+              an LSA within the area";
+            uses ospfv2-lsdb-area-lsa-type-state;
+          }
+
+          container lsas {
+            description
+              "Enclosing container for a list of the LSAs of
+              the specified type received by the system";
+
+            list lsa {
+              key "link-state-id";
+
+              description
+                "List of the LSAs of a specified type in the
+                LSDB for the specified area";
+
+              leaf link-state-id {
+                type leafref {
+                  path "../state/link-state-id";
+                }
+                description
+                  "Reference to the Link State ID of the LSA";
+              }
+
+              container state {
+                description
+                  "Operational state parameters relating to all
+                  LSA types";
+                uses ospfv2-lsdb-area-lsa-state;
+              }
+
+              uses ospfv2-lsdb-router-lsa-structure {
+                when "../../state/type = 'oc-ospf-types:ROUTER_LSA'" {
+                  description
+                    "Include the router LSA hierarchy solely when
+                    that LSA type is being described";
+                }
+              }
+
+              uses ospfv2-lsdb-network-lsa-structure {
+                when "../../state/type = 'oc-ospf-types:NETWORK_LSA'" {
+                  description
+                    "Include the network LSA hierarchy solely when
+                    that LSA type is being described";
+                }
+              }
+
+              uses ospfv2-lsdb-summary-lsa-structure {
+                // rjs TODO: check this syntax
+                when "../../state/type = " +
+                  "'oc-ospf-types:SUMMARY_IP_NETWORK_LSA' or " +
+                  "../../state/type = 'oc-ospf-types:SUMMARY_ASBR_LSA'" {
+                  description
+                    "Include the summary LSA hierarchy solely when
+                    that LSA type is being described";
+                }
+              }
+
+              uses ospfv2-lsdb-asexternal-lsa-structure {
+                when "../../state/type = 'oc-ospf-types:AS_EXTERNAL_LSA'" {
+                  description
+                    "Include the AS external LSA hierarchy solely when
+                    that LSA type is being described";
+                }
+              }
+
+              uses ospfv2-lsdb-nssa-external-lsa-structure {
+                when "../../state/type = 'oc-ospf-types:NSSA_AS_EXTERNAL_LSA'" {
+                  description
+                    "Include the NSSA External LSA hierarchy solely
+                    when that LSA type is being described";
+                }
+              }
+
+              uses ospfv2-lsdb-opaque-lsa-structure {
+                when "../../state/type = 'oc-ospf-types:OSPFV2_LINK_SCOPE_OPAQUE_LSA'
+                  or ../../state/type = 'oc-ospf-types:OSPFV2_AREA_SCOPE_OPAQUE_LSA'
+                  or ../../state/type = 'oc-ospf-types:OSPFV2_AS_SCOPE_OPAQUE_LSA'" {
+                  description
+                    "Include the Opaque LSA structure when type of entry
+                    being described in an opaque LSA";
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

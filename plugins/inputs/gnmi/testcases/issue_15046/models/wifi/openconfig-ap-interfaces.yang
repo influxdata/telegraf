@@ -1,0 +1,240 @@
+module openconfig-ap-interfaces {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/ap-interfaces";
+
+  // Assign this module a prefix to be used by other modules, when
+  // imported.
+  prefix "oc-ap-if";
+
+  // Imports
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-access-points { prefix oc-access-points; }
+  import openconfig-if-ethernet { prefix oc-eth; }
+  import openconfig-if-aggregate {prefix oc-lag; }
+  import openconfig-if-poe {prefix oc-poe; }
+  import openconfig-vlan {prefix oc-vlan; }
+  import openconfig-if-tunnel {prefix oc-tun; }
+  import openconfig-if-ip {prefix oc-ip; }
+  import openconfig-if-8021x {prefix oc-1x; }
+
+  // Meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines the configuration and state data for
+    non-radio interfaces on WiFi Access Points.";
+
+  oc-ext:openconfig-version "1.3.0";
+
+  revision "2023-08-10" {
+    description
+      "Add container to make compatible with changes in
+      openconfig-interfaces";
+    reference "1.3.0";
+  }
+
+  revision "2023-06-26" {
+    description
+      "Remove deviation for unnumbered interfaces";
+    reference "1.2.0";
+  }
+
+  revision "2023-05-26" {
+    description
+      "Add full stop to all descriptions.";
+    reference "1.0.1";
+  }
+
+  revision "2021-08-02" {
+    description
+      "Update model version as it is in production.";
+    reference "1.0.0";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Update namespace based on new directory structure.";
+    reference "0.1.1";
+  }
+
+  revision "2019-05-29" {
+    description
+      "Initial version.";
+    reference "0.1.0";
+  }
+
+  grouping ap-interfaces-top {
+    description
+      "Top-level grouping for AP interface configuration and
+      operational state data.";
+
+    container interfaces {
+      description
+        "Top level container for non-radio AP interfaces, including
+        configuration and state data.";
+
+      list interface {
+        key "name";
+
+        description
+          "The list of named interfaces on the device.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "References the name of the interface.";
+        }
+
+        container config {
+          description
+            "Configurable items at the global, physical interface
+            level.";
+          oc-ext:telemetry-on-change;
+
+          uses oc-if:interface-phys-config;
+        }
+
+        container state {
+
+          config false;
+          description
+            "Operational state data at the global interface level.";
+
+          uses oc-if:interface-phys-config;
+          uses oc-if:interface-common-state;
+
+          container counters {
+            description
+              "A collection of interface specific statistics entitites which are
+              not common to subinterfaces.";
+
+            uses oc-if:interface-common-counters-state;
+            uses oc-if:interface-counters-state;
+          }
+        }
+      }
+    }
+  }
+
+  // augment statements
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point" {
+    description
+      "Adds interface configuration and state to access-points model.";
+
+    uses ap-interfaces-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface" {
+    description
+      "Adds ethernet interface configuration and state to
+      access-points model.";
+
+    uses oc-eth:ethernet-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:ethernet" {
+    description
+        "Adds 802.1X settings to individual Ethernet interfaces.";
+
+      uses oc-1x:dot1x-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:ethernet/oc-ap-if:switched-vlan" {
+    description
+      "Adds vlan-map to switched-vlans.";
+
+    uses oc-1x:vlan-map-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface" {
+    description
+      "Adds subinterface configuration and state to
+      access-points model.";
+
+    uses oc-if:subinterfaces-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:subinterfaces/oc-ap-if:subinterface" {
+    description
+      "IPv4 address family configuration for
+      interfaces.";
+
+    uses oc-ip:ipv4-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:subinterfaces/oc-ap-if:subinterface" {
+    description
+      "IPv6 address family configuration for
+      interfaces.";
+
+    uses oc-ip:ipv6-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface" {
+    description
+      "Adds lag configuration and state to access-points model.";
+
+    uses oc-lag:aggregation-logical-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:ethernet" {
+    description
+      "Adds poe configuration and state to access-points model.";
+
+    uses oc-poe:poe-ethernet-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:ethernet" {
+    description
+      "Adds vlan configuration and state to ethernet interfaces.";
+
+    uses oc-vlan:vlan-switched-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface/oc-ap-if:aggregation" {
+    description
+      "Adds vlan configuration and state to lag interfaces.";
+
+    uses oc-vlan:vlan-switched-top;
+  }
+
+  augment "/oc-access-points:access-points/" +
+    "oc-access-points:access-point/oc-ap-if:interfaces/" +
+    "oc-ap-if:interface" {
+    description
+      "Adds tunnel configuration and state to access-points model.";
+
+    uses oc-tun:tunnel-top;
+  }
+}

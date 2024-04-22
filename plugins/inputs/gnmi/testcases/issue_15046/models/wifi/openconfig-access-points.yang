@@ -1,0 +1,230 @@
+module openconfig-access-points {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/wifi/access-points";
+
+  // Assign this module a prefix to be used by other modules, when imported.
+  prefix "access-points";
+
+  // Imports
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-wifi-phy { prefix wifi-phy; }
+  import openconfig-wifi-mac { prefix wifi-mac; }
+  import openconfig-ap-manager { prefix ap-manager; }
+  import openconfig-system { prefix oc-sys; }
+
+  // Meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines the top level WiFi Configurations for a list of
+    Access Points.";
+
+  oc-ext:openconfig-version "1.2.0";
+
+  revision "2023-06-26" {
+    description
+      "Update description for hostname";
+    reference "1.2.0";
+  }
+
+  revision "2023-05-26" {
+    description
+      "Fix typos in descriptions.";
+    reference "1.1.1";
+  }
+
+  revision "2023-03-22" {
+    description
+      "Mirror /access-points/access-point/config/hostname in a state
+      container.";
+    reference "1.1.0";
+  }
+
+  revision "2021-08-02" {
+    description
+      "Update model version as it is in production.";
+    reference "1.0.0";
+  }
+
+  revision "2020-04-28" {
+    description
+      "Change hostname to leaf-ref.";
+    reference "0.3.0";
+  }
+
+  revision "2018-07-16" {
+    description
+      "Remove BSSID counters";
+    reference "0.2.0";
+  }
+
+  revision "2018-02-14" {
+    description
+      "Initial version";
+    reference "0.1.0";
+  }
+
+  grouping assigned-ap-managers-config {
+    description
+      "AP Manager(s) an AP may join. If cloud manager, this will be
+      the cloud instance(s). This is often referred to as 'Controller'.";
+
+    leaf id {
+      type string;
+      description
+        "The unique reference for the AP manager described in the list entry.";
+      }
+
+    leaf fqdn {
+      type oc-inet:domain-name;
+      description
+        "The FQDN of a manager this AP is assigned to. The list should be
+        ordered, according to priority. eg Primary first,
+        Secondary second, Tertiary third etc.";
+    }
+
+    leaf ap-manager-ipv4-address {
+      type oc-inet:ipv4-address;
+      description
+        "IPv4 address of a manager for this AP. The list should be
+        ordered, according to priority. eg. Primary first, Secondary second,
+        Tertiary third etc.";
+    }
+
+    leaf-list ap-manager-ipv6-address {
+      type oc-inet:ipv6-address;
+      description
+        "IPv6 address of a manager for this AP. The list should be
+        ordered, according to priority. eg. Primary first, Secondary second,
+        Tertiary third etc.";
+    }
+  }
+
+  grouping assigned-ap-managers-state {
+    description
+      "Manager(s) an AP may join. If cloud manager, this will be
+      the cloud instance(s).";
+
+    leaf joined {
+      type boolean;
+      description
+        "True only if this AP is currently joined to a manager. If this AP
+        is configured to join manager(s), however is not currently joined
+        to any manager, this MUST return False.";
+    }
+  }
+
+  grouping manager-ap-parameters-top {
+    description
+      "Top-level grouping for assigning AP's to manager(s).";
+
+    container assigned-ap-managers {
+      description
+        "Wireless manager(s) this AP is assigned to. eg. Primary
+        Secondary, Tertiary etc.";
+
+      list ap-manager {
+        key "id";
+        description
+          "Manager(s) this AP is assigned to, referenced by id.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "id serves as a reference point to the [1-n] manager(s) this AP
+            is assigned to.";
+        }
+
+        container config {
+          description
+            "Config. container for assigning APs to managers.";
+
+          uses assigned-ap-managers-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State container for APs assigned to managers.";
+
+          uses assigned-ap-managers-config;
+          uses assigned-ap-managers-state;
+        }
+      }
+    }
+  }
+
+  grouping access-points-common-config {
+    description
+      "Grouping for AP level State data.";
+
+    leaf hostname {
+      type leafref {
+        path "/ap-manager:provision-aps/ap-manager:provision-ap/" +
+        "ap-manager:config/ap-manager:hostname";
+      }
+      description
+        "Access Point FQDN.  This leaf is only valid when the type of the
+         component is WIFI_ACCESS_POINT, and should be used instead of
+         /oc-sys:system/oc-sys:state/oc-sys:hostname.";
+    }
+  }
+
+  grouping access-points-top {
+    description
+      "Top-level grouping for AP configuration & state data.";
+
+    container access-points {
+      description
+        "Top most container for configuration and state data for Access
+        Points.";
+
+      list access-point {
+        key "hostname";
+        description
+          "Configuration and state data for the access point referenced in the
+          list entry.";
+
+        leaf hostname {
+          type leafref {
+            path "../config/hostname";
+          }
+        description
+          "Access Point FQDN.";
+        }
+
+        container config {
+          description
+            "Config items at the global, Access Point level.";
+
+          uses access-points-common-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State items at the global, Access Point level.";
+
+          uses access-points-common-config;
+        }
+
+        uses wifi-phy:radio-top;
+        uses wifi-mac:ssid-top;
+        uses oc-sys:system-top;
+        uses manager-ap-parameters-top;
+      }
+    }
+  }
+  uses access-points-top;
+
+}

@@ -1,0 +1,7 @@
+- name: openconfig-lldp
+  docs:
+    - yang/lldp/openconfig-lldp.yang
+    - yang/lldp/openconfig-lldp-types.yang
+  build:
+    - yang/lldp/openconfig-lldp.yang
+  run-ci: true

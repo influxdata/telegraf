@@ -1,0 +1,306 @@
+module openconfig-lldp-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/lldp/types";
+
+  prefix "oc-lldp-types";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines types related to the LLDP protocol model.";
+
+  oc-ext:openconfig-version "0.1.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2016-05-16" {
+    description
+      "Initial public revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  identity LLDP_SYSTEM_CAPABILITY {
+    description
+      "Base identity for standard LLDP system capabilities.
+      The system capabilities field contains a bit-map of the
+      capabilities that define the primary function(s) of
+      the system. A system may advertise more than one capability.";
+    reference
+      "Table 8-4 System Capabilities, IEEE 802.1AB-2009";
+  }
+
+  identity OTHER {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "Other capability not specified; bit position 1";
+  }
+
+  identity REPEATER {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "Repeater capability; bit position 2";
+    reference
+      "IETF RFC 2108";
+  }
+
+  identity MAC_BRIDGE {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "MAC bridge capability; bit position 3";
+    reference
+      "IEEE Std 802.1D";
+  }
+
+  identity WLAN_ACCESS_POINT {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "WLAN access point capability; bit position 4";
+    reference
+      "IEEE Std 802.11 MIB";
+  }
+
+  identity ROUTER {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "Router; bit position 5";
+    reference
+      "IETF RFC 1812";
+  }
+
+  identity TELEPHONE {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "Telephone capability; bit position 6";
+    reference
+      "IETF RFC 4293";
+  }
+
+  identity DOCSIS_CABLE_DEVICE {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "DOCSIS cable device; bit position 7";
+    reference
+      "IETF RFC 4639 and IETF RFC 4546";
+  }
+
+  identity STATION_ONLY {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "Station only capability, for devices that implement only an
+      end station capability, and for which none of the other
+      capabilities apply; bit position 8";
+    reference
+      "IETF RFC 4293";
+  }
+
+  identity C_VLAN {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "C-VLAN component of a VLAN Bridge; bit position 9";
+    reference
+      "IEEE Std 802.1Q";
+  }
+
+  identity S_VLAN {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "S-VLAN component of a VLAN Bridge; bit position 10";
+    reference
+      "IEEE Std 802.1Q";
+  }
+
+  identity TWO_PORT_MAC_RELAY {
+    base LLDP_SYSTEM_CAPABILITY;
+    description
+      "Two-port MAC Relay (TPMR) capability; bit position 11";
+    reference
+      "IEEE Std 802.1Q";
+  }
+
+  identity LLDP_TLV {
+    description
+      "A base identity which describes the TLVs in LLDP";
+  }
+
+  identity CHASSIS_ID {
+    base LLDP_TLV;
+    description
+      "The chassis identifier of the device associated with
+      the transmitting LLDP agent";
+    reference "IEEE Std 802.1AB";
+  }
+
+  identity PORT_ID {
+    base LLDP_TLV;
+    description
+      "The port identifier associated with the interface
+      on with the LLDP agent is transmitting";
+    reference "IEEE Std 802.1AB";
+  }
+
+  identity PORT_DESCRIPTION {
+    base LLDP_TLV;
+    description
+      "The description of the port that is associated with
+      the interface on which the LLDP agent is transmitting";
+    reference "IEEE Std 802.1AB";
+  }
+
+  identity SYSTEM_NAME {
+    base LLDP_TLV;
+    description
+      "The assigned name (sysName or hostname) of the device
+      which is transmitting the LLDP PDU";
+    reference "IEEE Std 802.1AB";
+  }
+
+  identity SYSTEM_DESCRIPTION {
+    base LLDP_TLV;
+    description
+      "The description (sysDescr) of the device which is
+      transmitting the LLDP PDU";
+    reference "IEEE Std 802.1AB";
+  }
+
+  identity SYSTEM_CAPABILITIES {
+    base LLDP_TLV;
+    description
+      "The primary functions of the device transmitting the
+      LLDP PDU and their administrative status";
+    reference "IEEE Std 802.1AB";
+  }
+
+  identity MANAGEMENT_ADDRESS {
+    base LLDP_TLV;
+    description
+      "The address associated with the device transmitting the
+      LLDP PDU which can be used for higher-layer network
+      management";
+    reference "IEEE Std 802.1AB";
+  }
+
+  // typedef statements
+
+  typedef chassis-id-type {
+    type enumeration {
+      enum CHASSIS_COMPONENT {
+        description
+          "Chassis identifier based on the value of entPhysicalAlias
+          object defined in IETF RFC 2737";
+      }
+      enum INTERFACE_ALIAS {
+        description
+          "Chassis identifier based on the value of ifAlias object
+          defined in IETF RFC 2863";
+      }
+      enum PORT_COMPONENT {
+        description
+          "Chassis identifier based on the value of entPhysicalAlias
+          object defined in IETF RFC 2737 for a port or backplane
+          component";
+      }
+      enum MAC_ADDRESS {
+        description
+          "Chassis identifier based on the value of a unicast source
+          address (encoded in network byte order and IEEE 802.3
+          canonical bit order), of a port on the containing chassis
+          as defined in IEEE Std 802-2001";
+      }
+      enum NETWORK_ADDRESS {
+        description
+          "Chassis identifier based on a network address,
+          associated with a particular chassis.  The encoded address
+          is composed of two fields.  The first field is a single
+          octet, representing the IANA AddressFamilyNumbers value
+          for the specific address type, and the second field is the
+          network address value";
+      }
+      enum INTERFACE_NAME {
+        description
+          "Chassis identifier based on the name of the interface,
+          e.g., the value of ifName object defined in IETF RFC 2863";
+      }
+      enum LOCAL {
+        description
+          "Chassis identifier based on a locally defined value";
+      }
+    }
+    description
+      "Type definition with enumerations describing the source of
+      the chassis identifier";
+    reference
+      "IEEE 802.1AB LLDP MIB";
+  }
+
+  typedef port-id-type {
+    type enumeration {
+      enum INTERFACE_ALIAS {
+        description
+          "Chassis identifier based on the value of ifAlias object
+          defined in IETF RFC 2863";
+      }
+      enum PORT_COMPONENT {
+        description
+          "Port identifier based on the value of entPhysicalAlias
+          object defined in IETF RFC 2737 for a port component";
+      }
+      enum MAC_ADDRESS {
+        description
+          "Port identifier based on the value of a unicast source
+          address (encoded in network byte order and IEEE 802.3
+          canonical bit order) associated with a port";
+      }
+      enum NETWORK_ADDRESS {
+        description
+          "Port identifier based on a network address,
+          associated with a particular port";
+      }
+      enum INTERFACE_NAME {
+        description
+          "Port identifier based on the name of the interface,
+          e.g., the value of ifName object defined in IETF RFC 2863";
+      }
+      enum AGENT_CIRCUIT_ID {
+        description
+          "Port identifer based on the circuit id in the DHCP
+          relay agent information option as defined in IETF
+          RFC 3046";
+      }
+      enum LOCAL {
+        description
+          "Port identifier based on a locally defined alphanumeric
+          string";
+      }
+    }
+    description
+      "Type definition with enumerations describing the basis of
+      the port identifier";
+    reference
+      "IEEE 802.1AB LLDP MIB";
+  }
+
+
+}

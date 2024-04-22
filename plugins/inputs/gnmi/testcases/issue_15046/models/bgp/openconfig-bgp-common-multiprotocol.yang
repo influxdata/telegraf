@@ -1,0 +1,739 @@
+submodule openconfig-bgp-common-multiprotocol {
+
+  belongs-to openconfig-bgp {
+    prefix "oc-bgp";
+  }
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-bgp-types { prefix oc-bgp-types; }
+  import openconfig-routing-policy { prefix oc-rpol; }
+  import openconfig-types { prefix oc-types; }
+
+  include openconfig-bgp-common;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This sub-module contains groupings that are related to support
+    for multiple protocols in BGP. The groupings are common across
+    multiple contexts.";
+
+  oc-ext:openconfig-version "9.7.1";
+
+  revision "2023-12-28" {
+    description
+      "Clarification to last-prefix-limit-exceeded in description";
+          reference "9.7.1";
+  }
+
+  revision "2023-12-28" {
+    description
+      "Add support for controling use of link-bandwidth extended
+      community for BGP multipath.";
+    reference "9.7.0";
+  }
+  revision "2023-11-02" {
+    description
+      "Fix revision '2023-03-31': send-community-type was added to the
+       wrong grouping.
+      Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.6.0";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Add default apply policy to global and per afi-safi config.";
+    reference "9.5.0";
+  }
+
+  revision "2023-06-27" {
+    description
+      "Clarify bgp remote-port description";
+    reference "9.4.1";
+  }
+
+  revision "2023-04-01" {
+    description
+      "Add support for BGP large communities [rfc8092] in
+      send-community.
+      Leaf send-community was replaced by the leaf-list
+      send-community-type to allow the combination of different
+      community types";
+    reference "9.4.0";
+  }
+
+  revision "2023-03-31" {
+    description
+      "Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.3.0";
+  }
+
+  revision "2022-12-12" {
+    description
+      "Removed the default of enabled leaf of AFI-SAFI
+      at neighbor/peer-group to support BGP inheritance model.";
+    reference "9.2.0";
+  }
+
+  revision "2022-05-21" {
+    description
+      "Added extended-next-hop-encoding leaf.";
+    reference "9.1.0";
+  }
+
+  revision "2022-04-26" {
+    description
+      "Transition decimal64 types to uint16 for various BGP timers";
+    reference "9.0.0";
+  }
+
+  revision "2022-03-21" {
+    description
+      "Add BGP port";
+    reference "8.1.0";
+  }
+
+  revision "2021-12-01" {
+    description
+      "Add prefix-limit-received, add prefix-limit
+      state nodes, change/relocate restart-timer";
+    reference "8.0.0";
+  }
+
+  revision "2021-10-21" {
+    description
+      "Removal of top-level /bgp container";
+    reference "7.0.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "6.1.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "6.1.0";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Normalise timestamp units to nanoseconds.";
+    reference "6.0.0";
+  }
+
+  revision "2019-05-28" {
+    description
+      "Clarify prefix counter descriptions, add received-pre-policy
+      counter.";
+    reference "5.2.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Add BGP RIB to the top-level BGP container";
+    reference "5.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "5.0.2";
+  }
+
+  revision "2018-08-20" {
+    description
+      "Correct description of AFI-SAFI enabled leaf.";
+    reference "5.0.1";
+  }
+
+  revision "2018-04-11" {
+    description
+      "Correct naming of BGP maximum prefix warning percentage leaf.";
+    reference "5.0.0";
+  }
+
+  revision "2018-03-20" {
+    description
+      "Added SR-TE policy SAFI";
+    reference "4.1.0";
+  }
+
+  revision "2017-07-30" {
+    description
+      "Clarification of add-paths send-max leaf";
+    reference "4.0.1";
+  }
+
+  revision "2017-07-10" {
+    description
+      "Add error notifications; moved add-paths config; add AS
+      prepend policy features; removed unneeded config leaves";
+    reference "4.0.0";
+  }
+
+  revision "2017-02-02" {
+    description
+      "Bugfix to remove remaining global-level policy data";
+    reference "3.0.1";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add dynamic neighbor support, migrate to OpenConfig types";
+    reference "3.0.0";
+  }
+
+  revision "2016-06-21" {
+    description
+      "OpenConfig BGP refactor";
+    reference "2.1.1";
+  }
+
+  grouping bgp-common-mp-afi-safi-graceful-restart-config {
+    description
+      "BGP graceful restart parameters that apply on a per-AFI-SAFI
+      basis";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "This leaf indicates whether graceful-restart is enabled for
+        this AFI-SAFI";
+    }
+  }
+
+  grouping bgp-common-mp-afi-safi-extended-next-hop-encoding-config {
+    description
+      "BGP extended next-hop encoding parameters that apply on a per-AFI-SAFI
+      basis";
+
+    leaf extended-next-hop-encoding {
+      type boolean;
+      default false;
+      description
+        "This leaf indicates whether extended next-hop encoding is enabled for
+        this AFI-SAFI";
+    }
+  }
+
+  grouping bgp-common-mp-global-afi-safi-config {
+    description
+      "Configuration parameters used for all BGP global AFI-SAFIs";
+
+    leaf afi-safi-name {
+      type identityref {
+        base oc-bgp-types:AFI_SAFI_TYPE;
+      }
+      description "AFI,SAFI";
+    }
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "This leaf indicates whether the AFI-SAFI is enabled for all
+        neighbors or groups.";
+    }
+
+    leaf-list send-community-type {
+      type oc-bgp-types:community-type;
+      description
+        "Specify which types of community should be sent to the
+        neighbor or group. The default is to not send the
+        community attribute. This takes precedence over the neighbor
+        or group configuration";
+    }
+  }
+
+  grouping bgp-common-mp-afi-safi-config {
+    description
+      "Configuration parameters used for all BGP neighbors
+      or groups AFI-SAFIs";
+
+    leaf afi-safi-name {
+      type identityref {
+        base oc-bgp-types:AFI_SAFI_TYPE;
+      }
+      description "AFI,SAFI";
+    }
+
+    leaf enabled {
+      type boolean;
+      description
+        "This leaf indicates whether the AFI-SAFI is
+        enabled for the neighbor or group";
+    }
+
+    leaf-list send-community-type {
+      type oc-bgp-types:community-type;
+      description
+        "Specify which types of community should be sent to the
+        neighbor or group. The default is to not send the
+        community attribute. This takes precedence over the neighbor
+        or group configuration";
+    }
+  }
+
+  grouping bgp-common-mp-all-afi-safi-list-contents {
+    description
+      "A common grouping used for contents of the list that is used
+      for AFI-SAFI entries";
+
+    // import and export policy included for the afi/safi
+    uses oc-rpol:apply-policy-group;
+
+    uses bgp-common-mp-ipv4-unicast-group;
+    uses bgp-common-mp-ipv6-unicast-group;
+    uses bgp-common-mp-ipv4-labeled-unicast-group;
+    uses bgp-common-mp-ipv6-labeled-unicast-group;
+    uses bgp-common-mp-l3vpn-ipv4-unicast-group;
+    uses bgp-common-mp-l3vpn-ipv6-unicast-group;
+    uses bgp-common-mp-l3vpn-ipv4-multicast-group;
+    uses bgp-common-mp-l3vpn-ipv6-multicast-group;
+    uses bgp-common-mp-l2vpn-vpls-group;
+    uses bgp-common-mp-l2vpn-evpn-group;
+    uses bgp-common-mp-srte-policy-ipv4-group;
+    uses bgp-common-mp-srte-policy-ipv6-group;
+  }
+
+  // Groupings relating to each address family
+  grouping bgp-common-mp-ipv4-unicast-group {
+    description
+      "Group for IPv4 Unicast configuration options";
+
+    container ipv4-unicast {
+      when "../afi-safi-name = 'oc-bgp-types:IPV4_UNICAST'" {
+        description
+          "Include this container for IPv4 Unicast specific
+          configuration";
+      }
+
+      description "IPv4 unicast configuration options";
+      uses bgp-common-mp-ipv4-unicast-common;
+    }
+  }
+
+  grouping bgp-common-mp-ipv6-unicast-group {
+    description
+      "Group for IPv6 Unicast configuration options";
+
+    container ipv6-unicast {
+      when "../afi-safi-name = 'oc-bgp-types:IPV6_UNICAST'" {
+        description
+          "Include this container for IPv6 Unicast specific
+          configuration";
+      }
+
+      description "IPv6 unicast configuration options";
+      uses bgp-common-mp-ipv6-unicast-common;
+    }
+  }
+
+  grouping bgp-common-mp-ipv4-labeled-unicast-group {
+    description
+      "Group for IPv4 Labeled Unicast configuration options";
+
+    container ipv4-labeled-unicast {
+      when "../afi-safi-name = 'oc-bgp-types:IPV4_LABELED_UNICAST'" {
+        description
+          "Include this container for IPv4 Labeled Unicast specific
+          configuration";
+      }
+
+      description "IPv4 Labeled Unicast configuration options";
+
+      uses bgp-common-mp-all-afi-safi-common;
+
+      // placeholder for IPv4 Labeled Unicast specific config
+      // options
+    }
+  }
+
+  grouping bgp-common-mp-ipv6-labeled-unicast-group {
+    description
+      "Group for IPv6 Labeled Unicast configuration options";
+
+    container ipv6-labeled-unicast {
+      when "../afi-safi-name = 'oc-bgp-types:IPV6_LABELED_UNICAST'" {
+        description
+          "Include this container for IPv6 Labeled Unicast specific
+          configuration";
+      }
+
+      description "IPv6 Labeled Unicast configuration options";
+
+      uses bgp-common-mp-all-afi-safi-common;
+
+      // placeholder for IPv6 Labeled Unicast specific config
+      // options.
+    }
+  }
+
+  grouping bgp-common-mp-l3vpn-ipv4-unicast-group {
+    description
+      "Group for IPv4 Unicast L3VPN configuration options";
+
+    container l3vpn-ipv4-unicast {
+      when "../afi-safi-name = 'oc-bgp-types:L3VPN_IPV4_UNICAST'" {
+        description
+          "Include this container for IPv4 Unicast L3VPN specific
+          configuration";
+      }
+
+      description "Unicast IPv4 L3VPN configuration options";
+
+      // include common L3VPN configuration options
+      uses bgp-common-mp-l3vpn-ipv4-ipv6-unicast-common;
+
+      // placeholder for IPv4 Unicast L3VPN specific config options.
+    }
+  }
+
+  grouping bgp-common-mp-l3vpn-ipv6-unicast-group {
+    description
+      "Group for IPv6 Unicast L3VPN configuration options";
+
+    container l3vpn-ipv6-unicast {
+      when "../afi-safi-name = 'oc-bgp-types:L3VPN_IPV6_UNICAST'" {
+        description
+          "Include this container for unicast IPv6 L3VPN specific
+          configuration";
+      }
+
+      description "Unicast IPv6 L3VPN configuration options";
+
+      // include common L3VPN configuration options
+      uses bgp-common-mp-l3vpn-ipv4-ipv6-unicast-common;
+
+      // placeholder for IPv6 Unicast L3VPN specific configuration
+      // options
+    }
+  }
+
+  grouping bgp-common-mp-l3vpn-ipv4-multicast-group {
+    description
+      "Group for IPv4 L3VPN multicast configuration options";
+
+    container l3vpn-ipv4-multicast {
+      when "../afi-safi-name = 'oc-bgp-types:L3VPN_IPV4_MULTICAST'" {
+        description
+          "Include this container for multicast IPv6 L3VPN specific
+          configuration";
+      }
+
+      description "Multicast IPv4 L3VPN configuration options";
+
+      // include common L3VPN multicast options
+      uses bgp-common-mp-l3vpn-ipv4-ipv6-multicast-common;
+
+      // placeholder for IPv4 Multicast L3VPN specific configuration
+      // options
+    }
+  }
+
+  grouping bgp-common-mp-l3vpn-ipv6-multicast-group {
+    description
+      "Group for IPv6 L3VPN multicast configuration options";
+
+    container l3vpn-ipv6-multicast {
+      when "../afi-safi-name = 'oc-bgp-types:L3VPN_IPV6_MULTICAST'" {
+        description
+          "Include this container for multicast IPv6 L3VPN specific
+          configuration";
+      }
+
+      description "Multicast IPv6 L3VPN configuration options";
+
+      // include common L3VPN multicast options
+      uses bgp-common-mp-l3vpn-ipv4-ipv6-multicast-common;
+
+      // placeholder for IPv6 Multicast L3VPN specific configuration
+      // options
+    }
+  }
+
+  grouping bgp-common-mp-l2vpn-vpls-group {
+    description
+      "Group for BGP-signalled VPLS configuration options";
+
+    container l2vpn-vpls {
+      when "../afi-safi-name = 'oc-bgp-types:L2VPN_VPLS'" {
+        description
+          "Include this container for BGP-signalled VPLS specific
+          configuration";
+      }
+
+      description "BGP-signalled VPLS configuration options";
+
+      // include common L2VPN options
+      uses bgp-common-mp-l2vpn-common;
+
+      // placeholder for BGP-signalled VPLS specific configuration
+      // options
+    }
+  }
+
+  grouping bgp-common-mp-l2vpn-evpn-group {
+    description
+      "Group for BGP EVPN configuration options";
+
+    container l2vpn-evpn {
+      when "../afi-safi-name = 'oc-bgp-types:L2VPN_EVPN'" {
+        description
+          "Include this container for BGP EVPN specific
+          configuration";
+      }
+
+      description "BGP EVPN configuration options";
+
+      // include common L2VPN options
+      uses bgp-common-mp-l2vpn-common;
+
+      // placeholder for BGP EVPN specific configuration options
+    }
+  }
+
+  // Common groupings across multiple AFI,SAFIs
+  grouping bgp-common-mp-all-afi-safi-common {
+    description
+      "Grouping for configuration common to all AFI,SAFI";
+
+    container prefix-limit {
+      description
+        "Configure the maximum number of prefixes that will be
+        accepted from a peer";
+
+      container config {
+        description
+          "Configuration parameters relating to the prefix
+          limit for the AFI-SAFI";
+        uses bgp-common-mp-all-afi-safi-common-prefix-limit-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State information relating to the prefix-limit for the
+          AFI-SAFI";
+        uses bgp-common-mp-all-afi-safi-common-prefix-limit-config;
+        uses bgp-common-mp-all-afi-safi-common-prefix-limit-state;
+      }
+    }
+
+    container prefix-limit-received {
+      description
+        "Configure the maximum number of prefixes that will be
+        received from a peer";
+
+      container config {
+        description
+          "Configuration parameters relating to the prefix
+          limit for the AFI-SAFI";
+        uses bgp-common-mp-all-afi-safi-common-prefix-limit-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State information relating to the prefix-limit for the
+          AFI-SAFI";
+        uses bgp-common-mp-all-afi-safi-common-prefix-limit-config;
+        uses bgp-common-mp-all-afi-safi-common-prefix-limit-state;
+      }
+    }
+  }
+
+  grouping bgp-common-mp-ipv4-unicast-common {
+    description
+      "Configuration that is applicable for IPv4 unicast";
+
+    // include common afi-safi options.
+    uses bgp-common-mp-all-afi-safi-common;
+
+    container config {
+      description
+        "Configuration parameters for IPv4 unicast AFI-SAFI options";
+      // configuration options that are common to IPv[46] unicast
+      uses bgp-common-mp-ipv4-ipv6-unicast-common-config;
+
+      // configuration options that are specific to IPv4 unicast
+      uses bgp-common-mp-afi-safi-extended-next-hop-encoding-config;
+    }
+
+    container state {
+      config false;
+      description
+        "State information for IPv4 parameters";
+      uses bgp-common-mp-ipv4-ipv6-unicast-common-config;
+      uses bgp-common-mp-afi-safi-extended-next-hop-encoding-config;
+    }
+  }
+
+  grouping bgp-common-mp-ipv6-unicast-common {
+    description
+      "Configuration that is applicable for IPv6 unicast";
+
+    // include common afi-safi options.
+    uses bgp-common-mp-all-afi-safi-common;
+
+    // configuration options that are specific to IPv[46] unicast
+    container config {
+      description
+        "Configuration parameters for IPv6 unicast AFI-SAFI options";
+      // configuration options that are common to IPv[46] unicast
+      uses bgp-common-mp-ipv4-ipv6-unicast-common-config;
+
+      // placholder for IPv6 unicast specific options
+    }
+    container state {
+      config false;
+      description
+        "State information for IPv6 unicast parameters";
+      uses bgp-common-mp-ipv4-ipv6-unicast-common-config;
+    }
+  }
+
+  grouping bgp-common-mp-l3vpn-ipv4-ipv6-unicast-common {
+    description
+      "Common configuration applied across L3VPN for IPv4
+       and IPv6";
+
+    // placeholder -- specific configuration options that are generic
+    // across IPv[46] unicast address families.
+    uses bgp-common-mp-all-afi-safi-common;
+  }
+
+  grouping bgp-common-mp-l3vpn-ipv4-ipv6-multicast-common {
+    description
+      "Common configuration applied across L3VPN for IPv4
+      and IPv6";
+
+    // placeholder -- specific configuration options that are
+    // generic across IPv[46] multicast address families.
+    uses bgp-common-mp-all-afi-safi-common;
+  }
+
+  grouping bgp-common-mp-l2vpn-common {
+    description
+      "Common configuration applied across L2VPN address
+      families";
+
+    // placeholder -- specific configuration options that are
+    // generic across L2VPN address families
+    uses bgp-common-mp-all-afi-safi-common;
+  }
+
+  grouping bgp-common-mp-srte-policy-ipv4-group {
+    description
+      "Grouping for SR-TE for AFI 1";
+
+    container srte-policy-ipv4 {
+      when "../afi-safi-name = 'oc-bgp-types:SRTE_POLICY_IPV4'" {
+        description
+          "Only include this container when the address family is
+          specified to be SR-TE Policy SAFI for the IPv4 unicast
+          address family.";
+      }
+
+      description
+        "Configuration and operational state parameters relating to
+        the SR-TE Policy SAFI for IPv4 Unicast.";
+
+      uses bgp-common-mp-all-afi-safi-common;
+    }
+  }
+
+  grouping bgp-common-mp-srte-policy-ipv6-group {
+    description
+      "Grouping for SR-TE for AFI 2";
+
+    container srte-policy-ipv6 {
+      when "../afi-safi-name = 'oc-bgp-types:SRTE_POLICY_IPV6'" {
+        description
+          "Only include this container when the address family is
+          specified to be SR-TE Policy SAFI for the IPv6 unicast
+          address family.";
+      }
+
+      description
+        "Configuration and operational state parameters relating to
+        the SR-TE Policy SAFI for IPv6 Unicast.";
+
+      uses bgp-common-mp-all-afi-safi-common;
+    }
+  }
+
+  // Config groupings for common groups
+  grouping bgp-common-mp-all-afi-safi-common-prefix-limit-config {
+    description
+      "Configuration parameters relating to prefix-limits for an
+      AFI-SAFI";
+
+    leaf max-prefixes {
+      type uint32;
+      description
+        "Maximum number of prefixes that will be accepted
+        from the neighbor";
+    }
+
+    leaf prevent-teardown {
+      type boolean;
+      default false;
+      description
+        "Do not tear down the BGP session when the maximum
+        prefix limit is exceeded, but rather only log a
+        warning. The default of this leaf is false, such
+        that when it is not specified, the session is torn
+        down.";
+    }
+
+    leaf warning-threshold-pct {
+      type oc-types:percentage;
+      description
+        "Threshold on number of prefixes that can be received
+        from a neighbor before generation of warning messages
+        or log entries. Expressed as a percentage of
+        max-prefixes";
+    }
+  }
+
+  grouping bgp-common-mp-all-afi-safi-common-prefix-limit-state {
+    description
+      "State parameters relating to prefix-limits for an AFI-SAFI";
+
+    leaf prefix-limit-exceeded {
+      type boolean;
+      description
+        "If set to true, the prefix-limit has been exceeded.  When the
+        prefix-limit has been exceeded, the value of true must be retained
+        until the restart-time has expired.  Prior to session re-establishment,
+        the value must be reset to false";
+    }
+  }
+
+
+  grouping bgp-common-mp-ipv4-ipv6-unicast-common-config {
+    description
+      "Common configuration parameters for IPv4 and IPv6 Unicast
+      address families";
+
+    leaf send-default-route {
+      type boolean;
+      default "false";
+      description
+        "If set to true, send the default-route to the neighbor(s)";
+    }
+  }
+}

@@ -1,0 +1,528 @@
+submodule openconfig-qos-mem-mgmt {
+
+  belongs-to openconfig-qos {
+    prefix "oc-qos";
+  }
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+
+  include openconfig-qos-elements;
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule defines configuration and operational state
+    data associated related to queue management features of QoS
+    particularly:
+
+    - buffer-allocation-profiles: these profiles are applied on
+      a per-interface basis, and determine how memory is to be managed
+      across the queues that are instantiated on the system.
+
+    - queue-management-profiles: these profiles are applied on a per-interface
+      per-queue basis, and determine how packets are marked/dropped within
+      the queue instantiation.";
+
+  oc-ext:openconfig-version "0.11.2";
+
+  revision "2023-10-13" {
+    description
+      "Fix revision statement date";
+    reference "0.11.2";
+  }
+
+  revision "2023-10-08" {
+    description
+      "Clarification on WRED weight in case it is not present";
+    reference "0.11.1";
+  }
+
+  revision "2023-09-15" {
+    description
+      "Add support for ECN counters";
+    reference "0.11.0";
+  }
+
+revision "2023-07-26" {
+    description
+      "Add buffer management parameters in time unts (microseconds).
+       Make profiles reusable across LAGs and PHY of different speed";
+    reference "0.10.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify interface-ref usage.";
+    reference "0.9.1";
+  }
+
+  revision "2023-04-17" {
+    description
+      "Add support for relative RED min-threshold and max-threshold values.";
+    reference "0.9.0";
+  }
+
+  revision "2023-02-17" {
+    description
+      "Add queue identifier.";
+    reference "0.8.0";
+  }
+
+  revision "2023-02-08" {
+    description
+      "Remove incorrect output placement of interface-ref";
+    reference "0.7.0";
+  }
+
+  revision "2023-01-28" {
+    description
+      "Split groupings in interfaces for better leaf reuse.";
+    reference "0.6.1";
+  }
+
+  revision "2022-09-13" {
+    description
+      "Add queue octet drop counter.";
+    reference "0.6.0";
+  }
+
+  revision "2021-08-28" {
+    description
+      "Revision updating memory management profile WRED and RED configuration.";
+    reference "0.5.0";
+  }
+
+  revision "2021-06-28" {
+    description
+      "Adding buffer carving policies per interface per queue.";
+    reference "0.4.0";
+  }
+
+  revision "2021-04-28" {
+    description
+      "Revision updating buffer management and queue management
+      configuration.";
+    reference "0.3.0";
+  }
+
+  identity SHARED_BUFFER_LIMIT_TYPE {
+    description
+      "Base identity for supported shared buffer limit types.";
+  }
+
+  identity STATIC {
+    base SHARED_BUFFER_LIMIT_TYPE;
+    description
+      "The maximum buffer space that the queue is allowed to use from the shared
+       buffer is specified as a static-limit which is expressed in bytes.";
+  }
+
+  identity DYNAMIC_BASED_ON_SCALING_FACTOR {
+    base SHARED_BUFFER_LIMIT_TYPE;
+    description
+      "The maximum buffer space that the queue is allowed to use from the shared
+       buffer is dynamically determined based on the current usage pattern of the
+       shared buffer and a dynamic-limit which is expressed as a scaling factor
+       on the free space in the shared buffer.";
+  }
+
+  grouping qos-buffer-profile-top {
+    description
+      "Grouping containing buffer-allocation-profile structural definition";
+
+    container buffer-allocation-profiles {
+      description
+        "Surrounding container for buffer allocation profiles.";
+
+      list buffer-allocation-profile {
+        key "name";
+
+        description
+          "A buffer allocation profile describes a mapping between the queues
+          that are instantiated on an interface and the memory that is allocated
+          to them on the forwarding complex that they are instantiated. Profiles
+          (like queues) are defined in the abstract and instantiated by being
+          configured on a particular interface. Separate allocation profiles may
+          be used for ingress and egress traffic, with the profile being specified
+          within the /qos/interfaces/interface list.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the unique name used as a key for each buffer profile.";
+        }
+
+        container config {
+          description
+            "Configuration parameters for a buffer-allocation-profile.";
+          uses buffer-allocation-profile-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to a buffer-allocation-profile.";
+          uses buffer-allocation-profile-config;
+        }
+
+        container queues {
+          description
+            "Surrounding container for the queues that are referenced under a
+            buffer-allocation-policy.";
+
+          list queue {
+            key "name";
+
+            description
+              "Buffer allocation profile for a specific queue on the interface.";
+
+            leaf name {
+              type leafref {
+                path "../config/name";
+              }
+              description
+                "Reference to the name of the queue being referenced under the buffer
+                allocation profile.";
+            }
+
+            container config {
+              description
+                "Configuration parameters relating to a queue within a buffer allocation
+                profile.";
+              uses buffer-allocation-profile-q-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters relating to a queue wtihin a buffer allocation
+                profile.";
+              uses buffer-allocation-profile-q-config;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping buffer-allocation-profile-config {
+    description
+      "Configuration parameters relating to a buffer-allocation-profile.";
+
+    leaf name {
+      type string;
+      description
+        "Unique string identifying the buffer allocation profile, used to
+        reference to the profile on interfaces.";
+    }
+
+    // TODO(openconfig-ops): add any parameters that relate to overall allocation
+    // profile.
+  }
+
+  grouping buffer-allocation-profile-q-config {
+    description
+      "Configuration parameters relating to a queue within a buffer-allocation-profile.";
+
+    leaf name {
+      type leafref {
+        // @ /qos/buffer-allocation-profiles/buffer-allocation-profile/queues/queue/config/name
+        path "../../../../../../queues/queue/config/name";
+      }
+      description
+        "Reference to the queue being referenced within the buffer allocation profile.";
+    }
+
+    leaf dedicated-buffer {
+      type uint64;
+      units bytes;
+      description
+        "This is the dedicated buffer that is carved for the queue, this is the minimum
+        number of bytes reserved for this queue.
+        This leaf is mutualy exclusive with dedicated-buffer-temporal leaf";
+    }
+
+    leaf dedicated-buffer-temporal {
+      type uint64;
+      units microseconds;
+      description
+        "This is the dedicated buffer that is carved for the queue. The the minimum
+        number of bytes reserved for this queue is calculated by multiplying by interface speed
+        queue is attached to and queues minimum, guarantaed transmit share (derived
+        form WRR schedulers weights).
+        This leaf shouldbot be used for strict priority scheduled queues.
+        This leaf is mutualy exclusive with dedicated-buffer leaf";
+    }
+
+    leaf use-shared-buffer {
+      type boolean;
+      description
+        "If the flag is true, then the queue is allowed to use buffers from shared pool
+        in additional to the dedicated buffers assigned for this queue.";
+    }
+
+    leaf shared-buffer-limit-type {
+      type identityref {
+        base SHARED_BUFFER_LIMIT_TYPE;
+      }
+      description
+        "The type of limit used to specify the amount of buffer space that the queue
+        is allowed to use from the shared pool.";
+    }
+
+    leaf static-shared-buffer-limit {
+      type uint32;
+      units bytes;
+      description
+        "If the shared-buffer-limit-type is STATIC, then static-shared-buffer-limit is
+        the maximum number of bytes that the queue is allowed to use from the shared
+        pool.
+        This leaf is mutualy exclusive with static-shared-buffer-limit-temporal leaf.";
+    }
+
+    leaf static-shared-buffer-limit-temporal {
+      type uint32;
+      units microseconds;
+      description
+        "If the shared-buffer-limit-type is STATIC, then static-shared-buffer-limit-temporal is
+        the maximum number of bytes that the queue is allowed to use from the shared
+        pool.
+        The the number of bytes is calculated by multiplying static-shared-buffer-limit-temporal
+        by interface speed the queue is attached to and queues minimum, guarantaed transmit share
+        (derived form WRR schedulers weights).
+        This leaf shouldbot be used for strict priority scheduled queues.
+        This leaf is mutualy exclusive with static-shared-buffer-limit leaf.";
+    }
+
+    leaf dynamic-limit-scaling-factor {
+      type int32;
+      description
+        "If shared-buffer-limit-type is DYNAMIC_BASED_ON_SCALING_FACTOR, the scaling
+        factor and the current free space in the shared pool is used to determine the
+        maximum buffer sapce from the shared pool that the queue is allowed to use.
+
+        Example: If a queue is using 79MB and the other queues are using 11MB, the
+        free buffer is 10MB. If the configured scaling factor is 3 for the queue, the
+        maximum buffer space from the shared pool that the queue is allowed to use is
+        calculated as (free buffer * 2^scaling factor) ie. 10MB*2^3 = 80MB. Since the
+        current usage is 79MB which is < 80MB, the packet is queued.";
+    }
+  }
+
+  grouping qos-queue-management-profile-config {
+    description
+      "Configuration parameters for queue management profiles.";
+
+    leaf name {
+      type string;
+      description
+        "Unique string name used for the queue management profile.";
+    }
+  }
+
+  grouping qos-queue-management-profile-red-wred-common-config {
+    description
+      "Common configuration parameters for red and wred.";
+
+    leaf min-threshold {
+      type uint64;
+      units bytes;
+      description
+        "The mininum threshold parameter for a RED-managed queue in bytes.
+        When the average queue length is less than minth, all packets are admitted
+        to the queue.  Mututally exclusive with min-threshold-percent and
+        max-threshold-percent.";
+    }
+
+    leaf max-threshold {
+      type uint64;
+      units bytes;
+      description
+        "The maximum threshold parameter for a RED-managed queue in bytes.
+        When the average queue length exceeds the maxth value, all packets are
+        dropped (or marked if ECN is enabled).  Mutually exclusive with
+        min-threshold-percent and max-threshold-percent.";
+    }
+
+    leaf min-threshold-percent {
+      type uint64;
+      units oc-types:percentage;
+      description
+        "The mininum threshold parameter for a RED-managed queue in percent.
+        When the average queue length is less than minth, all packets are
+        admitted to the queue.  Mutually exclusive with min-threshold and
+        max-threshold.";
+    }
+
+    leaf max-threshold-percent {
+      type uint64;
+      units oc-types:percentage;
+      description
+        "The maximum threshold parameter for a RED-managed queue in percent.
+        When the average queue length exceeds the maxth value, all packets
+        are dropped (or marked if ECN is enabled).  Mutually exclusive with
+        min-threshold and max-threshold.";
+    }
+
+    leaf enable-ecn {
+      type boolean;
+      default false;
+      description
+        "When this leaf is true and the number of packets in the queue
+        is between the minimum threshold and the maximum threshold, if
+        the ECN field on the packet indicates that the endpoints are ECN
+        capable (that is, the ECT bit is set to 1 and the CE bit is set
+        to 0, or the ECT bit is set to 0 and the CE bit is set to 1) and
+        the WRED algorithm determines that the packet should have been
+        dropped based on the drop probability, the ECT and CE bits for
+        the packet are changed to 1, and the packet is transmitted.";
+    }
+
+    leaf drop {
+      type boolean;
+      default false;
+      description
+        "When this leaf is true and the packet and if the ECN field in
+        the packet indicates that the endpoints are not ECN capable and
+        the and the WRED algorithm determines that the packet should
+        have been dropped based on the drop probability, the packet
+        is dropped.";
+    }
+  }
+
+  grouping qos-queue-management-profile-wred-config {
+    description
+      "Configuration parameters for wred buffer allocation.";
+
+    leaf weight {
+      type uint32;
+      description
+        "The average queue size depends on the previous average as well as
+         the current size of the queue.
+
+        average queue size = (previous average queue size)*(1-2^{-n})+
+                             (current queue size)*(2^{-n})
+
+        where n is the user-configurable exponential weight factor.
+
+        The previous average is more important for high values of n. Peaks
+        and lows in queue size are smoothed by a high value. For low values
+        of n, the average queue size is close to the current queue size.
+
+        When this leaf is not present, implementation default value is
+        applied.";
+    }
+
+    leaf max-drop-probability-percent {
+      type oc-types:percentage;
+      description
+        "If the queue depth is between min and max threshold then this
+        the probability with which packets are dropped or marked.";
+    }
+  }
+
+  grouping qos-queue-mgmt-profile-top {
+    description
+      "Grouping containing queue management profiles for queues.";
+
+    container queue-management-profiles {
+      description
+        "Surrounding container for the list of configured
+        queue management profiles.";
+
+      list queue-management-profile {
+        key "name";
+
+        description
+          "A queue management profile within the OpenConfig QoS model
+          specifies how packets are ECN marked/dropped for a particular
+          instance of a queue on a particular interface. for example,
+          whether RED, or WRED is applied to manage the queue's occupancy.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the unique name used to reference the queue
+            management profile";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to the queue
+            management profile.";
+          uses qos-queue-management-profile-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the queue
+            management profile.";
+          uses qos-queue-management-profile-config;
+        }
+
+        container wred {
+          description
+            "Configuration and operational state parameters relating to
+            Weighted Random Early Detection (WRED).";
+
+          container uniform {
+            description
+              "Uniform WRED parameters. These parameters are applied to all the
+              traffic coming into system.";
+
+            container config {
+              description
+                "Configuration parameters relating to the WRED.";
+              uses qos-queue-management-profile-red-wred-common-config;
+              uses qos-queue-management-profile-wred-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters relating to the WRED.";
+              uses qos-queue-management-profile-red-wred-common-config;
+              uses qos-queue-management-profile-wred-config;
+            }
+          }
+        }
+
+        container red {
+          description
+            "Configuration and operational state parameters
+            relating to Random Early Detection (RED).";
+
+          container uniform {
+            description
+              "Uniform RED parameters. These parameters are applied to all
+              the traffic coming into system.";
+
+            container config {
+              description
+                "Configuration parameters relating to the RED.";
+              uses qos-queue-management-profile-red-wred-common-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters relating to the RED.";
+              uses qos-queue-management-profile-red-wred-common-config;
+            }
+          }
+        }
+      }
+    }
+  }
+}

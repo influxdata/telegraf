@@ -1,0 +1,221 @@
+submodule openconfig-rib-bgp-shared-attributes {
+
+  belongs-to openconfig-rib-bgp {
+    prefix "oc-rib-bgp";
+  }
+
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  include openconfig-rib-bgp-attributes;
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule contains structural data definitions for
+    attribute sets shared across routes.";
+
+  oc-ext:openconfig-version "0.9.0";
+
+  revision "2022-12-20" {
+    description
+      "Convert as-segment and as4-segment to keyed lists.";
+    reference "0.9.0";
+  }
+
+  revision "2022-06-06" {
+    description
+      "Revert IETF types in favor of oc-inet types";
+    reference "0.8.1";
+  }
+
+  revision "2021-06-21" {
+    description
+      "Add L2VPN-EVPN BGP RIB Support";
+    reference "0.8.0";
+  }
+
+  revision "2019-10-15" {
+    description
+      "Change imported segment-routing module.";
+    reference "0.7.0";
+  }
+
+  revision "2019-04-25" {
+    description
+      "Update last-modified timestamp to be expressed as nanoseconds
+      since the Unix epoch.";
+    reference "0.6.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Rename the top-level BGP RIB container's name
+      to RIB.";
+    reference "0.5.0";
+  }
+
+  revision "2019-02-27" {
+    description
+      "Remove top-level BGP RIB container, and update list
+      names to be compatible with path compression.";
+    reference "0.4.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2016-10-17" {
+    description
+      "OpenConfig BGP RIB refactor";
+    reference "0.3.0";
+  }
+
+
+  grouping attribute-sets-top {
+    description
+      "Top level grouping for list of common attribute sets";
+
+    container attr-sets {
+      description
+        "Enclosing container for the list of path attribute sets";
+
+      list attr-set {
+        key "index";
+
+        description
+          "List of path attributes that may be in use by multiple
+          routes in the table";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to list key";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for common path attributes";
+
+          leaf index {
+            type uint64;
+            description
+              "System generated index for each attribute set.  The
+              index is used to reference an attribute set from a
+              specific path.  Multiple paths may reference the same
+              attribute set.";
+          }
+
+          uses bgp-shared-common-attr-state;
+        }
+        uses bgp-aggregator-attr-top;
+        uses bgp-as-path-attr-top;
+        uses bgp-as4-path-attr-top;
+        uses bgp-tunnel-encapsulation-attr-top;
+      }
+    }
+  }
+
+  grouping community-sets-top {
+    description
+      "Top level grouping for list of shared community attribute
+      sets";
+
+    container communities {
+      description
+        "Enclosing container for the list of community attribute
+        sets";
+
+      list community {
+        key "index";
+
+        description
+          "List of path attributes that may be in use by multiple
+          routes in the table";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to the list key";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for shared BGP community attribute";
+
+          leaf index {
+            type uint64;
+            description
+              "System generated index for each attribute set.  The
+              index is used to reference an attribute set from a
+              specific path.  Multiple paths may reference the same
+              attribute set.";
+          }
+
+          uses bgp-community-attr-state;
+        }
+      }
+    }
+  }
+
+  grouping ext-community-sets-top {
+    description
+      "Top level grouping for list of extended community attribute
+      sets";
+
+    container ext-communities {
+      description
+        "Enclosing container for the list of extended community
+        attribute sets";
+
+      list ext-community {
+        key "index";
+
+        description
+          "List of path attributes that may be in use by multiple
+          routes in the table";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to the list key";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for shared BGP extended community
+            attribute";
+
+          leaf index {
+            type uint64;
+            description
+              "System generated index for each attribute set.  The
+              index is used to reference an attribute set from a
+              specific path.  Multiple paths may reference the same
+              attribute set.";
+          }
+
+          uses bgp-extended-community-attr-state;
+        }
+      }
+    }
+  }
+}

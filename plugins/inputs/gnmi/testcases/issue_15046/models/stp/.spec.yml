@@ -1,0 +1,7 @@
+- name: openconfig-spanning-tree
+  docs:
+    - yang/stp/openconfig-spanning-tree-types.yang
+    - yang/stp/openconfig-spanning-tree.yang
+  build:
+    - yang/stp/openconfig-spanning-tree.yang
+  run-ci: true

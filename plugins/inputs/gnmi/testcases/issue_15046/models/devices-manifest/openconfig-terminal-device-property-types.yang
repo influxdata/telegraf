@@ -1,0 +1,457 @@
+module openconfig-terminal-device-property-types {
+
+  // Yang version can be "1" without mandatory fields.
+  // Yang version 1.1 allows mandatory fiels in an augment
+  // https://tools.ietf.org/html/rfc7950#section-7.17
+  // If the augmentation adds mandatory nodes (see Section 3) that
+  // represent configuration to a target node in another module, the
+  // augmentation MUST be made conditional with a "when" statement.
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://example.net/yang/openconfig-terminal-device-property-types";
+  prefix "oc-opt-term-prop-types";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-transport-types { prefix oc-opt-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+      www.openconfig.net";
+
+  description
+      "Supplementary module to expose identity types for the
+      openconfig-terminal-device-properties model. This model includes
+      definitions of the set of modulation format, FEC codes and adjustment
+      granularity types use in the reffered model.";
+
+  oc-ext:openconfig-version "0.1.0";
+
+
+  // Revisions
+  revision "2022-03-08" {
+      description "Initial version to provide the initial set of identities
+      used in the openconfig-terminal-device-properties model.";
+      reference "0.1.0";
+  }
+
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig-properties";
+
+
+  typedef standard-mode {
+    type string;
+    description
+      "ITU-T G.698.2 standard mode that guarantees interoperability.
+      It must be an string with the following format:
+      B-DScW-ytz(v) where all these attributes are conformant
+      to the ITU-T recomendation";
+      reference "ITU-T G.698.2 (11/2018)";
+  }
+
+  typedef bit-rate {
+    type identityref {
+      base oc-opt-types:TRIBUTARY_RATE_CLASS_TYPE;
+    }
+    description
+      "Rounded bit rate of the tributary signal delivered by the
+      optical channel associated to the specifc operational mode.
+      Exact bit rate will be refined by protocol selection at the
+      associated tributary logical channel.";
+  }
+
+  typedef pulse-shaping-type {
+    type identityref {
+      base SHAPING_TYPE;
+    }
+    description
+      "Pulse/spectral shaping type associated to the mode.";
+  }
+
+  typedef modulation-format {
+    type identityref {
+      base MODULATION_FORMAT;
+    }
+    description
+      "Optical modulation format associated to the mode";
+  }
+
+  typedef fec-coding {
+    type identityref {
+      base FEC;
+    }
+    description
+      "FEC Type identityref, e.g., FEC_G";
+  }
+
+  typedef grid-type {
+    type identityref {
+      base GRID_TYPE;
+    }
+    description
+      "Type for frequency ITU-T grid specification attributes.";
+  }
+
+  typedef adjustment-granularity {
+    type identityref {
+      base ADJUSTMENT_GRANULARITY;
+    }
+    description
+      "Type definition for the possible adjustment granularity attributes.
+      As per ITU-T G.694.1 (10/2020), it is used to calculate nominal
+      central frequency.";
+  }
+
+  typedef impairment-type {
+    type identityref {
+      base IMPAIRMENT_TYPE;
+    }
+    description
+      "Definition of impairment type and unit used in penaty list";
+  }
+
+  identity SHAPING_TYPE {
+    description
+      "Base identity for pulse-shaping-type, to help characterize the
+      filter type included in the transceiver which support the mode.";
+  }
+
+  identity RC {
+    base  SHAPING_TYPE;
+    description
+      "Raised-cosine filter shape.";
+  }
+
+  identity RRC {
+    base  SHAPING_TYPE;
+    description
+      "Root-raised-cosine filter shape.";
+  }
+
+  identity OFF {
+    base  SHAPING_TYPE;
+    description
+      "No filter.";
+  }
+
+  identity IMPAIRMENT_TYPE {
+    description
+      "Base identity for impairment type and units, used in penaty list.";
+  }
+
+  identity CD_PS_NM {
+    base  IMPAIRMENT_TYPE;
+    description
+      "Chromatic Dispersion (CD) in picoseconds per nanometer units.";
+  }
+
+  identity PMD_PS {
+    base  IMPAIRMENT_TYPE;
+    description
+      "Polarization Mode Dispersion (PMD) in picoseconds units.";
+  }
+
+  identity PDL_DB {
+    base  IMPAIRMENT_TYPE;
+    description
+      "Polarization Dependent Loss (PDL) in decibels (dB) units.";
+  }
+
+  identity GRID_TYPE {
+    description
+      "Base identity for Grid Type definitions according to ITU-T
+      ITU-T G.694.1 (10/2020) standard which defines the possible
+      configurable values of the optical channel component's
+      central frequency attribute.";
+  }
+
+  identity DWDM {
+    base  GRID_TYPE;
+    description
+      "Fixed frequency grid in C & L bands as specified
+      in  ITU-T G.694.1 (10/2020)";
+  }
+
+  identity CWDM {
+    base  GRID_TYPE;
+    description
+      "Fixed frequency grid as specified in  ITU-T G.694.1 (10/2020).";
+  }
+
+  identity FLEX {
+    base  GRID_TYPE;
+    description
+      "Flexible frequency grid as specified in  ITU-T G.694.1 (10/2020).";
+  }
+
+  identity GRIDLESS {
+    base  GRID_TYPE;
+    description
+      "No grid";
+  }
+
+  identity UNSPECIFIED {
+    base  GRID_TYPE;
+    description
+      "Unspecified/proprietary frequency grid";
+  }
+
+  identity ADJUSTMENT_GRANULARITY {
+    description
+      "Base identity for the adjustment granularity or nominal central
+      frequency granularity, according to  ITU-T G.694.1 (10/2020) standard,
+      defined as the minimun spectrum separation between the central
+      frequencies of two contiguous optical channels";
+  }
+
+  identity G_100GHZ {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value of 100 gigahertz.";
+  }
+
+  identity G_50GHZ {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value of 50 gigahertz.";
+  }
+
+  identity G_25GHZ {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value of 25 gigahertz.";
+  }
+
+  identity G_12_5GHZ {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value of 12.5 gigahertz.";
+  }
+
+  identity G_6_25GHZ {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value of 6.25 gigahertz.";
+  }
+
+  identity G_3_125GHZ {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value of 3.125 gigahertz.";
+  }
+
+  identity UNCONSTRAINED {
+      base  ADJUSTMENT_GRANULARITY;
+      description
+        "Adjustment granularity value unconstrained, i.e.,
+        no minimun spacing between channels is defined.";
+  }
+
+
+  identity FEC {
+    description
+      "Forward Error Correction base identity.";
+  }
+
+  identity FEC_HD {
+    base FEC;
+    description
+      "Hard-Decision (HD) Staircase FEC, defined in
+      ITU-T G.709.2 (07/18)";
+  }
+
+  identity FEC_G {
+    base FEC;
+    description
+      "Generic FEC, Reed Solomon (255,239) coding schema,
+      defined in ITU-T G.975 (10/2000).";
+  }
+  identity FEC_E {
+    base FEC;
+    description
+      "Enhanced FEC (EFEC) from G.975.1 Clause I.4.";
+  }
+  identity FEC_O {
+    base FEC;
+    description
+      "OpenROADM 200G Open FEC (oFEC) soft-decision coding
+      schema.";
+  }
+
+  identity FEC_C {
+    base FEC;
+    description
+      "OIF 400G concatenated FEC (cFEC) with soft-decision inner
+       Hamming code and hard-decision outer Staircase code";
+  }
+
+  identity FEC_OTHER {
+    base FEC;
+    description
+      "Placeholder identity to refer to any other propiertary or
+      non-propiertary FEC coding schema non-defined in this model
+      yet.";
+  }
+
+  identity MODULATION_FORMAT {
+    description
+      "Base identity for identiying the optical modulation
+      format associated to the operational mode.";
+  }
+
+  identity MODULATION_FORMAT_BPSK {
+    base MODULATION_FORMAT;
+    description
+      "Binary phase-shift keying (BPSK) modulation format
+      identity";
+  }
+
+  identity MODULATION_FORMAT_DPSK {
+    base MODULATION_FORMAT;
+    description
+      "Differential phase-shift keying (DPSK) modulation format
+      identity";
+  }
+
+  identity MODULATION_FORMAT_QPSK {
+    base MODULATION_FORMAT;
+    description
+      "Quadrature phase-shift keying (QPSK) modulation format
+      identity";
+  }
+
+  identity MODULATION_FORMAT_DP_QPSK {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Polarization Quadrature Phase-Shift Keying (QPSK)
+      modulation format identity";
+  }
+
+  identity MODULATION_FORMAT_8QAM {
+    base MODULATION_FORMAT;
+    description
+      "8-Quadrature Amplitude Modulation (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_DP_8QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Polarization 8-Quadrature Amplitude Modulation (QAM)
+      identity";
+  }
+
+  identity MODULATION_FORMAT_DC_DP_8QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Carrier Dual-Polarization 8-Quadrature Amplitude
+      Modulation identity";
+  }
+
+  identity MODULATION_FORMAT_16QAM {
+    base MODULATION_FORMAT;
+    description
+      "16-Quadrature Amplitude Modulation (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_DP_16QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Polarization 16-Quadrature Amplitude Modulation (QAM)
+      identity";
+  }
+
+  identity MODULATION_FORMAT_DC_DP_16QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Carrier Dual-Polarization 16-Quadrature Amplitude Modulation
+      (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_32QAM {
+    base MODULATION_FORMAT;
+    description
+      "32-Quadrature Amplitude Modulation (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_DP_32QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Polarization 32-Quadrature Amplitude Modulation (QAM)
+      identity";
+  }
+
+  identity MODULATION_FORMAT_DC_DP_32QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Carrier Dual-Polarization 32-Quadrature Amplitude Modulation
+      (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_64QAM {
+    base MODULATION_FORMAT;
+    description
+      "64-Quadrature Amplitude Modulation (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_DP_64QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Polarization 64-Quadrature Amplitude Modulation (QAM)
+      identity";
+  }
+
+  identity MODULATION_FORMAT_DC_DP_64QAM {
+    base MODULATION_FORMAT;
+    description
+      "Dual-Carrier Dual-Polarization 64-Quadrature Amplitude Modulation
+      (QAM) identity";
+  }
+
+  identity MODULATION_FORMAT_PAM4 {
+    base MODULATION_FORMAT;
+    description
+      "4-level Pulse Amplitud Modulation (PAM)";
+  }
+
+  identity MODULATION_FORMAT_PAM8 {
+    base MODULATION_FORMAT;
+    description
+      "8-level Pulse Amplitud Modulation (PAM)";
+  }
+
+  identity MODULATION_FORMAT_PROPRIETARY {
+    base MODULATION_FORMAT;
+    description
+      "Proprietary modulation format.";
+  }
+
+  identity TRANSCEIVER_MODE_TYPE{
+    description
+      "Base identity for identiying the transceiver's mode category:
+      Standard or Explicit. This differentiates on the way operational
+      mode's features are expose by the transceiver device.";
+  }
+
+  identity TRANSCEIVER_MODE_TYPE_STANDARD{
+    base TRANSCEIVER_MODE_TYPE;
+    description
+      "Operational model type Standard, according to ITU-T G.698.2,
+      indicates the mode is interoperable with other transceiver-modules
+      supporting the same Standard mode.";
+  }
+
+  identity TRANSCEIVER_MODE_TYPE_EXPLICIT{
+    base TRANSCEIVER_MODE_TYPE;
+    description
+      "Operational model type Explicit, indicating the description of the
+      operational mode features follows the model subtree explicit
+      features description.";
+  }
+}

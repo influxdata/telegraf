@@ -1,0 +1,945 @@
+module openconfig-segment-routing {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/sr";
+  prefix "oc-sr";
+
+  // import some basic types
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-mpls-types { prefix "oc-mplst"; }
+  import openconfig-interfaces { prefix "oc-if"; }
+  import ietf-inet-types { prefix "inet"; }
+  import ietf-yang-types { prefix "yang"; }
+  import openconfig-segment-routing-types { prefix "oc-srt"; }
+  import openconfig-srte-policy { prefix "oc-srte"; }
+  import openconfig-isis-types { prefix "oc-isis-types"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Configuration and operational state parameters relating to the
+    segment routing. This module defines a number of elements which are
+    instantiated in multiple places throughout the OpenConfig collection
+    of models.
+
+    Particularly:
+      - SRGB+LB dataplane instances - directly instantied by SR.
+      - SRGB+LB dataplane reservations - instantiated within MPLS and future SR
+                                      dataplanes.
+      - SR SID advertisements - instantiated within the relevant IGP.
+      - SR-specific counters - instantied within the relevant dataplane.";
+
+  oc-ext:openconfig-version "0.4.1";
+
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "0.4.1";
+  }
+
+  revision "2023-05-24" {
+    description
+      "Add flex-algo model";
+    reference "0.4.0";
+  }
+
+  revision "2023-02-06" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.3.2";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add qualify to when statements.";
+    reference "0.3.1";
+  }
+
+  revision "2020-03-31" {
+    description
+      "Move segment-list to the te-policies container.";
+    reference "0.3.0";
+  }
+
+  revision "2020-02-04" {
+    description
+      "Consistent prefix for openconfig-mpls-types.";
+    reference "0.2.0";
+  }
+
+  revision "2019-09-24" {
+    description
+      "Move SR types to a separate module and add a SR-TE policy module.";
+    reference "0.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.0.4";
+  }
+
+  revision "2017-01-12" {
+    description
+      "Minor compliance fixes.";
+    reference "0.0.3";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Updated revision of SR module.";
+    reference "0.0.2";
+  }
+
+  revision "2016-07-28" {
+    description
+      "Initial revision of SR module.";
+    reference "0.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping srgb-config {
+    description
+      "Configuration parameters relating to the SRGB.";
+
+    leaf local-id {
+      type string;
+      description
+        "Unique identifier for the segment routing global block on
+        the local system.";
+    }
+
+    leaf dataplane-type {
+      type oc-srt:sr-dataplane-type;
+      description
+        "The dataplane being used to instantiate the SRGB. When MPLS is specified
+        the set of MPLS label blocks that are defined in the mpls-label-blocks
+        list are used to make up the SRGB. When IPv6 is specified, the set of IPv6
+        prefixes specified in the ipv6-prefixes list are used.";
+    }
+
+    leaf-list mpls-label-blocks {
+      when "../dataplane-type = 'oc-srt:MPLS'" {
+        description
+          "Allow the MPLS label block to be specified only for SRGBs that are
+          using the MPLS dataplane.";
+      }
+      type leafref {
+        // We are at /network-instances/network-instance/segment-routing/
+        // srgbs/srgb/config/mpls-label-blocks
+        path "../../../../../mpls/global/reserved-label-blocks/" +
+             "reserved-label-block/config/local-id";
+      }
+      description
+        "A list of refences to the label blocks that are used to make
+        up the SRGB.";
+    }
+
+    leaf-list ipv6-prefixes {
+      when "../dataplane-type = 'oc-srt:IPV6'" {
+        description
+          "Allow IPv6 prefixes to be specified only when the dataplane
+          realisation of the SRGB is IPv6.";
+      }
+      type inet:ipv6-prefix;
+      description
+        "A list of IPv6 prefixes which are to be used for segment routing using
+        the IPv6 dataplane.";
+    }
+  }
+
+  grouping srgb-state {
+    description
+      "Operational state parameters relating to the SRGB.";
+
+    leaf size {
+      type uint32;
+      description
+        "The total number of SRGB entries that are available within the SRGB.";
+    }
+
+    leaf used {
+      type uint32;
+      description
+        "The total number of SRGB entries that have already been alocated by
+        protocols referencing the SRGB.";
+    }
+  }
+
+  grouping srlb-config {
+    description
+      "Configuration parameters relating to an SRLB.";
+
+    leaf local-id {
+      type string;
+      description
+        "A unique local identifier used for the Segment Routing Local Block.
+        The identifier is used when referencing the SRLB within other
+        contexts.";
+    }
+
+    leaf dataplane-type {
+      type oc-srt:sr-dataplane-type;
+      description
+        "The dataplane that is to be used for the Segment Routing Local Block.
+        When MPLS is specified, the local block corresponds to a block of MPLS
+        labels; when IPv6 is specified it corresponds to an IPv6 prefix.";
+    }
+
+    leaf mpls-label-block {
+      when "../dataplane-type = 'oc-srt:MPLS'" {
+        description
+          "Allow the MPLS label block to be specified only for SRLBs that are
+          using the MPLS dataplane.";
+      }
+      type leafref {
+        path "../../../../../mpls/global/reserved-label-blocks/" +
+             "reserved-label-block/config/local-id";
+      }
+      description
+        "A reference to the MPLS label block that is used to contain the
+        SIDs of the SRLB.";
+    }
+
+    leaf ipv6-prefix {
+      when "../dataplane-type = 'oc-srt:IPV6'" {
+        description
+          "Allow IPv6 prefixes to be specified only when the dataplane
+          realisation of the SRGB is IPv6.";
+      }
+      type inet:ipv6-prefix;
+      description
+        "The IPv6 prefix that is used for the SRLB.";
+    }
+  }
+
+  grouping sr-structural {
+    description
+      "Top-level structural grouping defining Segment Routing Global Blocks.";
+
+    container srgbs {
+      description
+        "Configuration and operational state parameters relating to the
+        SRGBs defined for the system.";
+
+      list srgb {
+        key "local-id";
+
+        description
+          "A single definition of an SRGB which may comprise of multiple
+          sets of dataplane addresses (IPv6 addresses, or MPLS labels).";
+
+        leaf local-id {
+          type leafref {
+            path "../config/local-id";
+          }
+          description
+            "A reference to the identifier for the SRGB.";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to the SRGB.";
+          uses srgb-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters relating to the SRGB.";
+          uses srgb-config;
+          uses srgb-state;
+        }
+      }
+    }
+
+    container srlbs {
+      description
+        "Configuration and operational state parameters relating to the
+        Segment Routing Local Blocks (SRLBs) defined for the system.";
+
+      list srlb {
+        key "local-id";
+
+        description
+          "A definition of a Segment Routing Local Block, defined to be
+          a set of Segment Identifiers (specified as MPLS labels or
+          IPv6 addreses) that are defined for local allocation by the
+          system. A block may optionally be advertised into an IGP.";
+
+        leaf local-id {
+          type leafref {
+            path "../config/local-id";
+          }
+          description
+            "Reference to the local identifier used for the SRLB.";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to the SRLB.";
+          uses srlb-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parmeters relating to the SRLB.";
+          uses srlb-config;
+        }
+      }
+    }
+  }
+
+  grouping sr-mpls-top {
+    description
+      "Structural grouping defining SR definition within MPLS.";
+
+    container segment-routing {
+      description
+        "MPLS-specific Segment Routing configuration and operational state
+        parameters";
+
+      container aggregate-sid-counters {
+        description
+          "Per-SID counters aggregated across all interfaces on the local system";
+
+        list aggregate-sid-counter {
+          key "mpls-label";
+          config false;
+
+          description
+            "Counters aggregated across all of the interfaces of the local
+            system corresponding to traffic received or forwarded with a
+            particular SID";
+
+          leaf mpls-label {
+            type leafref {
+              path "../state/mpls-label";
+            }
+            description
+              "The MPLS label representing the segment identifier";
+          }
+
+          container state {
+            config false;
+            description
+              "State parameters for per-SID statistics";
+            uses sr-mpls-sid-counters-state;
+            uses sr-mpls-common-counters;
+          }
+        }
+      }
+
+      container interfaces {
+        description
+          "Interface related Segment Routing parameters.";
+
+        list interface {
+          key "interface-id";
+
+          description
+            "Parameters and MPLS-specific configuration relating to Segment
+            Routing on an interface.
+
+            The interface referenced is based on the interface and
+            subinterface leaves within the interface-ref container -
+            which reference an entry in the /interfaces/interface list -
+            and should not rely on the value of the list key.";
+
+          leaf interface-id {
+            type leafref {
+              path "../config/interface-id";
+            }
+            description
+              "A reference to the ID for the interface for which SR is
+              configured";
+          }
+
+          container config {
+            description
+              "MPLS-specific Segment Routing configuration parameters
+              related to an interface.";
+            uses sr-mpls-interface-config;
+          }
+
+          container state {
+            config false;
+            description
+              "MPLS-specific Segment Routing operational state parameters
+              related to an interface.";
+            uses sr-mpls-interface-config;
+            uses sr-mpls-interface-state;
+          }
+
+          container sid-counters {
+            description
+              "Per-SID statistics for MPLS";
+
+            list sid-counter {
+              key "mpls-label";
+              config false;
+
+              description
+                "Per segment identifier counters for the MPLS dataplane.";
+
+              leaf mpls-label {
+                type leafref {
+                  path "../state/mpls-label";
+                }
+                description
+                  "The MPLS label representing the segment identifier";
+              }
+
+              container state {
+                config false;
+                description
+                  "State parameters for per-SID statistics";
+                uses sr-mpls-sid-counters-state;
+                uses sr-mpls-common-counters;
+              }
+
+              container forwarding-classes {
+                description
+                  "Per-SID per-forwarding class counters for Segment Routing.";
+
+                list forwarding-class {
+                  key "exp";
+                  config false;
+
+                  description
+                    "SID entries for the forwarding class associated with the
+                    referenced MPLS EXP.";
+
+                  leaf exp {
+                    type leafref {
+                      path "../state/exp";
+                    }
+                    description
+                      "Reference to the value of the EXP bits of the segment
+                      identifier.";
+                  }
+
+                  container state {
+                    config false;
+                    description
+                      "Per-SID, per forwarding class counters for Segment Routing
+                      with the MPLS dataplane";
+
+                    uses sr-mpls-interface-sid-fc-state;
+                    uses sr-mpls-common-counters;
+                  }
+                }
+              }
+            }
+          }
+          uses oc-if:interface-ref;
+        }
+      }
+    }
+  }
+
+  grouping sr-mpls-interface-config {
+    description
+      "MPLS-specific Segment Routing configuration for an interface";
+
+    leaf interface-id {
+      type oc-if:interface-id;
+      description
+        "A unique identifier for the interface.";
+    }
+  }
+
+  grouping sr-mpls-interface-state {
+    description
+      "MPLS-specific Segment Routing operational state parameters for an
+      interface";
+
+    uses sr-mpls-common-counters;
+  }
+
+  grouping sr-mpls-interface-sid-fc-state {
+    description
+      "Per-SID per forwarding class statistics for SR with the MPLS dataplane";
+
+    leaf exp {
+      type uint8 {
+        range "0..7";
+      }
+      description
+        "The value of the MPLS EXP (experimental) or Traffic Class bits that the
+        SID statistics relate to. Packets received with a MPLS label value
+        equal to the SID's MPLS label and EXP bits equal to the this value
+        should be counted towards the associated ingress statistics. Packets
+        that are forwarded to the destination MPLS label corresponding to the
+        SID should be counted towards this value. In the egress direction, where
+        forwarding follows a SID value that requires PHP at the local node,
+        packets should still be counted towards the egress counters.";
+    }
+  }
+
+  grouping sr-mpls-sid-counters-state {
+    description
+      "Per-SID statistics leaves";
+
+    leaf mpls-label {
+      type oc-mplst:mpls-label;
+      description
+        "The MPLS label used for the segment identifier";
+    }
+  }
+
+  grouping sr-mpls-common-counters {
+    description
+      "Per segment identifier counters used in the model";
+
+      leaf in-pkts {
+        type yang:counter64;
+        description
+          "A cumulative counter of the packets received within the context
+          which have matched a label corresponding to an SR Segment Identifier.";
+      }
+
+      leaf in-octets {
+        type yang:counter64;
+        description
+          "The cumulative counter of the total bytes received within the context
+          which have matched a label corresponding to an SR Segment Identifier";
+      }
+
+      leaf out-pkts {
+        type yang:counter64;
+        description
+          "A cumulative counter of the total number of packets transmitted by
+          the local system within the context which have a label imposed that
+          corresponds to an Segment Identifier.";
+      }
+
+      leaf out-octets {
+        type yang:counter64;
+        description
+          "A cumulative counter of the total bytes transmitted by the local
+          system within the context which have a label imported that
+          corresponds to an SR Segment Identifier.";
+      }
+  }
+
+  grouping sr-igp-config {
+    description
+      "Configuration parameters relating to segment routing within an
+      IGP.";
+
+    leaf enabled {
+      type boolean;
+      description
+        "When this leaf is set to true, the segment routing extensions are
+        utilised within the IGP.";
+    }
+
+    leaf srgb {
+      type leafref {
+        path "../../../../../../../segment-routing/srgbs/srgb/config/local-id";
+      }
+      description
+        "A reference to the Segment Routing Global Block (SRGB) that is
+        to be used by this IGP instance.";
+    }
+
+    leaf srlb {
+      // Leaf is defined at
+      // /network-instances/network-instance/protocols/protocol/<igp>/global/
+      // segment-routing/config
+      type leafref {
+        path "../../../../../../../segment-routing/srlbs/srlb/config/local-id";
+      }
+      description
+        "A reference to the Segment Routing Local Block (SRLB) that is to
+        be advertised by the IGP instance.";
+    }
+  }
+
+  grouping flex-algo-binding-attributes {
+    description
+      "Attributes for Flexible Algorithm bindings";
+    leaf flex-algo-id {
+      type uint8 {
+	range "128..255";
+      }
+      description
+        "Flexible Algorithm identifier";
+    }
+    leaf isis-level {
+      type oc-isis-types:level-type;
+      default "LEVEL_1_2";
+      description
+        "IS-IS Level associated with this Flex Algorithm";
+    }
+    leaf advertised {
+      type boolean;
+      default "false";
+      description
+        "Indicates if the Flex Algorithm definition is advertised by this node";
+    }
+    leaf participate {
+      type boolean;
+      default "false";
+      description
+        "Indicates if the node participates in this Flex Algorithm";
+    }
+  }
+
+  grouping sr-igp-top {
+    description
+      "Per-instance configuration and state parameters for Segment Routing
+      in an IGP.";
+
+    container segment-routing {
+      description
+        "Configuration and operational state relating to segment routing.";
+
+      container config {
+        description
+          "Configuration parameters relating to the configuration of segment
+          routing for the IGP instance.";
+        uses sr-igp-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to segment routing for the
+          IGP instance.";
+        uses sr-igp-config;
+      }
+
+      container flex-algorithm-bindings {
+        description
+          "Flex Algorithm bindings";
+        list flex-algorithm-binding {
+          key "flex-algo-id";
+          description
+            "Flex Algorithm binding";
+          leaf flex-algo-id {
+            type leafref {
+              path "../config/flex-algo-id";
+            }
+            description
+              "Flex Algorithm identifier used by IGP";
+          }
+          container config {
+            description
+              "Attributes of a FAD binding";
+            uses flex-algo-binding-attributes;
+          }
+          container state {
+            config false;
+            description
+              "Attributes of a FAD binding";
+            uses flex-algo-binding-attributes;
+          }
+        }
+      }
+    }
+  }
+
+  grouping sr-igp-interface-prefix-sid-config {
+    description
+      "Configuration parameters relating to an IGP prefix SID advertisement";
+
+    leaf prefix {
+      type inet:ip-prefix;
+      description
+        "The IP prefix for which the IGP prefix SID should be advertised. The
+        value specified is a local prefix on the interface which is advertised
+        into the IGP.";
+    }
+
+    leaf sid-id {
+      type oc-srt:sr-sid-type;
+      description
+        "The Segment Identifier to be used when advertising the IGP Prefix SID.";
+    }
+
+    leaf label-options {
+      type enumeration {
+        enum NO_PHP {
+          description
+            "When this value is specified, the penultimate hop must not pop
+            the Prefix-SID label before forwarding it to the local system.";
+        }
+        enum EXPLICIT_NULL {
+          description
+            "When set, the penultimate hop must swap the prefix SID for the
+            relevant explicit null label before forwarding the packet.";
+        }
+      }
+      description
+        "The options associated with the IGP prefix SID for MPLS. The value
+        of this leaf specifies the option that the SID should be advertised
+        into the IGP with.";
+    }
+  }
+
+  grouping sr-igp-interface-adjsid-config {
+    description
+      "Configuration parameters relating to an Adj-SID on an interface";
+
+    leaf sid-id {
+      type union {
+        type oc-srt:sr-sid-type;
+        type enumeration {
+            enum DYNAMIC {
+              description
+                "The SID chosen for the Adjacency SID should be dynamically
+                allocated from the system's dynamic range of Segment
+                Identifiers. For MPLS, this range should be considered to be
+                those labels that do not fall within a reserved label block.";
+            }
+        }
+      }
+      description
+        "The value of the Adj-SID to be advertised. Where a static SID
+        identifier is specified, this should be advertised directly by the
+        system. Where the DYNAMIC value is specified, this should be treated
+        as a dynamically allocated value. When the MPLS data plane is in use
+        the dynamic value should not fall within a reserved-label-block.";
+    }
+
+    leaf protection-eligible {
+      type boolean;
+      default true;
+      description
+        "Whether the Adj-SID should be considered to be eligible for protection
+        using IP or MPLS FRR during a network failure. When this value is set to
+        true, the B-flag of the Adj-SID is set to 1, and the local system should
+        provide FRR paths for the associated label forwarding entry. When it is
+        set to false, the local system must not provide FRR for the specified
+        LFIB entry.";
+    }
+
+    leaf group {
+      type boolean;
+      default false;
+      description
+        "When set to true, the Adj-SID is indicated to be part of a group, and
+        the G flag is set to 1 in the corresponding advertisement in the IGP.";
+    }
+
+    leaf neighbor {
+      type inet:ip-address;
+      description
+        "The remote system on the interface with which the Adj-SID is
+        associated.";
+    }
+  }
+
+  grouping sr-igp-interface-adjsid-state {
+    description
+      "Operational state parameters relating to the adjacency SID for an
+      interface";
+
+    leaf allocated-dynamic-local {
+      type oc-srt:sr-sid-type;
+      description
+        "Where an Adjacency SID with a dynamic value is to be allocated by
+        the system, this leaf reports to the value of the Adj-SID allocated
+        to this interface.";
+    }
+  }
+
+  grouping sr-igp-interface-flex-algo-prefix-sid-config {
+    description
+      "Configuration parameters relating to an IGP prefix SID advertisement for
+       Flexible Algorithms";
+    leaf prefix {
+      type inet:ip-prefix;
+      description
+        "The IP prefix for which the IGP prefix SID should be advertised. The
+         value specified is a local prefix on the interface which is advertised
+         into the IGP.";
+    }
+    leaf flex-algo-id {
+      type uint8 {
+	range "128..255";
+      }
+      description
+        "Flexible Algorithm identifier for the prefix segment.";
+    }
+    leaf sid-id {
+      type oc-srt:sr-sid-type;
+      description
+        "The Segment Identifier to be used when advertising the IGP Prefix SID for
+         the Flexible Algorithm.";
+    }
+  }
+
+  grouping sr-igp-interface-top {
+    description
+      "Per-interface configuration and operational state relating to an
+      interface within the IGP.";
+
+    container segment-routing {
+      description
+        "Configuration and operatioanl state parameters relating to segment
+        routing for an interface within the IGP.";
+
+      container prefix-sids {
+        description
+          "Configuration and operational state parameters relating to
+          the advertisement of a segment routing IGP-Prefix SID for this
+          interface.";
+
+        list prefix-sid {
+          key "prefix";
+
+          description
+            "An IGP prefix that should have a segment routing IGP-Prefix SID
+            allocated to it. The value of the SID is specified by the SID ID,
+            as an absolute value. If the absolute value falls within the SRGB,
+            the Global flag should be advertised by the system.";
+
+          leaf prefix {
+            type leafref {
+              path "../config/prefix";
+            }
+            description
+              "Reference to the prefix for which the IGP-Prefix SID is to be
+              advertised";
+          }
+
+          container config {
+            description
+              "Configuration parameters for the IGP Prefix SID.";
+            uses sr-igp-interface-prefix-sid-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters for the IGP-Prefix SID.";
+            uses sr-igp-interface-prefix-sid-config;
+          }
+        }
+      }
+
+      container flex-algo-prefix-sids {
+        description
+           "Configuration and operational state parameters relating to segment
+           routing flexible algorithm for an interface within the IGP.";
+
+        list flex-algo-prefix-sid {
+          key "prefix flex-algo-id";
+
+          description
+            "IGP prefix segments allocated for Flexible Algorithms";
+
+          leaf prefix {
+            type leafref {
+              path "../config/prefix";
+            }
+            description
+              "Reference to the prefix for which Flexible Algorithm Prefix SID is to be
+              advertised.";
+          }
+
+          leaf flex-algo-id {
+            type leafref {
+              path "../config/flex-algo-id";
+            }
+            description
+              "Reference to the Flexible Algorithm for which Flexible Algorithm Prefix
+              SID is to be advertised.";
+          }
+
+          container config {
+            description
+              "Configuration parameters for the IGP Flexible Algorithm Prefix SID.";
+            uses sr-igp-interface-flex-algo-prefix-sid-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters for the IGP Flexible Algorithm Prefix SID.";
+            uses sr-igp-interface-flex-algo-prefix-sid-config;
+          }
+        }
+      }
+
+      container adjacency-sids {
+        description
+          "Configuration and operational state parameters relating to
+          the advertisement of a segment routing adjacency SID for this
+          interface.";
+
+        list adjacency-sid {
+          key "neighbor sid-id";
+
+          description
+            "An Adjacency SID to be advertised for the specified interface.
+            The Adj-SID's identifier (the SID ID) must be unique, with flags
+            specified indicating the parameters that should be set for the SID.
+            Where a SID value is specified that is allocated from the SRGB, the
+            global flag must be set by the system.";
+
+          leaf sid-id {
+            type leafref {
+              path "../config/sid-id";
+            }
+            description
+              "Reference to the segment identifier to be used by the local
+              system.";
+          }
+
+          leaf neighbor {
+            type leafref {
+              path "../config/neighbor";
+            }
+            description
+              "Reference to the neighbor with which the Adjacency SID is
+              associated.";
+          }
+
+          container config {
+            description
+              "Configuraton parameters relating to the AdjSID.";
+            uses sr-igp-interface-adjsid-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to the AdjSID.";
+            uses sr-igp-interface-adjsid-config;
+            uses sr-igp-interface-adjsid-state;
+          }
+        }
+      }
+    }
+  }
+
+  grouping sr-top {
+    description
+      "Top level grouping for Segment Routing";
+
+    container segment-routing {
+      description
+        "Configuration and operational state parameters relating to
+        segment routing.";
+
+      uses sr-structural;
+      uses oc-srte:oc-srte-policy-top;
+    }
+  }
+}

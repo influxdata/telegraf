@@ -1,0 +1,212 @@
+module openconfig-gnsi-authz {
+  yang-version 1;
+  namespace "https://github.com/openconfig/yang/gnsi/authz";
+  prefix oc-gnsi-authz;
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-system {
+    prefix oc-sys;
+  }
+  import openconfig-system-grpc {
+    prefix oc-sys-grpc;
+  }
+  import openconfig-types {
+    prefix oc-types;
+  }
+  import openconfig-yang-types {
+    prefix oc-yang;
+  }
+  import openconfig-gnsi {
+    prefix oc-gnsi;
+  }
+  organization
+    "OpenConfig Working Group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module provides a data model for the metadata of the gRPC
+    authorization policies installed on a networking device.";
+
+  oc-ext:openconfig-version "0.4.0";
+
+  revision 2024-02-13 {
+    description
+      "Major style updates and move to openconfig/public from openconfig/gnsi.
+      Last commit at
+      https://github.com/openconfig/gnsi/commit/347935aac66135d5649dadb9583ed0914578aab0";
+    reference "0.4.0";
+  }
+
+  revision 2022-10-30 {
+    description
+      "Adds success/failure counters.";
+    reference "0.3.0";
+  }
+
+  revision 2022-08-01 {
+    description
+      "Single authz policy.";
+    reference "0.2.0";
+  }
+
+  revision 2022-01-17 {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  typedef version {
+    type string;
+    description
+      "The version ID of the gRPC authorization policy as provided by
+      the gRPC Authorization Policy Manager when the policy was pushed.
+      This leaf persists through a reboot.";
+  }
+
+  typedef created-on {
+    type oc-types:timeticks64;
+    description
+      "The creation time of the gRPC authorization policy as reported by
+      the gRPC Authorization Policy manager when the policy was pushed
+      to the device. This value is reported as nanoseconds since epoch
+      (January 1st, 1970 00:00:00 GMT). This leaf persists through
+      a reboot.";
+  }
+
+  // gRPC server authorization policy related definitions.
+  grouping counters {
+    description
+      "A collection of counters that were collected by the gNSI.authz
+      module while evaluating access to a RPC.";
+
+    leaf access-rejects {
+      type oc-yang:counter64;
+      description
+        "The total number of times the gNSI.authz module denied access
+        to a RPC.";
+    }
+    leaf last-access-reject {
+      type oc-types:timeticks64;
+      description
+        "A timestamp of the last time the gNSI.authz denied access to
+        a RPC.";
+    }
+    leaf access-accepts {
+      type oc-yang:counter64;
+      description
+        "The total number of times the gNSI.authz module allowed access
+        to a RPC.";
+    }
+    leaf last-access-accept {
+      type oc-types:timeticks64;
+      description
+        "A timestamp of the last time the gNSI.authz allowed access to
+        a RPC.";
+    }
+  }
+
+  grouping grpc-server-user-authz-policy-success-failure-counters {
+    description
+      "A collection of counters collected by the gNSI.authz module.";
+
+    container rpcs {
+      description
+        "A collection of counters collected by the gNSI.authz module
+        for each RPC separately.";
+
+      list rpc {
+        description
+          "A collection of counters collected by the gNSI.authz module
+          for a RPC identified by the `name`.";
+
+        key "name";
+        leaf name {
+          type leafref {
+            path "../state/name";
+          }
+          description
+            "The name of the RPC the counters were collected for.
+
+            The name MUST match the HTTP/2 Path header value in
+            https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+
+            For example,
+            /gnmi.gNMI/Subscribe
+            /gnoi.healthz.Healthz/Get
+            ";
+        }
+        container state {
+          description
+            "operational state for authz policy success/failure counters.";
+          leaf name {
+            type string;
+            description
+              "The name of the RPC the counters were collected for.
+
+              The name MUST match the HTTP/2 Path header value in
+              https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+
+              For example,
+              /gnmi.gNMI/Subscribe
+              /gnoi.healthz.Healthz/Get
+              ";
+          }
+          uses counters;
+        }
+      }
+    }
+  }
+
+  grouping grpc-server-authz-policy-success-failure-counters {
+    description
+      "A collection of counters collected by the gNSI.authz module.";
+
+    container authz-policy-counters {
+      description
+        "A collection of counters collected by the gNSI.authz module.";
+      config false;
+
+      uses grpc-server-user-authz-policy-success-failure-counters;
+    }
+  }
+
+  grouping grpc-server-authz-policy-state {
+    description
+      "gNMI server's gRPC authorization policy freshness-related data.";
+
+    leaf grpc-authz-policy-version {
+      type version;
+      description
+        "The version of the gRPC authorization policy that is used by
+        this system.";
+    }
+    leaf grpc-authz-policy-created-on {
+      type created-on;
+      description
+        "The timestamp of the moment when the gRPC authorization policy
+        that is currently used by this system was created.";
+    }
+  }
+
+  // Augments section.
+
+  augment "/oc-sys:system/oc-sys:aaa/oc-sys:authorization/" +
+    "oc-sys:state" {
+      description
+        "A system's gRPC authorization policy freshness information.";
+
+      uses grpc-server-authz-policy-state;
+  }
+
+  augment "/oc-sys:system/oc-sys-grpc:grpc-servers/oc-sys-grpc:grpc-server" {
+    when "config[contains(services, 'oc-gnsi:GNSI')]/enable = 'true'";
+    description
+      "Counters collected while evaluating access to a gRPC server using
+      the gNSI.authz authorization policy.";
+
+    uses grpc-server-authz-policy-success-failure-counters;
+  }
+}

@@ -1,0 +1,366 @@
+submodule openconfig-mpls-static {
+
+  yang-version "1";
+
+  belongs-to "openconfig-mpls" {
+    prefix "mpls";
+  }
+
+  // import some basic types
+  import openconfig-mpls-types {prefix oc-mplst; }
+  import openconfig-inet-types { prefix inet; }
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Defines static LSP configuration";
+
+
+  oc-ext:openconfig-version "3.4.0";
+
+  revision "2023-07-25" {
+    description
+      "Added record-route-enabled to MPLS p2p tunnel config";
+    reference "3.4.0";
+  }
+
+  revision "2023-04-28" {
+    description
+      "Fixed typo in cspf-tiebreaker leaf description";
+    reference "3.3.2";
+  }
+
+  revision "2023-02-03" {
+    description
+      "Clarify usage of interface-ref.";
+    reference "3.3.1";
+  }
+
+  revision "2022-02-11" {
+    description
+      "Add lsp-path PCE control mode";
+    reference "3.3.0";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add prefix to qualify when statements.";
+    reference "3.2.2";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "3.2.1";
+  }
+
+  revision "2021-03-24" {
+    description
+      "Add Metric bounds constraints for LSPs.";
+    reference "3.2.0";
+  }
+
+  revision "2019-03-26" {
+    description
+      "Add Pseudowire encapsulation.";
+    reference "3.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.0.1";
+  }
+
+  revision "2018-07-02" {
+    description
+      "Add new RSVP-TE statistics, remove associated-rsvp-session
+      leaf. Remove use of date-and-time.";
+    reference "3.0.0";
+  }
+
+  revision "2018-06-16" {
+    description
+      "Included attributes for base LDP configuration.";
+     reference "2.6.0";
+  }
+
+  revision "2018-06-13" {
+    description
+      "Add ttl-propagation to global MPLS config";
+    reference "2.5.0";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fixed bugs in when statements on RSVP-TE attributes";
+    reference "2.4.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "2.4.1";
+  }
+
+  revision "2017-06-21" {
+    description
+      "Add TC bits typedef.";
+    reference "2.4.0";
+  }
+
+  revision "2017-03-22" {
+    description
+      "Add RSVP calculated-absolute-subscription-bw";
+    reference "2.3.0";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add RSVP Tspec, clarify units for RSVP, remove unused LDP";
+    reference "2.2.0";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add additional MPLS parameters";
+    reference "2.1.0";
+  }
+
+  revision "2016-09-01" {
+    description
+      "Revisions based on implementation feedback";
+    reference "2.0.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "Public release of MPLS models";
+    reference "1.0.1";
+  }
+
+  // grouping statements
+
+  grouping static-lsp-common-config {
+    description
+      "common definitions for static LSPs";
+
+    leaf next-hop {
+      type inet:ip-address;
+      description
+        "next hop IP address for the LSP";
+    }
+
+    leaf incoming-label {
+      type oc-mplst:mpls-label;
+      description
+        "label value on the incoming packet";
+    }
+
+    leaf push-label {
+      type oc-mplst:mpls-label;
+      description
+        "label value to push at the current hop for the
+        LSP";
+    }
+  }
+
+  grouping static-lsp-ingress-config {
+    description
+      "Configuration data for ingress LSPs";
+
+    uses static-lsp-common-config;
+  }
+
+  grouping static-lsp-ingress-state {
+    description
+      "Operational state data for ingress LSPs";
+  }
+
+  grouping static-lsp-ingress-top {
+    description
+      "Top-level grouping for ingress LSP data";
+
+    container ingress {
+      description
+        "Static LSPs for which the router is an
+          ingress node";
+
+      container config {
+        description
+          "Configuration data for ingress LSPs";
+
+        uses static-lsp-ingress-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for ingress LSPs";
+
+        uses static-lsp-ingress-config;
+        uses static-lsp-ingress-state;
+      }
+    }
+  }
+
+  grouping static-lsp-transit-config {
+    description
+      "Configuration data for transit LSPs";
+
+    uses static-lsp-common-config;
+  }
+
+  grouping static-lsp-transit-state {
+    description
+      "Operational state data for transit LSPs";
+  }
+
+  grouping static-lsp-transit-top {
+    description
+      "Top-level grouping for transit LSP data";
+
+    container transit {
+      description
+        "Static LSPs for which the router is an
+          transit node";
+
+      container config {
+        description
+          "Configuration data for transit LSPs";
+
+        uses static-lsp-transit-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for transit LSPs";
+
+        uses static-lsp-transit-config;
+        uses static-lsp-transit-state;
+      }
+    }
+  }
+
+  grouping static-lsp-egress-config {
+    description
+      "Configuration data for egress LSPs";
+
+    uses static-lsp-common-config;
+  }
+
+  grouping static-lsp-egress-state {
+    description
+      "Operational state data for egress LSPs";
+  }
+
+  grouping static-lsp-egress-top {
+    description
+      "Top-level grouping for egress LSP data";
+
+    container egress {
+      description
+        "Static LSPs for which the router is an
+          egress node";
+
+      container config {
+        description
+          "Configuration data for egress LSPs";
+
+        uses static-lsp-egress-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for egress LSPs";
+
+        uses static-lsp-egress-config;
+        uses static-lsp-egress-state;
+      }
+    }
+  }
+
+  grouping static-lsp-config {
+    description
+      "Configuration data for static LSPs";
+
+    leaf name {
+      type string;
+      description
+        "name to identify the LSP";
+    }
+  }
+
+  grouping static-lsp-state {
+    description
+      "Operational state data for static LSPs";
+
+  }
+
+  grouping static-lsp-top {
+    description
+      "grouping for top level list of static LSPs";
+
+
+    list static-lsp {
+      key "name";
+      description
+        "list of defined static LSPs";
+
+      leaf name {
+        type leafref {
+          path "../config/name";
+        }
+        description
+          "Reference the name list key";
+      }
+
+      container config {
+        description
+          "Configuration data for the static lsp";
+
+        uses static-lsp-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for the static lsp";
+
+        uses static-lsp-config;
+        uses static-lsp-state;
+
+      }
+
+      // TODO: separation into ingress, transit, egress may help
+      // to figure out what exactly is configured, but need to
+      // consider whether implementations can support the
+      // separation
+      uses static-lsp-ingress-top;
+      uses static-lsp-transit-top;
+      uses static-lsp-egress-top;
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+
+}

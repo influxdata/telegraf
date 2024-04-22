@@ -1,0 +1,252 @@
+module openconfig-catalog-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/catalog-types";
+
+  prefix "oc-cat-types";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines types and identities used by the OpenConfig
+    YANG module catalog model.";
+
+  oc-ext:openconfig-version "0.2.2";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.2";
+  }
+
+  revision "2017-05-01" {
+    description
+      "Fix to module dependency list";
+    reference "0.2.1";
+  }
+
+  revision "2017-03-08" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  revision "2016-02-15" {
+    description
+      "Initial OpenConfig public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity CATALOG_MEMBER_TYPE {
+    description
+      "Base identity for elements in the catalog";
+  }
+
+  identity MODULE {
+    base CATALOG_MEMBER_TYPE;
+    description
+      "Module elements in the catalog";
+  }
+
+  identity RELEASE_BUNDLE {
+    base CATALOG_MEMBER_TYPE;
+    description
+      "Release bundle elements in the catalog";
+  }
+
+  identity FEATURE_BUNDLE {
+    base CATALOG_MEMBER_TYPE;
+    description
+      "Feature bundle elements in the catalog";
+  }
+
+
+  identity IMPLEMENTATION_STATUS_TYPE {
+    description
+      "Indications of the status of a module's implementation on a
+      device or server";
+  }
+
+  identity IN_PROGRESS {
+    base IMPLEMENTATION_STATUS_TYPE;
+    description
+      "Implementation is in progress";
+  }
+
+  identity PLANNED {
+    base IMPLEMENTATION_STATUS_TYPE;
+    description
+      "Implementation is planned";
+  }
+
+  identity COMPLETE {
+    base IMPLEMENTATION_STATUS_TYPE;
+    description
+      "Implementation is complete and fully supports the model";
+  }
+
+  identity PARTIAL {
+    base IMPLEMENTATION_STATUS_TYPE;
+    description
+      "Implementation is complete, but only supports the model
+      partially";
+  }
+
+  identity MODULE_STATUS_TYPE {
+    description
+      "Indicates the deployment status of the module";
+  }
+
+  identity EXPERIMENTAL {
+    base MODULE_STATUS_TYPE;
+    description
+      "Module should be considered experimental, not deployed in
+      production settings";
+  }
+
+  identity PRODUCTION {
+    base MODULE_STATUS_TYPE;
+    description
+      "Module is suitable for use in production, or has been
+      deployed in production";
+  }
+
+  identity MODULE_CATEGORY_BASE {
+    description
+      "Base identity for the module category.  It is expected that
+      publishing organizations will define additional derived
+      identities to describe their categorization scheme.";
+  }
+
+  identity MODULE_SUBCATEGORY_BASE {
+    description
+      "Base identity for the module subcategory.  It is expected that
+      publishing organizations will define additional derived
+      identities to describe their categorization scheme.";
+  }
+
+  identity ORGANIZATION_TYPE {
+    description
+      "Publishing organization type for the set of modules";
+  }
+
+  identity STANDARDS {
+    base ORGANIZATION_TYPE;
+    description
+      "Standards development organization (SDO) publisher type";
+  }
+
+  identity INDUSTRY {
+    base ORGANIZATION_TYPE;
+    description
+      "Industry forum or other industry group";
+  }
+
+  identity COMMERCIAL {
+    base ORGANIZATION_TYPE;
+    description
+      "Commercial entity, company, etc.";
+  }
+
+  identity INDIVIDUAL {
+    base ORGANIZATION_TYPE;
+    description
+      "For modules published by an individual";
+  }
+
+  identity IETF_MODEL_LAYER {
+    base MODULE_CATEGORY_BASE;
+    description
+      "Describes layering of models based on their abstraction
+      level as defined by IETF model classification proposals";
+    reference
+      "IETF draft-ietf-netmod-yang-model-classification";
+  }
+
+  identity IETF_MODEL_TYPE {
+    base MODULE_SUBCATEGORY_BASE;
+    description
+      "IETF proposed classification dimension of YANG model types as
+     standard YANG models, vendor-specific, or user-specific YANG
+     models and extensions";
+    reference
+      "IETF draft-ietf-netmod-yang-model-classification";
+  }
+
+  identity IETF_NETWORK_SERVICE {
+    base IETF_MODEL_LAYER;
+    description
+      "Service-layer model as defined by IETF classification
+      proposal";
+  }
+
+  identity IETF_NETWORK_ELEMENT {
+    base IETF_MODEL_LAYER;
+    description
+      "Network element-layer model as defined by IETF classification
+      proposal";
+  }
+
+  identity IETF_TYPE_STANDARD {
+    base IETF_MODEL_TYPE;
+    description
+      "Models published by standards-defining organizations (SDOs)";
+  }
+
+  identity IETF_TYPE_VENDOR {
+    base IETF_MODEL_TYPE;
+    description
+      "Developed by organizations (e.g., vendors) with the intent
+      to support a specific set of implementations under control of
+      that organization";
+  }
+
+  identity IETF_TYPE_USER {
+    base IETF_MODEL_TYPE;
+    description
+      "Developed by organizations that operate YANG-based
+      infrastructure including devices and orchestrators.
+      The intent of these models is to express the specific needs
+      for a certain implementation, above and beyond what is provided
+      by vendors";
+  }
+
+  typedef module-version-type {
+    type string;
+    description
+      "This type defines acceptable formats for the version of a
+      module.  The version may be a semantic version, or a YANG
+      revision statement date, and may include wildcards when
+      included in a bundle compatibility list, e.g.:
+
+      semver format: <major>.<minor>.<patch>
+      examples: 0.1.0, 2.1.0, 1.1.*, 2.*.*
+
+      revision format:  YYYY-MM-DD
+      example:  2016-11-31";
+  }
+
+
+
+}

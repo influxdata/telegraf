@@ -1,0 +1,302 @@
+module openconfig-transport-line-common {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/transport-line-common";
+
+  prefix "oc-line-com";
+
+  // import some basic types
+  import iana-if-type { prefix ianaift; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-transport-types { prefix oc-opt-types; }
+  import openconfig-platform-transceiver { prefix oc-transceiver; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines common data elements for OpenConfig data
+    models for optical transport line system elements, such as
+    amplifiers and ROADMs (wavelength routers).";
+
+  oc-ext:openconfig-version "0.6.0";
+
+  revision "2019-06-03" {
+    description
+      "Add state leaf 'tilt' to optical-port";
+    reference "0.6.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Update import prefix for iana-if-type module";
+    reference "0.5.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.2";
+  }
+
+  revision "2018-07-17" {
+    description
+      "Remove leaf 'enabled' from osc-config";
+    reference "0.4.1";
+  }
+
+  revision "2018-05-08" {
+    description
+      "Added leaf 'enabled' to osc-config and
+      leaf 'output-frequency' to osc-state";
+    reference "0.4.0";
+  }
+
+  revision "2017-09-08" {
+    description
+      "Correct bug with OSC interfaces";
+    reference "0.3.1";
+  }
+
+  revision "2017-07-08" {
+    description
+      "Add monitor port type and refs to hw ports, ";
+    reference "0.3.0";
+  }
+
+  revision "2017-03-28" {
+    description
+      "Added min/max/avg stats, status for media channels, OCM, APS";
+    reference "0.2.0";
+  }
+
+  revision "2016-03-31" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+   grouping optical-osc-config {
+    description
+      "Configuration data for OSC interfaces";
+
+    leaf interface {
+      type oc-if:base-interface-ref;
+      description
+        "Reference to an OSC interface";
+    }
+  }
+
+  grouping optical-osc-state {
+    description
+      "Operational state data for OSC interfaces";
+
+    container input-power {
+      description
+        "The input optical power of this port in units
+        of 0.01dBm. If avg/min/max statistics are not supported,
+        the target is expected to just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+
+    container output-power {
+      description
+        "The output optical power of this port in units
+        of 0.01dBm. If avg/min/max statistics are not supported,
+        the target is expected to just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+
+    container laser-bias-current {
+      description
+        "The current applied by the system to the transmit laser to
+        achieve the output power. The current is expressed in mA
+        with up to one decimal precision. If avg/min/max statistics
+        are not supported, the target is expected to just supply
+        the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-mA;
+    }
+
+    uses oc-transceiver:output-optical-frequency;
+  }
+
+
+
+  grouping optical-osc-top {
+    description
+      "Top-level grouping for configuration and operational state
+      data for optical supervisory channels (OSC) for amplifiers,
+      WSS/ROADM, nodes, etc.";
+
+    container config {
+      description
+        "Configuration data for OSCs";
+
+      uses optical-osc-config;
+    }
+
+    container state {
+
+      config false;
+
+      description
+        "Operational state data for OSCs";
+
+      uses optical-osc-config;
+      uses optical-osc-state;
+    }
+  }
+
+
+  grouping transport-line-common-port-config {
+    description
+      "Configuration data for optical line ports";
+
+    leaf admin-state {
+      type oc-opt-types:admin-state-type;
+      description
+          "Sets the admin state of the optical-port";
+    }
+  }
+
+  grouping transport-line-common-port-state {
+    description
+      "Operational state data describing optical line ports";
+
+    leaf optical-port-type {
+      type identityref {
+        base oc-opt-types:OPTICAL_PORT_TYPE;
+      }
+      description
+        "For physical ports belonging to optical transport
+        devices, this indicates the type of optical port.  This is an
+        informational field that should be made available by the
+        device.";
+    }
+
+    leaf tilt {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The total tilt measured on the port. This is applicable to
+	       ports of type INGRESS and EGRESS.";
+    }
+
+    container input-power {
+      description
+        "For line system device ports, this value indicates
+        the total input optical power of the port in units
+        of 0.01dBm. If avg/min/max statistics are not supported,
+        just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+
+    container output-power {
+      description
+        "For line system device ports, this value indicates
+        the total output optical power of the port in units
+        of 0.01dBm. If avg/min/max statistics are not supported,
+        just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+  }
+
+  grouping transport-line-common-port-top {
+    description
+      "Top-level grouping for optical port data";
+
+    container optical-port {
+      description
+        "Contains data specific to ports on optical transport
+        devices.";
+
+      container config {
+
+        description
+          "Operational config data for optical ports";
+
+        uses transport-line-common-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for optical ports";
+
+        uses transport-line-common-port-config;
+        uses transport-line-common-port-state;
+      }
+    }
+  }
+
+
+
+  // data definition statements
+
+  // uses optical-osc-top;
+
+  // augment statements
+
+  augment "/oc-platform:components/oc-platform:component" +
+    "/oc-platform:port" {
+    description
+      "Adding optical port data to platform components model";
+
+    uses transport-line-common-port-top;
+  }
+
+  //TODO:this is placeholder until SONET model is added
+  //to interfaces model
+  augment "/oc-if:interfaces/oc-if:interface" {
+    when "oc-if:config/oc-if:type = 'ianaift:sonet'" {
+      description "Additional interface configuration parameters when
+      the interface type is SONET/SDH";
+    }
+    description "Adds additional SONET/SDH-specific data to
+    osc model";
+
+    container sonet {
+      description
+        "Data related to SONET/SDH interfaces";
+    }
+  }
+
+  // rpc statements
+
+  // notification statements
+
+}

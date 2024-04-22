@@ -1,0 +1,295 @@
+module openconfig-bgp {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/bgp";
+
+  prefix "oc-bgp";
+
+  // import some basic inet types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-rib-bgp { prefix oc-bgprib; }
+
+  // Include the OpenConfig BGP submodules
+  // Common: defines the groupings that are common across more than
+  //         one context (where contexts are neighbor, group, global)
+  include openconfig-bgp-common;
+  // Multiprotocol: defines the groupings that are common across more
+  //                than one context, and relate to Multiprotocol
+  include openconfig-bgp-common-multiprotocol;
+  // Structure: defines groupings that are shared but are solely used for
+  //            structural reasons.
+  include openconfig-bgp-common-structure;
+  // Include peer-group/neighbor/global - these define the groupings
+  // that are specific to one context
+  include openconfig-bgp-peer-group;
+  include openconfig-bgp-neighbor;
+  include openconfig-bgp-global;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes a YANG model for BGP protocol
+    configuration.It is a limited subset of all of the configuration
+    parameters available in the variety of vendor implementations,
+    hence it is expected that it would be augmented with vendor-
+    specific configuration data as needed. Additional modules or
+    submodules to handle other aspects of BGP configuration,
+    including policy, VRFs, VPNs, and additional address families
+    are also expected.
+
+    This model supports the following BGP configuration level
+    hierarchy:
+
+      BGP
+        |
+        +-> [ global BGP configuration ]
+          +-> AFI / SAFI global
+        +-> peer group
+          +-> [ peer group config ]
+          +-> AFI / SAFI [ per-AFI overrides ]
+        +-> neighbor
+          +-> [ neighbor config ]
+          +-> [ optional pointer to peer-group ]
+          +-> AFI / SAFI [ per-AFI overrides ]
+
+    Most BGP features can be configured at multiple levels in the BGP
+    configuration level hierarchy. The common inheritance model allows
+    the more specific configuration (e.g. neighbor) to inherit from or
+    override the less specific configuration (e.g. global).
+    Leaf present at one level overrides leafs present at higher levels,
+    whereas leaf not present inherits its value from the leaf present
+    at the next higher level in the hierarchy.";
+
+  oc-ext:openconfig-version "9.7.1";
+
+  revision "2023-12-28" {
+    description
+      "Clarification to last-prefix-limit-exceeded in description";
+          reference "9.7.1";
+  }
+
+  revision "2023-12-28" {
+    description
+      "Add support for controling use of link-bandwidth extended
+      community for BGP multipath.";
+          reference "9.7.0";
+  }
+
+  revision "2023-11-02" {
+    description
+      "Fix revision '2023-03-31': send-community-type was added to the
+       wrong grouping.
+      Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.6.0";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Add default apply policy to global and per afi-safi config.";
+    reference "9.5.0";
+  }
+
+  revision "2023-06-27" {
+    description
+      "Clarify bgp remote-port description";
+    reference "9.4.1";
+  }
+
+  revision "2023-04-01" {
+    description
+      "Add support for BGP large communities [rfc8092] in
+      send-community.
+      Leaf send-community was replaced by the leaf-list
+      send-community-type to allow the combination of different
+      community types";
+    reference "9.4.0";
+  }
+
+  revision "2023-03-31" {
+    description
+      "Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.3.0";
+  }
+
+  revision "2022-12-12" {
+    description
+      "Removed the default of enabled leaf of AFI-SAFI
+      at neighbor/peer-group to support BGP inheritance model.";
+    reference "9.2.0";
+  }
+
+  revision "2022-05-21" {
+    description
+      "Added extended-next-hop-encoding leaf.";
+    reference "9.1.0";
+  }
+
+  revision "2022-04-26" {
+    description
+      "Transition decimal64 types to uint16 for various BGP timers";
+    reference "9.0.0";
+  }
+
+  revision "2022-03-21" {
+    description
+      "Add BGP port";
+    reference "8.1.0";
+  }
+
+  revision "2021-12-01" {
+    description
+      "Add prefix-limit-received, add prefix-limit
+      state nodes, change/relocate restart-timer";
+    reference "8.0.0";
+  }
+
+  revision "2021-10-21" {
+    description
+      "Removal of top-level /bgp container";
+    reference "7.0.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "6.1.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "6.1.0";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Normalise timestamp units to nanoseconds.";
+    reference "6.0.0";
+  }
+
+  revision "2019-05-28" {
+    description
+      "Clarify prefix counter descriptions, add received-pre-policy
+      counter.";
+    reference "5.2.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Add BGP RIB to the top-level BGP container";
+    reference "5.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "5.0.2";
+  }
+
+  revision "2018-08-20" {
+    description
+      "Correct description of AFI-SAFI enabled leaf.";
+    reference "5.0.1";
+  }
+
+  revision "2018-04-11" {
+    description
+      "Correct naming of BGP maximum prefix warning percentage leaf.";
+    reference "5.0.0";
+  }
+
+  revision "2018-03-20" {
+    description
+      "Added SR-TE policy SAFI";
+    reference "4.1.0";
+  }
+
+  revision "2017-07-30" {
+    description
+      "Clarification of add-paths send-max leaf";
+    reference "4.0.1";
+  }
+
+  revision "2017-07-10" {
+    description
+      "Add error notifications; moved add-paths config; add AS
+      prepend policy features; removed unneeded config leaves";
+    reference "4.0.0";
+  }
+
+  revision "2017-02-02" {
+    description
+      "Bugfix to remove remaining global-level policy data";
+    reference "3.0.1";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add dynamic neighbor support, migrate to OpenConfig types";
+    reference "3.0.0";
+  }
+
+  revision "2016-06-21" {
+    description
+      "OpenConfig BGP refactor";
+    reference "2.1.1";
+  }
+
+  revision "2016-06-06" {
+    description
+      "OpenConfig public release";
+    reference "2.1.0";
+  }
+
+  revision "2016-03-31" {
+    description
+      "OpenConfig public release";
+    reference "2.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping bgp-top {
+    description
+      "Top-level grouping for the BGP model data";
+
+    container bgp {
+      description
+        "Top-level configuration and state for the BGP router";
+
+      container global {
+        description
+          "Global configuration for the BGP router";
+          uses bgp-global-base;
+      }
+
+      container neighbors {
+        description
+          "Configuration for BGP neighbors";
+        uses bgp-neighbor-list;
+      }
+
+      container peer-groups {
+        description
+          "Configuration for BGP peer-groups";
+        uses bgp-peer-group-list;
+      }
+
+      uses oc-bgprib:bgp-rib-top;
+    }
+  }
+
+}

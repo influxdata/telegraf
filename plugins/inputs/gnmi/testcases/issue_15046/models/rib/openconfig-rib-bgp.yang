@@ -1,0 +1,270 @@
+module openconfig-rib-bgp {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/rib/bgp";
+
+  prefix "oc-rib-bgp";
+
+  // import some basic types
+  import openconfig-bgp-types { prefix oc-bgpt; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // include RIB submodules
+
+  // structure for LOC-RIB and Adj-RIB tables
+  include openconfig-rib-bgp-tables;
+
+  // structure of shared attribute groups
+  include openconfig-rib-bgp-shared-attributes;
+
+  // groupings of attributes in three categories:
+  //  - shared across multiple routes
+  //  - common to LOC-RIB and Adj-RIB, but not shared across routes
+  //  - specific to LOC-RIB or Adj-RIB
+  include openconfig-rib-bgp-attributes;
+
+  // groupings of annotations for each route or table
+  include openconfig-rib-bgp-table-attributes;
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Defines a data model for representing BGP routing table (RIB)
+    contents.  The model supports 5 logical RIBs per address family:
+
+    loc-rib: This is the main BGP routing table for the local routing
+    instance, containing best-path selections for each prefix. The
+    loc-rib table may contain multiple routes for a given prefix,
+    with an attribute to indicate which was selected as the best
+    path.  Note that multiple paths may be used or advertised even if
+    only one path is marked as best, e.g., when using BGP
+    add-paths.  An implementation may choose to mark multiple
+    paths in the RIB as best path by setting the flag to true for
+    multiple entries.
+
+    adj-rib-in-pre: This is a per-neighbor table containing the NLRI
+    updates received from the neighbor before any local input policy
+    rules or filters have been applied.  This can be considered the
+    'raw' updates from a given neighbor.
+
+    adj-rib-in-post: This is a per-neighbor table containing the
+    routes received from the neighbor that are eligible for
+    best-path selection after local input policy rules have been
+    applied.
+
+    adj-rib-out-pre: This is a per-neighbor table containing routes
+    eligible for sending (advertising) to the neighbor before output
+    policy rules have been applied.
+
+    adj-rib-out-post: This is a per-neighbor table containing routes
+    eligible for sending (advertising) to the neighbor after output
+    policy rules have been applied.";
+
+  oc-ext:openconfig-version "0.9.0";
+
+  revision "2022-12-20" {
+    description
+      "Convert as-segment and as4-segment to keyed lists.";
+    reference "0.9.0";
+  }
+
+  revision "2022-06-06" {
+    description
+      "Revert IETF types in favor of oc-inet types";
+    reference "0.8.1";
+  }
+
+  revision "2021-06-21" {
+    description
+      "Add L2VPN-EVPN BGP RIB Support";
+    reference "0.8.0";
+  }
+
+  revision "2019-10-15" {
+    description
+      "Change imported segment-routing module.";
+    reference "0.7.0";
+  }
+
+  revision "2019-04-25" {
+    description
+      "Update last-modified timestamp to be expressed as nanoseconds
+      since the Unix epoch.";
+    reference "0.6.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Rename the top-level BGP RIB container's name
+      to RIB.";
+    reference "0.5.0";
+  }
+
+  revision "2019-02-27" {
+    description
+      "Remove top-level BGP RIB container, and update list
+      names to be compatible with path compression.";
+    reference "0.4.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2016-10-17" {
+    description
+      "OpenConfig BGP RIB refactor";
+    reference "0.3.0";
+  }
+
+  revision "2016-04-11" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+
+
+  // grouping statements
+
+
+
+  grouping bgp-rib-state {
+    description
+      "Operational state data for the top level BGP RIB";
+
+    leaf afi-safi-name {
+      type identityref {
+        base oc-bgpt:AFI_SAFI_TYPE;
+      }
+      description "AFI,SAFI";
+    }
+  }
+
+  grouping bgp-rib-top {
+    description
+      "Top-level grouping for the BGP RIB";
+
+    container rib {
+      config false;
+      description
+        "Top level container for BGP RIBs";
+
+      uses attribute-sets-top;
+      uses community-sets-top;
+      uses ext-community-sets-top;
+
+      container afi-safis {
+        config false;
+        description
+          "Enclosing container for address family list";
+
+        list afi-safi {
+          key "afi-safi-name";
+          description
+            "list of afi-safi types";
+
+          leaf afi-safi-name {
+            type leafref {
+              path "../state/afi-safi-name";
+            }
+            description
+              "Reference to the list key";
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state data for the BGP list";
+
+            uses bgp-rib-state;
+          }
+
+          container ipv4-unicast {
+            when "../afi-safi-name = 'oc-bgpt:IPV4_UNICAST'" {
+              description
+                "Include this container for IPv4 unicast RIB";
+            }
+            description
+              "Routing tables for IPv4 unicast -- active when the
+              afi-safi name is ipv4-unicast";
+
+            uses ipv4-loc-rib-top;
+            uses ipv4-adj-rib-top;
+          }
+
+          container ipv6-unicast {
+            when "../afi-safi-name = 'oc-bgpt:IPV6_UNICAST'" {
+              description
+                "Include this container for IPv6 unicast RIB";
+            }
+            description
+              "Routing tables for IPv6 unicast -- active when the
+              afi-safi name is ipv6-unicast";
+
+            uses ipv6-loc-rib-top;
+            uses ipv6-adj-rib-top;
+          }
+
+          container ipv4-srte-policy {
+            when "../afi-safi-name = 'oc-bgpt:SRTE_POLICY_IPV4'" {
+              description
+                "Include this container only for the IPv4 AFI, SR-TE Policy
+                SAFI.";
+            }
+            description
+              "Routing tables for the IPv4 Unicast, SR-TE Policy SAFI.";
+
+            uses ipvX-srte-policy-locrib-top;
+            uses ipvX-srte-policy-adjrib-top;
+          }
+
+          container ipv6-srte-policy {
+            when "../afi-safi-name = 'oc-bgpt:SRTE_POLICY_IPV6'" {
+              description
+                "Include this container only for the IPv6 AFI, SR-TE Policy
+                SAFI.";
+            }
+            description
+              "Routing tables for the IPv6 Unicast, SR-TE Policy SAFI.";
+
+            uses ipvX-srte-policy-locrib-top;
+            uses ipvX-srte-policy-adjrib-top;
+          }
+
+          container l2vpn-evpn {
+            when "../afi-safi-name = 'oc-bgpt:L2VPN_EVPN'" {
+              description
+                "Include this container for l2vpn evpn route-types";
+            }
+            description
+              "Routing tables for l2vpn evpn -- active when the
+              afi-safi name is l2vpn-evpn";
+
+            uses l2vpn-evpn-loc-rib-top;
+            uses l2vpn-evpn-adj-rib-top;
+          }
+        }
+      }
+    }
+  }
+
+
+  // data definition statements
+  // augment statements
+
+
+  // rpc statements
+
+  // notification statements
+
+}

@@ -1,0 +1,64 @@
+module openconfig-igmp-types {
+
+    yang-version "1";
+
+    // namespace
+    namespace "http://openconfig.net/yang/igmp/types";
+
+    prefix "oc-igmp-types";
+
+    // import some basic types
+    import openconfig-extensions { prefix "oc-ext"; }
+
+    // meta
+    organization
+      "OpenConfig working group";
+
+    contact
+      "OpenConfig working group
+      www.openconfig.net";
+
+    description
+      "This module defines types related to the IGMP protocol model.";
+
+    oc-ext:openconfig-version "0.1.1";
+
+    revision "2018-11-21" {
+      description
+        "Add OpenConfig module metadata extensions.";
+      reference "0.1.1";
+    }
+
+    revision "2018-02-19" {
+        description
+          "Initial revision.";
+        reference "0.1.0";
+    }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+    // typedef statements
+
+    typedef igmp-version {
+        type uint8 {
+            range 1..3;
+        }
+        description
+          "IGMP Version.";
+        reference "v1 = RFC1112, v2 = RFC2236, v3 = RFC3376";
+    }
+
+    typedef igmp-interval-type {
+        type uint16 {
+          range 1..1024;
+        }
+        units "seconds";
+        description
+          "Interval at which the router sends the IGMP query message toward
+          the upstream neighbor.";
+        reference "RFC3376 8.2 Page 40";
+    }
+}

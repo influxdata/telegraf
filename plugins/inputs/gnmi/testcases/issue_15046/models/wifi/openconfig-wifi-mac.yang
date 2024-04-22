@@ -1,0 +1,1714 @@
+module openconfig-wifi-mac {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/wifi-mac";
+
+  // Assign this module a prefix.
+  prefix "oc-wifi-mac";
+
+  import openconfig-yang-types { prefix oc-yang; }
+  // OC-specific types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-vlan-types { prefix oc-vlan-types; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-wifi-types { prefix oc-wifi-types; }
+  import openconfig-types { prefix oc-types; }
+
+  // Some required meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Model for managing MAC layer configuration of Radio interfaces.";
+
+  oc-ext:openconfig-version "1.3.1";
+
+  revision "2023-05-26" {
+    description
+      "Adds clarity to various descriptions.  Unit type for tx/rx phy-rate,
+       client frequency, etc.";
+    reference "1.3.1";
+  }
+
+  revision "2023-02-14" {
+    description
+      "Adds totals to retry metrics to calculate retry percentages.";
+    reference "1.3.0";
+  }
+
+  revision "2023-01-17" {
+    description
+      "Splits client phy-rate leaf into rx/tx phy-rate leaves.  Marks phy-rate
+      as deprecated.";
+    reference "1.2.0";
+  }
+
+  revision "2022-03-24" {
+    description
+      "Update model to support operation in 6 GHz frequency.";
+    reference "1.1.0";
+  }
+
+  revision "2021-08-02" {
+    description
+      "Update tx/rx MCS rates, add AX as client connection mode.";
+    reference "1.0.0";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Update namespace based on new directory structure";
+    reference "0.4.1";
+  }
+
+  revision "2018-12-19" {
+    description
+      "Frequency-specific data-rates, fix client connection-time,
+      fix client IPv6 addresses, remove mobility-domain.";
+    reference "0.4.0";
+  }
+
+  revision "2018-07-16" {
+    description
+      "Reorganize bssid-counters and add BSSID references. Add
+      vlan-list.";
+    reference "0.3.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Add mobility-domain and move/create bssid-state list for
+      counters.";
+    reference "0.2.0";
+  }
+
+  revision "2017-07-25" {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  grouping ssid-common-config {
+    description
+      "Configuration items common to all logical SSIDs.";
+
+    leaf name {
+      type string;
+      description
+        "The name of the SSID.";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "The desired operational state (up/down) of this SSID.";
+    }
+
+    leaf hidden {
+      type boolean;
+      default "false";
+      description
+        "Whether this SSID IE is hidden within Beacons.";
+    }
+
+    leaf default-vlan {
+      type oc-vlan-types:vlan-id;
+      description
+        "Default VLAN tag used by the SSID. When unspecified, SSID
+        defaults to untagged. If DVA enabled and RADIUS returns a
+        VLAN not present in 'vlan-list', or RADIUS returns no VLAN
+        (Tunnel-Private-Group-Id), this VLAN will be used. If DVA
+        not enabled, all packets are tagged with this VLAN.";
+    }
+
+    leaf-list vlan-list {
+      type oc-vlan-types:vlan-id;
+      description
+        "List of VLANs allowed on the SSID, if DVA is enabled. Note,
+        if DVA enabled and RADIUS returns no VLAN or a VLAN outside
+        of this list, the SSID will be tagged with the value of
+        vlan-id (or untagged if 'vlan-id' not configured).";
+    }
+
+    leaf operating-frequency {
+      type identityref {
+        base oc-wifi-types:OPERATING_FREQUENCY;
+      }
+      default "oc-wifi-types:FREQ_2_5_GHZ";
+      description
+        "Operating frequency of this SSID. When none specified, the
+        default is dual-band 2.4 and 5 GHz.";
+    }
+
+    leaf-list basic-data-rates-2g {
+      type identityref {
+        base oc-wifi-types:DATA_RATE;
+      }
+      description
+        "2.4GHz Basic data-rates for the SSID.";
+    }
+
+    leaf-list supported-data-rates-2g {
+      type identityref {
+        base oc-wifi-types:DATA_RATE;
+      }
+      description
+        "2.4GHz Supported data-rates for the SSID.";
+    }
+
+    leaf-list basic-data-rates-5g {
+      type identityref {
+        base oc-wifi-types:DATA_RATE;
+      }
+      description
+        "5GHz Basic data-rates for the SSID.";
+    }
+
+    leaf-list supported-data-rates-5g {
+      type identityref {
+        base oc-wifi-types:DATA_RATE;
+      }
+      description
+        "5GHz Supported data-rates for the SSID.";
+    }
+    leaf-list basic-data-rates-6g {
+      type identityref {
+        base oc-wifi-types:DATA_RATE;
+      }
+      description
+        "6GHz Basic data-rates for the SSID.";
+    }
+
+    leaf-list supported-data-rates-6g {
+      type identityref {
+        base oc-wifi-types:DATA_RATE;
+      }
+      description
+        "6GHz Supported data-rates for the SSID.";
+    }
+    // MCS rates explicitly absent, as they are typically not pruned.
+
+    leaf broadcast-filter {
+      type boolean;
+      description
+        "Convert all downstream broadcast ARP to unicast
+        only if Station is associated to the AP. Drop packet
+        if Station is not associated to the AP. All other
+        broadcast, except DHCP, is dropped by the AP.
+
+        DHCP Offers/ACKs are converted to Unicast, over-the-air.";
+    }
+
+    leaf multicast-filter {
+      type boolean;
+      description
+        "Drop all downstream Multicast packets.";
+    }
+
+    leaf ipv6-ndp-filter {
+      type boolean;
+      description
+        "Neighbor Advertisements will be cached at the AP (or WLC)
+        and unicast in response to Neighbor Solicitations.
+
+        Router Advertisements, in response to a Router Solicitation
+        are converted to Unicast for over-the-air transmission.";
+    }
+
+    leaf ipv6-ndp-filter-timer {
+      type uint16;
+      units seconds;
+      description
+        "Time, in seconds, the ndp-filter will cache
+        Neighbor Advertisements (NA).";
+    }
+
+    leaf station-isolation {
+      type boolean;
+      description
+        "Block Station peer to peer communication.";
+    }
+
+    leaf opmode {
+      type enumeration {
+        enum OPEN {
+          description
+            "Open authentication.";
+        }
+        enum WPA2_PERSONAL {
+          description
+            "WPA2-Personal with PSK authentication.";
+        }
+        enum WPA2_ENTERPRISE {
+          description
+            "WPA2-Enterprise with 802.1X authentication.";
+        }
+        enum ENHANCED_OPEN {
+          description
+            "Open authentication with Opportunistic Wireless Encryption.";
+        }
+        enum WPA3_SAE {
+          description
+            "WPA3-SAE using Simultaneous Authentication of Equals (SAE).";
+        }
+        enum WPA3_ENTERPRISE {
+          description
+            "WPA3-Enterprise with 802.1X SHA-256 authentication key
+             management.";
+        }
+        enum WPA3_ENTERPRISE_192_BIT {
+          description
+            "WPA3-Enterprise with 802.1X SHA-384 authentication key
+             management.";
+        }
+      }
+      description
+        "The type of Layer2 authentication in use.";
+    }
+    // Note, legacy 802.11 auth methods (ie Shared Key) explicitly
+    // absent here. It should never be used.
+
+    leaf wpa2-psk {
+      when "../opmode = 'WPA2_PERSONAL'";
+      type string {
+        length "8..63";
+      }
+      description
+        "The passphrase used on this WPA2-Personal SSID.";
+    }
+
+    leaf wpa3-psk {
+      when "../opmode = 'WPA3_SAE'";
+      type string {
+        length "8..63";
+      }
+      description
+        "The passphrase used on this WPA3-SAE SSID.";
+    }
+
+    leaf server-group {
+      when "../opmode = 'WPA2_ENTERPRISE' or
+      ../opmode = 'WPA2_PERSONAL' or
+      ../opmode = 'WPA3_ENTERPRISE' or
+      ../opmode = 'WPA3_ENTERPRISE_192_BIT' or
+      ../opmode = 'WPA3_SAE'";
+      type string;
+        description
+          "Specifies the RADIUS server-group to be used,
+          as defined in the openconfig-aaa.yang model.
+
+          Including WPA2_PERSONAL and WPA3_SAE as they can be accompanied by
+          MAB.";
+    }
+
+    leaf dva {
+      type boolean;
+      description
+        "Enable/disable Dynamic VLAN Assignment,
+        using 'Tunnel-Private-Group-Id' RADIUS attribute.";
+    }
+
+    leaf dhcp-required {
+      type boolean;
+      description
+        "Allow a Station to access the network only if
+        a DHCP exchange has occurred.";
+    }
+
+    leaf qbss-load {
+      type boolean;
+      description
+        "Advertisement of the QBSS Load Information Element.";
+    }
+
+    leaf advertise-apname {
+      type boolean;
+      description
+        "Advertise the AP hostname in Beacon and Probe Response frames.";
+    }
+
+    leaf csa {
+      type boolean;
+      default "true";
+      description
+        "Enable/Disable 802.11h channel-switch-announcement.";
+    }
+
+    leaf ptk-timeout {
+      type uint16;
+      units seconds;
+      description
+        "Time, in seconds, for the Pairwise Transient Key.";
+    }
+
+    leaf gtk-timeout {
+      type uint16;
+      units seconds;
+      description
+        "TTL for the Group Temporal Key.";
+    }
+
+    leaf dot11k {
+      type boolean;
+      description
+        "802.11k neighbor-list enabled/disabled.";
+    }
+
+    leaf okc {
+      type boolean;
+      description
+        "Enable/disable Opportunistic Key Caching.";
+    }
+
+    leaf mfp {
+      when "../opmode = 'WPA3_ENTERPRISE' or ../opmode =
+      'WPA3_ENTERPRISE_192_BIT' or ../opmode =
+      'WPA3_SAE' or ../opmode = 'ENHANCED_OPEN'";
+      type boolean;
+      mandatory true;
+      description
+        "Management Frame Protection is required for WPA3 and OWE.";
+    }
+  }
+
+    grouping dot11v-config {
+      description
+        "802.11v configuration & state data.";
+
+      leaf dot11v-dms {
+        type boolean;
+        description
+          "802.11v Directed Multicast Service enabled/disabled.";
+      }
+
+      leaf dot11v-bssidle {
+        type boolean;
+        description
+          "802.11v BSS Max Idle enabled/disabled.";
+      }
+
+      leaf dot11v-bssidle-timeout {
+        type uint16;
+        units seconds;
+        description
+          "802.11v BSS Max Idle timeout.";
+      }
+
+      leaf dot11v-bsstransition {
+        type boolean;
+        description
+          "802.11v BSS Transition enabled/disabled.";
+      }
+    }
+
+  grouping dot11r-config {
+    description
+      "802.11r related configuration & state data.";
+
+    leaf dot11r {
+      type boolean;
+      description
+        "Enable/disable 802.11r FT.";
+    }
+
+    leaf dot11r-domainid {
+      type uint16;
+      description
+        "Specify the mobility domain id (MDID) where PMK-R0
+        distribution will occur. Specifically, which APs will receive
+        PMK-R0 if using 802.11r (FT).";
+    }
+
+    leaf dot11r-method {
+      type enumeration {
+        enum OVA {
+        description
+          "802.11r Over-the-AIR.";
+        }
+        enum ODS {
+        description
+          "802.11r Over-the-DS.";
+        }
+      }
+      default "OVA";
+      description
+        "The type of 802.11r FT in use.";
+    }
+
+    leaf dot11r-r1key-timeout {
+      type uint16;
+      units seconds;
+      description
+        "TTL for the Pairwise Master Key R1.";
+    }
+  }
+
+  grouping dot1x-timers-config {
+    description
+      "Configurable 802.1X timers, per ESS.";
+
+    leaf max-auth-failures {
+      type uint8;
+      description
+        "Number of consecutive authentication failures,
+        via RADIUS Access-Reject, before Station
+        is blacklisted.";
+    }
+
+    leaf blacklist-time {
+      type uint16;
+      units seconds;
+      description
+        "Length of time, in seconds, a Station will be
+        blacklisted as a result of max-auth-failures.";
+    }
+  }
+
+  grouping wmm-config {
+    description
+      "WMM & QoS marking config, per BSS.";
+
+    leaf trust-dscp {
+      type boolean;
+      default "true";
+      description
+        "The AP should trust DSCP on 802.11 frames received
+        in this BSS.";
+    }
+
+    leaf-list wmm-vo-remark {
+      type uint8;
+      max-elements 8;
+      description
+        "Allowed DSCP markings for WMM AC_VO. Remark to lowest in this
+        list if DSCP marking falls outside of these allowed markings.
+
+        From 1 (min) to 8 (max) integers.";
+    }
+
+    leaf-list wmm-vi-remark {
+      type uint8;
+      max-elements 8;
+      description
+        "Allowed DSCP markings for WMM AC_VI. Remark to lowest in this
+        list if DSCP marking falls outside of these allowed markings.
+
+        From 1 (min) to 8 (max) integers.";
+    }
+
+    leaf-list wmm-be-remark {
+      type uint8;
+      max-elements 8;
+      description
+        "Allowed DSCP markings for WMM AC_BE. Remark to lowest in this
+        list if DSCP marking falls outside of these allowed markings.
+
+        From 1 (min) to 8 (max) integers.";
+    }
+
+    leaf-list wmm-bk-remark {
+      type uint8;
+      max-elements 8;
+      description
+        "Allowed DSCP markings for WMM AC_BK. Remark to lowest in this
+        list if DSCP marking falls outside of these allowed markings.
+
+        From 1 (min) to 8 (max) integers.";
+    }
+  }
+
+  grouping band-steering-config {
+    description
+      "Grouping for band-steering specific configuration.";
+
+    leaf band-steering {
+      type boolean;
+      description
+        "Enable/disable band-steering.";
+    }
+
+    leaf steering-rssi {
+      type int8;
+      description
+        "Minimum RSSI a dual-band Station's Probe Request
+         must be heard at on a 5GHz radio, in order for
+         band-steering to withhold 2.4GHz Probe Responses.";
+    }
+  }
+
+  grouping bssid-common-state {
+    description
+      "Grouping for defining bssid-specific operational state";
+
+    container bssids {
+      description
+        "Top-level container for BSSIDs operational state data.";
+      list bssid {
+        key "radio-id bssid";
+        config false;
+        description
+          "List of BSSIDs and what radio-id they utilize. Radio-id
+          included here to allocate for APs with dual 5GHz radios.
+          Usage of paths allows for discovery and subscription of
+          State data per BSSID, regardless of radio.";
+
+        leaf bssid {
+          type leafref {
+            path "../state/bssid";
+          }
+          config false;
+          description
+            "The BSSID MAC address.";
+        }
+
+        leaf radio-id {
+          type leafref {
+            path "../state/radio-id";
+          }
+          description
+            "References the configured id of the radio.";
+        }
+
+        container state {
+          config false;
+          description
+            "BSSID state data.";
+
+          uses bss-common-state;
+          uses bssid-counters-state;
+        }
+      }
+    }
+  }
+
+  grouping bss-common-state {
+    description
+      "Grouping for defining bss-specific operational state.";
+
+    leaf bssid {
+      type oc-yang:mac-address;
+      description
+        "MAC of the BSS.";
+    }
+
+    leaf radio-id {
+      type uint8;
+      description
+        "The configured id of the radio";
+    }
+
+    leaf num-associated-clients {
+      type uint8;
+      description
+        "Number of associated STAs to this BSS.";
+    }
+  }
+
+  grouping bssid-counters-state {
+    description
+      "BSSID telemetry statistics.";
+
+    container counters {
+      config false;
+      description
+        "BSS Counters.";
+
+      // Rx Counters
+      leaf rx-bss-dot11-channel-utilization {
+        type oc-types:percentage;
+        description
+          "receive channel utilization percent caused by reception of
+          any 802.11 frame within this BSS.";
+      }
+
+      leaf rx-mgmt {
+        type oc-yang:counter64;
+        description
+          "Received 802.11 Management frames.";
+      }
+
+      leaf rx-control {
+        type oc-yang:counter64;
+        description
+          "Received 802.11 Control frames.";
+      }
+
+      container rx-data-dist {
+        description
+          "The distribution of Data frame sizes in bytes of
+          successfully received AMPDU, or MPDU for non-aggregated,
+          frames. The distribution should characterize frame sizes
+          starting at 64 bytes or less with the bin size doubling for
+          each successive bin to a maximum of 1MB or larger, as
+          represented in the following table:
+
+          Lower Bound Upper Bound
+             0          64
+             65         128
+             129        256
+             257        512
+             513        1024
+             1025       2048
+             2049       4096
+             4097       8192
+             8193       16384
+             16385      32768
+             32769      65536
+             65537      131072
+             131073     262144
+             262145     524288
+             524289     1048576";
+
+        leaf rx-0-64 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 0 to 64 Bytes.";
+        }
+
+        leaf rx-65-128 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 65 to 128 Bytes.";
+        }
+
+        leaf rx-129-256 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 129 to 256 Bytes.";
+        }
+
+        leaf rx-257-512 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 257 to 512 Bytes.";
+        }
+
+        leaf rx-513-1024 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 513 to 1024 Bytes.";
+        }
+
+        leaf rx-1025-2048 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 1025 to 2048 Bytes.";
+        }
+
+        leaf rx-2049-4096 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 2049 to 4096 Bytes.";
+        }
+
+        leaf rx-4097-8192 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 4097 to 8192 Bytes.";
+        }
+
+        leaf rx-8193-16384 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 8193 to 16384 Bytes.";
+        }
+
+        leaf rx-16385-32768 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 16385 to 32768 Bytes.";
+        }
+
+        leaf rx-32769-65536 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 32769 to 65536 Bytes.";
+        }
+
+        leaf rx-65537-131072 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 65537 to 131072 Bytes.";
+        }
+
+        leaf rx-131073-262144 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 131073 to 262144 Bytes.";
+        }
+
+        leaf rx-262145-524288 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 262145 to 524288 Bytes.";
+        }
+
+        leaf rx-524289-1048576 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 524289 to 1048576 Bytes.";
+        }
+      }
+
+      container rx-data-wmm {
+        description
+          "Received 802.11 Data frames, per WMM Access Category.";
+
+        leaf vi {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames marked as Access Category Video.";
+        }
+
+        leaf vo {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames marked as Access Category Voice.";
+        }
+
+        leaf be {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames marked as Access Category Best Effort.";
+          }
+
+        leaf bk {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames marked as Access Category Background.";
+        }
+      }
+
+      container rx-mcs {
+       description
+         "Received Data frames, per MCS Index. It is expected that
+         vendors bucketize 802.11n MCS frames in their matching
+         802.11ac buckets.
+
+         Example, 802.11n MCS 15 = 802.11ac MCS 7.
+         802.11n MCS 20 = 802.11ac MCS 4.";
+
+        leaf mcs0 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 0.";
+         }
+
+        leaf mcs1 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 1.";
+        }
+
+        leaf mcs2 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 2.";
+        }
+
+        leaf mcs3 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 3.";
+        }
+
+        leaf mcs4 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 4.";
+        }
+
+        leaf mcs5 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 5.";
+        }
+
+        leaf mcs6 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 6.";
+        }
+
+        leaf mcs7 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 7.";
+        }
+
+        leaf mcs8 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 8.";
+        }
+
+        leaf mcs9 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 9.";
+        }
+
+        leaf mcs10 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 10.";
+        }
+
+        leaf mcs11 {
+          type oc-yang:counter64;
+          description
+            "Rx Data frames at MCS 11.";
+        }
+      }
+
+      leaf rx-retries {
+        type oc-yang:counter64;
+        description
+          "Total number of received frames with the Retry bit set,
+          within this BSS.";
+      }
+
+      leaf rx-total-frames {
+        type oc-yang:counter64;
+        description
+          "Total number of received frames within this BSS.";
+      }
+
+      leaf rx-retries-data {
+        type oc-yang:counter64;
+        description
+          "Number of received QoS Data frames with the Retry bit set.";
+      }
+
+      leaf rx-total-data {
+        type oc-yang:counter64;
+        description
+          "Number of received QoS Data frames.";
+      }
+
+      leaf rx-retries-subframe {
+        type oc-yang:counter64;
+        description
+          "Aggregated MPDUs which had individual subframes that fail
+          and require retransmission.";
+      }
+
+      leaf rx-total-subframe {
+        type oc-yang:counter64;
+        description
+          "Total Aggregated MPDUs received.";
+      }
+
+      leaf rx-bytes-data {
+        type oc-yang:counter64;
+        description
+          "Bytes received from QoS Data frames.";
+      }
+
+      // Tx Counters
+      leaf tx-bss-dot11-channel-utilization {
+        type oc-types:percentage;
+        description
+          "Channel utilization percent caused by transmission of any
+          802.11 frame within this BSS.";
+      }
+
+      leaf tx-mgmt {
+        type oc-yang:counter64;
+        description
+          "Transmitted 802.11 Management frames.";
+      }
+
+      leaf tx-control {
+        type oc-yang:counter64;
+        description
+          "Transmitted 802.11 Control frames.";
+      }
+
+      container tx-data-dist {
+        description
+          "The distribution of Data frame sizes in bytes of
+          successfully transmitted AMPDU, or MPDU for non-aggregated,
+          frames. The distribution should characterize frame sizes
+          starting at 64 bytes or less with the bin size doubling for
+          each successive bin to a maximum of 1MB or larger, as
+          represented in the following table:
+
+          Lower Bound Upper Bound
+             0          64
+             65         128
+             129        256
+             257        512
+             513        1024
+             1025       2048
+             2049       4096
+             4097       8192
+             8193       16384
+             16385      32768
+             32769      65536
+             65537      131072
+             131073     262144
+             262145     524288
+             524289     1048576";
+
+        leaf tx-0-64 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 0 to 64 Bytes.";
+        }
+
+        leaf tx-65-128 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 65 to 128 Bytes.";
+        }
+
+        leaf tx-129-256 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 129 to 256 Bytes.";
+        }
+
+        leaf tx-257-512 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 257 to 512 Bytes.";
+        }
+
+        leaf tx-513-1024 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 513 to 1024 Bytes.";
+        }
+
+        leaf tx-1025-2048 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 1025 to 2048 Bytes.";
+        }
+
+        leaf tx-2049-4096 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 2049 to 4096 Bytes.";
+        }
+
+        leaf tx-4097-8192 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 4097 to 8192 Bytes.";
+        }
+
+        leaf tx-8193-16384 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 8193 to 16384 Bytes.";
+        }
+
+        leaf tx-16385-32768 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 16385 to 32768 Bytes.";
+        }
+
+        leaf tx-32769-65536 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU or MPDUs from 32769 to 65536 Bytes.";
+        }
+
+        leaf tx-65537-131072 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 65537 to 131072 Bytes.";
+        }
+
+        leaf tx-131073-262144 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 131073 to 262144 Bytes.";
+        }
+
+        leaf tx-262145-524288 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 262145 to 524288 Bytes.";
+        }
+
+        leaf tx-524289-1048576 {
+          type oc-yang:counter64;
+          description
+            "Transmitted AMPDU from 524289 to 1048576 Bytes.";
+        }
+      }
+
+      container tx-data-wmm {
+      description
+        "Transmitted QoS Data frames, per WMM AC.";
+        leaf vi {
+          type oc-yang:counter64;
+          description
+            "Tx Data frames marked as Access Category Video.";
+        }
+
+        leaf vo {
+          type oc-yang:counter64;
+          description
+            "Tx Data frames marked as Access Category Voice.";
+        }
+
+        leaf bk {
+          type oc-yang:counter64;
+          description
+            "Tx Data frames marked as Access Category Background.";
+        }
+
+        leaf be {
+          type oc-yang:counter64;
+          description
+            "Tx Data frames marked as Access Category Best Effort.";
+        }
+      }
+
+      container tx-mcs {
+        description
+          "Transmitted Data frames, per MCS Index. It is expected that
+          vendors bucketize 802.11n MCS frames in their matching
+          802.11ac buckets.
+
+          Example, 802.11n MCS 15 = 802.11ac MCS 7.
+          802.11n MCS 20 = 802.11ac MCS 4.";
+
+        leaf mcs0 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 0.";
+        }
+
+        leaf mcs1 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 1.";
+        }
+
+        leaf mcs2 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 2.";
+        }
+
+        leaf mcs3 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 3.";
+        }
+
+        leaf mcs4 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 4.";
+        }
+
+        leaf mcs5 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 5.";
+        }
+
+        leaf mcs6 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 6.";
+        }
+
+        leaf mcs7 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 7.";
+        }
+
+        leaf mcs8 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 8.";
+        }
+
+        leaf mcs9 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 9.";
+        }
+
+        leaf mcs10 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 10.";
+        }
+
+        leaf mcs11 {
+          type oc-yang:counter64;
+            description
+              "Tx Data frames at MCS 11.";
+        }
+      }
+
+      leaf tx-retries {
+        type oc-yang:counter64;
+        description
+          "Number of frames transmitted with the Retry bit set.";
+      }
+
+      leaf tx-total-frames {
+        type oc-yang:counter64;
+        description
+          "Number of frames transmitted.";
+      }
+
+      leaf tx-retries-data {
+        type oc-yang:counter64;
+        description
+          "Number of transmitted QoS Data frames with the Retry bit
+          set.";
+      }
+
+      leaf tx-total-data {
+        type oc-yang:counter64;
+        description
+          "Number of transmitted QoS Data frames.";
+      }
+
+      leaf tx-retries-subframe {
+        type oc-yang:counter64;
+        description
+          "Aggregated MPDUs which had individual subframes that fail
+          and require retransmission.";
+      }
+
+        leaf tx-total-subframe {
+        type oc-yang:counter64;
+        description
+          "Aggregated MPDUs total frames transmitted.";
+      }
+
+      leaf tx-bytes-data {
+        type oc-yang:counter64;
+        description
+          "Bytes transmitted from QoS Data frames.";
+      }
+      // Total Counters
+      leaf bss-channel-utilization {
+       type oc-types:percentage;
+       description
+         "Total 802.11 channel utilization in this BSS. The total
+         channel utilization should include all time periods the AP
+         spent actively receiving and transmitting 802.11 frames in
+         this BSS.";
+      }
+    }
+  }
+
+  grouping clients-state {
+    description
+      "List of clients; followed by state data, per client.";
+
+    leaf mac {
+      type oc-yang:mac-address;
+      description
+        "MAC address of the client.";
+    }
+
+    container counters {
+      description
+        "Per-client counters.";
+
+      leaf tx-bytes {
+        type oc-yang:counter64;
+        description
+          "Tx Bytes to this client.";
+      }
+
+      leaf rx-bytes {
+        type oc-yang:counter64;
+        description
+          "Rx Bytes from this client.";
+      }
+
+      leaf rx-retries {
+        type oc-yang:counter64;
+        description
+          "Rx retried frames from this client.";
+      }
+
+      leaf rx-total {
+        type oc-yang:counter64;
+        description
+          "Rx frames from this client.";
+      }
+
+      leaf tx-retries {
+        type oc-yang:counter64;
+        description
+          "Tx retried frames to this client.";
+      }
+
+      leaf tx-total {
+        type oc-yang:counter64;
+        description
+          "Tx frames to this client.";
+      }
+    }
+  }
+
+  grouping client-connect-state {
+    description
+      "Grouping for connection state related data, per client.";
+
+    container state {
+      description
+        "Container for connection state related data, per client.";
+
+      leaf client-state {
+        type identityref {
+          base oc-wifi-types:CLIENT_STATE;
+        }
+        description
+          "Various states a Client STA may be in.";
+      }
+
+      leaf connection-time {
+        type oc-types:timeticks64;
+        units nanoseconds;
+        description
+          "Reports the time of Client Association. The value is the
+          timestamp in nanoseconds relative to the Unix Epoch
+          (Jan 1, 1970 00:00:00 UTC).";
+      }
+
+      leaf username {
+        type string;
+        description
+          "Username of Client; can be outer-identity (if PEAP),
+          CN of certificate (if EAP-TLS), etc.";
+      }
+
+      leaf hostname {
+        type string;
+        description
+          "Hostname of the client, as discovered via DHCP, mDNS
+          or otherwise.";
+      }
+
+      leaf-list ipv4-address {
+        type oc-inet:ipv4-address;
+        description
+          "IPv4 addresses of the client.";
+      }
+
+      leaf-list ipv6-addresses {
+        type oc-inet:ipv6-address;
+        description
+          "IPv6 addresses of the client.";
+      }
+
+      leaf operating-system {
+        type string;
+        description
+          "Optional/if known; the OS of the client.";
+      }
+    }
+  }
+
+  grouping dot11k-neighbors-state {
+    description
+      "Grouping for Client beacon reports. Requires 802.11k enabled.
+      See Sec. 5.2.7.1 of 802.11k-2008 Standard.";
+    container state {
+      description
+        "Container for Client beacon reports. Requires 802.11k
+        enabled. See Sec. 5.2.7.1 of 802.11k-2008 Standard.";
+
+      leaf neighbor-bssid {
+        type oc-yang:mac-address;
+        description
+          "The BSSID of this neighbor.";
+      }
+
+      leaf neighbor-channel {
+        type uint8;
+        description
+          "The channel of this neighbor.";
+      }
+
+      leaf neighbor-rssi {
+        type int8;
+        description
+          "The RSSI of this neighbor in dBm, expressed as a negative
+          number.";
+      }
+
+      leaf neighbor-antenna {
+        type uint8;
+        description
+          "Antenna details for this neighbor.";
+      }
+
+      leaf channel-load-report {
+        type uint8;
+        description
+          "Channel load, as reported by Client to AP
+          normalized to 255. See Sec. 10.11.9.3 of 802.11ac-2013
+          Spec.";
+      }
+    }
+  }
+
+  grouping client-capabilities-state {
+    description
+      "Groupig for Client capabilities, as reported by Assoc. Req. or
+      Probe Req. frames. Capability is supported, if present.";
+    container state {
+      description
+        "Container for Client capabilities, as reported by Assoc. Req.
+        or Probe Req. frames. Capability is supported, if present.";
+      leaf-list client-capabilities {
+        type identityref {
+          base oc-wifi-types:CLIENT_CAPABILITIES;
+        }
+        description
+          "Features supported by client that are Optional
+          within the 802.11 specifications.";
+      }
+
+      leaf-list channel-support {
+        type uint8;
+          description
+            "List of supported channels.";
+      }
+    }
+  }
+
+  grouping client-rf-state {
+    description
+      "Grouping for RF related client state data.";
+    container state {
+      description
+        "Container for RF related client state data.";
+
+      leaf rssi {
+        type int8;
+        description
+          "The RSSI of this client in dBm. Expressed as negative
+          number.";
+      }
+
+      leaf snr {
+        type uint8;
+        description
+          "The SNR of AP to Client, in dB.";
+      }
+
+      leaf ss {
+        type uint8;
+        description
+          "Number of Spatial Streams supported by the client.";
+      }
+
+      leaf phy-rate {
+        type uint16;
+        status deprecated;
+        description
+          "Last used PHY rate of connected client.";
+      }
+
+      leaf rx-phy-rate {
+        type uint16;
+        description
+          "Last used PHY rate received from connected client in Mbps.";
+      }
+
+      leaf tx-phy-rate {
+        type uint16;
+        description
+          "Last used PHY rate transmitted to connected client in Mbps.";
+      }
+
+      leaf connection-mode {
+        type enumeration {
+          enum A {
+            description
+              "Client connected using 802.11a.";
+          }
+          enum B {
+            description
+              "Client connected using 802.11b.";
+          }
+          enum G {
+            description
+              "Client connected using 802.11g.";
+          }
+          enum N {
+            description
+              "Client connected using 802.11n.";
+          }
+          enum AC {
+            description
+              "Client connected using 802.11ac.";
+          }
+          enum AX {
+            description
+              "Client connected using 802.11ax.";
+          }
+        }
+        description
+          "802.11 protocol used for the client's connection.";
+      }
+
+      leaf frequency {
+        type uint8;
+        description
+          "Frequency the client is utilizing. Typically, 2 for a client
+           connecting over 2.4GHz, 5 and 6 for 5/6GHz respectively.";
+      }
+    }
+  }
+
+  grouping clients-top {
+    description
+      "Top-level grouping for clients operational state data.";
+
+    container clients {
+      description
+        "Top-level container for clients operational state data.";
+      list client {
+        key "mac";
+        config false;
+        description
+          "List of clients per BSS.";
+        leaf mac {
+          type leafref {
+            path "../state/mac";
+          }
+          config false;
+          description
+            "The clients WiFi MAC address.";
+        }
+
+        container state {
+          config false;
+          description
+            "Client state data.";
+          uses clients-state;
+        }
+
+        container client-rf {
+          config false;
+          description
+            "RF radio-data per non-AP STA.";
+
+          uses client-rf-state;
+        }
+
+        container client-capabilities {
+          config false;
+          description
+            "Capabilites as advertised by the Client.";
+
+          uses client-capabilities-state;
+        }
+
+        container dot11k-neighbors {
+          config false;
+          description
+            "80211.k nieghbor information given from the Client to
+            the infrastructure.";
+
+          uses dot11k-neighbors-state;
+        }
+
+        container client-connection {
+          config false;
+          description
+            "Connection-state and meta-data associated with the
+            Client.";
+
+          uses client-connect-state;
+        }
+      }
+    }
+  }
+
+  grouping wmm-top {
+    description
+      "Top-level grouping for WMM configuration and operational
+      state data.";
+
+    container wmm {
+      description
+        "Top-level container for WMM configuration and
+        state container.";
+      container config {
+        description
+          "Container for WMM configuration elements.";
+        uses wmm-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Container for WMM state elements.";
+        uses wmm-config;
+      }
+    }
+  }
+
+  grouping dot11r-top {
+    description
+      "Top-level grouping for 802.11r configuration and
+      operational state data.";
+
+    container dot11r {
+      description
+        "Top-level container for 802.11r configuration and
+        state container.";
+      container config {
+        description
+          "Container for 802.11r configuration elements.";
+        uses dot11r-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Container for 802.11r state elements.";
+        uses dot11r-config;
+      }
+    }
+  }
+
+  grouping dot11v-top {
+    description
+      "Top-level grouping for 802.11v configuration and
+      operational state data.";
+
+    container dot11v {
+      description
+        "Top-level container for 802.11v configuration and
+        operational state data.";
+      container config {
+        description
+          "Container for 802.11v configuration elements.";
+        uses dot11v-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Container for 802.11r state elements.";
+        uses dot11v-config;
+      }
+    }
+  }
+
+  grouping dot1x-timers-top {
+    description
+      "Top-level grouping for dot1x configuration and
+      operational state data.";
+
+    container dot1x-timers {
+      description
+        "Top-level container for dot1x configuration
+        and operational state data.";
+      container config {
+        description
+          "Container for dot1x configuration elements.";
+        uses dot1x-timers-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Container for dot1x state elements.";
+        uses dot1x-timers-config;
+      }
+    }
+  }
+
+  grouping band-steering-top {
+    description
+      "Top-level grouping for band-steering configuration
+      and operational state data.";
+
+    container band-steering {
+      description
+        "Top-level container for band-steering configuration
+        and operational state data.";
+      container config {
+        description
+          "Container for band-steering configuration elements.";
+        uses band-steering-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Container for band-steering state elements.";
+        uses band-steering-config;
+      }
+    }
+  }
+
+  grouping ssid-top {
+    description
+      "Top-level grouping for SSID configuration and operational state
+      data.";
+
+    container ssids {
+      description
+        "Top level container for SSIDs, including configuration
+        and state data.";
+
+      list ssid {
+        key "name";
+        description
+          "The list of named SSIDs on the APs.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "References the configured name of the SSID.";
+        }
+
+        container config {
+          description
+            "Configurable items at the global, SSID level";
+
+          uses ssid-common-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data at the SSID level";
+
+          uses ssid-common-config;
+        }
+        uses bssid-common-state;
+        uses wmm-top;
+        uses dot11r-top;
+        uses dot11v-top;
+        uses clients-top;
+        uses dot1x-timers-top;
+        uses band-steering-top;
+      }
+    }
+  }
+  uses ssid-top;
+}

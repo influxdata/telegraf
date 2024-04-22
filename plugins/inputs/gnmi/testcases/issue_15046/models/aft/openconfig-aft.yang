@@ -1,0 +1,281 @@
+module openconfig-aft {
+
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/aft";
+
+  prefix "oc-aft";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  // Include IPv4 AFT submodule.
+  include openconfig-aft-ipv4;
+  // Include IPv6 AFT submodule.
+  include openconfig-aft-ipv6;
+  // Include MPLS AFT submodule.
+  include openconfig-aft-mpls;
+  // Include policy forwarding AFT submodule.
+  include openconfig-aft-pf;
+  // Include the ethernet AFT submodule.
+  include openconfig-aft-ethernet;
+  // Include the common cross-AFT entities.
+  include openconfig-aft-common;
+  // Include the state synced submodule.
+  include openconfig-aft-state-synced;
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "A model describing the forwarding entries installed on a network
+    element. It should be noted that this model is not expected to
+    align 1:1 with the underlying structure used directly by a
+    forwarding element (e.g., linecard), but rather provide an
+    abstraction that can be consumed by an NMS to observe, and in some
+    cases manipulate, the internal forwarding database in a simplified
+    manner. Since the underlying model of the forwarding table is not
+    expected to align with this model, the structure described herein
+    is referred to as an Abstract Forwarding Table (AFT), rather than
+    the FIB.";
+
+  oc-ext:openconfig-version "2.4.0";
+
+  revision "2023-09-26" {
+    description
+      "Add next-hop-group-name in NHG AFT entry state.";
+    reference "2.4.0";
+  }
+
+  revision "2023-04-19" {
+    description
+      "Add atomic attribute to AFT containers.";
+    reference "2.3.0";
+  }
+
+  revision "2022-06-16" {
+    description
+      "Add state-synced container under afts.";
+    reference "2.2.0";
+  }
+
+  revision "2022-06-15" {
+    description
+      "Add decapsulate-header in NH AFT entry state";
+    reference "2.1.0";
+  }
+
+  revision "2022-05-17" {
+    description
+      "Relocate next-hop-group/next-hop-group-network-instance
+      from openconfig-aft-common to resolve absolute path
+      leafref specific to network-instances";
+    reference "2.0.0";
+  }
+
+  revision "2022-01-27" {
+    description
+      "Add next hop counters and prefix counters.";
+    reference "1.0.0";
+  }
+
+  revision "2022-01-26" {
+    description
+      "Add vni-label and tunnel-src-ip-address properties under next-hops";
+    reference "0.10.0";
+  }
+
+  revision "2021-12-09" {
+    description
+      "Add pop-top-label in NH AFT entry state";
+    reference "0.9.0";
+  }
+
+  revision "2021-08-06" {
+    description
+      "Add references to the network instance within which to resolve
+      a next-hop-group; fix defect where NHG could not be an ID defined
+      outside the current NI; add metadata; add IP-in-IP encap.";
+    reference "0.8.0";
+  }
+
+  revision "2021-07-15" {
+    description
+      "NHG-ID and NH-ID space management.";
+    reference "0.7.0";
+  }
+
+  revision "2020-11-06" {
+    description
+      "Make AFT model read-only.";
+    reference "0.6.0";
+  }
+
+  revision "2020-09-09" {
+    description
+      "Remove leafs that are not used as keys from config containers as
+      AFT model is ready-only.
+      * next-hop/interface-ref/config.
+      * all leafs under policy-forwarding-entry/config except index.";
+    reference "0.5.0";
+  }
+
+  revision "2019-11-07" {
+    description
+      "Move lsp-name leaf out of aft-common-entry-nexthop-state group.";
+    reference "0.4.1";
+  }
+
+  revision "2019-08-02" {
+    description
+      "Add installing protocol for IPv[46] unicast entries.
+      Add the ability to describe conditional next-hop groups
+      outside of the policy forwarding module to allow for efficient
+      handling of CBTS, where many prefixes may share the same next-hop
+      criteria.";
+    reference "0.4.0";
+  }
+
+  revision "2019-08-01" {
+    description
+      "Add lsp-name leaf to AFT next-hop.";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Formatting fixes";
+    reference "0.3.1";
+  }
+
+  revision 2017-05-10 {
+    description
+      "Refactor to provide concretised per-AF schemas per AFT.";
+    reference "0.3.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // config + state groupings
+
+  // structural groupings
+
+  grouping aft-top {
+    description
+      "Top-level grouping allowing per-protocol instantiation of the
+      AFT.";
+
+    container afts {
+      config false;
+      description
+        "The abstract forwarding tables (AFTs) that are associated
+        with the network instance. An AFT is instantiated per-protocol
+        running within the network-instance - such that one exists for
+        IPv4 Unicast, IPv6 Unicast, MPLS, L2 forwarding entries, etc.
+        A forwarding entry within the FIB has a set of next-hops,
+        which may be a reference to an entry within another table -
+        e.g., where a Layer 3 next-hop has an associated Layer 2
+        forwarding entry.";
+
+      container ipv4-unicast {
+        description
+          "The abstract forwarding table for IPv4 unicast. Entries
+          within this table are uniquely keyed on the IPv4 unicast
+          destination prefix which is matched by ingress packets.
+
+          The data set represented by the IPv4 Unicast AFT is the set
+          of entries from the IPv4 unicast RIB that have been selected
+          for installation into the FIB of the device exporting the
+          data structure.";
+
+        uses aft-ipv4-unicast-structural;
+      }
+
+      container ipv6-unicast {
+        description
+          "The abstract forwarding table for IPv6 unicast. Entries
+          within this table are uniquely keyed on the IPv6 unicast
+          destination prefix which is matched by ingress packets.
+
+          The data set represented by the IPv6 Unicast AFTis the set
+          of entries within the IPv6 unicast RIB that have been
+          selected for installation into the FIB of the device
+          exporting the data structure.";
+
+        uses aft-ipv6-unicast-structural;
+      }
+
+      container policy-forwarding {
+        description
+          "The abstract forwarding table for policy-based forwarding
+          entries. Since multiple match criteria can be utilised
+          within a policy-based forwarding rule, this AFT provides a
+          flexible match criteria, and is indexed based on an
+          arbitrary 64-bit index. Entries within the AFT may match on
+          multiple field types (e.g., L4 header fields, as well as L2
+          fields).
+
+          Examples of entries within this table are:
+            - IPv4 policy-based routing based on DSCP.
+            - MPLS policy-based forwarding entries.";
+
+        uses aft-pf-structural;
+      }
+
+      container mpls {
+        description
+          "The abstract forwarding table for MPLS label based
+          forwarding entries. Entries within the table are keyed based
+          on the top-most MPLS label in the stack on the ingress
+          packet.";
+
+        uses aft-mpls-structural;
+      }
+
+      container ethernet {
+        description
+          "The abstract forwarding table for Ethernet based forwarding
+          entries. Entries within the table are keyed based on the
+          destination MAC address on the ingress packet.";
+
+        uses aft-ethernet-structural;
+      }
+
+      container state-synced {
+        description
+          "In some cases AFT streaming (e.g., over gNMI) is an eventually consistent system.
+          When the device updates an entry it is usually expected to
+          stream an update to the client within a vert short amount
+          of time (few milliseconds). Given this is the casee, a telemetry collector or a
+          controller that parse the AFT doesn't have a consistent
+          snapshot, or overall versioned copy of AFT with the device
+          at any specific point of time.
+
+          In certain failure modes like device boot up, gNMI daemon
+          failure and device/routing engine stateful switchover
+          a telemetry collector or a controller need a flag to
+          determine whether it is in consistent with the device or
+          not such that it can a corrective action when needed.
+          A device sets this leaf or flag to indicate to the
+          client that AFT data/view is consistent.";
+
+        uses aft-state-synced-structural;
+      }
+
+      uses aft-next-hop-groups-structural;
+      uses aft-nhop-structural;
+    }
+  }
+}

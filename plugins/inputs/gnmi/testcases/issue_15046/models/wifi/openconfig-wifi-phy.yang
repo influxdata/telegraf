@@ -1,0 +1,594 @@
+module openconfig-wifi-phy {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/wifi-phy";
+
+  // Assign this module a prefix to be used by other modules.
+  prefix "oc-wifi-phy";
+
+  // Imports
+  import openconfig-yang-types { prefix oc-yang; }
+  // OC-specific types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-wifi-types { prefix oc-wifi-types; }
+
+  // Some required meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Model for managing PHY layer configuration of Radio interfaces.";
+
+  oc-ext:openconfig-version "1.2.3";
+
+  revision "2023-11-30" {
+    description
+      "Add allowed-max-eirp and allowed-max-txpower radio state leaves.";
+    reference "1.2.3";
+  }
+
+  revision "2023-05-26" {
+    description
+      "Minor cleanup in descriptions.";
+    reference "1.2.2";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Update description for neighbor RSSI to specify as a negative number.";
+    reference "1.2.1";
+  }
+
+  revision "2022-09-16" {
+    description
+      "Adds obss-rx and clarifies language on rx-dot11-channel-utilization.";
+    reference "1.2.0";
+  }
+
+  revision "2022-03-24" {
+    description
+      "Update model to support operation in 6 GHz frequency.";
+    reference "1.1.0";
+  }
+
+  revision "2021-08-02" {
+    description
+      "Add BSS color to radio config and neighbor table.";
+    reference "1.0.0";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Update namespace based on new directory structure.";
+    reference "0.4.2";
+  }
+
+  revision "2020-03-02" {
+    description
+      "Bug fix, add semicolon to previous revision statement.";
+    reference "0.4.1";
+  }
+
+  revision "2019-12-20" {
+    description
+      "Add supported-channels.";
+    reference "0.4.0";
+  }
+
+  revision "2018-12-19" {
+    description
+      "Add opmode to neighbor-table, transmit-eirp, and change
+      transmit-power to int8.";
+    reference "0.3.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Add last-seen to neighbor-table.";
+    reference "0.2.0";
+  }
+
+  revision "2017-11-06" {
+    description
+      "Add SSID to neighbor-table.";
+    reference "0.1.1";
+  }
+
+  revision "2017-07-25" {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  // Grouping statements
+  grouping radio-common-config {
+    description
+      "Configuration items common to all Radio interfaces, independent
+      of frequency";
+
+    leaf id {
+      type uint8;
+      description
+        "Unique ID of the radio. Each ID has a corresponding
+        operating-frequency.";
+    }
+
+    leaf operating-frequency {
+      type identityref {
+        base oc-wifi-types:OPERATING_FREQUENCY;
+      }
+      description
+        "Operating frequency of this radio.";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "The configured state (enabled/disabled) of this radio
+        interface.";
+    }
+
+    leaf transmit-power {
+      type int8;
+      units dBm;
+      default 9;
+      description
+        "Transmit power of the radio, in dBm.";
+    }
+
+    leaf transmit-eirp {
+      type uint8;
+      units dBm;
+      description
+        "Transmit eirp of the radio + antenna, in dBm.";
+    }
+
+    leaf channel {
+      type uint8 {
+        range "1..233";
+        }
+      description
+        "Operating channel of this radio. If using channel-bonding
+        this will represent the Primary 20MHz channel of the
+        40,80,160MHz channel.";
+    }
+
+    leaf channel-width {
+      type uint8;
+      units MHz;
+      default 20;
+      description
+        "Operating channel-width of this radio.";
+    }
+
+    leaf bss-coloring {
+      type boolean;
+      default "true";
+      description
+        "Utilize BSS coloring on this radio.";
+    }
+
+    leaf bss-color-id {
+      type uint8 {
+        range "1..63";
+        }
+      description
+        "Numerical identifier of the BSS.";
+    }
+
+    leaf dca {
+      type boolean;
+      default "true";
+      description
+        "Utilize Dynamic Channel Assignment on this Radio.";
+    }
+
+    leaf-list allowed-channels {
+      type oc-wifi-types:channels-type;
+      description
+        "Allowed channel list for this Radio to utilize.";
+    }
+
+    leaf dtp {
+      type boolean;
+      default "true";
+      description
+        "Utilize dynamic transmit-power on this Radio.";
+    }
+
+    leaf dtp-min {
+      when "../dtp = 'true'";
+      type int8;
+      units dBm;
+      default '3';
+      description
+        "Minimum allowed transmit-power on this radio, if utilizing
+        dtp. Expressed in dBm.";
+    }
+
+    leaf dtp-max {
+      when "../dtp = 'true'";
+      type int8;
+      units dBm;
+      default '15';
+      description
+        "Maximum allowed transmit-power on this radio, if utilizing
+        dtp. Expressed in dBm.";
+    }
+
+    leaf antenna-gain {
+      type int8;
+      description
+        "Antenna gain applied to this Radio; typically used when
+        external antennae connected.";
+    }
+
+    leaf scanning {
+      type boolean;
+      default "true";
+      description
+        "Whether the radio will perform off-channel scanning, to
+        collect neighboring RF information.";
+    }
+
+    leaf scanning-interval {
+      type uint8;
+      units seconds;
+      description
+        "How often, in seconds, the radio will go off-channel to
+        perform scanning.";
+    }
+
+    leaf scanning-dwell-time {
+      type uint16;
+      units milliseconds;
+      description
+        "Amount of time, in milliseconds, the radio will spend on a
+        channel during scanning-interval. If a Monitor-mode Radio, it
+        will cycle through scanning-allowed-channels spending this
+        amount of time on each.";
+    }
+
+    leaf scanning-defer-clients {
+      type uint8;
+      description
+        "Sets the number of associated stations after which the radio
+        should not perform scanning.";
+    }
+
+    leaf scanning-defer-traffic {
+      type boolean;
+      description
+        "Do not perform scanning if any traffic received from an
+        active Station in the past 100ms marked as AC_VO or AC_VI.";
+    }
+  }
+
+  grouping radio-common-state {
+    description
+      "Grouping for defining radio-specific operational state";
+
+    leaf base-radio-mac {
+      type oc-yang:mac-address;
+      description
+        "Represents the 'burned-in' base-radio MAC
+        address for the a Radio interface.";
+    }
+
+    leaf-list allowed-regulatory-channels {
+      type oc-wifi-types:channels-type;
+      description
+        "Allowed channels, per regulatory restrictions, this Radio is
+        capable of using. This is typically a combination of AP
+        certification and allowed frequencies per country.";
+    }
+
+    leaf software-selectable {
+      type boolean;
+      description
+        "Indicates whether or not the operating frequency can be
+        configured by the operator.";
+    }
+
+    leaf dfs-hit-time {
+      type oc-types:timeticks64;
+      units nanoseconds;
+      description
+        "Reports the time of the last DFS hit. The value is the
+        timestamp in nanoseconds relative to the Unix Epoch
+        (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+
+    leaf-list supported-channels {
+      type oc-wifi-types:channels-type;
+      description
+        "Channels allowed by a combination of regulatory and AP certification
+        restrictions.";
+    }
+
+    leaf channel-change-reason {
+      type identityref {
+        base oc-wifi-types:CHANGE_REASON_TYPE;
+      }
+      description
+        "When an Access Point changes channels, this will
+        provide the reason that led to the change.";
+    }
+
+    leaf total-channel-utilization {
+      type oc-types:percentage;
+      description
+        "Total 802.11 and non-802.11 channel utilization on this
+        Radio. The total channel utilization should include all time
+        periods the AP spent actively receiving and transmitting
+        802.11 frames, and also include all time spent with clear
+        channel assessment (CCA) in a busy state.";
+    }
+
+    leaf rx-dot11-channel-utilization {
+      type oc-types:percentage;
+      description
+        "Received channel-utilization due to any 802.11 frames, destined to this
+        radio or otherwise.";
+    }
+
+    leaf rx-noise-channel-utilization {
+      type oc-types:percentage;
+         description
+           "Received channel-utilization percentage due to noise.";
+    }
+
+    leaf tx-dot11-channel-utilization {
+      type oc-types:percentage;
+      description
+        "Transmit channel-utilization percentage.";
+    }
+
+    leaf allowed-max-eirp {
+      type uint8;
+      units dBm;
+      description
+        "Maximum allowed transmit eirp of this radio + antenna, of the current channel, in dBm.";
+    }
+
+    leaf allowed-max-txpower {
+      type uint8;
+      units dBm;
+      description
+        "Maximum allowed transmit power of this radio, of the current channel, in dBm.";
+    }
+
+    leaf obss-rx {
+      type oc-types:percentage;
+      description
+        "Received channel utilization due to 802.11 frames NOT destined to a
+        BSS on this AP ('Overlapping BSS').";
+    }
+  }
+
+  grouping radio-counters-state {
+    description
+      "Radio telemetry statistics.";
+    container counters {
+      description
+        "A collection of radio-related statistics objects.";
+
+      // Rx Counters
+      leaf failed-fcs-frames {
+        type oc-yang:counter64;
+        description
+          "Number of frames that failed the FCS.";
+      }
+
+      // Tx Counters
+      leaf noise-floor {
+        type int8;
+        description
+          "Noise Floor, as measured by this radio.";
+      }
+    }
+  }
+
+  grouping neighbor-list-state {
+    description
+      "Operational state data relating to neighboring
+       BSSIDs and their received signal strength.";
+    leaf bssid {
+      type oc-yang:mac-address;
+      description
+        "Neighboring BSSID.";
+    }
+
+    leaf ssid {
+      type string;
+      description
+       "The SSID of this neighboring BSSID.";
+    }
+
+    leaf rssi {
+      type int8;
+      description
+       "The RSSI of this neighboring BSSID, expressed as a negative number.";
+    }
+
+    leaf channel {
+      type uint16;
+      description
+        "The channel of this neighboring BSSID. This is to utilize
+        802.11ac nomenclature. For example, 40MHz channel 36-40
+        represented as channel 38. The primary-channel leaf is used to
+        identify the primary 20MHz channel of a bonded channel.";
+    }
+
+    leaf primary-channel {
+      type uint16;
+      description
+        "The primary 20MHz channel, if the neighbor is operating on
+        bonded channel.";
+    }
+
+    leaf bss-color-id {
+      type uint8 {
+        range "1..63";
+        }
+      description
+        "Numerical identifier of the BSS.";
+    }
+
+    leaf last-seen {
+      type oc-types:timeticks64;
+      units nanoseconds;
+      description
+        "Reports the time this reading was taken, indicating when
+        this neighbor was last seen. If a cache is used, it MUST be
+        updated instantly when a neighbor BSS changes channels, or a
+        new BSS is seen. The value is the timestamp in nanoseconds
+        relative to the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf opmode {
+      type enumeration {
+        enum OPEN {
+          description
+            "Open authentication.";
+        }
+        enum WPA2_PERSONAL {
+          description
+            "WPA2-Personal.";
+        }
+        enum WPA2_ENTERPRISE {
+          description
+            "WPA2-Enterprise.";
+        }
+        enum WPA_PERSONAL {
+          description
+            "WPA-Personal.";
+        }
+        enum WPA_ENTERPRISE {
+          description
+            "WPA-Enterprise.";
+        }
+        enum WEP {
+          description
+            "Any flavor of WEP encryption.";
+        }
+        enum ENHANCED_OPEN {
+          description
+            "Open authentication with Opportunistic Wireless Encryption.";
+        }
+        enum WPA3_SAE {
+          description
+            "WPA3-SAE using Simultaneous Authentication of Equals (SAE).";
+        }
+        enum WPA3_ENTERPRISE {
+          description
+            "WPA3-Enterprise with 802.1X SHA-256 authentication key
+             management.";
+        }
+        enum WPA3_ENTERPRISE_192_BIT {
+          description
+            "WPA3-Enterprise with 802.1X SHA-384 authentication key
+             management.";
+        }
+      }
+      description
+        "Operating mode of the BSS.";
+      reference "Section 12.6.1.3 of the 802.11-2016 specification.";
+    }
+  }
+
+  grouping neighbor-bssid-top {
+  description
+    "Top-level grouping for neighbor table
+    operational state data.";
+
+    container neighbors {
+      description
+        "Top-level container for RF neighbors.";
+      list neighbor {
+        key "bssid";
+        config false;
+        description
+          "The MAC address, or BSSID, of a neighbor, and
+          their corresponding RSSI.";
+
+        leaf bssid {
+          type leafref {
+            path "../state/bssid";
+          }
+          config false;
+          description "Reference to neighbor BSSID.";
+        }
+
+        container state {
+          config false;
+          description
+            "State container for RF neighbors.";
+          uses neighbor-list-state;
+        }
+      }
+    }
+  }
+
+  grouping radio-top {
+    description
+      "Top-level grouping for radio configuration and
+      operational state data";
+
+    container radios {
+      description
+        "Top level container for radios, including configuration
+        and state data.";
+
+      list radio {
+        key "id operating-frequency";
+        description
+          "The list of radios on the device.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "List key referencing the configured radio id.";
+        }
+
+        leaf operating-frequency {
+          type leafref {
+            path "../config/operating-frequency";
+          }
+          description
+            "List key referencing the radio operating-frequency.";
+        }
+
+        container config {
+          description
+            "Configurable items at the global, radio interface
+            level.";
+
+          uses radio-common-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data at the global radio level.";
+
+          uses radio-common-config;
+          uses radio-common-state;
+          uses radio-counters-state;
+        }
+        uses neighbor-bssid-top;
+      }
+    }
+  }
+  uses radio-top;
+}

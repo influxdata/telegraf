@@ -1,0 +1,651 @@
+module openconfig-system-logging {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/system/logging";
+
+  prefix "oc-log";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-network-instance { prefix oc-ni; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    for common logging facilities on network systems.";
+
+  oc-ext:openconfig-version "0.6.0";
+
+revision "2023-07-20" {
+    description
+      "adding VTY and local files as logging destinations";
+    reference "0.6.0";
+  }
+
+  revision "2023-05-04" {
+    description
+      "removing LOG_DESTINATION_TYPE identities";
+    reference "0.5.0";
+  }
+
+  revision "2022-12-29" {
+    description
+      "Add network-instance for remote logging servers";
+    reference "0.4.1";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2017-09-18" {
+    description
+      "Updated to use OpenConfig types modules";
+    reference "0.3.0";
+  }
+
+  revision "2017-07-06" {
+    description
+      "Move to oc-inet types, add IETF attribution, add RADIUS
+      counters, changed password leaf names to indicate hashed";
+    reference "0.2.0";
+  }
+
+  revision "2017-01-29" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity SYSLOG_FACILITY {
+    description
+      "Base identity for Syslog message facilities.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity ALL {
+    base SYSLOG_FACILITY;
+    description
+      "All supported facilities";
+  }
+
+  identity KERNEL {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for kernel messages";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity USER {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for user-level messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity MAIL {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for the mail system.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity SYSTEM_DAEMON {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for the system daemons.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+   }
+
+  identity AUTH {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for security/authorization messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity SYSLOG {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for messages generated internally by syslogd
+       facility.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity AUTHPRIV {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for privileged security/authorization messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+
+  identity NTP {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for the NTP subsystem.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity AUDIT {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for log audit messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity CONSOLE {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for log alert messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL0 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 0 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL1 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 1 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL2 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 2 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL3 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 3 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL4 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 4 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL5 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 5 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL6 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 6 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  identity LOCAL7 {
+    base SYSLOG_FACILITY;
+    description
+      "The facility for local use 7 messages.";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  // typedef statements
+
+    typedef syslog-severity {
+      type enumeration {
+        enum EMERGENCY {
+          description
+            "Emergency: system is unusable (0)";
+        }
+        enum ALERT {
+          description
+          "Alert: action must be taken immediately (1)";
+      }
+      enum CRITICAL {
+        description
+          "Critical: critical conditions (2)";
+      }
+      enum ERROR {
+        description
+          "Error: error conditions (3)";
+      }
+      enum WARNING {
+        description
+          "Warning: warning conditions (4)";
+      }
+      enum NOTICE {
+        description
+          "Notice: normal but significant  condition(5)";
+      }
+      enum INFORMATIONAL {
+        description
+          "Informational: informational messages (6)";
+      }
+      enum DEBUG {
+        description
+          "Debug: debug-level messages (7)";
+      }
+    }
+    description
+      "Syslog message severities";
+    reference
+      "IETF RFC 5424 - The Syslog Protocol";
+  }
+
+  // grouping statements
+
+  grouping logging-selectors-config {
+    description
+      "Configuration data for logging selectors";
+
+    leaf facility {
+      type identityref {
+        base SYSLOG_FACILITY;
+      }
+      description
+        "Specifies the facility, or class of messages to log";
+    }
+
+    leaf severity {
+      type syslog-severity;
+      description
+        "Specifies that only messages of the given severity (or
+        greater severity) for the corresonding facility are logged";
+    }
+  }
+
+  grouping logging-selectors-state {
+    description
+      "Operational state data for logging selectors";
+  }
+
+  grouping logging-selectors-top {
+    description
+      "Top-level grouping for the logging selector list";
+
+    container selectors {
+      description
+        "Enclosing container ";
+
+      list selector {
+        key "facility severity";
+        description
+          "List of selectors for log messages";
+
+        leaf facility {
+          type leafref {
+            path "../config/facility";
+          }
+          description
+            "Reference to facility list key";
+        }
+
+        leaf severity {
+          type leafref {
+            path "../config/severity";
+          }
+          description
+            "Reference to severity list key";
+        }
+
+        container config {
+          description
+            "Configuration data ";
+
+          uses logging-selectors-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data ";
+
+          uses logging-selectors-config;
+          uses logging-selectors-state;
+        }
+      }
+    }
+  }
+
+  grouping logging-console-config {
+    description
+      "Configuration data for console and vty logging";
+  }
+
+  grouping logging-console-state {
+    description
+      "Operational state data for console and vty logging";
+  }
+
+  grouping logging-console-top {
+    description
+      "Top-level grouping for console logging data";
+
+    container console {
+      description
+        "Top-level container for data related to console-based
+        logging";
+
+      container config {
+        description
+          "Configuration data for console logging";
+
+        uses logging-console-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for console logging";
+
+        uses logging-console-config;
+        uses logging-console-state;
+      }
+
+      uses logging-selectors-top;
+    }
+  }
+
+  grouping logging-remote-config {
+    description
+      "Configuration data for remote log servers";
+
+    leaf host {
+      type oc-inet:host;
+      description
+        "IP address or hostname of the remote log server";
+    }
+
+    leaf source-address {
+      type oc-inet:ip-address;
+      description
+        "Source IP address for packets to the log server";
+    }
+
+    leaf network-instance {
+      type oc-ni:network-instance-ref;
+      description
+        "The network instance used to reach the log server.  If no
+        instance is specified, DEFAULT_INSTANCE is used.";
+    }
+
+    leaf remote-port {
+      type oc-inet:port-number;
+      default 514;
+      description
+        "Sets the destination port number for syslog UDP messages to
+        the server.  The default for syslog is 514.";
+    }
+  }
+
+  grouping logging-remote-state {
+    description
+      "Operational state data for remote log servers";
+  }
+
+  grouping logging-remote-top {
+    description
+      "Top-level grouping for remote log servers";
+
+    container remote-servers {
+      description
+        "Enclosing container for the list of remote log
+         servers";
+
+      list remote-server {
+        key "host";
+        description
+          "List of remote log servers";
+
+        leaf host {
+          type leafref {
+            path "../config/host";
+          }
+          description
+            "Reference to the host list key";
+        }
+
+        container config {
+          description
+            "Configuration data for remote log servers";
+
+          uses logging-remote-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for remote log servers";
+
+          uses logging-remote-config;
+          uses logging-remote-state;
+        }
+        uses logging-selectors-top;
+      }
+    }
+  }
+
+  grouping logging-file-config {
+    description
+      "Configuration data for logfile";
+
+    leaf filename-prefix {
+      type string {
+        length 0..255;
+      }
+      description
+        "A name used for the file.  It is expected that an
+        implementation may append timestamp, serial-number or
+        other identifier to the filename.";
+    }
+
+    leaf path {
+      type string {
+        length 0..255;
+      }
+      description
+        "The fully specified path of the folder where the
+        logfile is stored.  The path is implementation specific
+        and may include attributes such as a drive identifier.";
+    }
+
+    leaf rotate {
+      type uint32;
+      default 0;
+      description
+        "Used for logfile rotation.
+         Log files are rotated the number of times defined by
+         this leaf.
+         The default value of 1 indicates that there will be one
+         rotation file and one active file.  A 0 value indicates
+         old versions are removed rather than rotated.";
+    }
+
+    leaf max-size {
+      type uint32;
+      default 1000;
+      description
+        "Used for logfile rotation.
+        Maximum size in Bytes, logfile may grow to. When logfile
+        reach this size it triggers log rotation. The log file need to
+        be save, closed, and new file open or future log storage.
+        If needed oldest logfile of same prefix shall be deleted to";
+    }
+
+    leaf max-open-time {
+      type uint32;
+      default 1440;
+      description
+        "Used for logfile rotation.
+        Maximum time, in minutes, the logfile can be open. When expires,
+        it triggers log rotation.
+        Actions are same ans when log file reaches its max-size.
+        it need to be closed, save, and new file open or future log
+        storage. If needed oldest logfile of same prefix shall be
+        deleted to ";
+    }
+  }
+
+  grouping logging-file-state {
+    description
+      "Operational state data for logfile";
+    leaf open-logfile {
+      type string{
+        length 0..511;
+      }
+      description
+        "the currently active/open filename prepended by folder path
+        and including suffix appended to filename-prefix by system";
+    }
+  }
+
+  grouping logging-files-top {
+    description
+      "Top-level grouping for local log files";
+
+    container files {
+      description
+        "Enclosing container for the list of log files";
+
+      list file {
+        key "path filename-prefix";
+        description
+          "List of logfiles";
+
+        leaf filename-prefix {
+          type leafref {
+            path "../config/filename-prefix";
+          }
+          description
+            "Reference to the logfiles list key";
+        }
+
+        leaf path {
+          type leafref {
+            path "../config/path";
+          }
+          description
+            "Reference to the logfiles list key";
+        }
+
+        container config {
+          description
+            "Configuration data for logfile";
+          uses logging-file-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for logfile servers";
+          uses logging-file-config;
+          uses logging-file-state;
+        }
+        uses logging-selectors-top;
+      }
+    }
+  }
+
+  grouping logging-vty-top {
+    description
+      "Top-level grouping for vty logging data";
+
+    container vty {
+      description
+        "Top-level container for data related to vty-based
+        logging (active sessions of ssh, telnet, etc )";
+
+      container config {
+        description
+          "Configuration data for vty logging";
+
+        uses logging-console-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for console logging";
+        uses logging-console-config;
+        uses logging-console-state;
+      }
+      uses logging-selectors-top;
+    }
+  }
+
+  grouping logging-top {
+    description
+      "Top-level grouping for logging data";
+
+    container logging {
+      description
+        "Top-level container for data related to logging / syslog";
+
+      uses logging-console-top;
+      uses logging-remote-top;
+      uses logging-files-top;
+      uses logging-vty-top;
+
+    }
+  }
+  // data definition statements
+
+  // augment statements
+
+
+}

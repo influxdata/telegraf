@@ -1,0 +1,267 @@
+submodule openconfig-aft-pf {
+  belongs-to "openconfig-aft" {
+    prefix "oc-aft";
+  }
+
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+  import openconfig-mpls-types { prefix "oc-mplst"; }
+  import openconfig-packet-match-types {
+    prefix "oc-pkt-match-types";
+  }
+
+  // Include common cross-AFT groupings from the common submodule.
+  include openconfig-aft-common;
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Submodule containing definitions of groupings for the abstract
+    forwarding table(s) for policy forwarding entries. These are
+    defined to be forwarding tables that allow matches on
+    fields other than the destination address that is used in
+    other forwarding tables.";
+
+  oc-ext:openconfig-version "2.4.0";
+
+  revision "2023-09-26" {
+    description
+      "Add next-hop-group-name in NHG AFT entry state.";
+    reference "2.4.0";
+  }
+
+  revision "2023-04-19" {
+    description
+      "Add atomic attribute to AFT containers.";
+    reference "2.3.0";
+  }
+
+  revision "2022-06-16" {
+    description
+      "Add state-synced container under afts.";
+    reference "2.2.0";
+  }
+
+  revision "2022-06-15" {
+    description
+      "Add decapsulate-header in NH AFT entry state";
+    reference "2.1.0";
+  }
+
+  revision "2022-05-17" {
+    description
+      "Relocate next-hop-group/next-hop-group-network-instance
+      from openconfig-aft-common to resolve absolute path
+      leafref specific to network-instances";
+    reference "2.0.0";
+  }
+
+  revision "2022-01-27" {
+    description
+      "Add next hop counters and prefix counters.";
+    reference "1.0.0";
+  }
+
+  revision "2022-01-26" {
+    description
+      "Add vni-label and tunnel-src-ip-address properties under next-hops";
+    reference "0.10.0";
+  }
+
+  revision "2021-12-09" {
+    description
+      "Add pop-top-label in NH AFT entry state";
+    reference "0.9.0";
+  }
+
+  revision "2021-08-06" {
+    description
+      "Add references to the network instance within which to resolve
+      a next-hop-group; fix defect where NHG could not be an ID defined
+      outside the current NI; add metadata; add IP-in-IP encap.";
+    reference "0.8.0";
+  }
+
+  revision "2021-07-15" {
+    description
+      "NHG-ID and NH-ID space management.";
+    reference "0.7.0";
+  }
+
+  revision "2020-11-06" {
+    description
+      "Make AFT model read only.";
+    reference "0.6.0";
+  }
+
+  revision "2020-09-09" {
+    description
+      "Remove leafs that are not used as keys from config containers as
+      AFT model is ready-only.
+      * next-hop/interface-ref/config.
+      * all leafs under policy-forwarding-entry/config except index.";
+    reference "0.5.0";
+  }
+
+  revision "2019-11-07" {
+    description
+      "Move lsp-name leaf out of aft-common-entry-nexthop-state group.";
+    reference "0.4.1";
+  }
+
+  revision "2019-08-02" {
+    description
+      "Add installing protocol for IPv[46] unicast entries.
+      Add the ability to describe conditional next-hop groups
+      outside of the policy forwarding module to allow for efficient
+      handling of CBTS, where many prefixes may share the same next-hop
+      criteria.";
+    reference "0.4.0";
+  }
+
+  revision "2019-08-01" {
+    description
+      "Add lsp-name leaf to AFT next-hop.";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Formatting fixes";
+    reference "0.3.1";
+  }
+
+  revision 2017-05-10 {
+    description
+      "Refactor to provide concretised per-AF schemas per AFT.";
+    reference "0.3.0";
+  }
+
+  grouping aft-pf-structural {
+    description
+      "Structural grouping defining the schema for the policy
+      forwarding abstract forwarding table.";
+
+    list policy-forwarding-entry {
+      key "index";
+
+      oc-ext:telemetry-atomic;
+      description
+        "List of the policy forwarding entries within the abstract
+        forwarding table. Each entry is uniquely identified by an
+        index on the system, due to the arbitrary match conditions
+        that may be implemented within the policy forwarding AFT.
+        The index may change upon changes of the entry if, and only
+        if, the device exporting the AFT replaces the entire entry
+        by removing the previous entry and replacing it with a
+        subsequent updated version.";
+
+      leaf index {
+        type leafref {
+          path "../state/index";
+        }
+        description
+          "Reference to the arbitary index for the policy forwarding
+          AFT entry.";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for the Policy Forwarding
+          AFT entry.";
+        uses aft-pf-entry-state;
+      }
+    }
+  }
+
+  grouping aft-pf-entry-state {
+    description
+      "Operational state parameters for the Policy Forwarding
+      AFT entry.";
+
+    leaf index {
+      type uint64;
+      description
+        "An arbitrary 64-bit index identifying the policy forwarding
+        AFT entry.";
+    }
+
+    leaf ip-prefix {
+      type oc-inet:ip-prefix;
+      description
+        "The IP prefix that the forwarding entry matches.";
+    }
+
+    leaf mac-address {
+      type oc-yang:mac-address;
+      description
+         "The MAC address that the forwarding entry matches. Used for
+         Layer 2 forwarding entries, e.g., within a VSI instance.";
+    }
+
+    leaf mpls-label {
+      type oc-mplst:mpls-label;
+      description
+        "The MPLS label that the forwarding entry matches. Used for
+        MPLS forwarding entries, whereby the local device acts as an
+        LSR.";
+    }
+
+    leaf mpls-tc {
+      type oc-mplst:mpls-tc;
+      description
+        "The value of the MPLS Traffic Class bits (formerly known as
+        the MPLS experimental bits) that are to be matched by the AFT
+        entry.";
+      reference
+        "RFC5462: Multiprotocol Label Switching (MPLS) Label Stack
+        Entry: 'EXP' Field Renamed to 'Traffic Class' Field"; }
+
+    leaf ip-dscp {
+      type oc-inet:dscp;
+      description
+        "The value of the differentiated services code point (DSCP) to
+        be matched for the forwarding entry. The value is specified in
+        cases where specific class-based forwarding based on IP is
+        implemented by the device.";
+    }
+
+    leaf ip-protocol {
+      type oc-pkt-match-types:ip-protocol-type;
+      description
+        "The value of the IP protocol field of an IPv4 packet, or the
+        next-header field of an IPv6 packet which is to be matched by
+        the AFT entry. This field is utilised where forwarding is
+        performed based on L4 information.";
+    }
+
+    leaf l4-src-port {
+      type oc-inet:port-number;
+      description
+        "The value of the source port field of the transport header
+        that is to be matched by the AFT entry.";
+    }
+
+    leaf l4-dst-port {
+      type oc-inet:port-number;
+      description
+        "The value of the destination port field of the transport
+        header that is to be matched by the AFT entry.";
+    }
+
+    uses aft-common-entry-state;
+  }
+}

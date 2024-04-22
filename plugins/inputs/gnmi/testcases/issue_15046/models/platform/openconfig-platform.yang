@@ -1,0 +1,1221 @@
+module openconfig-platform {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform";
+
+  prefix "oc-platform";
+
+  import openconfig-platform-types { prefix oc-platform-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-alarm-types { prefix oc-alarm-types; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-types { prefix oc-types; }
+
+  include openconfig-platform-common;
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines a data model for representing a system
+    component inventory, which can include hardware or software
+    elements arranged in an arbitrary structure. The primary
+    relationship supported by the model is containment, e.g.,
+    components containing subcomponents.
+
+    It is expected that this model reflects every field replacable
+    unit on the device at a minimum (i.e., additional information
+    may be supplied about non-replacable components).
+
+    Every element in the inventory is termed a 'component' with each
+    component expected to have a unique name and type, and optionally
+    a unique system-assigned identifier and FRU number.  The
+    uniqueness is guaranteed by the system within the device.
+
+    Components may have properties defined by the system that are
+    modeled as a list of key-value pairs. These may or may not be
+    user-configurable.  The model provides a flag for the system
+    to optionally indicate which properties are user configurable.
+
+    Each component also has a list of 'subcomponents' which are
+    references to other components. Appearance in a list of
+    subcomponents indicates a containment relationship as described
+    above.  For example, a linecard component may have a list of
+    references to port components that reside on the linecard.
+
+    This schema is generic to allow devices to express their own
+    platform-specific structure.  It may be augmented by additional
+    component type-specific schemas that provide a common structure
+    for well-known component types.  In these cases, the system is
+    expected to populate the common component schema, and may
+    optionally also represent the component and its properties in the
+    generic structure.
+
+    The properties for each component may include dynamic values,
+    e.g., in the 'state' part of the schema.  For example, a CPU
+    component may report its utilization, temperature, or other
+    physical properties.  The intent is to capture all platform-
+    specific physical data in one location, including inventory
+    (presence or absence of a component) and state (physical
+    attributes or status).";
+
+  oc-ext:openconfig-version "0.24.0";
+
+  revision "2023-11-28" {
+    description
+      "Add model-name";
+    reference "0.24.0";
+  }
+
+  revision "2023-02-13" {
+    description
+      "Refactor resource utilization threshold config into a separate grouping.
+      Update 'utilization resource' to 'resource utilization'.";
+    reference "0.23.0";
+  }
+
+  revision "2022-12-20" {
+     description
+        "Add threshold and threshold-exceeded for resource usage.";
+      reference "0.22.0";
+   }
+
+  revision "2022-12-19" {
+    description
+      "Update last-high-watermark timestamp documentation.";
+    reference "0.21.1";
+  }
+
+  revision "2022-09-26" {
+    description
+      "Add state data for base-mac-address.";
+    reference "0.21.0";
+  }
+
+  revision "2022-08-31" {
+    description
+      "Add new state data for component CLEI code.";
+    reference "0.20.0";
+  }
+
+  revision "2022-07-28" {
+    description
+      "Add container for controller card component";
+    reference "0.19.0";
+  }
+
+  revision "2022-07-11" {
+    description
+      "Add switchover ready";
+    reference "0.18.0";
+  }
+
+  revision "2022-06-10" {
+    description
+      "Specify units and epoch for switchover and reboot times.";
+    reference "0.17.0";
+  }
+
+  revision "2022-04-21" {
+    description
+      "Add platform utilization.";
+    reference "0.16.0";
+  }
+
+  revision "2022-02-02" {
+    description
+      "Add new state data for component reboot and
+      switchover.";
+    reference "0.15.0";
+  }
+
+  revision "2021-08-13" {
+    description
+      "Add container for PCIe error statistics";
+    reference "0.14.0";
+  }
+
+  revision "2021-01-18" {
+    description
+      "Add container for software module component";
+    reference "0.13.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Fix bug in parent path reference";
+    reference "0.12.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.12.1";
+  }
+
+  revision "2018-06-29" {
+    description
+      "Added location description for components";
+    reference "0.12.0";
+  }
+
+  revision "2018-06-03" {
+    description
+      "Added parent reference, empty flag and preconfiguration
+      for components";
+    reference "0.11.0";
+  }
+
+  revision "2018-04-20" {
+    description
+      "Added new per-component state data: mfg-date and removable";
+    reference "0.10.0";
+  }
+
+  revision "2018-01-30" {
+    description
+      "Amended approach for modelling CPU - rather than having
+      a local CPU utilisation state variable, a component with
+      a CPU should create a subcomponent of type CPU to report
+      statistics.";
+    reference "0.9.0";
+  }
+
+  revision "2018-01-16" {
+    description
+      "Added new per-component common data; add temp alarm;
+      moved hardware-port reference to port model";
+    reference "0.8.0";
+  }
+
+  revision "2017-12-14" {
+    description
+      "Added anchor containers for component data, added new
+      component types";
+    reference "0.7.0";
+  }
+
+  revision "2017-08-16" {
+    description
+      "Added power state enumerated type";
+    reference "0.6.0";
+  }
+
+  revision "2016-12-22" {
+    description
+      "Added temperature state variable to component";
+    reference "0.5.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+
+
+  grouping platform-component-properties-config {
+    description
+      "System-defined configuration data for component properties";
+
+    leaf name {
+      type string;
+      description
+        "System-supplied name of the property -- this is typically
+        non-configurable";
+    }
+
+    leaf value {
+      type union {
+        type string;
+        type boolean;
+        type int64;
+        type uint64;
+        type decimal64 {
+          fraction-digits 2;
+        }
+      }
+      description
+        "Property values can take on a variety of types.  Signed and
+        unsigned integer types may be provided in smaller sizes,
+        e.g., int8, uint16, etc.";
+    }
+  }
+
+  grouping platform-component-properties-state {
+    description
+      "Operational state data for component properties";
+
+    leaf configurable {
+      type boolean;
+      description
+        "Indication whether the property is user-configurable";
+    }
+  }
+
+  grouping platform-component-properties-top {
+    description
+      "Top-level grouping ";
+
+    container properties {
+      description
+        "Enclosing container ";
+
+      list property {
+        key "name";
+        description
+          "List of system properties for the component";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the property name.";
+        }
+
+        container config {
+          description
+            "Configuration data for each property";
+
+          uses platform-component-properties-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for each property";
+
+          uses platform-component-properties-config;
+          uses platform-component-properties-state;
+        }
+      }
+    }
+  }
+
+  grouping platform-subcomponent-ref-config {
+    description
+      "Configuration data for subcomponent references";
+
+    leaf name {
+      type leafref {
+        path "../../../../../component/config/name";
+      }
+      description
+        "Reference to the name of the subcomponent";
+    }
+  }
+
+  grouping platform-subcomponent-ref-state {
+    description
+      "Operational state data for subcomponent references";
+
+  }
+
+  grouping platform-subcomponent-ref-top {
+    description
+      "Top-level grouping for list of subcomponent references";
+
+    container subcomponents {
+      description
+        "Enclosing container for subcomponent references";
+
+      list subcomponent {
+        key "name";
+        description
+          "List of subcomponent references";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name list key";
+        }
+
+        container config {
+          description
+            "Configuration data for the subcomponent";
+
+          uses platform-subcomponent-ref-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for the subcomponent";
+
+          uses platform-subcomponent-ref-config;
+          uses platform-subcomponent-ref-state;
+        }
+      }
+    }
+  }
+
+  grouping platform-component-config {
+    description
+      "Configuration data for components";
+
+    leaf name {
+      type string;
+      description
+        "Device name for the component -- this may not be a
+        configurable parameter on many implementations.  Where
+        component preconfiguration is supported, for example,
+        the component name may be configurable.";
+    }
+  }
+
+  grouping platform-component-state {
+    description
+      "Operational state data for device components.";
+
+    leaf type {
+      type union {
+        type identityref {
+          base oc-platform-types:OPENCONFIG_HARDWARE_COMPONENT;
+        }
+        type identityref {
+          base oc-platform-types:OPENCONFIG_SOFTWARE_COMPONENT;
+        }
+      }
+      description
+        "Type of component as identified by the system";
+    }
+
+    leaf id {
+      type string;
+      description
+        "Unique identifier assigned by the system for the
+        component";
+    }
+
+    leaf location {
+      type string;
+      description
+        "System-supplied description of the location of the
+        component within the system. This could be a bay position,
+        slot number, socket location, etc. For component types that
+        have an explicit slot-id attribute, such as linecards, the
+        system should populate the more specific slot-id.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "System-supplied description of the component";
+    }
+
+    leaf mfg-name {
+      type string;
+      description
+        "System-supplied identifier for the manufacturer of the
+        component.  This data is particularly useful when a
+        component manufacturer is different than the overall
+        device vendor.";
+    }
+
+    leaf mfg-date {
+      type oc-yang:date;
+      description
+        "System-supplied representation of the component's
+        manufacturing date.";
+    }
+
+    leaf hardware-version {
+      type string;
+      description
+        "For hardware components, this is the hardware revision of
+        the component.";
+    }
+
+    leaf firmware-version {
+      type string;
+      description
+        "For hardware components, this is the version of associated
+        firmware that is running on the component, if applicable.";
+    }
+
+    leaf software-version {
+      type string;
+      description
+        "For software components such as operating system or other
+        software module, this is the version of the currently
+        running software.";
+    }
+
+    leaf serial-no {
+      type string;
+      description
+        "System-assigned serial number of the component.";
+    }
+
+    leaf part-no {
+      type string;
+      description
+        "System-assigned part number for the component.  This should
+        be present in particular if the component is also an FRU
+        (field replaceable unit)";
+    }
+
+    leaf model-name {
+      type string;
+      description
+        "A human readable string describing the model of a component.
+        This string is optional and should only be populated if part-no
+        is also populated.";
+    }
+
+    leaf clei-code {
+      type string;
+      description
+        "Common Language Equipment Identifier (CLEI) code of the
+        component.  This should be present in particular if the
+        component is also an FRU (field replaceable unit)";
+    }
+
+    leaf removable {
+      type boolean;
+      description
+        "If true, this component is removable or is a field
+        replaceable unit";
+    }
+
+    leaf oper-status {
+      type identityref {
+        base oc-platform-types:COMPONENT_OPER_STATUS;
+      }
+      description
+        "If applicable, this reports the current operational status
+        of the component.";
+    }
+
+    leaf empty {
+      type boolean;
+      default false;
+      description
+        "The empty leaf may be used by the device to indicate that a
+        component position exists but is not populated.  Using this
+        flag, it is possible for the management system to learn how
+        many positions are available (e.g., occupied vs. empty
+        linecard slots in a chassis).";
+    }
+
+    leaf parent {
+      type leafref {
+        path "../../../component/config/name";
+      }
+      description
+        "Reference to the name of the parent component.  Note that
+        this reference must be kept synchronized with the
+        corresponding subcomponent reference from the parent
+        component.";
+    }
+
+    leaf redundant-role {
+      type oc-platform-types:component-redundant-role;
+      description
+        "For components that have redundant roles (e.g. two
+        supervisors in a device, one as primary the other as secondary),
+        this reports the role of the component.";
+    }
+
+    container last-switchover-reason {
+      description
+        "For components that have redundant roles (e.g. two
+        supervisors in a device, one as primary the other as secondary),
+        this reports the reason of the last change of the
+        component's role.";
+
+      uses oc-platform-types:component-redundant-role-switchover-reason;
+    }
+
+    leaf last-switchover-time {
+      type oc-types:timeticks64;
+      units "nanoseconds";
+      description
+        "For components that have redundant roles (e.g. two
+        supervisors in a device, one as primary the other as
+        secondary), this reports the time of the last change of
+        the component's role. The value is the timestamp in
+        nanoseconds relative to the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+
+    }
+
+    leaf last-reboot-reason {
+      type identityref {
+        base oc-platform-types:COMPONENT_REBOOT_REASON;
+      }
+      description
+        "This reports the reason of the last reboot of the component.";
+    }
+
+    leaf last-reboot-time {
+      type oc-types:timeticks64;
+      units "nanoseconds";
+      description
+        "This reports the time of the last reboot of the component. The
+        value is the timestamp in nanoseconds relative to the Unix Epoch
+        (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf switchover-ready {
+      type boolean;
+      description
+        "For components that have redundant roles, this reports a value
+        that indicates if the component is ready to support failover.
+
+        The components with a redundant-role should reflect the overall
+        system's switchover status.  For example, two supervisors in a
+        device, one as primary and the other as secondary, should both
+        report the same value.";
+    }
+
+    leaf base-mac-address {
+      type oc-yang:mac-address;
+      description
+        "This is a MAC address representing the root or primary MAC
+        address for a component.  Components such as CHASSIS and
+        CONTROLLER_CARD are expected to provide a base-mac-address.  The
+        base mac-address for CHASSIS and a PRIMARY CONTROLLER_CARD may
+        contain the same value.";
+    }
+
+  }
+
+  grouping platform-component-temp-alarm-state {
+    description
+      "Temperature alarm data for platform components";
+
+    // TODO(aashaikh): consider if these leaves could be in a
+    // reusable grouping (not temperature-specific); threshold
+    // may always need to be units specific.
+
+    leaf alarm-status {
+      type boolean;
+      description
+        "A value of true indicates the alarm has been raised or
+        asserted.  The value should be false when the alarm is
+        cleared.";
+    }
+
+    leaf alarm-threshold {
+      type uint32;
+      description
+        "The threshold value that was crossed for this alarm.";
+    }
+
+    leaf alarm-severity {
+      type identityref {
+        base oc-alarm-types:OPENCONFIG_ALARM_SEVERITY;
+      }
+      description
+        "The severity of the current alarm.";
+    }
+  }
+
+  grouping platform-component-power-state {
+    description
+      "Power-related operational state for device components.";
+
+    leaf allocated-power {
+      type uint32;
+      units watts;
+      description
+        "Power allocated by the system for the component.";
+    }
+
+    leaf used-power {
+      type uint32;
+      units watts;
+      description
+        "Actual power used by the component.";
+    }
+  }
+
+  grouping platform-component-temp-state {
+    description
+      "Temperature state data for device components";
+
+    container temperature {
+      description
+        "Temperature in degrees Celsius of the component. Values include
+        the instantaneous, average, minimum, and maximum statistics. If
+        avg/min/max statistics are not supported, the target is expected
+        to just supply the instant value";
+
+      uses oc-platform-types:avg-min-max-instant-stats-precision1-celsius;
+      uses platform-component-temp-alarm-state;
+    }
+  }
+
+  grouping platform-component-memory-state {
+    description
+      "Per-component memory statistics";
+
+    container memory {
+      description
+        "For components that have associated memory, these values
+        report information about available and utilized memory.";
+
+      leaf available {
+        type uint64;
+        units bytes;
+        description
+          "The available memory physically installed, or logically
+          allocated to the component.";
+      }
+
+      // TODO(aashaikh): consider if this needs to be a
+      // min/max/avg statistic
+      leaf utilized {
+        type uint64;
+        units bytes;
+        description
+          "The memory currently in use by processes running on
+          the component, not considering reserved memory that is
+          not available for use.";
+      }
+    }
+  }
+
+  grouping pcie-uncorrectable-errors {
+    description
+      "PCIe uncorrectable error statistics.";
+
+    leaf total-errors {
+      type oc-yang:counter64;
+      description
+        "Total number of uncorrectable errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf undefined-errors {
+      type oc-yang:counter64;
+      description
+        "Number of undefined errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf data-link-errors {
+      type oc-yang:counter64;
+      description
+        "Number of data-link errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf surprise-down-errors {
+      type oc-yang:counter64;
+      description
+        "Number of unexpected link down errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf poisoned-tlp-errors {
+      type oc-yang:counter64;
+      description
+        "Number of poisoned TLP errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf flow-control-protocol-errors {
+      type oc-yang:counter64;
+      description
+        "Number of flow control protocol errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf completion-timeout-errors {
+      type oc-yang:counter64;
+      description
+        "Number of completion timeout errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf completion-abort-errors {
+      type oc-yang:counter64;
+      description
+        "Number of completion abort errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf unexpected-completion-errors {
+      type oc-yang:counter64;
+      description
+        "Number of unexpected completion errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf receiver-overflow-errors  {
+      type oc-yang:counter64;
+      description
+        "Number of receiver overflow errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf malformed-tlp-errors  {
+      type oc-yang:counter64;
+      description
+        "Number of malformed TLP errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf ecrc-errors  {
+      type oc-yang:counter64;
+      description
+        "Number of ECRC errors detected by PCIe device since the system
+        booted, according to PCIe AER driver.";
+    }
+
+    leaf unsupported-request-errors {
+      type oc-yang:counter64;
+      description
+        "Number of unsupported request errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf acs-violation-errors {
+      type oc-yang:counter64;
+      description
+        "Number of access control errors detected by PCIe device since
+        the system booted, according to PCIe AER driver.";
+    }
+
+    leaf internal-errors {
+      type oc-yang:counter64;
+      description
+        "Number of internal errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf blocked-tlp-errors {
+      type oc-yang:counter64;
+      description
+        "Number of blocked TLP errors detected by PCIe device since
+        the system booted, according to PCIe AER driver.";
+    }
+
+    leaf atomic-op-blocked-errors {
+      type oc-yang:counter64;
+      description
+        "Number of atomic operation blocked errors detected by PCIe
+        device since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf tlp-prefix-blocked-errors {
+      type oc-yang:counter64;
+      description
+        "Number of TLP prefix blocked errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+  }
+
+  grouping pcie-correctable-errors {
+    description
+      "PCIe correctable error statistics.";
+
+    leaf total-errors {
+      type oc-yang:counter64;
+      description
+        "Total number of correctable errors detected by PCIe device
+        since the system booted, according to PCIe AER driver.";
+    }
+
+    leaf receiver-errors {
+      type oc-yang:counter64;
+      description
+        "Number of receiver errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf bad-tlp-errors {
+      type oc-yang:counter64;
+      description
+        "Number of TLPs with bad LCRC detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf bad-dllp-errors {
+      type oc-yang:counter64;
+      description
+        "Number of DLLPs with bad LCRC detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf relay-rollover-errors {
+      type oc-yang:counter64;
+      description
+        "Number of relay rollover errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf replay-timeout-errors {
+      type oc-yang:counter64;
+      description
+        "Number of replay timeout errors detected by PCIe device since the
+        system booted, according to PCIe AER driver.";
+    }
+
+    leaf advisory-non-fatal-errors {
+      type oc-yang:counter64;
+      description
+        "Number of advisory non fatal errors detected by PCIe device since
+        the system booted, according to PCIe AER driver.";
+    }
+
+    leaf internal-errors {
+      type oc-yang:counter64;
+      description
+        "Number of internal errors detected by PCIe device since the system
+        booted, according to PCIe AER driver.";
+    }
+
+    leaf hdr-log-overflow-errors {
+      type oc-yang:counter64;
+      description
+        "Number of header log overflow errors detected by PCIe device since
+        the system booted, according to PCIe AER driver.";
+    }
+  }
+
+  grouping platform-component-pcie-state {
+    description
+      "Per-component PCIe error statistics";
+
+    container pcie {
+      description
+        "Components that are connected to the system over the Peripheral
+        Component Interconnect Express (PCIe), report the fatal, non-fatal
+        and correctable PCIe error counts.";
+
+      container fatal-errors {
+        description
+          "The count of the fatal PCIe errors.";
+        uses pcie-uncorrectable-errors;
+      }
+
+      container non-fatal-errors {
+        description
+          "The count of the non-fatal PCIe errors.";
+        uses pcie-uncorrectable-errors;
+      }
+
+      container correctable-errors {
+        description
+          "The count of the correctable PCIe errors.";
+        uses pcie-correctable-errors;
+      }
+    }
+  }
+
+  grouping platform-anchors-top {
+    description
+      "This grouping is used to add containers for components that
+      are common across systems, but do not have a defined schema
+      within the openconfig-platform module.  Containers should be
+      added to this grouping for components that are expected to
+      exist in multiple systems, with corresponding modules
+      augmenting the config/state containers directly.";
+
+    container chassis {
+      description
+        "Data for chassis components";
+
+      container config {
+        description
+          "Configuration data for chassis components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for chassis components";
+      }
+
+      uses platform-resource-utilization-top;
+    }
+
+// TODO(aashaikh): linecard container is already defined in
+// openconfig-platform-linecard; will move to this module
+// in future.
+  /*
+    container linecard {
+      description
+        "Data for linecard components";
+
+      container config {
+        description
+          "Configuration data for linecard components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for linecard components";
+      }
+    }
+  */
+
+    container port {
+      description
+        "Data for physical port components";
+
+      container config {
+        description
+          "Configuration data for physical port components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for physical port components";
+      }
+    }
+
+// TODO(aashaikh): transceiver container is already defined in
+// openconfig-platform-transceiver; will move to this module
+// in future.
+  /*
+    container transceiver {
+      description
+        "Data for transceiver components";
+
+      container config {
+        description
+          "Configuration data for transceiver components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for transceiver components";
+      }
+    }
+  */
+
+    container power-supply {
+      description
+        "Data for power supply components";
+
+      container config {
+        description
+          "Configuration data for power supply components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for power supply components";
+      }
+    }
+
+    container fan {
+      description
+        "Data for fan components";
+
+      container config {
+        description
+          "Configuration data for fan components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for fan components";
+      }
+    }
+
+    container fabric {
+      description
+        "Data for fabric components";
+
+      container config {
+        description
+          "Configuration data for fabric components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for fabric components";
+      }
+    }
+
+    container storage {
+      description
+        "Data for storage components";
+
+      container config {
+        description
+          "Configuration data for storage components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for storage components";
+      }
+    }
+
+    container cpu {
+      description
+        "Data for cpu components";
+
+      container config {
+        description
+          "Configuration data for cpu components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for cpu components";
+      }
+    }
+
+    container integrated-circuit {
+      description
+        "Data for chip components, such as ASIC, NPUs, etc.";
+
+      container config {
+        description
+          "Configuration data for chip components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for chip components";
+      }
+
+      uses platform-resource-utilization-top;
+    }
+
+    container backplane {
+      description
+        "Data for backplane components";
+
+      container config {
+        description
+          "Configuration data for backplane components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for backplane components";
+      }
+    }
+
+    container software-module {
+      description
+        "Data for software module components, i.e., for components
+        with type=SOFTWARE_MODULE";
+
+      container config {
+        description
+          "Configuration data for software module components";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for software module components";
+      }
+    }
+
+    container controller-card {
+      description
+        "Data for controller card components, i.e., for components
+        with type=CONTROLLER_CARD";
+
+      container config {
+        description
+          "Configuration data for controller card components. Note that disabling
+          power to the primary supervisor should be rejected, and the operator is
+          required to perform a switchover first.";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for controller card components";
+      }
+    }
+  }
+
+  grouping platform-component-top {
+    description
+      "Top-level grouping for components in the device inventory";
+
+    container components {
+      description
+        "Enclosing container for the components in the system.";
+
+      list component {
+        key "name";
+        description
+          "List of components, keyed by component name.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "References the component name";
+        }
+
+        container config {
+          description
+            "Configuration data for each component";
+
+          uses platform-component-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for each component";
+
+          uses platform-component-config;
+          uses platform-component-state;
+          uses platform-component-temp-state;
+          uses platform-component-memory-state;
+          uses platform-component-power-state;
+          uses platform-component-pcie-state {
+            when "./type = 'oc-platform-types:STORAGE' or " +
+              "'oc-platform-types:INTEGRATED_CIRCUIT' or " +
+              "'oc-platform-types:FRU'";
+          }
+        }
+
+        uses platform-component-properties-top;
+        uses platform-subcomponent-ref-top;
+        uses platform-anchors-top;
+      }
+    }
+  }
+
+
+  // data definition statements
+
+  uses platform-component-top;
+
+
+  // augments
+
+
+}

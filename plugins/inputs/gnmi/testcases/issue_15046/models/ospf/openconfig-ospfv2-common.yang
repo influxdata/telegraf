@@ -1,0 +1,164 @@
+submodule openconfig-ospfv2-common {
+
+  belongs-to openconfig-ospfv2 {
+    prefix "oc-ospfv2";
+  }
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule provides OSPFv2 configuration and operational
+    state parameters that are shared across multiple contexts";
+
+  oc-ext:openconfig-version "0.5.1";
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "0.5.1";
+  }
+
+  revision "2023-08-25" {
+    description
+      "Add leaf metric to lsdb-summary-lsa-state.";
+    reference "0.5.0";
+}
+
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "0.4.3";
+  }
+
+  revision "2023-07-05" {
+    description
+      "Fix typo in experimental-te leaf description.";
+    reference "0.4.2";
+  }
+
+  revision "2023-03-06" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.4.1";
+  }
+
+  revision "2022-02-10" {
+    description
+      "Fix spelling error in retransmission-queue-length leaf.";
+    reference "0.4.0";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add prefix to qualify when statements.";
+    reference "0.3.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Revert path changes in when statements in LSDB model";
+    reference "0.2.2";
+  }
+
+  revision "2019-11-05" {
+    description
+      "Fix paths in when statements in LSDB model";
+    reference "0.2.1";
+  }
+
+  revision "2019-07-09" {
+    description
+      "Normalise all timeticks64 to be expressed in nanoseconds.";
+    reference "0.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.3";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Bug fixes in when statements in lsdb";
+    reference "0.1.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "0.1.1";
+  }
+
+  revision "2017-02-28"{
+    description
+      "Initial public release of OSPFv2";
+    reference "0.1.0";
+  }
+
+  revision "2016-06-24" {
+    description
+      "Initial revision";
+    reference "0.0.1";
+  }
+
+  grouping ospfv2-common-mpls-igp-ldp-sync-config {
+    description
+      "Configuration parameters used for OSPFv2 MPLS/IGP
+      synchronization";
+
+    leaf enabled {
+      type boolean;
+      description
+        "When this leaf is set to true, do not utilise this link for
+        forwarding via the IGP until such time as LDP adjacencies to
+        the neighbor(s) over the link are established.";
+    }
+
+    leaf post-session-up-delay {
+      type uint32;
+      units milliseconds;
+      description
+        "This leaf specifies a delay, expressed in units of milliseconds,
+        between the LDP session to the IGP neighbor being established, and
+        it being considered synchronized by the IGP.";
+    }
+  }
+
+  grouping ospfv2-common-timers {
+    description
+      "Common definition of the type of timers that the OSPFv2 implementation
+      uses";
+
+    leaf timer-type {
+      type enumeration {
+        enum LINEAR_BACKOFF {
+          description
+            "The backoff used by the OSPFv2 implementation is linear, such that
+            a common delay is added following each event.";
+        }
+        enum EXPONENTIAL_BACKOFF {
+          description
+            "The backoff used by the OSPFv2 implementation is exponential, such
+            that the delay added following each event increases.";
+        }
+      }
+      description
+        "The timer mode that is utilised by the implementation.";
+    }
+  }
+}

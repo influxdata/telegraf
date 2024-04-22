@@ -1,0 +1,991 @@
+submodule openconfig-rib-bgp-attributes {
+
+  belongs-to openconfig-rib-bgp {
+    prefix "oc-rib-bgp";
+  }
+
+
+  // import some basic types
+  import openconfig-bgp-types { prefix oc-bgpt; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-rib-bgp-types { prefix oc-bgprt; }
+  import openconfig-segment-routing-types { prefix oc-srt; }
+  import openconfig-inet-types { prefix oc-inet; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule contains common data definitions for BGP
+    attributes for use in BGP RIB tables.";
+
+
+  oc-ext:openconfig-version "0.9.0";
+
+  revision "2022-12-20" {
+    description
+      "Convert as-segment and as4-segment to keyed lists.";
+    reference "0.9.0";
+  }
+
+  revision "2022-06-06" {
+    description
+      "Revert IETF types in favor of oc-inet types";
+    reference "0.8.1";
+  }
+
+  revision "2021-06-21" {
+    description
+      "Add L2VPN-EVPN BGP RIB Support";
+    reference "0.8.0";
+  }
+
+  revision "2019-10-15" {
+    description
+      "Change imported segment-routing module.";
+    reference "0.7.0";
+  }
+
+  revision "2019-04-25" {
+    description
+      "Update last-modified timestamp to be expressed as nanoseconds
+      since the Unix epoch.";
+    reference "0.6.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Rename the top-level BGP RIB container's name
+      to RIB.";
+    reference "0.5.0";
+  }
+
+  revision "2019-02-27" {
+    description
+      "Remove top-level BGP RIB container, and update list
+      names to be compatible with path compression.";
+    reference "0.4.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2016-10-17" {
+    description
+      "OpenConfig BGP RIB refactor";
+    reference "0.3.0";
+  }
+
+  grouping bgp-as-path-attr-state {
+    description
+      "Data for representing BGP AS-PATH attribute";
+
+    leaf index {
+      type uint32;
+      description
+        "A unique ordering index starting from 0 identifying the position of
+        the AS-PATH segment in the list of segments.
+
+        The index MUST start from 0 and end at (length-1), where length is the
+        number of segments in the list of AS-PATH segments.";
+    }
+
+    leaf type {
+      type oc-bgpt:as-path-segment-type;
+      description
+        "The type of AS-PATH segment";
+    }
+
+    leaf-list member {
+      type oc-inet:as-number;
+      description
+        "List of the AS numbers in the AS-PATH segment";
+    }
+  }
+
+  grouping bgp-as-path-attr-top {
+    description
+      "Top-level grouping for AS-PATH attribute data";
+
+    container as-path {
+      oc-ext:telemetry-atomic;
+      description
+        "Enclosing container for the list of AS path segments.
+
+        In the Adj-RIB-In or Adj-RIB-Out, this list should show
+        the received or sent AS_PATH, respectively.  For
+        example, if the local router is not 4-byte capable, this
+        value should consist of 2-octet ASNs or the AS_TRANS
+        (AS 23456) values received or sent in route updates.
+
+        In the Loc-RIB, this list should reflect the effective
+        AS path for the route, e.g., a 4-octet value if the
+        local router is 4-octet capable.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)
+        RFC 6793 - BGP Support for Four-octet AS Number Space
+        RFC 5065 - Autonomous System Confederations for BGP";
+
+      list as-segment {
+        key "index";
+
+        description
+          "List of AS-PATH segments";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to the unique ordering index starting from 0 identifying
+            the position of the AS-PATH segment in the list of segments.";
+        }
+
+        container state {
+          config false;
+          description
+            "Opstate data for AS-PATH segments";
+
+          uses bgp-as-path-attr-state;
+        }
+      }
+    }
+  }
+
+  grouping bgp-as4-path-attr-top {
+    description
+      "Top-level grouping for AS4-PATH attribute data";
+
+    container as4-path {
+      oc-ext:telemetry-atomic;
+      description
+        "This is the path encoded with 4-octet
+        AS numbers in the optional transitive AS4_PATH attribute.
+        This value is populated with the received or sent attribute
+        in Adj-RIB-In or Adj-RIB-Out, respectively.  It should not
+        be populated in Loc-RIB since the Loc-RIB is expected to
+        store the effective AS-Path in the as-path leaf regardless
+        of being 4-octet or 2-octet.";
+      reference
+          "RFC 6793 - BGP Support for Four-octet AS Number Space";
+
+      list as4-segment {
+        key "index";
+
+        description
+          "List of AS4-PATH segments";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to the unique ordering index starting from 0 identifying
+            the position of the AS4-PATH segment in the list of segments.";
+        }
+
+        container state {
+          config false;
+          description
+            "Opstate data for AS4-PATH segments";
+
+          uses bgp-as-path-attr-state;
+        }
+      }
+    }
+  }
+
+  grouping bgp-community-attr-state {
+    description
+      "Common definition of BGP community attributes";
+
+    leaf-list community {
+      type union {
+        type oc-bgpt:bgp-well-known-community-type;
+        type oc-bgpt:bgp-std-community-type;
+      }
+      description
+        "List of standard or well-known BGP community
+        attributes.";
+    }
+  }
+
+  grouping bgp-extended-community-attr-state {
+    description
+      "Common definition of BGP extended community attribute";
+
+    leaf-list ext-community {
+      type oc-bgpt:bgp-ext-community-recv-type;
+      description
+        "List of BGP extended community attributes.  The received
+        extended community may be an explicitly modeled
+        type or unknown, represented by an 8-octet value
+        formatted according to RFC 4360.";
+      reference
+        "RFC 4360 - BGP Extended Communities Attribute";
+    }
+
+  }
+
+  grouping bgp-aggregator-attr-state {
+    description
+      "Operational state data for the BGP aggregator
+      attribute";
+
+    leaf as {
+      type oc-inet:as-number;
+      description
+          "AS number of the autnonomous system that performed the
+          aggregation.";
+    }
+
+    leaf as4 {
+      type oc-inet:as-number;
+      description
+        "AS number of the autnonomous system that performed the
+        aggregation (4-octet representation).  This value is
+        populated if an upstream router is not 4-octet capable.
+        Its semantics are similar to the AS4_PATH optional
+        transitive attribute";
+      reference
+        "RFC 6793 - BGP Support for Four-octet AS Number Space";
+    }
+
+    leaf address {
+      type oc-inet:ipv4-address;
+      description
+        "IP address of the router that performed the
+        aggregation.";
+    }
+  }
+
+
+  grouping bgp-aggregator-attr-top {
+    description
+      "Common definition of the BGP aggregator attribute";
+
+    container aggregator {
+      description
+        "BGP attribute indicating the prefix has been aggregated by
+        the specified AS and router.";
+
+      container state {
+        config false;
+        description
+          "Operational state data for BGP aggregator attribute";
+
+        uses bgp-aggregator-attr-state;
+      }
+    }
+  }
+
+  grouping bgp-shared-common-attr-state {
+    description
+      "Route attributes shared across route table entries,
+      common to both LOC-Rib and Adj-RIB";
+
+
+    leaf origin {
+      type oc-bgpt:bgp-origin-attr-type;
+      description
+        "BGP attribute defining the origin of the path information.";
+    }
+
+    leaf atomic-aggregate {
+      type boolean;
+      description
+        "BGP attribute indicating that the prefix is an atomic
+        aggregate, i.e., the peer selected a less specific
+        route without selecting a more specific route that is
+        included in it.";
+    }
+
+    leaf next-hop {
+      type oc-inet:ip-address;
+      description
+        "BGP next hop attribute defining the IP address of the router
+        that should be used as the next hop to the destination";
+    }
+
+    leaf med {
+      type uint32;
+      description
+        "BGP multi-exit discriminator attribute used in BGP route
+        selection process";
+    }
+
+    leaf local-pref {
+      type uint32;
+      description
+        "BGP local preference attribute sent to internal peers to
+        indicate the degree of preference for externally learned
+        routes.  The route with the highest local preference value
+        is preferred.";
+    }
+
+    leaf originator-id {
+      type oc-inet:ipv4-address;
+      description
+        "BGP attribute that provides the id as an IPv4 address
+        of the originator of the announcement.";
+      reference
+        "RFC 4456 - BGP Route Reflection: An Alternative to Full
+        Mesh Internal BGP (IBGP)";
+    }
+
+    leaf-list cluster-list {
+      type oc-inet:ipv4-address;
+      description
+        "Represents the reflection path that the route has passed.";
+      reference
+        "RFC 4456 - BGP Route Reflection: An Alternative to Full
+        Mesh Internal BGP (IBGP)";
+    }
+
+    leaf aigp {
+      type uint64;
+      description
+        "BGP path attribute representing the accumulated IGP metric
+        for the path";
+      reference
+        "RFC 7311 - The Accumulated IGP Metric Attribute for BGP";
+    }
+  }
+
+  grouping bgp-unknown-attr-flags-state {
+    description
+      "Operational state data for path attribute flags";
+
+    leaf optional {
+      type boolean;
+      description
+        "Defines whether the attribute is optional (if
+         set to true) or well-known (if set to false).
+         Set in the high-order bit of the BGP attribute
+         flags octet.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+
+    leaf transitive {
+      type boolean;
+      description
+        "Defines whether an optional attribute is transitive
+        (if set to true) or non-transitive (if set to false).  For
+        well-known attributes, the transitive flag MUST be set to
+        true.  Set in the second high-order bit of the BGP attribute
+        flags octet.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+
+    leaf partial {
+      type boolean;
+      description
+        "Defines whether the information contained in the optional
+        transitive attribute is partial (if set to true) or complete
+        (if set to false).  For well-known attributes and for
+        optional non-transitive attributes, the partial flag
+        must be set to false.  Set in the third high-order bit of
+        the BGP attribute flags octet.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+
+    leaf extended {
+      type boolean;
+      description
+        "Defines whether the attribute length is one octet
+        (if set to false) or two octets (if set to true).  Set in
+        the fourth high-order bit of the BGP attribute flags
+        octet.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+  }
+
+  grouping bgp-unknown-attr-state {
+    description
+      "Operational state data for path attributes not shared
+      across route entries, common to LOC-RIB and Adj-RIB";
+
+    leaf attr-type {
+      type uint8;
+      description
+        "1-octet value encoding the attribute type code";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+
+    leaf attr-len {
+      type uint16;
+      description
+        "One or two octet attribute length field indicating the
+        length of the attribute data in octets.  If the Extended
+        Length attribute flag is set, the length field is 2 octets,
+        otherwise it is 1 octet";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+
+    leaf attr-value {
+      type binary {
+        length 1..65535;
+      }
+      description
+        "Raw attribute value, not including the attribute
+        flags, type, or length.  The maximum length
+        of the attribute value data is 2^16-1 per the max value
+        of the attr-len field (2 octets).";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+    }
+  }
+
+  grouping bgp-unknown-attr-top {
+    description
+      "Unknown path attributes that are not expected to be shared
+      across route entries, common to LOC-RIB and Adj-RIB";
+
+    container unknown-attributes {
+      description
+        "Unknown path attributes that were received in the UPDATE
+        message which contained the prefix.";
+
+      list unknown-attribute {
+        key "attr-type";
+        description
+          "This list contains received attributes that are unrecognized
+          or unsupported by the local router.  The list may be empty.";
+
+        leaf attr-type {
+          type leafref {
+            path "../state/attr-type";
+          }
+          description
+            "Reference to the list key";
+        }
+
+        container state {
+          description
+            "Operational state for unknown route attributes";
+
+          uses bgp-unknown-attr-flags-state;
+          uses bgp-unknown-attr-state;
+        }
+      }
+    }
+  }
+
+  grouping bgp-loc-rib-attr-state {
+    description
+      "Path attributes that are not expected to be shared across
+      route entries, specific to LOC-RIB";
+
+  }
+
+  grouping bgp-adj-rib-attr-state {
+    description
+      "Path attributes that are not expected to be shared across
+      route entries, specific to Adj-RIB";
+
+    leaf path-id {
+      type uint32;
+      description
+        "When the BGP speaker supports advertisement of multiple
+        paths for a prefix, the path identifier is used to
+        uniquely identify a route based on the combination of the
+        prefix and path id.  In the Adj-RIB-In, the path-id value is
+        the value received in the update message.   In the Loc-RIB,
+        if used, it should represent a locally generated path-id
+        value for the corresponding route.  In Adj-RIB-Out, it
+        should be the value sent to a neighbor when add-paths is
+        used, i.e., the capability has been negotiated.";
+      reference
+        "draft-ietf-idr-add-paths - Advertisement of Multiple Paths
+        in BGP";
+    }
+  }
+
+  grouping bgp-tunnel-encapsulation-attr-top {
+    description
+      "Top-level definition of the BGP Tunnel encapsulation
+      attribute.";
+
+    container tunnel-encapsulation {
+      config false;
+      description
+        "The Tunnel Encapsulation attribute specifies a set of
+        tunnels to a remote destination. The attribute is TLV
+        based and allows description of a tunnel type, and the
+        relevant information to create the tunnel to the remote
+        destination.";
+
+      reference "RFC5512, draft-ietf-idr-tunnel-encaps";
+
+      container tunnels {
+        description
+          "Surrounding container for the set of tunnels included
+          within the tunnel encapsulation attribute.";
+
+        list tunnel {
+          key "type";
+          description
+            "List of the tunnels that are specified within the
+            attribute. Keyed on the type of tunnel that the
+            TLV describes.";
+
+          leaf type {
+            type leafref {
+              path "../state/type";
+            }
+            description
+              "Reference to the tunnel type specified within the
+              TLV's type field.";
+          }
+
+          container state {
+            config false;
+            description
+              "State parameters of the tunnel attribute";
+
+            uses bgp-tunnel-encapsulation-attr-tunnel-state;
+          }
+
+          container subtlvs {
+            description
+              "Surrounding container for the list of sub-TLVs within
+              the tunnel encapsulation attribute.";
+
+            list subtlv {
+              key "type";
+              description
+                "List of the subTLVs that are specified within the
+                TLV instance inside the tunnel encapsulation attribute.";
+
+              leaf type {
+                type leafref {
+                  path "../state/type";
+                }
+                description
+                  "Reference to the sub-TLV type that is included within
+                  the subTLV.";
+              }
+
+              container state {
+                config false;
+                description
+                  "State parameters of the subTLV of the tunnel attribute";
+
+                uses bgp-tunnel-encapsulation-attr-tunnel-subtlv-state;
+              }
+
+              container remote-endpoints {
+                when "../state/type = 'oc-bgprt:TUNNEL_REMOTE_ENDPOINT'" {
+                  description
+                    "Only allow the remote endpoint to be specified when the
+                    subTLV is specified to describe remote endpoints.";
+                }
+
+                description
+                  "The remote endpoints associated with the tunnel
+                  described by the attribute.";
+
+                list remote-endpoint {
+                  key "endpoint";
+                  description
+                    "List of the remote endpoints described within the TLV.";
+
+                  leaf endpoint {
+                    type leafref {
+                      path "../state/endpoint";
+                    }
+                    description
+                      "Reference to the IP address of the endpoint.";
+                  }
+
+                  container state {
+                    config false;
+                    description
+                      "State parameters of the remote endpoints described
+                      by the attribute.";
+
+                    uses bgp-tunnel-encapsulation-attr-tunnel-subtlv-endpoint-state;
+                  }
+                }
+              }
+
+              container segment-lists {
+                when "../state/type = 'oc-bgprt:SRTE_SEGMENT_LIST'" {
+                  description
+                    "Only allow the segment lists to be specified when the sub-TLV
+                    is of the relevant type.";
+                }
+
+                description
+                  "Surrounding container for the list of segment lists that are
+                  associated with a SR-TE Policy tunnel.";
+
+                list segment-list {
+                  key "instance-id";
+
+                  description
+                    "List of segment lists that are specified within the
+                    tunnel encapsulation attribute.";
+
+                  leaf instance-id {
+                    type leafref {
+                      path "../state/instance-id";
+                    }
+                    description
+                      "Reference to the instance identifier of the Segment List
+                      that is included within the tunnel encapsulation
+                      attribute.";
+                  }
+
+                  container state {
+                    config false;
+                    description
+                      "State parameters relating to the Segment List within the
+                      Tunnel Encapsulation attribute.";
+
+                    uses bgp-tunnel-encapsulation-attr-tunnel-subtlv-segment-list-state;
+                  }
+
+                  container segments {
+                    description
+                      "Surrounding container for the list of segments within the
+                      SR-TE segment list.";
+
+                    list segment {
+                      key "index";
+
+                      description
+                        "List of segments within the SR-TE segment list.";
+
+                      leaf index {
+                        type leafref {
+                          path "../state/index";
+                        }
+                        description
+                          "Reference to the index of the segment within the
+                          segment list.";
+                      }
+
+                      container state {
+                        config false;
+                        description
+                          "State parameters relating to the segment within
+                          the segment list.";
+
+                        uses bgp-tunnel-encapsulation-attr-tunnel-subtlv-segment-state;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping bgp-tunnel-encapsulation-attr-tunnel-state {
+    description
+      "State parameters of the tunnel encapsulation attribute";
+
+    leaf type {
+      type identityref {
+        base "oc-bgprt:TUNNEL_ENCAPSULATION_TYPE";
+      }
+      description
+        "Type of the tunnel described within the tunnel encapsulation
+        attribute.";
+    }
+  }
+
+  grouping bgp-tunnel-encapsulation-attr-tunnel-subtlv-state {
+    description
+      "State parameters relating to subTLVs of the tunnel encapsulation
+      attribute.";
+
+    leaf type {
+      type identityref {
+        base "oc-bgprt:TUNNEL_ENCAPSULATION_SUBTLV_TYPE";
+      }
+      description
+        "Type of the sub-TLV within the tunnel encapsulation attribute";
+    }
+
+    leaf-list colors {
+      when "../type = 'oc-bgprt:TUNNEL_COLOR'" {
+        description
+          "Only allow list of colours to be specified when the sub-TLV
+          specifies colours associated with the tunnel encapsulation
+          attribute.";
+      }
+      type uint32;
+      description
+        "The colours associated with the tunnel encapsulation attribute,
+        as described by RFC5512.";
+    }
+
+    leaf preference {
+      when "../type = 'oc-bgprt:SRTE_PREFERENCE'" {
+        description
+          "Only allow the preference to be specified when the sub-TLV
+          specifies the preference associated with the tunnel encapsulation
+          attribute.";
+      }
+      type uint32;
+      default 100;
+      description
+        "The preference of the SR-TE policy described by the tunnel
+        encapsulation attribute. If unspecified, the preference
+        defaults to 100.";
+    }
+
+    leaf binding-sid {
+      when "../type = 'oc-bgprt:SRTE_BINDING_SID'" {
+        description
+          "Only allow the binding SID to be specified when the sub-TLV
+          is specified to be the of the relevant type.";
+      }
+      type oc-srt:sr-sid-type;
+      description
+        "Binding SID associated with the SR-TE policy";
+    }
+  }
+
+  grouping bgp-tunnel-encapsulation-attr-tunnel-subtlv-endpoint-state {
+    description
+      "State parameters relating to the remote endpoint described by a
+      tunnel encapsulation attribute.";
+
+    leaf as {
+      type oc-inet:as-number;
+      description
+        "The remote AS to which the IP address of the remote endpoint
+        belongs.";
+    }
+
+    leaf endpoint {
+      type oc-inet:ip-address;
+      description
+        "IP address of the remote endpoint.";
+    }
+  }
+
+  grouping bgp-tunnel-encapsulation-attr-tunnel-subtlv-segment-list-state {
+    description
+      "State parameters relating to an entry within a segment list within
+      a SR-TE policy segment list.";
+
+    leaf instance-id {
+      type uint64;
+      description
+        "Instance of the segment list within the sub-TLV";
+    }
+
+    leaf weight {
+      type uint32;
+      description
+        "The weight given to the path within the set of segment
+        lists that are included in the tunnel attribute sub-TLV.";
+    }
+  }
+
+  grouping bgp-tunnel-encapsulation-attr-tunnel-subtlv-segment-state {
+    description
+      "State parameters relating to a segment within the segment list.";
+
+    leaf index {
+      type uint64;
+      description
+        "Index of the segment within the segment list. The segments are
+        ordered in ascending order, beginning at 0.";
+    }
+
+    leaf type {
+      type enumeration {
+        enum MPLS_SID {
+          description
+            "The segment is specified as an MPLS label.";
+          value 1;
+        }
+        enum IPV6_SID {
+          description
+            "The segment is specified as an IPv6 address.";
+          value 2;
+        }
+        enum IPV4_NODE_ADDRESS {
+          description
+            "The segment is specified as an IPv4 node address with
+            optional SID.";
+          value 3;
+        }
+        enum IPV6_NODE_ADDRESS {
+          description
+            "The segment is specified as an IPv6 node address with
+            optional SID.";
+          value 4;
+        }
+        enum IPV4_LOCAL_INTF_ID {
+          description
+            "The segment is specified as an IPv4 address with a
+            local interface identifier along with an .";
+          value 5;
+        }
+        enum IPV4_LOCAL_REMOTE_ADDR {
+          description
+            "The segment is specified as an IPv4 local and remote
+            address with an optional SID.";
+          value 6;
+        }
+        enum IPV6_LOCAL_INTF_ID {
+          description
+            "The segment is specified as an IPv6 address with an
+            index, along with an optional SID.";
+          value 7;
+        }
+        enum IPV6_LOCAL_REMOTE_ADDR {
+          description
+            "The segmetn is specified as an IPv6 local and remote
+            address with an optional SID.";
+          value 8;
+        }
+      }
+      description
+        "The type of segment specified within the segment entry.";
+    }
+
+    leaf sid {
+      type oc-srt:sr-sid-type;
+      description
+        "SID value for the segment entry, specified as an MPLS label
+        or IPv6 address.";
+    }
+
+    leaf mpls-tc {
+      when "../type = 'MPLS_SID'" {
+        description
+          "The MPLS TC bits can only be specified when the segment
+          time is an MPLS label.";
+      }
+      type uint8 {
+        range "0..7";
+      }
+      description
+        "The MPLS TC bits used when the SID is specified as an MPLS
+        label. If set to zero, the receiving system specifies the
+        value of the TC bits.";
+    }
+
+    leaf mpls-bos {
+      when "../type = 'MPLS_SID'" {
+        description
+          "The MPLS BoS bit can only be specified when the segment
+          type is an MPLS label.";
+      }
+      type boolean;
+      description
+        "When this leaf is set to true the MPLS bottom-of-stack
+        (BoS) bit is set in the MPLS segment. The BoS bit should
+        always be set to zero by the sender.";
+    }
+
+    leaf mpls-ttl {
+      when "../type = 'MPLS_SID'" {
+        description
+          "The MPLS TTL can only be set when the segment type is
+          an MPLS label.";
+      }
+      type uint8;
+      description
+        "The MPLS time to live (TTL) to be set for the MPLS
+        segment. If set to 255, the receiver specifies the
+        TTL value that is used for packets sent with this
+        segment in the stack.";
+    }
+
+    leaf remote-ipv4-address {
+      when "../type = 'IPV4_NODE_ADDRESS' or ../type='../IPV4_ADDRESS_INDEX'" +
+           "or ../type='IPV4_LOCAL_INTF_ID' or " +
+           "../type='IPV4_LOCAL_REMOTE_ADDR'" {
+        description
+          "An IPv4 address can only be associated with the segment entry
+          when the type of the SID is a node address, or an IPv6 address
+          with an index.";
+      }
+      type oc-inet:ipv4-address;
+      description
+        "An IPv4 address specified as the remote node address. When the type
+        of the segment specifies only the remote address, no other addresses
+        are specified. When the type of the segment requires a local address,
+        this leaf specifies the remote IPv4 address.";
+    }
+
+    leaf local-ipv4-address {
+      when "../type = 'IPV4_LOCAL_REMOTE_ADDR'" {
+        description
+          "A local IPv4 address can only be specified when the segment is
+          specified by the local and remote IPv4 interface addresses.";
+      }
+      type oc-inet:ipv4-address;
+      description
+        "An IPv4 address of a local adjacency that is used to identify
+        the segment.";
+    }
+
+    leaf remote-ipv6-address {
+      when "../type = 'IPV6_NODE_ADDRESS' or ../type='IPV6_ADDRESS_INDEX'" +
+           "or ../type='IPV6_LOCAL_INTF_ID' or " +
+           "../type='IPV6_LOCAL_REMOTE_ADDR'" {
+        description
+          "An IPv6 address can only be specified with a segment entry
+          when the type of the SID is a node address, or an IPv6 address
+          with an index.";
+      }
+      type oc-inet:ipv6-address;
+      description
+        "An IPv6 address specified as the remote node address. When the type
+        of the segment specifies only the remote address, no other addresses
+        are specified. When the type of the segment requires a local address,
+        this leaf specifies the remote IPv6 address.";
+    }
+
+    leaf local-ipv6-address {
+      when "../type = 'IPV6_LOCAL_REMOTE_ADDR'" {
+        description
+          "A local IPv6 address can only be speciifed when the segment
+          is specified by the local and remote IPv6 interface addresses.";
+      }
+      type oc-inet:ipv6-address;
+      description
+        "An IPv6 address of a local adjacency that is used to identify the
+        segment.";
+    }
+
+    leaf local-interface-id {
+      when "../type = 'IPV4_LOCAL_INTF_ID' or ../type='IPV6_LOCAL_INTF_ID'" {
+        description
+          "A local interface identifier can only be specified when the
+          type of the segment is an IPv4 address with local interface ID,
+          or IPv6 address with local interface ID.";
+      }
+      type uint32;
+      description
+        "The local interface identifier to be utilised for the segment.";
+      reference
+        "draft-ietf-pce-segment-routing";
+    }
+  }
+}

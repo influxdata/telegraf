@@ -1,0 +1,795 @@
+module openconfig-module-catalog {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/module-catalog";
+
+  prefix "oc-cat";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-catalog-types { prefix oc-cat-types; }
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module provides a schema for cataloging and descrbing
+    YANG models published across various organizations.  The catalog
+    contains several categories of data:
+
+    * organizations -- entities that publish and/or maintain
+      individual YANG modules or groups of modules
+
+    * modules -- information regarding individual YANG modules,
+      including their versions, dependencies, submodules, and how
+      to access them
+
+    * release bundles -- groups of modules that are compatible and
+      consistent with each other (as determined by the publisher of
+      of the bundle).  The release bundle does not necessarily
+      correspond to a functional area, e.g., it could the entire
+      set of modules published by an organization
+
+    * feature bundles -- sets of schema paths across a
+      release bundle that provide a specific set of functionality
+
+    * implementations -- information about available module and/or
+      bundle implementations and their status";
+
+  oc-ext:openconfig-version "0.2.2";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.2";
+  }
+
+  revision "2017-05-01" {
+    description
+      "Fix to module dependency list";
+    reference "0.2.1";
+  }
+
+  revision "2017-03-08" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  revision "2016-02-15" {
+    description
+      "Initial OpenConfig public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+
+  grouping catalog-module-common-config {
+    description
+      "Data definitions common for both bundles and standalone
+      modules";
+
+    leaf name {
+      type string;
+      description
+        "The name of the module or bundle.  For modules, this
+        should reflect the 'module' or 'submodule'
+        statement in the YANG module file.
+
+        For bundles, this is the canonical name for the overall
+        bundle of modules which is to be released together.
+        This name should be consistent over multiple
+        releases";
+    }
+
+    leaf version {
+      type oc-cat-types:module-version-type;
+      description
+        "For individual modules, this is the version number, e.g.,
+        a semantic version.  The version may be the same as the date
+        indicated in the module revision statement.
+
+        For bundles, this is a semantic version number for the
+        overall bundle. This version is to be defined as per the
+        approach specified in the OpenConfig semantic version
+        guidance - and is of the form x.y.z, where x is the major
+        version, y is the minor version, and z is the patch level";
+      reference
+        "Semantic versioning for OpenConfig models";
+    }
+  }
+
+  grouping feature-bundle-included-reference {
+    description
+      "References to the included feature bundles";
+
+    leaf name {
+      type leafref {
+        path "../../../../../../../organizations/" +
+          "organization[name=current()/../publisher]/" +
+            "feature-bundles/feature-bundle/name";
+      }
+      description
+        "Name of the referenced feature bundle";
+    }
+
+    leaf publisher {
+      type leafref {
+        path "../../../../../../../organizations/organization/" +
+          "name";
+      }
+      description
+        "Publisher of the referenced feature bundle";
+    }
+
+    leaf version {
+      type oc-cat-types:module-version-type;
+      description
+        "Version of the referenced feature bundle";
+    }
+  }
+
+  grouping catalog-implementation-bundle-config {
+    description
+      "References to the feature bundles supported by an
+      implementation";
+
+    uses feature-bundle-included-reference;
+  }
+
+  grouping catalog-implementation-bundle-top {
+    description
+      "Top-level grouping for the list of feature bundles
+      supported by an implementation";
+
+    container feature-bundles {
+      description
+        "Enclosing container for the list of feature bundles";
+
+      list feature-bundle {
+        key "name version";
+        description
+          "List of feature bundles supported by the implementation";
+
+        uses catalog-implementation-bundle-config;
+      }
+    }
+  }
+
+  grouping catalog-implementation-config {
+    description
+      "Data describing any available implementations";
+
+    leaf id {
+      type string;
+      description
+        "An identifier for the implementation, provided by the
+        implementor.  This id should uniquely identify a specific
+        implementation of the module, e.g., based on the vendor,
+        platform, and platform version.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "A text summary of important information about the
+        implementation";
+    }
+
+    leaf reference {
+      type union {
+        type oc-inet:uri;
+        type string;
+      }
+      description
+        "A URI (preferred) or text reference to more detailed
+        information about the implementation.";
+    }
+
+
+    leaf platform {
+      type string;
+      description
+        "Name of the platform on which the implementation
+        is available -- this could be the model name of a network
+        device, a server OS, etc.";
+    }
+
+    leaf platform-version {
+      type string;
+      description
+        "Implementor-defined version name or number of the
+        module implementation, corresponding to the platform.
+        This could be the firmware version of a network device
+        such as a router, OS version, or other server platform
+        version.";
+    }
+
+    leaf status {
+      type identityref {
+        base oc-cat-types:IMPLEMENTATION_STATUS_TYPE;
+      }
+      description
+        "Indicates the status of the implementation, e.g.,
+        complete, partial, in-progress, etc.  Implementors
+        may define additional values for the base identity";
+    }
+  }
+
+  grouping catalog-implementation-top {
+    description
+      "Top level grouping for information on model implementations";
+
+    container implementations {
+      description
+        "Container for module implementation information";
+
+      list implementation {
+        key "id";
+        description
+          "List of available implementations, keyed by an identifier
+          provided by either the implementor or the module
+          maintainer.  Such a key avoids needing a complex composite
+          key to uniquely identify an implementation.";
+
+        uses catalog-implementation-config;
+        uses catalog-implementation-bundle-top;
+      }
+    }
+  }
+
+  grouping catalog-module-dependency-config {
+    description
+      "Information about module dependencies";
+
+
+    leaf-list required-module {
+      type string;
+      description
+        "List of names of modules that are imported by the
+        current module.  This list should reflect all of the 'import'
+        statements in the module.  Release bundles should be used to
+        indicate which versions of the imported module are used
+        (or are compatible) with the current module";
+    }
+  }
+
+  grouping catalog-module-dependency-top {
+    description
+      "Top-level grouping for module dependency data";
+
+    container dependencies {
+      description
+        "Data about dependencies of the module";
+
+      uses catalog-module-dependency-config;
+    }
+
+  }
+
+  grouping catalog-module-classification-config {
+    description
+      "Data describing the module's classification(s)";
+
+    leaf category {
+      type identityref {
+        base oc-cat-types:MODULE_CATEGORY_BASE;
+      }
+      description
+         "Categorization of the module based on identities defined
+         or used by the publishing organizations.";
+    }
+
+    leaf subcategory {
+      type identityref {
+        base oc-cat-types:MODULE_SUBCATEGORY_BASE;
+      }
+      description
+         "Sub-categorization of the module based on identities
+          defined or used by the publishing organizations.";
+    }
+
+    leaf deployment-status {
+      type identityref {
+        base oc-cat-types:MODULE_STATUS_TYPE;
+      }
+      description
+        "Deployment status of the module -- experimental,
+        standards-track, production, etc.";
+    }
+  }
+
+  grouping catalog-module-classification-top {
+    description
+      "Data definitions related to module classfications";
+
+    container classification {
+      description
+        "Container for data describing the module's classification";
+
+      uses catalog-module-classification-config;
+    }
+  }
+
+  grouping catalog-module-access-config {
+    description
+      "Data pertaining to retrieval and usage of the module";
+
+    leaf uri {
+      type oc-inet:uri;
+      description
+        "URI where module can be downloaded.  Modules may be
+        made available from the catalog maintainer, or directly
+        from the publisher";
+    }
+
+    leaf md5-hash {
+      type string;
+      description
+        "Optional MD5 hash of the module file.  If specified, the
+        hash may be used by users to validate data integrity";
+    }
+  }
+
+  grouping catalog-module-access-top {
+    description
+      "Top level groupig for data related to accessing a module
+      or submodule";
+
+    container access {
+      description
+        "Container for data pertaining to retrieval and usage of the
+        module";
+
+      uses catalog-module-access-config;
+    }
+  }
+
+  grouping catalog-module-submodule-config {
+    description
+      "Data definitions for submodules belonging to a
+      module";
+
+    leaf name {
+      type string;
+      description
+        "Name of the submodule as indicated by its top-level
+        'submodule' statement";
+    }
+
+  }
+
+  grouping catalog-module-submodule-top {
+    description
+      "Top-level grouping for submodule information";
+
+    container submodules {
+      description
+        "Data for the submodules belonging to a submodule. If the
+        module does not have any submodules, this container
+        should be empty.";
+
+      list submodule {
+        key "name";
+        description
+          "List of submodules included by a module.  All submodules
+          specified by 'include' statements in the module should be
+          included in this list.";
+
+        uses catalog-module-submodule-config;
+        uses catalog-module-access-top;
+      }
+    }
+  }
+
+  grouping catalog-module-base-config {
+    description
+      "Basic information describing the module, e.g., the
+      YANG metadata in the module preface.";
+
+
+    leaf namespace {
+      type string;
+      description
+        "Published namespace of module, i.e., defined by the
+        'namespace' ";
+    }
+
+    leaf prefix {
+      type string;
+      description
+        "Published prefix of the module";
+    }
+
+    leaf revision {
+      type string;
+      description
+        "Date in the revision statement of the module";
+    }
+
+    leaf summary {
+      type string;
+      description
+        "Summary description of the module";
+    }
+  }
+
+  grouping release-bundle-member-config {
+    description
+      "Data for each member of a bundle";
+
+    leaf id {
+      type string;
+      description
+        "Identifier for the bundle member";
+    }
+
+    leaf type {
+      type identityref {
+        base oc-cat-types:CATALOG_MEMBER_TYPE;
+      }
+      description
+        "The type of member that is to be included within the
+        release bundle. Release bundles may include modules and
+        other release bundles.  Both member modules and member
+        bundles should specify the list of compatible versions.";
+    }
+
+    leaf module {
+      when "../type = 'oc-cat-types:MODULE'" {
+        description
+          "The module name is specified for bundle membrs that are
+          modules";
+      }
+      type leafref {
+        path "../../../../../../../organizations/" +
+          "organization[name=current()/../publisher]/modules/" +
+          "module/name";
+      }
+      description
+        "Name of the module set which is included in this bundle -
+        for example, 'openconfig-bgp'";
+    }
+
+    leaf release-bundle {
+      when "../type = 'oc-cat-types:RELEASE_BUNDLE'" {
+        description
+          "The release bundle is specified for bundle members that
+          are release bundles";
+      }
+      type leafref {
+        path "../../../../../../../organizations/" +
+          "organization[name=current()/../publisher]/" +
+            "release-bundles/release-bundle/name";
+      }
+      description
+        "Name of the module set which is included in this bundle -
+        for example, 'openconfig-bgp'";
+    }
+
+    leaf publisher {
+      type leafref {
+        path "../../../../../../../organizations/organization/" +
+          "name";
+      }
+      description
+        "Reference to the name of the publishing organization";
+    }
+
+    leaf-list compatible-versions {
+      type oc-cat-types:module-version-type;
+      description
+        "A list of semantic version specification of the versions
+        of the specified module or release bundle which are
+        compatible when building this version of the bundle.
+
+        Version specifications may be added when changes are made
+        to a module within a bundle, and this does not affect the
+        interaction between it and other modules. It is expected
+        that backwards compatible changes to an individual module or
+        member bundle do not affect the compatibility of that
+        with other members, and hence wildcard matches are allowed
+        within this list.";
+    }
+  }
+
+  grouping release-bundle-member-top {
+
+    description
+      "Parameters relating to models within release bundles";
+
+    container members {
+      description
+        "List of bundle members which make up this release bundle. A
+        member is defined as an individual YANG module specified
+        in the YANG catalogue, or another release
+        bundle which can be used to group multiple YANG
+        models together.";
+
+      list member {
+        key "id";
+        description
+          "A set of modules or bundles which are part of the bundle
+          of models. For example, if 'ietf-yang-types' were to be
+          specified within the bundle, then this would refer to the
+          individual entry within the module catalogue. If the type
+          of the entry is set to bundle, then for example,
+          openconfig-bgp could be referenced - which itself consists
+          of separate modules.";
+
+        uses release-bundle-member-config;
+
+      }
+    }
+  }
+
+  grouping release-bundle-top {
+    description
+      "Top-level container for a release bundle";
+
+    container release-bundles {
+      description
+        "List of release bundles";
+
+      list release-bundle {
+        key "name version";
+
+        description
+          "List of release bundles - sets of modules and/or
+          bundles which are interoperable";
+
+        uses catalog-module-common-config;
+        uses release-bundle-member-top;
+      }
+    }
+  }
+
+  grouping feature-bundle-release-config {
+    description
+      "Data definitions to identify the release bundle that the
+      feature bundle is based on.";
+
+    leaf name {
+      type leafref {
+        path "../../../../release-bundles/release-bundle/name";
+      }
+      description
+        "Reference to the name of the release bundle used for the
+        feature paths.";
+    }
+
+    leaf version {
+      type leafref {
+        path "../../../../release-bundles/" +
+          "release-bundle[name=current()/../name]/version";
+      }
+      description
+        "Reference to the release bundle version used for the
+        feature paths";
+    }
+
+    leaf publisher {
+      type leafref {
+        path "../../../../release-bundles/" +
+          "release-bundle[name=current()/../name]/publisher";
+      }
+      description
+        "Reference to the publisher of the release bundle used for
+        the feature paths";
+    }
+  }
+
+  grouping feature-bundle-release-top {
+    description
+      "Top-level grouping for data about the release bundle used
+      to specify the feature bundle";
+
+    container release-bundle {
+      description
+        "Data to identify the release bundle from which the feature
+        paths should be specified.  If the feature crosses
+        release bundles, a new release bundle should be
+        created to support the feature bundle.";
+
+      leaf name {
+        type leafref {
+          path "../../../../../../organizations/" +
+            "organization[name=current()/../publisher]/" +
+              "release-bundles/release-bundle/name";
+        }
+        description
+          "Name of the module set which is included in this bundle -
+          for example, 'openconfig-bgp'";
+      }
+
+      leaf publisher {
+        type leafref {
+          path "../../../../../../organizations/organization/" +
+            "name";
+        }
+        description
+          "Reference to the name of the publishing organization";
+      }
+
+      leaf version {
+        type oc-cat-types:module-version-type;
+        description
+          "Version of the referenced release bundle";
+      }
+    }
+  }
+
+
+  grouping feature-bundle-config {
+    description
+      "Data definitions for the feature bundle";
+
+    uses catalog-module-common-config;
+
+    leaf-list path {
+      type string;
+      description
+        "The list of schema paths included in the feature.  The
+        paths specify subtrees, i.e., all data underneath the
+        specified path are included in the feature.";
+    }
+  }
+
+  grouping feature-bundle-feature-config {
+    description
+      "Data definitions for included feature bundles";
+
+    uses feature-bundle-included-reference;
+  }
+
+  grouping feature-bundle-feature-top {
+    description
+      "Top level grouping for the list of included feature
+      bundles";
+
+    container feature-bundles {
+      description
+        "Enclosing container for the list of included feature
+        bundles.  Feature bundles may be composed from other
+        smaller feature units";
+
+      list feature-bundle {
+        key "name";
+        description
+          "The list of feature bundles included in the current
+          feature bundle.";
+
+        uses feature-bundle-feature-config;
+      }
+    }
+
+  }
+
+
+  grouping feature-bundle-top {
+    description
+      "Top-level grouping for OpenConfig feature bundles";
+
+    container feature-bundles {
+      description
+        "Enclosing container for the list of feature bundles";
+
+      list feature-bundle {
+        key "name version";
+        description
+          "List of feature bundles";
+
+        uses feature-bundle-config;
+        uses feature-bundle-release-top;
+        uses feature-bundle-feature-top;
+      }
+    }
+  }
+
+  grouping catalog-module-top {
+    description
+      "Top level structure of the module catalog";
+
+    container modules {
+      description
+        "Modules published by this organization";
+
+      list module {
+        key "name version";
+        description
+          "List of published modules from the organization";
+
+        uses catalog-module-common-config;
+        uses catalog-module-base-config;
+        uses catalog-module-classification-top;
+        uses catalog-module-dependency-top;
+        uses catalog-module-access-top;
+        uses catalog-module-submodule-top;
+      }
+    }
+  }
+
+  grouping catalog-organization-config {
+    description
+      "Top level grouping for data related to an organization that
+      publishes module, bundles, etc.";
+
+    leaf name {
+      type string;
+      description
+        "Name of the maintaining organization -- the name should be
+        supplied in the official format used by the organization.
+        Standards Body examples:
+          IETF, IEEE, MEF, ONF, etc.
+        Commercial entity examples:
+          AT&T, Facebook, <Vendor>
+        Name of industry forum examples:
+          OpenConfig, OpenDaylight, ON.Lab";
+    }
+
+    leaf type {
+      type identityref {
+        base oc-cat-types:ORGANIZATION_TYPE;
+      }
+      description
+        "Type of the publishing organization";
+    }
+
+    leaf contact {
+      type string;
+      description
+        "Contact information for the publishing organization (web
+        site, email address, etc.)";
+    }
+  }
+
+  grouping catalog-organization-top {
+    description
+      "Top level grouping for list of maintaining organizations";
+
+    container organizations {
+      description
+        "List of organizations owning modules";
+
+      list organization {
+        key "name";
+
+        description
+          "List of organizations publishing YANG modules or
+          module bundles";
+
+        uses catalog-organization-config;
+        uses catalog-module-top;
+        uses release-bundle-top;
+        uses feature-bundle-top;
+        uses catalog-implementation-top;
+      }
+    }
+  }
+
+
+  grouping catalog-top {
+    description
+      "Top-level grouping for the YANG model catalog";
+
+    uses catalog-organization-top;
+  }
+
+  // data definition statements
+
+  uses catalog-top;
+
+}

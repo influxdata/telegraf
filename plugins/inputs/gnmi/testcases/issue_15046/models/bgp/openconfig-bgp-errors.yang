@@ -1,0 +1,495 @@
+submodule openconfig-bgp-errors {
+
+  belongs-to openconfig-bgp-types {
+    prefix "oc-bgp-types";
+  }
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module defines BGP NOTIFICATION message error codes
+    and subcodes";
+
+  oc-ext:openconfig-version "6.0.0";
+
+  revision "2024-01-31" {
+    description
+      "Update community-sets/members/member union type by replacing
+      the bgp-regex type with posix-eregexp.";
+    reference "6.0.0";
+  }
+
+  revision "2023-12-26" {
+    description
+      "Add regex for bgp link bandwidth";
+    reference "5.6.0";
+  }
+
+  revision "2023-09-06" {
+    description
+      "Add GRACEFUL_SHUTDOWN as a BGP_WELL_KNOWN_STD_COMMUNITY";
+    reference "5.5.0";
+  }
+
+  revision "2023-03-31" {
+    description
+      "Add support for BGP large communities [rfc8092] in
+       send-community-type
+
+      Types impacted:
+      - community-type";
+    reference "5.4.0";
+  }
+
+  revision "2021-08-06" {
+    description
+      "Fix pattern regexes to allow full 4-byte private ASN range including
+       42xxxxxxxx in extended communities
+
+      Types impacted:
+      - bgp-ext-community-type";
+    reference "5.3.1";
+  }
+
+  revision "2021-01-07" {
+    description
+      "Remove module extension oc-ext:regexp-posix by making pattern regexes
+      conform to RFC7950.
+
+      Types impacted:
+      - bgp-std-community-type
+      - bgp-ext-community-type";
+    reference "5.3.0";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions.";
+    reference "5.2.1";
+  }
+
+  revision "2020-06-17" {
+    description
+      "Add RFC5549 capability identity.";
+    reference "5.2.0";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Add FlowSpec, BGP-LS and LSVR AFI-SAFI identities.";
+    reference "5.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "5.0.2";
+  }
+
+  revision "2018-08-20" {
+    description
+      "Correct description of AFI-SAFI enabled leaf.";
+    reference "5.0.1";
+  }
+
+  revision "2018-04-11" {
+    description
+      "Correct naming of BGP maximum prefix warning percentage leaf.";
+    reference "5.0.0";
+  }
+
+  revision "2018-03-20" {
+    description
+      "Added SR-TE policy SAFI";
+    reference "4.1.0";
+  }
+
+  revision "2017-07-30" {
+    description
+      "Clarification of add-paths send-max leaf";
+    reference "4.0.1";
+  }
+
+  revision "2017-07-10" {
+    description
+      "Add error notifications; moved add-paths config; add AS
+      prepend policy features; removed unneeded config leaves";
+    reference "4.0.0";
+  }
+
+  identity BGP_ERROR_CODE {
+    description
+      "Indicates the error type in a BGP NOTIFICATION message";
+    reference
+      "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+  }
+
+  identity BGP_ERROR_SUBCODE {
+    description
+      "Provides more specific information about the nature of the
+      error reported in a NOTIFICATION message. Each Error
+      Code may have one or more Error Subcodes associated with it.";
+    reference
+      "RFC 4271 - A Border Gateway Protocol 4 (BGP-4)";
+  }
+
+
+  identity UNSPECIFIC {
+    base  BGP_ERROR_SUBCODE;
+    description
+      "The error subcode field is unspecific when the NOTIFICATION
+      message does not include any specific error subcode (i.e..,
+      value 0).";
+  }
+
+  identity MESSAGE_HEADER_ERROR {
+    base BGP_ERROR_CODE;
+    description
+      "Errors detected while processing the Message Header";
+  }
+
+  identity OPEN_MESSAGE_ERROR {
+    base BGP_ERROR_CODE;
+    description
+      "Errors detected while processing the OPEN message";
+  }
+
+  identity UPDATE_MESSAGE_ERROR {
+    base BGP_ERROR_CODE;
+    description
+      "Errors detected while processing the UPDATE message";
+  }
+
+  identity HOLD_TIMER_EXPIRED {
+    base BGP_ERROR_CODE;
+    description
+      "Indicates that the system did not receive successive
+      KEEPALIVE, UPDATE, and/or NOTIFICATION messages within the
+      period specified in the Hold Time field of the OPEN message";
+  }
+
+  identity FINITE_STATE_MACHINE_ERROR {
+    base BGP_ERROR_CODE;
+    description
+      "Error detected by the BGP Finite State Machine
+      (e.g., receipt of an unexpected event)";
+  }
+
+  identity CEASE {
+    base BGP_ERROR_CODE;
+    description
+      "Sent by a BGP peer to close its BGP connection in absence of
+      any fatal errors.  If the BGP speaker terminates its
+      connection with a neihbor because the number of prefixes
+      received exceeds the configured upper bound, the speaker must
+      send the neighbor a NOTIFICATION message with the Cease
+      error code.";
+  }
+
+  identity ROUTE_REFRESH_MESSAGE_ERROR {
+    base BGP_ERROR_CODE;
+    description
+      "The length, excluding the fixed-size message header, of the
+      received ROUTE-REFRESH message with Message Subtype 1 and 2 is
+      not 4.  Applicable only when a BGP speaker has received the
+      'Enhanced Route Refresh Capability' from a peer";
+    reference
+      "RFC 7313 - Enhanced Route Refresh Capability for BGP-4";
+  }
+
+  identity MESSAGE_HEADER_SUBCODE {
+    base BGP_ERROR_SUBCODE;
+    description
+      "Error subcode definitions for Message Header error
+      notifications";
+  }
+
+  identity CONNECTION_NOT_SYNCHRONIZED {
+    base MESSAGE_HEADER_SUBCODE;
+    description
+      "Marker field of the message header is not all ones as
+      expected";
+  }
+
+  identity BAD_MESSAGE_LENGTH {
+    base MESSAGE_HEADER_SUBCODE;
+    description
+      "Indicates the message has an erroneous length with one
+      or more of the following:
+
+      - the Length field of the message header is less than 19 or
+        greater than 4096
+
+      - the Length field of an OPEN message is less than the minimum
+        length of the OPEN message
+
+      - the Length field of an UPDATE message is less than the
+        minimum length of the UPDATE message
+
+      - the Length field of a KEEPALIVE message is not equal to 19
+
+      - the Length field of a NOTIFICATION message is less than the
+        minimum length of the NOTIFICATION message
+
+      The erroneous Length field must be reported in the
+      NOTIFICATION data.";
+  }
+
+  identity BAD_MESSAGE_TYPE {
+    base MESSAGE_HEADER_SUBCODE;
+    description
+      "Type field of the message header is not recognized.  The
+      erroneous type field must be reported in the NOTIFICATION
+      data";
+  }
+
+  identity OPEN_MESSAGE_SUBCODE {
+    base BGP_ERROR_SUBCODE;
+    description
+      "Error subcode definitions for OPEN message error
+      notifications";
+  }
+
+  identity UNSUPPORTED_VERSION_NUMBER {
+    base OPEN_MESSAGE_SUBCODE;
+    description
+      "Version number in the Version field of the received OPEN
+      message is not supported";
+  }
+
+  identity BAD_PEER_AS {
+    base  OPEN_MESSAGE_SUBCODE;
+    description
+      "Autonomous System field of the OPEN message is unacceptable";
+  }
+
+  identity BAD_BGP_IDENTIFIER {
+    base OPEN_MESSAGE_SUBCODE;
+    description
+      "BGP Identifier field of the OPEN message is syntactically
+      incorrect";
+  }
+
+  identity UNSUPPORTED_OPTIONAL_PARAMETER {
+    base OPEN_MESSAGE_SUBCODE;
+    description
+      "One of the Optional Parameters in the OPEN message is not
+      recognized";
+  }
+
+  identity UNACCEPTABLE_HOLD_TIME {
+    base OPEN_MESSAGE_SUBCODE;
+    description
+      "Hold Time field of the OPEN message is unacceptable";
+  }
+
+  identity UNSUPPORTED_CAPABILITY {
+    base OPEN_MESSAGE_SUBCODE;
+    description
+      "Inidicates that the peer does not support capabilities
+      advertisement -- the peer may send this subcode in response to
+      an OPEN message that carries the Capabilities Optional
+      Parameter";
+    reference
+      "RFC 5492 - Capabilities Advertisement with BGP-4";
+  }
+
+  identity UPDATE_MESSAGE_SUBCODE {
+    base BGP_ERROR_SUBCODE;
+    description
+      "Error subcode definitions for UPDATE message error
+      notifications";
+  }
+
+  identity MALFORMED_ATTRIBUTE_LIST {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "Inidicates Withdrawn Routes Length or Total Attribute Length
+      is too large, or
+
+      An attribute appears more than once in the UPDATE message";
+  }
+
+  identity UNRECOGNIZED_WELL_KNOWN_ATTRIBUTE {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "One or more of the well-known mandatory attributes are not
+      recognized";
+  }
+
+  identity MISSING_WELL_KNOWN_ATTRIBUTE {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "One or more of the well-known mandatory attributes are not
+      present";
+  }
+
+  identity ATTRIBUTE_FLAGS_ERROR {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "Attribute has Attribute Flags that conflict with the
+      Attribute Type Code";
+  }
+
+  identity ATTRIBUTE_LENGTH_ERROR {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "Attribute has an Attribute Length that conflicts with the
+      expected length (based on the attribute type code)";
+  }
+
+  identity INVALID_ORIGIN_ATTRIBUTE {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "ORIGIN attribute has an undefined value";
+  }
+
+  identity INVALID_NEXT_HOP_ATTRIBUTE {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "The NEXT_HOP attribute field is syntactically incorrect";
+  }
+
+  identity OPTIONAL_ATTRIBUTE_ERROR {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "An error is detected in the value of a recognized optional
+      attribute (such an attribute must be discarded)";
+  }
+
+  identity INVALID_NETWORK_FIELD {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "The NLRI field in the UPDATE message is syntactically
+      incorrect";
+  }
+
+  identity MALFORMED_AS_PATH {
+    base UPDATE_MESSAGE_SUBCODE;
+    description
+      "The AS_PATH attribute is syntactically incorrect";
+  }
+
+  identity FINITE_STATE_MACHINE_SUBCODE {
+    base BGP_ERROR_SUBCODE;
+    description
+      "Error subcode definitions for BGP finite state machine
+      errors.";
+    reference
+      "RFC 6608 - Subcodes for BGP Finite State Machine Error";
+  }
+
+  identity RECEIVE_UNEXPECTED_MESSAGE_OPENSENT {
+    base FINITE_STATE_MACHINE_SUBCODE;
+    description
+      "The peer BGP speaker received an unexpected message from
+      the local system while the peer speaker session was in the
+      OpenSent state";
+  }
+
+  identity RECEIVE_UNEXPECTED_MESSAGE_OPENCONFIRM {
+    base FINITE_STATE_MACHINE_SUBCODE;
+    description
+      "The peer BGP speaker received an unexpected message from
+      the local system while the peer speaker session was in the
+      OpenConfirm state";
+  }
+
+  identity RECEIVE_UNEXPECTED_MESSAGE_ESTABLISHED {
+    base FINITE_STATE_MACHINE_SUBCODE;
+    description
+      "The peer BGP speaker received an unexpected message from
+      the local system while the peer speaker session was in the
+      Established state";
+  }
+
+  identity CEASE_SUBCODE {
+    base BGP_ERROR_SUBCODE;
+    description
+      "Error subcode definitions for Cease notification messages";
+    reference
+      "RFC 4486 - Subcodes for BGP Cease Notification Message";
+  }
+
+  identity MAX_NUM_PREFIXES_REACHED {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker terminated its peering with the local
+      system because the number of address prefixes received
+      exceeds a locally configured upper bound";
+  }
+
+  identity ADMINISTRATIVE_SHUTDOWN {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker administratively shut down its peering
+      with the local system";
+  }
+
+  identity PEER_DE_CONFIGURED {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker de-configure the peering with the local
+      system";
+  }
+
+  identity ADMINISTRATIVE_RESET {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker administratively reset the peering with
+      the local system";
+  }
+
+  identity CONNECTION_REJECTED {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker disallowed the BGP connection to the
+      local system after the peer speaker accepted a transport
+      protocol connection";
+  }
+
+  identity OTHER_CONFIG_CHANGE {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker administratively reset the peering with
+      the local sytem due to a configuration change that is not
+      covered by another subcode.";
+  }
+
+  identity CONN_COLLISION_RESOLUTION {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker sent a CEASE NOTIFICATION as a result of
+      the collision resolution procedure described in RFC 4271";
+  }
+
+  identity OUT_OF_RESOURCES {
+    base CEASE_SUBCODE;
+    description
+      "The peer BGP speaker ran out of resources (e.g., memory) and
+      reset the session with the local system";
+  }
+
+  identity ROUTE_REFRESH_SUBCODE {
+    base BGP_ERROR_SUBCODE;
+    description
+      "Error subcode definitions for the ROUTE-REFRESH message
+      error";
+  }
+
+  identity INVALID_MESSAGE_LENGTH {
+    base ROUTE_REFRESH_SUBCODE;
+    description
+      "The length, excluding the fixed-size message header, of the
+      received ROUTE-REFRESH message with Message Subtype 1 and 2
+      is not 4";
+  }
+}

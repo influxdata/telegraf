@@ -1,0 +1,1025 @@
+submodule openconfig-qos-interfaces {
+
+  belongs-to openconfig-qos {
+    prefix "oc-qos";
+  }
+
+  // import openconfig-qos-elements { prefix oc-qos; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-yang-types { prefix oc-yang; }
+
+  include openconfig-qos-elements;
+  include openconfig-qos-mem-mgmt;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+     www.openconfig.net";
+
+  description
+    "This submodule defines data related to quality-of-service
+    configuration and operational state associated with
+    interfaces.";
+
+  oc-ext:openconfig-version "0.11.2";
+
+  revision "2023-10-13" {
+    description
+      "Fix revision statement date";
+    reference "0.11.2";
+  }
+
+  revision "2023-10-08" {
+    description
+      "Clarification on WRED weight in case it is not present";
+    reference "0.11.1";
+  }
+
+  revision "2023-09-15" {
+    description
+      "Add support for ECN counters";
+    reference "0.11.0";
+  }
+
+  revision "2023-07-26" {
+    description
+      "Add buffer management parameters in time unts (microseconds).
+       Make profiles reusable across LAGs and PHY of different speed";
+    reference "0.10.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify interface-ref usage.";
+    reference "0.9.1";
+  }
+
+  revision "2023-04-17" {
+    description
+      "Add support for relative RED min-threshold and max-threshold values.";
+    reference "0.9.0";
+  }
+
+  revision "2023-02-17" {
+    description
+      "Add queue identifier.";
+    reference "0.8.0";
+  }
+
+  revision "2023-02-08" {
+    description
+      "Remove incorrect output placement of interface-ref";
+    reference "0.7.0";
+  }
+
+  revision "2023-01-28" {
+    description
+      "Split groupings in interfaces for better leaf reuse.";
+    reference "0.6.1";
+  }
+
+  revision "2022-09-13" {
+    description
+      "Add queue octet drop counter.";
+    reference "0.6.0";
+  }
+
+  revision "2021-08-28" {
+    description
+      "Revision updating memory management profile WRED and RED configuration.";
+    reference "0.5.0";
+  }
+
+  revision "2021-04-28" {
+    description
+      "Updating memory management profile to queue management profile.";
+    reference "0.4.0";
+  }
+
+  revision "2021-04-28" {
+    description
+      "Revision updating buffer management and queue management
+      configuration.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Fix xpaths in when statements";
+    reference "0.2.3";
+  }
+
+  revision "2019-08-20" {
+    description
+      "Fix typo in classifiers container name";
+    reference "0.2.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-16" {
+    description
+      "Fix incorrect interface-ref placement";
+    reference "0.2.0";
+  }
+
+  revision "2016-06-03" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  grouping qos-interface-classifier-match-state {
+    description
+      "Operational state data for match terms in the classifier
+      associated with an interface";
+
+    leaf id {
+      type leafref {
+        // Current location:
+        // /qos/interfaces/interface/input/classifiers/classifier/
+        // terms/term/config/id
+        path "../../../../../../../../../classifiers/" +
+            "classifier[name=current()/../../../../config/name]/" +
+            "terms/term/config/id";
+
+      }
+      description
+        "Reference to match terms in the classifier";
+    }
+
+    uses qos-interface-classifier-match-counters-state;
+  }
+
+  grouping qos-interface-classifier-match-counters-state {
+    description
+      "Grouping for counters relating to QoS classifier match terms.";
+
+    leaf matched-packets {
+      type oc-yang:counter64;
+      description
+        "Count of the number of packets matching this classifier
+        match term on the interface.";
+    }
+
+    leaf matched-octets {
+      type oc-yang:counter64;
+      description
+        "Count of the number of octets (bytes) matching this
+        classifier match term on the interface.";
+    }
+
+  }
+
+  grouping qos-interface-classifier-match-top {
+    description
+      "Top-level grouping for match terms in the classifier
+      associated with an interface";
+
+    container terms {
+      description
+        "Enclosing container for the list of match terms in the
+        classifier";
+
+      list term {
+        key "id";
+        config false;
+
+        description
+          "List of match terms in the classifier associated with the
+          interface";
+
+        leaf id {
+          type leafref {
+            path "../state/id";
+          }
+          description
+            "Reference to match term id list key";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for match terms in the classifier
+            associated with an interface";
+
+          uses qos-interface-classifier-match-state;
+        }
+      }
+    }
+  }
+
+  grouping qos-interface-classifier-top {
+    description
+      "Top-level grouping for a QoS classifier associated with an
+      interface";
+
+    container classifiers {
+      description
+        "Classifiers to be applied to the interface.";
+
+      list classifier {
+        key "type";
+
+        description
+          "A list of classifiers that should be applied to the interface";
+
+        leaf type {
+          type leafref {
+            path "../config/type";
+          }
+          description
+            "Reference to the classifier name.";
+        }
+
+        container config {
+          description
+            "Configuration parameters for the list of classifiers.";
+          uses qos-interface-classifiers-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters for the list of classifiers.";
+          uses qos-interface-classifiers-config;
+        }
+
+        uses qos-interface-classifier-match-top;
+      }
+    }
+  }
+
+  grouping qos-interface-classifiers-config {
+    description
+      "Configuration parameters for the list of classifiers";
+
+    leaf name {
+      type leafref {
+        // current loc: /qos/interfaces/interface/input/classifiers/
+        // classifier/config/name
+        path "../../../../../../../classifiers/classifier/config/name";
+      }
+      description
+        "Reference to the classifier to be applied to ingress traffic on
+        the interface";
+    }
+
+    leaf type {
+      type enumeration {
+        enum IPV4 {
+          value 4;
+          description
+            "Classifier matches IPv4 Unicast packets.";
+        }
+        enum IPV6 {
+          value 6;
+          description
+            "Classifier matches IPv6 Unicast packets.";
+        }
+        enum MPLS {
+          description
+            "Classifier matches MPLS packets.";
+        }
+        enum IPV4_MULTICAST {
+          description
+            "Classifier matches IPv4 Multicast packets.";
+        }
+        enum IPV6_MULTICAST {
+          description
+            "Classifier matches IPv6 Multicast packets.";
+        }
+      }
+      description
+        "Type of packets matched by the classifier.";
+    }
+  }
+
+  grouping qos-interface-queue-config {
+    description
+      "Configuration data for queues associated with the
+      interface, this is re-used across input/output queues.";
+
+    leaf name {
+      // TODO(robjs): Previously we proposed that the queue name here is
+      // only a queue that has been configured. However, in some cases we
+      // may want to have queues that have not been configured exist.
+      //type leafref {
+      //  path "../../../../../../queues/queue/config/name";
+      //}
+      type string;
+      description
+        "Reference to the queue associated with this interface.
+        A queue may be explicitly configured, or implicitly created
+        by the system based on default queues that are instantiated
+        by a hardware component, or are assumed to be default on
+        the system.";
+    }
+  }
+
+  grouping qos-interface-queue-root-config {
+    description
+      "Configuration parameters for per-queue per-interface, applying
+      only to the root.";
+
+    leaf queue-management-profile {
+      type leafref {
+        // we are at /qos/interfaces/interface/{input,output}/queues/queue/config/queue-management-profile
+        path "../../../../../../../queue-management-profiles/" +
+             "queue-management-profile/config/name";
+      }
+      description
+        "The queue management profile that is to be used for the queue
+        on the interface.
+
+        For example, the system may use a profile which specifies that
+        WRED curves are used for setting an ECN mark in the IP header
+        instead of dropping a packet in order to signal impending
+        congestion and for determining when there is sufficient
+        congestion to tail drop packets.
+
+        A single profile is available per queue - which applies to all packets
+        that are enqueued to the specified queue, whether they are unicast or
+        multicast.";
+    }
+  }
+
+  grouping qos-interface-queue-state {
+    description
+      "Operational state data for the queue associated with the
+      interface";
+
+    leaf max-queue-len {
+      type oc-yang:counter64;
+      units bytes;
+      description
+        "Maximum observed queue length";
+    }
+
+    leaf avg-queue-len {
+      type oc-yang:counter64;
+      units bytes;
+      description
+        "Average observed queue length";
+
+    }
+
+    leaf transmit-pkts {
+      type oc-yang:counter64;
+      description
+        "Number of packets transmitted by this queue";
+    }
+
+    leaf transmit-octets {
+      type oc-yang:counter64;
+      description
+        "Number of octets trasmitted by this queue";
+    }
+
+    leaf dropped-pkts {
+      type oc-yang:counter64;
+      description
+        "Number of packets dropped by the queue due to overrun, that is tail-drop
+        or AMQ (RED, WRED, etc) induced drops as indicated by the attached
+        queue-management-profile";
+    }
+
+    leaf dropped-octets {
+      type oc-yang:counter64;
+      description
+        "Number of octets dropped by the queue due to overrun, that is tail-drop
+        or AMQ (RED, WRED, etc) induced drops as indicated by the attached
+        queue-management-profile";
+    }
+
+    leaf ecn-marked-pkts {
+      type oc-yang:counter64;
+      description
+        "number of packets for which ECN codepoint has been changed from ECT to CE";
+    }
+
+    leaf ecn-marked-octets {
+      type oc-yang:counter64;
+      description
+        "Number of octets for which ECN codepoint has been changed from ECT to CE";
+    }
+
+    leaf ecn-selected-pkts {
+      type oc-yang:counter64;
+      description
+        "Number of packets selected by AQM
+
+        For RED/WRED AQM this counter counts:
+        - all packets enqueued while queue utilization was greater then max-threshold
+        - packs enqueued while queue utilization was between min-threshold and max-threshold, with probability derived from RED/WRED slope
+
+        Packets are counted regardless of its ECN codepoint";
+    }
+
+    leaf ecn-selected-octets {
+      type oc-yang:counter64;
+      description
+        "Number of octets of packets selected by AQM
+
+        For RED/WRED AQM this counter counts:
+        - all octets enqueued while queue utilization was greater then max-threshold
+        - octets enqueued while queue utilization was between min-threshold and max-threshold, with probability derived from RED/WRED slope
+
+        Octets are counted regardless of its ECN codepoint";
+    }
+  }
+
+  grouping qos-interface-queue-top {
+    description
+      "Top-level grouping for the queue associated with the
+      interface";
+
+    container queues {
+      description
+        "Surrounding container for a list of queues that are
+        instantiated on an interface.";
+
+      list queue {
+        key "name";
+
+        description
+          "Top-level container for the queue associated with this
+          interface";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name of the queue
+            instantiated on the interface.";
+        }
+
+        container config {
+          description
+            "Configuration data for the queue associated with the
+            interface";
+
+          uses qos-interface-queue-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for the queue associated with the
+            interface";
+
+          uses qos-interface-queue-config;
+          uses qos-interface-queue-state;
+        }
+      }
+    }
+  }
+
+  grouping qos-interface-queue-root-top {
+    description
+      "Top-level grouping for the queue associated with the
+      interface - used only for /qos/interfaces/interface rather
+      than in multiple contexts.";
+
+    container queues {
+      description
+        "Surrounding container for a list of queues that are
+        instantiated on an interface.";
+
+      list queue {
+        key "name";
+
+        description
+          "Top-level container for the queue associated with this
+          interface";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name of the queue
+            instantiated on the interface.";
+        }
+
+        container config {
+          description
+            "Configuration data for the queue associated with the
+            interface";
+
+          uses qos-interface-queue-config;
+          uses qos-interface-queue-root-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for the queue associated with the
+            interface";
+
+          uses qos-interface-queue-config;
+          uses qos-interface-queue-root-config;
+          uses qos-interface-queue-state;
+        }
+      }
+    }
+  }
+
+  grouping qos-interface-voqs-top {
+    description
+      "Structural grouping of virtual-output-queue operational state
+      for an interface.";
+
+    container virtual-output-queues {
+      description
+        "Surrounding container for the list of egress interfaces
+        for which virtual output queues are instantiated on this
+        interface.";
+
+      list voq-interface {
+        key "name";
+
+        description
+          "List of egress interfaces for which a virtual output
+          queue is instantiated at this interface.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Name used to refer to the egress interface.";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to the interface
+            for which the VOQs are instantiated.";
+          uses qos-voqs-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the interface
+            for which the VOQs are instantiated.";
+          uses qos-voqs-config;
+        }
+
+        uses qos-interface-queue-top;
+      }
+    }
+  }
+
+  grouping qos-voqs-config {
+    description
+      "Configuration parameters relating to an egress interface for which
+      VOQs are established on an interface.";
+
+    leaf name {
+        type string;
+        description
+          "Name used to refer to the egress interface.";
+    }
+  }
+
+  grouping qos-interface-scheduler-policy-config {
+    description
+      "Configuration data for schedulers associated with
+      the interface";
+
+    leaf name {
+      type leafref {
+        // current loc:
+        // /qos/interfaces/interface/input/schedulers/scheduler/config/name
+        path "../../../../../../scheduler-policies/scheduler-policy/" +
+             "config/name";
+      }
+      description
+        "The scheduler policy to be applied to traffic on this interface.";
+    }
+  }
+
+  grouping qos-interface-scheduler-state {
+    description
+      "Operational state data for a scheduler within
+      a scheduler group applied to an interface.";
+
+    leaf sequence {
+      type leafref {
+        // current loc: /qos/interfaces/interface/input/scheduler-policy/
+        // schedulers/scheduler/state/sequence
+        path "../../../../../../../../scheduler-policies/" +
+            "scheduler-policy[name=current()/../../../../config/name]" +
+            "/schedulers/scheduler/config/sequence";
+      }
+      description
+        "Reference to the sequence ID of the scheduler within
+        the current scheduler policy.";
+    }
+
+    uses qos-scheduler-common-state;
+  }
+
+  grouping qos-scheduler-common-state {
+    description
+      "Common definitions of counters used in schedulers.";
+
+    leaf conforming-pkts {
+      type oc-yang:counter64;
+      description
+        "The number of packets that were considered conforming by
+        the scheduler.";
+    }
+
+    leaf conforming-octets {
+      type oc-yang:counter64;
+      description
+        "The number of octets in packets that were considered
+        conforming by the scheduler.";
+    }
+
+    leaf exceeding-pkts {
+      type oc-yang:counter64;
+      description
+        "The number of packets that were considered exceeding by
+        the scheduler.";
+    }
+
+    leaf exceeding-octets {
+      type oc-yang:counter64;
+      description
+        "The number of octets in packets that were considered
+        exceeding by the scheduler.";
+    }
+
+    leaf violating-pkts {
+      type oc-yang:counter64;
+      description
+        "The number of packets that were considered violating by
+        the policer.";
+    }
+
+    leaf violating-octets {
+      type oc-yang:counter64;
+      description
+        "The number of octets in packets that were considered
+        violating by the policer.";
+    }
+  }
+
+  grouping qos-interface-scheduler-top {
+    description
+      "Top-level grouping ";
+
+    container scheduler-policy {
+      description
+        "Scheduler policy associated with the interface.";
+
+      container config {
+        description
+          "Configuration parameters relating to a scheduler policy on
+          an interface.";
+        uses qos-interface-scheduler-policy-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to a scheduler policy
+          on an interface.";
+        uses qos-interface-scheduler-policy-config;
+      }
+
+      container schedulers {
+        config false;
+        description
+          "Schedulers within the applied scheduler-policy.";
+
+        list scheduler {
+          key "sequence";
+          description
+            "List of the schedulers that are part of the scheduler-policy
+            specified.";
+
+          leaf sequence {
+            type leafref {
+              path "../state/sequence";
+            }
+            description
+              "Reference to the sequence ID for the scheduler.";
+          }
+
+          container state {
+            description
+              "Operational state parameters relating to the scheduler
+              policy.";
+
+            uses qos-interface-scheduler-state;
+          }
+        }
+      }
+    }
+  }
+
+  grouping qos-interfaces-config {
+    description
+      "Configuration data for interfaces referenced in the QoS
+      model";
+
+    leaf interface-id {
+      type string;
+      description
+        "Identifier for the interface.";
+    }
+  }
+
+  grouping qos-interfaces-state {
+    description
+      "Operational state data for interfaces referenced in the QoS
+      model";
+
+      // definitions per-interface counters for QoS
+  }
+
+  grouping qos-interface-input-config {
+    description
+      "Configuration data for QoS on ingress interface";
+
+    leaf buffer-allocation-profile {
+      type leafref {
+        // we are at
+        // /qos/interfaces/interface/input/config/buffer-allocation-profile
+        path "../../../../../buffer-allocation-profiles/"  +
+             "buffer-allocation-profile/config/name";
+      }
+      description
+        "The buffer allocation profile that is to be used for the interface.
+        This profile specifies how memory that is available to the interface
+        should be allocated amongst the queues that are instantiated on the
+        interface.
+
+        This reference specifies the policy that should be used for memory
+        allocated to the input (rx) queueing.
+
+        This leaf is used in deployment cases where the operator or system
+        requires common allocation profiles covering unicast and multicast
+        packets.";
+    }
+
+    leaf multicast-buffer-allocation-profile {
+      type leafref {
+        // we are at
+        // /qos/interfaces/interface/input/config/multicast-buffer-allocation-profile
+        path "../../../../../buffer-allocation-profiles/"  +
+             "buffer-allocation-profile/config/name";
+      }
+      description
+        "The buffer allocation profile that is to be used for the interface.
+        This profile specifies how memory that is available to the interface
+        should be allocated amongst the queues that are instantiated on the
+        interface.
+
+        This reference specifies the policy that should be used for memory
+        allocated to the output (tx) queueing.
+
+        This buffer allocation profile applies to only multicast packets on
+        the interface - if specified, the unicast-buffer-allocation-profile
+        governs the allocation profile used for memory dedicated to unicast.
+        If a system does not support, or an operator does not require separate
+        buffer-allocation-profiles, this is specified by use of the
+        buffer-allocation-profile leaf.";
+    }
+
+    leaf unicast-buffer-allocation-profile {
+      type leafref {
+        // we are at
+        // /qos/interfaces/interface/input/config/unicast-buffer-allocation-profile
+        path "../../../../../buffer-allocation-profiles/"  +
+             "buffer-allocation-profile/config/name";
+      }
+      description
+        "The buffer allocation profile that is to be used for the interface.
+        This profile specifies how memory that is available to the interface
+        should be allocated amongst the queues that are instantiated on the
+        interface.
+
+        This reference specifies the policy that should be used for memory
+        allocated to the output (tx) queueing.
+
+        This buffer allocation profile applies to only unicast packets on
+        the interface - if specified, the multicast-buffer-allocation-profile
+        governs the allocation profile used for memory dedicated to multicast.
+        If a system does not support, or an operator does not require separate
+        buffer-allocation-profiles, this is specified by use of the
+        buffer-allocation-profile leaf.";
+    }
+  }
+
+  grouping qos-interface-input-state {
+    description
+      "Operational state data for QoS on ingress interface";
+  }
+
+  grouping qos-interface-input-top {
+    description
+      "Top-level grouping for QoS on ingress interface";
+
+    container input {
+      description
+        "Top-level container for QoS data for the ingress
+        interface";
+
+      container config {
+        description
+          "Configuration data for QoS on ingress interface";
+
+        uses qos-interface-input-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for QoS on ingress interface";
+
+        uses qos-interface-input-config;
+        uses qos-interface-input-state;
+      }
+
+      uses qos-interface-classifier-top;
+      uses qos-interface-queue-root-top;
+      uses qos-interface-scheduler-top;
+      uses qos-interface-voqs-top;
+    }
+  }
+
+  grouping qos-interface-output-config {
+    description
+      "Configuration data for QoS on the egress interface";
+
+    leaf buffer-allocation-profile {
+      type leafref {
+        // we are at
+        // /qos/interfaces/interface/output/config/buffer-allocation-profile
+        path "../../../../../buffer-allocation-profiles/"  +
+             "buffer-allocation-profile/config/name";
+      }
+      description
+        "The buffer allocation profile that is to be used for the interface.
+        This profile specifies how memory that is available to the interface
+        should be allocated amongst the queues that are instantiated on the
+        interface.
+
+        This reference specifies the policy that should be used for memory
+        allocated to the output (tx) queueing.
+
+        This leaf is used in deployment cases where the operator or system
+        requires common allocation profiles covering unicast and multicast
+        packets.";
+    }
+
+    leaf multicast-buffer-allocation-profile {
+      type leafref {
+        // we are at
+        // /qos/interfaces/interface/output/config/buffer-allocation-profile
+        path "../../../../../buffer-allocation-profiles/"  +
+             "buffer-allocation-profile/config/name";
+      }
+      description
+        "The buffer allocation profile that is to be used for the interface.
+        This profile specifies how memory that is available to the interface
+        should be allocated amongst the queues that are instantiated on the
+        interface.
+
+        This reference specifies the policy that should be used for memory
+        allocated to the output (tx) queueing.
+
+        This buffer allocation profile applies to only multicast packets on
+        the interface - if specified, the unicast-buffer-allocation-profile
+        governs the allocation profile used for memory dedicated to unicast.
+        If a system does not support, or an operator does not require separate
+        buffer-allocation-profiles, this is specified by use of the
+        buffer-allocation-profile leaf.";
+    }
+
+    leaf unicast-buffer-allocation-profile {
+      type leafref {
+        // we are at
+        // /qos/interfaces/interface/output/config/buffer-allocation-profile
+        path "../../../../../buffer-allocation-profiles/"  +
+             "buffer-allocation-profile/config/name";
+      }
+      description
+        "The buffer allocation profile that is to be used for the interface.
+        This profile specifies how memory that is available to the interface
+        should be allocated amongst the queues that are instantiated on the
+        interface.
+
+        This reference specifies the policy that should be used for memory
+        allocated to the output (tx) queueing.
+
+        This buffer allocation profile applies to only unicast packets on
+        the interface - if specified, the multicast-buffer-allocation-profile
+        governs the allocation profile used for memory dedicated to multicast.
+        If a system does not support, or an operator does not require separate
+        buffer-allocation-profiles, this is specified by use of the
+        buffer-allocation-profile leaf.";
+    }
+  }
+
+  grouping qos-interface-output-state {
+    description
+      "Operational state data for QoS on the egress interface";
+  }
+
+  grouping qos-interface-output-top {
+    description
+      "Top-level grouping for QoS on the egress interface";
+
+    container output {
+      description
+        "Top-level container for QoS data related to the egress
+        interface.";
+
+      container config {
+        description
+          "Configuration data for QoS on the egress interface";
+
+        uses qos-interface-output-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for QoS on the egress interface";
+
+        uses qos-interface-output-config;
+        uses qos-interface-output-state;
+      }
+
+      uses qos-interface-classifier-top;
+      uses qos-interface-queue-root-top;
+      uses qos-interface-scheduler-top;
+    }
+  }
+
+  grouping qos-interfaces-top {
+    description
+      "Top-level grouping for interfaces referenced in the QoS
+      model";
+
+    container interfaces {
+      description
+        "Enclosing container for the list of interface references";
+
+      list interface {
+        key "interface-id";
+        description
+          "List of interfaces referenced by QoS entities.
+
+           The interface referenced is based on the interface and
+           subinterface leaves within the interface-ref container -
+           which reference an entry in the /interfaces/interface list -
+           and should not rely on the value of the list key.";
+
+        leaf interface-id {
+          type leafref {
+            path "../config/interface-id";
+          }
+          description
+            "Reference to the interface-id list key";
+        }
+
+        container config {
+          description
+            "Configuration data ";
+
+          uses qos-interfaces-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data ";
+
+          uses qos-interfaces-config;
+          uses qos-interfaces-state;
+        }
+
+        uses oc-if:interface-ref;
+        uses qos-interface-input-top;
+        uses qos-interface-output-top;
+      }
+    }
+  }
+
+}

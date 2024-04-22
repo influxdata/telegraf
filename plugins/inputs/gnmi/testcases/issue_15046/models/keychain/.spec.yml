@@ -1,0 +1,7 @@
+- name: openconfig-keychain
+  docs:
+    - yang/keychain/openconfig-keychain-types.yang
+    - yang/keychain/openconfig-keychain.yang
+  build:
+    - yang/keychain/openconfig-keychain.yang
+  run-ci: true

@@ -1,0 +1,833 @@
+module openconfig-relay-agent {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/relay-agent";
+
+  prefix "oc-relay";
+
+  // import some basic types
+  import ietf-inet-types { prefix inet; }
+  import ietf-yang-types { prefix yang; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module describes a model for configuration and operational
+    state related to relay agents typically used for DHCP and BOOTP
+    packets.  The supports both DHCP and DHCPv6 and device-wide and
+    per-interface settings.";
+
+  oc-ext:openconfig-version "0.1.2";
+
+  revision "2023-02-06" {
+    description
+      "Clarify usage of interface-ref.";
+    reference "0.1.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2016-05-16" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+
+  grouping agent-information-ipv4-common-config {
+    description
+      "Common configuration data for DHCP relay option";
+
+    leaf enable {
+      type boolean;
+      default false;
+      description
+        "Enable sending the DHCP option for Relay Agent information
+        -- option 82.";
+      reference
+        "RFC 3046 - DHCP Relay Agent Information Option";
+    }
+  }
+
+  grouping agent-information-ipv4-common-state {
+    description
+      "Common operational state data for DHCP relay option";
+
+  }
+
+  grouping agent-information-ipv4-global-top {
+    description
+      "Top-level grouping for agent information data at global level";
+
+    container agent-information-option {
+      description
+        "Top-level container for relay agent information option
+        data";
+
+      container config {
+        description
+          "Configuration data for the relay agent information
+          option";
+
+        uses agent-information-ipv4-common-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for agent information at global
+          level";
+
+        uses agent-information-ipv4-common-config;
+        uses agent-information-ipv4-common-state;
+      }
+    }
+  }
+
+  grouping agent-information-ipv4-interface-config {
+    description
+      "Configuration data for DCHP relay option on interfaces";
+
+    leaf circuit-id {
+      type string;
+      description
+        "Encodes an agent-local identifier of the circuit from which
+        a DHCP client-to-server packet was received.  It is intended
+        for use by agents in relaying DHCP responses back to the
+        proper circuit.  The circuit id is an opaque value";
+      reference
+        "RFC 3046 - DHCP Relay Agent Information Option";
+    }
+
+    leaf remote-id {
+      type string;
+      description
+        "Provides a mechanism to identify the remote host end of
+        the circuit.  The remote-id should be thought of as an
+        opaque value, but must be globally unique.";
+      reference
+        "RFC 3046 - DHCP Relay Agent Information Option";
+    }
+  }
+
+  grouping agent-information-ipv4-interface-state {
+    description
+      "Operational state data for DHCP relay option on interfaces";
+
+    leaf sent-circuit-id {
+      type string;
+      description
+        "Reports the circuit-id sent by the system to the DHCP
+        server.";
+    }
+
+    leaf sent-remote-id {
+      type string;
+      description
+        "Reports the remote-id value sent by the system to the DHCP
+        server";
+    }
+  }
+
+  grouping agent-information-ipv4-interface-top {
+    description
+      "Top-level grouping for relay agent information option data";
+
+    container agent-information-option {
+      description
+        "Top-level container for relay agent information option
+        data";
+
+      container config {
+        description
+          "Configuration data for the relay agent information
+          option";
+
+        uses agent-information-ipv4-common-config;
+        uses agent-information-ipv4-interface-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data ";
+
+        uses agent-information-ipv4-common-config;
+        uses agent-information-ipv4-interface-config;
+        uses agent-information-ipv4-common-state;
+        uses agent-information-ipv4-interface-state;
+      }
+    }
+  }
+
+  grouping agent-options-ipv6-common-config {
+    description
+      "Configuration data for DHCPv6 options";
+
+    leaf enable-interface-id {
+      type boolean;
+      default false;
+      description
+        "Enables DHCPv6 OPTION_INTERFACE_ID (18) to identify the
+        interface on which the client message was received.";
+      reference
+        "IETF RFC 3315 - Dynamic Host Configuration Protocol for
+        IPv6 (DHCPv6)";
+    }
+
+    leaf enable-remote-id {
+      type boolean;
+      default false;
+      description
+        "Sets DHCPv6 OPTION_REMOTE_ID (37).  This option is the
+        DHCPv6 equivalent for the IPv4 (DHCPv4) Relay Agent Option's
+        Remote-ID suboption as specified in RFC 3046. The remote-id
+        field may be used to encode a user name, remote IP address,
+        interface/port identifier, etc.";
+      reference
+        "IETF RFC 4649 - Dynamic Host Configuration Protocol for
+        IPv6 (DHCPv6) Relay Agent Remote-ID Option";
+    }
+  }
+
+  grouping agent-options-ipv6-common-state {
+    description
+      "Operational state data for DHCPv6 options";
+  }
+
+  grouping agent-options-ipv6-interface-config {
+    description
+      "Configuration data for DHCPv6 options";
+
+    leaf interface-id {
+      type string;
+      description
+        "Sets DHCPv6 OPTION_INTERFACE_ID (18) to identify the
+        interface on which the client message was received.";
+      reference
+        "IETF RFC 3315 - Dynamic Host Configuration Protocol for
+        IPv6 (DHCPv6)";
+    }
+
+    leaf remote-id {
+      type string;
+      description
+        "Sets DHCPv6 OPTION_REMOTE_ID (37).  This option is the
+        DHCPv6 equivalent for the IPv4 (DHCPv4) Relay Agent Option's
+        Remote-ID suboption as specified in RFC 3046. The remote-id
+        field may be used to encode a user name, remote IP address,
+        interface/port identifier, etc.";
+      reference
+        "IETF RFC 4649 - Dynamic Host Configuration Protocol for
+        IPv6 (DHCPv6) Relay Agent Remote-ID Option";
+    }
+  }
+
+  grouping agent-options-ipv6-interface-state {
+    description
+      "Operational state data for DHCPv6 options";
+
+    leaf sent-interface-id {
+      type string;
+      description
+        "Reflects the DHCPv6 OPTION_INTERFACE_ID (18) sent to the
+        server by the system.";
+      reference
+        "IETF RFC 3315 - Dynamic Host Configuration Protocol for
+        IPv6 (DHCPv6)";
+    }
+
+    leaf sent-remote-id {
+      type string;
+      description
+        "Reflects the DHCPv6 OPTION_REMOTE_ID (37) sent to the
+        server by the system.";
+      reference
+        "IETF RFC 4649 - Dynamic Host Configuration Protocol for
+        IPv6 (DHCPv6) Relay Agent Remote-ID Option";
+    }
+  }
+
+  grouping agent-options-ipv6-global-top {
+    description
+      "Top-level grouping for DHCPv6 options on interfaces";
+
+    container options {
+      description
+        "Top-level container for DHCPv6 agent options on interfaces";
+
+      container config {
+        description
+          "Configuration data ";
+
+        uses agent-options-ipv6-common-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for DHCPv6 agent option on an
+          interface";
+
+        uses agent-options-ipv6-common-config;
+        uses agent-options-ipv6-common-state;
+      }
+    }
+  }
+
+  grouping agent-options-ipv6-interface-top {
+    description
+      "Top-level grouping for DHCPv6 options on interfaces";
+
+    container options {
+      description
+        "Top-level container for DHCPv6 agent options on interfaces";
+
+      container config {
+        description
+          "Configuration data ";
+
+        uses agent-options-ipv6-common-config;
+        uses agent-options-ipv6-interface-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for DHCPv6 agent option on an
+          interface";
+
+        uses agent-options-ipv6-common-config;
+        uses agent-options-ipv6-interface-config;
+        uses agent-options-ipv6-common-state;
+        uses agent-options-ipv6-interface-state;
+      }
+    }
+  }
+
+  grouping relay-agent-common-config {
+    description
+      "Configuration data for global level relay agent options,
+      common across address families";
+
+      leaf enable-relay-agent {
+        type boolean;
+        default false;
+        description
+          "Enables DHCP/BOOTP relay agent on all interfaces";
+      }
+  }
+
+  grouping relay-agent-common-state {
+    description
+      "Operational state data for global level relay agent, common
+      across address families";
+  }
+
+  grouping relay-agent-ipv4-config {
+    description
+      "Configuration data for DHCPv4 relay agents";
+
+    uses relay-agent-common-config;
+  }
+
+  grouping relay-agent-ipv4-state {
+    description
+      "Configuration data for DHCPv4 relay agents";
+
+    uses relay-agent-common-state;
+  }
+
+
+  grouping relay-agent-ipv4-top {
+    description
+      "Top-level grouping for global relay agent data";
+
+    container dhcp {
+      description
+        "Top-level container for global relay agent data";
+
+      container config {
+        description
+          "Configuration data for global DHCPv4";
+
+        uses relay-agent-ipv4-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data global DHCPv4";
+
+        uses relay-agent-ipv4-config;
+        uses relay-agent-ipv4-state;
+      }
+
+      uses agent-information-ipv4-global-top;
+      uses relay-agent-ipv4-interfaces-top;
+    }
+  }
+
+  grouping relay-agent-ipv6-config {
+    description
+      "Configuration data for DHCPv6 relay agents";
+
+    uses relay-agent-common-config;
+  }
+
+  grouping relay-agent-ipv6-state {
+    description
+      "Configuration data for DHCPv6 relay agents";
+
+    uses relay-agent-common-state;
+  }
+
+  grouping relay-agent-ipv6-top {
+    description
+      "Top-level grouping for global relay agent data";
+
+    container dhcpv6 {
+      description
+        "Top-level container for global relay agent data";
+
+      container config {
+        description
+          "Configuration data for global DHCPv6";
+
+        uses relay-agent-ipv6-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data global DHCPv6";
+
+        uses relay-agent-ipv6-config;
+        uses relay-agent-ipv6-state;
+      }
+
+      uses agent-options-ipv6-global-top;
+      uses relay-agent-ipv6-interfaces-top;
+    }
+  }
+
+
+  grouping relay-agent-common-stats {
+    description
+      "Common DHCP / BOOTP message statistics for
+      DHCPv4 and DHCPv6";
+
+
+    leaf total-dropped {
+      type yang:counter64;
+      description
+        "Total number of DHCP packets dropped by the relay agent";
+    }
+
+    leaf invalid-opcode {
+      type yang:counter64;
+      description
+        "Number of DHCP packets dropped due to an invalid opcode";
+    }
+
+    leaf invalid-options {
+      type yang:counter64;
+      description
+        "Number of DHCP packets dropped due to an invalid option";
+    }
+  }
+
+  grouping relay-agent-ipv4-stats {
+    description
+      "DHCPv4 relay agent message statistics";
+
+    leaf bootrequest-received {
+      type yang:counter64;
+      description
+        "BOOTREQUEST messages received by the relay agent";
+    }
+
+    leaf dhcp-decline-received {
+      type yang:counter64;
+      description
+        "DHCP DECLINE messages received by the relay agent";
+    }
+
+    leaf dhcp-discover-received {
+      type yang:counter64;
+      description
+        "DHCP DISCOVER messages received by the relay agent";
+    }
+
+    leaf dhcp-inform-received {
+      type yang:counter64;
+      description
+        "DHCP INFORM messages received by the relay agent";
+    }
+
+    leaf dhcp-release-received {
+      type yang:counter64;
+      description
+        "DHCP RELEASE messages received by the relay agent";
+    }
+
+    leaf dhcp-request-received {
+      type yang:counter64;
+      description
+        "DHCP REQUEST messages received by the relay agent";
+    }
+
+    leaf bootrequest-sent {
+      type yang:counter64;
+      description
+        "BOOTREQUEST messages forwarded by the relay agent";
+    }
+
+    leaf bootreply-sent {
+      type yang:counter64;
+      description
+        "BOOTREPLY messages forwarded by the relay agent";
+    }
+
+    leaf dhcp-offer-sent {
+      type yang:counter64;
+      description
+        "DHCP OFFER messages sent by the relay agent";
+    }
+
+    leaf dhcp-ack-sent {
+      type yang:counter64;
+      description
+        "DHCP ACK messages sent by the relay agent";
+    }
+
+    leaf dhcp-nack-sent {
+      type yang:counter64;
+      description
+        "DHCP NACK messages sent by the relay agent";
+    }
+  }
+
+  grouping relay-agent-ipv6-stats {
+    description
+      "DHCPv4 relay agent message statistics";
+
+    leaf dhcpv6-solicit-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 SOLICIT messages received from clients
+        by the relay agent";
+    }
+
+    leaf dhcpv6-decline-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 DECLINE messages received from
+        clients by the relay agent";
+    }
+
+    leaf dhcpv6-request-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 request messages received from clients
+        by the relay agent";
+    }
+
+    leaf dhcpv6-release-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 release messages received from clients
+        by the relay agent";
+    }
+
+    leaf dhcpv6-confirm-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 confirm messages received from clients
+        by the relay agent";
+    }
+
+    leaf dhcpv6-rebind-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 rebind messages received from clients
+        by the relay agent";
+    }
+
+    leaf dhcpv6-info-request-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 information requests messages received from
+        clients by the relay agent";
+    }
+
+    leaf dhcpv6-relay-reply-received {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 relay reply messages received from servers
+        by the relay agent";
+    }
+
+    leaf dhcpv6-adverstise-sent {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 adverstise messages sent to clients by
+        the relay agent";
+    }
+
+    leaf dhcpv6-reply-sent {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 reply messages sent to clients by
+        the relay agent";
+    }
+
+    leaf dhcpv6-reconfigure-sent {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 reconfigure messages sent to clients by
+        the relay agent";
+    }
+
+    leaf dhcpv6-relay-forw-sent {
+      type yang:counter64;
+      description
+        "Number of DHCPv6 relay-forward messages sent to servers
+        by the relay agent";
+    }
+
+  }
+
+  grouping relay-agent-ipv4-interfaces-config {
+    description
+      "Configuration data for interfaces enabled for relaying";
+
+    leaf id {
+      type oc-if:interface-id;
+      description
+        "Name of the interface on which relay agent is active";
+    }
+
+    leaf enable {
+      type boolean;
+      description
+        "Enables the relay agent on the referenced interface.
+        At least one helper address should also be configured
+        for forwarding requested.";
+    }
+
+    leaf-list helper-address {
+      type inet:ip-address;
+      description
+        "List of IPv4 or IPv6 addresses of DHCP servers to which the
+        relay agent should forward DHCPv4 requests.  The relay agent is
+        expected to forward DHCPv4/BOOTP requests to all listed
+        server addresses when DHCPv4 relaying is enabled globally, or
+        on the interface.";
+    }
+  }
+
+  grouping relay-agent-ipv4-interfaces-state {
+    description
+      "Operational state data for interfaces enabled for relaying";
+
+    container counters {
+      description
+        "Counters and statistics for relay agent operation.";
+
+      uses relay-agent-common-stats;
+      uses relay-agent-ipv4-stats;
+    }
+  }
+
+  grouping relay-agent-ipv4-interfaces-top {
+    description
+      "Top-level grouping for DHCPv4 relays on interfaces";
+
+    container interfaces {
+      description
+        "Enclosing container for the list of interface references.";
+
+      list interface {
+        key "id";
+        description
+          "List of interfaces on which the relay agent is
+           configured.
+
+           The interface referenced is based on the interface and
+           subinterface leaves within the interface-ref container -
+           which reference an entry in the /interfaces/interface list -
+           and should not rely on the value of the list key.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "Reference to the interface list key";
+        }
+
+        container config {
+          description
+            "Configuration data for relay agent interfaces.";
+
+          uses relay-agent-ipv4-interfaces-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for relay agent interfaces.";
+
+          uses relay-agent-ipv4-interfaces-config;
+          uses relay-agent-ipv4-interfaces-state;
+        }
+
+        uses oc-if:interface-ref;
+        uses agent-information-ipv4-interface-top;
+      }
+    }
+  }
+
+  grouping relay-agent-ipv6-interfaces-config {
+    description
+      "Configuration data for interfaces enabled for relaying";
+
+    leaf id {
+      type oc-if:interface-id;
+      description
+        "Name of the interface on which relay agent is active";
+    }
+
+    leaf enable {
+      type boolean;
+      description
+        "Enables the relay agent on the referenced interface.
+        At least one helper address should also be configured
+        for forwarding requested.";
+    }
+
+    leaf-list helper-address {
+      type inet:ipv6-address;
+      description
+        "List of IPv6 addresses of DHCP servers to which the
+        relay agent should forward DHCPv6 requests.  The relay agent
+        is expected to forward DHCPv4/BOOTP requests to all listed
+        server addresses when DHCPv6 relaying is enabled globally, or
+        on the interface.";
+    }
+  }
+
+  grouping relay-agent-ipv6-interfaces-state {
+    description
+      "Operational state data for interfaces enabled for relaying";
+
+    container counters {
+      description
+        "Counters and statistics for relay agent operation.";
+
+      uses relay-agent-common-stats;
+      uses relay-agent-ipv6-stats;
+    }
+  }
+
+  grouping relay-agent-ipv6-interfaces-top {
+    description
+      "Top-level grouping for DHCPv4 relays on interfaces";
+
+    container interfaces {
+      description
+        "Enclosing container for the list of interface references.";
+
+      list interface {
+        key "id";
+        description
+          "List of interfaces on which the relay agent is
+           configured.
+
+           The interface referenced is based on the interface and
+           subinterface leaves within the interface-ref container -
+           which reference an entry in the /interfaces/interface list -
+           and should not rely on the value of the list key.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "Reference to the interface list key";
+        }
+
+        container config {
+          description
+            "Configuration data for relay agent interfaces.";
+
+          uses relay-agent-ipv6-interfaces-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state data for relay agent interfaces.";
+
+          uses relay-agent-ipv6-interfaces-config;
+          uses relay-agent-ipv6-interfaces-state;
+        }
+
+        uses oc-if:interface-ref;
+        uses agent-options-ipv6-interface-top;
+      }
+    }
+  }
+
+  grouping relay-agent-top {
+    description
+      "Top-level container for relay agent configuration and opstate
+      data.";
+
+    container relay-agent {
+      description
+        "Top level container for relay-agent configuration and
+        operational state data";
+
+      uses relay-agent-ipv4-top;
+      uses relay-agent-ipv6-top;
+    }
+  }
+
+  // data definition statements
+
+  uses relay-agent-top;
+
+  // augment statements
+
+
+}

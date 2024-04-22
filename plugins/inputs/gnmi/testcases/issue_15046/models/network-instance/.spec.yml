@@ -1,0 +1,24 @@
+- name: openconfig-network-instance
+  docs:
+    - yang/aft/openconfig-aft-network-instance.yang
+    - yang/aft/openconfig-aft-summary.yang
+    - yang/network-instance/openconfig-evpn-types.yang
+    - yang/network-instance/openconfig-evpn.yang
+    - yang/network-instance/openconfig-network-instance-types.yang
+    - yang/network-instance/openconfig-network-instance.yang
+    - yang/network-instance/openconfig-programming-errors.yang
+    - yang/segment-routing/openconfig-rsvp-sr-ext.yang
+    - yang/segment-routing/openconfig-segment-routing.yang
+    - yang/rib/openconfig-rib-bgp-ext.yang
+
+  build:
+    - yang/aft/openconfig-aft-network-instance.yang
+    - yang/aft/openconfig-aft-summary.yang
+    - yang/network-instance/openconfig-network-instance.yang
+    - yang/network-instance/openconfig-programming-errors.yang
+    - yang/segment-routing/openconfig-rsvp-sr-ext.yang
+  run-ci: true
+- name: openconfig-network-instance-bgp-rib-augment
+  build:
+    - yang/network-instance/openconfig-network-instance.yang
+    - yang/rib/openconfig-rib-bgp-ext.yang

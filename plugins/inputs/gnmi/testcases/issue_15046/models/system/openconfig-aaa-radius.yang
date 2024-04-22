@@ -1,0 +1,205 @@
+submodule openconfig-aaa-radius {
+
+  yang-version "1";
+
+  belongs-to "openconfig-aaa" {
+    prefix "oc-aaa";
+  }
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-aaa-types { prefix oc-aaa-types; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-yang-types { prefix oc-yang; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    related to the RADIUS protocol for authentication,
+    authorization, and accounting.";
+
+  oc-ext:openconfig-version "1.0.0";
+
+  revision "2022-07-29" {
+    description
+      "Update user role to be mandatory.";
+      reference "1.0.0";
+  }
+
+  revision "2020-07-30" {
+    description
+      "Add secret-key-hashed.";
+    reference "0.5.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.1";
+  }
+
+  revision "2017-09-18" {
+    description
+      "Updated to use OpenConfig types modules";
+    reference "0.3.0";
+  }
+
+  revision "2017-07-06" {
+    description
+      "Move to oc-inet types, add IETF attribution, add RADIUS
+      counters, changed password leaf names to indicate hashed";
+    reference "0.2.0";
+  }
+
+  revision "2017-01-29" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity RADIUS {
+    base oc-aaa-types:AAA_SERVER_TYPE;
+    description
+      "Remote Authentication Dial In User Service (RADIUS) AAA
+      server";
+    reference
+      "RFC 2865 - Remote Authentication Dial In User Service
+      (RADIUS)";
+  }
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping aaa-radius-server-config {
+    description
+      "Configuration data for a RADIUS server";
+
+    leaf auth-port {
+      type oc-inet:port-number;
+      default 1812;
+      description
+        "Port number for authentication requests";
+    }
+
+    leaf acct-port {
+      type oc-inet:port-number;
+      default 1813;
+      description
+        "Port number for accounting requests";
+    }
+
+    leaf secret-key {
+      type oc-types:routing-password;
+      description
+        "The unencrypted shared key used between the authentication
+        server and the device.";
+    }
+
+    leaf secret-key-hashed {
+      type oc-aaa-types:crypt-password-type;
+      description
+        "The hashed shared key used between the authentication
+        server and the device.";
+    }
+
+    leaf source-address {
+      type oc-inet:ip-address;
+      description
+        "Source IP address to use in messages to the RADIUS server";
+    }
+
+    leaf retransmit-attempts {
+      type uint8;
+      description
+        "Number of times the system may resend a request to the
+        RADIUS server when it is unresponsive";
+    }
+  }
+
+  grouping aaa-radius-server-state {
+    description
+      "Operational state data for a RADIUS server";
+
+    container counters {
+      description
+        "A collection of RADIUS related state objects.";
+
+      leaf retried-access-requests {
+        type oc-yang:counter64;
+        description
+          "Retransmitted Access-Request messages.";
+      }
+
+      leaf access-accepts {
+        type oc-yang:counter64;
+        description
+          "Received Access-Accept messages.";
+      }
+
+      leaf access-rejects {
+        type oc-yang:counter64;
+        description
+          "Received Access-Reject messages.";
+      }
+
+      leaf timeout-access-requests {
+        type oc-yang:counter64;
+        description
+          "Access-Request messages that have timed-out,
+          requiring retransmission.";
+      }
+    }
+  }
+
+  grouping aaa-radius-server-top {
+    description
+      "Top-level grouping for RADIUS server data";
+
+    container radius {
+      description
+        "Top-level container for RADIUS server data";
+
+      container config {
+        description
+          "Configuration data for RADIUS servers";
+
+        uses aaa-radius-server-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for RADIUS servers";
+
+        uses aaa-radius-server-config;
+        uses aaa-radius-server-state;
+      }
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+
+}

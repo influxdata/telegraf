@@ -1,0 +1,283 @@
+module openconfig-vlan-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/vlan-types";
+
+  prefix "oc-vlan-types";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module defines configuration and state variables for VLANs,
+    in addition to VLAN parameters associated with interfaces";
+
+  oc-ext:openconfig-version "3.2.0";
+
+  revision "2022-05-24" {
+    description
+      "Remove module extension oc-ext:regexp-posix by making pattern regexes
+      conform to RFC6020/7950.
+
+      Types impacted:
+      - vlan-range
+      - qinq-id
+      - qinq-id-range";
+    reference "3.2.0";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions.";
+    reference "3.1.1";
+  }
+
+  revision "2019-01-31" {
+    description
+      "Add TPID_ANY wildcard match and a QinQ list type.";
+    reference "3.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.0.1";
+  }
+
+  revision "2018-02-14" {
+    description
+      "Fix bug with name of 802.1ad identity.";
+    reference "3.0.0";
+  }
+
+  revision "2017-07-14" {
+    description
+      "Move top-level vlan data to network-instance; Update
+      identities to comply to style guide; fixed pattern
+      quoting; corrected trunk vlan types; added TPID config to
+      base interface.";
+    reference "2.0.0";
+  }
+
+  revision "2016-05-26" {
+    description
+      "OpenConfig public release";
+    reference "1.0.2";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity TPID_TYPES {
+    description
+      "Base identity for TPID values that can be matched or that override
+       the VLAN ethertype value";
+  }
+
+  identity TPID_0X8100 {
+    base TPID_TYPES;
+    description
+      "Default TPID value for 802.1q single-tagged VLANs.";
+  }
+
+  identity TPID_0X88A8 {
+    base TPID_TYPES;
+    description
+      "TPID value for 802.1ad provider bridging, QinQ or
+       stacked VLANs.";
+  }
+
+  identity TPID_0X9100 {
+    base TPID_TYPES;
+    description
+      "Alternate TPID value.";
+  }
+
+  identity TPID_0X9200 {
+    base TPID_TYPES;
+    description
+      "Alternate TPID value.";
+  }
+
+  identity TPID_ANY {
+    base TPID_TYPES;
+    description
+      "A wildcard that matches any of the generally used TPID values
+       for singly- or multiply-tagged VLANs. Equivalent to matching
+       any of TPID_0X8100, TPID_0X88A8, TPID_0X9100 and TPID_0x9200.
+       This value is only applicable where the TPID of a packet is
+       being matched.";
+  }
+
+  // typedef statements
+
+  // TODO: typedefs should be defined in a vlan-types.yang file.
+  typedef vlan-id {
+    type uint16 {
+      range 1..4094;
+    }
+    description
+      "Type definition representing a single-tagged VLAN";
+  }
+
+  typedef vlan-range {
+    type string {
+      // range specified as [lower]..[upper]
+      pattern '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'       +
+              '[1-9][0-9]{1,2}|[1-9])\.\.(409[0-4]|'       +
+              '40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{1,2}|' +
+              '[1-9])';
+      oc-ext:posix-pattern '^(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'       +
+              '[1-9][0-9]{1,2}|[1-9])\.\.(409[0-4]|'       +
+              '40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{1,2}|' +
+              '[1-9])$';
+    }
+    description
+      "Type definition representing a range of single-tagged
+      VLANs. A range is specified as x..y where x and y are
+      valid VLAN IDs (1 <= vlan-id <= 4094). The range is
+      assumed to be inclusive, such that any VLAN-ID matching
+      x <= VLAN-ID <= y falls within the range.";
+  }
+
+  typedef qinq-id {
+    type string {
+      pattern
+        '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'       +
+        '[1-9][0-9]{1,2}|[1-9])\.'                    +
+        '((409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'      +
+        '[1-9][0-9]{1,2}|[1-9])|\*)';
+      oc-ext:posix-pattern
+        '^(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'       +
+        '[1-9][0-9]{1,2}|[1-9])\.'                    +
+        '((409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'      +
+        '[1-9][0-9]{1,2}|[1-9])|\*)$';
+    }
+    description
+      "Type definition representing a single double-tagged/QinQ VLAN
+      identifier. The format of a QinQ VLAN-ID is x.y where X is the
+      'outer' VLAN identifier, and y is the 'inner' VLAN identifier.
+      Both x and y must be valid VLAN IDs (1 <= vlan-id <= 4094)
+      with the exception that y may be equal to a wildcard (*). In
+      cases where y is set to the wildcard, this represents all inner
+      VLAN identifiers where the outer VLAN identifier is equal to
+      x.";
+  }
+
+  typedef qinq-id-range {
+    type union {
+      type string {
+        // match cases where the range is specified as x..y.z
+        pattern
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])\.\.'               +
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])\.'                 +
+          '((409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'   +
+          '[1-9][0-9]{1,2}|[1-9])|\*)';
+        oc-ext:posix-pattern
+          '^(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])\.\.'               +
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])\.'                 +
+          '((409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'   +
+          '[1-9][0-9]{1,2}|[1-9])|\*)$';
+      }
+      type string {
+        // match cases where the range is specified as x.y..z
+        pattern
+          '(\*|(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9]))\.'                 +
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])\.\.'               +
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])';
+        oc-ext:posix-pattern
+          '^(\*|(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9]))\.'                 +
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])\.\.'               +
+          '(409[0-4]|40[0-8][0-9]|[1-3][0-9]{3}|'    +
+          '[1-9][0-9]{1,2}|[1-9])$';
+      }
+    }
+    description
+      "A type definition representing a range of double-tagged/QinQ
+      VLAN identifiers. The format of a QinQ VLAN-ID range can be
+      specified in two formats. Where the range is outer VLAN IDs
+      the range is specified as x..y.z. In this case outer VLAN
+      identifiers meeting the criteria x <= outer-vlan-id <= y are
+      accepted if and only if the inner VLAN-ID is equal to y - or
+      any inner-tag if the wildcard is specified. Alternatively the
+      ange can be specified as x.y..z. In this case only VLANs with an
+      outer-vlan-id qual to x are accepted (x may again be the
+      wildcard). Inner VLANs are accepted if they meet the inequality
+      y <= inner-vlan-id <= z.";
+  }
+
+  typedef vlan-mode-type {
+    type enumeration {
+      enum ACCESS {
+        description "Access mode VLAN interface (No 802.1q header)";
+      }
+      enum TRUNK {
+        description "Trunk mode VLAN interface";
+      }
+    }
+    description
+      "VLAN interface mode (trunk or access)";
+  }
+
+  typedef vlan-ref {
+    type union {
+      type vlan-id;
+      type string;
+      // TODO: string should be changed to leafref to reference
+      // an existing VLAN.  this is not allowed in YANG 1.0 but
+      // is expected to be in YANG 1.1.
+      // type leafref {
+      //  path "vlan:vlans/vlan:vlan/vlan:config/vlan:name";
+      // }
+    }
+    description
+      "Reference to a VLAN by name or id";
+  }
+
+  typedef vlan-stack-action {
+    type enumeration {
+      enum PUSH {
+        description
+          "Push a VLAN onto the VLAN stack.";
+      }
+      enum POP {
+        description
+          "Pop a VLAN from the VLAN stack.";
+      }
+      enum SWAP {
+        description
+          "Swap the VLAN at the top of the VLAN stack.";
+      }
+      // TODO: add push-push, pop-pop, push-swap etc
+    }
+    description
+      "Operations that can be performed on a VLAN stack.";
+  }
+
+
+}

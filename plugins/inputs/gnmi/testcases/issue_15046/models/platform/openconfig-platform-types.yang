@@ -1,0 +1,541 @@
+module openconfig-platform-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform-types";
+
+  prefix "oc-platform-types";
+
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines data types (e.g., YANG identities)
+    to support the OpenConfig component inventory model.";
+
+  oc-ext:openconfig-version "1.6.0";
+
+  revision "2023-06-27" {
+    description
+      "Add WIFI_ACCESS_POINT";
+    reference "1.6.0";
+  }
+
+  revision "2022-07-28" {
+    description
+      "Add grouping for component power management";
+    reference "1.5.0";
+  }
+
+  revision "2022-03-27" {
+    description
+      "Add identity for BIOS";
+    reference "1.4.0";
+  }
+
+  revision "2022-02-02" {
+    description
+      "Add support for component reboot and switchover.";
+    reference "1.3.0";
+  }
+
+  revision "2021-07-29" {
+    description
+      "Add several avg-min-max-instant-stats groupings";
+    reference "1.2.0";
+  }
+
+  revision "2021-01-18" {
+    description
+      "Add identity for software modules";
+    reference "1.1.0";
+  }
+
+  revision "2019-06-03" {
+    description
+      "Add OpenConfig component operating system patch type.";
+    reference "1.0.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.10.1";
+  }
+
+  revision "2018-11-16" {
+    description
+      "Added FEC_MODE_TYPE and FEC_STATUS_TYPE";
+    reference "0.10.0";
+  }
+
+  revision "2018-05-05" {
+    description
+      "Added min-max-time to
+      avg-min-max-instant-stats-precision1-celsius,
+      added new CONTROLLER_CARD identity";
+    reference "0.9.0";
+  }
+
+  revision "2018-01-16" {
+    description
+      "Added new per-component common data; add temp alarm";
+    reference "0.8.0";
+  }
+
+  revision "2017-12-14" {
+    description
+      "Added anchor containers for component data, added new
+      component types";
+    reference "0.7.0";
+  }
+
+  revision "2017-08-16" {
+    description
+      "Added power state enumerated type";
+    reference "0.6.0";
+  }
+
+  revision "2016-12-22" {
+    description
+      "Added temperature state variable to component";
+    reference "0.5.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+  grouping avg-min-max-instant-stats-precision1-celsius {
+    description
+      "Common grouping for recording temperature values in
+      Celsius with 1 decimal precision. Values include the
+      instantaneous, average, minimum, and maximum statistics";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The arithmetic mean value of the statistic over the
+        sampling period.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The minimum value of the statistic over the sampling
+        period";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The maximum value of the statistic over the sampling
+        period";
+    }
+
+    uses oc-types:stat-interval-state;
+    uses oc-types:min-max-time;
+  }
+
+  grouping avg-min-max-instant-stats-precision2-volts {
+    description
+      "Common grouping for recording voltage values in
+      volts with 2 decimal precision. Values include the
+      instantaneous, average, minimum, and maximum statistics.
+      If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the
+      minimum and maximum values occurred, are also reported.";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units volts;
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units volts;
+      description
+        "The arithmetic mean value of the statistic over the
+        sampling period.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units volts;
+      description
+        "The minimum value of the statistic over the sampling
+        period";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units volts;
+      description
+        "The maximum value of the statistic over the sampling
+        period";
+    }
+
+    uses oc-types:stat-interval-state;
+    uses oc-types:min-max-time;
+  }
+
+  grouping component-redundant-role-switchover-reason {
+    description
+      "Common grouping for recording the reason of a component's
+      redundant role switchover. For example two supervisors in
+      a device, one as primary the other as secondary, switchover
+      can happen in different scenarios, e.g. user requested,
+      system error, priority contention, etc.";
+
+    leaf trigger {
+      type component-redundant-role-switchover-reason-trigger;
+      description
+        "Records the generic triggers, e.g. user or system
+        initiated the switchover.";
+    }
+
+    leaf details {
+      type string;
+      description
+        "Records detailed description of why the switchover happens.
+        For example, when system initiated the switchover, this leaf
+        can be used to record the specific reason, e.g. due to critical
+        errors of the routing daemon in the primary role.";
+    }
+  }
+
+  // identity statements
+  identity OPENCONFIG_HARDWARE_COMPONENT {
+    description
+      "Base identity for hardware related components in a managed
+      device.  Derived identities are partially based on contents
+      of the IANA Entity MIB.";
+    reference
+      "IANA Entity MIB and RFC 6933";
+  }
+
+  identity OPENCONFIG_SOFTWARE_COMPONENT {
+    description
+      "Base identity for software-related components in a managed
+      device";
+  }
+
+  // hardware types
+  identity CHASSIS {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Chassis component, typically with multiple slots / shelves";
+  }
+
+  identity BACKPLANE {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Backplane component for aggregating traffic, typically
+      contained in a chassis component";
+  }
+
+  identity FABRIC {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Interconnect between ingress and egress ports on the
+      device (e.g., a crossbar switch).";
+  }
+
+  identity POWER_SUPPLY {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Component that is supplying power to the device";
+  }
+
+  identity FAN {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Cooling fan, or could be some other heat-reduction component";
+  }
+
+  identity SENSOR {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Physical sensor, e.g., a temperature sensor in a chassis";
+  }
+
+  identity FRU {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Replaceable hardware component that does not have a more
+      specific defined schema.";
+  }
+
+  identity LINECARD {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Linecard component, typically inserted into a chassis slot";
+  }
+
+  identity CONTROLLER_CARD {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "A type of linecard whose primary role is management or control
+      rather than data forwarding.";
+  }
+
+  identity PORT {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Physical port, e.g., for attaching pluggables and networking
+      cables";
+  }
+
+  identity TRANSCEIVER {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Pluggable module present in a port";
+  }
+
+  identity CPU {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "Processing unit, e.g., a management processor";
+  }
+
+  identity STORAGE {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "A storage subsystem on the device (disk, SSD, etc.)";
+  }
+
+  identity INTEGRATED_CIRCUIT {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "A special purpose processing unit, typically for traffic
+      switching/forwarding (e.g., switching ASIC, NPU, forwarding
+      chip, etc.)";
+  }
+
+  identity WIFI_ACCESS_POINT {
+    base OPENCONFIG_HARDWARE_COMPONENT;
+    description
+      "A device that attaches to a an Ethernet network and creates a wireless
+       local area network";
+  }
+
+  identity OPERATING_SYSTEM {
+    base OPENCONFIG_SOFTWARE_COMPONENT;
+    description
+      "Operating system running on a component";
+  }
+
+  identity OPERATING_SYSTEM_UPDATE {
+    base OPENCONFIG_SOFTWARE_COMPONENT;
+    description
+      "An operating system update - which should be a subcomponent
+      of the `OPERATING_SYSTEM` running on a component. An update is
+      defined to be a set of software changes that are atomically
+      installed (and uninstalled) together. Multiple updates may be
+      present for the Operating System. A system should not list all
+      installed software packages using this type -- but rather
+      updates that are bundled together as a single installable
+      item";
+  }
+
+  identity BIOS {
+    base OPENCONFIG_SOFTWARE_COMPONENT;
+    description
+      "Legacy BIOS or UEFI firmware interface responsible for
+      initializing hardware components and first stage boot loader.";
+  }
+
+  identity BOOT_LOADER {
+    base OPENCONFIG_SOFTWARE_COMPONENT;
+    description
+      "Software layer responsible for loading and booting the
+      device OS or network OS.";
+  }
+
+  identity SOFTWARE_MODULE {
+    base OPENCONFIG_SOFTWARE_COMPONENT;
+    description
+      "A base identity for software modules installed and/or
+      running on the device.  Modules include user-space programs
+      and kernel modules that provide specific functionality.
+      A component with type SOFTWARE_MODULE should also have a
+      module type that indicates the specific type of software module";
+  }
+
+  identity COMPONENT_OPER_STATUS {
+    description
+      "Current operational status of a platform component";
+  }
+
+  identity ACTIVE {
+    base COMPONENT_OPER_STATUS;
+    description
+      "Component is enabled and active (i.e., up)";
+  }
+
+  identity INACTIVE {
+    base COMPONENT_OPER_STATUS;
+    description
+      "Component is enabled but inactive (i.e., down)";
+  }
+
+  identity DISABLED {
+    base COMPONENT_OPER_STATUS;
+    description
+      "Component is administratively disabled.";
+  }
+
+  identity FEC_MODE_TYPE {
+    description
+      "Base identity for FEC operational modes.";
+  }
+
+  identity FEC_ENABLED {
+    base FEC_MODE_TYPE;
+    description
+      "FEC is administratively enabled.";
+  }
+
+  identity FEC_DISABLED {
+    base FEC_MODE_TYPE;
+    description
+      "FEC is administratively disabled.";
+  }
+
+  identity FEC_AUTO {
+    base FEC_MODE_TYPE;
+    description
+      "System will determine whether to enable or disable
+      FEC on a transceiver.";
+  }
+
+  identity FEC_STATUS_TYPE {
+    description
+      "Base identity for FEC operational statuses.";
+  }
+
+  identity FEC_STATUS_LOCKED {
+    base FEC_STATUS_TYPE;
+    description
+      "FEC is operationally locked.";
+  }
+
+  identity FEC_STATUS_UNLOCKED {
+    base FEC_STATUS_TYPE;
+    description
+      "FEC is operationally unlocked.";
+  }
+
+  // typedef statements
+  typedef component-power-type {
+    type enumeration {
+      enum POWER_ENABLED {
+        description
+          "Enable power on the component";
+      }
+      enum POWER_DISABLED {
+        description
+          "Disable power on the component";
+      }
+    }
+    description
+      "A generic type reflecting whether a hardware component
+      is powered on or off";
+  }
+
+  identity COMPONENT_REBOOT_REASON {
+    description
+      "Base entity for component reboot reasons.";
+  }
+
+  identity REBOOT_USER_INITIATED {
+    base COMPONENT_REBOOT_REASON;
+    description
+      "User initiated the reboot of the componenent.";
+  }
+
+  identity REBOOT_POWER_FAILURE {
+    base COMPONENT_REBOOT_REASON;
+    description
+      "The component reboots due to power failure.";
+  }
+
+  identity REBOOT_CRITICAL_ERROR {
+    base COMPONENT_REBOOT_REASON;
+    description
+      "The component reboots due to critical errors.";
+  }
+
+  typedef component-redundant-role {
+    type enumeration {
+      enum PRIMARY {
+        description
+          "Component is acting the primary role.";
+      }
+      enum SECONDARY {
+        description
+          "Component is acting the secondary role.";
+      }
+    }
+    description
+      "A generic type reflecting the component's redundanty role.
+      For example, a device might have dual supervisors components
+      for redundant purpose, with one being the primary and the
+      other secondary.";
+  }
+
+  typedef component-redundant-role-switchover-reason-trigger {
+    type enumeration {
+      enum USER_INITIATED {
+        description
+          "User initiated the switchover, e.g. via command line.";
+      }
+      enum SYSTEM_INITIATED {
+        description
+          "The system initiated the switchover, e.g. due to
+          critical errors in the component of the primar role.";
+      }
+    }
+    description
+      "Records how the role switchover is triggered.";
+  }
+}

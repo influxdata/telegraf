@@ -1,0 +1,115 @@
+module openconfig-system-utilization {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/system-utilization";
+  prefix "oc-sys-util";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-system { prefix oc-sys; }
+  import openconfig-platform { prefix oc-platform; }
+
+  organization
+    "OpenConfig working group";
+  contact
+    "www.openconfig.net";
+
+  description
+    "This module adds configuration and operational state for
+    system wide resource utilization thresholds.";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision "2023-02-13" {
+      description
+        "Add system wide utilization thresholds.";
+      reference
+        "0.1.0";
+  }
+
+  grouping system-resource-utilization-config {
+    description
+      "Configuration data for resource utilization. The configuration added here should
+      apply across all of the components that matches the respective resource.
+      /components/component/*/utilization/resources/resource/name";
+
+
+    leaf name {
+      type string;
+      description
+        "Resource name within the system.";
+    }
+
+    uses oc-platform:resource-utilization-threshold-common;
+  }
+
+  grouping system-resource-utilization-state {
+    description
+      "State data for resource utilization.";
+
+    leaf-list active-component-list {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component/oc-platform:config/oc-platform:name";
+      }
+
+      description
+        "List of references to each component which has this resource.";
+    }
+  }
+
+  grouping system-resource-utilization-top {
+    description
+      "Top level grouping for system wide configuration of resources for
+      all components.";
+
+    container "utilization" {
+      description
+        "System wide resource utilization configuration.";
+
+      container "resources" {
+        description
+          "Enclosing container for the resources in the entire system. The system
+          resource names should be aggregated from the following collections:
+
+          * /components/component/chassis/utilization/resources/resource
+          * /components/component/integrate-circuit/utilization/resources/resource
+          * /components/component/linecard/utilization/resources/resource.";
+
+        list "resource" {
+          key "name";
+          description
+            "The list of all resources across all platform components keyed by
+            resource name.";
+
+          leaf name {
+            type leafref {
+              path "../config/name";
+            }
+            description
+              "References the resource name.";
+          }
+
+          container "config" {
+            description
+              "Configuration data for resource utilization.";
+            uses system-resource-utilization-config;
+          }
+
+          container "state" {
+            config false;
+            description
+              "Operational state data for resource utilization.";
+
+            uses system-resource-utilization-config;
+            uses system-resource-utilization-state;
+          }
+        }
+      }
+    }
+  }
+
+  augment "/oc-sys:system" {
+    description
+      "Add system resource utilization.";
+    uses system-resource-utilization-top;
+  }
+}

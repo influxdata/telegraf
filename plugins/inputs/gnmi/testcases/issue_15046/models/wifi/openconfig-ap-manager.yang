@@ -1,0 +1,299 @@
+module openconfig-ap-manager {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/ap-manager";
+
+  // Assign this module a prefix to be used by other modules, when imported.
+  prefix "ap-manager";
+
+  // Imports
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-wifi-types { prefix oc-wifi; }
+  import openconfig-types { prefix oc-types; }
+
+  // Meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines the top level configuration and state data for a
+    system which manages Access Points.";
+
+  oc-ext:openconfig-version "1.3.1";
+
+  revision "2023-05-26" {
+    description
+      "Add full stop to all descriptions.";
+    reference "1.3.1";
+  }
+
+  revision "2023-01-17" {
+    description
+      "Replace uptime counter with up-time oc-types:timeticks64 timestamp. Sets
+      uptime leaf to deprecated.";
+    reference "1.3.0";
+  }
+
+  revision "2022-05-24" {
+    description
+      "Change pattern regexes to conform to RFC6020/7950.
+
+      Leaf nodes impacted:
+      - country-code
+
+      Fix previous incorrect revision date.";
+    reference "1.2.0";
+  }
+
+  revision "2022-03-24" {
+    description
+      "Update model to support operation in 6 GHz frequency.";
+    reference "1.1.0";
+  }
+
+  revision "2021-08-02" {
+    description
+      "Update model version as it is in production.";
+    reference "1.0.0";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions and add anchors for country-code
+      pattern.";
+    reference "0.1.3";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Update namespace based on new directory structure.";
+    reference "0.1.2";
+  }
+
+  revision "2019-02-25" {
+    description
+      "Added software-version leaf under joined APs.";
+    reference "0.1.1";
+  }
+
+  revision "2018-02-14" {
+    description
+      "Initial version";
+    reference "0.1.0";
+  }
+
+  grouping provision-aps-config {
+    description
+      "Assignment of hostname to an Access Point.";
+
+    leaf mac {
+      type oc-yang:mac-address;
+      description
+        "MAC address of the AP primary Ethernet interface. If AP
+        has multiple Ethernet interfaces, this would be the MAC printed
+        on the unit label and referenced within the management system.
+        Vendors MUST reject attempts to configure this leaf.";
+    }
+
+    leaf hostname {
+      type oc-inet:domain-name;
+      description
+        "Hostname of the Access Point.";
+    }
+
+    leaf country-code {
+      type string {
+        pattern '[A-Z]{2}';
+        oc-ext:posix-pattern '^[A-Z]{2}$';
+      }
+      description
+        "Country code where the AP operates in ISO 3166-1 alpha-2
+        format.";
+    }
+  }
+
+  grouping controller-aps-system-state {
+    description
+      "Grouping for a Controller & AP system state data.";
+
+    leaf mac {
+      type oc-yang:mac-address;
+      description
+        "MAC address of the AP primary Ethernet interface. If AP
+        has multiple Ethernet interfaces, this would be the MAC printed
+        on the unit label and referenced within the management system.
+        Vendors MUST reject attempts to configure this leaf.";
+    }
+
+    leaf hostname {
+      type oc-inet:domain-name;
+      description
+        "Hostname of the Access Point.";
+    }
+
+    leaf opstate {
+      type identityref {
+        base oc-wifi:AP_STATE;
+      }
+      description
+        "The current operational state of the AP.";
+    }
+
+    leaf up-time {
+      type oc-types:timeticks64;
+      units nanoseconds;
+      description
+        "Timestamp when this AP last changed its op-state to 'UP'. The value is
+        the timestamp in nanoseconds relative to the Unix Epoch (Jan 1, 1970
+        00:00:00 UTC).";
+    }
+
+    leaf uptime {
+      type uint32;
+      units seconds;
+      status deprecated;
+      description
+        "Seconds this AP has been in the op-state of 'UP'.";
+    }
+
+    leaf enabled {
+      type boolean;
+      description
+        "Wheather the AP is enabled or disabled.";
+    }
+
+    leaf serial {
+      type string;
+      description
+        "Serial number of the Access Point.";
+    }
+
+    leaf model {
+      type string;
+      description
+        "Model number of the Access Point.";
+    }
+
+    leaf software-version {
+      type string;
+      description
+        "Software version of the Access Point.";
+    }
+
+    leaf ipv4 {
+      type oc-inet:ipv4-address;
+      description
+        "The IPv4 address of the Access Point.";
+    }
+
+    leaf ipv6 {
+      type oc-inet:ipv6-address;
+      description
+        "The IPv6 address of the Access Point.";
+    }
+
+    leaf power-source {
+      type enumeration {
+      enum AT {
+        description "Powered using 802.3at.";
+      }
+      enum AF {
+        description "Powered using 802.3af.";
+      }
+      enum BT_TYPE3 {
+        description "Powered using 802.3bt Type 3.";
+      }
+      enum BT_TYPE4 {
+        description "Powered using 802.3bt Type 4.";
+      }
+      enum PLUG {
+        description "Powered using local source, not PoE.";
+      }
+    }
+    description
+      "Enumerate how the AP is being powered.";
+    }
+  }
+
+  grouping provision-ap-top {
+    description
+      "Top-level grouping for assigning hostnames to APs.";
+
+    container provision-aps {
+      description
+        "Top most container for assigning hostnames to APs.";
+
+      list provision-ap {
+        key "mac";
+        description
+          "List of MAC addresses that will have hostnames assigned.";
+
+        leaf mac {
+          type leafref {
+            path "../config/mac";
+          }
+          description
+          "Reference to the MAC address list key. This leaf is a reference
+          only and not to be configured.";
+        }
+
+        container config {
+          description
+            "Config container for assigning hostnames to APs.";
+
+          uses provision-aps-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State container for assigning hostnames to APs.";
+
+          uses provision-aps-config;
+        }
+      }
+    }
+  }
+
+  grouping joined-aps-top {
+    description
+      "Top-level grouping for APs assigned to controller(s).";
+
+    container joined-aps {
+      description
+        "Top most container for joined-aps.";
+
+      list joined-ap {
+        key "hostname";
+        config false;
+        description
+          "List of access points that have joined the controller.";
+
+        leaf hostname {
+          type leafref {
+            path "../state/hostname";
+          }
+          description
+          "Reference to the MAC address list key.";
+        }
+
+        container state {
+          config false;
+          description
+            "State container for Joined APs.";
+
+          uses controller-aps-system-state;
+        }
+      }
+    }
+  }
+  uses provision-ap-top;
+  uses joined-aps-top;
+}

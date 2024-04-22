@@ -1,0 +1,361 @@
+module openconfig-sampling-sflow {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/sampling/sflow";
+
+  prefix "oc-sflow";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-network-instance { prefix oc-netinst; }
+  import openconfig-sampling { prefix oc-sampling; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    related to data plane traffic sampling based on sFlow.
+
+    RFC 3176 - InMon Corporation's sFlow: A Method for
+    Monitoring Traffic in Switched and Routed Networks";
+
+  revision "2022-06-21" {
+    description
+      "Add agent-id/source-address for IPv4/IPv6; add polling-interval;
+      add global dscp marking for generated packets; moved sampling-rate
+      to ingress/egress; moved top-level sampling container to separate
+      module;";
+    reference "1.0.0";
+  }
+
+  revision "2020-06-26" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  oc-ext:openconfig-version "1.0.0";
+
+  grouping sflow-interfaces-config {
+    description
+      "Configuration data for sFlow data on interfaces.";
+
+    leaf name {
+      type oc-if:base-interface-ref;
+      description
+        "Reference to the interface for sFlow configuration and
+        state.";
+    }
+
+    leaf enabled {
+      type boolean;
+      description
+        "Enables or disables sFlow on the interface.  If sFlow is
+        globally disabled, this leaf is ignored.  If sFlow
+        is globally enabled, this leaf may be used to disable it
+        for a specific interface.";
+    }
+
+    uses sflow-polling-interval-config;
+    uses sflow-sampling-rate-config;
+  }
+
+  grouping sflow-interfaces-state {
+    description
+      "Operational state data for sFlow data on interfaces";
+
+    leaf packets-sampled {
+      type oc-yang:counter64;
+      description
+        "Total number of packets sampled from the interface.";
+    }
+  }
+
+  grouping sflow-interfaces-top {
+    description
+      "Top-level grouping for sFlow data on an interface.";
+
+    container interfaces {
+      description
+        "Enclosing container for list of sFlow interfaces.";
+
+      list interface {
+        key "name";
+        description
+          "List of interfaces with sFlow data.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to list key.";
+        }
+
+        container config {
+          description
+            "Configuration data for sFlow data on interfaces.";
+
+          uses sflow-interfaces-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for sFlow data on interfaces.";
+
+          uses sflow-interfaces-config;
+          uses sflow-interfaces-state;
+        }
+      }
+    }
+  }
+
+  grouping sflow-collectors-config {
+    description
+      "Configuration data for sFlow collectors.";
+
+    leaf address {
+      type oc-inet:ip-address;
+      description
+        "IPv4/IPv6 address of the sFlow collector.";
+    }
+
+    leaf port {
+      type oc-inet:port-number;
+      default 6343;
+      description
+        "UDP port number for the sFlow collector.";
+    }
+
+    leaf source-address {
+      type oc-inet:ip-address;
+      description
+        "Sets the source IPv4/IPv6 address for sFlow datagrams sent
+        to sFlow collectors.";
+    }
+
+    leaf network-instance {
+      type oc-netinst:network-instance-ref;
+      description
+        "Reference to the network instance used to reach the
+        sFlow collector.  If uspecified, the collector destination
+        is reachable in the default network instance.";
+    }
+  }
+
+  grouping sflow-collectors-state {
+    description
+      "Operational state data for sFlow collectors.";
+
+    leaf packets-sent {
+      type oc-yang:counter64;
+      description
+        "The total number of packets sampled and sent to the
+        collector.";
+    }
+  }
+
+  grouping sflow-collectors-top {
+    description
+      "Top-level grouping for data related to sFlow collectors.";
+
+    container collectors {
+      description
+        "Enclosing container for list of sFlow collectors.";
+
+      list collector {
+        key "address port";
+        description
+          "List of sFlow collectors to send sampling data.  Packet
+          samples are sent to all collectors specified.";
+
+        leaf address {
+          type leafref {
+            path "../config/address";
+          }
+          description
+            "Reference to address list key.";
+        }
+
+        leaf port {
+          type leafref {
+            path "../config/port";
+          }
+          description
+            "Reference to port list key.";
+        }
+
+        container config {
+          description
+            "Configuration data for sFlow collectors.";
+
+          uses sflow-collectors-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for sFlow collectors.";
+
+          uses sflow-collectors-config;
+          uses sflow-collectors-state;
+        }
+      }
+    }
+  }
+
+  grouping sflow-sampling-rate-config {
+    description
+      "Configuration data for sFlow sample rates";
+
+    leaf ingress-sampling-rate {
+      type uint32;
+      description
+        "Sets the ingress packet sampling rate.  The rate is expressed
+        as an integer N, where the intended sampling rate is 1/N
+        packets.  An implementation may implement the sampling rate as
+        a statistical average, rather than a strict periodic sampling.
+
+        The allowable sampling rate range is generally a property of
+        the system, e.g., determined by the capability of the
+        hardware.";
+    }
+
+    leaf egress-sampling-rate {
+      type uint32;
+      description
+        "Sets the egress packet sampling rate.  The rate is expressed
+        as an integer N, where the intended sampling rate is 1/N
+        packets.  An implementation may implement the sampling rate as
+        a statistical average, rather than a strict periodic sampling.
+
+        The allowable sampling rate range is generally a property of
+        the system, e.g., determined by the capability of the
+        hardware.";
+    }
+  }
+
+  grouping sflow-polling-interval-config {
+    description
+      "Configuration data for sFlow polling intervals";
+
+    leaf polling-interval {
+      type uint16;
+      units seconds;
+      description
+        "Sets the traffic sampling polling interval.";
+    }
+  }
+
+  grouping sflow-global-config {
+    description
+      "Configuration data for global sflow";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Enables or disables sFlow sampling for the device.";
+    }
+
+    leaf agent-id-ipv4 {
+      type oc-inet:ipv4-address;
+      description
+        "Sets the agent identifier for IPv4 PDUs.";
+      reference
+        "RFC 3176 - InMon Corporation's sFlow: A Method for
+        Monitoring Traffic in Switched and Routed Networks";
+    }
+
+    leaf agent-id-ipv6 {
+      type oc-inet:ipv6-address;
+      description
+        "Sets the agent identifier for IPv6 PDUs.";
+      reference
+        "RFC 3176 - InMon Corporation's sFlow: A Method for
+        Monitoring Traffic in Switched and Routed Networks";
+    }
+
+    leaf dscp {
+      type oc-inet:dscp;
+      description
+        "DSCP marking of packets generated by the sFlow subsystem
+        on the network device.";
+    }
+
+    leaf sample-size {
+      type uint16;
+      units bytes;
+      default 128;
+      description
+        "Sets the maximum number of bytes to be copied from a
+        sampled packet.";
+      reference
+        "RFC 3176 - InMon Corporation's sFlow: A Method for
+        Monitoring Traffic in Switched and Routed Networks";
+    }
+
+    uses sflow-polling-interval-config;
+    uses sflow-sampling-rate-config;
+  }
+
+  grouping sflow-global-state {
+    description
+      "Operational state data for global sFlow.";
+  }
+
+  grouping sflow-global-top {
+    description
+      "Top-level grouping for global sFlow";
+
+    container sflow {
+      description
+        "Top-level container for sFlow data.";
+
+      container config {
+        description
+          "Configuration data for global sFlow.";
+
+        uses sflow-global-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for global sFlow.";
+
+        uses sflow-global-config;
+        uses sflow-global-state;
+      }
+
+      uses sflow-collectors-top;
+      uses sflow-interfaces-top;
+    }
+  }
+
+  augment "/oc-sampling:sampling" {
+    description
+      "Add sFlow configuration/state to the openconfig-sampling model.";
+
+    uses sflow-global-top;
+  }
+
+}

@@ -1,0 +1,520 @@
+module openconfig-lacp {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/lacp";
+
+  prefix "oc-lacp";
+
+  // import some basic types
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module describes configuration and operational state
+    data for Link Aggregation Control Protocol (LACP) for
+    managing aggregate interfaces.   It works in conjunction with
+    the OpenConfig interfaces and aggregate interfaces models.";
+
+  oc-ext:openconfig-version "2.0.0";
+
+  revision "2023-12-11" {
+    description
+      "Add config container for aggregation member and port-priority leaf under
+       both config and state";
+    reference "2.0.0";
+  }
+
+  revision "2021-07-20" {
+    description
+      "Add count of number of timeouts and time of the last timeout.";
+    reference "1.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "1.1.1";
+  }
+
+  revision "2017-05-05" {
+    description
+      "Add member local and remote port num";
+    reference "1.1.0";
+  }
+
+  revision "2016-05-26" {
+    description
+      "OpenConfig public release";
+    reference "1.0.2";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // typedef statements
+
+  typedef lacp-activity-type {
+    type enumeration {
+      enum ACTIVE {
+        description
+          "Interface is an active member, i.e., will detect and
+          maintain aggregates";
+      }
+      enum PASSIVE {
+        description
+          "Interface is a passive member, i.e., it participates
+          with an active partner";
+      }
+    }
+    description
+      "Describes the LACP membership type, active or passive, of the
+      interface in the aggregate";
+    reference "IEEE 802.1AX-2008";
+  }
+
+  typedef lacp-timeout-type {
+    type enumeration {
+      enum LONG {
+        description
+          "Participant wishes to use long timeouts to detect
+          status of the aggregate, i.e., will expect less frequent
+          transmissions. Long timeout is 90 seconds.";
+      }
+      enum SHORT {
+        description
+          "Participant wishes to use short timeouts, i.e., expects
+          frequent transmissions to aggressively detect status
+          changes. Short timeout is 3 seconds.";
+      }
+    }
+    description
+      "Type of timeout used, short or long, by LACP participants";
+    reference "IEEE 802.1AX-2008";
+  }
+
+  typedef lacp-synchronization-type {
+    type enumeration {
+      enum IN_SYNC {
+        description
+          "Participant is in sync with the system id and key
+          transmitted";
+      }
+      enum OUT_SYNC {
+        description
+          "Participant is not in sync with the system id and key
+          transmitted";
+      }
+    }
+    description
+      "Indicates LACP synchronization state of participant";
+    reference "IEEE 802.1AX-2008";
+  }
+
+  typedef lacp-period-type {
+    type enumeration {
+      enum FAST {
+        description "Send LACP packets every second";
+      }
+      enum SLOW {
+        description "Send LACP packets every 30 seconds";
+      }
+    }
+    description
+      "Defines the period options for the time between sending
+      LACP messages";
+    reference "IEEE 802.3ad";
+  }
+
+  // grouping statements
+
+
+  grouping aggregation-lacp-members-config {
+    description
+      "Configuration data for lacp member interfaces";
+
+    leaf interface {
+      type oc-if:base-interface-ref;
+      description
+        "Reference to interface member of the LACP aggregate";
+    }
+
+    leaf port-priority {
+      type uint16;
+      description
+        "Member interface's priority in its aggregate interface.";
+    }
+  }
+
+  grouping aggregation-lacp-members-state {
+    description
+      "Operational status data for the member interfaces";
+
+    leaf activity {
+      type lacp-activity-type;
+      description "Indicates participant is active or passive";
+    }
+
+    leaf timeout {
+      type lacp-timeout-type;
+      description
+        "The timeout type (short or long) used by the
+        participant";
+    }
+
+    leaf synchronization {
+      type lacp-synchronization-type;
+      description
+        "Indicates whether the participant is in-sync or
+        out-of-sync";
+    }
+
+    leaf aggregatable {
+      type boolean;
+      description
+        "A true value indicates that the participant will allow
+        the link to be used as part of the aggregate. A false
+        value indicates the link should be used as an individual
+        link";
+    }
+
+    leaf collecting {
+      type boolean;
+      description
+        "If true, the participant is collecting incoming frames
+        on the link, otherwise false";
+    }
+
+    leaf distributing {
+      type boolean;
+      description
+        "When true, the participant is distributing outgoing
+        frames; when false, distribution is disabled";
+    }
+
+    leaf system-id {
+      type oc-yang:mac-address;
+      description
+        "MAC address that defines the local system ID for the
+        aggregate interface";
+    }
+
+    leaf oper-key {
+      type uint16;
+      description
+        "Current operational value of the key for the aggregate
+        interface";
+    }
+
+    leaf partner-id {
+      type oc-yang:mac-address;
+      description
+        "MAC address representing the protocol partner's interface
+        system ID";
+    }
+
+    leaf partner-key {
+      type uint16;
+      description
+        "Operational value of the protocol partner's key";
+    }
+
+    leaf port-num {
+      type uint16;
+      description
+        "Port number of the local (actor) aggregation member";
+    }
+
+    leaf partner-port-num {
+      type uint16;
+      description
+        "Port number of the partner (remote) port for this member
+        port";
+    }
+
+    leaf partner-port-priority {
+      type uint16;
+      description
+        "Member interface partner's priority in its aggregate interface.";
+    }
+
+    leaf last-change {
+      type oc-types:timeticks64;
+      description
+        "The timestamp indicates the absolute time of the last state
+        change of a LACP timeout. The last state change of the LACP
+        timeout is defined as what is reported as the operating state
+        to the system. The state change is both a timeout event and
+        when the timeout event is no longer active. The value is the
+        timestamp in nanoseconds relative to the Unix Epoch
+        (Jan 1, 1970 00:00:00 UTC).";
+    }
+  }
+
+grouping aggregation-lacp-members-statistics {
+    description
+      "LACP packet statistics for the member interfaces";
+
+    container counters {
+      description
+        "LACP protocol counters";
+
+      leaf lacp-in-pkts {
+        type oc-yang:counter64;
+        description
+          "Number of LACPDUs received";
+      }
+
+      leaf lacp-out-pkts {
+        type oc-yang:counter64;
+        description
+          "Number of LACPDUs transmitted";
+      }
+
+      leaf lacp-rx-errors {
+        type oc-yang:counter64;
+        description
+          "Number of LACPDU receive packet errors";
+      }
+
+      leaf lacp-tx-errors {
+        type oc-yang:counter64;
+        description
+          "Number of LACPDU transmit packet errors";
+      }
+
+      leaf lacp-unknown-errors {
+        type oc-yang:counter64;
+        description
+          "Number of LACPDU unknown packet errors";
+      }
+
+      leaf lacp-errors {
+        type oc-yang:counter64;
+        description
+          "Number of LACPDU illegal packet errors";
+      }
+
+      leaf lacp-timeout-transitions {
+        type oc-yang:counter64;
+        description
+          "Number of times the LACP state has transitioned
+          with a timeout since the time the device restarted
+          or the interface was brought up, whichever is most
+          recent. The last state change of the LACP timeout
+          is defined as what is reported as the operating state
+          to the system. The state change is both a timeout
+          event and when the timeout event is no longer active.";
+      }
+    }
+  }
+
+  grouping aggregation-lacp-members-top {
+    description
+      "Top-level grouping for aggregate members list";
+
+    container members {
+      description
+        "Configuration and operational state of the aggregate member
+	     interfaces";
+
+      list member {
+        key "interface";
+        description
+          "List of member interfaces and their associated status for
+          a LACP-controlled aggregate interface";
+
+        leaf interface {
+          type leafref {
+            path "../config/interface";
+          }
+          description
+            "Reference to aggregate member interface";
+        }
+
+        container config {
+          description
+            "Operational state data for aggregate members";
+
+          uses aggregation-lacp-members-config;
+        }
+
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for aggregate members";
+
+          uses aggregation-lacp-members-config;
+          uses aggregation-lacp-members-state;
+          uses aggregation-lacp-members-statistics;
+        }
+      }
+    }
+  }
+
+  grouping lacp-interfaces-config {
+    description
+      "Configuration data for each LACP-enabled interface";
+
+    leaf name {
+      type oc-if:base-interface-ref;
+      description
+        "Reference to the interface on which LACP should be
+        configured.   The type of the target interface must be
+        ieee8023adLag";
+    }
+
+    leaf interval {
+      type lacp-period-type;
+      default SLOW;
+      description
+        "Set the period between LACP messages -- uses
+        the lacp-period-type enumeration.";
+    }
+
+    leaf lacp-mode {
+      type lacp-activity-type;
+      default ACTIVE;
+      description
+        "ACTIVE is to initiate the transmission of LACP packets.
+         PASSIVE is to wait for peer to initiate the transmission of
+         LACP packets.";
+        //TODO:some implementations configure the LACP mode on each
+        //member interface rather than on the LAG interface.  There
+        //may be use cases for this identified at a later time.
+    }
+
+    leaf system-id-mac {
+      type oc-yang:mac-address;
+      description
+        "The MAC address portion of the node's System ID. This is
+        combined with the system priority to construct the 8-octet
+        system-id";
+    }
+
+    uses aggregation-lacp-global-config;
+  }
+
+  grouping lacp-interfaces-state {
+    description
+      "Operational state data for each LACP-enabled interface";
+  }
+
+  grouping lacp-interfaces-top {
+    description
+      "Top-level grouping for LACP-enabled interfaces";
+
+    container interfaces {
+      description
+        "Enclosing container for the list of LACP-enabled
+        interfaces";
+
+      list interface {
+        key "name";
+        description
+          "List of aggregate interfaces managed by LACP";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the list key";
+        }
+
+        container config {
+          description
+            "Configuration data for each LACP aggregate interface";
+
+          uses lacp-interfaces-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for each LACP aggregate
+            interface";
+
+          uses lacp-interfaces-config;
+          uses lacp-interfaces-state;
+        }
+
+        uses aggregation-lacp-members-top;
+      }
+    }
+  }
+
+  grouping aggregation-lacp-global-config {
+    description
+      "Configuration data for LACP aggregate interfaces";
+
+
+    leaf system-priority {
+      type uint16;
+      description
+        "Sytem priority used by the node on this LAG interface.
+        Lower value is higher priority for determining which node
+        is the controlling system.";
+    }
+  }
+
+  grouping aggregation-lacp-global-state {
+    description
+      "Operational data for LACP aggregate interfaces";
+
+  }
+
+  grouping aggregation-lacp-top {
+    description
+      "Top level configuration and state variable containers for
+      LACP data";
+
+    container lacp {
+      description
+        "Configuration and operational state data for LACP protocol
+        operation on the aggregate interface";
+
+      container config {
+        description
+          "Configuration data for LACP";
+
+        uses aggregation-lacp-global-config;
+      }
+
+      container state {
+
+        config false;
+        description
+          "Operational state data for LACP";
+
+        uses aggregation-lacp-global-config;
+        uses aggregation-lacp-global-state;
+      }
+      uses lacp-interfaces-top;
+    }
+  }
+
+  // data definition statements
+  uses aggregation-lacp-top;
+
+  // augment statements
+
+
+}

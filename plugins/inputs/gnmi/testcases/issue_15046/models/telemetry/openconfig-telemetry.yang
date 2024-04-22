@@ -1,0 +1,782 @@
+module openconfig-telemetry {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/telemetry";
+
+  prefix "oc-telemetry";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-telemetry-types { prefix oc-telemetry-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group www.openconfig.net";
+
+  description
+    "Data model which creates the configuration for the telemetry
+     systems and functions on the device.";
+
+  oc-ext:openconfig-version "0.5.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.5.1";
+  }
+
+  revision "2018-08-17" {
+    description
+      "Update telemetry model to comply with the OpenConfig
+      style for lists and their containers. Remove subscription
+      exclusions.";
+    reference "0.5.0";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes";
+    reference "0.4.1";
+  }
+
+  revision "2017-02-20" {
+    description
+      "Fixes for YANG 1.0 compliance, add types module";
+    reference "0.4.0";
+  }
+
+  revision "2016-04-05" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping telemetry-top {
+    description
+      "Top level grouping for telemetry configuration and operational
+      state data";
+
+    container telemetry-system {
+      description
+        "Top level configuration and state for the
+         device's telemetry system.";
+
+      container sensor-groups {
+        description
+          "Top level container for sensor-groups.";
+
+        list sensor-group {
+          key "sensor-group-id";
+          description
+            "List of telemetry sensory groups on the local
+             system, where a sensor grouping represents a resuable
+             grouping of multiple paths and exclude filters.";
+
+          leaf sensor-group-id {
+            type leafref {
+              path "../config/sensor-group-id";
+            }
+            description
+              "Reference to the name or identifier of the
+               sensor grouping";
+          }
+
+          container config {
+            description
+              "Configuration parameters relating to the
+               telemetry sensor grouping";
+            uses telemetry-sensor-group-config;
+          }
+
+          container state {
+            config false;
+            description
+              "State information relating to the telemetry
+               sensor group";
+            uses telemetry-sensor-group-config;
+          }
+
+          container sensor-paths {
+            description
+              "Top level container to hold a set of sensor
+               paths grouped together";
+
+            list sensor-path {
+              key "path";
+              description
+                "List of paths in the model which together
+                 comprise a sensor grouping. Filters for each path
+                 to exclude items are also provided.";
+
+              leaf path {
+                type leafref {
+                  path "../config/path";
+                }
+                description
+                  "Reference to the path of interest";
+              }
+
+              container config {
+                description
+                  "Configuration parameters to configure a set
+                   of data model paths as a sensor grouping";
+                uses telemetry-sensor-path-config;
+              }
+
+              container state {
+                config false;
+                description
+                  "Configuration parameters to configure a set
+                   of data model paths as a sensor grouping";
+                uses telemetry-sensor-path-config;
+              }
+            }
+          }
+        }
+      }
+
+        container destination-groups {
+          description
+            "Top level container for destination group configuration
+             and state.";
+
+          list destination-group {
+            key "group-id";
+            description
+              "List of destination-groups. Destination groups allow the
+               reuse of common telemetry destinations across the
+               telemetry configuration. An operator references a
+               set of destinations via the configurable
+               destination-group-identifier.
+
+               A destination group may contain one or more telemetry
+               destinations";
+
+            leaf group-id {
+              type leafref {
+                path "../config/group-id";
+              }
+              description
+                "Unique identifier for the destination group";
+            }
+
+            container config {
+              description
+                "Top level config container for destination groups";
+              leaf group-id {
+                type string;
+                description
+                  "Unique identifier for the destination group";
+              }
+            }
+
+            container state {
+              config false;
+              description
+                "Top level state container for destination groups";
+
+              leaf group-id {
+                type string;
+                description
+                  "Unique identifier for destination group";
+              }
+            }
+
+            container destinations {
+              description
+                "The destination container lists the destination
+                 information such as IP address and port of the
+                 telemetry messages from the network element.";
+              list destination {
+                key "destination-address destination-port";
+                description
+                  "List of telemetry stream destinations";
+
+                leaf destination-address {
+                  type leafref {
+                    path "../config/destination-address";
+                  }
+                  description
+                    "Reference to the destination address of the
+                     telemetry stream";
+                }
+
+                leaf destination-port {
+                  type leafref {
+                    path "../config/destination-port";
+                  }
+                  description
+                    "Reference to the port number of the stream
+                     destination";
+                }
+
+                container config {
+                  description
+                    "Configuration parameters relating to
+                     telemetry destinations";
+                  uses telemetry-stream-destination-config;
+                }
+
+                container state {
+                  config false;
+                  description
+                    "State information associated with
+                     telemetry destinations";
+                  uses telemetry-stream-destination-config;
+                }
+              }
+            }
+          }
+        }
+
+      container subscriptions {
+        description
+          "This container holds information for both persistent
+           and dynamic telemetry subscriptions.";
+
+        container persistent-subscriptions {
+          description
+            "This container holds information relating to persistent
+             telemetry subscriptions. A persistent telemetry
+             subscription is configued locally on the device through
+             configuration, and is persistent across device restarts or
+             other redundancy changes.";
+
+          list persistent-subscription {
+            key "name";
+
+            description
+              "List of telemetry subscriptions. A telemetry
+              subscription consists of a set of collection
+              destinations, stream attributes, and associated paths to
+              state information in the model (sensor data)";
+
+            leaf name {
+              type leafref {
+                path "../config/name";
+              }
+              description
+                "Reference to the identifier of the subscription
+                itself. The id will be the handle to refer to the
+                subscription once created";
+            }
+
+            container config {
+              description
+                "Config parameters relating to the telemetry
+                subscriptions on the local device";
+
+              uses telemetry-subscription-name-config;
+              uses telemetry-local-source-address-config;
+              uses telemetry-qos-marking-config;
+              uses telemetry-stream-protocol-config;
+              uses telemetry-stream-encoding-config;
+            }
+
+            container state {
+              config false;
+              description
+                "State parameters relating to the telemetry
+                subscriptions on the local device";
+
+              uses telemetry-subscription-name-config;
+              uses telemetry-subscription-config;
+              uses telemetry-subscription-state;
+              uses telemetry-local-source-address-config;
+              uses telemetry-qos-marking-config;
+              uses telemetry-stream-protocol-config;
+              uses telemetry-stream-encoding-config;
+            }
+
+            container sensor-profiles {
+              description
+                "A sensor profile is a set of sensor groups or
+                individual sensor paths which are associated with a
+                telemetry subscription. This is the source of the
+                telemetry data for the subscription to send to the
+                defined collectors.";
+              list sensor-profile {
+                key "sensor-group";
+                description
+                  "List of telemetry sensor groups used
+                  in the subscription";
+
+                leaf sensor-group {
+                  type leafref {
+                    path "../config/sensor-group";
+                  }
+                  description
+                    "Reference to the telemetry sensor group name";
+                }
+
+                container config {
+                  description
+                    "Configuration parameters related to the sensor
+                    profile for a subscription";
+                  uses telemetry-sensor-profile-config;
+                }
+
+                container state {
+                  config false;
+                  description
+                    "State information relating to the sensor profile
+                    for a subscription";
+                  uses telemetry-sensor-profile-config;
+                }
+              }
+            }
+
+            container destination-groups {
+              description
+                "A subscription may specify destination addresses.
+                 If the subscription supplies destination addresses,
+                 the network element will be the initiator of the
+                 telemetry streaming, sending it to the destination(s)
+                 specified.
+
+                 If the destination set is omitted, the subscription
+                 preconfigures certain elements such as paths and
+                 sample intervals under a specified subscription ID.
+                 In this case, the network element will NOT initiate an
+                 outbound connection for telemetry, but will wait for
+                 an inbound connection from a network management
+                 system.
+
+                 It is expected that the network management system
+                 connecting to the network element will reference
+                 the preconfigured subscription ID when initiating
+                 a subscription.";
+
+              list destination-group {
+                key "group-id";
+                description
+                  "Identifier of the previously defined destination
+                   group";
+
+                leaf group-id {
+                  type leafref {
+                    path "../config/group-id";
+                  }
+                  description
+                    "The destination group id references a configured
+                     group of destinations for the telemetry stream.";
+                }
+
+                container config {
+                  description
+                  "Configuration parameters related to telemetry
+                   destinations.";
+
+                  leaf group-id {
+                    type leafref {
+                      path "../../../../../../../destination-groups"
+                        + "/destination-group/group-id";
+                    }
+                    description
+                      "The destination group id references a reusable
+                       group of destination addresses and ports for
+                       the telemetry stream.";
+                  }
+                }
+
+                container state {
+                  config false;
+                  description
+                  "State information related to telemetry
+                   destinations";
+
+                  leaf group-id {
+                    type leafref {
+                      path "../../../../../../../destination-groups"
+                        + "/destination-group/group-id";
+                    }
+                    description
+                      "The destination group id references a reusable
+                       group of destination addresses and ports for
+                       the telemetry stream.";
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        container dynamic-subscriptions {
+          description
+            "This container holds information relating to dynamic
+            telemetry subscriptions. A dynamic subscription is
+            typically configured through an RPC channel, and does not
+            persist across device restarts, or if the RPC channel is
+            reset or otherwise torn down.";
+
+
+          list dynamic-subscription {
+            key "id";
+
+            config false;
+            description
+              "List representation of telemetry subscriptions that
+              are configured via an inline RPC, otherwise known
+              as dynamic telemetry subscriptions.";
+
+            leaf id {
+              type leafref {
+                path "../state/id";
+              }
+
+              description
+                "Reference to the identifier of the subscription
+                itself. The id will be the handle to refer to the
+                subscription once created";
+            }
+
+              container state {
+                config false;
+                description
+                  "State information relating to dynamic telemetry
+                   subscriptions.";
+
+                uses telemetry-subscription-config;
+                uses telemetry-stream-destination-config;
+                uses telemetry-stream-frequency-config;
+                uses telemetry-heartbeat-config;
+                uses telemetry-suppress-redundant-config;
+                uses telemetry-qos-marking-config;
+                uses telemetry-stream-protocol-config;
+                uses telemetry-stream-encoding-config;
+              }
+
+              container sensor-paths {
+                description
+                  "Top level container to hold a set of sensor
+                   paths grouped together";
+
+                list sensor-path {
+                  key "path";
+                  description
+                    "List of paths in the model which together
+                    comprise a sensor grouping. Filters for each path
+                    to exclude items are also provided.";
+
+                  leaf path {
+                    type leafref {
+                      path "../state/path";
+                    }
+                    description
+                      "Reference to the path of interest";
+                  }
+
+                  container state {
+                    config false;
+                    description
+                      "State information for a dynamic subscription's
+                      paths of interest";
+                    uses telemetry-sensor-path-config;
+                  }
+                }
+              }
+          }
+        }
+      }
+    }
+  }
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping telemetry-sensor-path-config {
+    description
+      "Configuration parameters relating to the
+       grouping of data model paths comprising a
+       sensor grouping";
+      leaf path {
+        type string;
+        description
+          "Path to a section of operational state of interest
+           (the sensor).";
+      }
+
+      leaf exclude-filter {
+        type string;
+        description
+          "Filter to exclude certain values out of the state
+           values";
+          //May not be necessary. Could remove.
+      }
+  }
+
+  grouping telemetry-heartbeat-config {
+    description
+      "Configuration parameters relating to the
+       heartbeat of the telemetry subscription";
+    leaf heartbeat-interval {
+      type uint64;
+      description
+        "Maximum time interval in seconds that may pass
+         between updates from a device to a telemetry collector.
+         If this interval expires, but there is no updated data to
+         send (such as if suppress_updates has been configured), the
+         device must send a telemetry message to the collector.";
+    }
+  }
+
+  grouping telemetry-suppress-redundant-config {
+    description
+      "Configuration parameters relating to suppression of
+       redundant upstream updates";
+    leaf suppress-redundant {
+      type boolean;
+      description
+        "Boolean flag to control suppression of redundant
+         telemetry updates to the collector platform. If this flag is
+         set to TRUE, then the collector will only send an update at
+         the configured interval if a subscribed data value has
+         changed. Otherwise, the device will not send an update to
+         the collector until expiration of the heartbeat interval.";
+    }
+  }
+
+  grouping telemetry-sensor-profile-config {
+    description
+      "Configuration parameters relating to the sensor groups
+       used in the sensor profile";
+    leaf sensor-group {
+      type leafref {
+        path "../../../../../../../sensor-groups/sensor-group"
+        + "/config/sensor-group-id";
+      }
+      description
+        "Reference to the sensor group which is used in the profile";
+    }
+    uses telemetry-stream-subscription-config;
+  }
+
+  grouping telemetry-stream-subscription-config {
+    description
+      "Configuration used when the sensor is a stream based sensor.";
+
+    uses telemetry-stream-frequency-config;
+    uses telemetry-heartbeat-config;
+    uses telemetry-suppress-redundant-config;
+
+  }
+
+  grouping telemetry-qos-marking-config {
+    description
+      "Config parameters relating to the quality of service
+       marking on device generated telemetry packets";
+
+    leaf originated-qos-marking {
+      type oc-inet:dscp;
+      description
+        "DSCP marking of packets generated by the telemetry
+         subsystem on the network device.";
+    }
+  }
+
+
+  grouping telemetry-sensor-group-config {
+    description
+      "Config parameters related to the sensor groups
+       on the device";
+    leaf sensor-group-id {
+      type string;
+      description
+        "Name or identifier for the sensor group itself.
+         Will be referenced by other configuration specifying a
+         sensor group";
+    }
+  }
+
+  grouping telemetry-subscription-config {
+    description
+      "Configuration parameters relating to the telemetry
+       subscription";
+
+    leaf id {
+      type uint64;
+      description
+        "System generated identifer of the telemetry
+         subscription.";
+    }
+  }
+
+  grouping telemetry-subscription-name-config {
+    description
+      "Configuration parameters relating to the configured
+       name of the telemetry subscription. The name is a user
+       configured string value which uniquely identifies the
+       subscription in the configuration database.";
+
+     leaf name {
+       type string;
+       description
+         "User configured identifier of the telemetry
+          subscription. This value is used primarily for
+          subscriptions configured locally on the network
+          element.";
+     }
+  }
+
+  grouping telemetry-subscription-state {
+    description
+      "State values for the telemetry subscription";
+    //TODO add values
+  }
+
+  grouping telemetry-stream-protocol-config {
+    description
+      "Configuration parameters relating to the
+       transport protocol carrying telemetry
+       data.";
+
+    leaf protocol {
+      type identityref {
+        base oc-telemetry-types:STREAM_PROTOCOL;
+      }
+      description
+        "Selection of the transport protocol for the telemetry
+         stream.";
+    }
+  }
+
+  grouping telemetry-stream-encoding-config {
+    description
+      "Configuration parameters relating to the
+       encoding of telemetry data to and from the
+       network element. The encoding method controls
+       specifically the wire format of the telemetry
+       data, and also controls which RPC framework
+       may be in use to exchange telemetry data.";
+
+     leaf encoding {
+       type identityref {
+         base oc-telemetry-types:DATA_ENCODING_METHOD;
+       }
+       description
+         "Selection of the specific encoding or RPC framework
+          for telemetry messages to and from the network element.";
+     }
+  }
+
+  grouping telemetry-stream-destination-config {
+    description
+      "Configuration parameters for the stream destinations";
+      leaf destination-address {
+        type oc-inet:ip-address;
+        description
+          "IP address of the telemetry stream destination";
+      }
+      leaf destination-port {
+        type uint16;
+        description
+          "Protocol (udp or tcp) port number for the telemetry
+           stream destination";
+      }
+  }
+
+  grouping telemetry-stream-frequency-config {
+    description
+      "Config parameters for the frequency of updates to
+        the collector";
+    leaf sample-interval {
+      type uint64;
+      description
+        "Time in milliseconds between the device's sample of a
+         telemetry data source. For example, setting this to 100
+         would require the local device to collect the telemetry
+         data every 100 milliseconds. There can be latency or jitter
+         in transmitting the data, but the sample must occur at
+         the specified interval.
+
+         The timestamp must reflect the actual time when the data
+         was sampled, not simply the previous sample timestamp +
+         sample-interval.
+
+         If sample-interval is set to 0, the telemetry sensor
+         becomes event based. The sensor must then emit data upon
+         every change of the underlying data source.";
+    }
+  }
+
+  grouping telemetry-sensor-specification {
+    description
+      "Config related to creating telemetry sensor groups. A sensor
+       group is a related set of sensor paths and/or filters to
+       exclude items. A group is assigned a reusable identifer, so
+       it can be used in multiple telemetry subscriptions.";
+    list telemetry-sensor-group {
+      key "telemetry-sensor-group-id";
+      description
+        "List of telemetry sensor groups";
+
+      leaf telemetry-sensor-group-id {
+        type string;
+        description
+          "The sensor group identifer is a reusable handle which
+           identifies a single sensor group. It is referenced from
+           the subscription configuration.";
+      }
+      uses telemetry-sensor-paths;
+    }
+  }
+
+  grouping telemetry-sensor-paths {
+    description
+      "This grouping contains these paths to leaves or containers
+       in the data model which are the sources of telemetry
+       information.";
+
+    list telemetry-sensor-paths {
+      key "telemetry-sensor-path";
+      description
+        "A list of sensor paths and exclude filters which comprise
+        a sensor grouping";
+
+      leaf telemetry-sensor-path {
+        type string;
+        description
+          "The sensor path is a path to a portion of operational
+          state of interest in the data model";
+      }
+    }
+  }
+
+
+  grouping telemetry-local-source-address-config {
+    description
+      "Config relating to the local source address for telemetry
+       messages";
+    // TODO: Make this a reference to an interface.
+    leaf local-source-address {
+      type oc-inet:ip-address;
+      description
+        "The IP address which will be the source of packets from
+         the device to a telemetry collector destination.";
+    }
+  }
+
+  // data definition statements
+
+  uses telemetry-top;
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+
+}

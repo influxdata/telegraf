@@ -1,0 +1,485 @@
+module openconfig-inet-types {
+
+  yang-version "1";
+  namespace "http://openconfig.net/yang/types/inet";
+  prefix "oc-inet";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module contains a set of Internet address related
+    types for use in OpenConfig modules.
+
+    Portions of this code were derived from IETF RFC 6021.
+    Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "0.7.0";
+
+  revision "2024-01-05" {
+    description
+      "Change ipv6-address-zoned typedef to conform to W3C standard
+      regex pattern.";
+    reference "0.7.0";
+  }
+
+  revision "2023-02-06" {
+    description
+      "Add ipv6-link-local and ipv6-address-type";
+    reference "0.6.0";
+  }
+
+  revision "2021-08-17" {
+    description
+      "Add ip-address-zoned typedef as a union between ipv4-address-zoned
+      and ipv6-address-zoned types.";
+    reference "0.5.0";
+  }
+
+  revision "2021-07-14" {
+    description
+      "Use auto-generated regex for ipv4 pattern statements:
+      - ipv4-address
+      - ipv4-address-zoned
+      - ipv4-prefix";
+    reference "0.4.1";
+  }
+
+  revision "2021-01-07" {
+    description
+      "Remove module extension oc-ext:regexp-posix by making pattern regexes
+      conform to RFC7950.
+
+      Types impacted:
+      - ipv4-address
+      - ipv4-address-zoned
+      - ipv6-address
+      - domain-name";
+    reference "0.4.0";
+  }
+
+  revision "2020-10-12" {
+    description
+      "Fix anchors for domain-name pattern.";
+    reference "0.3.5";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions and add anchors for domain-name
+      pattern.";
+    reference "0.3.4";
+  }
+
+  revision "2019-04-25" {
+    description
+      "Fix regex bug for ipv6-prefix type";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Minor formatting fixes.";
+    reference "0.3.1";
+  }
+
+  revision 2017-07-06 {
+    description
+      "Add domain-name and host typedefs";
+    reference "0.3.0";
+  }
+
+  revision 2017-04-03 {
+    description
+      "Add ip-version typedef.";
+    reference "0.2.0";
+  }
+
+  revision 2017-04-03 {
+    description
+      "Update copyright notice.";
+    reference "0.1.1";
+  }
+
+  revision 2017-01-26 {
+    description
+      "Initial module for inet types";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // IPv4 and IPv6 types.
+
+  typedef ipv4-address {
+    type string {
+      pattern
+        '([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+        + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}';
+      oc-ext:posix-pattern
+        '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+        + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})$';
+    }
+    description
+      "An IPv4 address in dotted quad notation using the default
+      zone.";
+  }
+
+  typedef ipv4-address-zoned {
+    type string {
+      pattern
+        '([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+        + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}(%[a-zA-Z0-9_]+)';
+      oc-ext:posix-pattern
+        '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+        + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}(%[a-zA-Z0-9_]+))$';
+    }
+    description
+      "An IPv4 address in dotted quad notation.  This type allows
+      specification of a zone index to disambiguate identical
+      address values.  For link-local addresses, the index is
+      typically the interface index or interface name.";
+  }
+
+  typedef ipv6-address {
+    type string {
+        pattern
+          // Must support compression through different lengths
+          // therefore this regexp is complex.
+          '(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,7}:|'                        +
+          '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'        +
+          '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' +
+          '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' +
+          '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' +
+          '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' +
+          '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|'      +
+          ':((:[0-9a-fA-F]{1,4}){1,7}|:)'                     +
+          ')';
+        oc-ext:posix-pattern
+          // Must support compression through different lengths
+          // therefore this regexp is complex.
+          '^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,7}:|'                        +
+          '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'        +
+          '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' +
+          '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' +
+          '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' +
+          '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' +
+          '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|'      +
+          ':((:[0-9a-fA-F]{1,4}){1,7}|:)'                     +
+          ')$';
+    }
+    description
+      "An IPv6 address represented as either a full address; shortened
+      or mixed-shortened formats, using the default zone.";
+  }
+
+  typedef ipv6-address-zoned {
+    type string {
+        pattern
+          // Must support compression through different lengths
+          // therefore this regexp is complex.
+          '(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'          +
+          '([0-9a-fA-F]{1,4}:){1,7}:|'                        +
+          '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'        +
+          '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' +
+          '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' +
+          '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' +
+          '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' +
+          '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|'      +
+          ':((:[0-9a-fA-F]{1,4}){1,7}|:)'                     +
+          ')(%[a-zA-Z0-9_]+)';
+        oc-ext:posix-pattern
+          // Must support compression through different lengths
+          // therefore this regexp is complex.
+          '^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,7}:|'                        +
+          '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'        +
+          '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' +
+          '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' +
+          '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' +
+          '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' +
+          '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|'      +
+          ':((:[0-9a-fA-F]{1,4}){1,7}|:)'                     +
+          ')(%[a-zA-Z0-9_]+)$';
+    }
+    description
+      "An IPv6 address represented as either a full address; shortened
+      or mixed-shortened formats.  This type allows specification of
+      a zone index to disambiguate identical address values.  For
+      link-local addresses, the index is typically the interface
+      index or interface name.";
+  }
+
+  typedef ipv4-prefix {
+    type string {
+      pattern
+        '([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+        + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}/([0-9]|[12][0-9]|'
+        + '3[0-2])';
+      oc-ext:posix-pattern
+        '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|'
+        + '[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}/([0-9]|[12][0-9]|'
+        + '3[0-2]))$';
+    }
+    description
+      "An IPv4 prefix represented in dotted quad notation followed by
+      a slash and a CIDR mask (0 <= mask <= 32).";
+  }
+
+  typedef ipv6-prefix {
+    type string {
+        pattern
+          '(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,7}:|'                        +
+          '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' +
+          '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' +
+          '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' +
+          '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' +
+          '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|'      +
+          ':((:[0-9a-fA-F]{1,4}){1,7}|:)'                     +
+          ')/(12[0-8]|1[0-1][0-9]|[1-9][0-9]|[0-9])';
+        oc-ext:posix-pattern
+          '^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,7}:|'                        +
+          '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'         +
+          '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' +
+          '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' +
+          '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' +
+          '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' +
+          '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|'      +
+          ':((:[0-9a-fA-F]{1,4}){1,7}|:)'                     +
+          ')/(12[0-8]|1[0-1][0-9]|[1-9][0-9]|[0-9])$';
+    }
+    description
+      "An IPv6 prefix represented in full, shortened, or mixed
+      shortened format followed by a slash and CIDR mask
+      (0 <= mask <= 128).";
+  }
+
+  typedef ip-address {
+    type union {
+      type ipv4-address;
+      type ipv6-address;
+    }
+    description
+      "An IPv4 or IPv6 address with no prefix specified.";
+  }
+
+  typedef ip-address-zoned {
+    type union {
+      type ipv4-address-zoned;
+      type ipv6-address-zoned;
+    }
+    description
+      "An IPv4 or IPv6 address with no prefix specified and an optional
+      zone index.";
+  }
+
+  typedef ip-prefix {
+    type union {
+      type ipv4-prefix;
+      type ipv6-prefix;
+    }
+    description
+      "An IPv4 or IPv6 prefix.";
+  }
+
+  typedef ip-version {
+    type enumeration {
+      enum UNKNOWN {
+        value 0;
+        description
+         "An unknown or unspecified version of the Internet
+          protocol.";
+      }
+      enum IPV4 {
+        value 4;
+        description
+         "The IPv4 protocol as defined in RFC 791.";
+      }
+      enum IPV6 {
+        value 6;
+        description
+         "The IPv6 protocol as defined in RFC 2460.";
+      }
+    }
+    description
+     "This value represents the version of the IP protocol.
+      Note that integer representation of the enumerated values
+      are not specified, and are not required to follow the
+      InetVersion textual convention in SMIv2.";
+    reference
+     "RFC  791: Internet Protocol
+      RFC 2460: Internet Protocol, Version 6 (IPv6) Specification
+      RFC 4001: Textual Conventions for Internet Network Addresses";
+  }
+
+  typedef ipv6-address-type {
+    type enumeration {
+      enum GLOBAL_UNICAST {
+        description
+          "The IPv6 address is a global unicast address type and must be in
+          the format defined in RFC 4291 section 2.4.";
+      }
+      enum LINK_LOCAL_UNICAST {
+        description
+          "The IPv6 address is a Link-Local unicast address type and must be
+          in the format defined in RFC 4291 section 2.4.";
+      }
+    }
+    description
+      "The value represents the type of IPv6 address";
+    reference
+      "RFC 4291: IP Version 6 Addressing Architecture
+      section 2.5";
+  }
+
+  typedef domain-name {
+    type string {
+      length "1..253";
+      pattern
+        '(((([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*' +
+        '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?)'    +
+        '|\.)';
+      oc-ext:posix-pattern
+        '^(((([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*' +
+        '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?)'    +
+        '|\.)$';
+    }
+    description
+      "The domain-name type represents a DNS domain name.
+      Fully quallified left to the models which utilize this type.
+
+      Internet domain names are only loosely specified.  Section
+      3.5 of RFC 1034 recommends a syntax (modified in Section
+      2.1 of RFC 1123).  The pattern above is intended to allow
+      for current practice in domain name use, and some possible
+      future expansion.  It is designed to hold various types of
+      domain names, including names used for A or AAAA records
+      (host names) and other records, such as SRV records.  Note
+      that Internet host names have a stricter syntax (described
+      in RFC 952) than the DNS recommendations in RFCs 1034 and
+      1123, and that systems that want to store host names in
+      schema nodes using the domain-name type are recommended to
+      adhere to this stricter standard to ensure interoperability.
+
+      The encoding of DNS names in the DNS protocol is limited
+      to 255 characters.  Since the encoding consists of labels
+      prefixed by a length bytes and there is a trailing NULL
+      byte, only 253 characters can appear in the textual dotted
+      notation.
+
+      Domain-name values use the US-ASCII encoding.  Their canonical
+      format uses lowercase US-ASCII characters.  Internationalized
+      domain names MUST be encoded in punycode as described in RFC
+      3492";
+  }
+
+  typedef host {
+    type union {
+      type ip-address;
+      type domain-name;
+    }
+    description
+      "The host type represents either an unzoned IP address or a DNS
+      domain name.";
+  }
+
+  typedef as-number {
+    type uint32;
+    description
+      "A numeric identifier for an autonomous system (AS). An AS is a
+      single domain, under common administrative control, which forms
+      a unit of routing policy. Autonomous systems can be assigned a
+      2-byte identifier, or a 4-byte identifier which may have public
+      or private scope. Private ASNs are assigned from dedicated
+      ranges. Public ASNs are assigned from ranges allocated by IANA
+      to the regional internet registries (RIRs).";
+    reference
+      "RFC 1930 Guidelines for creation, selection, and registration
+                of an Autonomous System (AS)
+       RFC 4271 A Border Gateway Protocol 4 (BGP-4)";
+  }
+
+  typedef dscp {
+    type uint8 {
+      range "0..63";
+    }
+    description
+      "A differentiated services code point (DSCP) marking within the
+      IP header.";
+    reference
+      "RFC 2474 Definition of the Differentiated Services Field
+                 (DS Field) in the IPv4 and IPv6 Headers";
+  }
+
+  typedef ipv6-flow-label {
+    type uint32 {
+      range "0..1048575";
+    }
+    description
+      "The IPv6 flow-label is a 20-bit value within the IPv6 header
+      which is optionally used by the source of the IPv6 packet to
+      label sets of packets for which special handling may be
+      required.";
+    reference
+      "RFC 2460 Internet Protocol, Version 6 (IPv6) Specification";
+  }
+
+  typedef port-number {
+    type uint16;
+    description
+      "A 16-bit port number used by a transport protocol such as TCP
+      or UDP.";
+    reference
+      "RFC 768 User Datagram Protocol
+       RFC 793 Transmission Control Protocol";
+  }
+
+  typedef uri {
+    type string;
+    description
+      "An ASCII-encoded Uniform Resource Identifier (URI) as defined
+      in RFC 3986.";
+    reference
+      "RFC 3986 Uniform Resource Identifier (URI): Generic Syntax";
+  }
+
+  typedef url {
+    type string;
+    description
+      "An ASCII-encoded Uniform Resource Locator (URL) as defined
+      in RFC 3986, section 1.1.3";
+    reference
+      "RFC 3986, paragraph 1.1.3";
+  }
+
+}

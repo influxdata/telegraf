@@ -1,0 +1,325 @@
+module openconfig-openflow {
+
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/openflow";
+
+  prefix "openflow";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-openflow-types { prefix of-types; }
+  import openconfig-system { prefix oc-sys; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data for
+    Openflow.";
+
+  oc-ext:openconfig-version "0.1.2";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.Initial revision";
+    reference "0.1.1";
+  }
+
+  revision "2017-06-01" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping openflow-controller-config {
+    description
+      "Openflow controller config";
+
+    leaf name {
+      type string;
+      description "Name of this Openflow controller. All connections
+      for the same controller need to have the same name.";
+    }
+  }
+
+  grouping openflow-controller-state {
+    description
+      "Openflow controller state";
+  }
+
+  grouping openflow-controllers-top {
+    description
+      "Top-level for the Openflow controllers model";
+
+    container controllers {
+      description
+        "Container for the Openflow controllers model";
+
+      list controller {
+        key "name";
+
+        description
+          "The Openflow Switch connects to all Openflow controllers
+          configured";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "The name identifies the controller.";
+        }
+
+        container config {
+          description
+            "Container for the Openflow controller config.";
+
+          uses openflow-controller-config;
+        }
+
+        container state {
+          config false;
+
+          description
+            "Container for the Openflow controller state.";
+
+          uses openflow-controller-config;
+          uses openflow-controller-state;
+        }
+
+        uses openflow-connections-top;
+      }
+    }
+  }
+
+
+  grouping openflow-connections-config {
+    description
+      "Configuration data for OpenFlow controller connections";
+
+    leaf aux-id {
+      type of-types:auxiliary-id;
+      description
+        "Controller auxiliary ID. Must be 0 for the main controller.
+        One controller may have multiple auxiliary connections as
+        specified by the Openflow protocol. Besides configuring the
+        main controller, it is also possible to configure auxiliary
+        connections. The main controller must have the aux-id
+        set to zero. All others must have an aux-id different
+        from 0.";
+    }
+
+    leaf priority {
+      type uint8;
+      description
+        "Optional value for servicing auxiliary connections with
+        different priorities.";
+    }
+
+    leaf address {
+      type oc-inet:ip-address;
+      description
+        "The IP address of the controller.";
+    }
+
+    leaf port {
+      type oc-inet:port-number;
+      default 6653;
+      description
+        "Controller port to use.";
+    }
+
+    leaf transport {
+      type of-types:transport;
+      default TCP;
+      description
+        "Controller transport protocol used.";
+    }
+
+    leaf certificate-id {
+      type string;
+      description
+        "Certificate ID is used for TLS connections. When installed,
+        certificates are associated with an ID. This ID specifies the
+        certificate to use in a TLS connection.";
+    }
+
+    leaf source-interface {
+      type oc-if:base-interface-ref;
+      description
+        "Optionally specify the source interface for the
+        controller connection.";
+    }
+  }
+
+  grouping openflow-connections-state {
+    description
+      "Operational state data for OpenFlow controller connections";
+
+    leaf connected {
+      type boolean;
+      description
+        "When set to true, indicates the connection between the
+        switch and controller is established.";
+    }
+  }
+
+  grouping openflow-connections-top {
+    description
+      "Top-level grouping for OpenFlow controller connections";
+
+    container connections {
+      description
+        "Enclosing container for list of controller connections";
+
+      list connection {
+        key "aux-id";
+        description
+          "List of connections to the OpenFlow controller.
+          The Openflow switch always connects to configured Openflow
+          controllers. Each controller can have more than one
+          connection, called auxiliary Openflow connections.";
+
+        leaf aux-id {
+          type leafref {
+            path "../config/aux-id";
+          }
+          description
+            "Reference to auxiliary id list key";
+        }
+
+        container config {
+          description
+            "Configuration data for OpenFlow controller connections";
+
+          uses openflow-connections-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for OpenFlow controller
+            connections";
+
+          uses openflow-connections-config;
+          uses openflow-connections-state;
+        }
+      }
+    }
+  }
+
+
+  grouping openflow-agent-config {
+    description
+      "Openflow agent config";
+
+    leaf datapath-id {
+      type of-types:datapath-id;
+      description
+        "Datapath unique ID. The lower 48-bits are for
+        a MAC address, while the upper 16-bits are
+        implementer-defined.";
+    }
+
+    leaf failure-mode {
+      type of-types:failure-mode;
+      description
+        "Failure mode for Openflow.";
+    }
+
+    leaf backoff-interval {
+      type uint32;
+      units seconds;
+      description
+        "Openflow agent connection backoff interval.";
+    }
+
+    leaf max-backoff {
+      type uint32;
+      units seconds;
+      description
+        "Openflow agent max backoff time.";
+    }
+
+    leaf inactivity-probe {
+      type uint32;
+      units seconds;
+      description
+        "Openflow agent inactivity probe period.";
+    }
+  }
+
+  grouping openflow-agent-state {
+    description
+      "Openflow agent state";
+  }
+
+  grouping openflow-agent-top {
+    description
+      "Top-level for the Openflow agent model";
+
+    container agent {
+      description
+        "Container for the Openflow agent model.";
+
+      container config {
+        description
+          "Container for the Openflow agent config.";
+
+        uses openflow-agent-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Container for the Openflow agent state.";
+
+        uses openflow-agent-config;
+        uses openflow-agent-state;
+      }
+    }
+  }
+
+
+  grouping openflow-top {
+    description
+      "Top-level for the Openflow model";
+
+    container openflow {
+      description
+        "Container for Openflow model";
+
+
+      uses openflow-controllers-top;
+      uses openflow-agent-top;
+    }
+  }
+
+
+  augment "/oc-sys:system" {
+    description
+      "Adding OpenConfig data to the system model";
+
+    uses openflow-top;
+  }
+
+}

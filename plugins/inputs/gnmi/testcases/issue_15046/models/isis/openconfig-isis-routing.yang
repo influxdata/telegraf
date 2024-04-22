@@ -1,0 +1,530 @@
+submodule openconfig-isis-routing {
+
+  belongs-to openconfig-isis {
+    prefix "oc-isis";
+  }
+
+  // import some basic types
+  import openconfig-isis-types { prefix oc-isis-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-mpls-types { prefix oc-mplst; }
+  import openconfig-segment-routing { prefix oc-sr; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module describes YANG model for ISIS Routing";
+
+  oc-ext:openconfig-version "1.6.2";
+
+  revision "2024-02-20" {
+    description
+      "Fix typo in RFC reference for adjacency-state.";
+    reference "1.6.2";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "1.6.1";
+  }
+
+  revision "2023-05-01" {
+    description
+      "Add ISIS total-lsps counter.";
+    reference "1.6.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify use of the interface-ref type.";
+    reference "1.5.1";
+  }
+
+  revision "2023-03-27" {
+    description
+      "Add weighted ecmp.";
+    reference "1.5.0";
+  }
+
+  revision "2023-03-20" {
+    description
+      "Per-level global enabled configuration default false re-added to keep
+      backward compatibility.";
+    reference "1.4.1";
+  }
+
+  revision "2023-02-22" {
+    description
+      "Deprecate the instance leaf, and add a new instance-id leaf
+      that indicates the value to be used in the Instance Identifier
+      TLV.";
+    reference "1.4.0";
+  }
+
+  revision "2023-01-25" {
+    description
+      "Per-level global enabled configuration removed, since it duplicates
+      the level-capability leaf.";
+    reference "1.3.0";
+  }
+
+  revision "2023-01-04" {
+    description
+      "Add max ecmp paths for address family.";
+    reference "1.2.0";
+  }
+
+  revision "2022-09-20" {
+    description
+      "Add CSNP enable to IS-IS global configuration.";
+    reference "1.1.0";
+  }
+
+  revision "2022-05-10" {
+    description
+      "Modify internal/external route preference to unrestricted uint32
+      type.";
+    reference "1.0.0";
+  }
+
+  revision "2022-03-01" {
+    description
+      "Add simple authentication key support.";
+    reference "0.9.0";
+  }
+
+  revision "2022-02-24" {
+    description
+      "Add Hello PDU padding type to IS-IS global configuration.";
+    reference "0.8.0";
+  }
+
+  revision "2022-01-19" {
+    description
+      "Align revisions across modules.";
+    reference "0.7.1";
+  }
+
+  revision "2021-12-31" {
+    description
+      "Add support for per-interface hello authentication, and per-level
+      *SNP authentication.";
+    reference "0.7.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.6.2";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "0.6.1";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Support IGP-LDP sync per interface.";
+    reference "0.6.0";
+  }
+
+  revision "2020-02-04" {
+    description
+      "Consistent prefix for openconfig-mpls-types.";
+    reference "0.5.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.2";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fix bugs in when statements.";
+    reference "0.4.1";
+  }
+
+  revision "2018-05-14" {
+    description
+      "Update LSDB model to correct Extended IS reach TLV
+      bug. This change is backwards incompatible due to
+      adding an additional level of hierarchy to support
+      multiple instances of the TLV.";
+    reference "0.4.0";
+  }
+
+  revision "2017-07-26" {
+    description
+      "Update LSDB and fix bugs.";
+    reference "0.3.2";
+  }
+
+  revision "2017-05-15" {
+    description
+      "Refactor LSDB.";
+    reference "0.3.0";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Remove top-level /isis container";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add segment routing to IS-IS module";
+    reference "0.2.0";
+  }
+
+  revision "2016-10-18" {
+    description
+      "Initial revision of IS-IS models.";
+    reference "0.1.0";
+  }
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping rt-admin-config {
+    description
+      "Re-usable grouping to enable or disable a particular IS-IS feature.";
+
+    leaf enabled {
+      type boolean;
+      description
+        "When set to true, the functionality within which this leaf is
+        defined is enabled, when set to false it is explicitly disabled.";
+    }
+  }
+
+  grouping isis-afi-safi-config {
+    description
+      "This grouping defines Address-Family configuration parameters";
+
+    leaf afi-name {
+      type identityref {
+        base oc-isis-types:AFI_TYPE;
+      }
+      description
+        "Address-family type.";
+    }
+
+    leaf safi-name {
+      type identityref {
+        base oc-isis-types:SAFI_TYPE;
+      }
+      description
+        "Subsequent address-family type.";
+    }
+  }
+
+  grouping isis-shortcuts-afi-config {
+    description
+      "This grouping defines ISIS Shortcuts configuration parameters";
+
+    leaf afi-name {
+      type identityref {
+        base oc-isis-types:AFI_TYPE;
+      }
+      description "Address-family type.";
+    }
+
+    leaf-list nh-type {
+      type identityref {
+        base oc-mplst:PATH_SETUP_PROTOCOL;
+      }
+      description "Tunnel NH Type(RSVP,SR). When present it implies
+      	that nh-type shortcut is enabled for a specified AFI.";
+    }
+  }
+
+  grouping isis-shortcuts-config {
+    description
+      "This grouping defines ISIS Shortcuts consfiguration parameters";
+
+    container config {
+      description "This container defines ISIS shortcuts configuration.";
+      uses rt-admin-config;
+    }
+
+    container state {
+      config false;
+      description "This container defines state for ISIS shortcuts.";
+      uses rt-admin-config;
+    }
+  }
+
+  grouping isis-mt-config {
+    description
+      "This grouping defines ISIS multi-topology configuration parameters";
+
+    leaf afi-name {
+      type identityref {
+        base oc-isis-types:AFI_TYPE;
+      }
+      description
+        "Address-family type.";
+    }
+    leaf safi-name {
+      type identityref {
+        base oc-isis-types:SAFI_TYPE;
+      }
+      description
+        "Subsequent address-family type.";
+    }
+    //prefer single topology
+  }
+
+
+
+  // *********** STRUCTURE GROUPINGS **********************
+
+  grouping isis-metric-config {
+    description
+      "This grouping defines ISIS metric configuration";
+
+    leaf metric {
+      type uint32;
+      default 10;
+      description "ISIS metric value(default=10).";
+    }
+  }
+  grouping isis-ecmp-config {
+    description
+      "This grouping defines ISIS ecmp configuration.";
+
+    leaf max-ecmp-paths {
+      type uint8;
+      description
+        "ISIS max-paths count.";
+    }
+
+  }
+
+  grouping isis-afi-safi-list {
+    description
+      "This grouping defines address-family configuration and state
+      information";
+
+    list af {
+      key "afi-name safi-name";
+
+      description
+            "Address-family/Subsequent Address-family list.";
+
+      leaf afi-name {
+        type leafref {
+          path "../config/afi-name";
+        }
+        description
+           "Reference to address-family type";
+      }
+
+      leaf safi-name {
+        type leafref {
+          path "../config/safi-name";
+        }
+        description
+           "Reference to subsequent address-family type";
+      }
+
+      container config {
+        description
+          "This container defines AFI-SAFI configuration parameters";
+
+        uses isis-afi-safi-config;
+        uses isis-metric-config;
+        uses rt-admin-config;
+        uses isis-ecmp-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines AFI-SAFI State information";
+
+        uses isis-afi-safi-config;
+        uses isis-metric-config;
+        uses rt-admin-config;
+        uses isis-ecmp-config;
+      }
+
+      uses isis-mt-list;
+    }
+  }
+
+  grouping isis-if-afi-safi-list {
+    description
+      "This grouping defines address-family configuration and state
+      information";
+
+    list af {
+      key "afi-name safi-name";
+
+      description
+            "Address-family/Subsequent Address-family list.";
+
+      leaf afi-name {
+        type leafref {
+          path "../config/afi-name";
+        }
+        description
+           "Reference to address-family type";
+      }
+
+      leaf safi-name {
+        type leafref {
+          path "../config/safi-name";
+        }
+        description
+           "Reference to subsequent address-family type";
+      }
+
+      container config {
+        description
+           "This container defines AFI-SAFI configuration parameters. Single
+            topology is the default setting.";
+        uses isis-afi-safi-config;
+        uses isis-metric-config;
+        uses rt-admin-config;
+      }
+
+      container state {
+        config false;
+        description
+           "This container defines AFI-SAFI State information";
+        uses isis-afi-safi-config;
+        uses isis-metric-config;
+        uses rt-admin-config;
+      }
+
+      uses oc-sr:sr-igp-interface-top;
+    }
+  }
+
+  grouping isis-if-global-afi-safi-list {
+    description
+      "This grouping defines address-family configuration and state
+      information";
+
+    list af {
+      key "afi-name safi-name";
+
+      description
+            "Address-family/Subsequent Address-family list.";
+
+      leaf afi-name {
+        type leafref {
+          path "../config/afi-name";
+        }
+        description
+           "Reference to address-family type";
+      }
+
+      leaf safi-name {
+        type leafref {
+          path "../config/safi-name";
+        }
+        description
+           "Reference to subsequent address-family type";
+      }
+
+      container config {
+        description
+           "This container defines AFI-SAFI configuration parameters. Single
+            topology is the default setting.";
+        uses isis-afi-safi-config;
+        uses rt-admin-config;
+      }
+
+      container state {
+        config false;
+        description
+           "This container defines AFI-SAFI State information";
+        uses isis-afi-safi-config;
+        uses rt-admin-config;
+      }
+    }
+  }
+
+  grouping isis-shortcuts-afi-list {
+    description
+      "This grouping defines ISIS Shorcuts configuration and
+      state information";
+
+    list afi {
+      key "afi-name";
+
+      description
+        "Address-family list.";
+
+      leaf afi-name {
+        type leafref {
+          path "../config/afi-name";
+        }
+        description
+          "Reference to address-family type.";
+      }
+
+      container config {
+        description
+          "This container defines ISIS Shortcuts configuration parameters";
+        uses isis-shortcuts-afi-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines ISIS Shortcuts state information";
+        uses isis-shortcuts-afi-config;
+      }
+    }
+  }
+
+  grouping isis-mt-list {
+    description
+      "This grouping defines multi-topology address-family configuration and
+      state information. MT0 - IPv4 Unicast, MT2 - IPv6 Unicast, MT3 -
+      IPv4 Multicast, MT4 - IPv6 Multicast";
+
+    container multi-topology {
+      description
+        "This container defines multi-topology address-family configuration
+        and state information. ISIS TLV 235, 237.";
+
+      container config {
+      description
+        "This container defines AFI-SAFI multi-topology configuration
+        parameters";
+      uses isis-mt-config;
+      }
+
+      container state {
+      config false;
+      description
+        "This container defines AFI-SAFI multi-topology state information";
+      uses isis-mt-config;
+      uses rt-admin-config;
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+- name: openconfig-telemetry
+  docs:
+    - yang/telemetry/openconfig-telemetry.yang
+  build:
+    - yang/telemetry/openconfig-telemetry.yang
+  run-ci: true

@@ -1,0 +1,150 @@
+module openconfig-alarm-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/alarms/types";
+
+  prefix "oc-alarm-types";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines operational state data related to alarms
+    that the device is reporting.
+
+    This model reuses some data items defined in the draft IETF
+    YANG Alarm Module:
+    https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02
+
+    Portions of this code were derived from the draft IETF YANG Alarm
+    Module. Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "0.2.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2018-01-16" {
+    description
+      "Moved alarm identities into separate types module";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+  identity OPENCONFIG_ALARM_TYPE_ID {
+    description
+      "Base identity for alarm type ID profiles";
+  }
+
+  identity AIS {
+    base OPENCONFIG_ALARM_TYPE_ID;
+    description
+      "Defines an alarm indication signal type of alarm";
+  }
+
+  identity EQPT {
+    base OPENCONFIG_ALARM_TYPE_ID;
+    description
+      "Defines an equipment related type of alarm that is specific
+       to the physical hardware";
+  }
+
+  identity LOS {
+    base OPENCONFIG_ALARM_TYPE_ID;
+    description
+      "Defines a loss of signal type of alarm";
+  }
+
+  identity OTS {
+    base OPENCONFIG_ALARM_TYPE_ID;
+    description
+      "Defines a optical transport signal type of alarm";
+  }
+
+  identity OPENCONFIG_ALARM_SEVERITY {
+    description
+      "Base identity for alarm severity profiles. Derived
+      identities are based on contents of the draft
+      IETF YANG Alarm Module";
+    reference
+      "IETF YANG Alarm Module: Draft - typedef severity
+      https://tools.ietf.org/html/draft-vallin-netmod-alarm-module-02";
+
+  }
+
+  identity UNKNOWN {
+    base OPENCONFIG_ALARM_SEVERITY;
+    description
+      "Indicates that the severity level could not be determined.
+      This level SHOULD be avoided.";
+  }
+
+  identity MINOR {
+    base OPENCONFIG_ALARM_SEVERITY;
+    description
+      "Indicates the existence of a non-service affecting fault
+      condition and that corrective action should be taken in
+      order to prevent a more serious (for example, service
+      affecting) fault. Such a severity can be reported, for
+      example, when the detected alarm condition is not currently
+      degrading the capacity of the resource";
+  }
+
+  identity WARNING {
+    base OPENCONFIG_ALARM_SEVERITY;
+    description
+      "Indicates the detection of a potential or impending service
+      affecting fault, before any significant effects have been felt.
+      Action should be taken to further diagnose (if necessary) and
+      correct the problem in order to prevent it from becoming a more
+      serious service affecting fault.";
+  }
+
+  identity MAJOR {
+    base OPENCONFIG_ALARM_SEVERITY;
+    description
+      "Indicates that a service affecting condition has developed
+      and an urgent corrective action is required. Such a severity
+      can be reported, for example, when there is a severe
+      degradation in the capability of the resource and its full
+      capability must be restored.";
+  }
+
+  identity CRITICAL {
+    base OPENCONFIG_ALARM_SEVERITY;
+    description
+      "Indicates that a service affecting condition has occurred
+      and an immediate corrective action is required. Such a
+      severity can be reported, for example, when a resource becomes
+      totally out of service and its capability must be restored.";
+  }
+
+}

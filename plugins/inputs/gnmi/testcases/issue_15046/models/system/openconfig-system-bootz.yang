@@ -1,0 +1,115 @@
+module openconfig-system-bootz {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/system-bootz";
+  prefix "oc-sys-bootz";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-system { prefix oc-sys; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-yang-types { prefix oc-yang; }
+
+  organization
+    "OpenConfig working group";
+  contact
+    "www.openconfig.net";
+
+  description
+    "This module adds configuration and operational state relating to bootz
+    service running on a network device.";
+
+
+  oc-ext:openconfig-version "1.0.0";
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  revision "2023-06-16" {
+    description
+      "Creation of bootz state paths needed for the service.";
+    reference "1.0.0";
+  }
+
+  grouping bootz-service-structural {
+    description
+      "Structural grouping for bootz service that can be enabled on
+      the system.";
+
+    container bootz {
+      description
+        "Bootz protocol container for management of bootz protocol state.";
+
+      container state {
+        config false;
+        description
+          "Operational state relating to the bootz service.";
+        uses bootz-state;
+      }
+    }
+  }
+
+  grouping bootz-state {
+    description
+      "State parameters required to monitor bootz service.";
+
+    leaf checksum {
+      type string;
+      default "";
+      description
+        "The current checksum of the bootz protocol buffer.
+
+        This value should refect the current sha-512 of the bootz
+        protocol buffer message BootstrapDataSigned. The protocol
+        buffer serialization must be done by tag value for each field
+        in the bootz protocol buffer. This will produce a
+        determintistic marshalled value which can be
+        checksummed.";
+    }
+
+    leaf error-count {
+      type oc-yang:counter64;
+      description
+        "Total count of all bootz errors.";
+    }
+
+    leaf status {
+      type enumeration {
+        enum BOOTZ_UNSPECIFIED;
+        enum BOOTZ_SENT;
+        enum BOOTZ_RECEIVED;
+        enum BOOTZ_CONFIGURATION_APPLIED;
+        enum BOOTZ_OK;
+        enum BOOTZ_OV_INVALID;
+        enum BOOTZ_OS_UPGRADE_IN_PROGRESS;
+        enum BOOTZ_OS_UPGRADE_COMPLETE;
+        enum BOOTZ_OS_INVALID_IMAGE;
+        enum BOOTZ_CONFIGURATION_INVALID;
+      }
+      description
+        "The status of the bootz service.
+
+        The general sequence for the flow would be:
+        BOOTZ_UNSPECIFIED            <- system initial state
+        BOOTZ_SENT                   <- bootz request sent
+        BOOTZ_RECEIVED               <- bootz response received
+        BOOTZ_OS_UPGRADE_IN_PROGRESS <- (if needed)
+        BOOTZ_OS_UPGRADE_COMPLETE    <- (if needed)
+        BOOTZ_CONFIGURATION_APPLIED  <- bootz configuration applied
+        BOOTZ_OK                     <- bootz process successful
+
+        If any error is encounter an error ENUM will be returned.";
+    }
+
+    leaf last-boot-attempt {
+      type oc-types:timeticks64;
+      description
+        "The timestamp of the last bootz attempt.";
+    }
+  }
+
+  augment "/oc-sys:system" {
+    description
+      "Add bootz service configuration to the openconfig-system model.";
+
+    uses bootz-service-structural;
+  }
+}

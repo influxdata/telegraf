@@ -1,0 +1,221 @@
+module openconfig-messages {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/messages";
+
+  prefix "oc-messages";
+
+  // import some basic types
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-system-logging { prefix "oc-log"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    related to Syslog messages that a device may generate.
+
+    These messages are historically obtained through the Syslog
+    transport, however this module allows for obtaining them through
+    an alternative transport, such as a Subscribe operation over an
+    RPC.
+
+    This module does not usurp traditional syslog servers, which may
+    still be configured through the
+    /yang/system/openconfig-system.yang model, rather it provies the
+    Operator with an alternative method of consuming messages.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2018-08-13" {
+      description
+        "Initial draft.";
+      reference "0.0.1";
+  }
+
+  // identity statements
+
+  identity DEBUG_SERVICE {
+    description
+      "Base identity for debug services. Identities within this base
+      identity are to be augmented in by vendors.";
+  }
+
+  // grouping statements
+
+  grouping messages-config {
+    description
+      "Configuration data for defining Syslog message severity.";
+
+    leaf severity {
+      type oc-log:syslog-severity;
+      description
+        "Specifies that only messages of the given severity (or
+        greater severity) are sent over the RPC.
+
+        This is analogous to differentiating which severity is to be
+        sent to legacy Syslog servers, as opposed to local buffer or
+        files.";
+    }
+  }
+
+  grouping messages-state {
+    description
+      "Operational state data for Syslog messages.";
+
+    container message {
+      oc-ext:telemetry-atomic;
+      config false;
+      description
+        "Syslog messages the client is Subscribing to. This is all
+        messages currently configured to be sent according to
+        syslog-severity.";
+      reference
+        "IETF RFC 5424 - The Syslog Protocol";
+
+      // Decide if it is OK to include ALL in this leaf.
+      leaf msg {
+        type string;
+        description
+          "Message payload. If other leafs within this container not
+          supported, this leaf MAY include the entire message,
+          inclding pri, procid, app-name etc..";
+      }
+
+      leaf priority {
+        type uint8;
+        description
+          "The Priority value (PRIVAL) represents both the
+          Facility and Severity.";
+        reference
+          "IETF RFC 5424, Section 6.2.1";
+        }
+
+      leaf app-name {
+        type string;
+        description
+          "The APP-NAME field SHOULD identify the device or
+          application that originated the message.";
+        reference
+          "IETF RFC 5424, Section 6.2.5.";
+      }
+
+      leaf procid {
+        type string;
+        description
+          "PROCID is a value that is included in the message, having
+          no interoperable meaning, except that a change in the value
+          indicates there has been a discontinuity in syslog
+          reporting.";
+        reference
+          "IETF RFC 5424, Section 6.2.6.";
+        }
+
+      leaf msgid {
+        type string;
+        description
+          "The MSGID SHOULD identify the type of message. For
+          example, a firewall might use the MSGID 'TCPIN' for
+          incoming TCP traffic and the MSGID 'TCPOUT' for outgoing
+          TCP traffic.";
+        reference
+          "IETF RFC 5424, Section 6.2.7.";
+      }
+    }
+  }
+
+  grouping debug-messages-config {
+    description
+      "Configuration data for enabling debug messages.";
+
+    leaf service {
+      type identityref {
+        base DEBUG_SERVICE;
+      }
+      description
+        "Enumeration of all services which can have debugging enabled.
+        Vendors are to augment this base identity with their platform
+        or OS specific debug options.";
+    }
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Enable and disable debugging.";
+    }
+  }
+
+  grouping debug-messages-top {
+    description
+      "Configuration data for enabling Syslog debug messages.";
+
+    container debug-entries {
+      description
+        "Enclosing container for list of debugs to enable.";
+
+      list debug-service {
+        key "service";
+        description
+          "List of debugging entries.";
+
+        leaf service {
+          type leafref {
+            path "../config/service";
+          }
+          description
+            "Reference to the debug-enable service key.";
+        }
+
+        container config {
+          description
+            "Configuration data for debug service entries.";
+
+          uses debug-messages-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for enabled debugs.";
+        uses debug-messages-config;
+        }
+      }
+    }
+  }
+
+  grouping messages-top {
+    description
+      "Top-level grouping for Syslog messages.";
+
+    container messages {
+      description
+        "Top-level container for Syslog messages.";
+
+      container config {
+        description
+          "Configuration data for Syslog messages.";
+
+        uses messages-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for a Syslog messages.";
+
+        uses messages-config;
+        uses messages-state;
+      }
+    uses debug-messages-top;
+    }
+  }
+  uses messages-top;
+}

@@ -1,0 +1,1509 @@
+submodule openconfig-mpls-te {
+
+  yang-version "1";
+
+  belongs-to "openconfig-mpls" {
+    prefix "oc-mpls";
+  }
+
+
+  // import some basic types
+  import openconfig-inet-types { prefix inet; }
+  import openconfig-mpls-rsvp { prefix oc-rsvp; }
+  import openconfig-mpls-sr { prefix oc-sr; }
+  import openconfig-mpls-types {prefix oc-mplst; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-yang-types { prefix yang; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-pcep { prefix oc-pcep; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Configuration related to constrained-path LSPs and traffic
+    engineering.  These definitions are not specific to a particular
+    signaling protocol or mechanism (see related submodules for
+    signaling protocol-specific configuration).";
+
+  oc-ext:openconfig-version "3.4.0";
+
+  revision "2023-07-25" {
+    description
+      "Added record-route-enabled to MPLS p2p tunnel config";
+    reference "3.4.0";
+  }
+
+  revision "2023-04-28" {
+    description
+      "Fixed typo in cspf-tiebreaker leaf description";
+    reference "3.3.2";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Add clarifying comments on use of interface-ref.";
+    reference "3.3.1";
+  }
+
+  revision "2022-02-11" {
+    description
+      "Add lsp-path PCE control mode";
+    reference "3.3.0";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add prefix to qualify when statements.";
+    reference "3.2.2";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace.";
+    reference "3.1.1";
+  }
+
+  revision "2021-03-24" {
+    description
+      "Add Metric bounds constraints for LSPs.";
+    reference "3.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.0.1";
+  }
+
+  revision "2018-07-02" {
+    description
+      "Add new RSVP-TE statistics, remove associated-rsvp-session
+      leaf. Remove use of date-and-time.";
+    reference "3.0.0";
+  }
+
+  revision "2018-06-16" {
+    description
+      "Included attributes for base LDP configuration.";
+     reference "2.6.0";
+  }
+
+  revision "2018-06-13" {
+    description
+      "Add ttl-propagation to global MPLS config";
+    reference "2.5.0";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fixed bugs in when statements on RSVP-TE attributes";
+    reference "2.4.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "2.4.1";
+  }
+
+  revision "2017-06-21" {
+    description
+      "Add TC bits typedef.";
+    reference "2.4.0";
+  }
+
+  revision "2017-03-22" {
+    description
+      "Add RSVP calculated-absolute-subscription-bw";
+    reference "2.3.0";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add RSVP Tspec, clarify units for RSVP, remove unused LDP";
+    reference "2.2.0";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add additional MPLS parameters";
+    reference "2.1.0";
+  }
+
+  revision "2016-09-01" {
+    description
+      "Revisions based on implementation feedback";
+    reference "2.0.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "Public release of MPLS models";
+    reference "1.0.1";
+  }
+
+  // typedef statements
+
+ typedef te-bandwidth-type {
+    type enumeration {
+      enum SPECIFIED {
+        description
+          "Bandwidth is explicitly specified";
+      }
+      enum AUTO {
+        description
+          "Bandwidth is automatically computed";
+      }
+    }
+    description
+      "enumerated type for specifying whether bandwidth is
+       explicitly specified or automatically computed";
+  }
+
+  typedef mpls-srlg-flooding-type {
+    type enumeration {
+      enum FLOODED_SRLG {
+        description
+          "SRLG is flooded in the IGP";
+      }
+      enum STATIC_SRLG {
+        description
+          "SRLG is not flooded, the members are
+           statically configured";
+      }
+    }
+    description
+      "Enumerated bype for specifying how the SRLG is flooded";
+  }
+
+  typedef mpls-hop-type {
+    type enumeration {
+      enum LOOSE {
+        description
+          "loose hop in an explicit path";
+      }
+      enum STRICT {
+        description
+          "strict hop in an explicit path";
+      }
+    }
+    description
+     "enumerated type for specifying loose or strict
+      paths";
+  }
+
+  typedef te-metric-type {
+    type union {
+      type enumeration {
+        enum IGP {
+          description
+           "set the LSP metric to track the underlying
+            IGP metric";
+        }
+      }
+      type uint32;
+    }
+    description
+     "union type for setting the LSP TE metric to a
+      static value, or to track the IGP metric";
+  }
+
+  typedef cspf-tie-breaking {
+    type enumeration {
+      enum RANDOM {
+        description
+         "CSPF calculation selects a random path among
+          multiple equal-cost paths to the destination";
+      }
+      enum LEAST_FILL {
+        description
+         "CSPF calculation selects the path with greatest
+          available bandwidth";
+      }
+      enum MOST_FILL {
+        description
+          "CSPF calculation selects the path with the least
+          available bandwidth";
+      }
+    }
+    default RANDOM;
+    description
+     "type to indicate the CSPF selection policy when
+      multiple equal cost paths are available";
+  }
+
+
+  // grouping statements
+
+  grouping te-tunnel-reoptimize-config {
+    description
+      "Definition for reoptimize timer configuration";
+
+    leaf reoptimize-timer {
+      type uint16;
+      units seconds;
+      description
+       "frequency of reoptimization of
+        a traffic engineered LSP";
+    }
+  }
+
+  grouping te-lsp-auto-bandwidth-config {
+    description
+      "Configuration parameters related to autobandwidth";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "enables mpls auto-bandwidth on the
+         lsp";
+    }
+
+    leaf min-bw {
+      type oc-mplst:bandwidth-kbps;
+      description
+        "set the minimum bandwidth in Kbps for an
+         auto-bandwidth LSP";
+    }
+
+    leaf max-bw {
+      type oc-mplst:bandwidth-kbps;
+      description
+        "set the maximum bandwidth in Kbps for an
+         auto-bandwidth LSP";
+    }
+
+    leaf adjust-interval {
+      type uint32;
+      description
+        "time in seconds between adjustments to
+         LSP bandwidth";
+    }
+
+    leaf adjust-threshold {
+      type oc-types:percentage;
+      description
+        "percentage difference between the LSP's
+         specified bandwidth and its current bandwidth
+         allocation -- if the difference is greater than the
+         specified percentage, auto-bandwidth adjustment is
+         triggered";
+    }
+  }
+
+  grouping te-lsp-auto-bandwidth-state {
+    description
+      "Operational state parameters relating to auto-bandwidth";
+
+    leaf interval-high-bw {
+      type oc-mplst:bandwidth-kbps;
+      description
+        "The maximum measured bandwidth during the current
+        auto-bandwidth adjust interval expressed in kilobits
+        per second.";
+    }
+  }
+
+  grouping te-lsp-overflow-config {
+    description
+     "configuration for mpls lsp bandwidth
+      overflow adjustment";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+       "enables mpls lsp bandwidth overflow
+        adjustment on the lsp";
+    }
+
+    leaf overflow-threshold {
+      type oc-types:percentage;
+      description
+       "bandwidth percentage change to trigger
+        an overflow event";
+
+    }
+
+    leaf trigger-event-count {
+      type uint16;
+      description
+       "number of consecutive overflow sample
+        events needed to trigger an overflow adjustment";
+    }
+  }
+
+  grouping te-lsp-underflow-config {
+    description
+      "configuration for mpls lsp bandwidth
+      underflow adjustment";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+       "enables bandwidth underflow
+        adjustment on the lsp";
+    }
+
+    leaf underflow-threshold {
+      type oc-types:percentage;
+      description
+       "bandwidth percentage change to trigger
+        and underflow event";
+    }
+
+    leaf trigger-event-count {
+      type uint16;
+      description
+       "number of consecutive underflow sample
+        events needed to trigger an underflow adjustment";
+    }
+  }
+
+  grouping te-path-placement-constraints-config {
+    description
+      "Configuration data for link affinities";
+
+    leaf-list exclude-group {
+      type leafref {
+        path "../../../../../../../../../../te-global-attributes" +
+          "/mpls-admin-groups/admin-group/admin-group-name";
+      }
+      description
+        "list of references to named admin-groups to exclude in
+        path calculation.";
+    }
+
+    leaf-list include-all-group {
+      type leafref {
+        path "../../../../../../../../../../te-global-attributes" +
+          "/mpls-admin-groups/admin-group/admin-group-name";
+      }
+      description
+        "list of references to named admin-groups of which all must
+        be included";
+    }
+
+    leaf-list include-any-group {
+      type leafref {
+        path "../../../../../../../../../../te-global-attributes" +
+          "/mpls-admin-groups/admin-group/admin-group-name";
+      }
+      description
+        "list of references to named admin-groups of which one must
+        be included";
+    }
+  }
+
+  grouping te-path-placement-constraints-state {
+    description
+      "Operational state data for link affinities";
+    //TODO: currently a placeholder
+  }
+
+  grouping te-path-placement-constraints-top {
+    description
+      "Top-level grouping ";
+
+    container admin-groups {
+      description
+        "Top-level container for include/exclude constraints for
+        link affinities";
+
+      container config {
+        description
+          "Configuration data ";
+
+        uses te-path-placement-constraints-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data ";
+
+        uses te-path-placement-constraints-config;
+        uses te-path-placement-constraints-state;
+      }
+    }
+  }
+
+  grouping te-tunnel-protection-config {
+    description
+     "Configuration parameters related to LSP
+      protection";
+    leaf protection-style-requested {
+      type identityref {
+        base oc-mplst:PROTECTION_TYPE;
+      }
+      default oc-mplst:UNPROTECTED;
+      description
+        "style of mpls frr protection desired: can be
+        link, link-node or unprotected.";
+    }
+  }
+
+  grouping explicit-route-subobject-config {
+    description
+      "The explicit route subobject grouping";
+
+    leaf address {
+     type inet:ip-address;
+     description
+      "router hop for the LSP path";
+    }
+
+    leaf hop-type {
+      type mpls-hop-type;
+      description
+        "strict or loose hop";
+    }
+
+    leaf index {
+      type uint8 {
+        range "0..255";
+      }
+      description
+        "Index of this explicit route object to express
+        the order of hops in the path";
+    }
+
+  }
+
+  grouping named-explicit-path-config {
+    description
+      "Configuration parameters relating to a named
+       explicit path";
+
+    leaf name {
+      type string;
+      description
+        "A string name that uniquely identifies an explicit
+         path";
+    }
+  }
+
+  // Explicit paths config somewhat following the IETF model
+  grouping explicit-paths-top {
+    description
+      "Top level global explicit path configuration
+      grouping";
+
+    container named-explicit-paths {
+      description
+        "Enclosing container for the named explicit paths";
+      list named-explicit-path {
+        key "name";
+        description
+          "A list of explicit paths";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "A string name that uniquely identifies
+            an explicit path";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to named explicit
+            paths";
+          uses named-explicit-path-config;
+          uses oc-sr:sr-path-attributes-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the named
+            explicit paths";
+          uses named-explicit-path-config;
+          uses oc-sr:sr-path-attributes-config;
+        }
+
+        container explicit-route-objects {
+          description
+            "Enclosing container for EROs";
+
+          list explicit-route-object {
+            key "index";
+            description
+              "List of explicit route objects";
+
+            leaf index {
+              type leafref {
+                path "../config/index";
+              }
+
+              description
+                "Index of this explicit route object,
+                 to express the order of hops in path";
+            }
+
+            container config {
+              description
+                "Configuration parameters relating to an explicit
+                route";
+              uses explicit-route-subobject-config;
+            }
+
+
+            container state {
+              config false;
+              description
+                "State parameters relating to an explicit route";
+              uses explicit-route-subobject-config;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping mpls-te-srlg-config {
+    description
+      "Configuration of various attributes associated
+      with the SRLG";
+
+    leaf name {
+      type string;
+      description
+        "SRLG group identifier";
+    }
+
+    leaf value {
+      type uint32;
+      description
+        "group ID for the SRLG";
+    }
+
+    leaf cost {
+      type uint32;
+      description
+        "The cost of the SRLG to the computation
+        algorithm";
+    }
+
+    leaf flooding-type {
+      type mpls-srlg-flooding-type;
+      default FLOODED_SRLG;
+      description
+        "The type of SRLG, either flooded in the IGP or
+         statically configured";
+    }
+  }
+
+  grouping mpls-te-srlg-members-config {
+    description
+      "Configuration of the membership of the SRLG";
+
+    leaf from-address {
+      type inet:ip-address;
+      description
+        "IP address of the a-side of the SRLG link";
+    }
+
+    leaf to-address {
+      type inet:ip-address;
+      description
+        "IP address of the z-side of the SRLG link";
+    }
+  }
+
+  grouping mpls-te-srlg-top {
+    description
+      "Top level grouping for MPLS shared
+      risk link groups.";
+
+    container srlgs {
+      description
+        "Shared risk link groups attributes";
+      list srlg {
+        key "name";
+        description
+          "List of shared risk link groups";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+            // Requires YANG 1.1
+            //require-instance true;
+          }
+          description
+            "The SRLG group identifier";
+        }
+
+        container config {
+          description
+            "Configuration parameters related to the SRLG";
+          uses mpls-te-srlg-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters related to the SRLG";
+          uses mpls-te-srlg-config;
+        }
+
+        container static-srlg-members {
+          when "../config/flooding-type = 'STATIC_SRLG'" {
+            description
+              "Include this container for static
+              SRLG specific configuration";
+          }
+          description
+            "SRLG members for static (not flooded) SRLGs ";
+
+          list members-list {
+            key "from-address";
+            description
+             "List of SRLG members, which are expressed
+              as IP address endpoints of links contained in the
+              SRLG";
+
+            leaf from-address {
+              type leafref {
+                path "../config/from-address";
+                // Requires YANG 1.1
+                //require-instance true;
+              }
+              description
+                "The from address of the link in the SRLG";
+            }
+
+            container config {
+              description
+                "Configuration parameters relating to the
+                SRLG members";
+              uses mpls-te-srlg-members-config;
+            }
+
+            container state {
+              config false;
+              description
+                "State parameters relating to the SRLG
+                members";
+              uses mpls-te-srlg-members-config;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping te-global-tunnel-config {
+    description
+      "Configuration parameters relevant to a single
+       traffic engineered tunnel.";
+
+    leaf name {
+      type string;
+      description
+        "The tunnel name";
+    }
+
+    leaf type {
+      type identityref {
+        base oc-mplst:TUNNEL_TYPE;
+      }
+      description
+        "Tunnel type, p2p or p2mp";
+    }
+
+    leaf signaling-protocol {
+      type identityref {
+        base oc-mplst:PATH_SETUP_PROTOCOL;
+      }
+      description
+        "Signaling protocol used to set up this tunnel";
+    }
+
+    leaf description {
+      type string;
+      description
+        "optional text description for the tunnel";
+    }
+
+    leaf admin-status {
+      type identityref {
+        base oc-mplst:TUNNEL_ADMIN_STATUS;
+      }
+      default oc-mplst:ADMIN_UP;
+      description
+        "TE tunnel administrative state.";
+    }
+
+    leaf preference {
+      type uint8 {
+        range "1..255";
+      }
+      description
+        "Specifies a preference for this tunnel.
+        A lower number signifies a better preference";
+    }
+
+    leaf metric-type {
+      type identityref {
+        base oc-mplst:LSP_METRIC_TYPE;
+      }
+      default oc-mplst:LSP_METRIC_INHERITED;
+      description
+        "The type of metric specification that should be used to set
+        the LSP(s) metric";
+    }
+
+    leaf metric {
+      type int32;
+      description
+        "The value of the metric that should be specified. The value
+        supplied in this leaf is used in conjunction with the metric
+        type to determine the value of the metric used by the system.
+        Where the metric-type is set to LSP_METRIC_ABSOLUTE - the
+        value of this leaf is used directly; where it is set to
+        LSP_METRIC_RELATIVE, the relevant (positive or negative)
+        offset is used to formulate the metric; where metric-type
+        is LSP_METRIC_INHERITED, the value of this leaf is not
+        utilised";
+    }
+
+    leaf shortcut-eligible {
+      type boolean;
+      default "true";
+      description
+        "Whether this LSP is considered to be eligible for us as a
+        shortcut in the IGP. In the case that this leaf is set to
+        true, the IGP SPF calculation uses the metric specified to
+        determine whether traffic should be carried over this LSP";
+    }
+
+    leaf protection-style-requested {
+      type identityref {
+        base oc-mplst:PROTECTION_TYPE;
+      }
+      default oc-mplst:UNPROTECTED;
+      description
+        "style of mpls frr protection desired: can be
+        link, link-node or unprotected.";
+    }
+
+    uses te-tunnel-reoptimize-config;
+    uses oc-rsvp:rsvp-p2p-tunnel-attributes-config;
+
+  }
+
+  grouping tunnel-p2p-attributes-config {
+    description
+      "Configuration related to p2p LSPs";
+    leaf destination {
+      type inet:ip-address;
+      description
+        "P2P tunnel destination address";
+    }
+    leaf record-route-enabled {
+      type boolean;
+      description
+        "Enables recording a path on an LSP using the record route object (RRO)";
+    }
+  }
+
+  grouping p2p-path-state {
+    description
+      "Operational state parameters for p2p paths";
+
+    leaf-list associated-rsvp-sessions {
+      type leafref {
+        path "../../../../../../../../../signaling-protocols/" +
+             "rsvp-te/sessions/session/local-index";
+      }
+      description
+        "If the signalling protocol specified for this path is
+        RSVP-TE, this leaf-list provides a reference to the associated
+        sessions within the RSVP-TE protocol sessions list, such
+        that details of the signaling can be retrieved. More than
+        one session may exist during re-signalling such as
+        make-before-break.";
+    }
+
+    leaf spf-metric {
+      type uint64;
+      description
+        "The IGP metric of the shortest path to the LSP destination.
+        This value is used to compare the current metric of the
+        constrained path to the shortest path that is available in
+        the network topology.";
+    }
+
+    leaf cspf-metric {
+      type uint64;
+      description
+        "The IGP metric of the path currently used by the LSP.
+        This value is used to represent the metric of the path
+        used by the LSP following the execution of the CSPF
+        algorithm and signalling of the LSP.";
+    }
+  }
+
+  grouping p2p-path-config {
+    description
+      "Configuration parameters for p2p paths";
+
+    leaf name {
+      type string;
+      description
+        "Path name";
+    }
+
+    leaf path-computation-method {
+      type identityref {
+        base oc-mplst:PATH_COMPUTATION_METHOD;
+      }
+      default oc-mplst:LOCALLY_COMPUTED;
+      description
+        "The method used for computing the path, either
+        locally computed, queried from a server or not
+        computed at all (explicitly configured).";
+    }
+
+    leaf use-cspf {
+      when "../path-computation-method = 'oc-mplst:LOCALLY_COMPUTED'" {
+        description
+          "The use of cspf when the path-computation method is
+           local computation";
+      }
+      type boolean;
+      description
+        "Flag to enable CSPF for locally computed LSPs";
+    }
+
+    leaf cspf-tiebreaker {
+      when "../path-computation-method = 'oc-mplst:LOCALLY_COMPUTED'" {
+        description
+          "The cspf tiebreaking method when the path is
+           locally computed";
+      }
+      type cspf-tie-breaking;
+      description
+        "Determine the tie-breaking method to choose between
+        equally desirable paths during CSPF computation";
+    }
+
+    leaf path-computation-server {
+      when "../path-computation-method = 'oc-mplst:EXTERNALLY_QUERIED'" {
+        description
+          "The path-computation server when the path is
+           externally queried";
+      }
+      type leafref {
+        path "../../../../../../../../../../protocols/protocol/pcep/path-computation-servers/" +
+             "path-computation-server/pce-server-address";
+      }
+      description
+        "Reference to the address of a previously configured
+        external path computation server.";
+    }
+
+    leaf path-control {
+      type oc-pcep:lsp-control-type;
+      description
+        "Set the LSP path control mode as PCE_DELEGATED
+        PCC_CONTROLLED or PCC_REPORT_ONLY information
+        state to the PCE.";
+    }
+
+    leaf explicit-path-name {
+      when "../path-computation-method = 'oc-mplst:EXPLICITLY_DEFINED'" {
+        description
+          "The name of the explicitly defined path used";
+      }
+
+      type leafref {
+        path "../../../../../../../"
+             + "named-explicit-paths/named-explicit-path/"
+             + "config/name";
+        // Requires YANG 1.1
+        //require-instance true;
+      }
+      description
+        "reference to a defined path";
+    }
+
+    leaf preference {
+      type uint8 {
+        range "1..255";
+      }
+      description
+        "Specifies a preference for this path. The lower the
+        number higher the preference";
+    }
+
+    uses oc-rsvp:rsvp-p2p-path-attributes-config;
+  }
+
+
+  grouping te-tunnel-p2p-top {
+    description
+      "Top level grouping for p2p configuration";
+
+    container p2p-tunnel-attributes {
+      when "../config/type = 'oc-mplst:P2P'" {
+        description
+         "Include this container for LSPs of type P2P";
+      }
+      description
+        "Parameters related to LSPs of type P2P";
+
+      container config {
+       description
+         "Configuration parameters for P2P LSPs";
+       uses tunnel-p2p-attributes-config;
+      }
+
+      container state {
+       config false;
+       description
+         "State parameters for P2P LSPs";
+       uses tunnel-p2p-attributes-config;
+      }
+
+      uses p2p-primary-paths-top;
+      uses p2p-secondary-paths-top;
+    }
+  }
+
+
+  grouping te-tunnel-state {
+    description
+      "Counters and statistical data relevent to a single
+       tunnel.";
+
+    leaf oper-status {
+      type identityref {
+        base oc-mplst:LSP_OPER_STATUS;
+      }
+      description
+       "The operational status of the TE tunnel";
+    }
+
+    leaf role {
+      type identityref {
+        base oc-mplst:LSP_ROLE;
+      }
+      description
+       "The lsp role at the current node, whether it is headend,
+        transit or tailend.";
+    }
+
+    leaf auto-generated {
+      type boolean;
+      description
+        "If the LSP was auto-generated by the system this leaf
+        should be set to true. Examples of auto-generated LSPs
+        are dynamically created backup LSPs to meet a FRR
+        policy.";
+    }
+
+    container counters {
+      description
+        "State data for MPLS label switched paths. This state
+        data is specific to a single label switched path.";
+
+      leaf bytes {
+        type yang:counter64;
+        description
+          "Number of bytes that have been forwarded over the
+           label switched path.";
+      }
+
+      leaf packets {
+        type yang:counter64;
+        description
+          "Number of pacets that have been forwarded over the
+           label switched path.";
+      }
+
+      leaf path-changes {
+        type yang:counter64;
+        description
+          "Number of path changes for the label switched path";
+      }
+
+      leaf state-changes {
+        type yang:counter64;
+        description
+          "Number of state changes for the label switched path";
+      }
+
+      leaf online-time {
+        type oc-types:timeticks64;
+        description
+          "Indication of the time the label switched path
+           transitioned to an Oper Up or in-service state.
+
+           The value is the timestamp in nanoseconds relative to
+           the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+      }
+
+      leaf current-path-time {
+        type oc-types:timeticks64;
+        description
+          "Indicates the time the LSP switched onto its
+           current path. The value is reset upon a LSP path
+           change.
+
+           The value is the timestamp in nanoseconds relative to
+           the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+
+      }
+
+      leaf next-reoptimization-time {
+        type oc-types:timeticks64;
+        description
+          "Indicates the next scheduled time the LSP
+           will be reoptimized.
+
+           The value is the timestamp in nanoseconds relative to
+           the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+
+      }
+    }
+  }
+
+  grouping te-tunnel-bandwidth-config {
+    description
+      "Configuration parameters related to bandwidth for a tunnel";
+
+    leaf specification-type {
+      type te-bandwidth-type;
+      default SPECIFIED;
+      description
+        "The method used for settign the bandwidth, either explicitly
+        specified or configured";
+    }
+
+    leaf set-bandwidth {
+      when "../specification-type = 'SPECIFIED'" {
+       description
+         "The bandwidth value when bandwidth is explicitly
+          specified";
+      }
+      type oc-mplst:bandwidth-kbps;
+      description
+       "set bandwidth explicitly, e.g., using
+        offline calculation";
+    }
+  }
+
+  grouping te-tunnel-bandwidth-state {
+    description
+      "Operational state parameters relating to bandwidth for a tunnel";
+
+    leaf signaled-bandwidth {
+      type oc-mplst:bandwidth-kbps;
+      description
+        "The currently signaled bandwidth of the LSP. In the case where
+        the bandwidth is specified explicitly, then this will match the
+        value of the set-bandwidth leaf; in cases where the bandwidth is
+        dynamically computed by the system, the current value of the
+        bandwidth should be reflected.";
+    }
+  }
+
+  grouping te-tunnel-bandwidth-top {
+    description
+      "Top level grouping for specifying bandwidth for a tunnel";
+
+    container bandwidth {
+      description
+        "Bandwidth configuration for TE LSPs";
+
+      container config {
+        description
+          "Configuration parameters related to bandwidth on TE
+          tunnels:";
+        uses te-tunnel-bandwidth-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State parameters related to bandwidth
+          configuration of TE tunnels";
+        uses te-tunnel-bandwidth-config;
+        uses te-tunnel-bandwidth-state;
+      }
+
+      container auto-bandwidth {
+        when "../config/specification-type = 'AUTO'" {
+          description
+            "Include this container for auto bandwidth
+            specific configuration";
+        }
+        description
+          "Parameters related to auto-bandwidth";
+
+        container config {
+          description
+            "Configuration parameters relating to MPLS
+            auto-bandwidth on the tunnel.";
+          uses te-lsp-auto-bandwidth-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters relating to MPLS
+            auto-bandwidth on the tunnel.";
+          uses te-lsp-auto-bandwidth-config;
+          uses te-lsp-auto-bandwidth-state;
+        }
+
+        container overflow {
+          description
+            "configuration of MPLS overflow bandwidth
+            adjustement for the LSP";
+
+          container config {
+            description
+              "Config information for MPLS overflow bandwidth
+              adjustment";
+            uses te-lsp-overflow-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Config information for MPLS overflow bandwidth
+              adjustment";
+            uses te-lsp-overflow-config;
+          }
+        }
+
+        container underflow {
+          description
+            "configuration of MPLS underflow bandwidth
+            adjustement for the LSP";
+
+          container config {
+            description
+              "Config information for MPLS underflow bandwidth
+              adjustment";
+            uses te-lsp-underflow-config;
+          }
+
+          container state {
+            config false;
+            description
+              "State information for MPLS underflow bandwidth
+              adjustment";
+            uses te-lsp-underflow-config;
+          }
+        }
+      }
+    }
+  }
+
+  grouping p2p-path-candidate-secondary-path-config {
+    description
+      "Configuration parameters relating to a secondary path which
+      is a candidate for a particular primary path";
+
+    leaf secondary-path {
+      type leafref {
+        path "../../../../../../p2p-secondary-paths/" +
+             "p2p-secondary-path/config/name";
+      }
+      description
+        "A reference to the secondary path that should be utilised
+        when the containing primary path option is in use";
+    }
+
+    leaf priority {
+      type uint16;
+      description
+        "The priority of the specified secondary path option. Higher
+        priority options are less preferable - such that a secondary
+        path reference with a priority of 0 is the most preferred";
+    }
+  }
+
+  grouping p2p-path-candidate-secondary-path-state {
+    description
+      "Operational state parameters relating to a secondary path
+      which is a candidate for a particular primary path";
+
+    leaf active {
+      type boolean;
+      description
+        "Indicates the current active path option that has
+        been selected of the candidate secondary paths";
+    }
+  }
+
+  grouping path-constraints-config {
+    description "Configuration parameters related to path metric bound constraints.";
+
+    leaf type {
+      type identityref {
+        base oc-mplst:PATH_METRIC_TYPE;
+      }
+      description
+        "Identifies an entry in the list of metric-types
+        bound for the TE path.";
+    }
+
+    leaf metric-upper-bound {
+      type uint64;
+      default 0;
+      description
+        "Upper bound on end-to-end path metric. A zero indicate
+        an unbounded upper limit for the specific metric-type.";
+    }
+  }
+
+  grouping path-constraints-top {
+    description
+      "Top-level path-constraints grouping.";
+
+    container path-metric-bound-constraints {
+      description
+        "Enclosing container for the path metric bound constraints.";
+
+      list path-metric-bound-constraint {
+        key "type";
+        description
+          "A list of metric bounds that are applied as constraints to the LSP.
+          It act as a logical AND, hence all of them must be satisfied.
+          If not, it will return an error.
+          Constraints within this list may be applicable to either
+          the local CSPF process (where data is available to the local device)
+          or be communicated to a PCE for calculation.";
+
+        leaf type {
+          type leafref {
+            path "../config/type";
+          }
+          description
+            "Identifies an entry in the list of metric-types
+            bound for the TE path.";
+        }
+
+        container config {
+          description
+          "Configuration parameters relating to path metric bound constraints.";
+          uses path-constraints-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to path metric bound constraints.";
+          uses path-constraints-config;
+        }
+      }
+    }
+  }
+
+  grouping p2p-primary-paths-top {
+    description
+      "Top level grouping for p2p primary paths";
+
+    container p2p-primary-path {
+      description
+        "Primary paths associated with the LSP";
+
+      list p2p-primary-path {
+        key "name";
+        description
+         "List of p2p primary paths for a tunnel";
+
+        leaf name {
+         type leafref {
+           path "../config/name";
+           // Requires YANG 1.1
+           //require-instance true;
+         }
+         description
+          "Path name";
+        }
+
+        container config {
+         description
+          "Configuration parameters related to paths";
+         uses p2p-path-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters related to paths";
+          uses p2p-path-config;
+          uses p2p-path-state;
+        }
+
+        uses path-constraints-top;
+
+        container candidate-secondary-paths {
+          description
+            "The set of candidate secondary paths which may be used
+            for this primary path. When secondary paths are specified
+            in the list the path of the secondary LSP in use must be
+            restricted to those path options referenced. The
+            priority of the secondary paths is specified within the
+            list. Higher priority values are less preferred - that is
+            to say that a path with priority 0 is the most preferred
+            path. In the case that the list is empty, any secondary
+            path option may be utilised when the current primary path
+            is in use.";
+
+          list candidate-secondary-path {
+            key "secondary-path";
+
+            description
+              "List of secondary paths which may be utilised when the
+              current primary path is in use";
+
+            leaf secondary-path {
+              type leafref {
+                path "../config/secondary-path";
+              }
+              description
+                "A reference to the secondary path option reference
+                which acts as the key of the candidate-secondary-path
+                list";
+            }
+
+            container config {
+              description
+                "Configuration parameters relating to the candidate
+                secondary path";
+
+              uses p2p-path-candidate-secondary-path-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters relating to the candidate
+                secondary path";
+
+              uses p2p-path-candidate-secondary-path-config;
+              uses p2p-path-candidate-secondary-path-state;
+            }
+          }
+        }
+        uses te-path-placement-constraints-top;
+
+      }
+    }
+  }
+
+  grouping p2p-secondary-paths-top {
+    description
+      "Top level grouping for p2p secondary paths";
+
+    container p2p-secondary-paths {
+      description
+        "Secondary paths for the LSP";
+
+      list p2p-secondary-path {
+        key "name";
+        description
+          "List of p2p primary paths for a tunnel";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+            // Requires YANG 1.1
+            //require-instance true;
+          }
+          description
+            "Path name";
+        }
+
+        container config {
+          description
+            "Configuration parameters related to paths";
+          uses p2p-path-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters related to paths";
+          uses p2p-path-config;
+          uses p2p-path-state;
+        }
+        uses path-constraints-top;
+        uses te-path-placement-constraints-top;
+      }
+    }
+  }
+
+  grouping te-tunnels-top {
+    description
+      "Top level grouping for TE tunnels";
+
+    container tunnels {
+      description
+        "Enclosing container for tunnels";
+      list tunnel {
+        key "name";
+        description
+          "List of TE tunnels. This list contains only the LSPs that the
+          current device originates (i.e., for which it is the head-end).
+          Where the signaling protocol utilised for an LSP allows a mid-point
+          or tail device to be aware of the LSP (e.g., RSVP-TE), then the
+          associated sessions are maintained per protocol";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+            // Requires YANG 1.1
+            //require-instance true;
+          }
+          description
+            "The tunnel name";
+        }
+
+        container config {
+          description
+            "Configuration parameters related to TE tunnels:";
+          uses te-global-tunnel-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters related to TE tunnels";
+          uses te-global-tunnel-config;
+          uses te-tunnel-state;
+
+        }
+
+        uses te-tunnel-bandwidth-top;
+        uses te-tunnel-p2p-top;
+        // TODO - add the p2mp configuration
+      }
+    }
+  }
+
+// data definition statements
+
+// augment statements
+
+// rpc statements
+
+// notification statements
+
+}

@@ -1,0 +1,286 @@
+module openconfig-policy-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/policy-types";
+
+  prefix "oc-pol-types";
+
+  // import some basic types
+  import ietf-yang-types { prefix yang; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module contains general data definitions for use in routing
+    policy.  It can be imported by modules that contain protocol-
+    specific policy conditions and actions.";
+
+  oc-ext:openconfig-version "3.2.3";
+
+  revision "2022-11-08" {
+    description
+      "Add INSTALL_PROTOCOL_TYPE local.";
+    reference "3.2.3";
+  }
+
+  revision "2022-02-11" {
+    description
+      "Add PCEP to INSTALL_PROTOCOL_TYPES identity";
+    reference "3.2.2";
+  }
+
+  revision "2021-12-10" {
+    description
+      "Add INSTALL_PROTOCOL_TYPE gRIBI.";
+    reference "3.2.1";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.1.1";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Add PIM, IGMP to INSTALL_PROTOCOL_TYPES identity";
+    reference "3.1.0";
+  }
+
+  revision "2017-07-14" {
+    description
+      "Replace policy choice node/type with policy-result
+      enumeration;simplified defined set naming;removed generic
+      IGP actions; migrate to OpenConfig types; added mode for
+      prefix sets";
+    reference "3.0.0";
+  }
+
+  revision "2016-05-12" {
+    description
+      "OpenConfig public release";
+    reference "2.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  identity ATTRIBUTE_COMPARISON {
+    description
+      "base type for supported comparison operators on route
+      attributes";
+  }
+
+  identity ATTRIBUTE_EQ {
+    base ATTRIBUTE_COMPARISON;
+    description "== comparison";
+  }
+
+  identity ATTRIBUTE_GE {
+    base ATTRIBUTE_COMPARISON;
+    description ">= comparison";
+  }
+
+  identity ATTRIBUTE_LE {
+    base ATTRIBUTE_COMPARISON;
+    description "<= comparison";
+  }
+
+  typedef match-set-options-type {
+    type enumeration {
+      enum ANY {
+        description "match is true if given value matches any member
+        of the defined set";
+      }
+      enum ALL {
+        description "match is true if given value matches all
+        members of the defined set";
+      }
+      enum INVERT {
+        description "match is true if given value does not match any
+        member of the defined set";
+      }
+    }
+    default ANY;
+    description
+      "Options that govern the behavior of a match statement.  The
+      default behavior is ANY, i.e., the given value matches any
+      of the members of the defined set";
+  }
+
+  typedef match-set-options-restricted-type {
+    type enumeration {
+      enum ANY {
+        description "match is true if given value matches any member
+        of the defined set";
+      }
+      enum INVERT {
+        description "match is true if given value does not match any
+        member of the defined set";
+      }
+    }
+    default ANY;
+    description
+      "Options that govern the behavior of a match statement.  The
+      default behavior is ANY, i.e., the given value matches any
+      of the members of the defined set.  Note this type is a
+      restricted version of the match-set-options-type.";
+      //TODO: restriction on enumerated types is only allowed in
+      //YANG 1.1.  Until then, we will require this additional type
+  }
+
+  grouping attribute-compare-operators {
+    description "common definitions for comparison operations in
+    condition statements";
+
+    leaf operator {
+        type identityref {
+          base ATTRIBUTE_COMPARISON;
+        }
+        description
+          "type of comparison to be performed";
+      }
+
+    leaf value {
+      type uint32;
+      description
+        "value to compare with the community count";
+    }
+  }
+
+  typedef tag-type {
+    type union {
+      type uint32;
+      type yang:hex-string;
+    }
+    description "type for expressing route tags on a local system,
+    including IS-IS and OSPF; may be expressed as either decimal or
+    hexidecimal integer";
+    reference
+      "RFC 2178 OSPF Version 2
+      RFC 5130 A Policy Control Mechanism in IS-IS Using
+      Administrative Tags";
+  }
+
+  identity INSTALL_PROTOCOL_TYPE {
+    description
+      "Base type for routing protocols, including those which may
+      install prefixes into the RIB";
+  }
+
+  identity BGP {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "BGP";
+    reference
+      "RFC 4271";
+  }
+
+  identity ISIS {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "IS-IS";
+    reference
+      "ISO/IEC 10589";
+  }
+
+  identity OSPF {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "OSPFv2";
+    reference
+      "RFC 2328";
+  }
+
+  identity OSPF3 {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "OSPFv3";
+    reference
+      "RFC 5340";
+  }
+
+  identity STATIC {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "Locally-installed static route";
+  }
+
+  identity DIRECTLY_CONNECTED {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "A directly connected route";
+  }
+
+  identity LOCAL_AGGREGATE {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "Locally defined aggregate route";
+  }
+
+  identity PIM {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "Protocol Independent Multicast";
+    reference
+      "RFC 7761";
+  }
+
+  identity IGMP {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "Internet Group Management Protocol";
+    reference
+      "RFC 3376";
+  }
+
+  identity GRIBI {
+    base INSTALL_PROTOCOL_TYPE;
+    description "gRPC Routing Information Base Interface";
+  }
+
+  identity PCEP {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "Path Computation Element Communication Protocol";
+    reference
+      "RFC 5440";
+  }
+
+  identity LOCAL {
+    base INSTALL_PROTOCOL_TYPE;
+    description
+      "A local route.
+
+      Local routes define a route for the one specific IP
+      address configured on the router interface. They are
+      created in association with directly connected routes.
+      Local routes must end with a /32 in the case of ipv4
+      or /128 for ipv6.
+      For example, when configuring an interface with the ip
+      address
+
+      10.244.136.79/31
+
+      the derived DIRECTLY_CONNECTED route is
+
+      10.244.136.78/31
+
+      and the derived LOCAL route is
+
+      10.244.136.79/32.";
+  }
+}

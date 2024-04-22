@@ -1,0 +1,137 @@
+module openconfig-platform-healthz {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform/healthz";
+
+  prefix "oc-platform-healthz";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-platform { prefix oc-platform; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This model defines health-related variables for components
+     within the openconfig-platform model (which defines the
+     the /components hierarchy). It is designed to be used in
+     conjunction with the gNOI Healthz service (see
+     https://github.com/openconfig/gnoi/blob/main/healthz/README.md).
+
+     The health variables included in this model are streamed via
+     telemetry interfaces, where gNOI.Healthz is used to retrieve
+     further diagnostic and debugging informaton from a network
+     device.";
+
+  oc-ext:openconfig-version "0.1.1";
+
+  revision "2023-04-11" {
+    description
+      "Clarification for healthz state transition and unhealthy-count leaf";
+    reference "0.1.1";
+  }
+
+  revision "2023-01-23" {
+    description
+      "Initial healthz variable revision";
+    reference "0.1.0";
+  }
+
+
+  grouping platform-health-top {
+    description
+      "Grouping containing health-related parameters.";
+
+    container healthz {
+      description
+        "The health of the component. The paramaters within this
+        container indicate the status of the component beyond whether
+        it is operationally up or down. When a signal is received
+        that a component is in an unhealthy state the gNOI.Healthz
+        service can be used to retrieve further diagnostic information
+        relating to the component.
+
+        The contents of this directory relate only to the specific
+        component that it is associated with. In the case that child
+        components become unhealthy and this causes a parent component
+        to be unhealthy, the new unhealthy status should be reported at
+        both components, such that an interested system can take the
+        relevant actions (e.g., retrieve the Healthz output, or
+        apply mitigation actions).";
+      reference
+        "https://github.com/openconfig/gnoi/tree/main/healthz";
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to component health.";
+        uses platform-health-state;
+      }
+    }
+  }
+
+  grouping platform-health-state {
+    description
+      "Operational state parameters relating to a platform component's
+      health.";
+
+    leaf status {
+      type enumeration {
+        enum UNSPECIFIED {
+          description
+            "The component's health status has not yet been checked
+            by the system.";
+        }
+
+        enum HEALTHY {
+          description
+            "The component is in a HEALTHY state, and is operating
+            within the expected parameters.";
+        }
+
+        enum UNHEALTHY {
+          description
+            "The component is in a unhealthy state, it is not
+            performing the function expected of it.";
+        }
+      }
+      description
+        "The status of the component, indicating its current health.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf last-unhealthy {
+      type oc-types:timeticks64;
+      description
+        "The time at which the component as last observed to be unhealthy
+        represented as nanoseconds since the Unix epoch. Unhealthy is defined
+        as the component being in a state other than HEALTHY.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf unhealthy-count {
+      type uint64;
+      description
+        "The number of status checks that have determined this component
+        to be in an unhealthy state. This counter should be incremented
+        when the component transitions from the HEALTHY to any other
+        state such that the value reflects the number of times the
+        component has become unhealthy.";
+      oc-ext:telemetry-on-change;
+    }
+  }
+
+  augment "/oc-platform:components/oc-platform:component" {
+    description
+      "Augment healthz information into the /components/component hierarchy.";
+
+    uses platform-health-top;
+  }
+}

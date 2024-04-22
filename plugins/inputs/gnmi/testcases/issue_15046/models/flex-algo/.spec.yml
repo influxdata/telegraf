@@ -1,0 +1,6 @@
+- name: openconfig-flexalgo
+  docs:
+    - yang/flex-algo/openconfig-flexalgo.yang
+  build:
+    - yang/flex-algo/openconfig-flexalgo.yang
+  run-ci: true

@@ -1,0 +1,10 @@
+- name: openconfig-vlan
+  docs:
+    - yang/vlan/openconfig-vlan-types.yang
+    - yang/vlan/openconfig-vlan.yang
+    - yang/interfaces/openconfig-interfaces.yang
+    - yang/interfaces/openconfig-if-aggregate.yang
+    - yang/interfaces/openconfig-if-ethernet.yang
+  build:
+    - yang/vlan/openconfig-vlan.yang
+  run-ci: true

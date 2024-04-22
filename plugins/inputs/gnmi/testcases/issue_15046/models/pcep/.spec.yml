@@ -1,0 +1,6 @@
+- name: openconfig-pcep
+  docs:
+    - yang/pcep/openconfig-pcep.yang
+  build:
+    - yang/pcep/openconfig-pcep.yang
+  run-ci: true

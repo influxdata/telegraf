@@ -1,0 +1,10 @@
+- name: openconfig-aft
+  docs:
+    - yang/aft/openconfig-aft.yang
+    - yang/aft/openconfig-aft-types.yang
+    - yang/aft/openconfig-aft-summary.yang
+  build:
+    - yang/network-instance/openconfig-network-instance.yang
+    - yang/aft/openconfig-aft-network-instance.yang
+    - yang/aft/openconfig-aft-summary.yang
+  run-ci: true

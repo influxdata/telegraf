@@ -1,0 +1,428 @@
+module openconfig-ate-flow {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/ate-flow";
+  prefix "oc-flow";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-mpls-types { prefix "oc-mplst"; }
+  import openconfig-vlan-types { prefix "oc-vlan"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+     netopenconfig@googlegroups.com";
+
+  description
+    "This module defines telemetry that relates to flows that are tracked
+    by a network device, or automated test equipment. A flow is an arbitrary
+    stream of packets whose definition is outside of the context of this
+    module.";
+
+  oc-ext:openconfig-version "0.4.0";
+
+  revision 2022-04-29 {
+    description
+      "Add protocol convergence tracking statistics.";
+    reference "0.4.0";
+  }
+
+  revision 2022-02-16 {
+    description
+      "Add VLAN ID to ingress tracked values.";
+    reference "0.3.0";
+  }
+
+  revision 2019-08-07 {
+    description
+      "Add additional flow statistics to support ONDATRA ATEs.";
+    reference "0.2.0";
+  }
+
+  revision 2019-06-11 {
+    description "Initial revision.";
+    reference "0.1.0";
+  }
+
+  // Boilerplate for OpenConfig modules to indicate catalog, telemetry
+  // origin and declare pattern statements to be POSIX regexps.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping flow-top {
+    description
+      "Top-level structural grouping for flow entries.";
+
+    container flows {
+      description
+        "Flow statistics collected by the network device. A flow is defined to
+        be an arbitrary stream of packets whose definition is outside of the
+        context of the module.";
+
+      list flow {
+        config false;
+
+        description
+          "A flow of packets between one or more internal and external sources
+          and one or more internal and external destinations that the target
+          is able to track and report statistics on. Each flow is identified by
+          an arbitrary string identifier.";
+
+        key "name";
+
+        leaf name {
+          type leafref {
+            path "../state/name";
+          }
+          description
+            "Reference to the flow's name, acting as a key of the flow list.";
+        }
+
+        container state {
+          config false;
+
+          description
+            "Operational state of the individual flow.";
+
+          uses flow-params;
+          uses flow-state;
+
+          container counters {
+            description
+              "Counters that correspond to the individual flow.";
+
+            uses flow-counters-state;
+          }
+        }
+
+        container ingress-tracking {
+          config false;
+
+          description
+            "Flow statistics grouped by ingress tracking filter.";
+
+          uses flow-ingress-tracking;
+        }
+
+        container egress-tracking {
+          config false;
+
+          description
+            "Flow statistics grouped by egress tracking filter.";
+
+          uses flow-egress-tracking;
+        }
+      }
+    }
+  }
+
+  grouping flow-params {
+    description
+      "Parameters of an individual flow.";
+
+    leaf name {
+      type string;
+      description
+        "An arbitary name used for the flow tracked by the system. This
+        name must be unique for the flows tracked and exported by the target.";
+    }
+
+    leaf src-port {
+      type string;
+      description
+        "Value of the source port for ingress tracking.";
+    }
+
+    leaf dst-port {
+      type string;
+      description
+        "Value of the destination port for ingress tracking.";
+    }
+
+    leaf mpls-label {
+      type oc-mplst:mpls-label;
+      description
+        "Value of the MPLS label for ingress tracking.";
+    }
+
+    leaf src-ipv4 {
+      type oc-inet:ipv4-address;
+      description
+        "The source IPv4 value of the traffic header.";
+    }
+
+    leaf dst-ipv4 {
+      type oc-inet:ipv4-address;
+      description
+        "The destination IPv4 value of the traffic header.";
+    }
+
+    leaf src-ipv6 {
+      type oc-inet:ipv6-address;
+      description
+        "The source IPv6 value of the traffic header.";
+    }
+
+    leaf dst-ipv6 {
+      type oc-inet:ipv6-address;
+      description
+        "The destination IPv6 value of the traffic header.";
+    }
+
+    leaf vlan-id {
+      type oc-vlan:vlan-id;
+      description
+        "The VLAN ID of the traffic header.";
+    }
+
+    leaf filter {
+      type string;
+      description
+        "Name of the filter on which the egress stats are tracked";
+    }
+  }
+
+  grouping flow-state {
+    description
+      "Operational state of the individual flow.";
+
+    leaf loss-pct {
+      type oc-types:ieeefloat32;
+      description
+        "The percentage of transmitted packets that were not received by the
+        destinations of the flow.";
+    }
+
+    leaf out-frame-rate {
+      type oc-types:ieeefloat32;
+      description
+        "The rate, measured in frames per second, at which frames are being
+        transmitted for the flow.";
+    }
+
+    leaf in-frame-rate {
+      type oc-types:ieeefloat32;
+      description
+        "The rate, measured in frames per second, at which frames are being
+        received for the flow.";
+    }
+
+    leaf out-rate {
+      type oc-types:ieeefloat32;
+      description
+        "The rate, measured in bits per second, at which the flow is being
+        transmitted.";
+    }
+
+    leaf in-rate {
+      type oc-types:ieeefloat32;
+      description
+        "The rate, measured in bits per second, at which the flow is being
+        received.";
+    }
+
+    leaf first-packet-latency {
+      type oc-types:timeticks64;
+      description
+        "The time from when the flow was started to when the first packet was
+        received.";
+    }
+
+    leaf convergence-time {
+      type oc-types:timeticks64;
+      description
+        "The time from when the first packet was received to when traffic
+        loss dropped below a minimal threshold value.";
+    }
+  }
+
+  grouping flow-counters-state {
+    description
+      "Counters that correspond to an individual flow.";
+
+    leaf in-octets {
+      type oc-yang:counter64;
+      description
+        "The total number of bytes received by the target for the flow.";
+    }
+
+    leaf in-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets received by the target for the flow.";
+    }
+
+    leaf out-octets {
+      type oc-yang:counter64;
+      description
+        "The total number of bytes sent by the target for the flow. These
+        packets may be generated or forwarded by the target.";
+    }
+
+    leaf out-pkts {
+      type oc-yang:counter64;
+      description
+        "The total number of packets sent by the target for the flow. These
+        packets may be generated or forwarded by the target.";
+    }
+  }
+
+  grouping flow-ingress-tracking {
+    description
+      "Flow statistics grouped by ingress tracking filter.";
+
+    list ingress-tracking {
+      config false;
+
+      description
+        "If the ATE is configured to track incoming frames by their header
+        fields, this list will map combinations of values of those header
+        fields to the flow statistics specific to frames that match that
+        combination.";
+
+      key "src-port dst-port mpls-label src-ipv4 dst-ipv4 src-ipv6 dst-ipv6 vlan-id";
+
+      leaf src-port {
+        type leafref {
+          path "../state/src-port";
+        }
+        description
+          "Value of the source port for ingress tracking.";
+      }
+
+      leaf dst-port {
+        type leafref {
+          path "../state/dst-port";
+        }
+        description
+          "Value of the destination port for ingress tracking.";
+      }
+
+      leaf mpls-label {
+        type leafref {
+          path "../state/mpls-label";
+        }
+        description
+          "The MPLS label value of the traffic header.";
+      }
+
+      leaf src-ipv4 {
+        type leafref {
+          path "../state/src-ipv4";
+        }
+        description
+          "The src IPv4 value of the traffic header.";
+      }
+
+      leaf dst-ipv4 {
+        type leafref {
+          path "../state/dst-ipv4";
+        }
+        description
+          "The dst IPv4 value of the traffic header.";
+      }
+
+      leaf src-ipv6 {
+        type leafref {
+          path "../state/src-ipv6";
+        }
+        description
+          "The src IPv6 value of the traffic header.";
+      }
+
+      leaf dst-ipv6 {
+        type leafref {
+          path "../state/dst-ipv6";
+        }
+        description
+          "The dst IPv6 value of the traffic header.";
+      }
+
+      leaf vlan-id {
+        type leafref {
+          path "../state/vlan-id";
+        }
+        description
+          "The VLAN ID value of the traffic header.";
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state of the flow by ingress tracking filter.";
+
+        uses flow-params;
+        uses flow-state;
+
+        container counters {
+          description
+            "Counters that correspond to the flow by ingress tracking filter.";
+
+          uses flow-counters-state;
+        }
+      }
+
+      container egress-tracking {
+        config false;
+
+        description
+          "Flow statistics grouped by egress tracking filter.";
+
+        uses flow-egress-tracking;
+      }
+    }
+  }
+
+  grouping flow-egress-tracking {
+    description
+      "Flow statistics grouped by egress tracking filter.";
+
+    list egress-tracking {
+      config false;
+
+      description
+        "If the ATE is configured to track outgoing frames by a header field,
+        this list will map values of that header field to the flow statistics
+        specific to frames that match that value.";
+
+      key "filter";
+
+      leaf filter {
+        type leafref {
+          path "../state/filter";
+        }
+        description
+          "The filter value of the egress tracking configuration.";
+      }
+
+      container state {
+        description
+          "Operational state of the flow by egress tracking filter.";
+        config false;
+
+        leaf filter {
+          type string;
+          description
+            "Value of the filter on which the egress stats are tracked";
+        }
+
+        uses flow-state;
+
+        container counters {
+          description
+            "Counters that correspond to the flow by egress tracking filter.";
+
+          uses flow-counters-state;
+        }
+      }
+    }
+  }
+
+  uses flow-top;
+}

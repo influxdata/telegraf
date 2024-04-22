@@ -1,0 +1,146 @@
+module openconfig-platform-psu {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform/psu";
+
+  prefix "oc-platform-psu";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-platform { prefix oc-platform; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines a schema for power supply components in
+    the OpenConfig platform model.";
+
+  oc-ext:openconfig-version "0.2.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2018-01-16" {
+    description
+      "Changed admin state leaf name";
+    reference "0.2.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping psu-config {
+    description
+      "Configuration data for power supply components";
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "Adminsitrative control on the on/off state of the power
+        supply unit.";
+    }
+  }
+
+  grouping psu-state {
+    description
+      "Operational state data for power supply components";
+
+
+    // TODO(aashaikh): May need to convert some of these to
+    // interval statistics once decided on which leaves to include.
+    leaf capacity {
+      type oc-types:ieeefloat32;
+      units watts;
+      description
+        "Maximum power capacity of the power supply.";
+    }
+
+    leaf input-current {
+      type oc-types:ieeefloat32;
+      units amps;
+      description
+        "The input current draw of the power supply.";
+    }
+
+    leaf input-voltage {
+      type oc-types:ieeefloat32;
+      units volts;
+      description
+        "Input voltage to the power supply.";
+    }
+
+    leaf output-current {
+      type oc-types:ieeefloat32;
+      units amps;
+      description
+        "The output current supplied by the power supply.";
+    }
+
+    leaf output-voltage {
+      type oc-types:ieeefloat32;
+      units volts;
+      description
+        "Output voltage supplied by the power supply.";
+    }
+
+    leaf output-power {
+      type oc-types:ieeefloat32;
+      units watts;
+      description
+        "Output power supplied by the power supply.";
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-platform:components/oc-platform:component/" +
+    "oc-platform:power-supply/oc-platform:config" {
+    description
+      "Adds power supply data to component operational state.";
+
+    uses psu-config;
+  }
+
+  augment "/oc-platform:components/oc-platform:component/" +
+    "oc-platform:power-supply/oc-platform:state" {
+    description
+      "Adds power supply data to component operational state.";
+
+    uses psu-config;
+    uses psu-state;
+  }
+
+
+  // rpc statements
+
+  // notification statements
+}

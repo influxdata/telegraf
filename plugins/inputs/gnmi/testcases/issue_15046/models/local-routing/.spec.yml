@@ -1,0 +1,6 @@
+- name: openconfig-local-routing
+  docs:
+    - yang/local-routing/openconfig-local-routing.yang
+  build:
+    - yang/local-routing/openconfig-local-routing.yang
+  run-ci: true

@@ -1,0 +1,218 @@
+module openconfig-rib-bgp-ext {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/rib/bgp-ext";
+
+  prefix "oc-bgprib-ext";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-rib-bgp-types { prefix oc-bgpribt; }
+  import openconfig-network-instance { prefix oc-ni; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Defines additional data nodes for the OpenConfig BGP RIB model.
+    These items reflect extensions that are desirable features but
+    are not currently supported in a majority of BGP
+    implementations.";
+
+  oc-ext:openconfig-version "0.6.0";
+
+  revision "2019-04-25" {
+    description
+      "Update last-modified timestamp to be expressed as nanoseconds
+      since the Unix epoch.";
+    reference "0.6.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Rename the top-level BGP RIB container's name
+      to RIB.";
+    reference "0.5.0";
+  }
+
+  revision "2019-02-27" {
+    description
+      "Remove top-level BGP RIB container, and update list
+      names to be compatible with path compression.";
+    reference "0.4.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2016-10-17" {
+    description
+      "OpenConfig BGP RIB refactor";
+    reference "0.3.0";
+  }
+
+  revision "2016-04-11" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping rib-ext-route-annotations {
+    description
+      "Extended annotations for routes in the routing tables";
+
+    leaf reject-reason {
+      type union {
+        type identityref {
+          base oc-bgpribt:BGP_NOT_SELECTED_BESTPATH;
+        }
+        type identityref {
+          base oc-bgpribt:BGP_NOT_SELECTED_POLICY;
+        }
+      }
+      description
+        "Indicates the reason the route is not used, either due to
+        policy filtering or bestpath selection";
+    }
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol/" +
+    "oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv4-unicast/oc-ni:loc-rib/" +
+    "oc-ni:routes/oc-ni:route/oc-ni:state" {
+      description
+        "Add extended annotations to the Loc-RIB for IPv4";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv6-unicast/oc-ni:loc-rib/" +
+    "oc-ni:routes/oc-ni:route/oc-ni:state" {
+      description
+        "Add extended annotations to the Loc-RIB for IPv6";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv4-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-in-pre/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state" {
+      description
+        "Add extended annotations to Adj-RIB for IPv4";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment
+    "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv4-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-in-post/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv4";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv4-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-out-pre/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv4";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv4-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-out-post/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv4";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv6-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-in-pre/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv6";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv6-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-in-post/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv6";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv6-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-out-pre/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv6";
+
+      uses rib-ext-route-annotations;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+    "oc-ni:protocols/oc-ni:protocol" +
+    "/oc-ni:bgp/oc-ni:rib/oc-ni:afi-safis/" +
+    "oc-ni:afi-safi/oc-ni:ipv6-unicast/" +
+    "oc-ni:neighbors/oc-ni:neighbor/" +
+    "oc-ni:adj-rib-out-post/oc-ni:routes/oc-ni:route" +
+    "/oc-ni:state"{
+      description
+        "Add extended annotations to Adj-RIB for IPv6";
+
+      uses rib-ext-route-annotations;
+  }
+
+}

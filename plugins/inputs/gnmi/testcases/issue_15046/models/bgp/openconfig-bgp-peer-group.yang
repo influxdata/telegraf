@@ -1,0 +1,393 @@
+submodule openconfig-bgp-peer-group {
+
+  belongs-to openconfig-bgp {
+    prefix "oc-bgp";
+  }
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-routing-policy { prefix oc-rpol; }
+  import openconfig-bfd { prefix oc-bfd; }
+
+  // Include the common submodule
+  include openconfig-bgp-common;
+  include openconfig-bgp-common-multiprotocol;
+  include openconfig-bgp-common-structure;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This sub-module contains groupings that are specific to the
+    peer-group context of the OpenConfig BGP module.";
+
+  oc-ext:openconfig-version "9.7.1";
+
+  revision "2023-12-28" {
+    description
+      "Clarification to last-prefix-limit-exceeded in description";
+          reference "9.7.1";
+  }
+
+  revision "2023-12-28" {
+    description
+      "Add support for controling use of link-bandwidth extended
+      community for BGP multipath.";
+    reference "9.7.0";
+  }
+
+  revision "2023-11-02" {
+    description
+      "Fix revision '2023-03-31': send-community-type was added to the
+       wrong grouping.
+      Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.6.0";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Add default apply policy to global and per afi-safi config.";
+    reference "9.5.0";
+  }
+
+  revision "2023-06-27" {
+    description
+      "Clarify bgp remote-port description";
+    reference "9.4.1";
+  }
+
+  revision "2023-04-01" {
+    description
+      "Add support for BGP large communities [rfc8092] in
+      send-community.
+      Leaf send-community was replaced by the leaf-list
+      send-community-type to allow the combination of different
+      community types";
+    reference "9.4.0";
+  }
+
+  revision "2023-03-31" {
+    description
+      "Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.3.0";
+  }
+
+  revision "2022-12-12" {
+    description
+      "Removed the default of enabled leaf of AFI-SAFI
+      at neighbor/peer-group to support BGP inheritance model.";
+    reference "9.2.0";
+  }
+
+  revision "2022-05-21" {
+    description
+      "Added extended-next-hop-encoding leaf.";
+    reference "9.1.0";
+  }
+
+  revision "2022-04-26" {
+    description
+      "Transition decimal64 types to uint16 for various BGP timers";
+    reference "9.0.0";
+  }
+
+  revision "2022-03-21" {
+    description
+      "Add BGP port";
+    reference "8.1.0";
+  }
+
+  revision "2021-12-01" {
+    description
+      "Add prefix-limit-received, add prefix-limit
+      state nodes, change/relocate restart-timer";
+    reference "8.0.0";
+  }
+
+  revision "2021-10-21" {
+    description
+      "Removal of top-level /bgp container";
+    reference "7.0.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "6.1.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "6.1.0";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Normalise timestamp units to nanoseconds.";
+    reference "6.0.0";
+  }
+
+  revision "2019-05-28" {
+    description
+      "Clarify prefix counter descriptions, add received-pre-policy
+      counter.";
+    reference "5.2.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Add BGP RIB to the top-level BGP container";
+    reference "5.1.0";
+  }
+
+  revision "2018-08-20" {
+    description
+      "Correct description of AFI-SAFI enabled leaf.";
+    reference "5.0.1";
+  }
+
+  revision "2018-04-11" {
+    description
+      "Correct naming of BGP maximum prefix warning percentage leaf.";
+    reference "5.0.0";
+  }
+
+  revision "2018-03-20" {
+    description
+      "Added SR-TE policy SAFI";
+    reference "4.1.0";
+  }
+
+  revision "2017-07-10" {
+    description
+      "Add error notifications; moved add-paths config; add AS
+      prepend policy features; removed unneeded config leaves";
+    reference "4.0.0";
+  }
+
+  revision "2017-02-02" {
+    description
+      "Bugfix to remove remaining global-level policy data";
+    reference "3.0.1";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add dynamic neighbor support, migrate to OpenConfig types";
+    reference "3.0.0";
+  }
+
+  revision "2016-06-21" {
+    description
+      "OpenConfig BGP refactor";
+    reference "2.1.1";
+  }
+
+  grouping bgp-peer-group-config {
+    description
+      "Configuration parameters relating to a base BGP peer group that
+      are not also applicable to any other context (e.g., neighbor)";
+
+    leaf peer-group-name {
+      type string;
+      description
+        "Name of the BGP peer-group";
+    }
+
+  }
+
+  grouping bgp-peer-group-afi-safi-list {
+    description
+      "List of address-families associated with the BGP peer-group";
+
+    list afi-safi {
+      key "afi-safi-name";
+
+      description
+        "AFI,SAFI configuration available for the
+        neighbour or group";
+
+      leaf afi-safi-name {
+        type leafref {
+          path "../config/afi-safi-name";
+        }
+        description
+          "Reference to the AFI-SAFI name used as a key
+          for the AFI-SAFI list";
+      }
+
+      container config {
+        description
+          "Configuration parameters for the AFI-SAFI";
+        uses bgp-common-mp-afi-safi-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to the AFI-SAFI";
+        uses bgp-common-mp-afi-safi-config;
+      }
+
+      container graceful-restart {
+        description
+          "Parameters relating to BGP graceful-restart";
+        container config {
+          description
+            "Configuration options for BGP graceful-restart";
+          uses bgp-common-mp-afi-safi-graceful-restart-config;
+        }
+        container state {
+          config false;
+          description
+            "State information for BGP graceful-restart";
+          uses bgp-common-mp-afi-safi-graceful-restart-config;
+        }
+      }
+
+      uses bgp-common-structure-neighbor-group-add-paths;
+      uses bgp-common-global-group-use-multiple-paths;
+      uses bgp-common-mp-all-afi-safi-list-contents;
+    }
+  }
+
+  grouping bgp-peer-group-base {
+    description
+      "Parameters related to a BGP group";
+
+    container config {
+      description
+        "Configuration parameters relating to the BGP neighbor or
+        group";
+      uses bgp-peer-group-config;
+      uses bgp-common-neighbor-group-config;
+    }
+    container state {
+      config false;
+      description
+        "State information relating to the BGP peer-group";
+      uses bgp-peer-group-config;
+      uses bgp-common-neighbor-group-config;
+      uses bgp-common-state;
+    }
+
+    container timers {
+      description
+        "Timers related to a BGP peer-group";
+
+      container config {
+        description
+          "Configuration parameters relating to timers used for the
+          BGP neighbor or peer group";
+        uses bgp-common-neighbor-group-timers-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to the timers used for the BGP
+         group";
+        uses bgp-common-neighbor-group-timers-config;
+      }
+    }
+
+    container transport {
+      description
+        "Transport session parameters for the BGP peer-group";
+
+      container config {
+        description
+          "Configuration parameters relating to the transport
+          session(s) used for the BGP neighbor or group";
+        uses bgp-common-neighbor-group-transport-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to the transport session(s)
+          used for the BGP neighbor or group";
+        uses bgp-common-neighbor-group-transport-config;
+      }
+    }
+
+    container error-handling {
+      description
+        "Error handling parameters used for the BGP peer-group";
+
+      container config {
+        description
+          "Configuration parameters enabling or modifying the
+          behavior or enhanced error handling mechanisms for the BGP
+          group";
+        uses bgp-common-neighbor-group-error-handling-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to enhanced error handling
+          mechanisms for the BGP group";
+        uses bgp-common-neighbor-group-error-handling-config;
+      }
+    }
+
+    container graceful-restart {
+      description
+        "Parameters relating the graceful restart mechanism for BGP";
+      container config {
+        description
+          "Configuration parameters relating to graceful-restart";
+        uses bgp-common-graceful-restart-config;
+      }
+      container state {
+        config false;
+        description
+          "State information associated with graceful-restart";
+        uses bgp-common-graceful-restart-config;
+      }
+    }
+
+    uses bgp-common-structure-neighbor-group-logging-options;
+    uses bgp-common-structure-neighbor-group-ebgp-multihop;
+    uses bgp-common-structure-neighbor-group-route-reflector;
+    uses bgp-common-structure-neighbor-group-as-path-options;
+    uses bgp-common-global-group-use-multiple-paths;
+    uses oc-rpol:apply-policy-group;
+
+    container afi-safis {
+      description
+        "Per-address-family configuration parameters associated with
+        thegroup";
+      uses bgp-peer-group-afi-safi-list;
+    }
+  }
+
+  grouping bgp-peer-group-list {
+    description
+      "The list of BGP peer groups";
+
+    list peer-group {
+      key "peer-group-name";
+      description
+        "List of BGP peer-groups configured on the local system -
+        uniquely identified by peer-group name";
+
+    leaf peer-group-name {
+      type leafref {
+        path "../config/peer-group-name";
+      }
+      description
+        "Reference to the name of the BGP peer-group used as a
+        key in the peer-group list";
+      }
+
+      uses bgp-peer-group-base;
+      uses oc-bfd:bfd-enable;
+    }
+  }
+
+}

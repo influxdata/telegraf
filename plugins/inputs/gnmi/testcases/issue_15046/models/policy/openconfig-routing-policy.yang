@@ -1,0 +1,1368 @@
+module openconfig-routing-policy {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/routing-policy";
+
+  prefix "oc-rpol";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-policy-types { prefix oc-pol-types; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes a YANG model for routing policy
+    configuration. It is a limited subset of all of the policy
+    configuration parameters available in the variety of vendor
+    implementations, but supports widely used constructs for managing
+    how routes are imported, exported, and modified across different
+    routing protocols.  This module is intended to be used in
+    conjunction with routing protocol configuration models (e.g.,
+    BGP) defined in other modules.
+
+    Route policy expression:
+
+    Policies are expressed as a set of top-level policy definitions,
+    each of which consists of a sequence of policy statements. Policy
+    statements consist of simple condition-action tuples. Conditions
+    may include mutiple match or comparison operations, and similarly
+    actions may be multitude of changes to route attributes or a
+    final disposition of accepting or rejecting the route.
+
+    Route policy evaluation:
+
+    Policy definitions are referenced in routing protocol
+    configurations using import and export configuration statements.
+    The arguments are members of an ordered list of named policy
+    definitions which comprise a policy chain, and optionally, an
+    explicit default policy action (i.e., reject or accept).
+
+    Evaluation of each policy definition proceeds by evaluating its
+    corresponding individual policy statements in order.  When a
+    condition statement in a policy statement is satisfied, the
+    corresponding action statement is executed.  If the action
+    statement has a final disposition configured as policy result, either
+    accept-route or reject-route, evaluation of the current policy definition
+    stops, and no further policy statements are evaluated. In case there is a
+    policy chain, no further policy definitions in the chain are evaluated.
+
+    If the action statement has the NEXT_STATEMENT policy result, all the
+    defined actions are executed and policy evaluation proceeds to the next
+    statement.  The NEXT_STATEMENT is the default policy result action.
+
+    If the condition is not satisfied, then evaluation proceeds to
+    the next policy statement.  If none of the policy statement
+    conditions are satisfied, then evaluation of the current policy
+    definition stops, and the next policy definition in the chain is
+    evaluated.  When the end of the policy chain is reached, the
+    default route disposition action is performed (i.e., reject-route
+    unless an an alternate default action is specified for the
+    chain).
+
+    Policy 'subroutines' (or nested policies) are supported by
+    allowing policy statement conditions to reference another policy
+    definition which applies conditions and actions from the
+    referenced policy before returning to the calling policy
+    statement and resuming evaluation.  If the called policy
+    results in an accept-route (either explicit or by default), then
+    the subroutine returns an effective true value to the calling
+    policy.  Similarly, a reject-route action returns false.  If the
+    subroutine returns true, the calling policy continues to evaluate
+    the remaining conditions (using a modified route if the
+    subroutine performed any changes to the route).
+
+    If a routing protocol is defined and the related
+    apply-policy/default-(import|export)-policy leaf is not set, the
+    default value for the default-(import|export)-policy leaf must be
+    applied.  See RFC6020 7.6.1 which applies to this model.";
+
+  oc-ext:openconfig-version "3.4.2";
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "3.4.2";
+  }
+
+  revision "2023-10-24" {
+    description
+      "Clarify the use of default-(import|export)-policy when no policy
+      is applied to a protocol.";
+    reference "3.4.1";
+  }
+
+  revision "2023-10-11" {
+    description
+      "Add NEXT_STATEMENT policy-result-type enum value.";
+    reference "3.4.0";
+  }
+
+  revision "2022-05-24" {
+    description
+      "Remove module extension oc-ext:regexp-posix by making pattern regexes
+      conform to RFC6020/7950.
+
+      Types impacted:
+      - masklength-range";
+    reference "3.3.0";
+  }
+
+  revision "2020-08-18" {
+    description
+      "Fix regex anchors for masklength-range's pattern statement.";
+    reference "3.2.2";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions.";
+    reference "3.2.1";
+  }
+
+  revision "2020-04-02" {
+    description
+      "Add generic set-tag operation back to support local and IGP
+      tagged routes.";
+    reference "3.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.1.1";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Add PIM, IGMP to INSTALL_PROTOCOL_TYPES identity";
+    reference "3.1.0";
+  }
+
+  revision "2017-07-14" {
+    description
+      "Replace policy choice node/type with policy-result
+      enumeration;simplified defined set naming;removed generic
+      IGP actions; migrate to OpenConfig types; added mode for
+      prefix sets";
+    reference "3.0.0";
+  }
+
+  revision "2016-05-12" {
+    description
+      "OpenConfig public release";
+    reference "2.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // typedef statements
+
+  typedef default-policy-type {
+    // this typedef retained for name compatibiity with default
+    // import and export policy
+    type enumeration {
+      enum ACCEPT_ROUTE {
+        description
+          "Default policy to accept the route";
+      }
+      enum REJECT_ROUTE {
+        description
+          "Default policy to reject the route";
+      }
+    }
+    description
+      "Type used to specify route disposition in
+      a policy chain";
+  }
+
+  typedef policy-result-type {
+    type enumeration {
+      enum ACCEPT_ROUTE {
+        description "Policy accepts the route and evaluation of the
+        current policy definition stops.";
+      }
+      enum REJECT_ROUTE {
+        description "Policy rejects the route and evaluation of the
+        current policy definition stops.";
+      }
+      enum NEXT_STATEMENT {
+        description "Any modifications of the route are preserved and the evaluation of the policy will continue to the
+        next statement.";
+      }
+    }
+    default NEXT_STATEMENT;
+    description
+      "Type used to specify route disposition in
+      a policy chain";
+  }
+
+
+  // grouping statements
+
+  grouping prefix-set-config {
+    description
+      "Configuration data for prefix sets used in policy
+      definitions.";
+
+    leaf name {
+      type string;
+      description
+        "name / label of the prefix set -- this is used to
+        reference the set in match conditions";
+    }
+
+    leaf mode {
+      type enumeration {
+        enum IPV4 {
+          description
+            "Prefix set contains IPv4 prefixes only";
+        }
+        enum IPV6 {
+          description
+            "Prefix set contains IPv6 prefixes only";
+        }
+        enum MIXED {
+          description
+            "Prefix set contains mixed IPv4 and IPv6 prefixes";
+        }
+      }
+      description
+        "Indicates the mode of the prefix set, in terms of which
+        address families (IPv4, IPv6, or both) are present.  The
+        mode provides a hint, but the device must validate that all
+        prefixes are of the indicated type, and is expected to
+        reject the configuration if there is a discrepancy.  The
+        MIXED mode may not be supported on devices that require
+        prefix sets to be of only one address family.";
+    }
+
+  }
+
+  grouping prefix-set-state {
+    description
+      "Operational state data for prefix sets";
+  }
+
+  grouping prefix-set-top {
+    description
+      "Top-level data definitions for a list of IPv4 or IPv6
+      prefixes which are matched as part of a policy";
+
+    container prefix-sets {
+      description
+        "Enclosing container ";
+
+      list prefix-set {
+        key "name";
+        description
+          "List of the defined prefix sets";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to prefix name list key";
+        }
+
+        container config {
+          description
+            "Configuration data for prefix sets";
+
+          uses prefix-set-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data ";
+
+          uses prefix-set-config;
+          uses prefix-set-state;
+        }
+
+        uses prefix-top;
+      }
+    }
+  }
+
+  grouping prefix-config {
+    description
+      "Configuration data for a prefix definition";
+
+    leaf ip-prefix {
+      type oc-inet:ip-prefix;
+      mandatory true;
+      description
+        "The prefix member in CIDR notation -- while the
+        prefix may be either IPv4 or IPv6, most
+        implementations require all members of the prefix set
+        to be the same address family.  Mixing address types in
+        the same prefix set is likely to cause an error.";
+    }
+
+    leaf masklength-range {
+      type string {
+        pattern '(([0-9]+\.\.[0-9]+)|exact)';
+        oc-ext:posix-pattern '^(([0-9]+\.\.[0-9]+)|exact)$';
+      }
+      description
+        "Defines a range for the masklength, or 'exact' if
+        the prefix has an exact length.
+
+        Example: 10.3.192.0/21 through 10.3.192.0/24 would be
+        expressed as prefix: 10.3.192.0/21,
+        masklength-range: 21..24.
+
+        Example: 10.3.192.0/21 would be expressed as
+        prefix: 10.3.192.0/21,
+        masklength-range: exact";
+    }
+  }
+
+  grouping prefix-state {
+    description
+      "Operational state data for prefix definitions";
+  }
+
+  grouping prefix-top {
+    description
+      "Top-level grouping for prefixes in a prefix list";
+
+    container prefixes {
+      description
+        "Enclosing container for the list of prefixes in a policy
+        prefix list";
+
+      list prefix {
+        key "ip-prefix masklength-range";
+        description
+          "List of prefixes in the prefix set";
+
+        leaf ip-prefix {
+          type leafref {
+            path "../config/ip-prefix";
+          }
+          description
+            "Reference to the ip-prefix list key.";
+        }
+
+        leaf masklength-range {
+          type leafref {
+            path "../config/masklength-range";
+          }
+          description
+            "Reference to the masklength-range list key";
+        }
+
+        container config {
+          description
+            "Configuration data for prefix definition";
+
+          uses prefix-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for prefix definition";
+
+          uses prefix-config;
+          uses prefix-state;
+        }
+      }
+    }
+  }
+
+  grouping neighbor-set-config {
+    description
+      "Configuration data for neighbor set definitions";
+
+    leaf name {
+      type string;
+      description
+          "name / label of the neighbor set -- this is used to
+          reference the set in match conditions";
+    }
+
+    leaf-list address {
+      type oc-inet:ip-address;
+      description
+        "List of IP addresses in the neighbor set";
+    }
+  }
+
+  grouping neighbor-set-state {
+    description
+      "Operational state data for neighbor set definitions";
+  }
+
+  grouping neighbor-set-top {
+    description
+      "Top-level data definition for a list of IPv4 or IPv6
+      neighbors which can be matched in a routing policy";
+
+    container neighbor-sets {
+      description
+        "Enclosing container for the list of neighbor set
+        definitions";
+
+      list neighbor-set {
+        key "name";
+        description
+          "List of defined neighbor sets for use in policies.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the neighbor set name list key.";
+        }
+
+        container config {
+          description
+            "Configuration data for neighbor sets.";
+
+          uses neighbor-set-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for neighbor sets.";
+
+          uses neighbor-set-config;
+          uses neighbor-set-state;
+        }
+      }
+    }
+  }
+
+  grouping tag-set-config {
+    description
+      "Configuration data for tag set definitions.";
+
+    leaf name {
+      type string;
+      description
+        "name / label of the tag set -- this is used to reference
+        the set in match conditions";
+    }
+
+    leaf-list tag-value {
+      type oc-pol-types:tag-type;
+      description
+        "Value of the tag set member";
+    }
+  }
+
+  grouping tag-set-state {
+    description
+      "Operational state data for tag set definitions.";
+  }
+
+  grouping tag-set-top {
+    description
+      "Top-level data definitions for a list of tags which can
+      be matched in policies";
+
+    container tag-sets {
+      description
+        "Enclosing container for the list of tag sets.";
+
+      list tag-set {
+        key "name";
+        description
+          "List of tag set definitions.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the tag set name list key";
+        }
+
+        container config {
+          description
+            "Configuration data for tag sets";
+
+          uses tag-set-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for tag sets";
+
+          uses tag-set-config;
+          uses tag-set-state;
+        }
+      }
+    }
+  }
+
+  grouping generic-defined-sets {
+    description
+      "Data definitions for pre-defined sets of attributes used in
+      policy match conditions.  These sets are generic and can
+      be used in matching conditions in different routing
+      protocols.";
+
+    uses prefix-set-top;
+    uses neighbor-set-top;
+    uses tag-set-top;
+  }
+
+  grouping match-set-options-group {
+    description
+      "Grouping containing options relating to how a particular set
+      should be matched";
+
+    leaf match-set-options {
+      type oc-pol-types:match-set-options-type;
+      description
+        "Optional parameter that governs the behaviour of the
+        match operation";
+    }
+  }
+
+  grouping match-set-options-restricted-group {
+    description
+      "Grouping for a restricted set of match operation modifiers";
+
+    leaf match-set-options {
+      type oc-pol-types:match-set-options-restricted-type;
+      description
+        "Optional parameter that governs the behaviour of the
+        match operation.  This leaf only supports matching on ANY
+        member of the set or inverting the match.  Matching on ALL is
+        not supported";
+    }
+  }
+
+  grouping match-interface-condition-config {
+    description
+      "Configuration data for interface match condition";
+
+    uses oc-if:interface-ref-common;
+  }
+
+  grouping match-interface-condition-state {
+    description
+      "Operational state data for interface match condition";
+  }
+
+  grouping match-interface-condition-top {
+    description
+      "Top-level grouping for the interface match condition";
+
+    container match-interface {
+      description
+        "Top-level container for interface match conditions";
+
+      container config {
+        description
+          "Configuration data for interface match conditions";
+
+        uses match-interface-condition-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for interface match conditions";
+
+        uses match-interface-condition-config;
+        uses match-interface-condition-state;
+      }
+
+    }
+  }
+
+  grouping prefix-set-condition-config {
+    description
+      "Configuration data for prefix-set conditions";
+
+    leaf prefix-set {
+        type leafref {
+          path "../../../../../../../../defined-sets/" +
+            "prefix-sets/prefix-set/config/name";
+        }
+        description "References a defined prefix set";
+      }
+      uses match-set-options-restricted-group;
+  }
+
+
+  grouping prefix-set-condition-state {
+    description
+      "Operational state data for prefix-set conditions";
+  }
+
+  grouping prefix-set-condition-top {
+    description
+      "Top-level grouping for prefix-set conditions";
+
+    container match-prefix-set {
+      description
+        "Match a referenced prefix-set according to the logic
+        defined in the match-set-options leaf";
+
+      container config {
+        description
+          "Configuration data for a prefix-set condition";
+
+        uses prefix-set-condition-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for a prefix-set condition";
+
+        uses prefix-set-condition-config;
+        uses prefix-set-condition-state;
+      }
+    }
+  }
+
+  grouping neighbor-set-condition-config {
+    description
+      "Configuration data for neighbor-set conditions";
+
+    leaf neighbor-set {
+      type leafref {
+        path "../../../../../../../../defined-sets/neighbor-sets/" +
+        "neighbor-set/name";
+        //TODO: require-instance should be added when it's
+        //supported in YANG 1.1
+        //require-instance true;
+      }
+      description "References a defined neighbor set";
+    }
+
+    uses match-set-options-restricted-group;
+  }
+
+  grouping neighbor-set-condition-state {
+    description
+      "Operational state data for neighbor-set conditions";
+  }
+
+  grouping neighbor-set-condition-top {
+    description
+      "Top-level grouping for neighbor-set conditions";
+
+    container match-neighbor-set {
+      description
+        "Match a referenced neighbor set according to the logic
+        defined in the match-set-options-leaf";
+
+      container config {
+        description
+          "Configuration data ";
+
+        uses neighbor-set-condition-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data ";
+
+        uses neighbor-set-condition-config;
+        uses neighbor-set-condition-state;
+      }
+    }
+  }
+
+  grouping tag-set-condition-config {
+    description
+      "Configuration data for tag-set condition statements";
+
+    leaf tag-set {
+      type leafref {
+        path "../../../../../../../../defined-sets/tag-sets/tag-set" +
+        "/name";
+        //TODO: require-instance should be added when it's
+        //supported in YANG 1.1
+        //require-instance true;
+      }
+      description "References a defined tag set";
+    }
+    uses match-set-options-restricted-group;
+  }
+
+  grouping tag-set-condition-state {
+    description
+      "Operational state data for tag-set condition statements";
+  }
+
+  grouping tag-set-condition-top {
+    description
+      "Top-level grouping for tag-set conditions";
+
+    container match-tag-set {
+      description
+        "Match a referenced tag set according to the logic defined
+        in the match-options-set leaf";
+
+      container config {
+        description
+          "Configuration data for tag-set conditions";
+
+        uses tag-set-condition-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data tag-set conditions";
+
+        uses tag-set-condition-config;
+        uses tag-set-condition-state;
+      }
+    }
+  }
+
+  grouping generic-conditions {
+    description "Condition statement definitions for checking
+    membership in a generic defined set";
+
+    uses match-interface-condition-top;
+    uses prefix-set-condition-top;
+    uses neighbor-set-condition-top;
+    uses tag-set-condition-top;
+
+  }
+
+  grouping generic-actions {
+    description
+      "Definitions for common set of policy action statements that
+      manage the disposition or control flow of the policy";
+
+    leaf policy-result {
+      type policy-result-type;
+      description
+        "Select the final disposition for the route, either
+        accept or reject.";
+    }
+  }
+
+
+  grouping policy-conditions-config {
+    description
+      "Configuration data for general policy conditions, i.e., those
+      not related to match-sets";
+
+      leaf call-policy {
+        type leafref {
+          path "../../../../../../../" +
+            "oc-rpol:policy-definitions/" +
+            "oc-rpol:policy-definition/oc-rpol:name";
+          //TODO: require-instance should be added when
+          //it is supported in YANG 1.1
+          //require-instance true;
+        }
+        description
+          "Applies the statements from the specified policy
+          definition and then returns control the current
+          policy statement. Note that the called policy may
+          itself call other policies (subject to
+          implementation limitations). This is intended to
+          provide a policy 'subroutine' capability.  The
+          called policy should contain an explicit or a
+          default route disposition that returns an
+          effective true (accept-route) or false
+          (reject-route), otherwise the behavior may be
+          ambiguous and implementation dependent";
+      }
+
+      leaf install-protocol-eq {
+        type identityref {
+          base oc-pol-types:INSTALL_PROTOCOL_TYPE;
+        }
+        description
+          "Condition to check the protocol / method used to install
+          the route into the local routing table";
+      }
+  }
+
+  grouping policy-conditions-state {
+    description
+      "Operational state data for policy conditions";
+  }
+
+  grouping policy-conditions-top {
+    description
+      "Top-level grouping for policy conditions";
+
+    container conditions {
+      description
+        "Condition statements for the current policy statement";
+
+      container config {
+        description
+          "Configuration data for policy conditions";
+
+        uses policy-conditions-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for policy conditions";
+
+        uses policy-conditions-config;
+        uses policy-conditions-state;
+      }
+      uses generic-conditions;
+    }
+  }
+
+  grouping policy-statements-config {
+    description
+      "Configuration data for policy statements";
+
+    leaf name {
+      type string;
+      description
+        "name of the policy statement";
+    }
+  }
+
+  grouping policy-statements-state {
+    description
+      "Operational state data for policy statements";
+  }
+
+  grouping policy-actions-config {
+    description
+      "Configuration data for policy actions";
+
+    uses generic-actions;
+  }
+
+  grouping policy-actions-state {
+    description
+      "Operational state data for policy actions";
+  }
+
+  grouping policy-actions-tag-set {
+    description
+      "Protocol agnostic tag specification.";
+
+    container set-tag {
+      description
+        "Policy actions associated with setting tags for a particular
+        route. A tag is an abstract entity which can be mapped to underlying
+        protocol attributes where applicable.";
+
+      container config {
+        description
+          "Configuration of tag application";
+        uses action-tag-set-config;
+      }
+
+      container state {
+        description
+          "Operational state related to tag application.";
+        config false;
+        uses action-tag-set-config;
+      }
+
+      container inline {
+        description
+          "The tags specified in this container are set on a route using
+          the values directly. It is applicable when the mode of application
+          is explicitly specified as INLINE.";
+
+        when "../config/mode = 'INLINE'" {
+          description
+            "In-line configuration is only relevant when the action's set-tag
+            mode is specified explicitly to be INLINE.";
+        }
+
+        container config {
+          description
+            "Configuration values related to in-line tag specification.";
+          uses action-tag-set-inline-config;
+        }
+
+        container state {
+          description
+            "Operational state related to in-line tag specification.";
+          config false;
+          uses action-tag-set-inline-config;
+        }
+      }
+
+      container reference {
+        description
+          "This container is applicable when the mode of application is explicitly
+          specified to as REFERENCE. The tags set on a route are those that are
+          specified within the tag-set";
+
+        when "../config/mode = 'REFERENCE'" {
+          description
+            "Reference configuration is only relevant when the action's set-tag
+            mode is specified explicitly to be REFERENCE.";
+        }
+
+        container config {
+          description
+            "Configuration values related to specifying a tag-set to be applied to
+            a route.";
+          uses action-tag-set-reference-config;
+        }
+
+        container state {
+          description
+            "Operational state related to specifying a tag-set to be applied to a
+            route.";
+          config false;
+          uses action-tag-set-reference-config;
+        }
+      }
+    }
+  }
+
+  grouping action-tag-set-config {
+    description
+      "Configuration leaves for setting a tag applicable to both inline and
+      reference modes.";
+
+    leaf mode {
+      type enumeration {
+        enum INLINE {
+          description
+            "Use an in-line specified list of tags";
+        }
+        enum REFERENCE {
+          description
+            "Use a reference to a defined tag-set.";
+        }
+      }
+      description
+        "This leaf controls the source of the tags that are set as a result
+        of the action. In the case that the INLINE value is specified, the
+        list of tags specified within the action is applied to matching prefixes.
+        In the case that the REFERENCE value is specified, a pre-defined set of
+        tags is utilised.";
+    }
+  }
+
+  grouping action-tag-set-inline-config {
+    description
+      "Configuration leaves for setting a tag within an action using an in-line
+      specified set of tags.";
+
+    leaf-list tag {
+      type oc-pol-types:tag-type;
+      description
+        "Set one or more tags for prefixes that match the specified condition(s)
+        using the specified tag values. When a tag is set it MUST be possible to
+        match the value set in subsequent policies on the local device. Where the
+        protocol that is carrying the prefix has a tag field (OSPF, and IS-IS in
+        particular) the tag MUST be set in the corresponding protocol advertisements
+        of the prefix.";
+    }
+  }
+
+  grouping action-tag-set-reference-config {
+    description
+      "Configuration leaves for setting a tag within an action using a set of
+      tags that is specified in a defined-set.";
+
+    leaf tag-set {
+      type leafref {
+        // we are at
+        // /routing-policy/policy-definitions/policy-definition/statements/statements/statement/action/set-tag/reference/config/tag-set
+        path "../../../../../../../../../defined-sets/tag-sets/tag-set/config/name";
+      }
+      description
+        "Use the referenced tag-set to set tags on the prefixes that match the
+        specified conditions. When a tag is set it MUST be possible to match the
+        value set in subsequent policies on the local device. where the protocol that
+        is carrying the prefix has a tag field (OSPF, and IS-IS for in particular)
+        the tag MUST be set in the corresponding protocol advertisements of the
+        prefix.";
+    }
+  }
+
+  grouping policy-actions-top {
+    description
+      "Top-level grouping for policy actions";
+
+    container actions {
+      description
+        "Top-level container for policy action statements";
+
+      container config {
+        description
+          "Configuration data for policy actions";
+
+        uses policy-actions-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for policy actions";
+
+        uses policy-actions-config;
+        uses policy-actions-state;
+      }
+
+      uses policy-actions-tag-set;
+    }
+  }
+
+  grouping policy-statements-top {
+    description
+      "Top-level grouping for the policy statements list";
+
+    container statements {
+      description
+        "Enclosing container for policy statements";
+
+      list statement {
+        key "name";
+        // TODO: names of policy statements within a policy
+        // definition should probably be optional, however, YANG
+        // requires a unique id for lists
+        ordered-by user;
+        description
+          "Policy statements group conditions and actions
+          within a policy definition.  They are evaluated in
+          the order specified (see the description of policy
+          evaluation at the top of this module.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to list key";
+        }
+
+        container config {
+          description
+            "Configuration data for policy statements";
+
+          uses policy-statements-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for policy statements";
+
+          uses policy-statements-config;
+          uses policy-statements-state;
+        }
+
+        uses policy-conditions-top;
+        uses policy-actions-top;
+      }
+    }
+  }
+
+  grouping defined-sets-top {
+    description
+      "Top-level grouping for defined set definitions";
+
+    container defined-sets {
+      description
+        "Predefined sets of attributes used in policy match
+        statements";
+
+      uses generic-defined-sets;
+    }
+  }
+
+  grouping policy-definitions-config {
+    description
+      "Configuration data for policy definitions";
+
+    leaf name {
+      type string;
+      description
+        "Name of the top-level policy definition -- this name
+        is used in references to the current policy";
+    }
+  }
+
+  grouping policy-definitions-state {
+    description
+      "Operational state data for policy definitions";
+  }
+
+  grouping policy-definitions-top {
+    description
+      "Top-level grouping for the policy definition list";
+
+    container policy-definitions {
+      description
+        "Enclosing container for the list of top-level policy
+          definitions";
+
+      list policy-definition {
+        key "name";
+        description
+          "List of top-level policy definitions, keyed by unique
+          name.  These policy definitions are expected to be
+          referenced (by name) in policy chains specified in import
+          or export configuration statements.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the list key";
+        }
+
+        container config {
+          description
+            "Configuration data for policy defintions";
+
+          uses policy-definitions-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for policy definitions";
+
+          uses policy-definitions-config;
+          uses policy-definitions-state;
+        }
+
+        uses policy-statements-top;
+      }
+    }
+  }
+
+  grouping routing-policy-top {
+    description
+      "Top level container for OpenConfig routing policy";
+
+    container routing-policy {
+      description
+        "Top-level container for all routing policy configuration";
+
+
+      uses defined-sets-top;
+
+      uses policy-definitions-top;
+    }
+  }
+
+  grouping apply-policy-import-config {
+    description
+      "Configuration data for applying import policies";
+
+    leaf-list import-policy {
+      type leafref {
+        path "/oc-rpol:routing-policy/oc-rpol:policy-definitions/" +
+          "oc-rpol:policy-definition/oc-rpol:name";
+        //TODO: require-instance should be added when it's
+        //supported in YANG 1.1
+        //require-instance true;
+      }
+      ordered-by user;
+      description
+        "list of policy names in sequence to be applied on
+        receiving a routing update in the current context, e.g.,
+        for the current peer group, neighbor, address family,
+        etc.";
+    }
+  }
+
+  grouping default-policy-import-config {
+    description
+      "Configuration data for default import policy";
+
+    leaf default-import-policy {
+      type default-policy-type;
+      default REJECT_ROUTE;
+      description
+        "explicitly set a default policy if no policy definition
+        in the import policy chain is satisfied.";
+    }
+  }
+
+  grouping apply-policy-export-config {
+    description
+      "Configuration data for applying export policies";
+
+    leaf-list export-policy {
+      type leafref {
+        path "/oc-rpol:routing-policy/oc-rpol:policy-definitions/" +
+          "oc-rpol:policy-definition/oc-rpol:name";
+        //TODO: require-instance should be added when it's
+        //supported in YANG 1.1
+        //require-instance true;
+      }
+      ordered-by user;
+      description
+        "list of policy names in sequence to be applied on
+        sending a routing update in the current context, e.g.,
+        for the current peer group, neighbor, address family,
+        etc.";
+    }
+  }
+
+  grouping default-policy-export-config {
+    description
+      "Configuration data for default export policy";
+
+    leaf default-export-policy {
+      type default-policy-type;
+      default REJECT_ROUTE;
+      description
+        "explicitly set a default policy if no policy definition
+        in the export policy chain is satisfied.";
+    }
+  }
+
+  grouping apply-policy-config {
+    description
+      "Configuration data for routing policies";
+
+    uses apply-policy-import-config;
+    uses apply-policy-export-config;
+    uses default-policy-config;
+  }
+
+  grouping default-policy-config {
+    description
+      "Configuration data for default routing policies";
+
+    uses default-policy-import-config;
+    uses default-policy-export-config;
+  }
+
+  grouping apply-policy-state {
+    description
+      "Operational state associated with routing policy";
+
+    uses default-policy-state;
+
+    //TODO: identify additional state data beyond the intended
+    //policy configuration.
+  }
+
+  grouping default-policy-state {
+    description
+      "Operational state associated with routing policy";
+
+    //TODO: identify additional state data beyond the intended
+    //policy configuration.
+  }
+
+  grouping apply-policy-group {
+    description
+      "Top level container for routing policy applications. This
+      grouping is intended to be used in routing models where
+      needed.";
+
+    container apply-policy {
+      description
+        "Anchor point for routing policies in the model.
+        Import and export policies are with respect to the local
+        routing table, i.e., export (send) and import (receive),
+        depending on the context.";
+
+      container config {
+        description
+          "Policy configuration data.";
+
+        uses apply-policy-config;
+      }
+
+      container state {
+
+        config false;
+        description
+          "Operational state for routing policy";
+
+        uses apply-policy-config;
+        uses apply-policy-state;
+      }
+    }
+  }
+
+  grouping default-policy-group {
+     description
+      "Top level container for default routing policy applications.";
+
+    container apply-policy {
+      description
+        "Anchor point for routing policies in the model.
+        Import and export policies are with respect to the local
+        routing table, i.e., export (send) and import (receive),
+        depending on the context.";
+
+      container config {
+        description
+          "Policy configuration data.";
+
+        uses default-policy-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state for routing policy";
+
+        uses default-policy-config;
+        uses default-policy-state;
+      }
+    }
+  }
+
+  uses routing-policy-top;
+
+}

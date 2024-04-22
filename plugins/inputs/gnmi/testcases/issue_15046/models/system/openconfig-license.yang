@@ -1,0 +1,177 @@
+module openconfig-license {
+
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/license";
+
+  prefix "oc-license";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational
+    state data for licenses.";
+
+  oc-ext:openconfig-version "0.2.0";
+
+  revision "2020-04-22" {
+    description
+      "Make license-data a union of a string or binary.";
+    reference "0.2.0";
+  }
+
+  revision "2020-01-07" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+
+  grouping license-config {
+    description
+      "Configuration data for license";
+
+    leaf license-id {
+      type string;
+      description
+        "License ID. A string that uniquelly identifies the license. The
+         platform should list all the licenses it supports being activated.";
+    }
+
+    leaf license-data {
+      type union {
+        type binary;
+        type string;
+      }
+      description
+        "The contents of the licence (if required) - which may be
+         supplied as a binary blob, or a simple string value. If this
+         value is considered sensitive, it may be read as an empty value.";
+    }
+
+    leaf active {
+      type boolean;
+      default false;
+      description
+        "The activation state of the license.";
+    }
+
+  }
+
+  grouping license-state {
+    description
+    "State data for license";
+
+    leaf description {
+      type string;
+      description
+        "The license description.";
+    }
+
+    leaf issue-date {
+      type uint64;
+      description
+        "The date and time at which the license was issued, expressed as the
+         number of nanoseconds since the Unix Epoch
+         (January 1, 1970, 00:00 UTC).";
+    }
+
+    leaf expiration-date {
+      type uint64;
+      description
+        "The date and time at which the license will expire, expressed as the
+         number of nanoseconds since the Unix Epoch
+         (January 1, 1970, 00:00 UTC). Zero if it does not expire.";
+    }
+
+    leaf in-use {
+      type boolean;
+      description
+        "The license is in use. Different from active. This states that the
+         license is effectively being used in addition to being active. If
+         license for feature X was activated but feature X is not being used,
+         then this should be false.";
+    }
+
+    leaf expired {
+      type boolean;
+      description
+        "The license has expired.";
+    }
+
+    leaf valid {
+      type boolean;
+      description
+        "The license is valid. Can be activated in the system or platform.";
+    }
+
+  }
+
+  grouping licenses-top {
+    description
+      "Top-level grouping for licenses.";
+
+    container licenses {
+      description
+        "Enclosing container for list of licenses";
+
+      list license {
+        key "license-id";
+        description
+          "List of licenses.";
+
+        leaf license-id {
+          type leafref {
+            path "../config/license-id";
+          }
+          description
+            "Reference to license id list key";
+        }
+
+        container config {
+          description
+            "Configuration data for license";
+
+          uses license-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for license.";
+
+          uses license-config;
+          uses license-state;
+        }
+      }
+    }
+
+  }
+
+  grouping license-top {
+    description
+      "Top-level for the license model";
+
+    container license {
+      description
+        "Container for license model";
+
+      uses licenses-top;
+
+    }
+  }
+
+}

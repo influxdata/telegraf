@@ -1,0 +1,208 @@
+submodule openconfig-aft-mpls {
+  belongs-to "openconfig-aft" {
+    prefix "oc-aft";
+  }
+
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-mpls-types { prefix "oc-mplst"; }
+
+  // Include common cross-AFT groupings from the common submodule.
+  include openconfig-aft-common;
+
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Submodule containing definitions of groupings for the abstract
+    forwarding table for MPLS label forwarding.";
+
+  oc-ext:openconfig-version "2.4.0";
+
+  revision "2023-09-26" {
+    description
+      "Add next-hop-group-name in NHG AFT entry state.";
+    reference "2.4.0";
+  }
+
+  revision "2023-04-19" {
+    description
+      "Add atomic attribute to AFT containers.";
+    reference "2.3.0";
+  }
+
+  revision "2022-06-16" {
+    description
+      "Add state-synced container under afts.";
+    reference "2.2.0";
+  }
+
+  revision "2022-06-15" {
+    description
+      "Add decapsulate-header in NH AFT entry state";
+    reference "2.1.0";
+  }
+
+  revision "2022-05-17" {
+    description
+      "Relocate next-hop-group/next-hop-group-network-instance
+      from openconfig-aft-common to resolve absolute path
+      leafref specific to network-instances";
+    reference "2.0.0";
+  }
+
+  revision "2022-01-27" {
+    description
+      "Add next hop counters and prefix counters.";
+    reference "1.0.0";
+  }
+
+  revision "2022-01-26" {
+    description
+      "Add vni-label and tunnel-src-ip-address properties under next-hops";
+    reference "0.10.0";
+  }
+
+  revision "2021-12-09" {
+    description
+      "Add pop-top-label in NH AFT entry state";
+    reference "0.9.0";
+  }
+
+  revision "2021-08-06" {
+    description
+      "Add references to the network instance within which to resolve
+      a next-hop-group; fix defect where NHG could not be an ID defined
+      outside the current NI; add metadata; add IP-in-IP encap.";
+    reference "0.8.0";
+  }
+
+  revision "2021-07-15" {
+    description
+      "NHG-ID and NH-ID space management.";
+    reference "0.7.0";
+  }
+
+  revision "2020-11-06" {
+    description
+      "Make AFT model read-only.";
+    reference "0.6.0";
+  }
+
+  revision "2020-09-09" {
+    description
+      "Remove leafs that are not used as keys from config containers as
+      AFT model is ready-only.
+      * next-hop/interface-ref/config.
+      * all leafs under policy-forwarding-entry/config except index.";
+    reference "0.5.0";
+  }
+
+  revision "2019-11-07" {
+    description
+      "Move lsp-name leaf out of aft-common-entry-nexthop-state group.";
+    reference "0.4.1";
+  }
+
+  revision "2019-08-02" {
+    description
+      "Add installing protocol for IPv[46] unicast entries.
+      Add the ability to describe conditional next-hop groups
+      outside of the policy forwarding module to allow for efficient
+      handling of CBTS, where many prefixes may share the same next-hop
+      criteria.";
+    reference "0.4.0";
+  }
+
+  revision "2019-08-01" {
+    description
+      "Add lsp-name leaf to AFT next-hop.";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Formatting fixes";
+    reference "0.3.1";
+  }
+
+  revision 2017-05-10 {
+    description
+      "Refactor to provide concretised per-AF schemas per AFT.";
+    reference "0.3.0";
+  }
+
+  grouping aft-mpls-structural {
+    description
+      "Structural grouping defining the schema for the MPLS
+      abstract forwarding table.";
+
+    list label-entry {
+      key "label";
+
+      oc-ext:telemetry-atomic;
+      description
+        "List of the MPLS entries within the abstract
+        forwarding table. This list is keyed by the top-most MPLS
+        label.";
+
+      leaf label {
+        type leafref {
+          path "../state/label";
+        }
+        description
+          "Reference to the top-most MPLS label matched by the
+          entry.";
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for the MPLS AFT
+          entry.";
+        uses aft-mpls-entry-state;
+      }
+    }
+  }
+
+  grouping aft-mpls-entry-state {
+    description
+      "Operational state parameters for the MPLS entry.";
+
+    leaf label {
+      type oc-mplst:mpls-label;
+      description
+        "The top-most MPLS label that should be matched to
+        utilise the AFT entry.";
+    }
+
+    uses aft-common-entry-state;
+
+    leaf-list popped-mpls-label-stack {
+      type oc-mplst:mpls-label;
+      description
+        "The MPLS label stack to be popped from the packet when
+        switched by the system. The stack is encoded as a leaf-list
+        such that the first entry is the label that is outer-most (i.e.,
+        furthest from the bottom of the stack).
+
+        If the local system pops the outer-most label 400, then the
+        value of this list is [400,]. If the local system removes two
+        labels, the outer-most being 500, and the second of which is
+        400, then the value of the list is [500, 400].
+
+        A swap operation is reflected by entries in the
+        popped-mpls-label-stack and pushed-mpls-label-stack nodes.";
+    }
+  }
+}

@@ -1,0 +1,182 @@
+module openconfig-aft-network-instance {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/aft/ni";
+  prefix "oc-aftni";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-network-instance { prefix "oc-ni"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+     www.openconfig.net";
+
+  description
+    "This module provides augmentations that are utilized
+     when building the OpenConfig network instance model to
+     add per-NI AFTs.";
+
+  oc-ext:openconfig-version "0.3.1";
+
+  revision "2023-04-25" {
+    description
+      "Clarify use of the interface-ref type.";
+    reference "0.3.1";
+  }
+
+  revision "2022-03-29" {
+    description
+      "Relocate next-hop-group/next-hop-group-network-instance
+      from openconfig-aft-common to resolve absolute path
+      leafref specific to network-instances";
+    reference "0.3.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.3";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Formatting fixes";
+    reference "0.2.2";
+  }
+
+  revision 2017-01-13 {
+    description
+      "Updated revision for external review";
+    reference "0.2.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping aft-nexthop-ni-state {
+    description
+      "Operational state parameters relating to a next-hop which reference a
+      network instance.";
+
+    leaf network-instance {
+      type oc-ni:network-instance-ref;
+      description
+        "The network-instance within which the next-hop should be resolved.
+         When this leaf is unspecified, the next-hop is resolved within
+         the local instance.";
+    }
+  }
+
+  grouping aft-entry-ni-state {
+    description
+      "Operational state parameters relating to an AFT entry which reference
+      a network instance.";
+
+    leaf origin-network-instance {
+      type oc-ni:network-instance-ref;
+      description
+        "If the AFT entry was imported from another network instance (e.g., it
+        corresponds to a L3 forwarding entry which was learned within another
+        network-instance), the value of this leaf reflects the network-instance
+        from which it was learned.
+
+        For example, if the local network-instance corresponds to a L3VRF, and
+        routes are imported from the VPNv4 address-family of the BGP instance
+        in the DEFAULT_INSTANCE, then this value would reflect the
+        DEFAULT_INSTANCE as the origin-network-instance.";
+    }
+  }
+
+  grouping aft-entry-nexthop-group-state {
+    description
+      "Operational state nexthop group parameters relating to an AFT entry
+      which reference a network instance.";
+
+    leaf next-hop-group {
+      type leafref {
+        path "/oc-ni:network-instances/oc-ni:network-instance/oc-ni:afts/" +
+             "oc-ni:next-hop-groups/oc-ni:next-hop-group/oc-ni:state/oc-ni:id";
+      }
+      description
+        "A reference to the next-hop-group that is in use for the entry within
+        the AFT. Traffic is distributed across the set of next-hops within the
+        next-hop group according to the weight. This node needs to refer to any
+        network-instance on the system hence must be absolute.";
+    }
+
+    leaf next-hop-group-network-instance {
+      type oc-ni:network-instance-ref;
+      description
+        "The network instance to look up the next-hop-group in. If unspecified,
+        the next hop group is in the local network instance. The referenced
+        network-instance must be an existing network instance on the device and
+        have corresponding entries in the /network-instances/network-instance
+        list.";
+    }
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+          "oc-ni:afts/oc-ni:next-hops/oc-ni:next-hop/oc-ni:state" {
+
+    description
+      "Add leaves that require referencing of a network instance to the
+      operational state parameters of a next-hop within the AFT for IPv4
+      unicast.";
+
+    uses aft-nexthop-ni-state;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+          "oc-ni:afts/oc-ni:ipv4-unicast/oc-ni:ipv4-entry/oc-ni:state" {
+    description
+      "Add leaves that require referencing of a network instance to the
+      operational state parameters of an entry within the IPv4 unicast AFT.";
+
+    uses aft-entry-nexthop-group-state;
+    uses aft-entry-ni-state;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+          "oc-ni:afts/oc-ni:ipv6-unicast/oc-ni:ipv6-entry/oc-ni:state" {
+    description
+      "Add leaves that require referencing of a network instance to the
+      operational state parameters of an entry within the IPv6 unicast AFT.";
+
+    uses aft-entry-nexthop-group-state;
+    uses aft-entry-ni-state;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+          "oc-ni:afts/oc-ni:policy-forwarding/oc-ni:policy-forwarding-entry/" +
+          "oc-ni:state" {
+    description
+      "Add leaves that require referencing of a network instance to the
+      operational state parameters of an entry within the Policy Forwarding
+      AFT.";
+
+    uses aft-entry-nexthop-group-state;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+          "oc-ni:afts/oc-ni:mpls/oc-ni:label-entry/oc-ni:state" {
+    description
+      "Add leaves that require referencing of a network instance to the
+      operational state parameters of an entry within the MPLS AFT.";
+
+    uses aft-entry-nexthop-group-state;
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/" +
+          "oc-ni:afts/oc-ni:ethernet/oc-ni:mac-entry/oc-ni:state" {
+    description
+      "Add leaves that require referencing of a network instance to the
+      operational state parameters of an entry within the Ethernet AFT.";
+
+    uses aft-entry-nexthop-group-state;
+  }
+}

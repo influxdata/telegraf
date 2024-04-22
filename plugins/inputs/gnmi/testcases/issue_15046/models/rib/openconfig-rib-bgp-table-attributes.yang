@@ -1,0 +1,161 @@
+submodule openconfig-rib-bgp-table-attributes {
+
+  belongs-to openconfig-rib-bgp {
+    prefix "oc-rib-bgp";
+  }
+
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-rib-bgp-types { prefix oc-bgpribt; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule contains common data definitions for data
+    related to a RIB entry, or RIB table.";
+
+  oc-ext:openconfig-version "0.9.0";
+
+  revision "2022-12-20" {
+    description
+      "Convert as-segment and as4-segment to keyed lists.";
+    reference "0.9.0";
+  }
+
+  revision "2022-06-06" {
+    description
+      "Revert IETF types in favor of oc-inet types";
+    reference "0.8.1";
+  }
+
+  revision "2021-06-21" {
+    description
+      "Add L2VPN-EVPN BGP RIB Support";
+    reference "0.8.0";
+  }
+
+  revision "2019-10-15" {
+    description
+      "Change imported segment-routing module.";
+    reference "0.7.0";
+  }
+
+  revision "2019-04-25" {
+    description
+      "Update last-modified timestamp to be expressed as nanoseconds
+      since the Unix epoch.";
+    reference "0.6.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Rename the top-level BGP RIB container's name
+      to RIB.";
+    reference "0.5.0";
+  }
+
+  revision "2019-02-27" {
+    description
+      "Remove top-level BGP RIB container, and update list
+      names to be compatible with path compression.";
+    reference "0.4.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.1";
+  }
+
+  revision "2016-10-17" {
+    description
+      "OpenConfig BGP RIB refactor";
+    reference "0.3.0";
+  }
+
+  grouping bgp-common-route-annotations-state {
+    description
+      "Data definitions for flags and other information attached
+      to routes in both LOC-RIB and Adj-RIB";
+
+    leaf last-modified {
+      type oc-types:timeticks64;
+      description
+        "Timestamp when this path was last modified.
+
+        The value is the timestamp relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf valid-route {
+      type boolean;
+      description
+        "Indicates that the route is considered valid by the
+        local router";
+    }
+
+    leaf invalid-reason {
+      type identityref {
+        base oc-bgpribt:INVALID_ROUTE_REASON;
+      }
+      description
+        "If the route is rejected as invalid, this indicates the
+        reason.";
+    }
+
+  }
+
+  grouping bgp-loc-rib-route-annotations-state {
+    description
+      "Data definitions for information attached to routes in the
+      LOC-RIB";
+
+    // placeholder for route metadata specific to the LOC-RIB
+
+  }
+
+  grouping bgp-adj-rib-in-post-route-annotations-state {
+    description
+      "Data definitions for information attached to routes in the
+      Adj-RIB-in post-policy table";
+
+    leaf best-path {
+      type boolean;
+      description
+        "Current path was selected as the best path.";
+    }
+  }
+
+  grouping bgp-common-table-attrs-state {
+    description
+      "Common attributes attached to all routing tables";
+
+    // placeholder for metadata associated with all tables
+  }
+
+  grouping bgp-common-table-attrs-top {
+    description
+      "Operational state data for common attributes attached to
+      all routing tables";
+    // no enclosing container as this data will fit under an
+    // existing LOC-RIB container
+
+    container state {
+      config false;
+      description
+        "Operational state data for data related to the entire
+        LOC-RIB";
+
+      uses bgp-common-table-attrs-state;
+    }
+  }
+
+
+}

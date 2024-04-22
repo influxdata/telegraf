@@ -1,0 +1,215 @@
+module openconfig-gnsi-certz {
+  yang-version 1;
+  namespace "https://github.com/openconfig/yang/gnsi/certz";
+  prefix oc-gnsi-certz;
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-system {
+    prefix oc-sys;
+  }
+  import openconfig-system-grpc {
+    prefix oc-sys-grpc;
+  }
+  import openconfig-types {
+    prefix oc-types;
+  }
+  import openconfig-yang-types {
+    prefix oc-yang;
+  }
+  import openconfig-gnsi {
+    prefix oc-gnsi;
+  }
+  organization
+    "OpenConfig Working Group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module provides a data model for the metadata of gRPC credentials
+    installed on a networking device.";
+
+  oc-ext:openconfig-version "0.6.0";
+
+  revision 2024-03-05 {
+    description
+      "rename access/reject counters";
+    reference "0.6.0";
+  }
+
+  revision 2024-02-13 {
+    description
+      "Major style updates and move to openconfig/public from openconfig/gnsi.
+      Last commit at
+      https://github.com/openconfig/gnsi/commit/347935aac66135d5649dadb9583ed0914578aab0";
+    reference "0.5.0";
+  }
+
+  revision 2023-08-24 {
+    description
+      "Adds ssl-profile-id leaf";
+    reference "0.4.0";
+  }
+
+  revision 2023-05-10 {
+    description
+      "Adds authentication policy freshness information.";
+    reference "0.3.0";
+  }
+
+  revision 2022-10-30 {
+    description
+      "Adds success/failure counters.";
+    reference "0.2.0";
+  }
+
+  revision 2022-09-20 {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  typedef version {
+    type string;
+    description
+      "The version ID of the credential as provided by the credential
+      manager when the credential was pushed. This leaf persists through
+      a reboot.";
+  }
+
+  typedef created-on {
+    type oc-types:timeticks64;
+    description
+      "The creation time of the credential as reported by the credential
+      manager when the credential was pushed to the device. This value is
+      reported as nanoseconds since epoch (January 1st, 1970 00:00:00 GMT).
+      This leaf persists through a reboot.";
+  }
+  // gRPC server related definitions.
+  // Success/failure counters.
+  grouping grpc-server-certz-counters  {
+    description
+      "A collection of counters that were collected while evaluating
+      access to the gRPC server.";
+
+    container counters {
+      config false;
+      description
+      "A collection of counters that were collected by the gRPC during
+      the authentication process.";
+
+      leaf connection-rejects {
+        type oc-yang:counter64;
+        description
+        "The total number of times that gRPC clients have failed
+        in establishing a connection to the server.";
+      }
+      leaf last-connection-reject {
+        type oc-types:timeticks64;
+        description
+        "A timestamp of the last time a gRPC client failed
+        in establishing a connection to the server.";
+      }
+      leaf connection-accepts {
+        type oc-yang:counter64;
+        description
+        "The total number of times that gRPC clients have succeeded
+        in establishing a connection to the server.";
+      }
+      leaf last-connection-accept {
+        type oc-types:timeticks64;
+        description
+        "A timestamp of the last time a gRPC client succeeded
+        in establishing a connection to the server.";
+        }
+    }
+  }
+
+  // TODO(earies): move to a system-wide subtree:
+  // https://github.com/openconfig/public/issues/1049
+  grouping grpc-server-credentials-state {
+    description
+      "gRPC server credentials freshness-related data.";
+
+    leaf certificate-version {
+      type version;
+      description
+        "The version of the certificate (and associated
+        private key) that is used by this gRPC server.";
+    }
+    leaf certificate-created-on {
+      type created-on;
+      description
+        "The timestamp of the moment when the certificate
+        (and associated private key) that is currently used
+        by this gRPC server was created.";
+    }
+    leaf ca-trust-bundle-version {
+      type version;
+      description
+        "The version of the bundle of the Certificate
+        Authority certificates a.k.a. trust bundle used by
+        this gRPC server.";
+    }
+    leaf ca-trust-bundle-created-on {
+      type created-on;
+      description
+        "The timestamp of the moment when the bundle of
+        the Certificate Authority certificates (a.k.a.
+            trust bundle) was created.";
+    }
+    leaf certificate-revocation-list-bundle-version {
+      type version;
+      description
+        "The version of the Certificate Revocation List bundle used by
+        this gRPC server.";
+    }
+    leaf certificate-revocation-list-bundle-created-on {
+      type created-on;
+      description
+        "The timestamp of the moment when the Certificate Revocation
+        List bundle was created.";
+    }
+    leaf authentication-policy-version {
+      type version;
+      description
+        "The version of the authentication policy that is used by
+        this gRPC server.";
+    }
+    leaf authentication-policy-created-on {
+      type created-on;
+      description
+        "The timestamp of the moment when the authentication policy
+        that is currently used by this gRPC server was created.";
+    }
+    // TODO(earies): Consider aligning this with grpc-server key after moving
+    // to a system-wide subtree:
+    // https://github.com/openconfig/public/issues/1050
+    leaf ssl-profile-id {
+      type string;
+      description
+        "The ID of this gRPC server's SSL profile
+        as used by the gNSI Certz service";
+    }
+  }
+
+  // Augments section.
+
+  augment "/oc-sys:system/oc-sys-grpc:grpc-servers/oc-sys-grpc:grpc-server/" +
+          "oc-sys-grpc:state" {
+    when "../config[contains(services, 'oc-gnsi:GNSI')]/enable = 'true'";
+    description
+      "A gRPC server credentials freshness information.";
+
+    uses grpc-server-credentials-state;
+  }
+
+  augment "/oc-sys:system/oc-sys-grpc:grpc-servers/oc-sys-grpc:grpc-server/" +
+          "oc-sys-grpc:state" {
+    when "../config[contains(services, 'oc-gnsi:GNSI')]/enable = 'true'";
+    uses grpc-server-certz-counters;
+    description
+      "gNSI certz server access counters.";
+  }
+}

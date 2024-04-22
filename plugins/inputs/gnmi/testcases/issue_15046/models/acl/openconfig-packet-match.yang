@@ -1,0 +1,727 @@
+module openconfig-packet-match {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/header-fields";
+
+  prefix "oc-pkt-match";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-packet-match-types { prefix oc-pkt-match-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-mpls-types { prefix oc-mpls; }
+  import openconfig-defined-sets { prefix oc-sets; }
+  import openconfig-icmpv4-types { prefix oc-icmpv4-types; }
+  import openconfig-icmpv6-types { prefix oc-icmpv6-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines data related to packet header fields
+    used in matching operations, for example in ACLs.  When a
+    field is omitted from a match expression, the effect is a
+    wildcard ('any') for that field.";
+
+
+  oc-ext:openconfig-version "2.1.0";
+
+  revision "2023-03-01" {
+    description
+      "Add ICMP Fields for filtering.";
+    reference "2.1.0";
+  }
+
+  revision "2023-01-27" {
+    description
+      "Update the mechanism to match detailed transport flags,
+      adding means for AND/OR in the explicitly specified flags
+      and commonly supported match aliases.";
+    reference "2.0.0";
+  }
+
+  revision "2022-06-01" {
+    description
+      "Add the ability to match source/destination ipv4 and
+      ipv6 prefix list and source/destination port list ";
+    reference "1.4.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace.";
+    reference "1.3.1";
+  }
+
+  revision "2021-05-19" {
+    description
+      "Add the ability to match multiple DSCPs in a rule.";
+    reference "1.3.0";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add MPLS filter Support.";
+      reference "1.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "1.1.1";
+  }
+
+  revision "2017-12-15" {
+    description
+      "Add MPLS packet field matches";
+    reference "1.1.0";
+  }
+
+  revision "2017-05-26" {
+    description
+      "Separated IP matches into AFs";
+    reference "1.0.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  revision "2016-04-27" {
+    description
+      "Initial revision";
+    reference "TBD";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+
+  // Physical Layer fields
+  // ethernet-header
+  grouping ethernet-header-config {
+    description
+      "Configuration data of fields in Ethernet header.";
+
+    leaf source-mac {
+      type oc-yang:mac-address;
+      description
+        "Source IEEE 802 MAC address.";
+    }
+
+    leaf source-mac-mask {
+      type oc-yang:mac-address;
+      description
+        "Source IEEE 802 MAC address mask.";
+    }
+
+    leaf destination-mac {
+      type oc-yang:mac-address;
+      description
+        "Destination IEEE 802 MAC address.";
+    }
+
+    leaf destination-mac-mask {
+      type oc-yang:mac-address;
+      description
+        "Destination IEEE 802 MAC address mask.";
+    }
+
+    leaf ethertype {
+      type oc-pkt-match-types:ethertype-type;
+      description
+        "Ethertype field to match in Ethernet packets";
+    }
+  }
+
+  grouping ethernet-header-state {
+    description
+      "State information of fields in Ethernet header.";
+  }
+
+  grouping ethernet-header-top {
+    description
+      "Top level container for fields in Ethernet header.";
+
+    container l2 {
+      description
+        "Ethernet header fields";
+
+      container config {
+        description
+          "Configuration data";
+        uses ethernet-header-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State Information.";
+        uses ethernet-header-config;
+        uses ethernet-header-state;
+      }
+    }
+  }
+
+  grouping mpls-header-top {
+    description
+      "Top-level container for fields in an MPLS header.";
+
+    container mpls {
+      description
+        "MPLS header fields";
+
+      container config {
+        description
+          "Configuration parameters relating to fields within
+          the MPLS header.";
+        uses mpls-header-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to fields
+          within the MPLS header";
+        uses mpls-header-config;
+      }
+    }
+  }
+
+  grouping mpls-header-config {
+    description
+      "Configuration parameters relating to matches within
+      MPLS header fields.";
+
+    leaf traffic-class {
+      type oc-mpls:mpls-tc;
+      description
+        "The value of the MPLS traffic class (TC) bits,
+        formerly known as the EXP bits.";
+    }
+
+    leaf start-label-value {
+      type oc-mpls:mpls-label;
+      description
+        "Match MPLS label value on the MPLS header.
+        The usage of this field indicated the upper
+        range value in the top of the stack.
+        The range that is used is inclusive. The match that
+        is done for a particular received pkt_label is:
+        start-label-value <= pkt_label <= end-label-value.
+        The 20-bit label value in an MPLS label
+        stack as specified in RFC 3032.
+        This label value does not include the
+        encodings of Traffic Class and TTL.";
+      }
+
+    leaf end-label-value {
+      type oc-mpls:mpls-label;
+      description
+        "Match MPLS label value on the MPLS header.
+        The usage of this field indicated the upper
+        range value in the top of the stack.
+        The range that is used is inclusive. The match that
+        is done for a particular received pkt_label is:
+        start-label-value <= pkt_label <= end-label-value.
+        The 20-bit label value in an MPLS label
+        stack as specified in RFC 3032.
+        This label value does not include the
+        encodings of Traffic Class and TTL.";
+      }
+
+    leaf ttl-value {
+      type uint8;
+      description
+        "Time-to-live MPLS packet value match.";
+      reference
+        "RFC 3032: MPLS Label Stack Encoding.";
+    }
+  }
+
+  grouping ip-protocol-fields-common-config {
+    description
+      "IP protocol fields common to IPv4 and IPv6";
+
+    leaf dscp {
+      type oc-inet:dscp;
+      description
+        "Value of diffserv codepoint.";
+    }
+
+    leaf-list dscp-set {
+      type oc-inet:dscp;
+      description
+        "A list of DSCP values to be matched for incoming packets. AN OR match should
+        be performed, such that a packet must match one of the values defined in this
+        list. If the field is left empty then any DSCP value matches unless the 'dscp'
+        leaf is specified. It is not valid to specify both 'dscp' and 'dscp-set together.'";
+    }
+
+    leaf length {
+      type uint16;
+      description
+        "In the IPv4 header field, this field is known as the Total
+         Length.  Total Length is the length of the datagram, measured
+         in octets, including internet header and data.
+         In the IPv6 header field, this field is known as the Payload
+         Length, which is the length of the IPv6 payload, i.e., the rest
+         of the packet following the IPv6 header, in octets.";
+      reference
+        "RFC 791: Internet Protocol
+         RFC 8200: Internet Protocol, Version 6 (IPv6) Specification.";
+    }
+
+    leaf protocol {
+      type oc-pkt-match-types:ip-protocol-type;
+      description
+        "The protocol carried in the IP packet, expressed either
+        as its IP protocol number, or by a defined identity.";
+    }
+
+    leaf hop-limit {
+      type uint8 {
+        range 0..255;
+      }
+      description
+        "The IP packet's hop limit -- known as TTL (in hops) in
+        IPv4 packets, and hop limit in IPv6";
+    }
+  }
+
+  // IP Layer
+  // ip-protocol-fields
+  grouping ipv4-protocol-fields-config {
+    description
+      "Configuration data of IP protocol fields
+      for IPv4";
+
+    leaf source-address {
+      type oc-inet:ipv4-prefix;
+      description
+        "Source IPv4 address prefix.";
+    }
+
+    leaf source-address-prefix-set {
+      type leafref {
+         path "/oc-sets:defined-sets/oc-sets:ipv4-prefix-sets"
+            + "/oc-sets:ipv4-prefix-set/oc-sets:name";
+       }
+      description
+          "Reference to a IPv4 address prefix Set
+          to match the source address";
+    }
+
+    leaf destination-address {
+      type oc-inet:ipv4-prefix;
+      description
+        "Destination IPv4 address prefix.";
+    }
+
+    leaf destination-address-prefix-set {
+      type leafref {
+         path "/oc-sets:defined-sets/oc-sets:ipv4-prefix-sets"
+            + "/oc-sets:ipv4-prefix-set/oc-sets:name";
+       }
+      description
+          "Reference to a IPv4 address prefix set
+          to match the destination address";
+    }
+
+    uses ip-protocol-fields-common-config;
+
+  }
+
+  grouping ipv4-protocol-fields-state {
+    description
+      "State information of IP header fields for IPv4";
+  }
+
+  grouping ipv4-protocol-fields-top {
+    description
+      "IP header fields for IPv4";
+
+    container ipv4 {
+      description
+        "Top level container for IPv4 match field data";
+
+      container config {
+        description
+          "Configuration data for IPv4 match fields";
+        uses ipv4-protocol-fields-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State information for IPv4 match fields";
+        uses ipv4-protocol-fields-config;
+        uses ipv4-protocol-fields-state;
+      }
+      uses ip-icmpv4-header-fields-top;
+    }
+  }
+
+  grouping ipv6-protocol-fields-config {
+    description
+      "Configuration data for IPv6 match fields";
+
+    leaf source-address {
+      type oc-inet:ipv6-prefix;
+      description
+        "Source IPv6 address prefix.";
+    }
+
+    leaf source-address-prefix-set {
+      type leafref {
+         path "/oc-sets:defined-sets/oc-sets:ipv6-prefix-sets"
+            + "/oc-sets:ipv6-prefix-set/oc-sets:name";
+       }
+      description
+          "Reference to a IPv6 address prefix set
+          to match the source address";
+    }
+
+    leaf source-flow-label {
+      type oc-inet:ipv6-flow-label;
+      description
+        "Source IPv6 Flow label.";
+    }
+
+    leaf destination-address {
+      type oc-inet:ipv6-prefix;
+      description
+        "Destination IPv6 address prefix.";
+    }
+
+    leaf destination-address-prefix-set {
+      type leafref {
+         path "/oc-sets:defined-sets/oc-sets:ipv6-prefix-sets"
+            + "/oc-sets:ipv6-prefix-set/oc-sets:name";
+       }
+      description
+          "Reference to a IPv6 address prefix set
+          to match the destination address";
+    }
+
+    leaf destination-flow-label {
+      type oc-inet:ipv6-flow-label;
+      description
+        "Destination IPv6 Flow label.";
+    }
+
+    uses ip-protocol-fields-common-config;
+  }
+
+  grouping ipv6-protocol-fields-state {
+    description
+      "Operational state data for IPv6 match fields";
+  }
+
+  grouping ipv6-protocol-fields-top {
+    description
+      "Top-level grouping for IPv6 match fields";
+
+    container ipv6 {
+      description
+        "Top-level container for IPv6 match field data";
+
+      container config {
+        description
+          "Configuration data for IPv6 match fields";
+
+        uses ipv6-protocol-fields-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for IPv6 match fields";
+
+        uses ipv6-protocol-fields-config;
+        uses ipv6-protocol-fields-state;
+      }
+      uses ip-icmpv6-header-fields-top;
+    }
+  }
+
+  // Transport fields
+  grouping transport-fields-config {
+    description
+      "Configuration data of transport-layer packet fields";
+
+    leaf source-port {
+      type oc-pkt-match-types:port-num-range;
+      description
+        "Source port or range";
+    }
+
+    leaf source-port-set {
+      type leafref {
+         path "/oc-sets:defined-sets/oc-sets:port-sets"
+            + "/oc-sets:port-set/oc-sets:name";
+       }
+      description
+          "Reference to a port set
+          to match the source port";
+    }
+
+    leaf destination-port {
+      type oc-pkt-match-types:port-num-range;
+      description
+        "Destination port or range";
+    }
+
+    leaf destination-port-set {
+      type leafref {
+         path "/oc-sets:defined-sets/oc-sets:port-sets"
+            + "/oc-sets:port-set/oc-sets:name";
+       }
+      description
+          "Reference to a port set
+          to match the destination port";
+    }
+
+    leaf detail-mode {
+      type enumeration {
+        enum EXPLICIT {
+          description
+            "Specifies that the mode for matching details at the transport
+             layer is to explicitly match transport flags.";
+        }
+        enum BUILTIN {
+          description
+            "Specifies that the mode for matching details at the transport
+            layer is to using implementation built-ins which may map to
+            multiple flags.";
+        }
+      }
+      description
+        "Mode that is used for matching detailed fields at the transport
+        layer. When EXPLICIT is specified, the implementation should
+        match based on the explicit flags that are specified in the
+        corresponding leaf. When BUILTIN is specified, the implementation
+        must expand the contents of the corresponding leaf to the flags
+        and/or fields that match the pre-defined built-in values.";
+    }
+
+    leaf explicit-detail-match-mode {
+      type enumeration {
+        enum ANY {
+          description
+            "Matches of the explicit-detail-flags field are treated as
+            an OR between the values in the list.";
+        }
+        enum ALL {
+          description
+            "Matches of the explicit-details-flags field are treated
+            as an AND of the values in the list.";
+        }
+      }
+      description
+        "Specifies how the contents of the explicit-details-flags list
+        are to be treated. ANY implies that any of the flags may match,
+        where ALL indicates that all the flags must be matched.";
+      when "../detail-mode = 'EXPLICIT'" {
+        description
+          "This leaf is only valid when the mode for matches is specified to
+          be explicit.";
+      }
+    }
+
+    leaf-list explicit-tcp-flags {
+      type identityref {
+        base oc-pkt-match-types:TCP_FLAGS;
+      }
+      description
+        "An explicit list of the TCP flags that are to be matched. The
+        mechanism for the match is specified by the explicit-detail-match-mode
+        leaf.";
+      when "../detail-mode = 'EXPLICIT'" {
+        description
+          "This leaf is only valid when the mode for matches is specified to
+          be explicit.";
+      }
+    }
+
+    leaf builtin-detail {
+      type enumeration {
+        enum TCP_INITIAL {
+          description
+            "Matches the first packet of a TCP session based on a packet
+            not having the ACK flag set, and having the SYN flag set.";
+        }
+        enum TCP_ESTABLISHED {
+          description
+            "Matches an established TCP session based on a packet having
+            the ACK or RST flags set. This does not match the first
+            packet.";
+        }
+        enum FRAGMENT {
+          description
+            "Matches non-zero values of the fragment-offset field, indicating
+            this packet is a follow up to a fragmented datagram.";
+        }
+      }
+      description
+        "Specifies a built-in (alias) for a match condition that matches
+        multiple flags, or specifies particular logic as to the flag matches
+        to be implemented. This leaf is only valid when the detail-match-mode
+        leaf is BUILTIN.";
+      when "../detail-mode = 'BUILTIN'" {
+        description
+          "This leaf is only valid when the mode for matches is specified to
+          be builtin.";
+      }
+    }
+  }
+
+  grouping transport-fields-state {
+    description
+      "State data of transport-fields";
+  }
+
+  grouping transport-fields-top {
+    description
+      "Destination transport-fields top level grouping";
+
+    container transport {
+      description
+        "Transport fields container";
+
+      container config {
+        description
+          "Configuration data";
+        uses transport-fields-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State data";
+        uses transport-fields-config;
+        uses transport-fields-state;
+      }
+    }
+  }
+
+  grouping ip-icmpv4-header-fields-top {
+    description
+      "Top grouping for ICMPv4 filtering";
+
+    container icmpv4 {
+      description
+        "Top container for ICMPv4 filtering";
+
+      container config {
+        description
+          "Configuration attributes for ICMPv4 filtering";
+
+        uses ip-icmpv4-header-fields-config;
+      }
+
+      container state {
+        description
+          "State attributes for ICMPv4 filtering";
+        config false;
+
+        uses ip-icmpv4-header-fields-config;
+      }
+    }
+  }
+
+  grouping ip-icmpv6-header-fields-top {
+    description
+      "Top grouping for ICMPv6 filtering";
+
+    container icmpv6 {
+      description
+        "Top container for ICMPv6 filtering";
+
+      container config {
+        description
+          "Configuration attributes for ICMPv6 filtering";
+
+        uses ip-icmpv6-header-fields-config;
+      }
+
+      container state {
+        description
+          "State attributes for ICMPv6 filtering";
+        config false;
+
+        uses ip-icmpv6-header-fields-config;
+      }
+    }
+  }
+
+  grouping ip-icmpv4-header-fields-config {
+    description
+      "Collection of ICMPv4 header fields that can be
+       used to set up a match filter.";
+
+    leaf type {
+      type identityref {
+        base oc-icmpv4-types:TYPE;
+      }
+      description
+        "ICMPv4 type to be matched.";
+      reference
+        "RFC 792: Internet Control Message Protocol";
+    }
+
+    leaf code {
+      type identityref {
+        base oc-icmpv4-types:CODE;
+      }
+      description
+        "ICMPv4 code to be matched.";
+      reference
+        "RFC 792: Internet Control Message Protocol";
+    }
+  }
+
+  grouping ip-icmpv6-header-fields-config {
+    description
+      "Collection of ICMPv6 header fields that can be
+       used to set up a match filter.";
+
+    leaf type {
+      type identityref {
+        base oc-icmpv6-types:TYPE;
+      }
+      description
+        "ICMPv6 type to be matched.";
+      reference
+        "RFC 4443: Internet Control Message Protocol (ICMPv6)
+                   for Internet Protocol Version 6 (IPv6)
+                   Specification.";
+    }
+
+    leaf code {
+      type identityref {
+        base oc-icmpv6-types:CODE;
+      }
+      description
+        "ICMP code to be matched.";
+      reference
+        "RFC 4443: Internet Control Message Protocol (ICMPv6)
+                   for Internet Protocol Version 6 (IPv6)
+                   Specification.";
+    }
+  }
+
+}

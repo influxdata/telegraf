@@ -1,0 +1,573 @@
+module openconfig-terminal-device-properties {
+
+  // Yang version can be "1" without mandatory fields.
+  // Yang version 1.1 allows mandatory fiels in an augment
+  // https://tools.ietf.org/html/rfc7950#section-7.17
+  // If the augmentation adds mandatory nodes (see Section 3) that
+  // represent configuration to a target node in another module, the
+  // augmentation MUST be made conditional with a "when" statement.
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://example.net/yang/openconfig-terminal-device-properties";
+  prefix "oc-opt-term-properties";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-transport-types { prefix oc-opt-types; }
+  import openconfig-terminal-device-property-types { prefix oc-opt-term-prop-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+      www.openconfig.net";
+
+  description
+      "Module to extend OpenConfig terminal device's operational modes'
+      data. It supports operational modes for one Optical
+      Channel, with a single OTSi. The operational mode includes key
+      attributes such modulation format, symbol rate, nominal central
+      frequency (NFC) tunability constraints (grid, min/max NCF), FEC
+      gain, minimum and maximum output power of the transmitter or
+      minimum OSNR at the receiver as well as the spectrum width of
+      the OTSi (OTSiMC). It also includes (optional) aspects such as
+      filter characterization, CD and DGD tolerance.";
+
+  oc-ext:openconfig-version "0.1.1";
+
+
+  // Revisions
+  revision "2023-12-13" {
+    description
+      "Add reference to the terminal-device-properties-guide.md doc for operational-modes.";
+      reference "0.1.1";
+  }
+
+  revision "2022-04-26" {
+      description "Initial manifest fine to extend the information
+      related to the operational modes supported by a terminal device.";
+      reference "0.1.0";
+  }
+
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig-properties";
+
+  // grouping statements
+
+  grouping penalties-list-element-attributes {
+    description
+      "OSNR penalties grouping, including the set of attributes
+      which defines each element of the penalties list.";
+
+    leaf parameter-and-unit {
+      type oc-opt-term-prop-types:impairment-type;
+      description
+        "Impairment and unit leading to the penalty (i.e., cd-ps)";
+    }
+
+    leaf up-to-boundary {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      description
+        "defines the upper (for positive values) and lower (for negative values)
+         limit for which the penalty value is valid.";
+    }
+
+    leaf penalty-value {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "OSNR penalty associated to the given values, expressed in dB.";
+    }
+  }
+
+  grouping fec-codes-attributes {
+    description
+      "FEC codes attributes grouping, including the set of attributes
+      which defines the FEC code employed on the transmission represented
+      by the operational-mode.";
+
+    leaf fec-coding {
+      type union {
+        type string;
+        type oc-opt-term-prop-types:fec-coding;
+      }
+      description
+        "Forward error correction (FEC) coding schema used in the
+        transmission mode. Type union of string (for proprietary codes)
+        and a set of standard codes encoded as identity references";
+    }
+
+    leaf coding-overhead {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      description
+        "Coding overhead rate in %.";
+    }
+
+    leaf coding-gain {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      default 0.00;
+      description
+        "Net coding gain (NCG) in dB units at 10E-15 bit error rate.
+        It may vary depending on the modulation format used in the
+        associated transmission mode (operational-mode).";
+    }
+    leaf pre-fec-ber-threshold {
+      type decimal64 {
+        fraction-digits 18;
+      }
+      units bit-errors-per-second;
+      description
+        "Threshold on the PRE-FEC-BER, for which FEC code is able to
+        correct errors.";
+    }
+  }
+
+  grouping filter-attributes-top {
+    description
+      "This grouping includes the attributes which characterises the filter
+      at transceiver transmission for the given operational-mode.";
+
+    leaf pulse-shaping-type {
+      type union {
+        type string;
+        type oc-opt-term-prop-types:pulse-shaping-type;
+      }
+      description
+       "Pulse/spectral shaping type such as Raised-cosine (RC),
+         root-raised-cosine (RRC) and OFF. The attribute allows
+         other pulse-shaping types to be encoded as strings.";
+    }
+
+    leaf roll-off {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      description
+        "Decimal fraction between 0 and 1. Roll-off parameter (𝛽) of the
+        TX pulse shaping filter. This assumes a raised-cosine filter";
+
+    }
+  }
+
+  grouping operational-mode-descriptor-explicit-config-constraints-state {
+    description
+      "Configuration value constraints for optical channels
+      configured on the target operational mode.";
+
+    leaf min-central-frequency {
+      type oc-opt-types:frequency-type;
+      description
+        "The lowest configurable central frequency in MHz.";
+    }
+
+    leaf max-central-frequency {
+      type oc-opt-types:frequency-type;
+      description
+        "The highest configurable central frequency in MHz.";
+    }
+
+    leaf grid-type {
+      type oc-opt-term-prop-types:grid-type;
+      description
+        "Frequency  ITU-T G.694.1 (10/2020) grid specification attribute.";
+    }
+
+    leaf adjustment-granularity {
+      type oc-opt-term-prop-types:adjustment-granularity;
+      description
+        "Adjustment granularity in Gigahertz. As per  ITU-T G.694.1
+        (10/2020), it is used to calculate nominal central frequency of an
+        optical channel. It defines the minimum granularity supporting by the
+        optical channel's central frequency setting.";
+    }
+
+    leaf min-channel-spacing {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units GHz;
+      description
+       "Minimum recommended spectrum spacing between the central frequency of two
+        adjacent optical channels of the same mode. In case of two adjacent optical
+        channels with different operational-modes, it is up to the path computation
+        engine to determine the minimum distance between the central frequencies of
+        these two optical channels.";
+    }
+
+    leaf min-output-power {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "Minimum target output optical power level of the optical channel,
+        configurable according to the optical transceiver mode properties,
+        expressed in increments of 0.01 dBm (decibel-milliwats)";
+    }
+
+    leaf max-output-power {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "Maximum target output optical power level of the optical channel,
+        configurable according to the optical transceiver mode properties,
+        expressed in increments of 0.01 dBm (decibel-milliwatts)";
+    }
+  }
+
+  grouping operational-mode-descriptor-explicit-capabilities-state {
+    description
+      "Operational-mode capabilities leafs.";
+
+    leaf modulation-format {
+      type union {
+        type string;
+        type oc-opt-term-prop-types:modulation-format;
+      }
+      description
+        "Optical modulation format associated to the mode. The
+        modulation format associated to the optical signal.";
+    }
+
+    leaf bit-rate {
+      type oc-opt-term-prop-types:bit-rate;
+      description
+        "Rounded bit rate of the tributary signal delivered by the
+        optical channel associated to the specific operational mode.
+        Exact bit rate will be refined by protocol selection at the
+        associated tributary logical channel.";
+    }
+
+    leaf baud-rate {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units Bd;
+      description
+        "Baud-rate or symbol rate.";
+    }
+
+    leaf optical-channel-spectrum-width {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units GHz;
+      description
+       "Spectrum width of the optical channel associated to this
+        operational mode, calculated as the baud-rate*(1+roll-off).";
+    }
+
+    leaf min-tx-osnr {
+      type decimal64 {
+          fraction-digits 2;
+      }
+      units dB;
+      description
+        "Minimum in-band transmitter OSNR measured at 0.1nm@193.6Thz,
+        considering the maximum transceiver inserted noise. ";
+    }
+
+    leaf min-rx-osnr {
+      type decimal64 {
+          fraction-digits 2;
+      }
+      units dB;
+      description
+        "Minimum back-to-back OSNR measured over 0.1nm@193.6Thz or
+        12.5GHz noise resolution bandwidth at the min-input-power.
+        If received OSNR at min-input-power is lower than this value,
+        an increased level of bit-errors post-FEC needs to be
+        expected.";
+    }
+
+    leaf min-input-power {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "Minimum value required input power in dBm of an optical channel
+        at the receiver (Rx) according to the given min-rx-osnr value. If
+        the input-power is lower it is expected to introduce an OSNR
+        penalty.";
+    }
+
+    leaf max-input-power {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "Maximum tolerated input power in dBm at the receiver (Rx)
+        of the coherence transceiver, which if exceeded can cause an
+        overload.";
+    }
+
+    leaf max-chromatic-dispersion {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units ps-nm;
+      description
+        "Maximum chromatic-dispersion, accumulated value, supported by the
+        optical channel associated to the associated transmission mode
+        (operational model), expressed in picoseconds / nanometer (ps/nm).";
+    }
+
+    leaf max-differential-group-delay {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units ps;
+      description
+        "Maximum differential-group-delay, absolute value, supported by the
+        optical channel associated to the associated tranmission mode
+        (operational model), expressed in picoseconds (ps).";
+    }
+
+    leaf max-polarization-dependent-loss {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "Maximum polarization-dependent-loss accumulated value, supported by the
+        optical channel associated to the associated transmission mode
+        (operational model), expressed in decibels (dB)";
+    }
+  }
+
+  grouping operational-mode-descriptor-explicit-top {
+    description
+      "Definition of proprietary or non-standard operational-modes, which can be
+      uniformly characterized by the set of attributes included in their
+      operational-mode-capabilities which defines the related signal physical
+      impairment related aspects such Rx and Tx associated attributes and tolerances;
+      and its optical-channel-config-value-constraints, which defines what are the
+      allowed values to be configured at the oc-component:optical-channel instance
+      configured to this mode.";
+
+    container explicit-mode {
+      description
+        "Explicit definition of the operational-mode. Typically this is used
+        for non-standard/proprietary modes defined by the terminal-device
+        vendor and it is self-described by the capabilities included in
+        the subtree underneath.";
+
+      container operational-mode-capabilities{
+        description
+            "Set of attributes which characterizes the operational-mode for optimal
+            optical-channel transmission and receiver functions. This attributes
+            are intending to describe all the relevant data used during the
+            network planning phase, to estimate the physical-impairment
+            tolerances which can be introduced by the DWDM optical path,
+            while assuring optimal transmission function.";
+
+        container state {
+          config false;
+          description
+            "Operational-mode explicit mode capabilities state container.";
+
+          uses operational-mode-descriptor-explicit-capabilities-state;
+        }
+        container fec {
+          description
+            "The Forward Error Coding (FEC) coding schema used,
+            including the name, overhead, pre-fec-ber threshold and
+            gain properties.";
+
+          container state {
+            config false;
+            description
+              "FEC state attributes top container.";
+
+            uses fec-codes-attributes;
+          }
+        }
+
+        container penalties {
+          description
+            "Enconsing list's container.";
+
+          list penalty {
+            key "parameter-and-unit up-to-boundary";
+            description
+              "Penalties includes contributions from different impairments including
+              cd, pmd, low RX Power, pdl,...
+              - For parameter values below lowest up-to-boundary value, the penalty is 0.
+              - For parameter values between lowest and highest up-to-boundary
+              values, penalty could be linearly interpolated.
+              - For parameter values above highest up-to-boundary value, the penalty is the one
+              included within penalty-value attribute associated to the highest up-to-boundary";
+
+            leaf parameter-and-unit {
+              type leafref {
+                path "../state/parameter-and-unit";
+              }
+              description
+                "Impairment and unit leading to the penalty (i.e., cd-ps)";
+            }
+
+            leaf up-to-boundary {
+              type leafref {
+                path "../state/up-to-boundary";
+              }
+              description
+                "defines the upper (for positive values) and lower (for negative values)
+                 limit for which the penalty value is valid.";
+            }
+
+            container state {
+              config false;
+              description
+                "Penalties list element's state attributes top container.";
+              uses penalties-list-element-attributes;
+            }
+          }
+        }
+
+        container filter {
+          description
+            "This container includes information which characterises the filter at
+            transceiver transmission for the given operational-mode.";
+
+          container state {
+            config false;
+            description
+              "Filter's state attributes top container.";
+            uses filter-attributes-top;
+          }
+        }
+      }
+
+      container optical-channel-config-value-constraints{
+        description
+          "Set of constraints of the configuration attributes
+          of the optical-channel associated to the selected
+          operational-mode.";
+
+        container state {
+          config false;
+          description
+            "Operational-mode explicit mode config value constrains state top
+            container.";
+
+          uses operational-mode-descriptor-explicit-config-constraints-state;
+        }
+      }
+    }
+  }
+
+  grouping operational-mode-descriptor-standard-state {
+    description
+      "Standard mode features attributes grouping.";
+
+    leaf standard-mode {
+      type oc-opt-term-prop-types:standard-mode;
+      description
+        "G.698.2 (11/18) standard mode";
+    }
+  }
+
+  grouping operational-mode-descriptor-standard-top {
+    description
+      "Standard mode features description grouping. It is used if the
+      'mode-type' attribute is set to 'TRANSCEIVER_MODE_TYPE_STANDARD";
+
+    container G.698.2 {
+      description
+        "ITU-T G.698.2 (11/18) standard mode that guarantees interoperability.
+        It must be an string with the following format:
+        B-DScW-ytz(v) where all these attributes are conformant
+        to the ITU-T G.698.2 (11/18) recommendation.";
+
+      container state {
+          config false;
+          description
+            "Operational-mode standard mode state top container.";
+
+          uses operational-mode-descriptor-standard-state;
+      }
+    }
+  }
+
+  grouping operational-mode-descriptor-state{
+    description
+      "Top-level operational-mode-features grouping definitions";
+
+    leaf mode-id {
+      type uint16;
+      description
+        "Two-octet encoding of the vendor-defined operational
+        mode";
+    }
+
+    leaf mode-type {
+      type identityref{
+          base oc-opt-term-prop-types:TRANSCEIVER_MODE_TYPE;
+      }
+      description
+        "Indicates whether the transceiver's mode is a standard
+        mode, an organizational mode or an explicit mode.";
+    }
+  }
+
+  grouping operational-mode-top{
+    description
+      "top-level operational-mode definitions";
+
+    container operational-modes {
+      config false;
+      description
+        "Indicates the transceiver's list of supported operational
+         modes and its associated transmission features";
+      reference
+         "https://github.com/openconfig/public/blob/master/doc/terminal-device-properties-guide.md";
+
+      list mode-descriptor {
+        key "mode-id";
+        description
+          "List of operational modes supported by the platform.
+          The operational mode provides a platform-defined summary
+          of information such as symbol rate, modulation, pulse
+          shaping, etc.";
+
+        leaf mode-id {
+          type leafref {
+            path "../state/mode-id";
+          }
+          description
+            "Reference to mode-id";
+        }
+
+        container state {
+          description
+            "Static features or properties which characterize the
+            operational mode.";
+
+          uses operational-mode-descriptor-state;
+        }
+        uses operational-mode-descriptor-standard-top;
+        uses operational-mode-descriptor-explicit-top;
+      }
+    }
+  }
+
+  uses operational-mode-top;
+}

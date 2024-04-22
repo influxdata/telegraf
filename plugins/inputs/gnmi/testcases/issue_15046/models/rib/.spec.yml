@@ -1,0 +1,9 @@
+- name: openconfig-bgp-rib
+  docs:
+    - yang/rib/openconfig-rib-bgp-types.yang
+    - yang/rib/openconfig-rib-bgp-ext.yang
+    - yang/rib/openconfig-rib-bgp.yang
+  build:
+    - yang/rib/openconfig-rib-bgp.yang
+    - yang/rib/openconfig-rib-bgp-ext.yang
+  run-ci: true

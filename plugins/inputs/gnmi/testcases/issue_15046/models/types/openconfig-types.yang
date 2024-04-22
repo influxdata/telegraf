@@ -1,0 +1,485 @@
+module openconfig-types {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/openconfig-types";
+
+  prefix "oc-types";
+
+  // import statements
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module contains a set of general type definitions that
+    are used across OpenConfig models. It can be imported by modules
+    that make use of these types.";
+
+  oc-ext:openconfig-version "1.0.0";
+
+  revision "2024-01-31" {
+    description
+      "Add posix-eregexp type and promote model to version 1.0.0.";
+    reference "1.0.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Clarify definition of timeticks64.";
+    reference "0.6.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.5.1";
+  }
+
+  revision "2018-05-05" {
+    description
+      "Add grouping of min-max-time and
+       included them to all stats with min/max/avg";
+    reference "0.5.0";
+  }
+
+  revision "2018-01-16" {
+    description
+      "Add interval to min/max/avg stats; add percentage stat";
+    reference "0.4.0";
+  }
+
+  revision "2017-08-16" {
+    description
+      "Apply fix for ieetfloat32 length parameter";
+    reference "0.3.3";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Add ADDRESS_FAMILY identity";
+    reference "0.3.2";
+  }
+
+  revision "2016-11-14" {
+    description
+      "Correct length of ieeefloat32";
+    reference "0.3.1";
+  }
+
+  revision "2016-11-11" {
+    description
+      "Additional types - ieeefloat32 and routing-password";
+    reference "0.3.0";
+  }
+
+  revision "2016-05-31" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  typedef percentage {
+    type uint8 {
+      range "0..100";
+    }
+    description
+      "Integer indicating a percentage value";
+  }
+
+  typedef std-regexp {
+    type string;
+    description
+      "This type definition is a placeholder for a standard
+      definition of a regular expression that can be utilised in
+      OpenConfig models. Further discussion is required to
+      consider the type of regular expressions that are to be
+      supported. An initial proposal is POSIX compatible.";
+  }
+
+  typedef posix-eregexp {
+    type string;
+    description
+      "This is a string which represents an extended POSIX
+      regular expression.";
+    reference "IEEE Std 1003.1-2017";
+  }
+
+  typedef timeticks64 {
+    type uint64;
+    units "nanoseconds";
+    description
+     "The timeticks64 represents the time, modulo 2^64 in
+     nanoseconds between two epochs. The leaf using this
+     type must define the epochs that tests are relative to.";
+  }
+
+  typedef ieeefloat32 {
+    type binary {
+      length "4";
+    }
+    description
+      "An IEEE 32-bit floating point number. The format of this number
+      is of the form:
+        1-bit  sign
+        8-bit  exponent
+        23-bit fraction
+      The floating point value is calculated using:
+        (-1)**S * 2**(Exponent-127) * (1+Fraction)";
+  }
+
+  typedef routing-password {
+    type string;
+    description
+      "This type is indicative of a password that is used within
+      a routing protocol which can be returned in plain text to the
+      NMS by the local system. Such passwords are typically stored
+      as encrypted strings. Since the encryption used is generally
+      well known, it is possible to extract the original value from
+      the string - and hence this format is not considered secure.
+      Leaves specified with this type should not be modified by
+      the system, and should be returned to the end-user in plain
+      text. This type exists to differentiate passwords, which
+      may be sensitive, from other string leaves. It could, for
+      example, be used by the NMS to censor this data when
+      viewed by particular users.";
+  }
+
+  typedef stat-interval {
+    type uint64;
+    units nanoseconds;
+    description
+      "A time interval over which a set of statistics is computed.
+      A common usage is to report the interval over which
+      avg/min/max stats are computed and reported.";
+  }
+
+  grouping stat-interval-state {
+    description
+      "Reusable leaf definition for stats computation interval";
+
+    leaf interval {
+      type oc-types:stat-interval;
+      description
+        "If supported by the system, this reports the time interval
+        over which the min/max/average statistics are computed by
+        the system.";
+    }
+  }
+
+  grouping min-max-time {
+    description
+      "Common grouping for recording the absolute time at which
+      the minimum and maximum values occurred in the statistics";
+
+    leaf min-time {
+      type oc-types:timeticks64;
+      description
+        "The absolute time at which the minimum value occurred.
+         The value is the timestamp in nanoseconds relative to
+          the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf max-time {
+      type oc-types:timeticks64;
+      description
+        "The absolute time at which the maximum value occurred.
+         The value is the timestamp in nanoseconds relative to
+          the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+  }
+
+  grouping avg-min-max-stats-precision1 {
+    description
+      "Common nodes for recording average, minimum, and
+      maximum values for a statistic.  These values all have
+      fraction-digits set to 1.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed is also reported.";
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      description
+        "The arithmetic mean value of the statistic over the
+        time interval.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      description
+        "The minimum value of the statistic over the time
+        interval.";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      description
+        "The maximum value of the statitic over the time
+        interval.";
+    }
+
+    uses stat-interval-state;
+    uses min-max-time;
+  }
+
+  grouping avg-min-max-instant-stats-precision1 {
+    description
+      "Common grouping for recording an instantaneous statistic value
+      in addition to avg-min-max stats";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    uses avg-min-max-stats-precision1;
+  }
+
+  grouping avg-min-max-instant-stats-precision2-dB {
+    description
+      "Common grouping for recording dB values with 2 decimal
+      precision. Values include the instantaneous, average,
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The arithmetic mean value of the statistic over the
+        time interval.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The minimum value of the statistic over the time interval.";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The maximum value of the statistic over the time
+        interval.";
+    }
+
+    uses stat-interval-state;
+    uses min-max-time;
+  }
+
+  grouping avg-min-max-instant-stats-precision2-dBm {
+    description
+      "Common grouping for recording dBm values with 2 decimal
+      precision. Values include the instantaneous, average,
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The arithmetic mean value of the statistic over the
+        time interval.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The minimum value of the statistic over the time
+        interval.";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The maximum value of the statistic over the time interval.";
+    }
+
+    uses stat-interval-state;
+    uses min-max-time;
+  }
+
+  grouping avg-min-max-instant-stats-precision2-mA {
+    description
+      "Common grouping for recording mA values with 2 decimal
+      precision. Values include the instantaneous, average,
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units mA;
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units mA;
+      description
+        "The arithmetic mean value of the statistic over the
+        time interval.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units mA;
+      description
+        "The minimum value of the statistic over the time
+        interval.";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units mA;
+      description
+        "The maximum value of the statistic over the time
+        interval.";
+    }
+
+    uses stat-interval-state;
+    uses min-max-time;
+  }
+
+  grouping avg-min-max-instant-stats-pct {
+    description
+      "Common grouping for percentage statistics.
+      Values include the instantaneous, average,
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
+
+    leaf instant {
+      type oc-types:percentage;
+      description
+        "The instantaneous percentage value.";
+    }
+
+    leaf avg {
+      type oc-types:percentage;
+      description
+        "The arithmetic mean value of the percentage measure of the
+        statistic over the time interval.";
+    }
+
+    leaf min {
+      type oc-types:percentage;
+      description
+        "The minimum value of the percentage measure of the
+        statistic over the time interval.";
+    }
+
+    leaf max {
+      type oc-types:percentage;
+      description
+        "The maximum value of the percentage measure of the
+        statistic over the time interval.";
+    }
+
+    uses stat-interval-state;
+    uses min-max-time;
+  }
+
+  identity ADDRESS_FAMILY {
+    description
+      "A base identity for all address families";
+  }
+
+  identity IPV4 {
+    base ADDRESS_FAMILY;
+    description
+      "The IPv4 address family";
+  }
+
+  identity IPV6 {
+    base ADDRESS_FAMILY;
+    description
+      "The IPv6 address family";
+  }
+
+  identity MPLS {
+    base ADDRESS_FAMILY;
+    description
+      "The MPLS address family";
+  }
+
+  identity L2_ETHERNET {
+    base ADDRESS_FAMILY;
+    description
+      "The 802.3 Ethernet address family";
+  }
+
+}

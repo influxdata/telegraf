@@ -1,0 +1,374 @@
+module openconfig-packet-match-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/packet-match-types";
+
+  prefix "oc-pkt-match-types";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines common types for use in models requiring
+    data definitions related to packet matches.";
+
+  oc-ext:openconfig-version "1.3.3";
+
+  revision "2023-01-29" {
+    description
+      "Whitespace cleanup.";
+    reference "1.3.3";
+  }
+
+  revision "2021-07-14" {
+    description
+      "Use auto-generated regex for port-num-range pattern statements";
+    reference "1.3.2";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace.";
+    reference "1.3.1";
+  }
+
+  revision "2021-05-19" {
+    description
+      "Add IP-in-IP protocol.";
+    reference "1.3.0";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add MPLS filter Support.";
+      reference "1.2.0";
+  }
+
+  revision "2021-01-07" {
+    description
+      "Remove module extension oc-ext:regexp-posix by making pattern regexes
+      conform to RFC7950.
+
+      Types impacted:
+      - port-num-range";
+    reference "1.1.0";
+  }
+
+  revision "2020-10-20" {
+    description
+      "Fix pattern regex for port-num-range.";
+    reference "1.0.4";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions.";
+    reference "1.0.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "1.0.2";
+  }
+
+  revision "2018-04-15" {
+    description
+        "Corrected description and range for ethertype typedef";
+    reference "1.0.1";
+  }
+
+  revision "2017-05-26" {
+    description
+        "Separated IP matches into AFs";
+    reference "1.0.0";
+  }
+
+    revision "2016-08-08" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  revision "2016-04-27" {
+    description
+      "Initial revision";
+    reference "TBD";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+
+  //TODO: should replace this with an official IEEE module
+  // when available.  Only a select number of types are
+  // defined in this identity.
+  identity ETHERTYPE {
+    description
+      "Base identity for commonly used Ethertype values used
+      in packet header matches on Ethernet frames.  The Ethertype
+      indicates which protocol is encapsulated in the Ethernet
+      payload.";
+    reference
+      "IEEE 802.3";
+  }
+
+  identity ETHERTYPE_IPV4 {
+    base ETHERTYPE;
+    description
+      "IPv4 protocol (0x0800)";
+  }
+
+  identity ETHERTYPE_ARP {
+    base ETHERTYPE;
+    description
+      "Address resolution protocol (0x0806)";
+  }
+
+  identity ETHERTYPE_VLAN {
+    base ETHERTYPE;
+    description
+      "VLAN-tagged frame (as defined by IEEE 802.1q) (0x8100). Note
+      that this value is also used to represent Shortest Path
+      Bridging (IEEE 801.1aq) frames.";
+  }
+
+  identity ETHERTYPE_IPV6 {
+    base ETHERTYPE;
+    description
+      "IPv6 protocol (0x86DD)";
+  }
+
+  identity ETHERTYPE_MPLS {
+    base ETHERTYPE;
+    description
+      "MPLS unicast (0x8847)";
+  }
+
+  identity ETHERTYPE_LLDP {
+    base ETHERTYPE;
+    description
+      "Link Layer Discovery Protocol (0x88CC)";
+  }
+
+  identity ETHERTYPE_ROCE {
+    base ETHERTYPE;
+    description
+      "RDMA over Converged Ethernet (0x8915)";
+  }
+
+
+  //TODO: should replace this with an official IANA module when
+  //available.  Only a select set of protocols are defined with
+  //this identity.
+  identity IP_PROTOCOL {
+    description
+      "Base identity for commonly used IP protocols used in
+      packet header matches";
+    reference
+      "IANA Assigned Internet Protocol Numbers";
+  }
+
+  identity IP_TCP {
+    base IP_PROTOCOL;
+    description
+      "Transmission Control Protocol (6)";
+  }
+
+  identity IP_UDP  {
+    base IP_PROTOCOL;
+    description
+      "User Datagram Protocol (17)";
+  }
+
+  identity IP_ICMP {
+    base IP_PROTOCOL;
+    description
+      "Internet Control Message Protocol (1)";
+  }
+
+  identity IP_IGMP {
+    base IP_PROTOCOL;
+    description
+      "Internet Group Membership Protocol (2)";
+  }
+
+  identity IP_PIM {
+    base IP_PROTOCOL;
+    description
+      "Protocol Independent Multicast (103)";
+  }
+
+  identity IP_RSVP {
+    base IP_PROTOCOL;
+    description
+      "Resource Reservation Protocol (46)";
+  }
+
+  identity IP_GRE {
+    base IP_PROTOCOL;
+    description
+      "Generic Routing Encapsulation (47)";
+  }
+
+  identity IP_AUTH {
+    base IP_PROTOCOL;
+    description
+      "Authentication header, e.g., for IPSEC (51)";
+  }
+
+  identity IP_L2TP {
+    base IP_PROTOCOL;
+    description
+      "Layer Two Tunneling Protocol v.3 (115)";
+  }
+
+  identity IP_IN_IP {
+    base IP_PROTOCOL;
+    description
+      "IP-in-IP tunneling (4)";
+    reference
+      "RFC2003: IP Encapsulation within IP";
+  }
+
+  identity TCP_FLAGS {
+    description
+      "Common TCP flags used in packet header matches";
+    reference
+      "IETF RFC 793 - Transmission Control Protocol
+      IETF RFC 3168 - The Addition of Explicit Congestion
+      Notification (ECN) to IP";
+  }
+
+  identity TCP_SYN {
+    base TCP_FLAGS;
+    description
+      "TCP SYN flag";
+  }
+
+  identity TCP_FIN {
+    base TCP_FLAGS;
+    description
+      "TCP FIN flag";
+  }
+
+  identity TCP_RST {
+    base TCP_FLAGS;
+    description
+      "TCP RST flag";
+  }
+
+  identity TCP_PSH {
+    base TCP_FLAGS;
+    description
+      "TCP push flag";
+  }
+
+  identity TCP_ACK {
+    base TCP_FLAGS;
+    description
+      "TCP ACK flag";
+  }
+
+  identity TCP_URG {
+    base TCP_FLAGS;
+    description
+      "TCP urgent flag";
+  }
+
+  identity TCP_ECE {
+    base TCP_FLAGS;
+    description
+      "TCP ECN-Echo flag.  If the SYN flag is set, indicates that
+      the TCP peer is ECN-capable, otherwise indicates that a
+      packet with Congestion Experienced flag in the IP header
+      is set";
+  }
+
+  identity TCP_CWR {
+    base TCP_FLAGS;
+    description
+      "TCP Congestion Window Reduced flag";
+  }
+
+  // typedef statements
+
+  typedef port-num-range {
+    type union {
+      type string {
+        pattern
+          '(0{0,4}[0-9]|0{0,3}[1-9][0-9]|0{0,2}[1-9][0-9]{2}|'
+          + '0?[1-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|'
+          + '655[0-2][0-9]|6553[0-5])\.\.(0{0,4}[0-9]|0{0,3}[1-9][0-9]|'
+          + '0{0,2}[1-9][0-9]{2}|0?[1-9][0-9]{3}|[1-5][0-9]{4}|'
+          + '6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])';
+        oc-ext:posix-pattern
+          '^((0{0,4}[0-9]|0{0,3}[1-9][0-9]|0{0,2}[1-9][0-9]{2}|'
+          + '0?[1-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|'
+          + '655[0-2][0-9]|6553[0-5])\.\.(0{0,4}[0-9]|0{0,3}[1-9][0-9]|'
+          + '0{0,2}[1-9][0-9]{2}|0?[1-9][0-9]{3}|[1-5][0-9]{4}|'
+          + '6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))$';
+      }
+      type oc-inet:port-number;
+      type enumeration {
+        enum ANY {
+          description
+            "Indicates any valid port number (e.g., wildcard)";
+        }
+      }
+    }
+    description
+      "Port numbers may be represented as a single value,
+      an inclusive range as <lower>..<higher>, or as ANY to
+      indicate a wildcard.";
+  }
+
+  typedef ip-protocol-type {
+    type union {
+      type uint8 {
+        range 0..254;
+      }
+      type identityref {
+        base IP_PROTOCOL;
+      }
+    }
+    description
+      "The IP protocol number may be expressed as a valid protocol
+      number (integer) or using a protocol type defined by the
+      IP_PROTOCOL identity";
+  }
+
+  typedef ethertype-type {
+    type union {
+      type uint16 {
+        range 1536..65535;
+      }
+      type identityref {
+        base ETHERTYPE;
+      }
+    }
+    description
+      "The Ethertype value may be expressed as a 16-bit number in
+      decimal notation, or using a type defined by the
+      ETHERTYPE identity";
+  }
+}

@@ -1,0 +1,227 @@
+module openconfig-defined-sets {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/defined-sets";
+
+  prefix "oc-sets";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-packet-match-types { prefix oc-pkt-match-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state
+    data for defined sets (sets of IPv4 prefixes, sets of
+    IPv6 prefixes, sets of ports, etc). These sets are used,
+    for example, in network access control lists (i.e., filters,
+    rules, etc.) in the matching fields.";
+
+  oc-ext:openconfig-version "1.0.0";
+
+  revision "2022-12-14" {
+    description
+      "Initial version of the defined set model";
+    reference "1.0.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping ipv4-prefix-sets-config {
+    description "Configuration parameters of IPv4 prefix sets.";
+
+    leaf name {
+      type string;
+      description
+         "A user defined name of the IPv4 prefix set.";
+    }
+
+    leaf description {
+      type string;
+      description "A user defined IPv4 prefix set description.";
+    }
+
+    leaf-list prefix {
+       type oc-inet:ipv4-prefix;
+       description
+         "A user defined list of IPv4 prefixes to be used in match
+         conditions. Each entry is a IPv4 + mask combination.";
+    }
+  }
+
+  grouping ipv6-prefix-sets-config {
+    description "Configuration parameters of IPv6 prefix sets.";
+
+    leaf name {
+      type string;
+      description
+        "Name of the IPv6 prefix set.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "A user defined IPv6 prefix set description.";
+    }
+
+    leaf-list prefix {
+       type oc-inet:ipv6-prefix;
+       description
+         "A user defined list of IPv6 prefixes to be used in match
+         conditions. Each entry is a IPv6 + mask combination.";
+    }
+  }
+
+  grouping port-sets-config {
+    description
+      "Configuration parameters of port sets.";
+
+    leaf name {
+        type string;
+        description
+          "A user defined name of the port set.";
+      }
+
+      leaf description {
+        type string;
+        description
+          "A user defined description for the port set";
+      }
+
+      leaf-list port {
+        type oc-pkt-match-types:port-num-range;
+        description
+          "A user defined set of ports to be
+          used in the match conditions.";
+      }
+  }
+
+  grouping defined-sets {
+    description "Configuration of Defined Sets.";
+
+    container ipv4-prefix-sets {
+      description
+        "Container to hold the list of IPv4 prefix sets.";
+
+      list ipv4-prefix-set {
+        key "name";
+        description
+          "List of IPv4 prefix sets.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name of the IPv4 prefix set.";
+        }
+
+        container config {
+          description
+            "Configuration data for IPv4 prefix sets.";
+          uses ipv4-prefix-sets-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State data for IPv4 prefix sets.";
+          uses ipv4-prefix-sets-config;
+        }
+      }
+    }
+
+    container ipv6-prefix-sets {
+      description
+        "Container to hold the list of IPv4 prefix sets.";
+
+      list ipv6-prefix-set {
+        key "name";
+        description "List of IPv6 prefix sets. Each defined set
+        is uniquely identified by a name";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name of the IPv6 prefix set.";
+        }
+
+        container config {
+          description
+            "Configuration data for IPv6 prefix sets.";
+          uses ipv6-prefix-sets-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State data for prefix lists.";
+          uses ipv6-prefix-sets-config;
+        }
+      }
+    }
+
+    container port-sets {
+      description
+        "Container to hold the list of port sets.";
+
+      list port-set {
+        key "name";
+        description
+          "List of port sets. Each por set is uniquely
+          identified by its name";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Name of the port set. The name is used to
+             reference the set in match conditions.";
+        }
+
+        container config {
+          description
+            "Configuration data for port lists.";
+          uses port-sets-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State data for port lists.";
+          uses port-sets-config;
+        }
+      }
+    }
+  }
+
+
+
+  grouping defined-sets-top {
+    description
+      "Top level grouping for defined-sets";
+
+    container defined-sets {
+      description
+        "Top level enclosing container for defined-set model
+        config and operational state data.";
+      uses defined-sets;
+    }
+  }
+
+  uses defined-sets-top;
+
+}

@@ -1,0 +1,6 @@
+- name: openconfig-ate-flow
+  docs:
+    - yang/ate/openconfig-ate-flow.yang
+  build:
+    - yang/ate/openconfig-ate-flow.yang
+  run-ci: true

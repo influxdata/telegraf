@@ -1,0 +1,758 @@
+module openconfig-bfd {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/bfd";
+
+  prefix "oc-bfd";
+
+  // import some basic types
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-interfaces { prefix "oc-if"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-policy-types { prefix "oc-pol-types"; }
+  import ietf-inet-types { prefix "ietf-if"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "An OpenConfig model of Bi-Directional Forwarding Detection (BFD)
+    configuration and operational state.";
+
+  oc-ext:openconfig-version "0.2.6";
+
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "0.2.6";
+  }
+
+  revision "2023-02-06" {
+    description
+      "Clarify interface references.";
+    reference "0.2.5";
+  }
+
+  revision "2022-06-28" {
+    description
+      "Remove reference to invalid oc-ift type check";
+    reference "0.2.4";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.2.3";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Remove augments from bfd module.
+       Add bfd support directly on the protocols";
+    reference "0.2.2";
+  }
+
+  revision "2020-05-08" {
+    description
+      "Ensure that when statements reference only read-write leaves
+      from read-write contexts.
+      Add ietf-inet-types LAG type to conditions for micro-bfd.";
+    reference "0.2.1";
+  }
+
+  revision "2019-10-25" {
+    description
+      "Correct when statements.";
+    reference "0.2.0";
+  }
+
+  revision "2019-06-02" {
+    description
+      "Fix detection multiplier to be 8-bit value";
+    reference "0.1.1";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.0";
+  }
+
+  revision "2017-10-19" {
+    description
+      "Adopt OpenConfig types models, type corrections";
+    reference "0.0.2";
+  }
+
+  revision "2016-06-24" {
+    description
+      "Initial revision";
+    reference "0.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  typedef bfd-session-state {
+    type enumeration {
+      enum UP {
+        description
+          "The BFD session is perceived to be up by the system.";
+      }
+      enum DOWN {
+        description
+          "The BFD session is perceived to be down by the system.";
+      }
+      enum ADMIN_DOWN {
+        description
+          "The BFD session is administratively disabled.";
+      }
+      enum INIT {
+        description
+          "The BFD session is perceived to be initialising by the
+          system.";
+      }
+    }
+    description
+      "The state of the BFD session according to the system referred
+      to by the context of the leaf.";
+    reference
+      "RFC5880 - Bidirectional Forwarding Detection, Section
+      4.1";
+  }
+
+  typedef bfd-diagnostic-code {
+    type enumeration {
+      enum NO_DIAGNOSTIC {
+        value 0;
+        description
+          "No diagnostic code was specified, or the session has not
+          changed state.";
+      }
+      enum DETECTION_TIMEOUT {
+        value 1;
+        description
+          "The control detection time expired: no BFD packet was
+          received within the required period.";
+      }
+      enum ECHO_FAILED {
+        value 2;
+        description
+          "The BFD echo function failed - echo packets have not been
+          received for the required period of time.";
+      }
+      enum FORWARDING_RESET {
+        value 3;
+        description
+          "The forwarding plane in the local system was reset - such
+          that the remote system cannot rely on the forwarding state of
+          the device specifying this error code.";
+      }
+      enum PATH_DOWN {
+        value 4;
+        description
+          "Signalling outside of BFD specified that the path underlying
+          this session has failed.";
+      }
+      enum CONCATENATED_PATH_DOWN {
+        value 5;
+        description
+          "When a BFD session runs over a series of path segments, this
+          error code indicates that a subsequent path segment (i.e.,
+          one in the transmit path between the source and destination
+          of the session) has failed.";
+      }
+      enum ADMIN_DOWN {
+        value 6;
+        description
+          "The BFD session has been administratively disabled by the
+          peer.";
+      }
+      enum REVERSE_CONCATENATED_PATH_DOWN {
+        value 7;
+        description
+          "In the case that a BFD session is running over a series of
+          path segments, this error code indicates that a path segment
+          on the reverse path (i.e., in the transmit direction from the
+          destination to the source of the session) has failed.";
+      }
+    }
+    description
+      "Diagnostic codes defined by BFD. These typically indicate the
+      reason for a change of session state.";
+    reference
+      "RFC5880 - Bidirectional Forwarding Detection, Section
+      4.1";
+  }
+
+
+  grouping bfd-interface-config {
+    description
+      "Top-level per-interface configuration parameters for BFD.";
+
+    leaf id {
+      type oc-if:interface-id;
+      description
+        "A unique identifier for the interface.";
+    }
+
+    leaf enabled {
+      type boolean;
+      description
+        "When this leaf is set to true then the BFD session is enabled
+        on the specified interface - if it is set to false, it is
+        administratively disabled.";
+    }
+
+    leaf local-address {
+      type oc-inet:ip-address;
+      description
+        "The source IP address to be used for BFD sessions over this
+        interface.";
+    }
+
+    leaf desired-minimum-tx-interval {
+      type uint32;
+      units microseconds;
+      description
+        "The minimum interval between transmission of BFD control
+        packets that the operator desires. This value is advertised to
+        the peer, however the actual interval used is specified by
+        taking the maximum of desired-minimum-tx-interval and the
+        value of the remote required-minimum-receive interval value.
+
+        This value is specified as an integer number of microseconds.";
+    }
+
+    leaf required-minimum-receive {
+      type uint32;
+      units microseconds;
+      description
+        "The minimum interval between received BFD control packets that
+        this system should support. This value is advertised to the
+        remote peer to indicate the maximum frequency (i.e., minimum
+        inter-packet interval) between BFD control packets that is
+        acceptable to the local system.";
+    }
+
+    // rjs: Could have required-minimum-echo-receive here, but this is
+    // generally not configurable.
+
+    leaf detection-multiplier {
+      type uint8 {
+        range "1..max";
+      }
+      description
+        "The number of packets that must be missed to declare this
+        session as down. The detection interval for the BFD session
+        is calculated by multiplying the value of the negotiated
+        transmission interval by this value.";
+    }
+
+    leaf enable-per-member-link {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true - BFD will be enabled on
+        each member interface of the aggregated Ethernet bundle.";
+    }
+  }
+
+  grouping bfd-interface-state {
+    // placeholder
+    description
+      "Operational state parameters relating to BFD running on an
+      interface.";
+  }
+
+  grouping bfd-session-state-mode-timers-common {
+    description
+      "Common operational state parameters that are re-used across
+      both asynchronous and echo modes of BFD.";
+
+    leaf last-packet-transmitted {
+      type uint64;
+      description
+        "The date and time at which the last BFD packet
+        was transmitted for this session, expressed as the number
+        of nanoseconds since the Unix Epoch (January 1, 1970,
+        00:00 UTC).";
+    }
+
+    leaf last-packet-received {
+      type uint64;
+      description
+        "The date and time at which the last BFD packet
+        was received for this session, expressed as the number
+        of nanoseconds since the Unix Epoch (January 1, 1970,
+        00:00 UTC).";
+    }
+
+    leaf transmitted-packets {
+      // TODO: looks to be unsupported on JUNOS
+      type uint64;
+      description
+        "The number of packets that have been transmitted
+        by the local system.";
+    }
+
+    leaf received-packets {
+      // TODO: looks to be unsupported on JUNOS
+      type uint64;
+      description
+        "The number of packets that have been received by the
+        local system from the remote neighbour.";
+    }
+
+    leaf up-transitions {
+      // TODO: looks to only be supported in SROS
+      type uint64;
+      description
+        "The number of times that the adjacency with the neighbor
+        has transitioned into the up state.";
+    }
+  }
+
+  grouping bfd-session-state-sessiondetails-common {
+    description
+      "Common session details for a BFD session.";
+
+    leaf session-state {
+      type bfd-session-state;
+      description
+        "The state of the BFD session perceived by the local system.";
+
+    }
+
+    leaf remote-session-state {
+      type bfd-session-state;
+      description
+        "The reported state of the BFD session according to the remote
+        system. This state reflects the last state reported in a BFD
+        control packet.";
+    }
+
+    leaf last-failure-time {
+      type oc-types:timeticks64;
+      description
+        "The time of the last transition of the BFD session out of
+        the UP state, expressed as the number of nanoseconds since
+        the Unix epoch.";
+    }
+
+    leaf failure-transitions {
+      type uint64;
+      description
+        "The number of times that the BFD session has transitioned
+        out of the UP state.";
+    }
+
+    leaf local-discriminator {
+      type string;
+      description
+        "A unique identifier used by the local system to identify this
+        BFD session.";
+    }
+
+    leaf remote-discriminator {
+      type string;
+      description
+        "A unique identified used by the remote system to identify this
+        BFD session.";
+    }
+
+    leaf local-diagnostic-code {
+      type bfd-diagnostic-code;
+      description
+        "The local BFD diagnostic code indicating the most recent
+        reason for failure of this BFD session.";
+    }
+
+    leaf remote-diagnostic-code {
+      type bfd-diagnostic-code;
+      description
+        "The remote BFD diagnostic code indicating the remote system's
+        reason for failure of the BFD session";
+    }
+
+    leaf remote-minimum-receive-interval {
+      type uint32;
+      description
+        "The value of the minimum receive interval that was specified
+        in the most recent BFD control packet received from the peer.";
+    }
+
+    leaf demand-mode-requested {
+      type boolean;
+      description
+        "This leaf is set to true when the remote system has requested
+        demand mode be run for this session.";
+    }
+
+    leaf remote-authentication-enabled {
+      type boolean;
+      description
+        "This leaf is set to true when the remote system has specified
+        that authentication is present for the BFD session.";
+    }
+
+    leaf remote-control-plane-independent {
+      type boolean;
+      description
+        "This leaf is set to true when the remote system has specified
+        that the hardware implementing this BFD session is independent
+        of the control plane's liveliness.";
+    }
+  }
+
+
+  grouping bfd-session-state-async-common {
+    description
+      "Common parameters for asynchronous BFD sessions";
+
+    container async {
+      description
+        "Operational state parameters specifically relating to
+        asynchronous mode of BFD.";
+
+      uses bfd-session-state-mode-timers-common;
+    }
+  }
+
+  grouping bfd-session-state-echo-common {
+    description
+      "Common parameters for echo-mode BFD sessions.";
+
+    container echo {
+      description
+        "Operational state parameters specifically relating to the
+        echo mode of BFD.";
+
+      leaf active {
+        type boolean;
+        description
+          "This leaf is set to true when echo mode is running between
+          the local and remote system. When it is set to false, solely
+          asynchronous mode is active.";
+      }
+
+      uses bfd-session-state-mode-timers-common;
+    }
+  }
+
+
+  grouping bfd-session-state-common {
+    description
+      "Common operational state parameters that may be re-used across
+      multiple BFD session contexts.";
+
+    leaf local-address {
+      type oc-inet:ip-address;
+      description
+        "The IP address used by the local system for this BFD session.";
+    }
+
+    leaf remote-address {
+      type oc-inet:ip-address;
+      description
+        "The IP address used by the remote system for this BFD session.";
+    }
+
+    leaf-list subscribed-protocols {
+      type identityref {
+        base "oc-pol-types:INSTALL_PROTOCOL_TYPE";
+      }
+      description
+        "Indicates the set of protocols that currently use
+        this BFD session for liveliness detection.";
+    }
+
+    uses bfd-session-state-sessiondetails-common;
+    uses bfd-session-state-echo-common;
+    uses bfd-session-state-async-common;
+  }
+
+  grouping bfd-session-microbfd-common {
+    description
+      "BFD session parameters utilised only for micro-BFD sessions.";
+
+    uses bfd-session-state-sessiondetails-common;
+    uses bfd-session-state-async-common;
+  }
+
+  grouping bfd-interface-peer-state {
+    description
+      "Per-peer, per-interface operational state parameters for BFD.";
+
+    uses bfd-session-state-common;
+  }
+
+  grouping bfd-interface-microbfd-config {
+    description
+      "Configuration parameters for a microBFD session on an
+      interface.";
+
+    leaf local-address {
+      type oc-inet:ip-address;
+      description
+        "The local IP address used by the system for the micro-BFD session
+        specified.";
+    }
+
+    leaf remote-address {
+      type oc-inet:ip-address;
+      description
+        "The remote IP destination that should be used by the system for
+        the micro-BFD session specified.";
+    }
+
+    leaf member-interface {
+      type leafref {
+        path "/oc-if:interfaces/" +
+          "oc-if:interface/oc-if:config/oc-if:name";
+      }
+      // rjs: Note that this does not restrict to only interfaces that
+      // are part of the current LAG. An implementation should return
+      // NOK if such an interface is specified.
+      description
+        "Reference to a member link of the aggregate interface being
+        described.";
+    }
+  }
+
+  grouping bfd-interface-microbfd-state {
+    description
+      "Operational state parameters relating to a micro-BFD session on
+      an interface.";
+
+    uses bfd-session-microbfd-common;
+  }
+
+  grouping bfd-interface-microbfd-structural {
+    description
+      "Structural grouping for micro-bfd configuration and state
+      parameters.";
+
+    container micro-bfd-sessions {
+      when "/oc-if:interfaces/oc-if:interface" +
+          "[oc-if:name=current()/../interface-ref/config/interface]/" +
+          "oc-if:config/oc-if:type = 'ietf-if:ieee8023adLag'" {
+        description
+          "Include per-member link BFD only when the type of
+          interface is a link aggregate.";
+      }
+
+      description
+        "Parameters relating to micro-BFD sessions associated
+        with the interface.";
+
+      list micro-bfd-session {
+        key "member-interface";
+
+        description
+          "This list contains configuration and state parameters
+          relating to micro-BFD session.";
+        reference
+          "RFC7130 - Bidirectional Forwarding Detection (BFD)
+          on Link Aggregation Group (LAG) Interfaces.";
+
+
+        leaf member-interface {
+          type leafref {
+            path "../config/member-interface";
+          }
+          description
+            "A reference to the member interface of the link
+            aggregate.";
+        }
+
+        container config {
+          description
+            "Configuration parameters for the micro-BFD session.";
+          uses bfd-interface-microbfd-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters for the micro-BFD session.";
+          uses bfd-interface-microbfd-config;
+          uses bfd-interface-microbfd-state;
+        }
+      }
+    }
+  }
+
+  grouping bfd-interface-peer-structural {
+    description
+      "Structural grouping for BFD peers (in the context of an interface).";
+
+    container peers {
+      description
+        "Parameters relating to the BFD peers which are seen
+        over this interface.";
+
+      list peer {
+        key "local-discriminator";
+        config false;
+
+        description
+          "Parameters relating to the BFD peer specified by the
+          remote address.";
+
+        leaf local-discriminator {
+          type leafref {
+            path "../state/local-discriminator";
+          }
+          description
+            "The local discriminator, which is unique for the
+            session on the system.";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters for the BFD session.";
+
+          uses bfd-interface-peer-state;
+        }
+      }
+    }
+  }
+
+  grouping bfd-top {
+    description
+      "Structural grouping for Bidirectional Forwarding Detection (BFD).";
+
+    container bfd {
+      description
+        "Configuration and operational state parameters for BFD.";
+      reference "RFC5880, RFC5881";
+
+      container interfaces {
+        description
+          "Interfaces on which BFD sessions are to be enabled.";
+
+        list interface {
+          key "id";
+
+          description
+            "Per-interface configuration and state parameters for BFD.
+             The interface referenced is based on the interface and
+             subinterface leaves within the interface-ref container -
+             which reference an entry in the /interfaces/interface list -
+             and should not rely on the value of the list key.";
+
+          leaf id {
+            type leafref {
+              path "../config/id";
+            }
+            description
+              "A reference to an identifier for the interface on which
+              BFD is enabled.";
+          }
+
+          container config {
+            description
+              "Configuration parameters for BFD on the specified
+              interface.";
+            uses bfd-interface-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters for BFD on the specified
+              interface.";
+            uses bfd-interface-config;
+            uses bfd-interface-state;
+          }
+
+          uses oc-if:interface-ref;
+
+          uses bfd-interface-microbfd-structural;
+          uses bfd-interface-peer-structural;
+        }
+      }
+    }
+  }
+
+  grouping enable-bfd-config {
+    description
+      "Configuration parameters relating to enabling BFD.";
+
+    leaf enabled {
+      type boolean;
+      description
+        "When this leaf is set to true, BFD is used to detect the
+        liveliness of the remote peer or next-hop.";
+    }
+  }
+
+  grouping enable-bfd-state {
+    description
+      "Operational state parameters relating to enabling BFD.";
+
+    leaf associated-session {
+      // TODO: this is a leafref to something unique, but seems
+      // like it might be expensive for the NMS to find out since
+      // it will need to cycle through all interfaces looking for
+      // the associated local-discriminator.
+      type leafref {
+        path "/bfd/interfaces/interface/peers/peer/local-discriminator";
+      }
+      description
+        "A reference to the BFD session that is tracking the liveliness
+        of the remote entity.";
+    }
+
+    //
+    // A fix to the above is to have the following leaf to show which
+    // interface is associated.
+    //
+    // leaf associated-interface {
+    //   type leafref {
+    //     path "/bfd/interfaces/interface/config/id";
+    //   }
+    // }
+  }
+
+  grouping bfd-enable {
+    description
+      "Grouping which can be included in a protocol wishing to enable
+      BFD.";
+
+    container enable-bfd {
+      description
+        "Enable BFD for liveliness detection to the next-hop or
+        neighbour.";
+
+      container config {
+        description
+          "Configuration parameters relating to enabling BFD.";
+
+        uses enable-bfd-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to enabing BFD.";
+
+        uses enable-bfd-config;
+        //uses enable-bfd-state;
+      }
+    }
+  }
+
+  uses bfd-top;
+}

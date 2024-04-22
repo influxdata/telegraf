@@ -1,0 +1,1205 @@
+module openconfig-evpn {
+
+  // namespace
+  namespace "http://openconfig.net/yang/evpn";
+
+  prefix "oc-evpn";
+
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-network-instance-types { prefix oc-ni-types; }
+  import openconfig-evpn-types { prefix oc-evpn-types; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-bgp-types { prefix oc-bgp-types; }
+  import openconfig-types { prefix oc-types; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module contains general data definitions for use in EVPN.
+    The model contains the configuration and state attributes
+    imported by the OpenConfig network instance module that is
+    the primary holder of these properties.
+
+    The module describes the configuration and state parameters
+    to support the instantiation of the MAC-VRF concept defined
+    in the RFC 7432: BGP MPLS-Based Ethernet VPN.
+    The EVPN concept allows the  Media Access Control (MAC) addresses
+    forwarding through the control plane on a PE.
+
+    Within the OpenConfig model, a single network instance represents
+    an individual MAC VRF. Whilst it is possible that there may be
+    cases where a single MAC VRF may support multiple broadcast
+    domains, this is not currently supported and requires an extension
+    of the model.";
+
+  oc-ext:openconfig-version "0.7.0";
+
+  revision "2024-02-01" {
+   description
+     "Add counters under endpoint-peer and endpoint-vni";
+   reference   "0.7.0";
+  }
+
+  revision "2023-07-12" {
+   description
+     "Removed ethernet segment";
+   reference   "0.6.0";
+  }
+
+  revision "2023-03-08" {
+   description
+     "Change control-plane-vnis property to leaf-list";
+   reference   "0.5.0";
+  }
+
+  revision "2023-01-24" {
+   description
+     "Add control word support";
+   reference   "0.4.0";
+  }
+
+  revision "2021-06-28" {
+   description
+     "Add vxlan endpoint oper data";
+   reference   "0.3.0";
+  }
+
+  revision "2021-06-11" {
+   description
+     "Structural update for arp-proxy and
+     nd-proxy.";
+   reference "0.2.0";
+  }
+
+  revision "2020-11-24" {
+   description
+     "Initial revision.";
+   reference "0.1.0";
+  }
+
+  /* Groupings */
+
+  /* Groupings related to Ethernet-Segment Configuration*/
+
+  grouping evpn-config-top {
+    description
+      "Configuration attributes of the EVPN Instance";
+
+    container evpn-instances {
+      description
+        "Configuration attributes of the EVPN Instance";
+
+      list evpn-instance {
+        key "evi";
+        description
+          "An EVPN instance (EVI) comprises Customer Edge devices
+          (CEs) that are connected to Provider Edge devices (PEs). One
+          network instance (representing a single MAC VRF) can
+          participate in one or more EVPN Instances. For each EVPN instance
+          in which the forwarding instance participates an
+          EVPN instance needs to be created.
+
+          The model supports BGP MPLS-Based Ethernet VPNs
+          (RFC 7432) and  Network Virtualization Overlay Solution
+          Using Ethernet VPN (RFC 8365). The use of MPLS or VXLAN
+          is selected via the encapsulation container within
+          EVPN instance. One use case requiring participating in
+          two EVIs is the Interconnect Solution for EVPN Overlay
+          networks (see draft-ietf-bess-dci-evpn-overlay-10)";
+
+        leaf evi {
+          type leafref {
+            path "../config/evi";
+          }
+          description "EVPN Intance (EVI) identifier";
+        }
+
+        container config {
+          description
+            "EVPN Configuration parameters for
+            the participation in an EVPN Intance.";
+
+          uses evpn-evi-common-config;
+        }
+
+        container state {
+          config false;
+          description
+            "EVPN State parameters for
+            the participation in an EVPN Intance.";
+
+        uses evpn-evi-common-config;
+        }
+
+      uses evpn-import-export-policy-top;
+      uses evpn-evi-overlay-top;
+      uses evpn-evi-pbb-top;
+      }
+    }
+  }
+
+  grouping evpn-import-export-policy-top {
+    description
+      "Top Level grouping for the import and export
+      route targets in a EVPN Instance.";
+
+    container import-export-policy {
+      description
+        "Top container to set the import and export policies
+        associated with a EVI";
+
+      container config {
+        description
+          "Configuration parameters to set the import and export policies
+          associated with a EVI";
+        uses evpn-import-export-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State parameters of the import and export policies
+          associated with a EVI";
+        uses evpn-import-export-config;
+      }
+    }
+  }
+
+
+
+  /* Groupings related to the Layer 2 forwarding (aka MAC-VRF)*/
+
+  grouping evpn-arp-proxy-top {
+    description
+      "Top Container related to ARP-Proxy";
+
+    container arp-proxy {
+      description
+        "Top Container related to ARP-Proxy";
+
+      container config {
+        description
+          "Configuration data related to ARP-Proxy.";
+
+        uses evpn-arp-proxy-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State data related to ARP-Proxy.";
+
+        uses evpn-arp-proxy-config;
+      }
+    }
+  }
+
+  grouping evpn-nd-proxy-top {
+    description
+      "Top Container related to ND-Proxy";
+
+    container nd-proxy {
+      description
+        "Top Container related to ND-Proxy.";
+
+      container config {
+        description
+          "Configuration data related to ND-Proxy.";
+
+        uses evpn-nd-proxy-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State data related to ND-Proxy.";
+
+        uses evpn-nd-proxy-config;
+      }
+    }
+  }
+
+  grouping evpn-arp-proxy-config {
+    description
+      "Configuration data related to ARP-Proxy";
+
+    leaf enable {
+      type boolean;
+      default false;
+      description
+        "Enable (TRUE) or disable (FALSE) ARP proxy. If true
+        a proxy server on the network answers the
+        Address Resolution Protocol (ARP) queries for an
+        IP address that is not on that network.";
+    }
+
+    leaf arp-suppression {
+      type boolean;
+      default false;
+      description
+        "Enable (TRUE) or disable (FALSE) ARP suppression. If true
+        the  Address Resolution Protocol (ARP) queries for an
+        IP address that is not on that network are suppressed.
+        Address Resolution Protocol (ARP) suppression is a
+        technique used to reduce the amount of ARP broadcast
+        flooding within individual VXLAN segments, that is between
+        VMs connected to the same logical switch.";
+      reference
+        "draft-ietf-bess-evpn-proxy-arp-nd-13
+        RFC 7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    leaf ip-mobility-threshold {
+      type uint16;
+      description
+        "Enable (TRUE) or disable (FALSE). It is possible for a given host
+        or end-station (as defined by its IP address) to move from one
+        Ethernet segment to another. The number of IP mobility events that
+        are detected for a given IP address within the detection-threshold
+        before it is identified as a duplicate IP address.
+        Once the detection threshold is reached, updates for the IP address
+        are suppressed.";
+    }
+
+    leaf duplicate-ip-detection-interval {
+      type uint16;
+      description
+        "The time interval used in detecting a duplicate IP address.
+        Duplicate ip detection number of host moves
+        allowed within interval period";
+    }
+  }
+
+  grouping evpn-nd-proxy-config {
+    description
+      "Configuration data related to Neighbor Discovery (ND)
+        proxy";
+
+    leaf enable {
+      type boolean;
+      default false;
+      description
+        "Enable (TRUE) or disable (FALSE) Neighbor Discovery (ND)
+        proxy. If true a proxy server on the network answers the
+        NDP packets for an IP address that is not on that network.";
+      reference
+        "draft-ietf-bess-evpn-proxy-arp-nd-13
+        RFC 7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    leaf nd-suppression {
+      type boolean;
+      default false;
+      description
+        "Enable (TRUE) or disable (FALSE) Neighbor Discovery suppression.
+        If true the NDP queries for an IP address that is not on that
+        network are suppressed. NDP suppression is a
+        technique used to reduce the amount of NDP Packets
+        flooding within individual VXLAN segments, that is between
+        VMs connected to the same logical switch.";
+    }
+
+    leaf ip-mobility-threshold {
+      type uint16;
+      description
+        "Enable (TRUE) or disable (FALSE). It is possible for a given host
+        or end-station (as defined by its IP address) to move from one
+        Ethernet segment to another. The number of IP mobility events that
+        are detected for a given IP address within the detection-threshold
+        before it is identified as a duplicate IP address.
+        Once the detection threshold is reached, updates for the IP address
+        are suppressed.";
+    }
+
+    leaf duplicate-ip-detection-interval {
+      type uint16;
+      description
+        "The time interval used in detecting a duplicate IP address.
+        Duplicate ip detection number of host moves
+        allowed within interval period";
+    }
+  }
+
+  grouping evpn-mac-vrf-config {
+    description
+      "Configuration data related to mac-vrf";
+
+    leaf anycast-gateway-mac {
+      type oc-yang:mac-address;
+      description
+        "Configure the anycast gateway MAC address that all VTEPs
+        use for the network instance. When a VM sends an Address
+        Resolution Protocol (ARP) request for the anycast gateway
+        IP address in a VXLAN virtual network, the VTEP responds
+        with the configured anycast MAC address.";
+    }
+
+    leaf flood-unknown-unicast-supression {
+      type boolean;
+      default false;
+      description
+        "Enable (TRUE) or disable (FALSE) the Unknown Unicast Flooding
+        Suppression. If the Unknown Unicast Flooding Suppression is on,
+        the unicast traffic towards an unknown host will be dropped.";
+    }
+  }
+
+  grouping evpn-mac-mobility-config {
+    description
+      "Configuration data related to mac-vrf";
+
+    leaf mac-mobility {
+      type boolean;
+      description
+        "Enable (TRUE) or disable (FALSE). It is possible for a given host
+        or end-station (as defined by its MAC address) to move from one
+        Ethernet segment to another; this is referred to as 'MAC Mobility'
+        or 'MAC move. The configuration attributes includes: mac-mobility-window
+        and mac-mobility-threshold";
+    }
+
+    leaf mac-mobility-window {
+      type uint16 {
+        range "0..600";
+      }
+      default 180;
+      description
+        "The time interval used in detecting a duplicate MAC address.
+        The value can be from 5 through 600 seconds.
+        The default is 180 seconds";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN section-15";
+    }
+
+    leaf mac-mobility-threshold {
+      type uint8 {
+        range "0..50";
+      }
+      default 5;
+      description
+        "The number of MAC mobility events that are detected for a
+        given MAC address within the detection-window before it is identified
+        as a duplicate MAC address. Once the detection threshold is reached,
+        updates for the MAC address are suppressed.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN section-15";
+    }
+
+    leaf ip-mobility-threshold {
+      type uint16;
+      description
+        "Enable (TRUE) or disable (FALSE). It is possible for a given host
+        or end-station (as defined by its IP address) to move from one
+        Ethernet segment to another. The number of IP mobility events that
+        are detected for a given IP address within the detection-threshold
+        before it is identified as a duplicate IP address.
+        Once the detection threshold is reached, updates for the IP address
+        are suppressed.";
+    }
+
+    leaf duplicate-ip-detection-interval {
+      type uint16;
+      description
+        "The time interval used in detecting a duplicate IP address.
+        Duplicate ip detection number of host moves
+        allowed within interval period";
+    }
+  }
+
+  grouping evpn-mac-mobility-top {
+    description
+      "Top grouping the configuration and state data related to mac
+      mobility.";
+
+    container mac-mobility {
+      description
+        "Top grouping the configuration and state data related to mac
+        mobility.";
+
+      container config {
+        description
+          "Configuration data related to mac mobility.";
+        uses evpn-mac-mobility-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State data related to mac mobility.";
+
+        uses evpn-mac-mobility-config;
+      }
+    }
+  }
+
+  /* Groupings related to the participation in an EVPN Instance*/
+
+  grouping evpn-evi-common-config {
+    description
+     "Top-Level parameters related the configuration of
+     EVPN to partipate in one EVPN instance";
+
+    leaf evi {
+      type string;
+      description
+        "EVPN Instance (EVI) identifier";
+    }
+
+    leaf encapsulation-type {
+      type identityref {
+        base oc-ni-types:ENCAPSULATION;
+      }
+      description
+        "The on-the-wire encapsulation that should be used when
+        exchanging traffic from this network instance to/from
+        destinations belonging to the EVI. The use of MPLS or
+        VXLAN is selected using this container.";
+    }
+
+    leaf service-type {
+      type identityref {
+        base oc-evpn-types:EVPN_TYPE;
+      }
+      description
+        "Specifies the type of EVPN that is being created according
+        to the values in the EVPN_TYPES identity.
+        The options are VLAN-based, VLAN-Bundle or VLAN-aware.
+        VLAN-Based services consists of an EVPN instance of only a
+        single broadcast domain, the proper network-instance type used
+        for this kind of services is L2VSI.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    leaf multicast-group {
+     type oc-inet:ip-address;
+     description
+       "Multicast group address for BUM traffic";
+    }
+
+    leaf multicast-mask {
+      type oc-inet:ip-address;
+      description
+        "Multicast group address mask";
+    }
+
+    leaf replication-mode {
+      type enumeration {
+        enum STATIC_INGRESS_REPLICATION {
+          description
+            "Static ingress replication mode.";
+        }
+        enum BGP {
+          description
+            "BGP EVPN ingress replication mode. It includes the ability to
+            signal a P2MP LSP for the EVPN Inclusive Provider Tunnel
+            for BUM traffic";
+        }
+        enum MULTICAST {
+          description
+            "Multicast enabled in the underlay for BUM traffic";
+        }
+      }
+      description
+        "Replication mode to handle BUM traffic";
+    }
+
+    leaf route-distinguisher {
+      type union {
+        type oc-ni-types:route-distinguisher;
+        type enumeration {
+          enum AUTO {
+            description
+              "Enable auto route-distinguisher generation.
+              When used for evpn and if not configured, the
+              RD is auto-derived with the format <ip-address>:<evi> where
+              ip-address is the ipv4 address associated to the
+              system loopback or sub-interface.";
+          reference
+            "RFC 7432: BGP MPLS-Based Ethernet VPN page-18";
+          }
+        }
+      }
+      description
+        "Route Distinguisher (RD) associated to the EVPN-instance.
+        An RD MUST be assigned for a given EVPN-instance on a PE.
+        This RD MUST be unique across all EVPN-instances on a PE.
+        The route-distinguisher at this level overrides
+        the route-distinguisher value defined under
+        network-instance/config.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN page-18";
+    }
+
+    leaf control-word-enabled {
+      type boolean;
+      description
+        "When true, the control word is signaled and sent.";
+      reference
+            "RFC8214 Virtual Private Wire Service Support
+            in Ethernet VPN
+            draft-ietf-bess-rfc7432bis-05 BGP MPLS-Based
+             Ethernet VPN";
+    }
+  }
+
+  grouping evpn-import-export-config {
+    description
+      "Parameters for import and export policy";
+
+    leaf-list export-route-target {
+      type union {
+        type oc-bgp-types:bgp-ext-community-type;
+        type enumeration {
+          enum AUTO {
+            description
+            "Enable auto route-target generation.
+            When used for EVPN and if not configured, the RT is auto-derived
+            with the format <asn>:<evi> where 'asn' is the autonomous-system
+            configured in the network-instance default.
+            Auto-derived route targets simplify the configuration of
+            VLAN services for EVPN, especially in VLAN-aware bundle
+            services where you can have multiple VLANs, multiple
+            bridge domains and the VLANS for a given service are
+            not present on all PE devices.";
+          }
+        }
+      }
+      description
+        "Export Route Target (RT) in the network-instance on a PE.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN page-19";
+    }
+
+    leaf-list import-route-target {
+      type union {
+        type oc-bgp-types:bgp-ext-community-type;
+        type enumeration {
+          enum AUTO {
+            description
+            "Enable auto route-target generation.
+            When used for EVPN and if not configured, the RT is auto-derived
+            with the format <asn>:<evi> where 'asn' is the autonomous-system
+            configured in the network-instance default.
+            Auto-derived route targets simplify the configuration of
+            VLAN services for EVPN, especially in VLAN aware bundle
+            services where you can have multiple VLANs, multiple
+            bridge domains and the VLANS for a given service are
+            not present on all PE devices.";
+          }
+        }
+      }
+      description
+        "Import Route Target (RT) in the network-instance on a PE.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN page-19";
+    }
+  }
+
+  grouping evpn-evi-overlay-top {
+    description
+      "Top grouping related the configuration of
+      Network Virtualization Overlay Solution
+      Using Ethernet VPN";
+
+    container vxlan {
+      description
+        "Top container related to Overlay Solution in EVPN.";
+
+      container config {
+        description
+          "Configuration data related to Overlay Solution in EVPN.";
+
+        uses evpn-evi-overlay-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State data related to Overlay Solution in EVPN.";
+
+        uses evpn-evi-overlay-config;
+      }
+
+    uses evpn-vxlan-anycast-config;
+    }
+  }
+
+  grouping evpn-evi-overlay-config {
+    description
+      "Parameters related the configuration of Network Virtualization Overlay Solution
+      Using Ethernet VPN";
+
+    leaf vni {
+      type oc-evpn-types:vni-id;
+      description
+        "Virtual Network Identifier (VNI) associated to the EVI. This VNI is used for
+        ingress and egress in the VXLAN domain.";
+    }
+
+    leaf overlay-endpoint-network-instance {
+      type leafref {
+        path "/network-instances/network-instance/name";
+      }
+      description
+        "The network instance to resolve the overlay-endpoint within.";
+    }
+
+    leaf overlay-endpoint {
+      type leafref {
+        path "/network-instances" +
+        "/network-instance[name=current()/../overlay-endpoint-network-instance]" +
+        "/connection-points/connection-point/endpoints/endpoint/config/endpoint-id";
+      }
+      description
+        "Associate the EVI with an VXLAN Endpoint defined under connection
+        points. The network instance to resolve the overlay-endpoint within.";
+    }
+
+    leaf host-reachability-bgp {
+      type boolean;
+      description
+        "Enable or Disable the BGP control plane to be
+        used to exchange  updates from the NVE interface";
+    }
+
+    leaf multicast-group {
+     type oc-inet:ip-address;
+     description
+       "Multicast group address for BUM traffic";
+    }
+
+    leaf multicast-mask {
+      type oc-inet:ip-address;
+      description
+        "Multicast group address mask";
+    }
+  }
+
+  grouping evpn-vxlan-anycast-config {
+    description
+      "Anycast source interface top grouping";
+
+    container anycast-source-interface {
+      description
+        "Anycast source interface references";
+
+      container config {
+        description
+          "Anycast source interface configuration references";
+        uses oc-if:interface-ref-common;
+      }
+
+      container state {
+        config false;
+        description
+          "Anycast source interface state references";
+        uses oc-if:interface-ref-common;
+      }
+    }
+  }
+
+  grouping evpn-parameters-pbb-isid-config {
+    description
+      "I-component identifier configuration parameters.
+      In PBB-EVPN [RFC7623] the use of GWs where I-components and
+      associated B-components are part of EVI instances is required.";
+
+    leaf i-sid {
+      type uint32 {
+        range "0..16777215";
+      }
+      description
+        "Service Instance Identifier 24 bits and global within a PBB
+        network. I-SID defines the service instance that the frame should be
+        mapped to.";
+      reference
+        "RFC 7080: Virtual Private LAN Service (VPLS) Interoperability
+        with Provider Backbone Bridges.";
+    }
+  }
+
+  grouping evpn-parameters-pbb-config {
+    description
+      "I-component identifier configuration parameters.
+      In PBB-EVPN [RFC7623] the use of GWs where I-components and
+      associated B-components are part of EVI instances is required.
+      These parameters includes the association between I and B
+      components.";
+
+    leaf b-component-name {
+      type string;
+      description
+        "Type of the associated b-component";
+    }
+
+    leaf backbone-src-mac {
+      type oc-yang:mac-address;
+      description
+        "EVPN will run independently in both components,
+        the I-component MAC-VRF and B-component MAC-VRF.
+        The backbone-src-mac assigns the b-component MAC.";
+    }
+  }
+
+  grouping evpn-parameters-pbb-icomponent-config {
+    description
+      "Parameters to configure components contained
+      in a backbone edge bridge that containes the customer
+      space (customer MAC addresses,S-VLAN).";
+
+    container i-components {
+      description
+        "i-components container definition.";
+
+      list i-component {
+        key "i-sid";
+        description
+          "list of i-components";
+
+        leaf i-sid {
+          type leafref {
+            path '../config/i-sid';
+          }
+        description
+          "I-SID represents a unique service identifier associated with
+          service instances";
+        }
+
+        container config {
+          description
+            "Configuration variables for the i-sid";
+          uses evpn-parameters-pbb-isid-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State variables for the i-sid";
+
+          uses evpn-parameters-pbb-isid-config;
+        }
+      }
+    }
+  }
+
+  grouping evpn-evi-pbb-config {
+    description
+      "Provider Backbone Bridging (PBB) parameters grouping";
+    reference
+      "IEEE 802.1ah Provider Backbone Bridge";
+
+    list b-component {
+      key "b-component-name";
+      description
+        "List of B-components. The b-component learns and forwards
+        traffic on the backbone in order to reduce the number of
+        BGP MAC Advertisement routes by aggregating Customer/Client
+        MAC (C-MAC) addresses via Provider Backbone MAC (B-MAC) address.";
+      reference
+        "RFC 7623: Provider Backbone Bridging Combined
+        with Ethernet VPN (PBB-EVPN).";
+
+      leaf b-component-name {
+      type leafref {
+        path '../config/b-component-name';
+      }
+      description
+        "Provider Backbone Bridging component name.";
+      }
+
+      container config {
+        description "Configuration variables for the b-components.";
+
+        uses evpn-parameters-pbb-config;
+      }
+
+      container state {
+        config false;
+        description "State variables for the b-components.";
+
+        uses evpn-parameters-pbb-config;
+      }
+
+      uses evpn-parameters-pbb-icomponent-config;
+    }
+  }
+
+  grouping evpn-evi-pbb-top {
+    description "Grouping for pbb configuration parameters";
+
+    container pbb {
+      uses evpn-evi-pbb-config;
+      description
+        "Container for EVPN with PBB PE functionality
+        for scaling over MPLS,";
+    }
+  }
+
+  /* Groupings related to the configuration of the Overlay
+  Endpoint when VXLAN is used*/
+
+  grouping evpn-vxlan-parameters-config {
+    description
+      "Type agnostic configuration parameters relating to the
+      overlay of the network instance";
+
+    leaf description {
+      type string;
+        description
+          "Description to identify the VXLAN tunnel endpoint It
+          is a unique name identifying the overlay endpoint";
+    }
+
+    leaf enabled {
+      type boolean;
+      description
+        "VXLAN tunnel endpoint administrative state.";
+    }
+
+    leaf source-interface {
+    type string;
+      description
+        "Source loopback interface name";
+    }
+  }
+
+  grouping evpn-overlays-grp-top {
+    description
+      "Parameters relating to the overlay tunnel endpoints";
+
+    container config {
+      description
+        "Configuration parameters relating to the overlay tunnel
+        endpoints of the network instance";
+
+      uses evpn-vxlan-parameters-config;
+    }
+
+    container state {
+      config false;
+      description
+        "State parameters relating to the overlay tunnel endpoints of
+        the network instance";
+
+      uses evpn-vxlan-parameters-config;
+    }
+
+    container endpoint-peers {
+      description
+        "Top level container for state information related to peer VXLAN Tunnel
+        Endpoints(VTEPs) learned by the local VTEP in the default network
+        instance";
+      config false;
+
+      list endpoint-peer {
+        key "peer-address";
+          description "List of VTEP peers and associated state information";
+
+        leaf peer-address {
+          type leafref {
+            path '../state/peer-address';
+          }
+          description "IP address for the VTEP peer";
+        }
+
+        container state {
+          config false;
+            description
+              "Container for state parameters related to this VTEP peer";
+            uses evpn-endpoint-peer-state;
+            uses evpn-endpoint-counters;
+	}
+      }
+    }
+
+    container endpoint-vnis {
+      description
+        "Top level container for state information related to Layer 2 virtual
+        network identifiers (L2VNIs) and Layer 3 virtual network identifiers
+        (L3VNIs) that are learned on the local VXLAN Tunnel End Point from
+        remote VTEPs in the default network instance";
+      config false;
+
+      list endpoint-vni {
+        key "vni";
+        description "List of L2VNIs and L3VNIs learned on the local VTEP";
+
+        leaf vni {
+          type leafref {
+            path '../state/vni';
+          }
+          description "L2VNI or L3VNI Identifier";
+        }
+
+        container state {
+          config false;
+          description
+            "Container for state parameters related to this L2VNI or L3VNI";
+          uses evpn-endpoint-vni-state;
+        }
+
+        uses ipv4-top;
+        uses ipv6-top;
+      }
+    }
+  }
+
+  grouping evpn-endpoint-peer-state {
+    description
+      "Grouping for state information related to peer VXLAN Tunnel
+      Endpoints(VTEPs) learned by the local VTEP";
+
+    leaf peer-address {
+      type oc-inet:ip-address;
+      description "IP address of the remote VXLAN Tunnel Endpoint peer";
+    }
+
+    leaf peer-state {
+      type enumeration {
+        enum UP {
+          description
+            "Operational status of the remote VTEP to indicate that the peer
+            status is UP";
+        }
+        enum DOWN {
+          description
+            "Operational status of the remote VTEP to indicate that the peer
+            status is DOWN";
+        }
+      }
+      description "State parameters related to the remote VTEP peer state";
+    }
+
+    leaf uptime {
+      type oc-types:timeticks64;
+      description
+        "This timestamp indicates the time elapsed relative to the moment that
+        the remote VTEP peer was discovered.";
+    }
+
+    leaf-list control-plane-vnis {
+      type oc-evpn-types:vni-id;
+      description
+        "The control-plane VNIs are all of the VNIs that are discovered by the
+        control-plane behind this peer VTEP";
+    }
+
+    leaf router-mac {
+      type oc-yang:mac-address;
+      description "MAC address of the remote VTEP";
+    }
+  }
+
+  grouping evpn-endpoint-counters {
+    description
+      "Grouping for Operational state regarding encapsulated traffic.";
+    container counters {
+      description
+        "Operational state regarding encapsulated traffic.";
+      leaf total-encap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of encapsulated packets.";
+      }
+      leaf total-encap-bytes {
+        type oc-yang:counter64;
+        description
+          "The total number of encapsulated bytes.";
+      }
+      leaf bum-encap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of encapsulated BUM packets.";
+      }
+      leaf total-decap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of decapsulated packets.";
+      }
+      leaf total-decap-bytes {
+        type oc-yang:counter64;
+        description
+          "The total number of decapsulated bytes.";
+      }
+      leaf unicast-decap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of decapsulated unicast packets.";
+      }
+      leaf bum-decap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of decapsulated BUM packets.";
+      }
+      leaf bum-decap-multicast-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of decapsulated BUM packets received via underlay multicast.";
+      }
+      leaf bum-decap-ir-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of decapsulated BUM packets received via underlay ingress replication.";
+      }
+      leaf drop-decap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of decapsulated packets that have been dropped locally.";
+      }
+      leaf except-decap-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of decapsulated packets that hit an exceptional condition.";
+      }
+    }
+  }
+
+  grouping ipv4-top {
+    description
+      "Grouping for Operational state of IPv4 address family.";
+    container ipv4 {
+      description
+        "Parameters for the IPv4 address family.";
+      container state {
+        config false;
+        description
+          "Top level IPv4 operational state data.";
+        uses evpn-endpoint-counters;
+      }
+    }
+  }
+
+  grouping ipv6-top {
+    description
+      "Grouping for Operational state of IPv6 address family.";
+    container ipv6 {
+      description
+        "Parameters for the IPv6 address family.";
+      container state {
+        config false;
+        description
+          "Top level IPv6 operational state data.";
+        uses evpn-endpoint-counters;
+      }
+    }
+  }
+
+  grouping evpn-endpoint-vni-state {
+    description
+      "Grouping for L2VNI and L3VNI state information learned on the
+      local VXLAN Tunnel End Point from remote VTEPs";
+
+    leaf vni {
+      type oc-evpn-types:evi-id;
+      description "L2VNI or L3VNI Identifier";
+    }
+
+    leaf multidestination-traffic {
+      type union {
+        type oc-inet:ip-address;
+        type enumeration {
+          enum STATIC_INGRESS_REPLICATION {
+            description
+              "Static ingress replication mode.";
+          }
+          enum BGP_INGRESS_REPLICATION {
+            description
+              "BGP EVPN ingress replication mode. It includes the ability to
+              signal a P2MP LSP for the EVPN Inclusive Provider Tunnel
+              for BUM traffic";
+          }
+        }
+      }
+      description
+        "The data plane for overlays needs to handle the transport of
+         multidestination traffic. Multidestination traffic is typically
+         referred to as (BUM) which stands for broadcast, unknown unicast,
+         or multicast. The two most common methods that can accommodate this
+         replication and transport in the underlay are IP multicast and
+         ingress replication
+         (also called head-end replication or unicast mode).";
+    }
+
+    leaf learning-mode {
+      type oc-evpn-types:learning-mode;
+      description
+        "Indicates whether the learning mode for this VNI is either
+        control-plane or data-plane";
+    }
+
+    leaf vni-type {
+      type enumeration {
+        enum L2 {
+          description
+            "This is a Layer 2 service virtual network identifier (L2VNI)
+            that is used for communication within the same subnet or
+            broadcast domain";
+        }
+        enum L3 {
+          description
+            "This is a Layer 3 service virtual network identifier (L3VNI)
+            or VRF VNI that is used for communication between subnets";
+        }
+      }
+      description "The type of virtual network identfier";
+    }
+
+    leaf vni-state {
+      type enumeration {
+        enum UP {
+          description
+            "Operational status of the virtual network identifier (VNI) to
+            indicate that it is UP";
+        }
+        enum DOWN {
+          description
+            "Operational status of the virtual network identifier (VNI) to
+            indicate that it is DOWN";
+        }
+      }
+      description "Operational state of the L2VNI or L3VNI";
+    }
+
+    leaf svi-state {
+      type enumeration {
+        enum UP {
+          description
+            "Operational status of the SVI mapped to the L3VNI used for routing
+            between subnets to indicate the SVI is UP";
+        }
+        enum DOWN {
+          description
+            "Operational status of the SVI mapped to the L3VNI used for routing
+            between subnets to indicate the SVI is DOWN";
+        }
+      }
+      description
+        "Operational status of the SVI mapped to the L3VNI that is used for
+        routing between subnets in the VXLAN fabric";
+    }
+
+    leaf bridge-domain {
+      type uint32;
+      description
+        "This reflects the configured VLAN or Bridge Domain that maps to this
+        L2VNI in the VXLAN fabric";
+    }
+
+    leaf l3-vrf-name {
+      type string;
+      description
+        "This refects the configured VRF instance that maps to this L3VNI
+        that is used for routing between subnets in the VXLAN fabric";
+    }
+
+  }
+}

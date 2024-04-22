@@ -1,0 +1,242 @@
+module openconfig-network-instance-l3 {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/network-instance-l3";
+
+  prefix "oc-ni-l3";
+
+  // import some basic types
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-types { prefix "octypes"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module contains groupings which specifically relate to
+    Layer 3 network instance configuration and operational state
+    parameters.";
+
+  oc-ext:openconfig-version "2.0.0";
+
+  revision "2022-11-08" {
+    description
+      "Removal of top-level enabled-address-families leaf-list";
+    reference "2.0.0";
+  }
+
+  revision "2022-09-15" {
+    description
+      "Reflect implementation status by releasing 1.0.0.";
+    reference "1.0.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.11.1";
+  }
+
+  revision "2018-08-17" {
+    description
+      "Add a route limit for L3 network instances.";
+    reference "0.11.0";
+  }
+
+  revision "2017-12-13" {
+    description
+      "Fix incorrect constraint on SR and MPLS containers";
+    reference "0.9.0";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes";
+    reference "0.8.1";
+  }
+
+  revision "2017-02-28" {
+    description
+      "Add OSPFv2 to network instance";
+    reference "0.8.0";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add policy forwarding to network instance";
+    reference "0.7.0";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Add AFT to the network instance";
+    reference "0.6.0";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add segment routing to network instance";
+    reference "0.5.0";
+  }
+
+  revision "2016-11-10" {
+    description
+      "Update model to include IS-IS.";
+    reference "0.4.1";
+  }
+
+  revision "2016-09-28" {
+    description
+      "Change L2 instance to submodule; add MAC table";
+    reference "0.3.0";
+  }
+
+  revision "2016-08-11" {
+    description
+      "Resolve repeated container names in routing protocols";
+    reference "0.2.3";
+  }
+
+  revision "2016-07-08" {
+    description
+      "Updated with refactored routing protocol models";
+    reference "0.2.1";
+  }
+
+  revision "2016-03-29" {
+    description
+      "Initial revision";
+    reference "0.2.0";
+  }
+
+  revision "2016-03-14" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping l3ni-instance {
+    description
+      "Configuration and operational state parameters relevant
+      to network instances that include a Layer 3 type";
+
+  }
+
+  grouping l3ni-route-limit-structural {
+    description
+      "Configuration and state for the maximum number of routes
+      that should be used by routing instance.";
+
+    container route-limits {
+      description
+        "Configuration and operational state relating to the
+        maximum number of routes for the address family that
+        should be allowed within the Layer 3 network instance.
+
+        When the specified value is reached, no further prefixes
+        should be installed into the system's RIB from this network
+        instance unless the warning only leaf is set. In this case,
+        new routes should still be installed. If a alarm threshold
+        is specified, then this should be used to generate
+        alarms via telemetry for the network instance.";
+
+      list route-limit {
+        key "afi";
+
+        description
+          "A route limit applying to a particular address family.";
+
+        leaf afi {
+          type leafref {
+            path "../config/afi";
+          }
+          description
+            "Reference to the address family for which the route
+            limit is being applied.";
+        }
+
+        container config {
+          description
+            "Configuration options relating to the route limit.";
+          uses l3ni-route-limit-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the route limit.";
+          uses l3ni-route-limit-config;
+          uses l3ni-route-limit-state;
+        }
+      }
+    }
+  }
+
+  grouping l3ni-route-limit-config {
+    description
+      "Configuration options relating to the route limit for a network
+      instance.";
+
+    leaf afi {
+      type identityref {
+        base octypes:ADDRESS_FAMILY;
+      }
+      description
+        "The address family for which the route limit applies.";
+    }
+
+    leaf maximum {
+      type uint32;
+      description
+        "The maximum number of routes for the address family. The
+        system should not install more than maximum number of
+        prefixes into the RIB unless the warning-only leaf is specified.";
+    }
+
+    leaf warning-only {
+      type boolean;
+      default false;
+      description
+        "When specified, the route limit specified is considered only as
+        a warning - and routes should continue to be installed into the
+        RIB over the limit specified in the maximum leaf.";
+    }
+
+    leaf alarm-threshold {
+      type uint32;
+      description
+        "When specified, an alarm should be generated when the threshold
+        number of installed routes is reached.";
+    }
+  }
+
+  grouping l3ni-route-limit-state {
+    description
+      "Operational state relating to the route limit for a network
+      instance.";
+
+    leaf threshold-exceeded {
+      type boolean;
+      description
+        "This leaf should be set to true in the case that the threshold
+        number of routes has been exceeded.";
+    }
+
+    leaf installed-routes {
+      type uint32;
+      description
+        "The current number of routes installed for the address family.";
+    }
+  }
+}

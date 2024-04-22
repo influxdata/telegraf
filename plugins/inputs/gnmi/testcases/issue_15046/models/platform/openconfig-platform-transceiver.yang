@@ -1,0 +1,985 @@
+module openconfig-platform-transceiver {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform/transceiver";
+
+  prefix "oc-transceiver";
+
+  // import some basic types
+  import ietf-yang-types { prefix yang; }
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-platform-types { prefix oc-platform-types; }
+  import openconfig-platform-port { prefix oc-port; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-transport-types { prefix oc-opt-types; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-alarm-types { prefix oc-alarm-types; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    for transceivers (i.e., pluggable optics).  The module should be
+    used in conjunction with the platform model where other
+    physical entity data are represented.
+
+    In the platform model, a component of type=TRANSCEIVER is
+    expected to be a subcomponent of a PORT component.  This
+    module defines a concrete schema for the associated data for
+    components with type=TRANSCEIVER.
+
+    A transceiver will always contain physical-channel(s), however
+    when a line side optical-channel is present (i.e. ZR+ optics)
+    the physical-channel will reference its optical-channel.
+    In this case, the optical-channels components must be
+    subcomponents of the transceiver. The relationship between the
+    physical-channel and the optical-channel allows for multiple
+    optical-channels to be associated with a transceiver in addition
+    to ensuring certain leaves (i.e. output-power) are not duplicated
+    in multiple components.
+
+    If a transceiver contains a digital signal processor (DSP), such
+    as with ZR+ optics, the modeling will utilize hierarchical
+    components as follows:
+    PORT --> TRANSCEIVER --> OPTICAL_CHANNEL(s)
+    The signal will then traverse through a series of
+    terminal-device/logical-channels as required. The first
+    logical-channel connected to the OPTICAL_CHANNEL will utilize the
+    assignment/optical-channel leaf to create the relationship. At the
+    conclusion of the series of logical-channels, the logical-channel
+    will be associated to its host / client side based on:
+    * If the TRANSCEIVER is directly within a router or switch, then
+      it will use the logical-channel ingress leaf to specify the
+      interface it is associated with.
+    * If the TRANSCEIVER is within a dedicated terminal (Layer 1)
+      device, then it will use the logical-channel ingress leaf to
+      specify a physical-channel within a TRANSCEIVER component
+      (i.e. gray optic) that it is associated with.";
+
+  oc-ext:openconfig-version "0.14.0";
+
+revision "2023-08-30" {
+    description
+      "Clarify transceiver module threshold for input-power.";
+    reference "0.14.0";
+  }
+
+revision "2023-08-30" {
+    description
+      "Add transceiver module temperature thresholds";
+    reference "0.13.0";
+  }
+
+  revision "2023-06-27" {
+    description
+      "Add tx bias and voltage thresholds";
+    reference "0.12.0";
+  }
+
+  revision "2023-05-03" {
+    description
+      "Increase max length of vendor-rev to 4.";
+    reference "0.11.0";
+  }
+
+  revision "2023-02-10" {
+    description
+      "Fixing linting issues.";
+    reference "0.10.1";
+  }
+
+  revision "2023-01-12" {
+    description
+      "Add laser power and temperature thresholds";
+    reference "0.10.0";
+  }
+
+  revision "2021-07-29" {
+    description
+      "Add several media-lane-based VDM defined by CMIS to physical channel";
+    reference "0.9.0";
+  }
+
+  revision "2021-02-23" {
+    description
+      "Add leafref to an optical channel from a physical channel.";
+    reference "0.8.0";
+  }
+
+  revision "2020-05-06" {
+    description
+      "Ensure that when statements in read-write contexts reference
+      only read-write leaves.";
+    reference "0.7.1";
+  }
+
+  revision "2018-11-25" {
+    description
+      "Add augment for leafref to transceiver component;
+      Correct paths in physical channels leafref.";
+    reference "0.7.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.6.1";
+  }
+
+  revision "2018-11-16" {
+    description
+      "Added transceiver FEC configuration and state";
+    reference "0.6.0";
+  }
+
+  revision "2018-05-15" {
+    description
+      "Remove internal-temp state leaf, since we prefer
+      the generic /components/component/state/temperature
+      container for temperature information.";
+    reference "0.5.0";
+  }
+
+  revision "2018-01-22" {
+    description
+      "Fixed physical-channel path reference";
+    reference "0.4.1";
+  }
+
+  revision "2017-09-18" {
+    description
+      "Use openconfig-yang-types module";
+    reference "0.4.0";
+  }
+
+  revision "2017-07-08" {
+    description
+      "Adds clarification on aggregate power measurement data";
+    reference "0.3.0";
+  }
+
+  revision "2016-12-22" {
+    description
+      "Adds preconfiguration data and clarified units";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping optical-power-state {
+    description
+      "Reusable leaves related to optical power state -- these
+      are read-only state values. If avg/min/max statistics are
+      not supported, the target is expected to just supply the
+      instant value";
+
+    container output-power {
+      description
+        "The output optical power of a physical channel in units
+        of 0.01dBm, which may be associated with individual
+        physical channels, or an aggregate of multiple physical
+        channels (i.e., for the overall transceiver). For an
+        aggregate, this may be a measurement from a photodetector
+        or a a calculation performed on the device by summing up
+        all of the related individual physical channels.
+        Values include the instantaneous, average, minimum, and
+        maximum statistics. If avg/min/max statistics are not
+        supported, the target is expected to just supply the
+        instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+
+    container input-power {
+      description
+        "The input optical power of a physical channel in units
+        of 0.01dBm, which may be associated with individual
+        physical channels, or an aggregate of multiple physical
+        channels (i.e., for the overall transceiver). For an
+        aggregate, this may be a measurement from a photodetector
+        or a a calculation performed on the device by summing up
+        all of the related individual physical channels.
+        Values include the instantaneous, average, minimum, and
+        maximum statistics. If avg/min/max statistics are not
+        supported, the target is expected to just supply the
+        instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+
+    container laser-bias-current {
+      description
+        "The current applied by the system to the transmit laser to
+        achieve the output power. The current is expressed in mA
+        with up to two decimal precision. Values include the
+        instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target is
+        expected to just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-mA;
+    }
+  }
+
+  grouping output-optical-frequency {
+    description
+      "Reusable leaves related to optical output power -- this is
+      typically configurable on line side and read-only on the
+      client-side";
+
+    leaf output-frequency {
+      type oc-opt-types:frequency-type;
+      description
+        "The frequency in MHz of the individual physical channel
+        (e.g. ITU C50 - 195.0THz and would be reported as
+        195,000,000 MHz in this model). This attribute is not
+        configurable on most client ports.";
+    }
+  }
+
+
+  grouping physical-channel-config {
+    description
+      "Configuration data for physical client channels";
+
+    leaf index {
+      type uint16 {
+        range 0..max;
+      }
+      description
+        "Index of the physical channnel or lane within a physical
+        client port";
+    }
+
+    leaf associated-optical-channel {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component/" +
+          "oc-platform:name";
+      }
+      description
+        "A physical channel may reference an optical channel
+        component. If the physical channel does make this optional
+        reference, then a limited set of leaves will apply within
+        the physical channel to avoid duplication within the optical
+        channel.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "Text description for the client physical channel";
+    }
+
+    leaf tx-laser {
+      type boolean;
+      description
+        "Enable (true) or disable (false) the transmit label for the
+        channel";
+    }
+
+    uses physical-channel-config-extended {
+      when "../../../config/module-functional-type = 'oc-opt-types:TYPE_STANDARD_OPTIC'" {
+        description
+          "When the physical channel is of TYPE_STANDARD_OPTIC, the
+          extended config will be used";
+      }
+    }
+  }
+
+  grouping physical-channel-config-extended {
+    description
+      "Extended configuration data for physical client channels
+      for applications where the full physical channel config and
+      state are used. In some cases, such as when the physical
+      channel has a leafref to an optical channel component and the
+      module-functional-type is TYPE_DIGITAL_COHERENT_OPTIC this
+      grouping will NOT be used.";
+
+    leaf target-output-power {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "Target output optical power level of the optical channel,
+        expressed in increments of 0.01 dBm (decibel-milliwats)";
+    }
+  }
+
+  grouping physical-channel-state {
+    description
+      "Operational state data for client channels. In some cases,
+      such as when the physical channel has a leafref to an optical
+      channel component and the module-functional-type is
+      TYPE_DIGITAL_COHERENT_OPTIC this grouping will NOT be used.";
+
+    leaf laser-age {
+      type oc-types:percentage;
+      description
+        "Laser age (0% at beginning of life, 100% end of life) in integer
+        percentage. This term is defined by Common Management Interface
+        Specification (CMIS).";
+
+      reference "QSFP-DD CMIS 5.0 Table 8-122";
+    }
+
+    container laser-temperature {
+      description
+        "Laser temperature for the cooled laser in degrees Celsius with 1
+        decimal precision. This term is defined by Common Management
+        Interface Specification (CMIS). Values include the instantaneous,
+        average, minimum, and maximum statistics. If avg/min/max statistics
+        are not supported, the target is expected to just supply the
+        instant value.";
+
+      reference "QSFP-DD CMIS 5.0 Table 8-122";
+
+      uses oc-platform-types:avg-min-max-instant-stats-precision1-celsius;
+    }
+
+    container target-frequency-deviation {
+      description
+        "The difference in MHz with 1 decimal precision between the target
+        center frequency and the actual current center frequency . This term
+        is defined by Common Management Interface Specification (CMIS) and
+        referred to as laser frequency error or laser ferquency deviation.
+        Values include the instantaneous, average, minimum, and maximum
+        statistics. If avg/min/max statistics are not supported, the target
+        is expected to just supply the instant value.";
+
+      reference "QSFP-DD CMIS 5.0 Section Table 8-122";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision1-mhz;
+    }
+
+    container tec-current {
+      description
+        "The amount of current flowing to the TC of a cooled laser in percentage
+        with 2 decimal precision. This term is defined by Common Management
+        Interface Specification (CMIS). Values include the instantaneous,
+        average, minimum, and maximum statistics. If avg/min/max statistics
+        are not supported, the target is expected to just supply the instant
+        value.";
+
+      reference "QSFP-DD CMIS 5.0 Table 8-122";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    uses physical-channel-state-extended {
+      when "../../../state/module-functional-type = 'oc-opt-types:TYPE_STANDARD_OPTIC'" {
+        description
+          "When the physical channel is of TYPE_STANDARD_OPTIC, the
+          extended state will be used";
+      }
+    }
+  }
+
+  grouping physical-channel-state-extended {
+    description
+      "Extended operational state data for physical client channels
+      for applications where the full physical channel config and
+      state are used. In some cases, such as when the physical
+      channel has a leafref to an optical channel component and the
+      module-functional-type is TYPE_DIGITAL_COHERENT_OPTIC this
+      grouping will NOT be used.";
+
+    uses output-optical-frequency;
+    uses optical-power-state;
+  }
+
+  grouping physical-channel-top {
+    description
+      "Top-level grouping for physical client channels";
+
+    container physical-channels {
+      description
+        "Enclosing container for client channels";
+
+      list channel {
+        key "index";
+        description
+          "List of client channels, keyed by index within a physical
+          client port.  A physical port with a single channel would
+          have a single zero-indexed element";
+
+        leaf index {
+          type leafref {
+            path "../config/index";
+          }
+          description
+            "Reference to the index number of the channel";
+        }
+
+        container config {
+          description
+            "Configuration data for physical channels";
+
+          uses physical-channel-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for channels";
+
+          uses physical-channel-config;
+          uses physical-channel-state;
+        }
+      }
+    }
+  }
+
+  grouping transceiver-threshold-top {
+    description
+      "Top-level grouping for transceiver alarm thresholds for
+      various sensors.";
+
+    container thresholds {
+      description
+        "Enclosing container for transceiver alarm thresholds.";
+
+      list threshold {
+        key "severity";
+        config false;
+        description
+          "List of transceiver alarm thresholds, indexed by
+          alarm severity.";
+
+        leaf severity {
+          type leafref {
+            path "../state/severity";
+          }
+          config false;
+          description
+           "The severity applied to the group of thresholds.
+            An implementation's highest severity threshold
+            should be mapped to OpenConfig's `CRITICAL`
+            severity level.";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational alarm thresholds for the transceiver.";
+
+          uses transceiver-threshold-state;
+        }
+      }
+    }
+  }
+
+  grouping port-transceiver-config {
+    description
+      "Configuration data for client port transceivers";
+
+    leaf enabled {
+      type boolean;
+      description
+        "Turns power on / off to the transceiver -- provides a means
+        to power on/off the transceiver (in the case of SFP, SFP+,
+        QSFP,...) or enable high-power mode (in the case of CFP,
+        CFP2, CFP4) and is optionally supported (device can choose to
+        always enable).  True = power on / high power, False =
+        powered off";
+    }
+
+    leaf form-factor-preconf {
+      type identityref {
+        base oc-opt-types:TRANSCEIVER_FORM_FACTOR_TYPE;
+      }
+      description
+        "Indicates the type of optical transceiver used on this
+        port.  If the client port is built into the device and not
+        pluggable, then non-pluggable is the corresponding state. If
+        a device port supports multiple form factors (e.g. QSFP28
+        and QSFP+, then the value of the transceiver installed shall
+        be reported. If no transceiver is present, then the value of
+        the highest rate form factor shall be reported
+        (QSFP28, for example).
+
+        The form factor is included in configuration data to allow
+        pre-configuring a device with the expected type of
+        transceiver ahead of deployment.  The corresponding state
+        leaf should reflect the actual transceiver type plugged into
+        the system.";
+    }
+
+    leaf ethernet-pmd-preconf {
+      type identityref {
+        base oc-opt-types:ETHERNET_PMD_TYPE;
+      }
+      description
+        "The Ethernet PMD is a property of the optical transceiver
+        used on the port, indicating the type of physical connection.
+        It is included in configuration data to allow pre-configuring
+        a port/transceiver with the expected PMD.  The actual PMD is
+        indicated by the ethernet-pmd state leaf.";
+    }
+
+    leaf fec-mode {
+      type identityref {
+        base oc-platform-types:FEC_MODE_TYPE;
+      }
+      description
+        "The FEC mode indicates the mode of operation for the
+        transceiver's FEC. This defines typical operational modes
+        and does not aim to specify more granular FEC capabilities.";
+    }
+
+    leaf module-functional-type {
+      type identityref {
+        base oc-opt-types:TRANSCEIVER_MODULE_FUNCTIONAL_TYPE;
+      }
+      description
+        "Indicates the module functional type which represents the
+        functional capability of the transceiver. For example, this
+        would specify the module is a digital coherent optic or a
+        standard grey optic that performs on-off keying.";
+    }
+  }
+
+  grouping port-transceiver-state {
+    description
+      "Operational state data for client port transceivers";
+
+    leaf present {
+      type enumeration {
+        enum PRESENT {
+          description
+            "Transceiver is present on the port";
+        }
+        enum NOT_PRESENT {
+          description
+            "Transceiver is not present on the port";
+        }
+      }
+      description
+        "Indicates whether a transceiver is present in
+        the specified client port.";
+    }
+
+    leaf form-factor {
+      type identityref {
+        base oc-opt-types:TRANSCEIVER_FORM_FACTOR_TYPE;
+      }
+      description
+        "Indicates the type of optical transceiver used on this
+        port.  If the client port is built into the device and not
+        pluggable, then non-pluggable is the corresponding state. If
+        a device port supports multiple form factors (e.g. QSFP28
+        and QSFP+, then the value of the transceiver installed shall
+        be reported. If no transceiver is present, then the value of
+        the highest rate form factor shall be reported
+        (QSFP28, for example).";
+    }
+
+    leaf connector-type {
+      type identityref {
+        base oc-opt-types:FIBER_CONNECTOR_TYPE;
+      }
+      description
+        "Connector type used on this port";
+    }
+
+    leaf vendor {
+      type string {
+        length 1..16;
+      }
+      description
+        "Full name of transceiver vendor. 16-octet field that
+        contains ASCII characters, left-aligned and padded on the
+        right with ASCII spaces (20h)";
+    }
+
+    leaf vendor-part {
+      type string {
+        length 1..16;
+      }
+      description
+        "Transceiver vendor's part number. 16-octet field that
+        contains ASCII characters, left-aligned and padded on the
+        right with ASCII spaces (20h). If part number is undefined,
+        all 16 octets = 0h";
+    }
+
+    leaf vendor-rev {
+      type string {
+        length 1..4;
+      }
+      description
+        "Transceiver vendor's revision number. Field of 1 to 4 octets that
+        contains ASCII characters, left-aligned and padded on the
+        right with ASCII spaces (20h)";
+    }
+
+    //TODO: these compliance code leaves should be active based on
+    //the type of port
+    leaf ethernet-pmd {
+      type identityref {
+        base oc-opt-types:ETHERNET_PMD_TYPE;
+      }
+      description
+        "Ethernet PMD (physical medium dependent sublayer) that the
+        transceiver supports. The SFF/QSFP MSAs have registers for
+        this and CFP MSA has similar.";
+    }
+
+    leaf sonet-sdh-compliance-code {
+      type identityref {
+        base oc-opt-types:SONET_APPLICATION_CODE;
+      }
+      description
+        "SONET/SDH application code supported by the port";
+    }
+
+    leaf otn-compliance-code {
+      type identityref {
+        base oc-opt-types:OTN_APPLICATION_CODE;
+      }
+      description
+        "OTN application code supported by the port";
+    }
+
+    leaf serial-no {
+      type string {
+        length 1..16;
+      }
+      description
+        "Transceiver serial number. 16-octet field that contains
+        ASCII characters, left-aligned and padded on the right with
+        ASCII spaces (20h). If part serial number is undefined, all
+        16 octets = 0h";
+    }
+
+    leaf date-code {
+      type oc-yang:date-and-time;
+      description
+        "Representation of the transceiver date code, typically
+        stored as YYMMDD.  The time portion of the value is
+        undefined and not intended to be read.";
+    }
+
+    leaf fault-condition {
+      type boolean;
+      description
+        "Indicates if a fault condition exists in the transceiver";
+    }
+
+    leaf fec-status {
+      type identityref {
+        base oc-platform-types:FEC_STATUS_TYPE;
+      }
+      description
+        "Operational status of FEC";
+    }
+
+    leaf fec-uncorrectable-blocks {
+      type yang:counter64;
+      description
+        "The number of blocks that were uncorrectable by the FEC";
+    }
+
+    leaf fec-uncorrectable-words {
+      type yang:counter64;
+      description
+        "The number of words that were uncorrectable by the FEC";
+    }
+
+    leaf fec-corrected-bytes {
+      type yang:counter64;
+      description
+        "The number of bytes that were corrected by the FEC";
+    }
+
+    leaf fec-corrected-bits {
+      type yang:counter64;
+      description
+        "The number of bits that were corrected by the FEC";
+    }
+
+    container pre-fec-ber {
+      description
+        "Bit error rate before forward error correction -- computed
+        value with 18 decimal precision. Note that decimal64
+        supports values as small as i x 10^-18 where i is an
+        integer. Values smaller than this should be reported as 0
+        to inidicate error free or near error free performance.
+        Values include the instantaneous, average, minimum, and
+        maximum statistics. If avg/min/max statistics are not
+        supported, the target is expected to just supply the
+        instant value";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision18-ber;
+    }
+
+    container post-fec-ber {
+      description
+        "Bit error rate after forward error correction -- computed
+        value with 18 decimal precision. Note that decimal64
+        supports values as small as i x 10^-18 where i is an
+        integer. Values smaller than this should be reported as 0
+        to inidicate error free or near error free performance.
+        Values include the instantaneous, average, minimum, and
+        maximum statistics. If avg/min/max statistics are not
+        supported, the target is expected to just supply the
+        instant value";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision18-ber;
+    }
+
+    container supply-voltage {
+      description
+        "Supply voltage to the transceiver in volts with 2 decimal
+        precision. Values include the instantaneous, average, minimum,
+        and maximum statistics. If avg/min/max statistics are not
+        supported, the target is expected to just supply the instant
+        value.";
+
+      uses oc-platform-types:avg-min-max-instant-stats-precision2-volts;
+    }
+
+    uses optical-power-state;
+  }
+
+  grouping transceiver-threshold-state {
+    description
+      "Grouping for all alarm threshold configs for a particular
+      severity level.";
+    leaf severity {
+      type identityref {
+        base oc-alarm-types:OPENCONFIG_ALARM_SEVERITY;
+      }
+      description
+        "The type of alarm to which the thresholds apply.";
+    }
+    leaf laser-temperature-upper {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The upper temperature threshold for the laser temperature sensor.
+        This leaf value is compared to the instant value of
+        laser-temperature.";
+    }
+    leaf laser-temperature-lower {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The lower temperature threshold for the laser temperature sensor.
+        This leaf value is compared to the instant value of
+        laser-temperature.";
+    }
+    leaf output-power-upper{
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The upper power threshold for the laser output power. This threshold
+        applies to every physical-channel on the transceiver and does not
+        apply to the aggregate transceiver optical-output-power. This leaf
+        value is compared to the instant value of optical-output-power.";
+    }
+    leaf output-power-lower{
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The lower power threshold for the laser output power. This threshold
+        applies to every physical-channel on the transceiver and does not
+        apply to the aggregate transceiver optical-output-power. This leaf
+        value is compared to the instant value of optical-output-power.";
+    }
+    leaf input-power-upper{
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The upper power threshold for the laser input power. This threshold
+        applies to every physical-channel on the transceiver and does not
+        apply to the aggregate transceiver optical-input-power. This leaf
+        value is compared to the instant value of optical-input-power.";
+    }
+    leaf input-power-lower{
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The lower power threshold for the laser input power. This threshold
+        applies to every physical-channel on the transceiver and does not
+        apply to the aggregate transceiver optical-input-power. This leaf
+        value is compared to the instant value of optical-input-power.";
+    }
+    leaf laser-bias-current-upper{
+      description
+        "The upper threshold for the laser bias current. This leaf value is
+        compared to the instant value of last-bias-current.";
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units mA;
+    }
+    leaf laser-bias-current-lower{
+      description
+        "The lower threshold for the laser bias current. This leaf value is
+        compared to the instant value of last-bias-current.";
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units mA;
+    }
+    leaf supply-voltage-upper{
+      description
+        "The upper threshold for the transceiver supply voltage. This leaf
+        value is compared to the instant value of supply-voltage.";
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units volts;
+    }
+    leaf supply-voltage-lower{
+      description
+        "The lower threshold for the transceiver supply voltage. This leaf
+        value is compared to the instant value of supply-voltage.";
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units volts;
+    }
+    leaf module-temperature-lower {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The lower temperature threshold for the transceiver module. This
+        leaf value is compared to the instant value of module-temperature.";
+    }
+    leaf module-temperature-upper {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The upper temperature threshold for the transceiver module. This
+        leaf value is compared to the instant value of module-temperature.";
+    }
+  }
+
+  grouping port-transceiver-top {
+    description
+      "Top-level grouping for client port transceiver data";
+
+    container transceiver {
+      description
+        "Top-level container for client port transceiver data";
+
+      container config {
+        description
+          "Configuration data for client port transceivers";
+
+        uses port-transceiver-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for client port transceivers";
+
+        uses port-transceiver-config;
+        uses port-transceiver-state;
+      }
+      // physical channels are associated with a transceiver
+      // component
+      uses physical-channel-top;
+      uses transceiver-threshold-top;
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-platform:components/oc-platform:component" {
+    description
+      "Adding transceiver data to physical inventory. This subtree is
+      only valid when the type of the component is TRANSCEIVER.";
+
+    uses port-transceiver-top;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:state" {
+    description
+      "Adds a reference from an interface to the corresponding
+      transceiver component.";
+
+    leaf transceiver {
+      type leafref {
+        path "/oc-platform:components/" +
+          "oc-platform:component[oc-platform:name=current()/../oc-port:hardware-port]/" +
+          "oc-platform:subcomponents/oc-platform:subcomponent/" +
+          "oc-platform:name";
+      }
+      description
+        "Provides a reference to the transceiver subcomponent that
+        corresponds to the physical port component for this interface.
+        The device must only populate this leaf with a reference to
+        a component of type TRANSCEIVER.";
+    }
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:state" {
+    description
+      "Adds a reference from the base interface to its corresponding
+      physical channels.";
+
+    leaf-list physical-channel {
+      type leafref {
+        path "/oc-platform:components/" +
+          "oc-platform:component[oc-platform:name=current()/../oc-transceiver:transceiver]/" +
+          "oc-transceiver:transceiver/" +
+          "oc-transceiver:physical-channels/oc-transceiver:channel/" +
+          "oc-transceiver:index";
+      }
+      description
+        "For a channelized interface, list of references to the
+        physical channels (lanes) corresponding to the interface.
+        The physical channels are elements of a transceiver component
+        in the platform model.";
+    }
+  }
+
+  // rpc statements
+
+  // notification statements
+
+}

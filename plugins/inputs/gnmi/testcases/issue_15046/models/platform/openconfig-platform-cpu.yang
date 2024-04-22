@@ -1,0 +1,72 @@
+module openconfig-platform-cpu {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform/cpu";
+
+  prefix "oc-cpu";
+
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines data related to FAN components in the
+    OpenConfig platform model.";
+
+  oc-ext:openconfig-version "0.1.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2018-01-30" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping component-cpu-utilization {
+    description
+      "Per-component CPU statistics";
+
+    container utilization {
+      description
+        "Statistics representing CPU utilization of the
+        component.";
+
+      container state {
+        config false;
+        description
+          "Operational state variables relating to the utilization
+           of the CPU.";
+
+        uses oc-types:avg-min-max-instant-stats-pct;
+      }
+    }
+  }
+
+  augment "/oc-platform:components/oc-platform:component/" +
+    "oc-platform:cpu" {
+    description
+      "Adding CPU utilization data to component model";
+
+    uses component-cpu-utilization;
+  }
+}

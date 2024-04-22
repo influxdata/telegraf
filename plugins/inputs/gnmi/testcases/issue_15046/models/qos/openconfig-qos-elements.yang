@@ -1,0 +1,1405 @@
+submodule openconfig-qos-elements {
+
+  belongs-to openconfig-qos {
+    prefix "oc-qos";
+  }
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-qos-types { prefix oc-qos-types; }
+  import openconfig-packet-match { prefix oc-pkt-match; }
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-types { prefix oc-types; }
+
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+     www.openconfig.net";
+
+  description
+    "This submodule defines configuration and operational state
+    data associated with QoS elements.  The primary elements of
+    the model include:
+
+      classifiers: match packets with a specific characteristic
+
+      forwarding groups: logical class of packets that receive
+      common forwarding treatment
+
+      queues:  collection of packets to be scheduled, including
+      a queue management scheme
+
+      schedulers: sequence of one more elements that schedule
+      packets for transmission, including policer and shaper
+      functions";
+
+  oc-ext:openconfig-version "0.11.2";
+
+  revision "2023-10-13" {
+    description
+      "Fix revision statement date";
+    reference "0.11.2";
+  }
+
+  revision "2023-10-08" {
+    description
+      "Clarification on WRED weight in case it is not present";
+    reference "0.11.1";
+  }
+
+  revision "2023-09-15" {
+    description
+      "Add support for ECN counters";
+    reference "0.11.0";
+  }
+
+  revision "2023-07-26" {
+    description
+      "Add buffer management parameters in time unts (microseconds).
+       Make profiles reusable across LAGs and PHY of different speed";
+    reference "0.10.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify interface-ref usage.";
+    reference "0.9.1";
+  }
+
+  revision "2023-04-17" {
+    description
+      "Add support for relative RED min-threshold and max-threshold values.";
+    reference "0.9.0";
+  }
+
+  revision "2023-02-17" {
+    description
+      "Add queue identifier.";
+    reference "0.8.0";
+  }
+
+  revision "2023-02-08" {
+    description
+      "Remove incorrect output placement of interface-ref";
+    reference "0.7.0";
+  }
+
+  revision "2023-01-28" {
+    description
+      "Split groupings in interfaces for better leaf reuse.";
+    reference "0.6.1";
+  }
+
+  revision "2022-09-13" {
+    description
+      "Add queue octet drop counter.";
+    reference "0.6.0";
+  }
+
+  revision "2021-08-28" {
+    description
+      "Revision updating memory management profile WRED and RED configuration.";
+    reference "0.5.0";
+  }
+
+  revision "2021-04-28" {
+    description
+      "Revision updating buffer management and queue management
+      configuration.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Fix xpaths in when statements";
+    reference "0.2.3";
+  }
+
+  revision "2019-08-20" {
+    description
+      "Fix typo in classifiers container name";
+    reference "0.2.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-16" {
+    description
+      "Fix incorrect interface-ref placement";
+    reference "0.2.0";
+  }
+
+  revision "2016-06-03" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  grouping qos-classifier-term-config {
+    description
+      "Configuration data for list of match criteria in a QoS
+      classifier";
+
+    leaf id {
+      type string;
+      description
+        "Identifier for the match term";
+    }
+  }
+
+  grouping qos-classifier-term-state {
+    description
+      "Operational state data for list of match criteria in a QoS
+      classifier";
+  }
+
+  grouping qos-classifier-term-action-config {
+    description
+      "Configuration parameters for actions for a classifier term.";
+
+    leaf target-group {
+      type leafref {
+        // Current location:
+        // /qos/classifiers/classifier/terms/term/actions/config/target-group
+        path "../../../../../../../forwarding-groups/forwarding-group/" +
+          "config/name";
+      }
+      description
+        "References the forwarding group or class to which the
+        matched packets should be assigned";
+    }
+  }
+
+  grouping qos-classifier-terms-top {
+    description
+      "Top-level grouping for list of match criteria in a QoS
+      classifier";
+
+    container terms {
+      description
+        "Enclosing container for ths list of terms";
+
+      list term {
+        key "id";
+        description
+          "List of match terms used in the classifier";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "Reference to id list key.";
+        }
+
+        container config {
+          description
+            "Configuration data for list of match criteria in a QoS
+            classifier";
+
+          uses qos-classifier-term-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for list of match criteria in a
+            QoS classifier";
+
+          uses qos-classifier-term-config;
+          uses qos-classifier-term-state;
+        }
+
+        container conditions {
+          description
+            "Conditions for the classifier term. Packets must match all of
+            the criteria specified within the match condition to be considered
+            matching the term.";
+
+            // TODO(robjs): Consider whether we should have classifiers
+            // that can match >1 different value of a field, or whether
+            // this should require different match terms within the
+            // classifier.
+            uses oc-pkt-match:ethernet-header-top;
+            uses oc-pkt-match:ipv4-protocol-fields-top;
+            uses oc-pkt-match:ipv6-protocol-fields-top;
+            uses oc-pkt-match:transport-fields-top;
+            uses oc-pkt-match:mpls-header-top;
+        }
+
+        container actions {
+          description
+            "Actions to be applied for packets matching the specified
+            classification rules.";
+
+          container config {
+            description
+              "Actions to be applied to packets that match the classifier
+              term.";
+
+            uses qos-classifier-term-action-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters associated with classifier term
+              actions";
+
+            uses qos-classifier-term-action-config;
+          }
+
+          container remark {
+            description
+              "Remark actions to be associated with packets that match the
+              classifier term. Where a packet matches these criteria, the
+              specified rewrite actions should be performed.";
+
+            uses qos-common-remark-actions;
+          }
+        }
+      }
+    }
+  }
+
+  grouping qos-classifier-config {
+    description
+      "Configuration data for classifiers";
+
+    leaf name {
+      type string;
+      description
+        "User-assigned name of the classifier";
+    }
+
+    leaf type {
+      type enumeration {
+        enum IPV4 {
+          description
+            "Classifier matches and operates
+            on packets with IPv4 headers.";
+        }
+        enum IPV6 {
+          description
+            "Classifier matches and operates
+            on packets with IPv6 headers.";
+        }
+        enum MPLS {
+          description
+            "Classifier matches and operates
+            on packets with MPLS headers.";
+        }
+        enum ETHERNET {
+          description
+            "Classifier matches and operates
+            on fields within the L2 ETHERNET
+            headers.";
+        }
+      }
+      description
+        "Type of classifier.";
+    }
+  }
+
+  grouping qos-classifier-state {
+    description
+      "Operational state data for classifiers";
+
+  }
+
+  grouping qos-classifier-top {
+    description
+      "Top-level grouping for classifier data";
+
+    container classifiers {
+      description
+        "Enclosing container for QoS classifiers";
+
+      list classifier {
+        key "name";
+        description
+          "List of classifier elements";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to list key name";
+        }
+
+        container config {
+          description
+            "Configuration data for classifers";
+
+          uses qos-classifier-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for classifiers";
+
+          uses qos-classifier-config;
+          uses qos-classifier-state;
+        }
+
+        uses qos-classifier-terms-top;
+      }
+    }
+  }
+
+  grouping qos-fabric-trace-config {
+    description
+      "Configuration data for fabric trace data";
+
+    leaf source {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component" +
+          "/oc-platform:config/oc-platform:name";
+      }
+      description
+        "Source component for fabric trace data";
+    }
+
+    leaf dest {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component" +
+          "/oc-platform:config/oc-platform:name";
+      }
+      description
+        "Destination component for fabric trace data";
+    }
+  }
+
+  grouping qos-forwarding-group-config {
+    description
+      "Configuration data for forwarding groups";
+
+    leaf name {
+      type string;
+      description
+        "Name of the forwarding group";
+    }
+
+    // TODO(robjs, Simon G): Discuss optionally moving
+    // this to a high/low priority indicator, if this
+    // is common across implementations.
+    leaf fabric-priority {
+      type uint8;
+      description
+        "Set the priority for the forwarding group for
+        local transmission through the device, e.g.,
+        across a switching fabric. Higher priorities
+        are considered to be better, such that traffic
+        with fabric priority 128 is considered to be
+        higher priority than that with fabric priority
+        0.";
+    }
+
+    leaf output-queue {
+      type leafref {
+        path "../../../../queues/queue/config/name";
+      }
+      description
+        "Output queue for packets in this forwarding group.
+        This leaf applies to both multicast and unicast
+        packets. Where a user or system requires separate
+        queueing for multicast and unicast the unicast-output-queue
+        and multicast-output-queue leaves should be specified.";
+    }
+
+    leaf unicast-output-queue {
+      type leafref {
+        path "../../../../queues/queue/config/name";
+      }
+      description
+        "Output queue for unicast packets within this
+        forwarding group. Where an operator or system does
+        not require separate queueing for multicast and
+        unicast this leaf is not specified.";
+    }
+
+    leaf multicast-output-queue {
+      type leafref {
+        path "../../../../queues/queue/config/name";
+      }
+      description
+        "Output queue for multicast packets within this
+        forwarding group. Where an operator or system does
+        not require separate queueing for multicast and
+        unicast this leaf is not specified.";
+    }
+  }
+
+  grouping qos-forwarding-group-state {
+    description
+      "Operational state data for forwarding groups";
+  }
+
+  grouping qos-forwarding-group-top {
+    description
+      "Top-level grouping for forwarding group data";
+
+    container forwarding-groups {
+      description
+        "Enclosing container for list of forwarding groups";
+
+      list forwarding-group {
+        key "name";
+        description
+          "List of forwarding groups.  Forwarding groups are
+          logical groups of traffic that will receive common
+          forwarding treatment.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to name list key";
+        }
+
+        container config {
+          description
+            "Configuration data for forwarding groups";
+
+          uses qos-forwarding-group-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for forwarding groups";
+
+          uses qos-forwarding-group-config;
+          uses qos-forwarding-group-state;
+        }
+      }
+    }
+  }
+
+  grouping qos-queue-red-common-config {
+    description
+      "Common configuration parameters applicable to RED and
+      its variants";
+
+    leaf enable-ecn {
+      type boolean;
+      default false;
+      description
+        "When set to true, the device should mark packets that are
+        ECN-capable rather than dropping them.  The receiver is
+        expected to echo the congestion signal back to the sender
+        so that it may adjust its transmission rate accordingly.
+        When this leaf is false, the device drops packets according
+        to the RED/WRED probability, or all packets if the
+        average queue length is above the max threshold.";
+    }
+  }
+
+  grouping qos-queue-red-common-state {
+    description
+      "Common operational state data applicable to RED and
+      its variants";
+
+  }
+
+  grouping qos-queue-wred-config {
+    description
+      "Configuration data for WRED-managed queues";
+
+    // TODO(robjs, aashaikh): Add configuration for weighted RED
+    // within this grouping.
+  }
+
+  grouping qos-queue-wred-state {
+    description
+      "Operational state data for WRED-managed queues";
+  }
+
+  grouping qos-queue-wred-top {
+    description
+      "Top-level grouping for WRED-managed queues";
+
+    container wred {
+      description
+        "Top-level container for WRED data";
+
+      container config {
+        description
+          "Configuration data for WRED";
+
+        uses qos-queue-wred-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for WRED";
+
+        uses qos-queue-wred-config;
+        uses qos-queue-wred-state;
+      }
+    }
+  }
+
+  grouping qos-queue-red-config {
+    description
+      "Configuration data for queues managed with RED";
+
+    leaf minth {
+      type uint64;
+      units bytes;
+      description
+        "The mininum threshold parameter for a RED-managed queue.
+        When the average queue length is less than minth, all
+        packets are admitted to the queue.";
+    }
+
+    leaf maxth {
+      type uint64;
+      units bytes;
+      description
+        "The maximum threshold parameter for a RED-managed queue.
+        When the average queue length exceeds the maxth value, all
+        packets are dropped (or marked if ECN is enabled).";
+    }
+  }
+
+  grouping qos-queue-red-state {
+    description
+      "Operational state data for queues managed with RED";
+  }
+
+  grouping qos-queue-red-top {
+    description
+      "Top-level grouping for RED queues";
+
+    container red {
+      description
+        "Top-level container for data related to RED-managed
+        queues";
+
+      container config {
+        description
+          "Configuration data for RED queues";
+
+        uses qos-queue-red-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for RED queues";
+
+        uses qos-queue-red-config;
+        uses qos-queue-red-state;
+      }
+    }
+  }
+
+
+  grouping qos-queue-config {
+    description
+      "Configuration data for QoS egress queues";
+
+    leaf name {
+      type string;
+      description
+        "User-defined name of the queue";
+    }
+    leaf queue-id {
+      type uint8;
+      description
+        "An optional identifier which may be required by some hardware to map
+        the named queue to a hardware queue";
+    }
+  }
+
+  grouping qos-queue-state {
+    description
+      "Operational state data for egress queues";
+  }
+
+  grouping qos-queue-top {
+    description
+      "Top-level grouping for queue elements";
+
+    container queues {
+      description
+        "Enclosing container for the list of queues";
+
+      list queue {
+        key "name";
+        description
+          "List of defined queues";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the queue name list key.";
+        }
+
+        container config {
+          description
+            "Configuration data for queues";
+
+          uses qos-queue-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for queues";
+
+          uses qos-queue-config;
+          uses qos-queue-state;
+        }
+      }
+    }
+  }
+
+  grouping qos-scheduler-output-config {
+    description
+      "Configuration data for scheduler output operations";
+
+    leaf output-type {
+      type enumeration {
+        enum SCHEDULER {
+          description
+            "Scheduler output is a child scheduler, e.g. to
+            implement hierarchical schedulers.";
+        }
+        enum FWD_GROUP {
+          description
+            "Scheduler output is a forwarding group, e.g., when
+            performing ingress scheduling before packets traverse
+            a fabric to be processed by an egress forwarding
+            complex.";
+        }
+        enum INTERFACE {
+          description
+            "Scheduler output is an interface for forwarding.";
+        }
+      }
+      description
+        "Describes the type of output sink for the scheduler.";
+    }
+
+    leaf child-scheduler {
+      when "../output-type = 'SCHEDULER'" {
+        description
+          "The child-scheduler leaf is valid only when
+          the output type of the scheduler is a child scheduler";
+      }
+      // TODO: consider whether both child (output) and parent
+      // (input) references are needed; consider whether child
+      // reference should separate in-profile and out-of-profile
+      type leafref {
+        // current loc:
+        // /qos/scheduler-policies/scheduler-policy/schedulers/scheduler/
+        // output/config/child-scheduler
+        path "../../../../../../../scheduler-policies/scheduler-policy/" +
+             "config/name";
+      }
+      description
+        "When the scheduler output type is a child scheduler,
+        this leaf provides a reference to the downstream
+        scheduler.";
+    }
+
+    leaf output-fwd-group {
+      when "../output-type = 'FWD_GROUP'" {
+        description
+          "The output-fwd-group leaf is valid only when
+          the output type of the scheduler is a forwarding group";
+      }
+      type leafref {
+        path "../../../../../../../forwarding-groups/forwarding-group" +
+          "/config/name";
+      }
+      description
+        "When the scheduler output type is a forwarding group,
+        this leaf provides a reference to the forwarding group.";
+    }
+  }
+
+  grouping qos-scheduler-output-state {
+    description
+      "Operational state data for scheduler output";
+  }
+
+  grouping qos-scheduler-output-top {
+    description
+      "Top-level grouping for data related to scheduler output";
+
+    container output {
+      description
+        "Top-level container for scheduler output data";
+
+      container config {
+        description
+          "Configuration data for scheduler output";
+
+        uses qos-scheduler-output-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for scheduler output";
+
+        uses qos-scheduler-output-config;
+        uses qos-scheduler-output-state;
+      }
+    }
+  }
+
+  grouping qos-scheduler-inputs-config {
+    description
+      "Configuration data for scheduler input sources";
+
+    leaf id {
+      type string;
+      description
+        "User-defined identifier for the scheduler input";
+    }
+
+    leaf input-type {
+      type enumeration {
+        enum QUEUE {
+          description
+            "Input is a defined queue.";
+        }
+        enum IN_PROFILE {
+          description
+            "Input is in-profile traffic from a parent scheduler/
+            shaper";
+        }
+        enum OUT_PROFILE {
+          description
+            "Input is out-of-profile traffic from a parent
+            scheduler/shaper";
+        }
+      }
+      description
+        "Describes the type of input source for the scheduler";
+    }
+
+    leaf queue {
+      when "../input-type = 'QUEUE'" {
+        description
+          "The queue leaf is valid only when
+          the input type of the scheduler is a queue";
+      }
+      type leafref {
+        // current loc: /qos/scheduler-policies/scheduler-policy/schedulers/
+        // scheduler/inputs/input/config/queue
+        path "../../../../../../../../queues/queue/name";
+      }
+      description
+        "Reference to a queue that is an input source for the
+        scheduler";
+    }
+
+    leaf weight {
+      type uint64;
+      description
+        "For priority schedulers, this indicates the priority of
+        the corresponding input.  Higher values indicate higher
+        priority.  For weighted round-robin schedulers, this leaf
+        indicates the weight of the corresponding input.";
+    }
+  }
+
+  grouping qos-scheduler-inputs-state {
+    description
+      "Operational state data for scheduler input sources";
+  }
+
+  grouping qos-scheduler-inputs-top {
+    description
+      "Top-level grouping for defining inputs to a scheduler.";
+
+    container inputs {
+      description
+        "Enclosing container ";
+
+      list input {
+        key "id";
+        description
+          "List of input sources for the scheduler.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "Reference to list key";
+        }
+
+        container config {
+          description
+            "Configuration data for scheduler input sources";
+
+          uses qos-scheduler-inputs-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for scheduler input sources";
+
+          uses qos-scheduler-inputs-config;
+          uses qos-scheduler-inputs-state;
+        }
+      }
+    }
+  }
+
+  grouping qos-scheduler-1r2c-config {
+    description
+      "Configuration data for 1 rate, 2 color scheduler.";
+
+    leaf cir {
+      type uint64;
+      units bps;
+      description
+        "Committed information rate for the single-rate token
+        bucket scheduler.  This value represents the rate at which
+        tokens are added to the bucket.";
+    }
+
+    leaf cir-pct {
+      type oc-types:percentage;
+      description
+        "Committed information rate for the single-rate token
+        bucket scheduler. This value represents the rate at which
+        tokens are added to the bucket. It is expressed as a
+        percentage of the total bandwidth allocated to the
+        context in which the scheduler is referenced.";
+    }
+
+    leaf cir-pct-remaining {
+      type oc-types:percentage;
+      description
+        "Committed information rate for the single-rate token
+        bucket scheduler. This value represents the rate at which
+        tokens are added to the bucket. It is expressed as a
+        percentage of the unallocated bandwidth available in the
+        context in which the scheduled is referenced.";
+    }
+
+    leaf bc {
+      type uint32;
+      units bytes;
+      description
+        "Committed burst size for the single-rate token bucket
+        scheduler.  This value represents the depth of the token
+        bucket.";
+    }
+
+    leaf queuing-behavior {
+      type oc-qos-types:queue-behavior;
+      description
+        "The type of scheduler that is being configured.";
+    }
+
+    // TODO(robjs): Add when statements to these parameters when the
+    // types of scheduler are agreed through review.
+    leaf max-queue-depth-bytes {
+      type uint32;
+      units bytes;
+      description
+        "When the scheduler is specified to be a shaper - the
+        maximum depth of the queue in bytes is the value
+        specified by this leaf.";
+    }
+
+    leaf max-queue-depth-packets {
+      type uint32;
+      units packets;
+      description
+        "When the scheduler is specified to be a shaper - the
+        maximum depth of the queue in packets is the value
+        specified by this leaf.";
+    }
+
+    leaf max-queue-depth-percent {
+      type oc-types:percentage;
+      description
+        "The queue depth specified as a percentage of the total
+        available buffer that is avaialble.";
+    }
+  }
+
+  grouping qos-scheduler-1r2c-top {
+    description
+      "Top-level grouping for 1 rate, 2 color shapers";
+
+    container one-rate-two-color {
+      description
+        "Top-level container for data related to a 1 rate, 2 color
+        shaper.";
+
+      container config {
+        description
+          "Configuration data for 1 rate, 2 color shapers";
+
+        uses qos-scheduler-1r2c-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for 1 rate, 2 color shapers";
+
+        uses qos-scheduler-1r2c-config;
+      }
+
+      container conform-action {
+        description
+          "Action to be applied to packets that are scheduled within the
+          CIR of the one-rate, two-colour scheduler. Packets that receive
+          a token from the in-CIR bucket are said to be conforming and
+          have all of the specified actions applied.";
+
+        container config {
+          description
+            "Configuration parameters relating to conforming packets for the
+            1r2c scheduler.";
+
+          uses qos-common-remark-actions-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to conforming packets
+            for the 1r2c scheduler.";
+
+          uses qos-common-remark-actions-config;
+        }
+      }
+
+      container exceed-action {
+        description
+          "Action to be applied to packets that are scheduled above the CIR
+          of the one-rate, two-colour shaper. Packets that do not receive a
+          token from the in-CIR bucket are said to be exceeding, and have
+          all of the specified actions applied.";
+
+          container config {
+            description
+              "Configuration parameters relating to exceeding packets for
+              the 1r2c scheduler.";
+
+            uses qos-common-remark-actions-config;
+            uses qos-common-scheduler-actions-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to exceeding
+              packets for the 1r2c scheduler.";
+
+            uses qos-common-remark-actions-config;
+            uses qos-common-scheduler-actions-config;
+          }
+      }
+    }
+  }
+
+  grouping qos-scheduler-2r3c-config {
+    description
+      "Configuration data for 2 rate, 3 color policer";
+
+    leaf cir {
+      type uint64;
+      units bps;
+      description
+        "Committed information rate for the dual-rate token
+        bucket policer.  This value represents the rate at which
+        tokens are added to the primary bucket.";
+    }
+
+    leaf cir-pct {
+      type oc-types:percentage;
+      description
+        "Committed information rate for the dual-rate token bucket
+        policer. This value represents the rate at which tokens
+        are added to the primary bucket. It is expressed as a
+        percentage of the total bandwidth available within the
+        context the scheduler is instantiated.";
+    }
+
+    leaf cir-pct-remaining {
+      type oc-types:percentage;
+      description
+        "Committed information rate for the dual-rate token
+        bucket policer. This value represents the rate at which
+        tokens are added to the primary bucket. It is expressed
+        as a percentage of the remaining bandwidth within the
+        context the scheduler is instantiated.";
+    }
+
+    leaf pir {
+      type uint64;
+      units bps;
+      description
+        "Peak information rate for the dual-rate token bucket
+        policer.  This value represents the rate at which tokens
+        are added to the secondary bucket.";
+    }
+
+    leaf pir-pct {
+      type oc-types:percentage;
+      description
+        "Peak information rate for the dual-rate token bucket
+        policer. This value represents the rate at which tokens
+        are added to the secondary bucket. The value is expressed
+        as a percentage of the total bandwidth available in the
+        context in which the scheduler is instantiated.";
+    }
+
+    leaf pir-pct-remaining {
+      type oc-types:percentage;
+      description
+        "Peak information rate for the dual-rate token
+        bucket policer. This value represents the rate at which
+        tokens are added to the secondary bucket. It is expressed
+        as a percentage of the remaining bandwidth within the
+        context the scheduler is instantiated.";
+    }
+
+    leaf bc {
+      type uint32;
+      units bytes;
+      description
+        "Committed burst size for the dual-rate token bucket
+        policer.  This value represents the depth of the token
+        bucket.";
+    }
+
+    leaf be {
+      type uint32;
+      units bytes;
+      description
+        "Excess burst size for the dual-rate token bucket policer.
+        This value represents the depth of the secondary bucket.";
+    }
+  }
+
+  grouping qos-scheduler-2r3c-top {
+    description
+      "Top-level grouping for 2 rate, 3 color policers..";
+
+    container two-rate-three-color {
+      description
+        "Top-level container for data for a 2 rate, 3 color policer.";
+
+      container config {
+        description
+          "Configuration data for 2 rate, 3 color policers.";
+
+        uses qos-scheduler-2r3c-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for 2 rate, 3 color policers.";
+
+        uses qos-scheduler-2r3c-config;
+      }
+
+      container conform-action {
+        description
+          "Action to be applied to the packets that are scheduled
+          within the CIR of the policer. All packets that receive
+          a token from this bucket have all actions specified
+          applied to them";
+
+          container config {
+            description
+              "Configuration parameters for the conform action of a
+              2r3c policer.";
+            uses qos-common-remark-actions-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to the conform
+              action of a 2r3c policer.";
+            uses qos-common-remark-actions-config;
+          }
+      }
+
+      container exceed-action {
+        description
+          "Action to be applied to the packets that are scheduled
+          within the PIR of the policer. Packets that receive a
+          token from within the PIR allocation have all the
+          specified actions applied to them";
+
+        container config {
+          description
+            "Configuration parameters relating to the action
+            applied to exceeding packets.";
+
+          uses qos-common-remark-actions-config;
+          uses qos-common-scheduler-actions-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the action
+            applied to exceeding packets.";
+
+          uses qos-common-remark-actions-config;
+          uses qos-common-scheduler-actions-config;
+        }
+      }
+
+      container violate-action {
+        description
+          "Action to be applied to the packets that are scheduled
+          above the PIR of the policer. Packets that do not receive
+          a token from either bucket have all specified actions
+          applied to them.";
+
+        container config {
+          description
+            "Configuration parameters relating to the action
+            applied to violating packets.";
+
+          uses qos-common-remark-actions-config;
+          uses qos-common-scheduler-actions-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the action
+            applied to violating packets.";
+
+          uses qos-common-remark-actions-config;
+          uses qos-common-scheduler-actions-config;
+        }
+      }
+    }
+  }
+
+  grouping qos-scheduler-config {
+    description
+      "Configuration data for QoS schedulers";
+
+    leaf sequence {
+      type uint32;
+      description
+        "Sequence number for the scheduler within the scheduler
+        policy. Schedulers are processed from lowest sequence
+        to highest.";
+    }
+
+    leaf type {
+      type identityref {
+        base oc-qos-types:QOS_SCHEDULER_TYPE;
+      }
+      description
+        "Sets the type of scheduler, i.e. the scheduling algorithm
+        used to serve inputs.";
+    }
+
+    leaf priority {
+      type enumeration {
+        enum STRICT {
+          description
+            "This scheduler term is considered as a strict priority
+            term - such that packets that arrive in the queue are
+            immediately serviced.";
+        }
+      }
+      description
+        "Priority of the scheduler within the scheduler policy.";
+    }
+  }
+
+  grouping qos-scheduler-state {
+    description
+      "Operational state data for QoS schedulers";
+  }
+
+  grouping qos-scheduler-policy-config {
+    description
+      "Configuration parameters relating to a scheduler policy";
+
+    leaf name {
+      type string;
+      description
+        "Name for the scheduler policy.";
+    }
+  }
+
+  grouping qos-scheduler-top {
+    description
+      "Top-level grouping for the set of defined QoS schedulers";
+
+    container scheduler-policies {
+      description
+        "Enclosing container for the list of configured scheduler policies.";
+
+      list scheduler-policy {
+        key "name";
+
+        description
+          "List of scheduler policies. A scheduler policy is a set of schedulers
+          that are to be applied together. Each scheduler within a scheduler
+          policy takes an input, and outputs it according to a scheduling
+          discipline that is specified within it. The schedulers consume
+          resources according to the specification that is provided - which
+          may be absolute resource limits, or relative.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name of the scheduler policy";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to a scheduler policy.";
+          uses qos-scheduler-policy-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to a scheduler policy.";
+          uses qos-scheduler-policy-config;
+        }
+
+        container schedulers {
+          description
+            "Schedulers within the scheduler policy.";
+
+          list scheduler {
+            key "sequence";
+            description
+              "List of defined QoS traffic schedulers.";
+
+            leaf sequence {
+              type leafref {
+                path "../config/sequence";
+              }
+              description
+                "Reference to the list key";
+            }
+
+            container config {
+              description
+                "Configuration data for QoS schedulers";
+
+              uses qos-scheduler-config;
+            }
+
+            container state {
+              config false;
+
+              description
+                "Operational state data for QoS schedulers";
+
+              uses qos-scheduler-config;
+              uses qos-scheduler-state;
+            }
+
+            uses qos-scheduler-inputs-top;
+            uses qos-scheduler-output-top;
+            uses qos-scheduler-1r2c-top;
+            uses qos-scheduler-2r3c-top;
+          }
+        }
+      }
+    }
+  }
+
+  grouping qos-common-remark-actions {
+    description
+      "Common grouping specifying actions related to re-marking
+      packets";
+
+    container config {
+      description
+        "Configuration parameters relating to remarking packets.";
+      uses qos-common-remark-actions-config;
+    }
+
+    container state {
+      config false;
+      description
+        "Operational state parameters relating to remarking packets.";
+      uses qos-common-remark-actions-config;
+    }
+  }
+
+  grouping qos-common-scheduler-actions-config {
+    description
+      "Configuration data for common actions of a QoS scheduler.";
+
+    leaf drop {
+      type boolean;
+      description
+        "If set to true, packets within this context are dropped.";
+    }
+  }
+
+  grouping qos-common-remark-actions-config {
+    description
+      "Configuration data for QoS re-marking actions";
+
+    leaf set-dscp {
+      type uint8;
+      description
+        "Sets the 6-bit DSCP (differentiated services code point)
+        value in the IP packet header.";
+      reference
+        "RFC 2474 - Definition of the Differentiated Services Field
+        (DS Field) in the IPv4 and IPv6 Headers";
+    }
+
+    leaf set-dot1p {
+      type uint8;
+      description
+        "Sets the 3-bit class-of-service value in the
+        Ethernet packet header for 802.1Q VLAN-tagged packets,
+        also known as PCP (priority code point).";
+      reference
+        "IEEE 802.1Q-2014 - IEEE Standard for Local and metropolitan
+        area networks--Bridges and Bridged Networks";
+    }
+
+    leaf set-mpls-tc {
+      type uint8;
+      description
+        "Sets the 3-bit traffic class value (also referred to as EXP
+        or CoS) in MPLS packets.";
+      reference
+        "RFC 3270 - Multi-Protocol Label Switching (MPLS) Support of
+        Differentiated Services";
+    }
+  }
+}

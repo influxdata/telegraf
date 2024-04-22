@@ -1,0 +1,1421 @@
+module openconfig-platform-pipeline-counters {
+
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/platform-pipeline-counters";
+  prefix "oc-ppc";
+
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-platform { prefix oc-platform; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Provide fine grain, per-Integrated Circuit (IC), telemetry data streams
+    that will identify the health, any packet drops, and any errors on the IC.
+    With this additional telemetry, the health of the IC, packet drops and
+    errors, can be explicitly monitored not only on a specific router, but also
+    on a specific IC on a specific router. The IC is divided into 5 platform
+    independent sub-blocks.
+      1. IC Interface Subsystem
+      2. Queueing Subsystem
+      3. Lookup Subsystem
+      4. Host Interface
+      5. Fabric Interface.
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    |                                                                   |
+    | +---------------------------------------------------------------+ |
+    | | Integrated +---------------------------------------+          | |
+    | | Circuit    |     Host Interface                    |          | |
+    | |            +---------------------------------------+          | |
+    | |               +------------+                                  | |
+    | | +-----------+ |  Lookup    |                  +-------------+ | |
+    | | | IC        | |  Subsystem |                  |  Fabric     | | |
+    | | | Interface | |            |                  | Interface   | | |
+    | | | Subsystem | +------------+                  |             | | |
+    | | +-----------+                +-------------+  +-------------+ | |
+    | |                              | Queueing    |                  | |
+    | |                              | Subsystem   |                  | |
+    | |                              +-------------+                  | |
+    | |                                                               | |
+    | +---------------------------------------------------------------+ |
+    |                                                                   |
+    +-------------------------------------------------------------------+
+    Each IC implementation inside forwarding engines may have a different set of
+    counters. Some counters have different names but the same
+    functionality and can be grouped together. Most counters are different
+    between IC families and will have to be aggregated as generic counters. The
+    aggregation could mean either a specific IC counter needs to be mapped to
+    one of the values specified in this model, or it may require multiple IC
+    counters aggregated to produce one of the values in this model.
+    The following classes of counters will generalize the types of
+    statistics that are provided from each of the above 5 blocks.
+      A. Packet Counters
+      B. Drop Counters
+      C. Error Counters
+    The advantage of grouping all the packet counters for all 5 blocks,
+    all drop counters from all 5 blocks, and all error counters from all
+    5 blocks, is to have the abililty to receive all drop counters from
+    all 5 blocks, for example, with one request.";
+
+  oc-ext:openconfig-version "0.5.1";
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  revision "2023-10-08" {
+    description
+      "More detail description of pipe-line aggregated drop counters";
+    reference "0.5.1";
+  }
+
+  revision "2023-09-26" {
+    description
+      "Add no-route aggregate drop counter.";
+    reference "0.5.0";
+  }
+
+  revision "2023-02-03" {
+    description
+      "Add vendor-specific control-plane traffic queue counters";
+    reference "0.4.0";
+  }
+
+  revision "2022-12-01" {
+    description
+      "Add uRPF aggregate drop counter.";
+    reference "0.3.1";
+  }
+
+  revision "2022-11-09" {
+    description
+      "Add container for vendor specific drop counters.";
+    reference "0.3.0";
+  }
+
+  revision "2022-01-19" {
+    description
+      "Fixed typo for aggregate field.";
+    reference "0.2.1";
+  }
+
+  revision "2021-10-16" {
+    description
+      "Update pipeline error counters to allow for multiple errors
+      per block.";
+    reference "0.2.0";
+  }
+
+  revision "2020-07-31" {
+    description
+      "Initial revision of platform pipeline counters.";
+    reference "0.1.0";
+  }
+
+  grouping platform-pipeline-top {
+    description
+      "Top-level structural grouping for platform pipeline
+      counters.";
+
+    container pipeline-counters {
+      config false;
+      description
+        "Top-level container for the packet, drop, and error counters for the
+        five NPU sub-blocks.";
+      container packet {
+        description
+          "IC packet counters for all five NPU sub-blocks.";
+        container interface-block {
+          description
+            "The IC interface subsystem connects the IC to the external PHY or
+            MAC.";
+
+          // We do not need a 'config' container here since there is no configurable state for a particular
+          // entity.
+
+          container state {
+            description
+              "State and counters corresponding to the interface subsystem of
+              the IC.";
+
+            uses pipeline-counters-packet-interface-block-state;
+          }
+        }
+
+        container lookup-block {
+          description
+            "The IC lookup subsystem perform the next hop lookup of the packet
+            and other forwarding features such as firewall filters.";
+
+          container state {
+            description
+              "State and counters corresponding to the lookup subsystem of the
+              IC.";
+
+            uses pipeline-counters-packet-lookup-block-state;
+          }
+        }
+
+        container queueing-block {
+          description
+            "The IC queueing subsystem buffers the packet while processing it
+            and queues the packet for delivery to the next stage";
+
+          container state {
+            description
+              "State and counters corresponding to the queueing subsystem of
+              the IC.";
+
+            uses pipeline-counters-packet-queueing-block-state;
+          }
+        }
+
+        container fabric-block {
+          description
+            "The IC fabric block subsystem connects the IC to the external
+            systems fabric subsystem";
+
+          container state {
+            description
+              "State and counters corresponding to the fabric subsystem of the
+              IC.";
+
+            uses pipeline-counters-packet-fabric-block-state;
+          }
+        }
+
+        container host-interface-block {
+          description
+            "The IC host interface block subsystem connects the IC to the
+            external systems host or control subsystem";
+
+          container state {
+            description
+              "State and counters corresponding to the host interface subsystem
+              of the IC.";
+
+            uses pipeline-counters-packet-host-interface-block-state;
+          }
+        }
+      }
+
+      container drop {
+        description
+          "IC drop counters for all five NPU sub-blocks.";
+        container state {
+          description
+            "State container for IC drop counters";
+
+          uses pipeline-drop-packet-state;
+        }
+
+
+        container interface-block {
+          description
+            "The IC interface subsystem connects the IC to the external PHY or
+            MAC.";
+
+          // We do not need a 'config' container here since there is no configurable state for a particular
+          // entity.
+
+          container state {
+            description
+              "Drop counters corresponding to the interface subsystem of the
+              IC.";
+
+            uses pipeline-drop-packet-interface-block-state;
+          }
+        }
+
+        container lookup-block {
+          description
+            "The IC lookup subsystem perform the next hop lookup of the packet
+            and other forwarding features such as firewall filters.";
+
+          container state {
+            description
+              "Drop counters corresponding to the lookup subsystem of the IC.";
+
+            uses pipeline-drop-packet-lookup-block-state;
+          }
+        }
+
+        container queueing-block {
+          description
+            "The IC queueing subsystem buffers the packet while processing it
+            and queues the packet for delivery to the next stage";
+
+          container state {
+            description
+              "Drop counters corresponding to the queueing subsystem of the
+              IC.";
+
+            uses pipeline-drop-packet-queueing-block-state;
+          }
+        }
+
+        container fabric-block {
+          description
+            "The IC fabric block subsystem connects the IC to the external
+            systems fabric subsystem";
+
+          container state {
+            description
+              "Drop counters corresponding to the fabric subsystem of the IC.";
+
+            uses pipeline-drop-packet-fabric-block-state;
+          }
+        }
+
+        container host-interface-block {
+          description
+            "The IC host interface block subsystem connects the IC to the
+            external systems host or control subsystem";
+
+          container state {
+            description
+              "Drop counters corresponding to the host interface subsystem of
+              the IC.";
+
+            uses pipeline-drop-packet-host-interface-block-state;
+          }
+        }
+
+        uses pipeline-vendor-drop-packets;
+      }
+
+      container errors {
+        description
+          "IC errors for all five NPU sub-blocks.";
+        container interface-block {
+          description
+            "The IC interface subsystem connects the IC to the external PHY or
+            MAC.";
+
+          list interface-block-error {
+            key "name";
+            description
+              "An individual error within the interface block. Each error counter
+              is uniquely identified by the name of the error.";
+
+            leaf name {
+              type leafref {
+                path "../state/name";
+              }
+              description
+                "Reference to the name of the error being described.";
+            }
+
+            container state {
+              description
+                "Errors corresponding to the interface subsystem of the IC.";
+
+              uses pipeline-errors-packet-interface-block-state;
+            }
+          }
+        }
+
+        container lookup-block {
+          description
+            "The IC lookup subsystem perform the next hop lookup of the packet
+            and other forwarding features such as firewall filters.";
+
+          list lookup-block-error {
+            key "name";
+            description
+              "An individual error within the lookup block. Each error counter
+              is uniquely identified by the name of the error.";
+
+            leaf name {
+              type leafref {
+                path "../state/name";
+              }
+              description
+                "Reference to the name of the error being described.";
+            }
+
+            container state {
+              description
+                "Errors corresponding to the lookup subsystem of the IC.";
+
+              uses pipeline-errors-packet-lookup-block-state;
+            }
+          }
+        }
+
+        container queueing-block {
+          description
+            "The IC queueing subsystem buffers the packet while processing it
+            and queues the packet for delivery to the next stage";
+
+          list queueing-block-error {
+            key "name";
+            description
+              "An individual error within the queueing block. Each error counter
+              is uniquely identified by the name of the error.";
+
+            leaf name {
+              type leafref {
+                path "../state/name";
+              }
+              description
+                "Reference to the name of the error being described.";
+            }
+
+            container state {
+              description
+                "Errors corresponding to the queueing subsystem of the IC.";
+
+              uses pipeline-errors-packet-queueing-block-state;
+            }
+          }
+        }
+
+        container fabric-block {
+          description
+            "The IC fabric block subsystem connects the IC to the external
+            systems fabric subsystem";
+
+          list fabric-block-error {
+            key "name";
+            description
+              "An individual error within the fabric block. Each error counter
+              is uniquely identified by the name of the error.";
+
+            leaf name {
+              type leafref {
+                path "../state/name";
+              }
+              description
+                "Reference to the name of the error being described.";
+            }
+
+            container state {
+              description
+                "Errors corresponding to the fabric subsystem of the IC.";
+
+              uses pipeline-errors-packet-fabric-block-state;
+            }
+          }
+        }
+
+        container host-interface-block {
+          description
+            "The IC host interface block subsystem connects the IC to the
+            external systems host or control subsystem";
+
+          list host-interface-error {
+            key "name";
+            description
+              "An individual error within the host interface block. Each error
+              counter is uniquely identified by the name of the error.";
+
+            leaf name {
+              type leafref {
+                path "../state/name";
+              }
+              description
+                "Reference to the name of the error being described.";
+            }
+
+            container state {
+              description
+                "Errors corresponding to the host interface subsystem of
+                the IC.";
+
+              uses pipeline-errors-packet-host-interface-block-state;
+            }
+          }
+        }
+      }
+
+      uses pipeline-control-plane-top;
+    }
+  }
+
+  grouping pipeline-packets-common {
+    description
+      "A common set of packet counters that apply to multiple packet sections.";
+
+    leaf in-packets {
+      type oc-yang:counter64;
+      description
+        "Incoming packets towards the integrated-circuit interface
+        subsystem block from the line interfaces or fabric.";
+    }
+
+    leaf out-packets {
+      type oc-yang:counter64;
+      description
+        "Outgoing packets towards the line interfaces or fabric from the
+        integrated-circuit interface subsystem block.";
+    }
+
+    leaf in-bytes {
+      type oc-yang:counter64;
+      description
+        "Incoming bytes towards the integrated-circuit interface
+        subsystem block from the line interfaces or fabric.";
+    }
+
+    leaf out-bytes {
+      type oc-yang:counter64;
+      description
+        "Outgoing bytes towards the line interfaces or fabric from the
+        integrated-circuit interface subsystem block.";
+    }
+  }
+
+  grouping pipeline-counters-common-high-low-packets {
+    description
+      "A common set of high and low priority packet counters that apply to
+      multiple packet sections.";
+
+    leaf in-high-priority-packets {
+      type oc-yang:counter64;
+      description
+        "Incoming high priority packets towards the integrated-circuit
+        fabric subsystem block from the previous NPU sub block.";
+    }
+
+    leaf out-high-priority-packets {
+      type oc-yang:counter64;
+      description
+        "Outgoing high priority packets towards the fabric from the
+        integrated-circuit fabric subsystem block.";
+    }
+
+    leaf in-low-priority-packets {
+      type oc-yang:counter64;
+      description
+        "Incoming low priority packets towards the integrated-circuit fabric
+        subsystem block from the previous NPU sub block.";
+    }
+
+    leaf out-low-priority-packets {
+      type oc-yang:counter64;
+      description
+        "Outgoing low priority packets towards the fabric from the
+        integrated-circuit fabric subsystem block.";
+    }
+
+  }
+
+  grouping pipeline-counters-packet-interface-block-state {
+    description
+      "Each counter will aggregate incoming and outgoing packets and bytes
+      that connect the IC to the external MAC or PHY.";
+
+    uses pipeline-packets-common;
+
+  }
+
+  grouping pipeline-counters-packet-lookup-block-state {
+    description
+      "The IC lookup subsystem counters include total packets/bytes in/out of
+      the lookup subsystem and performance metrics for key functionality of this
+      subsystem such as lookup memory usage, nexthop memory usage, ACL,
+      and firewall usage";
+
+    leaf lookup-utilization {
+      type oc-types:percentage;
+      description
+        "The integrated-circuit lookup subsystem block utilization percentage.";
+    }
+
+    uses pipeline-packets-common;
+
+    leaf lookup-memory {
+      type uint64;
+      units bytes;
+      description
+        "The total amount of memory available in the lookup subsystem.";
+    }
+
+    leaf lookup-memory-used {
+      type uint64;
+      units bytes;
+      description
+        "The amount of memory used in the lookup subsystem.";
+    }
+
+    leaf nexthop-memory {
+      type uint64;
+      units bytes;
+      description
+        "The total amount of nexthop memory available in the lookup subsystem.";
+    }
+
+    leaf nexthop-memory-used {
+      type uint64;
+      units bytes;
+      description
+        "The amount of nexthops memory used in the lookup subsystem.";
+    }
+
+    leaf acl-memory-total-entries {
+      type uint64;
+      description
+        "Total firewall or ACL memory counter measured in entries.";
+    }
+
+    leaf acl-memory-used-entries {
+      type uint64;
+      description
+        "Amount of used firewall or ACL memory counter measured in entries.
+        The number of used entries must include the entries
+        that are 'allocated but free' if the memory reaping algorithm makes
+        these entries practically unusable.";
+    }
+
+    leaf acl-memory-total-bytes {
+      type uint64;
+      units bytes;
+      description
+        "Total firewall or ACL memory counter measured in bytes.";
+    }
+
+    leaf acl-memory-used-bytes {
+      type uint64;
+      units bytes;
+      description
+        "Amount of used firewall or ACL memory counter measured in bytes.
+        The number of used bytes must include the bytes
+        that are 'allocated but free' if the memory reaping algorithm makes
+        these bytes practically unusable";
+    }
+
+    leaf fragment-total-pkts {
+      type oc-yang:counter64;
+      description
+        "Total number of fragments generated by the CPU.";
+    }
+
+  }
+
+  grouping pipeline-counters-packet-queueing-block-state {
+    description
+      "The IC queueing subsystem counters include packets/bytes in/out of the
+      queueing subsystem and performance metrics for key functionality of this
+      subsystem such as memory used and loopback counts.";
+
+    uses pipeline-packets-common;
+
+    leaf queue-memory {
+      type uint64;
+      units bytes;
+      description
+        "The total amount of memory available in the queue subsystem.";
+    }
+
+    leaf queue-memory-used {
+      type uint64;
+      units bytes;
+      description
+        "The amount of memory used in the queue subsystem.";
+    }
+
+    leaf loopback-packets {
+      type oc-yang:counter64;
+      description
+        "The number of packets in the loopback or re-circulate subsystem.";
+    }
+
+    leaf loopback-bytes {
+      type uint64;
+      units bytes;
+      description
+        "The number of bytes in the loopback or re-circulate subsystem.";
+    }
+
+  }
+
+  grouping pipeline-counters-packet-fabric-block-state {
+    description
+      "The IC fabric subsystem counters include packets/cells in/out of the
+      fabric subsystem and performance metrics for key functionality of this
+      subsystem such as high and low priority packet counts.";
+
+    leaf in-cells {
+      type oc-yang:counter64;
+      description
+        "Incoming cells towards the integrated-circuit fabric
+        subsystem block from the previous NPU sub block.";
+    }
+
+    leaf out-cells {
+      type oc-yang:counter64;
+      description
+        "Outgoing cells towards the fabric from the
+        integrated-circuit fabric subsystem block.";
+    }
+
+    uses pipeline-packets-common;
+
+    leaf in-high-priority-cells {
+      type oc-yang:counter64;
+      description
+        "Incoming high priority cells towards the integrated-circuit fabric
+        subsystem block from the previous NPU sub block.";
+    }
+
+    leaf out-high-priority-cells {
+      type oc-yang:counter64;
+      description
+        "Outgoing high priority cells towards the fabric from the
+        integrated-circuit fabric subsystem block.";
+    }
+
+    leaf in-low-priority-cells {
+      type oc-yang:counter64;
+      description
+        "Incoming low priority cells towards the integrated-circuit fabric
+        subsystem block from the previous NPU sub block.";
+    }
+
+    leaf out-low-priority-cells {
+      type oc-yang:counter64;
+      description
+        "Outgoing low priority cells towards the fabric from the
+        integrated-circuit fabric subsystem block.";
+    }
+
+    uses pipeline-counters-common-high-low-packets;
+
+  }
+
+  grouping pipeline-counters-packet-host-interface-block-state {
+    description
+      "The IC host interface counters include packets/bytes in/out of the
+      host interface subsystem and performance metrics for key functionality
+      of this subsystem such as fragmented packet counts and hi/low priority
+      packet counts";
+
+    uses pipeline-packets-common;
+
+    leaf fragment-punt-pkts{
+      type oc-yang:counter64;
+      description
+        "The packets that were successfully punted to CPU due to egress MTU
+        exceeded.";
+    }
+
+    uses pipeline-counters-common-high-low-packets;
+
+  }
+
+  grouping pipeline-drops-common {
+    description
+      "A common set of drop counters that apply to multiple drop sections.";
+
+    leaf oversubscription {
+      type oc-yang:counter64;
+      description
+        "Number of packets dropped due to oversubscription of the
+        integrated-circuit subsystem block.";
+    }
+  }
+
+  grouping pipeline-drops-common-high-low {
+    description
+      "A common set of drop counters for high and low priority.";
+
+    leaf in-high-priority {
+      type oc-yang:counter64;
+      description
+        "Incoming high priority drops towards this integrated-circuit
+        subsystem block from the previous NPU sub-block or interface.";
+    }
+
+    leaf out-high-priority {
+      type oc-yang:counter64;
+      description
+        "Outgoing high priority drops towards the fabric/interface from this
+        integrated-circuit subsystem block.";
+    }
+
+    leaf in-low-priority {
+      type oc-yang:counter64;
+      description
+        "Incoming low priority drops towards this integrated-circuit
+        subsystem block from the previous NPU sub-block or interface.";
+    }
+
+    leaf out-low-priority {
+      type oc-yang:counter64;
+      description
+        "Outgoing low priority drops towards the fabric/interface from this
+        integrated-circuit subsystem block.";
+    }
+  }
+
+  grouping pipeline-drop-packet-interface-block-state {
+    description
+      "Each drop counter will aggregate incoming and outgoing packets, and
+      oversubscription drops that connect the IC to the external MAC or PHY.";
+
+    uses pipeline-drops-common;
+
+    leaf in-drops {
+      type oc-yang:counter64;
+      description
+        "Incoming drops towards the integrated-circuit interface
+        subsystem block from the interfaces due to any reason.";
+    }
+
+    leaf out-drops {
+      type oc-yang:counter64;
+      description
+        "Outgoing drops towards the interfaces from the
+        integrated-circuit interface subsystem block due to any reason.";
+    }
+
+  }
+
+  grouping pipeline-drop-packet-lookup-block-state {
+    description
+      "The IC lookup subsystem drop counters track key functionality of this
+      subsystem such as Oversubscription, no-route, no-label, no-NH, invalid-
+      packets, forwarding-policy, incorrect-software, rate-limit, fragments,
+      and firewall drops";
+
+    uses pipeline-drops-common;
+
+    leaf no-route {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to no FIB entry for this ipv4 or ipv6 lookup.";
+    }
+
+    leaf no-label {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to no FIB entry for this MPLS label.";
+    }
+
+    leaf no-nexthop {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to no nexthop information - either the nexthop is
+        not programmed, or there is an invalid nexthop, or there is no ARP
+        information so the nexthop is in invalid state.";
+    }
+
+    leaf invalid-packet {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to invalid packet format for ipv4, ipv6, or MPLS.";
+    }
+
+    leaf forwarding-policy {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to either a filter applied as part of a forwarding
+        policy or dropped due to a policy-based-routing policy lookup.";
+    }
+
+    leaf incorrect-software-state {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to any incorrect or invalid software state of the
+        forwarding structures during lookup.";
+    }
+
+    leaf rate-limit {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to rate limiters - either user configured rate
+        limiters or system rate limiters in the forwarding path.";
+    }
+
+    leaf fragment-total-drops {
+      type oc-yang:counter64;
+      description
+        "Total number of packets dropped that could not be fragmented by NPU
+        due to DF bit.";
+    }
+
+    leaf lookup-aggregate {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to aggregate lookup drop counters - this counter
+        is sometimes referred to as Normal Discards or
+        ENQ_DISCARDED_PACKET_COUNTER.";
+    }
+
+    leaf acl-drops {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to firewall or acl terms.";
+    }
+
+  }
+
+  grouping pipeline-drop-packet-queueing-block-state {
+    description
+      "The IC queueing subsystem drop counters track key functionality of this
+      subsystem such as oversubscription, memory-limit, incorrect-state, and
+      loopback drops.";
+
+    uses pipeline-drops-common;
+
+    leaf memory-limit {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to running out of the queue memory.";
+    }
+
+    leaf incorrect-state {
+      type oc-yang:counter64;
+      description
+        "Packets dropped due to hardware of software incorrect state of VOQs,
+        or fabric queues, or interface queues.";
+    }
+
+    leaf lookup-queue {
+      type oc-yang:counter64;
+      description
+        "Packets dropped in either the lookup or recirculation path.";
+    }
+
+  }
+
+  grouping pipeline-drop-packet-fabric-block-state {
+    description
+      "The IC fabric subsystem drop counters track key functionality of this
+      subsystem such as oversubscription, lost-packets, high and low priority
+      packet drops.";
+
+    uses pipeline-drops-common;
+
+    leaf lost-packets {
+      type oc-yang:counter64;
+      description
+        "Fabric drops due to re-ordering, or due to packets arriving late, or
+        due to some loss in the fabric.";
+    }
+
+    uses pipeline-drops-common-high-low;
+
+    leaf fabric-aggregate {
+      type oc-yang:counter64;
+      description
+        "Aggregate of fabric-in and fabric-out drops.";
+    }
+
+  }
+
+  grouping pipeline-drop-packet-host-interface-block-state {
+    description
+      "The IC host interface drop counters track key funcitonality of this
+      subsystem such as oversubscription, rate-limit, fragment, and
+      hi/low priority drop counts";
+
+    uses pipeline-drops-common;
+
+    leaf rate-limit {
+      type oc-yang:counter64;
+      description
+        "Packet drops due to the rate limit in the integrated-circuit host
+        subsystem block.";
+    }
+
+    uses pipeline-drops-common-high-low;
+
+    leaf fragment-punt {
+      type oc-yang:counter64;
+      description
+        "The packets that were failed to punt to CPU due to policing rate.";
+    }
+
+    leaf host-aggregate {
+      type oc-yang:counter64;
+      description
+        "Aggregate of all the drops in the host path.";
+    }
+
+  }
+
+  grouping pipeline-errors-common {
+    description
+      "A common set of error counters that apply to multiple error sections.";
+
+    leaf name {
+      type string;
+      description
+        "Name of the interrupt, hardware error, or software error in the NPU.";
+    }
+
+    leaf count {
+      type uint64;
+      description
+        "Total count of errors of this type.";
+    }
+
+    leaf threshold {
+      type uint64;
+      description
+        "Number of errors before a recovery action is automatically
+        taken by the system.";
+    }
+
+    leaf-list action {
+      type enumeration {
+        enum LOG {
+          description
+            "Log a descriptive message.";
+        }
+        enum LINECARD_REBOOT {
+          description
+            "The line card is brought offline and then back online.";
+        }
+        enum LINECARD_OFFLINE {
+          description
+            "The line card is brought offline.";
+        }
+        enum NPU_RESET {
+          description
+            "The NPU is brought offline and then back online.";
+        }
+        enum NPU_OFFLINE {
+          description
+            "The NPU is brought offline.";
+        }
+        enum GET_DIAGNOSTIC_INFO {
+          description
+            "Diagnostic data is gathered at the time of the problem.";
+        }
+        enum ALARM {
+          description
+            "An Alarm is raised";
+        }
+      }
+      description
+        "Error actions that are taken by the system - log, linecard reboot,
+        linecard offline, NPU reset, NPU offline, gather diagnostic data,
+        raise an alarm.";
+    }
+
+    leaf active {
+      type boolean;
+      default false;
+      description
+        "The error is currently in an active state. When the system detects
+        that the specified threshold is exceeded, this value should be set to
+        true.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf level {
+      type enumeration {
+        enum FATAL {
+          description
+            "The Fatal error causes total packet loss";
+        }
+        enum MAJOR {
+          description
+            "The Major error causes persistent packet loss";
+        }
+        enum MINOR {
+          description
+            "The Minor error is an indication of some past problem, but now is
+            corrected";
+        }
+        enum INFORMATIONAL {
+          description
+            "Some problem happened that is not packet loss affecting.";
+        }
+      }
+      description
+        "The severity of the error that is being recorded by the system. This
+        value can be used by a consumer to determine the action when this error
+        is recorded.";
+    }
+  }
+
+  grouping pipeline-errors-packet-interface-block-state {
+    description
+      "Error counter will aggregate the errors that connect the IC to the
+      external MAC or PHY. Each error should contain the name, count,
+      last-occurrence, threshold, action, and severity level.";
+
+    uses pipeline-errors-common;
+
+  }
+
+  grouping pipeline-errors-packet-lookup-block-state {
+    description
+      "The IC lookup subsystem error counters include the errors encountered by
+      the lookup subsystem. Each error should contain the name, count,
+      last-occurrence, threshold, action, and severity level.";
+
+    uses pipeline-errors-common;
+
+  }
+
+  grouping pipeline-errors-packet-queueing-block-state {
+    description
+      "The IC queueing subsystem error counters include the errors encountered
+      by the queueing subsystem. Each error should contain the name, count,
+      last-occurrence, threshold, action, and severity level.";
+
+    uses pipeline-errors-common;
+
+  }
+
+  grouping pipeline-errors-packet-fabric-block-state {
+    description
+      "The IC fabric subsystem error counters include the errors encountered by
+      the fabric subsystem. Each error should contain the name, count,
+      last-occurrence, threshold, action, and severity level.";
+
+    uses pipeline-errors-common;
+
+  }
+
+  grouping pipeline-errors-packet-host-interface-block-state {
+    description
+      "The IC host interface error counters include the errors encountered by
+      the host interface subsystem. Each error should contain the name, count,
+      last-occurrence, threshold, action, and severity level.";
+
+    uses pipeline-errors-common;
+
+  }
+
+  grouping pipeline-drop-packet-state {
+    description
+      "Grouping of pipeline drop packet state.";
+
+    leaf adverse-aggregate {
+      type oc-yang:counter64;
+      description
+        "This captures the aggregation of all counters where the switch is
+        unexpectedly dropping packets. Occurrence of these drops on a stable
+        (no recent hardware or config changes) and otherwise healthy
+        switch needs further investigation.
+        This leaf counts packet discarded as result of corrupted
+        programming state in an INTEGRATED_CIRCUIT or corrupted data
+        structures of packet descriptors.
+
+        Note: corrupted packets received on ingress interfaces should be counted
+        in `/interfaces/interface/state/counters/in-errors` and NOT counted as
+        adverse-aggregate. This is because incoming corrupted packets are NOT
+        a signal of adverse state of an INTEGRATED_CIRCUIT but rather of an
+        entity adjacent to the Interface, such as a cable or transceiver). Therefore
+        such drops SHOULD NOT be counted as adverse-aggregate to preserve
+        a clean signal of INTEGRATED_CIRCUIT adverse state.";
+    }
+
+    leaf congestion-aggregate {
+      type oc-yang:counter64;
+      description
+        "This tracks the aggregation of all counters where the expected
+        conditions of packet drops due to internal congestion in some block of
+        the hardware that may not be visible in through other congestion
+        indicators like interface discards or queue drop counters.
+
+        This leaf counts packet discarded as result of exceeding
+        performance limits of an INTEGRATED_CIRCUT, when it processes
+        non-corrupted packets using legitimate, non-corrupted programming
+        state of the INTEGRATED_CIRCUIT.
+
+        The typical example is overloading given IC with higher packet rate (pps)
+        then given chip can handle. For example, let's assume chip X can process
+        3.6Bpps of incoming traffic and 2000 Mpps. However if average incoming
+        packet size is 150B, at full ingress rate this become 3000Mpps. Hence
+        1/3 of packets would be cropped and should be counted against
+        congestion-aggregate.
+
+        Another example is the case when some INTEGRATED_CIRCUIT internal data bus is
+        too narrow/slow for handling traffic. For example let's assume chip X needs to send
+        3Tbps of traffic to an external buffer memory which has only 2Tbps access I/O.  In
+        this case packets would be discarded, because of congestion of memory I/O bus
+        which is part of the INTEGRATED_CIRCUIT.  Depending on the design of the
+        INTEGRATED_CIRCUIT, packets could be discarded even if interface queues are
+        not full, hence this scenario is NOT treated as QoS queue tail-drops nor WRED drops.
+
+        Yet another example is the case where extremely large and long
+        ACL/filter requires more cycles to process than the INTEGRATED_CIRCUIT
+        has budgeted. ";
+    }
+
+    leaf packet-processing-aggregate {
+      type oc-yang:counter64;
+      description
+        "This aggregation of counters represents the conditions in which
+        packets are dropped due to legitimate forwarding decisions (ACL drops,
+        No Route etc.)
+        This counter counts packet discarded as result of processing
+        non-corrupted packet against legitimate, non-corrupted state
+        of INTEGRATED_CIRCUIT program (FIB content, ACL content, rate-limiting token-buckets)
+        which mandate packet drop. The examples of this class of discard are:
+        - dropping packets which destination address to no match any FIB entry
+        - dropping packets which destination address matches FIB entry pointing
+        to discard next-hop (e.g. route to null0)
+        - dropping packts due to ACL/packet filter decission
+        - dropping packets due to its TTL = 1
+        - dropping packets due to its size exceeds egress interface MTU and
+        packet can't be fragmented (IPv6 or do not fragment bit is set)
+        -  dropping packets due to uRPF rules (note: packet is counted here and
+        in separate, urpf-aggregate counter simultaneously)
+        - etc
+
+      Note:The INTEGRATED_CIRCUIT is doing exactly what it is programmed
+      to do, and the packet is parsable.
+      ";
+    }
+
+    leaf urpf-aggregate {
+      type oc-yang:counter64;
+      description
+        "This aggregation of counters represents the conditions in which
+        packets are dropped due to failing uRPF lookup check.  This counter
+        and the packet-processing-aggregate counter should be incremented
+        for each uRPF packet drop.
+        This counter counts packet discarded as result of Unicast Reverse
+        Path Forwarding verification.";
+      reference
+        "RFC2827: Network Ingress Filtering: Defeating Denial of Service Attacks which employ IP Source Address Spoofing
+        RFC3704: Ingress Filtering for Multihomed Networks";
+    }
+
+    leaf no-route {
+      type oc-yang:counter64;
+      description
+        "This aggregation of counters represents the conditions in which
+        packets are dropped due to no FIB entry for this ipv4 or ipv6 lookup.
+
+        This counter and the packet-processing-aggregate counter should be
+        incremented for each no-route packet drop.";
+    }
+
+  }
+
+  grouping pipeline-vendor-drop-packets {
+    description
+      "Grouping for vendor specific drop packets";
+
+    container vendor {
+      description
+        "Counters within these containers are defined and augmented by vendors.
+        As each ASIC and vendor has different implementation and internal
+        parts where packets may be dropped at any point in time. Providing
+        specific hardware counters provides better visibility into traffic drop.
+
+        The recommended usage of this container is to create an augment at
+        .../pipeline-counter/drop/vendor that contains additional vendor/platform
+        specific containers.
+
+        e.g.
+        augment /components/component/integrated-circuit/pipeline-counter/drop/vendor {
+          container <vendor name> {
+            container <platform name> {
+              uses pipeline-vendor-drop-containers;
+            }
+          }
+        }";
+
+      reference
+        "https://github.com/openconfig/public/tree/master/doc/vendor_counter_guide.md";
+    }
+  }
+
+  grouping pipeline-vendor-drop-containers {
+    description
+      "A utility grouping for vendors to insert when augmenting the vendor
+      drop counters container .../pipeline-counter/drop/vendor.
+
+      Counters that cannot differentiate between adverse, congestion, and
+      packet-processing should still be exposed as a vendor-specific,
+      packet-processing counter.";
+
+    reference
+      "https://github.com/openconfig/public/tree/master/doc/vendor_counter_guide.md";
+
+    container adverse {
+      description
+        "These counters capture where the switch is unexpectedly dropping
+        packets. Occurrence of these drops on a stable (no recent hardware
+        or config changes) and otherwise healthy switch needs further
+        investigation.
+
+        The sum of all counters under this container should match the value in
+        .../pipeline-counters/drop/state/adverse-aggregate";
+
+      container state {
+        description
+          "State container for vendor specific adverse counters.";
+      }
+    }
+
+    container congestion {
+      description
+        "These counters track expected conditions of packet drops due to
+        internal congestion in some block of the hardware that may not be
+        visible in through other congestion indicators like interface
+        discards or queue drop counters.
+
+        The sum of all counters under this container should match the value in
+        .../pipeline-counters/drop/state/congestion-aggregate";
+
+      container state {
+        description
+          "State container for vendor specific congestion counters.";
+      }
+    }
+
+    container packet-processing {
+      description
+        "These counters represent the conditions in which packets are dropped
+        due to legitimate forwarding decisions (ACL drops, No Route etc.)
+
+        The sum of all counters under this container should match the value in
+        .../pipeline-counters/drop/state/packet-processing-aggregate";
+
+      container state {
+        description
+          "State container for vendor specific packet processing counters.";
+      }
+    }
+  }
+
+  grouping control-plane-traffic-counters-state {
+    description
+      "Control plane traffic counter state grouping.";
+
+    leaf queued-aggregate {
+      type oc-yang:counter64;
+      description
+        "This captures the aggregation of all counters where the switch has enqueued
+        traffic related to the control-plane.";
+    }
+
+    leaf queued-bytes-aggregate {
+      type oc-yang:counter64;
+      description
+        "This captures the aggregation of all counters in bytes where the switch has
+        enqueued traffic related to the control-plane.";
+    }
+
+    leaf dropped-aggregate {
+      type oc-yang:counter64;
+      description
+        "This captures the aggregation of all counters where the switch has dropped
+        traffic related to the control-plane.";
+    }
+
+    leaf dropped-bytes-aggregate {
+      type oc-yang:counter64;
+      description
+        "This captures the aggregation of all counters in bytes where the switch has
+        dropped traffic related to the control-plane.";
+    }
+  }
+
+  grouping control-plane-traffic-vendor-counters {
+    description
+      "A utility grouping for vendors to use when augmenting the vendor-specific
+      control-plane traffic container.";
+
+    leaf queued {
+      type oc-yang:counter64;
+      description
+        "This counter counts the number of packets enqueued.
+
+        This counter should contribute to the total aggregate of
+        .../pipeline-counters/control-plane-traffic/state/queued-aggregate.";
+    }
+
+    leaf queued-bytes {
+      type oc-yang:counter64;
+      description
+        "This counter counts the number of bytes enqueued.
+
+        This counter should contribute to the total aggregate of
+        .../pipeline-counters/control-plane-traffic/state/queued-bytes-aggregate.";
+    }
+
+    leaf dropped {
+      type oc-yang:counter64;
+      description
+        "This counter counts the number of packets dropped.
+
+        This counter should contribute to the total aggregate of
+        .../pipeline-counters/control-plane-traffic/state/dropped-aggregate.";
+    }
+
+    leaf dropped-bytes {
+      type oc-yang:counter64;
+      description
+        "This counter counts the number of bytes dropped.
+
+        This counter should contribute to the total aggregate of
+        .../pipeline-counters/control-plane-traffic/state/dropped-bytes-aggregate.";
+    }
+  }
+
+  grouping pipeline-control-plane-top {
+    description
+      "Top-level structural grouping for control-plane traffic counters.";
+
+    container control-plane-traffic {
+      description
+        "Counters that are related to traffic destined to the control-plane.";
+
+      container state {
+        config false;
+        description
+          "State container for control-plane traffic counters.";
+
+        uses control-plane-traffic-counters-state;
+      }
+
+      container vendor {
+        description
+          "Counters within these containers are defined and augmented by vendors.
+          As each ASIC and vendor has different implementation and internal
+          parts where packets may be dropped at any point in time. Providing
+          vendor-specific counters provides better visibility into control-plane traffic.
+
+          The recommended usage of this container is to create an augment at
+          .../pipeline-counter/control-plane-traffic/vendor that contains additional
+          vendor/platform specific containers.
+
+          e.g.
+          augment /components/component/integrated-circuit/pipeline-counter/control-plane-traffic/vendor {
+            container <vendor name> {
+              container <platform name> {
+                container state {
+                  leaf counter-a {
+                    uses control-plane-traffic-vendor-counters;
+                  }
+
+                  leaf counter-b {
+                    uses control-plane-traffic-vendor-counters;
+                  }
+                }
+              }
+            }
+          }";
+
+        reference
+          "https://github.com/openconfig/public/tree/master/doc/vendor_counter_guide.md";
+      }
+    }
+  }
+
+  augment "/oc-platform:components/oc-platform:component/oc-platform:integrated-circuit" {
+    description
+      "Add operational state data that corresponds to sub-blocks of an integrated
+      circuit (NPU, ASIC) to the platform model.";
+
+    uses platform-pipeline-top;
+  }
+}

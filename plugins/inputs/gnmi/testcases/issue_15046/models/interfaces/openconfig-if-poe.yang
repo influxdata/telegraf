@@ -1,0 +1,110 @@
+module openconfig-if-poe {
+
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/poe";
+
+  prefix "oc-poe";
+
+  import openconfig-if-ethernet { prefix oc-eth; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "Openconfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and state data for
+    Power over Ethernet (PoE) based on the IEEE 802.3af
+    standard.";
+
+  oc-ext:openconfig-version "0.1.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2017-09-14" {
+    description
+      "Initial public revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping poe-ethernet-config {
+    description
+      "PoE ethernet config grouping";
+
+     leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Enable or disable PoE in the ethernet interface.";
+    }
+  }
+
+  grouping poe-ethernet-state {
+    description
+      "PoE ethernet state grouping";
+
+    leaf power-used {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units Watts;
+      description
+        "Power used by the ethernet interface in Watts.";
+    }
+
+    leaf power-class {
+      type uint8;
+      description
+        "IEEE 802.3af Power class detected for this ethernet
+        interface.";
+    }
+  }
+
+  grouping poe-ethernet-top {
+    description
+      "Ethernet top level grouping";
+
+    container poe {
+      description
+        "Top-level container for PoE configuration and state data";
+
+      container config {
+        description
+          "Configuration data for PoE";
+
+        uses poe-ethernet-config;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational state data for PoE";
+
+        uses poe-ethernet-config;
+        uses poe-ethernet-state;
+      }
+    }
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-eth:ethernet" {
+    description
+    "Adds PoE to the ethernet model.";
+
+    uses poe-ethernet-top;
+  }
+
+}

@@ -1,0 +1,6 @@
+- name: openconfig-bfd
+  docs:
+    - yang/bfd/openconfig-bfd.yang
+  build:
+    - yang/bfd/openconfig-bfd.yang
+  run-ci: true

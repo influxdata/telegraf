@@ -1,0 +1,159 @@
+module openconfig-qos-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/qos-types";
+
+  prefix "oc-qos-types";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines types and identities used in OpenConfig
+    models related to quality-of-service (QoS)";
+
+  oc-ext:openconfig-version "0.2.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-16" {
+    description
+      "Fix incorrect interface-ref placement";
+    reference "0.2.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity QOS_QUEUE_TYPE {
+    description
+      "Base identity for supported queue types, primarily
+      defined by their drop behavior / strategy";
+  }
+
+  identity DROP_TAIL {
+    base QOS_QUEUE_TYPE;
+    description
+      "When the queue is filled to capacity, newly arriving packets
+      are discarded until there is room in the queue to accept new
+      traffic.  Packets are not differentiated, i.e., all packets
+      are treated identically.";
+  }
+
+  identity RED {
+    base QOS_QUEUE_TYPE;
+    description
+      "Queue management based on Random Early Detection (RED).  RED
+      drops packets based on a drop probability that is based on the
+      average queue length, and settings of mininum and maximum
+      queue thresholds.  On ECN-capable devices, packets may be
+      marked instead of dropped to signal congestion to the
+      sender.";
+    reference
+      "IETF RFC 2309 - Recommendations on Queue Management and
+      Congestion Avoidance in the Internet
+      IETF RFC 7567 - IETF Recommendations Regarding Active Queue
+      Management";
+  }
+
+  identity WRED {
+    base QOS_QUEUE_TYPE;
+    description
+      "Queue management based on a variant of RED in which the packet
+      drop probability is based on its traffic class.";
+  }
+
+  identity QOS_SCHEDULER_TYPE {
+    description
+      "Base identity to describe supported QoS scheduler types.";
+  }
+
+  identity ONE_RATE_TWO_COLOR {
+    base QOS_SCHEDULER_TYPE;
+    description
+      "Token bucket scheduler with a single rate (committed information
+      rate) and two colors (conforming and exceeding).  The scheduler
+      behavior is governed by two parameters, the CIR which
+      determines the rate of token fill (bps) and the committed
+      burst size (depth of the token bucket in bytes).";
+  }
+
+  identity TWO_RATE_THREE_COLOR {
+    base QOS_SCHEDULER_TYPE;
+    description
+      "Token bucket scheduler with two buckets, one filled at the
+      committed information rate (CIR) in bps, and the second filled
+      at the peak information rate (PIR) in bps when the first
+      bucket is full.  The first bucket depth is
+      the committed burst size (bytes), and the second is the
+      excess burst size (bytes).  Traffic is categorized in three
+      colors as follows: traffic that falls within the
+      the CIR is conforming, traffic that is greater than the CIR
+      but less than the PIR is exceeding, and traffic that is
+      greater than PIR is violating.";
+  }
+
+  // typedef statements
+
+  typedef queue-behavior {
+    type enumeration {
+      enum SHAPE {
+        description
+          "Packets that exceed the CIR should be queued into a
+          buffer. The depth of the buffer is specified to be
+          max-queue-depth-bytes or max-queue-depth-packets.
+          Packets are subsequently scheduled from this queue
+          to the specified output. Only packets that overflow
+          the buffer have the exceed action applied to them.";
+      }
+      enum POLICE {
+        description
+          "Packets that exceed the CIR should be immediately
+          treated as exceeding the defined rate of the scheduler
+          and have the exceed action applied to them.";
+      }
+    }
+    description
+      "Type definition for different queueing behaviours that
+      are available to a scheduler.";
+  }
+
+  // grouping statements
+
+  // data definition statements
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+
+}

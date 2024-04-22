@@ -1,0 +1,246 @@
+submodule openconfig-platform-common {
+
+  yang-version "1";
+
+  belongs-to openconfig-platform {
+    prefix "oc-platform";
+  }
+
+  import openconfig-platform-types { prefix oc-platform-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This modules contains common groupings that are used in multiple
+    components within the platform module.";
+
+  oc-ext:openconfig-version "0.24.0";
+
+  revision "2023-11-28" {
+    description
+      "Add model-name";
+    reference "0.24.0";
+  }
+
+  revision "2023-02-13" {
+    description
+      "Refactor resource utilization threshold config into a separate grouping.
+      Update 'utilization resource' to 'resource utilization'.";
+    reference "0.23.0";
+  }
+
+  revision "2022-12-20" {
+    description
+      "Add threshold and threshold-exceeded for resource usage.";
+    reference "0.22.0";
+  }
+
+  revision "2022-12-19" {
+    description
+      "Update last-high-watermark timestamp documentation.";
+    reference "0.21.1";
+  }
+
+  revision "2022-09-26" {
+    description
+      "Add state data for base-mac-address.";
+    reference "0.21.0";
+  }
+
+  revision "2022-08-31" {
+    description
+      "Add new state data for component CLEI code.";
+    reference "0.20.0";
+  }
+
+  revision "2022-07-28" {
+    description
+      "Add grouping for component power management";
+    reference "0.19.0";
+  }
+
+  revision "2022-07-11" {
+    description
+      "Add switchover ready";
+    reference "0.18.0";
+  }
+
+  revision "2022-06-10" {
+    description
+      "Specify units and epoch for switchover and reboot times.";
+    reference "0.17.0";
+  }
+
+  revision "2022-04-21" {
+    description
+      "Add platform utilization.";
+    reference "0.16.0";
+  }
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping platform-resource-utilization-top {
+    description
+      "Top level grouping of platform resource utilization.";
+
+    container utilization {
+      description
+        "Resource utilization of the component.";
+
+      container resources {
+        description
+          "Enclosing container for the resources in this component.";
+
+        list resource {
+          key "name";
+          description
+            "List of resources, keyed by resource name.";
+
+          leaf name {
+            type leafref {
+              path "../config/name";
+            }
+            description
+              "References the resource name.";
+          }
+
+          container config {
+            description
+              "Configuration data for each resource.";
+
+            uses platform-resource-utilization-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state data for each resource.";
+
+            uses platform-resource-utilization-config;
+            uses platform-resource-utilization-state;
+          }
+        }
+      }
+    }
+  }
+
+  grouping resource-utilization-threshold-common {
+    description
+      "Common threshold configuration model for resource utilization.";
+    leaf used-threshold-upper {
+      type oc-types:percentage;
+      description
+        "The used percentage value (used / (used + free) * 100) that
+        when crossed will set utilization-threshold-exceeded to 'true'.";
+    }
+
+    leaf used-threshold-upper-clear {
+      type oc-types:percentage;
+      description
+        "The used percentage value (used / (used + free) * 100) that when
+        crossed will set utilization-threshold-exceeded to 'false'.";
+    }
+  }
+
+  grouping platform-resource-utilization-config {
+    description
+      "Configuration data for resource utilization.";
+
+    leaf name {
+      type string;
+      description
+        "Resource name within the component.";
+    }
+
+    uses resource-utilization-threshold-common;
+  }
+
+  grouping platform-resource-utilization-state {
+    description
+      "Operational state data for resource utilization.";
+
+    leaf used {
+      type uint64;
+      description
+        "Number of entries currently in use for the resource.";
+    }
+
+    leaf committed {
+      type uint64;
+      description
+        "Number of entries currently reserved for this resource. This is only
+        relevant to tables which allocate a block of resource for a given
+        feature.";
+    }
+
+    leaf free {
+      type uint64;
+      description
+        "Number of entries available to use.";
+    }
+
+    leaf max-limit {
+      type uint64;
+      description
+        "Maximum number of entries available for the resource. The value
+        is the theoretical maximum resource utilization possible.";
+    }
+
+    leaf high-watermark {
+      type uint64;
+      description
+        "A watermark of highest number of entries used for this resource.";
+    }
+
+    leaf last-high-watermark {
+      type oc-types:timeticks64;
+      description
+        "The timestamp when the high-watermark was last updated. The value
+        is the timestamp in nanoseconds relative to the Unix Epoch
+        (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf used-threshold-upper-exceeded {
+      type boolean;
+      description
+        "This value is set to true when the used percentage value
+        (used / (used + free) * 100) has crossed the used-threshold-upper for this
+        resource and false when the used percentage value has crossed the configured
+        used-threshold-upper-clear value for this resource.";
+    }
+  }
+
+  grouping component-power-management {
+    description
+      "Common grouping for managing component power";
+
+    leaf power-admin-state {
+      type oc-platform-types:component-power-type;
+      default POWER_ENABLED;
+      description
+        "Enable or disable power to the component";
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+}

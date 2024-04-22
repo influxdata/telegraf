@@ -1,0 +1,24 @@
+- name: openconfig-access-points
+  docs:
+    - yang/wifi/openconfig-access-points.yang
+    - yang/wifi/openconfig-ap-interfaces.yang
+    - yang/wifi/openconfig-ap-manager.yang
+    - yang/wifi/openconfig-wifi-mac.yang
+    - yang/wifi/openconfig-wifi-phy.yang
+    - yang/wifi/openconfig-wifi-types.yang
+  build:
+    - yang/wifi/openconfig-access-points.yang
+    - yang/wifi/openconfig-ap-interfaces.yang
+  run-ci: true
+- name: openconfig-ap-manager
+  docs:
+    - yang/wifi/openconfig-ap-manager.yang
+  build:
+    - yang/wifi/openconfig-ap-manager.yang
+  run-ci: true
+- name: openconfig-wifi-types
+  docs:
+    - yang/wifi/openconfig-wifi-types.yang
+  build:
+    - yang/wifi/openconfig-wifi-types.yang
+  run-ci: true

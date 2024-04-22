@@ -1,0 +1,6 @@
+- name: openconfig-gribi
+  docs:
+    - yang/gribi/openconfig-gribi.yang
+  build:
+    - yang/gribi/openconfig-gribi.yang
+  run-ci: true

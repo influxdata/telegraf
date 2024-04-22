@@ -1,0 +1,73 @@
+submodule openconfig-aft-state-synced {
+  belongs-to "openconfig-aft" {
+    prefix "oc-aft";
+  }
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Submodule containing definitions of groupings for the state
+    synced signals corresponding to various abstract forwarding tables.";
+
+  oc-ext:openconfig-version "2.4.0";
+
+  revision "2023-09-26" {
+    description
+      "Add next-hop-group-name in NHG AFT entry state.";
+    reference "2.4.0";
+  }
+
+  revision "2023-04-19" {
+    description
+      "Add atomic attribute to AFT containers.";
+    reference "2.3.0";
+  }
+
+  revision "2022-06-16" {
+    description
+      "Add state-synced container under afts.";
+    reference "2.2.0";
+  }
+
+  grouping aft-state-synced-structural {
+    description
+      "Structural grouping defining the schema for the state synced signals
+      of various abstract forwarding table.";
+
+    container state {
+      config false;
+      description
+        "Operational state parameters relating to the state
+        synced signals of various AFTs.";
+
+      leaf ipv4-unicast {
+        type boolean;
+        default false;
+        description
+          "State synced signal indicating consistent device snapshot of
+          IPv4 unicast AFT entries. Before setting this flag to true
+          next-hop-groups and next-hops AFT entries, associated with
+          ipv4-unicast AFT entries, are expected to be consistent with
+          device snapshot.";
+      }
+
+      leaf ipv6-unicast {
+        type boolean;
+        default false;
+        description
+          "State synced signal indicating consistent device snapshot of
+          IPv6 unicast AFT entries. Before setting this flag to true
+          next-hop-groups and next-hops AFT entries, associated with
+          ipv6-unicast AFT entries, are expected to be consistent with
+          device snapshot.";
+      }
+    }
+  }
+}

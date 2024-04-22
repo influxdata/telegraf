@@ -1,0 +1,577 @@
+module openconfig-probes {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/probes";
+
+  prefix "oc-probes";
+
+  import ietf-yang-types { prefix yang; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-probes-types { prefix oc-probes-types; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    for the probes.
+    A probe consists on a group of tests, each test being a
+    source-destination pair to poll. The destination can be either
+    IP Address (and eventually port) or URL, depending on the
+    nature of the test. The test can send ICMP, UDP, TCP, or HTTP
+    requests.
+    Each test groups a list of test items, the test results
+    being an overall view or average of the items list.
+    However, the test preserves only a limited set of history
+    items, whose length can be controlled using the history-size.";
+
+  oc-ext:openconfig-version "0.0.2";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.0.2";
+  }
+
+  revision "2017-09-05" {
+    description
+     "Initial public revision";
+    reference "0.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping test-target {
+    description
+      "Groups the config and state containers
+      for an individual test.";
+
+    container target {
+      description
+        "The target configuration of the test.
+        The nature of the target depends on the probe type:
+        for HTTP probes we need to provide an URL to poll,
+        while ICMP probes require an IP address to monitor.";
+
+      container config {
+        description
+          "Configuration data for the test target.";
+
+        uses test-target-base;
+      }
+
+      container state {
+        config false;
+
+        description
+          "Operational data for the test target.";
+
+        uses test-target-base;
+      }
+    }
+  }
+
+  grouping test-target-base {
+    description
+      "Targe types for the probe test.";
+
+    leaf address {
+      type oc-inet:ip-address;
+      description
+        "IP address of the target, either IPv4 or IPv6.";
+    }
+
+    leaf port {
+      type oc-inet:port-number;
+      description
+        "Destination port.";
+    }
+
+    leaf url {
+      type oc-inet:url;
+      description
+        "Target URL to probe.";
+    }
+  }
+
+  grouping probe-test-config-base {
+    description
+      "Definition of test details.";
+
+    leaf test-type {
+      type oc-probes-types:test-type;
+      description
+        "The type of the probe test.";
+      mandatory true;
+    }
+
+    leaf count {
+      type yang:counter64;
+      description
+        "The number of probes per test.";
+    }
+
+    leaf interval {
+      type yang:counter64;
+      description
+        "Time between two consecutive probes.";
+    }
+
+    leaf source {
+      type oc-inet:ip-address;
+      description
+        "Source address used when probing, either IPv4 or IPv6.";
+    }
+
+    leaf history-size {
+      type yang:counter64;
+      description
+        "The number of history entries stored.";
+    }
+
+    leaf source-port {
+      type oc-inet:port-number;
+      description
+        "Source number used.";
+    }
+
+    leaf dscp {
+      type oc-inet:dscp;
+      description
+        "DSCP code points";
+    }
+
+  }
+
+  grouping probe-test-state-history-item-base {
+    description
+      "The test item results counters and statistics.
+       An item presents the results of a single execution
+       of the test.
+       The results of the test depend on the values
+       of the total items, or an average over a certain
+       period of time.";
+
+    leaf id {
+      type yang:counter64;
+      description
+        "The test item ID.";
+    }
+
+    leaf timestamp {
+      type oc-types:timeticks64;
+      description
+        "The test timestamp.
+         This is not the timestamp when the test
+         was actually executed nither when it finished.
+         Should be the timestamp when the test has been scheduled.
+         It may not be the same with start-timestamp.";
+    }
+
+    leaf start-timestamp {
+      type oc-types:timeticks64;
+      description
+        "The timestamp when the test started.";
+    }
+
+    leaf end-timestamp {
+      type oc-types:timeticks64;
+      description
+        "The timestamp when the test finished.";
+    }
+
+    leaf test-duration {
+      type yang:counter64;
+      description
+        "The duration of the test, in microseconds.";
+    }
+
+    leaf failed {
+      type boolean;
+      description
+        "Whether the test failed or succeeded.";
+    }
+
+    leaf probes-sent {
+      type yang:counter64;
+      description
+        "Number of test probes sent.";
+    }
+
+    leaf probes-received {
+      type yang:counter64;
+      description
+        "Number of test probes received.";
+    }
+
+    leaf loss-percentage {
+      type oc-types:percentage;
+      description
+        "The loss percentage.";
+    }
+
+    leaf jitter {
+      type yang:counter64;
+      description
+        "The round trip jitter, in microseconds.";
+    }
+
+    leaf min-delay {
+      type yang:counter64;
+      description
+        "The minimum delay recorded during the test, in microseconds.";
+    }
+
+    leaf max-delay {
+      type yang:counter64;
+      description
+        "The maximum delay recorded during the test, in microseconds.";
+    }
+
+    leaf avg-delay {
+      type yang:counter64;
+      description
+        "The average delay recorded during the test, in microseconds.";
+    }
+
+    leaf stddev-delay {
+      type yang:counter64;
+      description
+        "The standard deviation of the delay of the test.";
+    }
+
+  }
+
+  grouping probe-test-state-history-item {
+    description
+      "A history item of the probe results.";
+
+    container state {
+
+      config false;
+
+      description
+        "A history item of the probe results: operational data only.";
+
+      uses probe-test-state-history-item-base;
+    }
+
+  }
+
+  grouping probe-test-state-history {
+
+    description
+      "The history of the test results.";
+
+    container items {
+
+      description
+        "The list of items in the probe history.
+         The length depends on the history size.";
+
+      list item {
+        key "id";
+        description
+          "List of history items.";
+
+        leaf id {
+          type leafref {
+            path "../state/id";
+          }
+          description
+            "Reference to the history entry ID.";
+        }
+
+        uses probe-test-state-history-item;
+      }
+
+    }
+
+  }
+
+  grouping probe-test-state-results {
+    description
+      "The test results counters and statistics.";
+
+    leaf timestamp {
+      type oc-types:timeticks64;
+      description
+        "The test timestamp.
+         This is not the timestamp when the test
+         was actually executed nither when it finished.
+         Should be the timestamp when the test has been scheduled.
+         It may not be the same with start-timestamp.";
+    }
+
+    leaf start-timestamp {
+      type oc-types:timeticks64;
+      description
+        "The timestamp when the test started.";
+    }
+
+    leaf last-test-timestamp {
+      type oc-types:timeticks64;
+      description
+        "The timestamp when the test finished.";
+    }
+
+    leaf test-duration {
+      type yang:counter64;
+      description
+        "The duration of the test, in microseconds.";
+    }
+
+    leaf failed {
+      type boolean;
+      description
+        "Whether the test failed or succeeded.";
+    }
+
+    leaf probes-sent {
+      type yang:counter64;
+      description
+        "Number of test probes sent.";
+    }
+
+    leaf probes-received {
+      type yang:counter64;
+      description
+        "Number of test probes received.";
+    }
+
+    leaf loss-percentage {
+      type oc-types:percentage;
+      description
+        "The loss percentage.";
+    }
+
+    leaf jitter {
+      type yang:counter64;
+      description
+        "The round trip jitter, in microseconds.";
+    }
+
+    leaf min-delay {
+      type yang:counter64;
+      description
+        "The minimum delay recorded during the test, in microseconds.";
+    }
+
+    leaf max-delay {
+      type yang:counter64;
+      description
+        "The maximum delay recorded during the test, in microseconds.";
+    }
+
+    leaf avg-delay {
+      type yang:counter64;
+      description
+        "The average delay recorded during the test, in microseconds.";
+    }
+
+    leaf stddev-delay {
+      type yang:counter64;
+      description
+        "The standard deviation of the delay of the test.";
+    }
+
+
+  }
+
+  grouping probe-test-state {
+
+    description
+      "Operational data and results for the probes.";
+
+  }
+
+  grouping probe-test-config {
+    description
+      "Definition of test details.";
+
+    leaf name {
+      type string;
+      description
+        "The name of the test probe";
+      mandatory true;
+    }
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "Whether the test is enabled.";
+    }
+
+    uses probe-test-config-base;
+
+  }
+
+ grouping probe-tests-top {
+    description
+      "Top-level grouping for the tests withing a probe.";
+
+    list test {
+      key "name";
+      description
+        "List of tests associated with this probe.";
+
+      leaf name {
+        type leafref {
+          path "../config/name";
+        }
+        description
+          "Reference to the list key";
+      }
+
+      container config {
+        description
+          "Configuration data for the test of this probe.";
+
+        uses probe-test-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data";
+
+        uses probe-test-config;
+        uses probe-test-state;
+      }
+
+      uses test-target;
+
+      container results {
+        description
+          "Contains the results of the tests.";
+
+        container state {
+
+          config false;
+
+          description
+            "Results of this test: operational data only";
+
+          uses probe-test-state-results;
+        }
+
+        container history {
+
+          config false;
+
+          description
+            "Historical data of the tests.";
+
+          uses probe-test-state-history;
+        }
+
+      }
+
+    }
+    // end list of probes
+
+  }
+
+  grouping probe-config {
+    description
+      "Definition of probe details.";
+
+    leaf name {
+      type string;
+      description
+        "The name of the probe.";
+      mandatory true;
+    }
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "Whether the probe is enabled.";
+    }
+
+  }
+
+  grouping probe-state {
+    description
+      "Definition of probes operation data.";
+  }
+
+ grouping probes-top {
+    description
+      "Top-level grouping for probes model";
+
+    list probe {
+      key "name";
+      description
+        "List of probes configured.";
+
+      leaf name {
+        type leafref {
+          path "../config/name";
+        }
+        description
+          "Reference to the list key";
+      }
+
+      container config {
+        description
+          "Configuration data for the probes.";
+
+        uses probe-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data";
+
+        uses probe-config;
+        uses probe-state;
+      }
+
+      container tests {
+
+        description
+          "The tests associated to be executed for the probe.";
+
+        uses probe-tests-top;
+      }
+
+    }
+    // end list of probes
+
+  }
+
+  grouping openconfig-probes-top {
+
+    description
+      "The top level grouping of the probes model.";
+
+    container probes {
+      description
+        "The container containing the list of probes.";
+
+      uses probes-top;
+    }
+
+  }
+
+  uses openconfig-probes-top;
+
+}

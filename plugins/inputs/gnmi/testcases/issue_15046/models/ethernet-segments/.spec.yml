@@ -1,0 +1,6 @@
+- name: openconfig-ethernet-segments
+  docs:
+    - yang/ethernet-segments/openconfig-ethernet-segments.yang
+  build:
+    - yang/ethernet-segments/openconfig-ethernet-segments.yang
+  run-ci: true

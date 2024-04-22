@@ -1,0 +1,7 @@
+- name: openconfig-bgp
+  docs:
+    - yang/bgp/openconfig-bgp-types.yang
+    - yang/bgp/openconfig-bgp.yang
+  build:
+    - yang/bgp/openconfig-bgp.yang
+  run-ci: true

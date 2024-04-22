@@ -1,0 +1,546 @@
+submodule openconfig-ospfv2-area-interface {
+
+  belongs-to openconfig-ospfv2 {
+    prefix "oc-ospfv2";
+  }
+
+  import ietf-yang-types { prefix "yang"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-interfaces { prefix "oc-if"; }
+  import openconfig-ospf-types { prefix "oc-ospf-types"; }
+  import openconfig-bfd { prefix "oc-bfd"; }
+
+  // include common submodule
+  include openconfig-ospfv2-common;
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule provides OSPFv2 configuration and operational
+    state parameters that are specific to the area context";
+
+  oc-ext:openconfig-version "0.5.1";
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "0.5.1";
+  }
+
+  revision "2023-08-25" {
+    description
+      "Add leaf metric to lsdb-summary-lsa-state.";
+    reference "0.5.0";
+  }
+
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "0.4.3";
+  }
+
+  revision "2023-07-05" {
+    description
+      "Fix typo in experimental-te leaf description.";
+    reference "0.4.2";
+  }
+
+  revision "2023-03-06" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.4.1";
+  }
+
+  revision "2022-02-10" {
+    description
+      "Fix spelling error in retransmission-queue-length leaf.";
+    reference "0.4.0";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add prefix to qualify when statements.";
+    reference "0.3.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Revert path changes in when statements in LSDB model";
+    reference "0.2.2";
+  }
+
+  revision "2019-11-05" {
+    description
+      "Fix paths in when statements in LSDB model";
+    reference "0.2.1";
+  }
+
+  revision "2019-07-09" {
+    description
+      "Normalise all timeticks64 to be expressed in nanoseconds.";
+    reference "0.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.3";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Bug fixes in when statements in lsdb";
+    reference "0.1.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "0.1.1";
+  }
+
+  revision "2017-02-28"{
+    description
+      "Initial public release of OSPFv2";
+    reference "0.1.0";
+  }
+
+  revision "2016-06-24" {
+    description
+      "Initial revision";
+    reference "0.0.1";
+  }
+
+  grouping ospfv2-area-interface-config {
+    description
+      "Configuration parameters for an OSPF interface";
+
+    leaf id {
+      type oc-if:interface-id;
+      description
+        "An operator-specified string utilised to uniquely
+        reference this interface";
+    }
+
+    leaf network-type {
+      type identityref {
+        base "oc-ospf-types:OSPF_NETWORK_TYPE";
+      }
+      description
+        "The type of network that OSPFv2 should use for the specified
+        interface.";
+    }
+
+    leaf priority {
+      type uint8;
+      description
+        "The local system's priority to become the designated
+        router";
+    }
+
+    leaf multi-area-adjacency-primary {
+      type boolean;
+      default true;
+      description
+        "When the specified interface is included in more than one
+        area's configuration, this leaf marks whether the area should
+        be considered the primary (when the value is true). In the
+        case that this value is false, the area is considered a
+        secondary area.";
+    }
+
+    leaf authentication-type {
+      type string;
+      // rjs TODO: discuss with bogdanov@ what the approach for auth
+      // links should be.
+      description
+        "The type of authentication that should be used on this
+        interface";
+    }
+
+    leaf metric {
+      type oc-ospf-types:ospf-metric;
+      description
+        "The metric for the interface";
+    }
+
+    leaf passive {
+      type boolean;
+      description
+        "When this leaf is set to true, the interface should be
+        advertised within the OSPF area but OSPF adjacencies should
+        not be established over the interface";
+    }
+
+    leaf hide-network {
+      type boolean;
+      description
+        "When this leaf is set to true, the network connected to
+        the interface should be hidden from OSPFv2 advertisements
+        per the procedure described in RFC6860.";
+      reference
+        "RFC6860 - Hiding Transit-Only Networks in OSFF";
+    }
+  }
+
+  grouping ospfv2-area-interface-timers-config {
+    description
+      "Configuration parameters relating to per-interface OSPFv2
+      timers";
+
+    leaf dead-interval {
+      type uint32;
+      units seconds;
+      description
+        "The number of seconds that the local system should let
+        elapse before declaring a silent router down";
+      reference "RFC2328";
+    }
+
+    leaf hello-interval {
+      type uint32;
+      units seconds;
+      description
+        "The number of seconds the local system waits between the
+        transmission of subsequent Hello packets";
+    }
+
+    leaf retransmission-interval {
+      type uint32;
+      units seconds;
+      description
+        "The number of seconds that the local system waits before
+        retransmitting an unacknowledged LSA.";
+    }
+  }
+
+  grouping ospfv2-area-interface-mpls-config {
+    description
+      "Configuration parameters relating to MPLS extensions for OSPF";
+
+    leaf traffic-engineering-metric {
+      type uint32;
+      description
+        "A link metric that should only be considered for traffic
+        engineering purposes.";
+      reference "RFC3630, §2.5.5";
+    }
+  }
+
+  grouping ospfv2-area-interface-neighbor-config {
+    description
+      "Configuration parameters relating to an individual neighbor
+      system on an interface within an OSPF area";
+
+    leaf router-id {
+      type yang:dotted-quad;
+      description
+        "The router ID of the remote system.";
+    }
+
+    leaf metric {
+      type oc-ospf-types:ospf-metric;
+      description
+        "The metric that should be considered to the remote neighbor
+        over this interface. This configuration is only applicable
+        for multiple-access networks";
+    }
+  }
+
+  grouping ospfv2-area-interface-neighbor-state {
+    description
+      "Operational state parameters relating an individual neighbor
+      system on an interface within an OSPF area";
+
+    leaf priority {
+      type uint8;
+      description
+        "The remote system's priority to become the designated
+        router";
+    }
+
+    leaf dead-time {
+      type oc-types:timeticks64;
+      description
+        "The time at which this neighbor's adjacency will be
+        considered dead. The value is expressed relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf designated-router {
+      type yang:dotted-quad;
+      description
+        "The designated router for the adjacency. This device
+        advertises the Network LSA for broadcast and NBMA networks.";
+    }
+
+    leaf backup-designated-router {
+      type yang:dotted-quad;
+      description
+        "The backup designated router for the adjacency.";
+    }
+
+    leaf optional-capabilities {
+      // rjs TODO: should this be anything more than the hex-string
+      // this is currently what is shown in IOS/JUNOS
+      type yang:hex-string;
+      description
+        "The optional capabilities field received in the Hello
+        message from the neighbor";
+    }
+
+    leaf last-established-time {
+      type oc-types:timeticks64;
+      // rjs TODO: check implementations - is FULL considered 'up'
+      // since the adjacency is probably up since ExStart
+      description
+        "The time at which the adjacency was last established with
+        the neighbor. That is to say the time at which the
+        adjacency last transitioned into the FULL state. The
+        value is expressed relative to the Unix Epoch (Jan 1 1970
+        00:00:00 UTC).";
+    }
+
+    leaf adjacency-state {
+      type identityref {
+        base "oc-ospf-types:OSPF_NEIGHBOR_STATE";
+      }
+      description
+        "The state of the adjacency with the neighbor.";
+    }
+
+    leaf state-changes {
+      type uint32;
+      description
+        "The number of transitions out of the FULL state that this
+        neighbor has been through";
+    }
+
+    leaf retransmission-queue-length {
+      type uint32;
+      description
+        "The number of LSAs that are currently in the queue to be
+        retransmitted to the neighbor";
+    }
+  }
+
+  grouping ospfv2-area-interface-lsa-filter-config {
+    description
+      "Configuration options relating to filtering LSAs
+      on an interface.";
+
+    leaf all {
+      type boolean;
+      description
+        "When this leaf is set to true, all LSAs should be
+        filtered to the neighbours with whom adjacencies are
+        formed on the interface.";
+    }
+
+    // NB: this container can be augmented to add additional
+    // filtering options which exist in some implementations.
+  }
+
+  grouping ospfv2-area-interface-mpls-igp-ldp-sync-state {
+    description
+      "Operational state parameters relating to MPLS LDP/IGP
+      synchronization on a per-neighbor basis";
+
+    leaf synchronized {
+      type boolean;
+      description
+        "When the value of this leaf is set to true, the
+        LDP neighbors reachable via this interface are considered
+        to be synchronized, and hence the link is considered
+        usable by the IGP.";
+    }
+  }
+
+  grouping ospfv2-area-interfaces-structure {
+    description
+      "Structural grouping for configuration and operational state
+      parameters that relate to an interface";
+
+    container interfaces {
+      description
+        "Enclosing container for a list of interfaces enabled within
+        this area";
+
+      list interface {
+        key "id";
+
+        description
+          "List of interfaces which are enabled within this area.
+
+           The interface referenced is based on the interface and
+           subinterface leaves within the interface-ref container -
+           which reference an entry in the /interfaces/interface list -
+           and should not rely on the value of the list key.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "A pointer to the identifier for the interface.";
+        }
+
+        container config {
+          description
+            "Configuration parameters for the interface on which
+            OSPFv2 is enabled";
+
+          uses ospfv2-area-interface-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters for the interface on which
+            OSPFv2 is enabled";
+          uses ospfv2-area-interface-config;
+        }
+
+        uses oc-if:interface-ref;
+
+        container timers {
+          description
+            "Timers relating to OSPFv2 on the interface";
+
+          container config {
+            description
+              "Configuration parameters for OSPFv2 timers on the
+              interface";
+            uses ospfv2-area-interface-timers-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters for OSPFv2 timers on
+              the interface";
+
+            uses ospfv2-area-interface-timers-config;
+          }
+        }
+
+        container mpls {
+          description
+            "Configuration and operational state parameters for
+            OSPFv2 extensions related to MPLS on the interface.";
+
+          container config {
+            description
+              "Configuration parameters for OSPFv2 extensions relating
+              to MPLS for the interface";
+            uses ospfv2-area-interface-mpls-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state for OSPFv2 extensions relating to
+              MPLS for the interface";
+            uses ospfv2-area-interface-mpls-config;
+          }
+
+          container igp-ldp-sync {
+            description
+              "OSPFv2 parameters relating to LDP/IGP synchronization";
+
+            container config {
+              description
+                "Configuration parameters relating to LDP/IG
+                synchronization.";
+              uses ospfv2-common-mpls-igp-ldp-sync-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state variables relating to LDP/IGP
+                synchronization";
+              uses ospfv2-common-mpls-igp-ldp-sync-config;
+              uses ospfv2-area-interface-mpls-igp-ldp-sync-state;
+            }
+          }
+        }
+
+        container lsa-filter {
+          description
+            "OSPFv2 parameters relating to filtering of LSAs to
+            neighbors the specified interface.";
+
+          container config {
+            description
+              "Configuration parameters relating to filtering LSAs
+              on the specified interface.";
+            uses ospfv2-area-interface-lsa-filter-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to filtering
+              LSAs on the specified interface";
+            uses ospfv2-area-interface-lsa-filter-config;
+          }
+        }
+
+        container neighbors {
+          description
+            "Enclosing container for the list of neighbors that
+            an adjacency has been established with on the interface";
+
+          list neighbor {
+            key "router-id";
+
+            description
+              "A neighbor with which an OSPFv2 adjacency has been
+              established within this area";
+
+            leaf router-id {
+              type leafref {
+                path "../config/router-id";
+              }
+              description
+                "Reference to the router ID of the adjacent system";
+            }
+
+            container config {
+              description
+                "Configuration parameters relating to the adjacent
+                system";
+              uses ospfv2-area-interface-neighbor-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters relating to the adjacent
+                system";
+              uses ospfv2-area-interface-neighbor-config;
+              uses ospfv2-area-interface-neighbor-state;
+            }
+          }
+        }
+
+        uses oc-bfd:bfd-enable;
+      }
+    }
+  }
+
+}

@@ -1,0 +1,985 @@
+module openconfig-mpls-ldp {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/ldp";
+
+  prefix "oc-ldp";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-types { prefix oc-types; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Configuration of Label Distribution Protocol global and LSP-
+    specific parameters for IGP-congruent LSPs.
+
+    This model reuses data items defined in the IETF YANG model for
+    LDP described by draft-ietf-mpls-ldp-yang-04, YANG Data Model for
+    MPLS LDP, following an alternate structure.
+
+    Portions of this code were derived from draft-ietf-mpls-ldp-yang-04.
+    Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "3.2.1";
+
+  revision "2023-02-06" {
+    description
+      "Add clarification of use of interface-ref.";
+    reference "3.2.1";
+  }
+
+  revision "2022-02-21" {
+    description
+      "Added downstream-on-demand support";
+    reference "3.2.0";
+  }
+
+  revision "2020-01-09" {
+    description
+      "Added session-state leaf";
+    reference "3.1.0";
+  }
+
+  revision "2019-07-09" {
+    description
+      "Remove units for timeticks64 leaves, since the type
+      specifies the units.";
+    reference "3.0.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.0.1";
+  }
+
+  revision "2018-07-02" {
+    description
+      "Add new RSVP-TE statistics, remove associated-rsvp-session
+      leaf. Remove use of date-and-time.";
+    reference "3.0.0";
+  }
+
+  revision "2018-06-16" {
+    description
+      "Included attributes for base LDP configuration.";
+     reference "2.6.0";
+  }
+
+  revision "2018-06-13" {
+    description
+      "Add ttl-propagation to global MPLS config";
+    reference "2.5.0";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fixed bugs in when statements on RSVP-TE attributes";
+    reference "2.4.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "2.4.1";
+  }
+
+  revision "2017-06-21" {
+    description
+      "Add TC bits typedef.";
+    reference "2.4.0";
+  }
+
+  revision "2017-03-22" {
+    description
+      "Add RSVP calculated-absolute-subscription-bw";
+    reference "2.3.0";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add RSVP Tspec, clarify units for RSVP, remove unused LDP";
+    reference "2.2.0";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add additional MPLS parameters";
+    reference "2.1.0";
+  }
+
+  revision "2016-09-01" {
+    description
+      "Revisions based on implementation feedback";
+    reference "2.0.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "Public release of MPLS models";
+    reference "1.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // typedef statements
+
+  typedef mpls-ldp-adjacency-type {
+    type enumeration {
+      enum LINK {
+        description
+          "Link LDP adjacency";
+      }
+      enum TARGETED {
+        description
+          "Targeted LDP adjacency";
+      }
+    }
+    description
+     "enumerated type for specifying LDP adjacencies";
+  }
+
+  typedef mpls-ldp-afi {
+    type enumeration {
+      enum IPV4 {
+        description
+          "IPv4 AFI for LDP adjancencies";
+      }
+      enum IPV6 {
+        description
+          "IPv6 AFI for LDP adjancencies";
+      }
+    }
+    description
+     "enumerated type for specifying LDP AFIs";
+  }
+
+  typedef label-advertisement-mode {
+    type enumeration {
+      enum DOWNSTREAM_UNSOLICITED {
+        description
+          "Downstream Unsolicited.";
+      }
+      enum DOWNSTREAM_ON_DEMAND {
+        description
+          "Downstream on Demand.";
+      }
+    }
+    description
+      "Label Advertisement Mode.";
+  }
+
+  // grouping statements
+
+   grouping ldp-global {
+    description
+      "Global LDP signaling configuration";
+
+    container ldp {
+      description
+        "LDP global signaling configuration";
+
+      container global {
+        description
+          "Platform wide LDP configuration and state";
+
+        uses mpls-ldp-global;
+        uses mpls-ldp-graceful-restart;
+        uses mpls-ldp-authentication-top;
+      }
+
+      uses mpls-ldp-interface-attributes-top;
+      uses mpls-ldp-targeted-top;
+      uses mpls-ldp-neighbors-top;
+
+    }
+  }
+
+  grouping mpls-ldp-authentication-top {
+    description
+    "Grouping containing LDP authentication attributes";
+
+    container authentication {
+      description
+        "Global LDP authentication";
+
+      container config {
+          description
+            "Configuration of LDP authentication attributes";
+          uses mpls-ldp-authentication-config;
+      }
+
+      container state {
+        config false;
+        description
+          "LDP authentication state.";
+        uses mpls-ldp-authentication-config;
+      }
+    }
+  }
+
+  grouping mpls-ldp-neighbors-top {
+    description
+      "Global LDP neighbor attributes";
+
+    container neighbors {
+      description
+        "State and configuration LDP neighbors attributes";
+
+      list neighbor {
+        key "lsr-id label-space-id";
+
+        description
+          "List of LDP neighbors and their attributes.";
+
+        leaf lsr-id {
+          type leafref {
+            path "../config/lsr-id";
+          }
+          description
+            "Neighbor label switch router identifier.";
+        }
+
+        leaf label-space-id {
+          type leafref {
+            path "../config/label-space-id";
+          }
+          description
+            "Label space ID of the neighbor.";
+        }
+
+        container config {
+          description
+            "Neighbor configuration attributes.";
+          uses mpls-ldp-neighbor-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Neighbor state attributes.";
+          uses mpls-ldp-neighbor-config;
+          uses mpls-ldp-neighbor-state;
+        }
+
+        container hello-adjacencies {
+          config false;
+          description "Top container for hello adjacencies
+            for a given LDP neighbor.";
+
+          list hello-adjacency {
+            key "remote-address local-address";
+            config false;
+            description
+              "List of hello adjacencies for a given LDP
+              neighbor.";
+
+            leaf remote-address {
+              config false;
+              description
+                "Within the LDP adjacency, this attribute
+                shows the neighbor address.";
+              type leafref {
+                path "../state/remote-address";
+              }
+            }
+
+            leaf local-address {
+              config false;
+              description
+                "Within the LDP adjacency, this attribute
+                shows the local address.";
+              type leafref {
+                path "../state/local-address";
+              }
+            }
+
+            container state {
+              description
+                "State information for a particular LDP
+                hello adjacency.";
+              uses mpls-ldp-adjacency-state;
+            }
+
+            uses oc-if:interface-ref-state;
+
+            container hello-holdtime {
+
+              description
+                "Specifies the time the sending LSR will
+                maintain its record of Hellos from the
+                receiving LSR";
+
+              container state {
+                description
+                  "State attributes related to the
+                  hello-holdtime.";
+                config false;
+                uses mpls-ldp-hello-holdtime-state;
+              }
+            }
+
+          }
+        }
+
+        uses mpls-ldp-authentication-top;
+
+      }
+    }
+  }
+
+  grouping mpls-ldp-neighbor-config {
+    description
+      "Global configuration for LDP neighbors.";
+
+    leaf lsr-id {
+      type oc-inet:ip-address;
+      description
+        "Neighbor label switch router identifier.";
+    }
+
+    leaf label-space-id {
+      type uint16;
+      description
+        "Label space ID of the neighbor.";
+    }
+
+    leaf enable-downstream-on-demand {
+      type boolean;
+      default "false";
+      description
+        "If this leaf is set to true, LDP downstream on demand is enabled in
+        the LDP session and the router advertises DoD to the peer. If the peer
+        also adverstises DoD, then downstream on demand is used in the session,
+        otherwise downstream unsolicited is used.";
+    }
+
+  }
+
+  grouping mpls-ldp-neighbor-state {
+    description
+      "Grouping containing operational attributes for LDP neighbors.";
+
+    leaf session-state {
+      type enumeration {
+        enum NON_EXISTENT {
+          description "LDP session state: NON EXISTENT.";
+        }
+        enum INITIALIZED {
+          description "LDP session state: INITIALIZED.";
+        }
+        enum OPENREC {
+          description "LDP session state: OPENREC.";
+        }
+        enum OPENSENT {
+          description "LDP session state: OPENSENT.";
+        }
+        enum OPERATIONAL {
+          description "LDP session state: OPERATIONAL.";
+        }
+      }
+      description
+        "Operational status of the LDP session,
+        based on the state machine for session
+        negotiation behavior.";
+      reference
+       "RFC5036, Sec. 2.5.4.";
+    }
+
+    leaf peer-label-advertisement-mode {
+      type label-advertisement-mode;
+      description
+        "This leaf shows the Label Advertisement Mode which is advertised by the peer.";
+    }
+
+    leaf negotiated-label-advertisement-mode {
+      type label-advertisement-mode;
+      description
+        "This leaf shows the Label Advertisement Mode negotiated based on local
+        and remote preferences. If DoD is enabled and the peer also adverstises DoD,
+        then downstream is negotiated. Otherwise, downstream unsolicited is used.";
+    }
+
+  }
+
+  grouping mpls-ldp-adjacency-state {
+
+    description
+      "Set of LDP neighbor related state attributes.";
+
+    leaf remote-address {
+      description
+        "Within the LDP adjacency, this attribute
+        shows the neighbor address.";
+      type oc-inet:ip-address;
+    }
+
+    leaf local-address {
+      description
+        "Within the LDP adjacency, this attribute
+        shows the local address.";
+      type oc-inet:ip-address;
+    }
+
+    leaf adjacency-type {
+      description
+        "This attributes defines if the LDP
+        adjacency is from a direct link or from
+        targeted discovery.";
+      type oc-ldp:mpls-ldp-adjacency-type;
+    }
+
+    leaf last-clear {
+      type oc-types:timeticks64;
+      description
+        "Timestamp of the last time the interface counters
+        were cleared expressed relative to the Unix Epoch
+        (January 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf hello-received {
+      type oc-yang:counter64;
+      description
+        "Number of Hello messaged received by the device";
+    }
+
+    leaf hello-dropped {
+      type oc-yang:counter64;
+      description
+        "Number of Hello messaged dropped by the device";
+    }
+
+  }
+
+  grouping mpls-ldp-hello-holdtime-state {
+    description
+      "Grouping containing the state attributes
+      for hello holdtime.";
+
+    leaf adjacent {
+      description
+        "Hello holdtime attribute learned from the
+        LDP neighbor";
+      type uint16;
+    }
+
+    leaf negotiated {
+      description
+        "Hello holdtime attribute negotiated between
+        the LDP neighbor and the local router.";
+      type uint16;
+    }
+
+    leaf hello-expiration {
+      description
+        "Expiration time for the hello holdtime.";
+      type oc-types:timeticks64;
+    }
+
+    leaf next-hello {
+      description
+        "Time when the next LDP hello will be sent to
+        the adjacent neighbor.";
+      type oc-types:timeticks64;
+    }
+
+  }
+
+  grouping mpls-ldp-global {
+    description
+      "Global LDP attributes";
+
+    container config {
+      description
+        "Global LDP configuration attributes.";
+      uses mpls-ldp-global-config;
+    }
+
+    container state {
+      config false;
+      description
+        "Global LDP state information.";
+      uses mpls-ldp-global-config;
+    }
+  }
+
+  grouping mpls-ldp-global-config {
+    description
+      "Grouping containing platform wide LDP information";
+
+    leaf lsr-id {
+      type oc-inet:ip-address;
+      description
+        "Global label switch router identifier
+        configuration.";
+      reference "RFC5036 LDP Specification";
+    }
+
+  }
+
+  grouping mpls-ldp-interface-attributes-top {
+    description
+      "Top-level structure grouping for interface
+      attributes";
+
+    container interface-attributes {
+      description
+        "Container including attributes for LDP-enabled
+        interfaces";
+
+      container config {
+        description
+          "Configuration of per-interface LDP parameters";
+        uses mpls-ldp-hello-timers-top-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Per-interface LDP protocol and state information";
+        uses mpls-ldp-hello-timers-top-config;
+      }
+
+      container interfaces {
+        description
+          "Container aggregating all interfaces and their
+          LDP-specific attributes.";
+
+        list interface {
+          key "interface-id";
+          description
+            "List of per-interface LDP configurations.
+
+             The interface referenced is based on the interface and
+             subinterface leaves within the interface-ref container -
+             which reference an entry in the /interfaces/interface list -
+             and should not rely on the value of the list key.";
+
+          leaf interface-id {
+            type leafref {
+              path "../config/interface-id";
+            }
+            description
+              "reference to the interface-id data";
+          }
+
+          container config {
+            description
+              "Configuration of per-interface LDP parameters";
+            uses mpls-ldp-interfaces-config;
+            uses mpls-ldp-hello-timers-top-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Per-interface LDP protocol and state information";
+
+            uses mpls-ldp-interfaces-config;
+            uses mpls-ldp-hello-timers-top-config;
+
+            container counters {
+              config false;
+              description
+                "Interface specific LDP statistics and counters";
+            }
+          }
+
+          uses oc-if:interface-ref;
+          uses mpls-ldp-address-families-ldp-top;
+
+        }
+      }
+    }
+  }
+
+  grouping mpls-ldp-address-families-ldp-top {
+    description
+      "Grouping containing the state and configuration
+      attributes for adress families.";
+
+    container address-families {
+      description
+        "Top container comprising the adress families
+        attributes";
+      list address-family {
+        key "afi-name";
+        description
+          "List for attributes related to address-families for LDP.";
+
+        leaf afi-name {
+          type leafref {
+                path "../config/afi-name";
+              }
+              description
+                "Adress-family name atttibute (IPv4, IPv6).";
+        }
+
+        container config {
+          description
+            "Configuration attributes related to address-families
+            for LDP.";
+          uses mpls-ldp-address-family-config;
+          uses admin-config;
+        }
+
+        container state {
+          description
+            "State attributes related to address-families for LDP.";
+          config false;
+          uses mpls-ldp-address-family-config;
+          uses admin-config;
+        }
+      }
+    }
+  }
+
+  grouping mpls-ldp-hello-timers-top-config {
+
+    description
+      "Grouping containing interface-related attributes
+      that can be configured for LDP.";
+
+    leaf hello-holdtime {
+      type uint16;
+      description
+        "Defines the time for which a neighbor adjacency will
+        be kept by the router while it waits for a new link
+        Hello message.";
+      reference "RFC5036 LDP Specification";
+    }
+
+    leaf hello-interval {
+      type uint16;
+      description
+        "Defines the interval for sending Hello messages on
+        each link LDP adjacency.";
+    }
+
+  }
+
+  grouping mpls-ldp-targeted-top {
+
+    description
+      "Grouping containing attributes for targeted LDP";
+
+    container targeted {
+      description
+        "Top container for targeted LDP state and configuration
+        attributes.";
+
+      container config {
+        description
+          "Configuration attributes related to targeted LDP.";
+        uses mpls-ldp-targeted-attributes-top-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State attributes related to targeted LDP.";
+        uses mpls-ldp-targeted-attributes-top-config;
+      }
+
+      uses mpls-ldp-address-targeted-ldp-top;
+    }
+  }
+
+  grouping mpls-ldp-address-targeted-ldp-top {
+    description
+      "Grouping containing address attributes for targeted LDP.";
+
+    container address-families {
+      description
+        "Global container for IPv4 and IPv6 attributes for LDP.";
+
+      list address-family {
+        key "afi-name";
+        description
+          "List of address families for targeted LDP
+          configuration";
+
+        leaf afi-name {
+          type leafref {
+                path "../config/afi-name";
+              }
+              description
+                "Adress-family name atttibute (IPv4, IPv6).";
+        }
+
+        container config {
+          description
+            "Address-family configuration for targeted LDP";
+          uses mpls-ldp-address-family-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Address-family state for targeted LDP";
+          uses mpls-ldp-address-family-config;
+        }
+
+        container targets {
+          description
+            "Container aggregating all targeted sessions and
+            their LDP-specific attributes.";
+
+          list target {
+            key "remote-address";
+
+            description
+              "List of LDP targets configuration";
+
+            leaf remote-address {
+              type leafref {
+                path "../config/remote-address";
+              }
+              description
+                "Neighbor address of the targeted LDP session";
+            }
+
+            container config {
+
+              description
+                "Configuration parameters of a targeted LDP
+                adjacency";
+
+              leaf remote-address {
+                type oc-inet:ip-address;
+                description
+                  "Configuration of neighbor address of the
+                  targeted LDP adjacency";
+              }
+
+              leaf local-address {
+                type oc-inet:ip-address;
+                description
+                  "Local IP address of the LDP adjacency";
+              }
+
+              uses admin-config;
+              uses mpls-ldp-hello-timers-top-config;
+            }
+
+            container state {
+              config false;
+              description
+                "State attributes of a targeted LDP adjacency";
+
+              leaf remote-address {
+                config false;
+                type oc-inet:ip-address;
+                description
+                  "Neighbor address of the targeted LDP adjacency";
+              }
+
+              leaf local-address {
+                config false;
+                type oc-inet:ip-address;
+                description
+                  "Local IP address of the LDP adjacency";
+              }
+
+              uses admin-config;
+              uses mpls-ldp-hello-timers-top-config;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping mpls-ldp-address-family-config {
+    description
+      "Grouping containing adress-family name atttibute";
+
+    leaf afi-name {
+      description
+        "Adress-family name atttibute (IPv4, IPv6).";
+      type oc-ldp:mpls-ldp-afi;
+    }
+
+  }
+
+  grouping mpls-ldp-targeted-attributes-top-config {
+
+    description
+      "Grouping containing targeted LDP configuration
+      attributes.";
+
+    uses mpls-ldp-hello-timers-top-config;
+
+    leaf hello-accept {
+      type boolean;
+      description
+        "Enables or disables the acceptance of targeted LDP
+        hello messages.";
+      reference "RFC5036 LDP Specification";
+    }
+
+  }
+
+  grouping mpls-ldp-interfaces-config {
+    description
+      "LDP configuration information relevant to an interface";
+
+    leaf interface-id {
+      type oc-if:interface-id;
+      description
+        "Identifier for the interface";
+    }
+  }
+
+  grouping mpls-ldp-graceful-restart {
+    description
+      "Attributes relating to LDP Graceful-Restart";
+
+    container graceful-restart {
+      description
+        "Top container for LDP graceful-restart attributes";
+
+      container config {
+        description
+          "LDP graceful-restart configuration attributes.";
+        uses mpls-ldp-graceful-restart-config;
+      }
+
+      container state {
+        config false;
+        description
+          "LDP graceful-restart state attributes.";
+        uses mpls-ldp-graceful-restart-config;
+      }
+    }
+  }
+
+  grouping mpls-ldp-graceful-restart-config {
+    description
+      "Configuration parameters relating to LDP Graceful-Restart";
+
+    uses admin-config;
+
+    leaf reconnect-time {
+      type uint16;
+      description
+        "Interval for which the remote LDP peers
+        will wait for the local node to reconnect after a
+        failure";
+      reference "RFC3478 Graceful Restart Mechanism for Label
+        Distribution Protocol";
+    }
+
+    leaf recovery-time {
+      type uint16;
+      description
+        "Interval used to specify the time for the remote
+        peer to maintain the MPLS forwarding state after
+        the local node has succesfully reconnected";
+      reference "RFC3478 Graceful Restart Mechanism for Label
+        Distribution Protocol";
+    }
+
+    leaf forwarding-holdtime {
+      type uint16;
+      description
+        "Time that defines the interval for keeping the
+        node in recovery mode.";
+      reference "RFC3478 Graceful Restart Mechanism for Label
+        Distribution Protocol";
+    }
+
+    leaf helper-enable {
+      type boolean;
+      description
+        "Enables the graceful restart helper for LDP.";
+    }
+  }
+
+  grouping igp-tunnel-ldp {
+    description
+      "common defintiions for LDP-signaled LSP tunnel
+      types";
+  }
+
+  grouping igp-lsp-ldp-setup {
+    description
+      "grouping for LDP setup attributes";
+
+    container ldp {
+      description
+        "LDP signaling setup for IGP-congruent LSPs";
+      uses igp-tunnel-ldp;
+    }
+  }
+
+  grouping mpls-ldp-authentication-config {
+    description
+      "LDP authentication parameters container.";
+
+    leaf enable {
+      type boolean;
+      default false;
+      description
+        "Enables LDP authentication on the node.";
+    }
+
+    leaf authentication-key {
+      type oc-types:routing-password;
+      description
+        "authenticate LDP signaling
+         messages";
+      reference
+        "RFC1321 The MD5 Message-Digest Algorithm
+        RFC5036 LDP Specification";
+    }
+  }
+
+  grouping admin-config {
+    description
+      "Re-usable grouping to enable or disable a particular LDP feature.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "When set to true, the functionality within which this leaf is
+        defined is enabled, when set to false it is explicitly disabled.";
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+
+}

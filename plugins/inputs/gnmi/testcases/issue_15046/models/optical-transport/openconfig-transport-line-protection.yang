@@ -1,0 +1,623 @@
+module openconfig-transport-line-protection {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/optical-transport-line-protection";
+
+  prefix "oc-line-protect";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-platform { prefix oc-platform; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This model describes configuration and operational state data
+    for optical line protection elements, deployed as part of a
+    transport line system. An Automatic Protection Switch (APS)
+    is typically installed in the same device as the amplifiers
+    and wave-router, however an APS can also be a standalone
+    device. In both scenarios, it serves the same purpose of
+    providing protection using two dark fiber pairs to ensure the
+    amplifiers can still receive a signal if one of the two fiber
+    pairs is broken. The APS port details and directionality are
+    shown below. The three major attributes, together with their
+    modifiers, define the behavior of the APS and can be prioritized
+    in the descending order as shown in the following table";
+
+  //
+  // Automatic Protection Switch (APS) port details and directionality.
+  //                 _________
+  //                 |       |
+  //                 |       | <=== LINE-PRIMARY-IN
+  //                 |       |
+  // COMMON-IN  ===> |       | ===> LINE-PRIMARY-OUT
+  //                 |       |
+  //                 |  APS  |
+  // COMMON-OUT <=== |       |
+  //                 |       | <=== LINE-SECONDARY-IN
+  //                 |       |
+  //                 |       | ===> LINE-SECONDARY-OUT
+  //                 |_______|
+  //
+  //
+  // The interaction of configuration attributes that control the
+  // protection switching behavior
+  // +------------------+--------------------+------------------------+
+  // | Attribute        | Modifier           | Behavior               |
+  // +------------------+--------------------+------------------------+
+  // | force-to-port    | n/a                | turns off switching    |
+  // |                  |                    | by forcing to primary  |
+  // |                  |                    | or secondary           |
+  // +------------------+--------------------+------------------------+
+  // | relative-switch  | relative-threshold | if set, overrides      |
+  // | -threshold       | -offset            | primary and secondary  |
+  // |                  |                    | switch thresholds      |
+  // +------------------+--------------------+------------------------+
+  // | primary-switch   | primary-switch     | sets respective        |
+  // | -threshold,      | -hysteresis        | threshold to switch    |
+  // | secondary-switch |                    | to opposite port       |
+  // | -threshold       |                    |                        |
+  // +------------------+--------------------+------------------------+
+
+  oc-ext:openconfig-version "0.4.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.1";
+  }
+
+  revision "2018-07-25" {
+    description
+      "Added wait-to-restore-time, hold-off-time,
+      relative-switch-threshold, relative-switch-threshold-offset,
+      forced-to-port, removed secondary-switch-hysteresis, and
+      edited the description of primary-switch-threshold,
+      secondary-switch-threshold, and primary-switch-hysteresis";
+    reference "0.4.0";
+  }
+
+  revision "2017-09-08" {
+    description
+      "Correct bug with OSC interfaces";
+    reference "0.3.1";
+  }
+
+  revision "2017-07-08" {
+    description
+      "Support multiple OCMs, add monitor port type
+      and refs to hw ports, ";
+    reference "0.3.0";
+  }
+
+  revision "2017-03-28" {
+    description
+      "Added min/max/avg stats, status for media channels, OCM, APS";
+    reference "0.2.0";
+  }
+
+  revision "2016-08-05" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity APS_PATHS {
+    description
+      "Base identity for identifying the line paths on an
+      automatic protection switch";
+  }
+
+  identity PRIMARY {
+    base APS_PATHS;
+    description
+      "The primary line path connected to an automatic protection
+      switch port indicating the primary/preferred path";
+  }
+
+  identity SECONDARY {
+    base APS_PATHS;
+    description
+      "The secondary line path connected to an automatic protection
+      switch port indicating the secondary path";
+  }
+
+  // grouping statements
+
+  grouping aps-input-port-config {
+    description
+      "Grouping for config related to unidirectional automatic
+      protection switch input ports";
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "This leaf contains the configured, desired state of the
+        port. Disabling the port turns off alarm reporting for
+        the port";
+    }
+
+    leaf target-attenuation {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "Target attenuation of the variable optical attenuator
+        associated with the port in increments of 0.01 dB.";
+    }
+  }
+
+  grouping aps-output-port-config {
+    description
+      "Grouping for config related to unidirectional automatic
+      protection switch output ports";
+
+    leaf target-attenuation {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "Target attenuation of the variable optical attenuator
+        associated with the port in increments of 0.01 dB";
+    }
+  }
+
+  grouping aps-input-port-state {
+    description
+      "Grouping for state related to unidirectional automatic
+      protection switch input ports";
+
+    leaf attenuation {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The attenuation of the variable optical attenuator
+        associated with the port in increments of 0.01 dB.";
+    }
+
+    container optical-power {
+      description
+        "The optical input power of this port in units of
+        0.01dBm. Optical input power represents the signal
+        traversing from an external destination into the module.
+        The power is measured before any attenuation. If avg/min/max
+        statistics are not supported, the target is expected to
+        just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+  }
+
+  grouping aps-output-port-state {
+    description
+      "Grouping for state related to unidirectional automatic
+      protection switch output ports";
+
+    leaf attenuation {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      description
+        "The attenuation of the variable optical attenuator
+        associated with the port in increments of 0.01 dB";
+    }
+
+    container optical-power {
+      description
+        "The optical output power of this port in units of
+        0.01dBm. Optical output power represents the signal
+        traversing from the module to an external destination. The
+        power is measured after any attenuation. If avg/min/max
+        statistics are not supported, the target is expected to
+        just supply the instant value";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dBm;
+    }
+  }
+
+  grouping aps-ports {
+    description
+      "Top level grouping for automatic protection switch ports";
+
+    container line-primary-in {
+      description
+        "Container for information related to the line primary
+        input port";
+
+      container config {
+        description
+          "Configuration data for the line primary input port";
+
+        uses aps-input-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "State data for the line primary input port";
+
+        uses aps-input-port-config;
+        uses aps-input-port-state;
+      }
+
+    }
+
+    container line-primary-out {
+      description
+        "Container for information related to the line primary
+        output port";
+
+      container config {
+        description
+          "Configuration data for the line primary output port";
+
+        uses aps-output-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "State data for the line primary output port";
+
+        uses aps-output-port-config;
+        uses aps-output-port-state;
+      }
+    }
+
+    container line-secondary-in {
+      description
+        "Container for information related to the line secondary
+        input port";
+
+      container config {
+        description
+          "Configuration data for the line secondary input port";
+
+        uses aps-input-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "State data for the line secondary input port";
+
+        uses aps-input-port-config;
+        uses aps-input-port-state;
+      }
+    }
+
+    container line-secondary-out {
+      description
+        "Container for information related to the line secondary
+        output port";
+
+      container config {
+        description
+          "Configuration data for the line secondary output port";
+
+        uses aps-output-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "State data for the line secondary output port";
+
+        uses aps-output-port-config;
+        uses aps-output-port-state;
+      }
+    }
+
+    container common-in {
+      description
+        "Container for information related to the line common
+        input port";
+
+      container config {
+        description
+          "Configuration data for the line common input port";
+
+        uses aps-input-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "State data for the line common input port";
+
+        uses aps-input-port-config;
+        uses aps-input-port-state;
+      }
+    }
+
+    container common-output {
+      description
+        "Container for information related to the line common
+        output port";
+
+      container config {
+        description
+          "Configuration data for the line common output port";
+
+        uses aps-output-port-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "State data for the line common output port";
+
+        uses aps-output-port-config;
+        uses aps-output-port-state;
+      }
+    }
+  }
+
+  grouping aps-config {
+    description
+      "Configuration data for automatic protection switch modules";
+
+    leaf name {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component/" +
+          "oc-platform:name";
+      }
+      description
+        "Reference to the component name (in the platform model)
+        corresponding to this automatic protection switch module
+        in the device";
+    }
+
+    leaf revertive {
+      type boolean;
+      description
+        "Revertive behavior of the module. If True, then
+        automatically revert after protection switch once the
+        fault is restored. This leaf is not valid when the
+        relative-switch-threshold is in effect";
+    }
+
+    leaf wait-to-restore-time {
+      type uint32;
+      units milliseconds;
+      description
+         "The time that must elapse before an APS path
+         that has recovered from an signal failure (SF) or signal
+         degradation (SD) condition can be used again to transport
+         the normal traffic signal. During this time period, an SF or
+         SD condition shall override the wait-to-restore time period.
+         This leaf can only take effect when the revertive leaf
+         equals true";
+    }
+
+    leaf hold-off-time {
+      type uint32;
+      units milliseconds;
+      description
+        "The time delay between the declaration of an SF or SD
+        condition and the initiation of the protection switching
+        algorithm";
+    }
+
+    leaf primary-switch-threshold {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The threshold at which the primary line port will switch to
+        the opposite line port in increments of 0.01 dBm. If the
+        hardware supports only one switch threshold for primary and
+        and secondary ports then it is recommended to set both
+        primary-switch-threshold and secondary-switch-threshold to
+        the same value to be explicit. When the relative switch
+        threshold is enabled, i.e. set to a non-zero value, the
+        primary switch threshold will be overridden";
+    }
+
+    leaf primary-switch-hysteresis {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      default 0;
+      description
+        "The delta in dB between the primary-switch-threshold
+        and the signal received on the primary APS_PATH before
+        initiating a switch from the secondary APS_PATH to the
+        primary APS_PATH, in order to prevent toggling between ports
+        when an input signal is very close to the threshold. A zero
+        value means the switch hysteresis is disabled.";
+    }
+
+    leaf secondary-switch-threshold {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dBm;
+      description
+        "The threshold at which the secondary line port will switch to
+        the opposite line port in increments of 0.01 dBm. If the
+        hardware supports only one switch threshold for primary and
+        and secondary ports then it is recommended to set both
+        primary-switch-threshold and secondary-switch-threshold to
+        the same value to be explicit. When the relative switch
+        threshold is enabled, i.e. set to a non-zero value, the
+        secondary switch threshold will be overridden";
+    }
+
+    leaf relative-switch-threshold {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      default 0;
+      description
+        "The delta threshold in dB at which the current line port
+        will switch to the opposite line port. It can be set to
+        the value of 0dB. When set to 0dB, the threshold is ignored
+        and the system automatically applies the primary and
+        secondary switch thresholds. When set to a non-zero value,
+        it overrides the primary and secondary switch thresholds";
+    }
+
+    leaf relative-switch-threshold-offset {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units dB;
+      default 0;
+      description
+        "The offset of the relative switch threshold that compensates
+        the normal difference of receiving power between the primary
+        and secondary line ports. A negative offset corresponds to
+        the situation where the secondary line port receives a higher
+        power than the primary line port in normal condition， and a
+        positive offset means the opposite. The offset will only work
+        when the relative switch threshold is set to a non-zero
+        value";
+    }
+
+    leaf force-to-port {
+      type enumeration {
+        enum NONE {
+          description
+            "Do not force the switch to stay on any line port";
+        }
+        enum PRIMARY {
+          description
+            "Force the switch to stay on the primary line port";
+        }
+        enum SECONDARY {
+          description
+            "Force the switch to stay on the secondary line port";
+        }
+      }
+      default NONE;
+      description
+        "Explicitly set the switch to stay on a port regardless of
+        its operational condition";
+    }
+  }
+
+  grouping aps-state {
+    description
+      "State data for automatic protection switch modules";
+
+    leaf active-path {
+      type identityref {
+        base APS_PATHS;
+      }
+      description
+        "Indicates which line path on the protection switch is
+         currently the active path connected to the common port";
+    }
+  }
+
+  grouping automatic-protection-switch-top {
+    description
+      "Top level grouping for automatic protection switch data";
+
+    container aps-modules {
+      description
+        "Enclosing container for list of automatic protection
+	       switch modules";
+
+      list aps-module {
+        key "name";
+        description
+          "List of automatic protection switch modules present
+          in the device";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the config name list key";
+        }
+
+        container config {
+          description
+            "Configuration data for an automatic protection
+            switch module";
+
+          uses aps-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for an automatic protection
+            switch module";
+
+          uses aps-config;
+          uses aps-state;
+        }
+
+        container ports {
+          description
+            "Top level grouping for automatic protection switch ports";
+
+          uses aps-ports;
+        }
+      }
+    }
+  }
+
+  grouping transport-line-protection-top {
+    description
+      "Top level grouping for transport line protection data";
+
+    container aps {
+      description
+        "Top level grouping for automatic protection switch data";
+
+      uses automatic-protection-switch-top;
+    }
+  }
+
+  // data definition statements
+
+  uses transport-line-protection-top;
+
+}

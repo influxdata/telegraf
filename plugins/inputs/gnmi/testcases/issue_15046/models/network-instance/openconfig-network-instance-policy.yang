@@ -1,0 +1,137 @@
+module openconfig-network-instance-policy {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/network-instance/policy";
+
+  prefix "oc-ni-pol";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-routing-policy { prefix oc-rpol; }
+  import openconfig-policy-types { prefix oc-pol-types; }
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines routing policy statements (conditions and
+    actions) for the network instance model.  These statements are
+    generally added to the routing policy model.";
+
+  oc-ext:openconfig-version "0.1.2";
+
+  revision "2023-07-25" {
+    description
+      "Expand description of
+       match-protocol-instance/protocol-name.";
+    reference "0.1.2";
+  }
+
+revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2017-02-15" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+
+  grouping protocol-instance-policy-config {
+    description
+      "Configuration data for policy matching on protocol instance";
+
+      leaf protocol-identifier {
+        type identityref {
+          base oc-pol-types:INSTALL_PROTOCOL_TYPE;
+        }
+        description
+          "The identifier (protocol type) of the
+          protocol instance to match on in the local network
+          instance.";
+      }
+
+      leaf protocol-name {
+        type string;
+        description
+          "The name of the protocol instance to match
+          on in the local network instance. The string
+          must match one of /network-instances/
+          network-instance/protocols/
+          protocol/identifier in the local network
+          instance.";
+      }
+  }
+
+  grouping protocol-instance-policy-state {
+    description
+      "Operational state data for policy matching on protocol
+      instance";
+  }
+
+  grouping protocol-instance-policy-top {
+    description
+      "Top-level grouping for policy matching on protocol instance";
+
+    container match-protocol-instance {
+      description
+        "Top-level container for protocol instance match condition
+        in policy statements.  The protocol instance is referenced
+        by an identifier and name";
+
+      container config {
+        description
+          "Configuration data for policy matching on protocol
+          instance";
+
+        uses protocol-instance-policy-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for policy matching on protocol instance";
+
+        uses protocol-instance-policy-config;
+        uses protocol-instance-policy-state;
+      }
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-rpol:routing-policy/oc-rpol:policy-definitions/" +
+    "oc-rpol:policy-definition/oc-rpol:statements/oc-rpol:statement/" +
+    "oc-rpol:conditions" {
+    description
+      "Add match conditions for protocol instances to the routing
+      policy model.";
+
+    uses protocol-instance-policy-top;
+  }
+
+  // rpc statements
+
+  // notification statements
+
+}

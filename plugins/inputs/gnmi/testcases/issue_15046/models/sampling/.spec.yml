@@ -1,0 +1,8 @@
+- name: openconfig-sampling
+  docs:
+    - yang/sampling/openconfig-sampling.yang
+    - yang/sampling/openconfig-sampling-sflow.yang
+  build:
+    - yang/sampling/openconfig-sampling.yang
+    - yang/sampling/openconfig-sampling-sflow.yang
+  run-ci: true

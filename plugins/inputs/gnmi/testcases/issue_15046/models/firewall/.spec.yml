@@ -1,0 +1,12 @@
+- name: openconfig-fw-high-availability
+  docs:
+    - yang/firewall/openconfig-fw-high-availability.yang
+  build:
+    - yang/firewall/openconfig-fw-high-availability.yang
+  run-ci: true
+- name: openconfig-fw-link-monitoring
+  docs:
+    - yang/firewall/openconfig-fw-link-monitoring.yang
+  build:
+    - yang/firewall/openconfig-fw-link-monitoring.yang
+  run-ci: true

@@ -1,0 +1,407 @@
+module openconfig-flexalgo {
+  yang-version 1.1;
+  namespace "http://openconfig.net/yang/flexalgo";
+  prefix "oc-flexalgo";
+
+  import openconfig-network-instance {
+    prefix "oc-ni";
+  }
+  import openconfig-extensions {
+    prefix oc-ext;
+  }
+  import openconfig-interfaces {
+    prefix oc-if;
+  }
+  oc-ext:openconfig-version "0.1.0";
+
+  organization
+    "OpenConfig working group";
+  contact
+    "OpenConfig working group
+    www.openconfig.net ";
+  description
+    "This YANG module defines the configurational and operational
+    parameters related to IGP Flex-Algorithms";
+
+  revision 2023-05-24 {
+    description
+      "Initial revision of flexalgo module";
+    reference
+      "0.1.0";
+  }
+
+  /* Types definitions */
+
+  typedef flex-algo-metric-type {
+    type enumeration {
+      enum IGP {
+        value 0;
+        description
+          "IGP metric to be used during the calculation.";
+      }
+      enum MIN_DELAY {
+        value 1;
+        description
+          "Min Unidirectional Link Delay as defined in [RFC7810] to
+           be used during the calculation.";
+      }
+      enum TE_METRIC {
+        value 2;
+        description
+          "TE default metric as defined in [RFC5305] to be used
+           during the calculation.";
+      }
+    }
+    description
+      "Type of metric to be used during a Flex Algo path
+       computation";
+  }
+
+  typedef flex-algo-id {
+    type uint8 {
+      range "128..255";
+    }
+    description
+      "Flex-Algorithm identifies which algorithm should be used during
+       path computation";
+  }
+
+  typedef flex-algo-calc-type {
+    type uint8 {
+      range "0..127";
+    }
+    default "0";
+    description
+      "Calculation type value ranges from 0 to 127 both inclusive
+       from the IGP Algorithm Types registry defined under
+       Interior Gateway Protocol (IGP)
+       Parameters IANA registries.
+       If the required calculation type is Shortest Path First,
+       the value 0 SHOULD appear in this field.";
+  }
+
+  grouping algorithm-attributes {
+    description
+      "All of the possible attributes for an flexible algorithm
+       definition";
+    leaf flex-algo-id {
+      type flex-algo-id;
+      mandatory true;
+      description
+        "Flex Algorithm Identifier";
+    }
+    leaf flex-algo-name {
+      type string;
+      description
+        "Flexible Algorithm name";
+    }
+    leaf flex-algo-description {
+      type string;
+      description
+        "Description of this flex-algo";
+    }
+    leaf metric-type {
+      type flex-algo-metric-type;
+      default "IGP";
+      description
+        "Indicates which is the corresponding metric type for
+         this algorithm";
+    }
+    leaf calc-type {
+      type flex-algo-calc-type;
+      description
+        "Indicates the calculation type, if advertised";
+    }
+    leaf priority {
+      type uint8;
+      default "237";
+      description
+        "Indicates the priority for this algorithm";
+    }
+
+    leaf-list exclude {
+      type leafref {
+        path "../../../../flex-algo-global-attributes/flex-algo-admin-groups/" +
+          "admin-group/admin-group-name";
+      }
+      description
+        "extended-admin-groups to exclude in path calculation.";
+    }
+    leaf-list include-all {
+      type leafref {
+        path "../../../../flex-algo-global-attributes/flex-algo-admin-groups/" +
+          "admin-group/admin-group-name";
+      }
+      description
+        "extended-admin-groups, all of which must be included";
+    }
+    leaf-list include-any {
+      type leafref {
+        path "../../../../flex-algo-global-attributes/flex-algo-admin-groups/" +
+          "admin-group/admin-group-name";
+      }
+      description
+        "extended-admin-groups, one of which must be included";
+    }
+    leaf-list srlg-exclude {
+      type leafref {
+        path "../../../../flex-algo-global-attributes/srlgs/srlg/name";
+      }
+      description
+        "list of references to named SRLGs to be excluded";
+    }
+    leaf algo-flags {
+      type boolean;
+      description
+        "Advertise flex-algo definition flags";
+    }
+  }
+
+  grouping flex-algo-definition-top {
+    description
+      "Top level grouping for flexible Algorithms and their definitions";
+    list algorithm {
+      key "flex-algo-id";
+      description
+        "List of Flexible Algorithms";
+      leaf flex-algo-id {
+        type leafref {
+          path "../config/flex-algo-id";
+        }
+        description
+          "Name for a Flexible Algorithm";
+      }
+      container config {
+        description
+          "Attributes for a Flexible Algorithm";
+        uses algorithm-attributes;
+      }
+      container state {
+        config false;
+        description
+          "Attributes for a Flexible Algorithm";
+        uses algorithm-attributes;
+      }
+    }
+  }
+
+  grouping flex-algo-interface-attributes-config {
+    description
+      "global level definitions for interfaces
+      on which TE is run";
+
+    leaf interface-id {
+      type oc-if:interface-id;
+      description
+        "Id of the interface";
+    }
+
+    leaf te-metric {
+      type uint32;
+      description
+        "TE specific metric for the link";
+    }
+
+    leaf min-delay {
+      type uint32;
+      description
+	"Min delay for the link";
+    }
+
+    leaf-list srlg-membership {
+      type leafref {
+          path "../../../../flex-algo-global-attributes/srlgs/srlg/name";
+      }
+      description
+        "list of references to named shared risk link groups that the
+        interface belongs to.";
+    }
+
+    leaf-list admin-group {
+      type leafref {
+        path "../../../../flex-algo-global-attributes/flex-algo-admin-groups/" +
+          "admin-group/admin-group-name";
+      }
+      description
+        "list of admin groups (by name) on the interface";
+    }
+  }
+
+  grouping flex-algo-interface-attributes-top {
+    description "Top level grouping for flex Algorithm attributes for interfaces";
+
+    list interface {
+      key "interface-id";
+      description
+        "List of flex-algo interfaces";
+
+      leaf interface-id {
+        type leafref {
+          path "../config/interface-id";
+        }
+        description
+          "Reference to the interface id list key";
+      }
+
+      container config {
+        description
+          "Configuration parameters related to flex-algo interfaces:";
+        uses flex-algo-interface-attributes-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State parameters related to flex-algo interfaces";
+        uses flex-algo-interface-attributes-config;
+      }
+    }
+  }
+
+  grouping flex-algo-srlg-config {
+    description
+      "Configuration of various attributes associated with the SRLG";
+
+    leaf name {
+      type string;
+      description
+        "SRLG group identifier";
+    }
+
+    leaf value {
+      type uint32;
+      description
+        "group ID for the SRLG";
+    }
+  }
+
+  grouping flex-algo-srlg-top {
+    description
+      "Top level grouping for flex algo shared risk link groups.";
+
+    container srlgs {
+      description
+        "Shared risk link groups attributes";
+      list srlg {
+        key "name";
+        description
+          "List of shared risk link groups";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "The SRLG group identifier";
+        }
+
+        container config {
+          description
+            "Configuration parameters related to the SRLG";
+          uses flex-algo-srlg-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State parameters related to the SRLG";
+          uses flex-algo-srlg-config;
+        }
+      }
+    }
+ }
+
+  grouping flex-algo-admin-group-config {
+    description
+      "configuration data for MPLS link admin groups";
+
+    leaf admin-group-name {
+      type string;
+      description
+        "name for mpls admin-group";
+    }
+
+    leaf bit-position {
+      type uint32;
+      description
+        "bit-position value for mpls admin-group. The value
+        for the admin group is an integer that represents one
+        of the bit positions in the admin-group bitmask. Values
+        between 0 and 31 are interpreted as the original limit
+        of 32 admin groups. Values >=32 are interpreted as
+        extended admin group values as per RFC7308.";
+    }
+  }
+
+  grouping flex-algo-admin-groups-top {
+    description
+      "top-level mpls admin-groups config
+      and state containers";
+
+    container flex-algo-admin-groups {
+      description
+        "Top-level container for admin-groups configuration
+        and state";
+
+      list admin-group {
+        key "admin-group-name";
+        description
+          "configuration of value to name mapping
+          for mpls affinities/admin-groups";
+
+        leaf admin-group-name {
+          type leafref {
+            path "../config/admin-group-name";
+          }
+          description
+            "name for mpls admin-group";
+          }
+        container config {
+          description
+            "Configurable items for admin-groups";
+          uses flex-algo-admin-group-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for admin-groups";
+          uses flex-algo-admin-group-config;
+        }
+      }
+    }
+  }
+
+  grouping flex-algo-top {
+    description
+      "Top level grouping for Flexible Algorithm Definitions";
+
+    container flex-algorithm {
+        description "Flex Algorithms definitions and the attributes";
+
+	container flex-algorithm-definition {
+          description "Flexible Algorithms and their definitions";
+          uses flex-algo-definition-top;
+        }
+
+        container flex-algo-global-attributes {
+          description "Flexible Algorithm global attributes";
+          uses flex-algo-srlg-top;
+          uses flex-algo-admin-groups-top;
+        }
+
+        container flex-algo-interface-attributes {
+          description "Flexible Algorithm attributes for interfaces";
+          uses flex-algo-interface-attributes-top;
+        }
+     }
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance" {
+    description
+      "List of Flexible Algorithms and their definitions";
+
+    uses flex-algo-top;
+  }
+}
+

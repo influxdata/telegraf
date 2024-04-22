@@ -1,0 +1,149 @@
+module openconfig-mpls-sr {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/mpls-sr";
+
+  prefix "oc-mpls-sr";
+
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Configuration for MPLS with segment routing-based LSPs,
+    including global parameters, and LSP-specific configuration for
+    both constrained-path and IGP-congruent LSPs";
+
+  oc-ext:openconfig-version "3.0.1";
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "3.0.1";
+  }
+
+  revision "2018-07-02" {
+    description
+      "Add new RSVP-TE statistics, remove associated-rsvp-session
+      leaf. Remove use of date-and-time.";
+    reference "3.0.0";
+  }
+
+  revision "2018-06-16" {
+    description
+      "Included attributes for base LDP configuration.";
+     reference "2.6.0";
+  }
+
+  revision "2018-06-13" {
+    description
+      "Add ttl-propagation to global MPLS config";
+    reference "2.5.0";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fixed bugs in when statements on RSVP-TE attributes";
+    reference "2.4.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "2.4.1";
+  }
+
+  revision "2017-06-21" {
+    description
+      "Add TC bits typedef.";
+    reference "2.4.0";
+  }
+
+  revision "2017-03-22" {
+    description
+      "Add RSVP calculated-absolute-subscription-bw";
+    reference "2.3.0";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add RSVP Tspec, clarify units for RSVP, remove unused LDP";
+    reference "2.2.0";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add additional MPLS parameters";
+    reference "2.1.0";
+  }
+
+  revision "2016-09-01" {
+    description
+      "Revisions based on implementation feedback";
+    reference "2.0.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "Public release of MPLS models";
+    reference "1.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping sr-path-attributes-config {
+    description
+      "Configuration parameters relating to SR-TE LSPs";
+
+    leaf sid-selection-mode {
+      type enumeration {
+        enum ADJ_SID_ONLY {
+          description
+            "The SR-TE tunnel should only use adjacency SIDs
+            to build the SID stack to be pushed for the LSP";
+        }
+        enum MIXED_MODE {
+          description
+            "The SR-TE tunnel can use a mix of adjacency
+            and prefix SIDs to build the SID stack to be pushed
+            to the LSP";
+        }
+      }
+      default MIXED_MODE;
+      description
+        "The restrictions placed on the SIDs to be selected by the
+        calculation method for the explicit path when it is
+        instantiated for a SR-TE LSP";
+    }
+
+    leaf sid-protection-required {
+      type boolean;
+      default "false";
+      description
+        "When this value is set to true, only SIDs that are
+        protected are to be selected by the calculating method
+        when the explicit path is instantiated by a SR-TE LSP.";
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+
+}

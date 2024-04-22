@@ -1,0 +1,46 @@
+- name: openconfig-system
+  docs:
+    - yang/openflow/openconfig-openflow.yang
+    - yang/system/openconfig-aaa.yang
+    - yang/system/openconfig-aaa-radius.yang
+    - yang/system/openconfig-aaa-tacacs.yang
+    - yang/system/openconfig-aaa-types.yang
+    - yang/system/openconfig-alarms.yang
+    - yang/system/openconfig-alarm-types.yang
+    - yang/system/openconfig-hashing.yang
+    - yang/system/openconfig-license.yang
+    - yang/system/openconfig-procmon.yang
+    - yang/system/openconfig-system.yang
+    - yang/system/openconfig-system-bootz.yang
+    - yang/system/openconfig-system-controlplane.yang
+    - yang/system/openconfig-system-grpc.yang
+    - yang/system/openconfig-system-logging.yang
+    - yang/system/openconfig-system-terminal.yang
+    - yang/system/openconfig-system-utilization.yang
+    - yang/gnsi/openconfig-gnsi-acctz.yang
+    - yang/gnsi/openconfig-gnsi-authz.yang
+    - yang/gnsi/openconfig-gnsi-certz.yang
+    - yang/gnsi/openconfig-gnsi-credentialz.yang
+    - yang/gnsi/openconfig-gnsi-pathz.yang
+  build:
+    - yang/system/openconfig-system.yang
+    - yang/system/openconfig-system-utilization.yang
+  run-ci: true
+- name: openconfig-system-ext
+  build:
+    - yang/system/openconfig-system.yang
+    - yang/system/openconfig-system-bootz.yang
+    - yang/system/openconfig-system-controlplane.yang
+    - yang/system/openconfig-system-grpc.yang
+  run-ci: true
+- name: openconfig-messages
+  docs:
+    - yang/system/openconfig-messages.yang
+  build:
+    - yang/system/openconfig-messages.yang
+- name: openconfig-hashing
+  docs:
+    - yang/system/openconfig-hashing.yang
+  build:
+    - yang/system/openconfig-hashing.yang
+  run-ci: true

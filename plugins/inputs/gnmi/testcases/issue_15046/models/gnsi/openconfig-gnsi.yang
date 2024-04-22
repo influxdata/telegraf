@@ -1,0 +1,40 @@
+module openconfig-gnsi {
+  yang-version "1";
+
+  prefix "oc-gnsi";
+
+  namespace "http://openconfig.net/yang/gnsi";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-system-grpc { prefix oc-grpc; }
+
+  organization
+    "OpenConfig Working Group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module defines a set of extensions that provide gNSI (the gRPC
+    Network Security Interface) specific extensions to the OpenConfig data models.
+    Specifically, the parameters for the configuration of the service, and
+    configuration and state are added.
+
+    The gNSI protobufs and documentation are published at
+    https://github.com/openconfig/gnsi.";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision 2024-02-13 {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  identity GNSI {
+    base "oc-grpc:GRPC_SERVICE";
+    description
+      "gNSI: gRPC Network Security Interface";
+  }
+}

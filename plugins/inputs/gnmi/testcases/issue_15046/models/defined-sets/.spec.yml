@@ -1,0 +1,6 @@
+- name: openconfig-defined-sets
+  docs:
+    - yang/defined-sets/openconfig-defined-sets.yang
+  build:
+    - yang/defined-sets/openconfig-defined-sets.yang
+  run-ci: true

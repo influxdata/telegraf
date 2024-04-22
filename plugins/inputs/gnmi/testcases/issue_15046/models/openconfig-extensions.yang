@@ -1,0 +1,206 @@
+module openconfig-extensions {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/openconfig-ext";
+
+  prefix "oc-ext";
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module provides extensions to the YANG language to allow
+    OpenConfig specific functionality and meta-data to be defined.";
+
+  oc-ext:openconfig-version "0.5.1";
+
+  revision "2022-10-05" {
+    description
+      "Add missing version statement.";
+    reference "0.5.1";
+  }
+
+  revision "2020-06-16" {
+    description
+      "Add extension for POSIX pattern statements.";
+    reference "0.5.0";
+  }
+
+  revision "2018-10-17" {
+    description
+      "Add extension for regular expression type.";
+    reference "0.4.0";
+  }
+
+  revision "2017-04-11" {
+    description
+      "rename password type to 'hashed' and clarify description";
+    reference "0.3.0";
+  }
+
+  revision "2017-01-29" {
+    description
+      "Added extension for annotating encrypted values.";
+    reference "0.2.0";
+  }
+
+  revision "2015-10-09" {
+    description
+      "Initial OpenConfig public release";
+    reference "0.1.0";
+  }
+
+
+  // extension statements
+  extension openconfig-version {
+    argument "semver" {
+      yin-element false;
+    }
+    description
+      "The OpenConfig version number for the module. This is
+      expressed as a semantic version number of the form:
+        x.y.z
+      where:
+        * x corresponds to the major version,
+        * y corresponds to a minor version,
+        * z corresponds to a patch version.
+      This version corresponds to the model file within which it is
+      defined, and does not cover the whole set of OpenConfig models.
+
+      Individual YANG modules are versioned independently -- the
+      semantic version is generally incremented only when there is a
+      change in the corresponding file.  Submodules should always
+      have the same semantic version as their parent modules.
+
+      A major version number of 0 indicates that this model is still
+      in development (whether within OpenConfig or with industry
+      partners), and is potentially subject to change.
+
+      Following a release of major version 1, all modules will
+      increment major revision number where backwards incompatible
+      changes to the model are made.
+
+      The minor version is changed when features are added to the
+      model that do not impact current clients use of the model.
+
+      The patch-level version is incremented when non-feature changes
+      (such as bugfixes or clarifications to human-readable
+      descriptions that do not impact model functionality) are made
+      that maintain backwards compatibility.
+
+      The version number is stored in the module meta-data.";
+  }
+
+  extension openconfig-hashed-value {
+    description
+      "This extension provides an annotation on schema nodes to
+      indicate that the corresponding value should be stored and
+      reported in hashed form.
+
+      Hash algorithms are by definition not reversible. Clients
+      reading the configuration or applied configuration for the node
+      should expect to receive only the hashed value. Values written
+      in cleartext will be hashed. This annotation may be used on
+      nodes such as secure passwords in which the device never reports
+      a cleartext value, even if the input is provided as cleartext.";
+  }
+
+  extension regexp-posix {
+     description
+      "This extension indicates that the regular expressions included
+      within the YANG module specified are conformant with the POSIX
+      regular expression format rather than the W3C standard that is
+      specified by RFC6020 and RFC7950.";
+  }
+
+  extension posix-pattern {
+    argument "pattern" {
+      yin-element false;
+    }
+    description
+      "Provides a POSIX ERE regular expression pattern statement as an
+      alternative to YANG regular expresssions based on XML Schema Datatypes.
+      It is used the same way as the standard YANG pattern statement defined in
+      RFC6020 and RFC7950, but takes an argument that is a POSIX ERE regular
+      expression string.";
+    reference
+      "POSIX Extended Regular Expressions (ERE) Specification:
+      https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04";
+  }
+
+  extension telemetry-on-change {
+    description
+      "The telemetry-on-change annotation is specified in the context
+      of a particular subtree (container, or list) or leaf within the
+      YANG schema. Where specified, it indicates that the value stored
+      by the nodes within the context change their value only in response
+      to an event occurring. The event may be local to the target, for
+      example - a configuration change, or external - such as the failure
+      of a link.
+
+      When a telemetry subscription allows the target to determine whether
+      to export the value of a leaf in a periodic or event-based fashion
+      (e.g., TARGET_DEFINED mode in gNMI), leaves marked as
+      telemetry-on-change should only be exported when they change,
+      i.e., event-based.";
+  }
+
+  extension telemetry-atomic {
+    description
+      "The telemetry-atomic annotation is specified in the context of
+      a subtree (containre, or list), and indicates that all nodes
+      within the subtree are always updated together within the data
+      model. For example, all elements under the subtree may be updated
+      as a result of a new alarm being raised, or the arrival of a new
+       protocol message.
+
+      Transport protocols may use the atomic specification to determine
+      optimisations for sending or storing the corresponding data.";
+  }
+
+  extension operational {
+    description
+      "The operational annotation is specified in the context of a
+      grouping, leaf, or leaf-list within a YANG module. It indicates
+      that the nodes within the context are derived state on the device.
+
+      OpenConfig data models divide nodes into the following three categories:
+
+       - intended configuration - these are leaves within a container named
+         'config', and are the writable configuration of a target.
+       - applied configuration - these are leaves within a container named
+         'state' and are the currently running value of the intended configuration.
+       - derived state - these are the values within the 'state' container which
+         are not part of the applied configuration of the device. Typically, they
+         represent state values reflecting underlying operational counters, or
+         protocol statuses.";
+  }
+
+  extension catalog-organization {
+    argument "org" {
+      yin-element false;
+    }
+    description
+      "This extension specifies the organization name that should be used within
+      the module catalogue on the device for the specified YANG module. It stores
+      a pithy string where the YANG organization statement may contain more
+      details.";
+  }
+
+  extension origin {
+    argument "origin" {
+      yin-element false;
+    }
+    description
+      "This extension specifies the name of the origin that the YANG module
+      falls within. This allows multiple overlapping schema trees to be used
+      on a single network element without requiring module based prefixing
+      of paths.";
+  }
+}

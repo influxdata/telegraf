@@ -1,0 +1,97 @@
+module openconfig-aft-types {
+
+  namespace "http://openconfig.net/yang/fib-types";
+  prefix "oc-aftt";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  organization
+    "OpenConfig Working Group";
+
+  contact
+    "OpenConfig Working Group
+    www.openconfig.net";
+
+  description
+    "Types related to the OpenConfig Abstract Forwarding
+    Table (AFT) model";
+
+  oc-ext:openconfig-version "1.1.0";
+
+  revision "2022-05-05" {
+    description
+        "Add network-instance and decapsulate-header in NH AFT entry state";
+      reference "1.1.0";
+  }
+
+  revision "2021-08-24" {
+    description
+      "Add vxlan to next-hops encapsulation-header-type.";
+    reference "0.3.5";
+  }
+
+  revision "2019-11-07" {
+    description
+      "Move lsp-name leaf out of aft-common-entry-nexthop-state group.";
+    reference "0.3.4";
+  }
+
+  revision "2019-08-01" {
+    description
+      "Add lsp-name leaf to AFT next-hop.";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Formatting fixes";
+    reference "0.3.1";
+  }
+
+  revision 2017-05-10 {
+    description
+      "Refactor to provide concretised per-AF schemas per AFT.";
+    reference "0.3.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  typedef encapsulation-header-type {
+    type enumeration {
+      enum GRE {
+        description
+          "The encapsulation header is a Generic Routing Encapsulation
+          header.";
+      }
+      enum IPV4 {
+        description
+          "The encapsulation header is an IPv4 packet header";
+      }
+      enum IPV6 {
+        description
+          "The encapsulation header is an IPv6 packet header";
+      }
+      enum MPLS {
+        description
+          "The encapsulation header is one or more MPLS labels indicated
+          by the pushed and popped label stack lists.";
+      }
+      enum VXLAN {
+        description
+          "The encapsulation header is a VXLAN packet header";
+      }
+    }
+    description
+      "Types of tunnel encapsulation that are supported by systems as either
+      head- or tail-end.";
+  }
+}

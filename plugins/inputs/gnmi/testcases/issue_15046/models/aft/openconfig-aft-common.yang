@@ -1,0 +1,751 @@
+submodule openconfig-aft-common {
+  belongs-to "openconfig-aft" {
+    prefix "oc-aft";
+  }
+
+  import openconfig-interfaces { prefix "oc-if"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-mpls-types { prefix "oc-mplst"; }
+  import openconfig-policy-types { prefix "oc-pol-types"; }
+  import openconfig-aft-types { prefix "oc-aftt"; }
+  import openconfig-evpn-types { prefix "oc-evpn-types"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "Submodule containing definitions of groupings that are re-used
+    across multiple contexts within the AFT model.";
+
+  oc-ext:openconfig-version "2.4.0";
+
+  revision "2023-09-26" {
+    description
+      "Add next-hop-group-name in NHG AFT entry state.";
+    reference "2.4.0";
+  }
+
+  revision "2023-04-19" {
+    description
+      "Add atomic attribute to AFT containers.";
+    reference "2.3.0";
+  }
+
+  revision "2022-06-16" {
+    description
+      "Add state-synced container under afts.";
+    reference "2.2.0";
+  }
+
+  revision "2022-06-15" {
+    description
+      "Add decapsulate-header in NH AFT entry state";
+    reference "2.1.0";
+  }
+
+  revision "2022-05-17" {
+    description
+      "Relocate next-hop-group/next-hop-group-network-instance
+      from openconfig-aft-common to resolve absolute path
+      leafref specific to network-instances";
+    reference "2.0.0";
+  }
+
+  revision "2022-01-27" {
+    description
+      "Add next hop counters and prefix counters.";
+    reference "1.0.0";
+  }
+
+  revision "2022-01-26" {
+    description
+      "Add vni-label and tunnel-src-ip-address properties under next-hops";
+    reference "0.10.0";
+  }
+
+  revision "2021-12-09" {
+    description
+      "Add pop-top-label in NH AFT entry state";
+    reference "0.9.0";
+  }
+
+  revision "2021-08-06" {
+    description
+      "Add references to the network instance within which to resolve
+      a next-hop-group; fix defect where NHG could not be an ID defined
+      outside the current NI; add metadata; add IP-in-IP encap.";
+    reference "0.8.0";
+  }
+
+  revision "2021-07-15" {
+    description
+      "NHG-ID and NH-ID space management.";
+    reference "0.7.0";
+  }
+
+  revision "2020-11-06" {
+    description
+      "Make AFT model read-only.";
+    reference "0.6.0";
+  }
+
+  revision "2020-09-09" {
+    description
+      "Remove leafs that are not used as keys from config containers as
+      AFT model is ready-only.
+      * next-hop/interface-ref/config.
+      * all leafs under policy-forwarding-entry/config except index.";
+    reference "0.5.0";
+  }
+
+  revision "2019-11-07" {
+    description
+      "Move lsp-name leaf out of aft-common-entry-nexthop-state group.";
+    reference "0.4.1";
+  }
+
+  revision "2019-08-02" {
+    description
+      "Add installing protocol for IPv[46] unicast entries.
+      Add the ability to describe conditional next-hop groups
+      outside of the policy forwarding module to allow for efficient
+      handling of CBTS, where many prefixes may share the same next-hop
+      criteria.";
+    reference "0.4.0";
+  }
+
+  revision "2019-08-01" {
+    description
+      "Add lsp-name leaf to AFT next-hop.";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision 2017-08-24 {
+    description
+      "Formatting fixes";
+    reference "0.3.1";
+  }
+
+  revision 2017-05-10 {
+    description
+      "Refactor to provide concretised per-AF schemas per AFT.";
+    reference "0.3.0";
+  }
+
+  grouping aft-nhop-structural {
+    description
+      "Structural grouping describing a next-hop entry.";
+
+    container next-hops {
+      description
+        "The list of next-hops that are to be used for entry within
+        the AFT table. The structure of each next-hop is address
+        family independent, such that it is possible to resolve fully
+        how the next-hop is treated. For example:
+
+        - Where ingress IPv4 unicast packets are to be forwarded via
+          an MPLS LSP, the next-hop list should indicate the MPLS
+          label stack that is used to the next-hop.
+        - Where ingress MPLS labelled packets are to be forwarded to
+          an IPv6 nexthop (for example, a CE within a VPN, then the
+          popped label stack, and IPv6 next-hop address should be
+          indicated).";
+
+      list next-hop {
+        key "index";
+
+        oc-ext:telemetry-atomic;
+        description
+          "A next-hop associated with the forwarding instance.";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "A unique index identifying the next-hop entry for the
+            AFT entry";
+
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the AFT
+            next-hop entry";
+
+          uses aft-common-entry-nexthop-state;
+          uses aft-labeled-entry-state;
+
+          container counters {
+            description
+              "Surrounding container for counters.";
+
+            uses aft-common-entry-counter-state;
+          }
+
+          uses aft-evpn-entry-state;
+
+        }
+
+        container ip-in-ip {
+          description
+            "When specified, the packet has an IP-in-IP header applied to it before
+            forwarding to the specified next-hop.";
+
+          container state {
+            config false;
+            description
+              "State parameters relating to IP-in-IP encapsulation.";
+            uses aft-common-entry-nexthop-ipip-state;
+          }
+        }
+
+        uses oc-if:interface-ref-state;
+      }
+    }
+  }
+
+  grouping aft-common-entry-state {
+    description
+      "Operational state parameters relating to a forwarding entry";
+
+    container counters {
+      config false;
+      description
+        "Surrounding container for counters.";
+
+      uses aft-common-entry-counter-state;
+    }
+
+    leaf entry-metadata {
+      type binary {
+        length "0..8"; // 0 to 8 bytes
+      }
+      description
+        "Metadata persistently stored with the entry.";
+    }
+  }
+
+  grouping aft-labeled-entry-state {
+    description
+      "Operational state for LSP name in forwarding entry";
+
+    leaf lsp-name {
+      type string;
+      description
+        "Where applicable, the protocol name for the next-hop labelled
+        forwarding entry. This leaf is applicable only to next-hops
+        which include MPLS label information, and its value typically
+        corresponds to the RSVP-TE LSP name.";
+    }
+  }
+
+  grouping aft-evpn-entry-state {
+    description
+      "Operational state for evpn related information in forwarding entry";
+
+    leaf vni-label {
+      type oc-evpn-types:evi-id;
+      description
+        "Where applicable, the next hop label representing the virtual
+        network identifier (VNI) for the forwarding entry. This leaf is
+        applicable only to next-hops which include VXLAN encapsulation
+        header information";
+    }
+
+    leaf tunnel-src-ip-address {
+      type oc-inet:ip-address;
+      description
+        "Where applicable this represents the tunnel source ip address.
+        For VXLAN this represents the source VTEP ip address";
+    }
+  }
+
+  grouping aft-common-entry-nexthop-state {
+    description
+      "Parameters relating to a next-hop.";
+
+    leaf index {
+      type uint64;
+      description
+        "A unique entry for the next-hop.";
+    }
+
+    leaf programmed-index {
+      type uint64;
+      description
+        "In some routing protocols, or route injection mechanisms it
+        is possible to set the index of the next-hop via configuration
+        or the protocol itself. In some systems it may not be possible
+        to maintain the index provided by an external client when
+        advertising the same entry via telemetry.
+
+        This leaf reflects the configured or client-supplied index of
+        the next-hop. This allows a client to create an assocation or
+        mapping back to the original index pushed by the client, and
+        the ID used as a key in the next-hop AFT list.";
+    }
+
+    leaf ip-address {
+      type oc-inet:ip-address;
+      description
+        "The IP address of the next-hop system.";
+    }
+
+    leaf mac-address {
+      type oc-yang:mac-address;
+      description
+        "The MAC address of the next-hop if resolved by the local
+        network instance.";
+    }
+
+    leaf pop-top-label {
+      type boolean;
+      default false;
+      description
+        "Flag that controls pop action, i.e., the top-most MPLS label
+         should be popped from the packet when switched by the system.
+
+        The top-most MPLS label associated with pop action is equal to
+        the label key used in 'mpls' AFT 'label-entry' list.";
+    }
+
+    leaf-list pushed-mpls-label-stack {
+      type oc-mplst:mpls-label;
+      ordered-by user;
+      description
+        "The MPLS label stack imposed when forwarding packets to the
+        next-hop
+        - the stack is encoded as a leaf list whereby the order of the
+          entries is such that the first entry in the list is the
+          label at the bottom of the stack to be pushed.
+
+        To this end, a packet which is to forwarded to a device using
+        a service label of 42, and a transport label of 8072 will be
+        represented with a label stack list of [42, 8072].
+
+        The MPLS label stack list is ordered by the user, such that no
+        system re-ordering of leaves is permitted by the system.
+
+        A swap operation is reflected by entries in the
+        popped-mpls-label-stack and pushed-mpls-label-stack nodes.";
+
+    }
+
+    leaf encapsulate-header {
+      type oc-aftt:encapsulation-header-type;
+      description
+        "When forwarding a packet to the specified next-hop the local
+        system performs an encapsulation of the packet - adding the
+        specified header type.";
+    }
+
+    leaf decapsulate-header {
+      type oc-aftt:encapsulation-header-type;
+      description
+        "When forwarding a packet to the specified next-hop, the local
+         system performs a decapsulation of the packet - removing the
+         specified header type. In the case that no next-hop is
+         specified, the packet header is removed, and a subsequent
+         forwarding lookup is performed on the packet encapsulated
+         within the header, matched within the relevant AFT within the
+         specified network-instance.";
+    }
+
+    uses aft-common-install-protocol;
+  }
+
+  grouping aft-common-entry-nexthop-ipip-state {
+    description
+      "IP-in-IP encapsulation applied on a next-hop";
+
+    leaf src-ip {
+      type oc-inet:ip-address;
+      description
+        "Source IP address to use for the encapsulated packet.";
+    }
+
+    leaf dst-ip {
+      type oc-inet:ip-address;
+      description
+        "Destination IP address to use for the encapsulated packet.";
+    }
+  }
+
+  grouping aft-common-install-protocol {
+    description
+      "Grouping for a common reference to the protocol which
+      installed an entry.";
+
+    leaf origin-protocol {
+      type identityref {
+        base "oc-pol-types:INSTALL_PROTOCOL_TYPE";
+      }
+      description
+        "The protocol from which the AFT entry was learned.";
+    }
+
+  }
+
+  grouping aft-common-ip-state {
+    description
+      "Common parameters across IP address families";
+
+    uses aft-common-install-protocol;
+
+    leaf decapsulate-header {
+      type oc-aftt:encapsulation-header-type;
+      description
+        "When forwarding a packet to the specified next-hop, the local
+        system performs a decapsulation of the packet - removing the
+        specified header type. In the case that no next-hop is
+        specified, the packet header is removed, and a subsequent
+        forwarding lookup is performed on the packet encapsulated
+        within the header, matched within the relevant AFT within the
+        specified network-instance.";
+    }
+  }
+
+  grouping aft-next-hop-groups-structural {
+    description
+      "Logical grouping for groups of next-hops.";
+
+    container next-hop-groups {
+      description
+        "Surrounding container for groups of next-hops.";
+
+      list next-hop-group {
+        key "id";
+
+        oc-ext:telemetry-atomic;
+        description
+          "An individual set of next-hops grouped into a common group.
+          Each entry within an abstract forwarding table points to a
+          next-hop-group. Entries in the next-hop-group are forwarded to
+          according to the weights specified for each next-hop group.
+
+          If an entry within the next-hop group becomes unusable, for
+          example due to an interface failure, the remaining entries
+          are used until all entries become unusable - at which point
+          the backup next-hop-group (if specified) is used.";
+
+        leaf id {
+          type leafref {
+            path "../state/id";
+          }
+          description
+            "A reference to a unique identifier for the next-hop-group.";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to next-hop-groups.";
+
+          uses aft-nhg-state;
+        }
+
+        container next-hops {
+          description
+            "Surrounding container for the list of next-hops within
+            the next-hop-group.";
+
+          list next-hop {
+            key "index";
+
+            description
+              "An individual next-hop within the next-hop-group. Each
+              next-hop is a reference to an entry within the next-hop
+              list.";
+
+            leaf index {
+              type leafref {
+                path "../state/index";
+              }
+              description
+                "A reference to the index for the next-hop within the
+                the next-hop-group.";
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters related to a next-hop
+                within the next-hop-group.";
+              uses aft-nhg-nh-state;
+            }
+          }
+        }
+
+        container conditional {
+          description
+            "When a system selects a next-hop-group based on conditions
+            in addition to those specified in the referencing table entries
+            (for example, DSCP is used in addition to the IPv4 destination
+            prefix), these conditions are specified in the conditions list.
+            Where such conditions exist, the next-hop-group MUST only
+            specify next-hop-groups under the conditional list, and therefore
+            MUST NOT specify any corresponding next-hops. The
+            next-hop-groups that are referenced by any conditions MUST
+            reference only next-hops and therefore MUST NOT be conditional
+            themselves.";
+
+          list condition {
+            key "id";
+
+            description
+              "A conditional next-hop-group that is used by the AFT
+              entry. The conditions that are specified within the
+              group are logically ANDed together. If a condition
+              is a leaf-list field its contents are logically ORed.";
+
+            leaf id {
+              type leafref {
+                path "../state/id";
+              }
+              description
+                "A reference to the identifier for the condition.";
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters related to the conditional
+                next-hop selection.";
+              uses aft-nhg-conditional-state;
+            }
+
+            container input-interfaces {
+              description
+                "The set of input interfaces that are required to be matched for
+                the next-hop-group condition to be met. Each non-interface condition
+                is logically ANDed with each member of the list -- i.e., interfaces in
+                the list are logically ORed.
+
+                If the input-interface list is empty, the condition applies to ALL input
+                interfaces.";
+
+              list input-interface {
+                key "id";
+
+                description
+                  "The input interface that must be matched for the condition to be met.";
+
+                leaf id {
+                  type leafref {
+                    path "../state/id";
+                  }
+                  description
+                    "Reference to the unique ID assigned to the input interface within
+                    the conditions list.";
+                }
+
+                container state {
+                  config false;
+                  description
+                    "Operational state parameters that relate to the input interface.";
+                  uses aft-nhg-conditional-interface-state;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping aft-nhg-state {
+    description
+      "Operational state parameters related to a next-hop-group.";
+
+    leaf id {
+      type uint64;
+      description
+        "A unique identifier for the next-hop-group. This index
+        is not expected to be consistent across reboots, or
+        reprogramming of the next-hop-group. When updating
+        a next-hop-group, if the group is removed by the system
+        or assigned an alternate identifier, the system should
+        send telemetry notifications deleting the previous
+        identifier. If the identifier of the next-hop-group
+        is changed, all AFT entries that reference it must
+        also be updated.";
+    }
+
+    leaf next-hop-group-name {
+      type string;
+      description
+        "Where applicable, this leaf is a unique identifier string for the
+        next-hop-group. It is an arbitrary name for the group, that is
+        supported by vendors and is exposed for telemetry.";
+    }
+
+    leaf programmed-id {
+      type uint64;
+      description
+        "In some routing protocols or route injection mechanisms it
+        is possible to supply the ID of the next-hop-group via
+        configuration or the protocol itself. In some systems, it
+        may not be possible to use this same ID when returning the
+        NHG via telemetry.
+
+        This leaf reflects the ID of the next-hop group that was
+        used by the original programming mechanism.
+
+        This leaf allows a client to create an association between
+        a programmed next-hop's original ID, and the ID that is
+        extracted via telemetry as a key in the next-hop-group AFT
+        list.";
+    }
+
+    leaf color {
+      type uint64;
+      description
+        "An arbitrary colour that is used as an identifier for the next-hop
+        group. Some next-hop resolutions may utilise the colour to select
+        the particular next-hop-group that a routing entry should be resolved
+        to. In this case, next-hop-group selection may be based on colour
+        matches rather than the protocol specified next-hop.
+
+        Regardless of whether the next-hop-group's specified colour is
+        used to select an AFT's active forwarding entry, the next-hop-group
+        referenced by an entry should be the currently active value.
+
+        Next-hop-groups that are installed on the system through a protocol
+        that allows injection of such entries (e.g., BGP using the SR-TE
+        Policy SAFI, or gRPC-based RIB programming) should have the colour
+        specified in the injecting protocol within this leaf.";
+    }
+
+    leaf backup-next-hop-group {
+      // We are at afts/next-hop-groups/next-hop-group/state/backup-next-hop-group
+      type leafref {
+        path "../../../next-hop-group/state/id";
+      }
+      description
+        "The backup next-hop-group for the current group. When all
+        entries within the next-hop group become unusable, the backup
+        next-hop group is used if specified.";
+    }
+  }
+
+  grouping aft-nhg-nh-state {
+    description
+      "Operational state parameters relating to an individual next-hop
+      within the next-hop-group.";
+
+    leaf index {
+      type leafref {
+        // We are at afts/next-hop-groups/next-hop-group/next-hops/next-hop/state/id
+        path "../../../../../../next-hops/next-hop/state/index";
+      }
+      description
+        "A reference to the identifier for the next-hop to which
+        the entry in the next-hop group corresponds.";
+    }
+
+    leaf weight {
+      type uint64;
+      description
+        "The weight applied to the next-hop within the group. Traffic
+        is balanced across the next-hops within the group in the
+        proportion of weight/(sum of weights of the next-hops within
+        the next-hop group).";
+    }
+  }
+
+  grouping aft-nhg-conditional-state {
+    description
+      "Operational state parameters relating to the conditional selection
+      of a next-hop group for an AFT entry.";
+
+    leaf id {
+      type uint64;
+      description
+        "A unique identifier for the conditional criteria.";
+    }
+
+    leaf-list dscp {
+      type oc-inet:dscp;
+      description
+        "A set of DSCP values that must be matched by an input packet for
+        the next-hop-group specified to be selected. A logical OR is applied
+        across the DSCP values.";
+    }
+
+    leaf next-hop-group {
+      type leafref {
+        // we are at afts/next-hop-groups/next-hop-group/conditions/condition/state/next-hop-group
+        path "../../../../../next-hop-group/state/id";
+      }
+      description
+        "The next-hop-group that is used by the system for packets that match
+        the criteria specified.";
+    }
+  }
+
+  grouping aft-nhg-conditional-interface-state {
+    description
+      "Operational state parameters relating to the input-interface condition
+      for a next-hop-group.";
+
+    leaf id {
+      type string;
+      description
+        "A unique reference for the input interface.";
+    }
+
+    uses oc-if:interface-ref-common;
+  }
+
+  grouping aft-common-entry-counter-state {
+    description
+      "Counters relating to a forwarding entry";
+
+    leaf packets-forwarded {
+      type oc-yang:counter64;
+      description
+        "The number of packets which have matched, and been forwarded,
+         based on the AFT entry.";
+    }
+
+    leaf octets-forwarded {
+      type oc-yang:counter64;
+      description
+        "The number of octets which have matched, and been forwarded,
+         based on the AFT entry";
+    }
+  }
+
+  grouping aft-common-backup-entry-counter-state {
+    description
+      "Counters relating to a backup forwarding entry";
+
+    leaf packets-forwarded-backup {
+      type oc-yang:counter64;
+      description
+        "The number of packets which have matched, and been forwarded,
+         based on the AFT backup entry.";
+    }
+
+    leaf octets-forwarded-backup {
+      type oc-yang:counter64;
+      description
+        "The number of octets which have matched, and been forwarded,
+         based on the AFT backup entry";
+    }
+  }
+}

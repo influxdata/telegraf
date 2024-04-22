@@ -1,0 +1,327 @@
+module openconfig-platform-port {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform/port";
+
+  prefix "oc-port";
+
+  // import some basic types
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-if-ethernet { prefix oc-eth; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines data related to PORT components in the
+    openconfig-platform model";
+
+  oc-ext:openconfig-version "1.0.1";
+
+  revision "2023-03-22" {
+    description
+      "Clarify use of the interface-ref type.";
+    reference "1.0.1";
+  }
+
+  revision "2023-01-19" {
+    description
+      "Add clarification of the definition of a physical channel, and
+      example configurations.";
+    reference "1.0.0";
+  }
+
+  revision "2021-10-01" {
+    description
+      "Fix indentation for 'list group'";
+    reference "0.4.2";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.4.1";
+  }
+
+  revision "2021-04-22" {
+    description
+      "Adding support for flexible port breakout.";
+    reference "0.4.0";
+  }
+
+  revision "2020-05-06" {
+    description
+      "Ensure that when statements in read-write contexts
+      reference only read-write leaves.";
+    reference "0.3.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.3.2";
+  }
+
+  revision "2018-11-07" {
+    description
+      "Fixed error in when statement path";
+    reference "0.3.1";
+  }
+
+  revision "2018-01-20" {
+    description
+      "Added augmentation for interface-to-port reference";
+    reference "0.3.0";
+  }
+
+  revision "2017-11-17" {
+    description
+      "Corrected augmentation path for port data";
+    reference "0.2.0";
+  }
+
+  revision "2016-10-24" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping group-config {
+    description
+      "Configuration data for the breakout group.";
+
+    leaf index {
+      type uint8;
+      description
+        "Each index specifies breakouts that are identical in
+        terms of speed and the number of physical channels.";
+    }
+
+    leaf num-breakouts {
+      type uint8;
+      description
+        "Sets the number of interfaces using this breakout group.";
+    }
+
+    leaf breakout-speed {
+      type identityref {
+        base oc-eth:ETHERNET_SPEED;
+      }
+      description
+        "Speed of interfaces in this breakout group, supported
+        values are defined by the ETHERNET_SPEED identity.";
+    }
+
+    leaf num-physical-channels {
+      type uint8;
+      description
+        "Sets the number of lanes or physical channels assigned
+        to the interfaces in this breakout group. This leaf need
+        not be set if there is only one breakout group where all
+        the interfaces are of equal speed and have equal number
+        of physical channels.
+
+        The physical channels referred to by this leaf are
+        electrical channels towards the transceiver.";
+    }
+  }
+
+  grouping group-state {
+    description
+      "Operational state data for the port breakout group.";
+  }
+
+  grouping port-breakout-top {
+    description
+      "Top-level grouping for port breakout data.";
+
+    container breakout-mode {
+      description
+        "Top-level container for port breakout-mode data.";
+
+      container groups {
+        description
+          "Top level container for breakout groups data.
+
+           When a device has the capability to break a port into
+           interfaces of different speeds and different number of
+           physical channels, it can breakout a 400G OSFP port with
+           8 physical channels (with support for 25G NRZ, 50G PAM4
+           and 100G PAM4) into  mixed speed interfaces. Particularly, to
+           break out into two 100G ports with different modulation, and a 200G
+           port, a user must configure 1 interface with 2 physical channels
+          1 interface with 4 physical channels and 1 interface with
+           2 physical channels. With this configuration the interface in
+           1st breakout group would use 50G PAM4 modulation, interface
+           in 2nd breakout group would use 25G NRZ modulation and the
+           interface in 3rd breakout group would use 100G PAM4 modulation
+           This configuration would result in 3 entries in the breakout
+           groups list. The example configuration for this case is shown below:
+
+              {
+                \"groups\": {
+                  \"group\": [
+                    {
+                      \"config\": {
+                        \"breakout-speed\": \"SPEED_100GB\",
+                        \"index\": 0,
+                        \"num-breakouts\": 1,
+                        \"num-physical-channels\": 2
+                      },
+                      \"index\": 0
+                    },
+                    {
+                      \"config\": {
+                        \"breakout-speed\": \"SPEED_100GB\",
+                        \"index\": 1,
+                        \"num-breakouts\": 1,
+                        \"num-physical-channels\": 4
+                      },
+                      \"index\": 1
+                    },
+                    {
+                      \"config\": {
+                        \"breakout-speed\": \"SPEED_200GB\",
+                        \"index\": 2,
+                        \"num-breakouts\": 1,
+                        \"num-physical-channels\": 2
+                      },
+                      \"index\": 2
+                    }
+                  ]
+                }
+              }
+
+           When a device does not have the capability to break a port
+           into interfaces of different speeds and different number of
+           physical channels, in order to  breakout a 400G OSFP port with
+           8 physical channels into 50G breakout ports it would use 8 interfaces
+           with 1 physical channel each. This would result in 1 entry in the
+           breakout groups list. The example configuration for this case is
+           shown below:
+
+            {
+              \"groups\": {
+                \"group\": [
+                  {
+                    \"config\": {
+                      \"breakout-speed\": \"SPEED_50GB\",
+                      \"index\": 0,
+                      \"num-breakouts\": 8,
+                      \"num-physical-channels\": 1
+                    },
+                    \"index\": 0
+                  }
+                ]
+              }
+            }
+
+           Similarly, if a 400G-DR4 interface (8 electrical channels at 50Gbps)
+           is to be broken out into 4 100Gbps ports, the following configuration
+           is used:
+
+            {
+              \"groups\": {
+                \"group\": [
+                  {
+                    \"config\": {
+                      \"breakout-speed\": \"SPEED_100GB\",
+                      \"index\": 0,
+                      \"num-breakouts\": 4,
+                      \"num-physical-channels\": 2
+                    },
+                    \"index\": 0
+                  }
+                ]
+              }
+            }";
+
+        list group {
+          key "index";
+          description
+            "List of breakout groups.";
+
+          leaf index {
+            type leafref {
+              path "../config/index";
+            }
+            description
+              "Index of the breakout group entry in the breakout groups list.";
+          }
+
+          container config {
+            description
+              "Configuration data for breakout group.";
+            uses group-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state data for breakout group.";
+
+            uses group-config;
+            uses group-state;
+          }
+        }
+      }
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-platform:components/oc-platform:component/" +
+    "oc-platform:port" {
+    description
+      "Adding port breakout data to physical platform data. This subtree
+      is only valid when the type of the component is PORT.";
+
+    uses port-breakout-top;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:state" {
+    description
+      "Adds a reference from the base interface to the corresponding
+      port component in the device inventory.";
+
+    leaf hardware-port {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component/" +
+          "oc-platform:name";
+      }
+      description
+        "For non-channelized interfaces, references the hardware port
+        corresponding to the base interface.";
+    }
+  }
+
+  // rpc statements
+
+  // notification statements
+
+}

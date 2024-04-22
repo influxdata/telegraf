@@ -1,0 +1,242 @@
+module openconfig-isis-policy {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/openconfig-isis-policy";
+
+  prefix "oc-isis-pol";
+
+  // import some basic types
+  import openconfig-routing-policy {prefix rpol; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-isis-types { prefix isis-types; }
+
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net ";
+
+  description
+    "This module contains data definitions for ISIS routing policy.
+    It augments the base routing-policy module with BGP-specific
+    options for conditions and actions.";
+
+  oc-ext:openconfig-version "0.8.0";
+
+  revision "2023-11-02" {
+    description
+      "Fixing metric type leafs for action and condition branches.";
+    reference "0.8.0";
+  }
+
+  revision "2023-04-28" {
+    description
+      "Adding set metric-type leaf";
+    reference "0.7.0";
+  }
+
+  revision "2023-02-27" {
+    description
+      "Fixing type for set-metric-type leaf";
+    reference "0.6.0";
+  }
+
+  revision "2020-02-04" {
+    description
+      "Consistent prefix for openconfig-mpls-types.";
+    reference "0.5.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.2";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fix bugs in when statements.";
+    reference "0.4.1";
+  }
+
+  revision "2018-05-14" {
+    description
+      "Update LSDB model to correct Extended IS reach TLV
+      bug. This change is backwards incompatible due to
+      adding an additional level of hierarchy to support
+      multiple instances of the TLV.";
+    reference "0.4.0";
+  }
+
+  revision "2017-07-26" {
+    description
+      "Update LSDB and fix bugs.";
+    reference "0.3.2";
+  }
+
+  revision "2017-05-15" {
+    description
+      "Refactor LSDB.";
+    reference "0.3.0";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Remove top-level /isis container";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add segment routing to IS-IS module";
+    reference "0.2.0";
+  }
+
+  revision "2016-10-18" {
+    description
+      "Initial revision of IS-IS models.";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+   grouping isis-match-conditions {
+    description
+      "Criteria used to match IS-IS routes within the policy";
+
+    container isis-conditions {
+      description
+        "Match conditions relating to the IS-IS protocol";
+
+      container config {
+        description
+          "Configuration parameters relating to IS-IS match
+          conditions";
+
+        uses isis-match-conditions-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to IS-IS match
+          conditions";
+        uses isis-match-conditions-config;
+      }
+    }
+  }
+
+  grouping isis-match-conditions-config {
+    description
+      "Match conditions for IS-IS";
+
+    leaf level-eq {
+      type isis-types:level-number;
+      description
+        "Match the level that the IS-IS prefix is within. This can
+        be used in the case that import or export policies refer
+        to an IS-IS instance that has multiple levels configured
+        within it";
+    }
+
+    leaf match-metric-type {
+      type isis-types:metric-type;
+      description
+        "Matches the type of the route to redistribute to INTERNAL or EXTERNAL";
+    }
+  }
+
+  grouping isis-actions {
+    description
+      "Actions supplied by the IS-IS protocol to be set on a
+      route within the policy";
+
+    container isis-actions {
+      description
+        "Actions that can be performed by IS-IS within a policy";
+
+      container config {
+        description
+          "Configuration parameters relating to IS-IS actions";
+
+        uses isis-actions-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state associated with IS-IS actions";
+
+        uses isis-actions-config;
+      }
+    }
+  }
+
+  grouping isis-actions-config {
+    description
+      "Actions for IS-IS";
+
+    leaf set-level {
+      type isis-types:level-number;
+      description
+        "Set the level that a prefix is to be imported into.";
+    }
+
+    leaf set-metric-type {
+      type isis-types:metric-type;
+      description
+        "This leaf sets the type of metric that is to be specified
+        when the set-metric leaf is specified";
+    }
+
+    leaf set-metric-style-type {
+      type isis-types:metric-style;
+      description
+        "Set the style of the metric";
+    }
+
+    leaf set-metric {
+      type isis-types:wide-metric;
+      description
+        "Set the metric of the IS-IS prefix";
+    }
+  }
+
+  // augment statements
+ augment "/rpol:routing-policy/rpol:policy-definitions/" +
+    "rpol:policy-definition/rpol:statements/rpol:statement/" +
+    "rpol:actions" {
+    description "This augments igp-actions with ISIS conditions";
+    uses isis-actions;
+
+  }
+
+  augment "/rpol:routing-policy/rpol:policy-definitions/" +
+    "rpol:policy-definition/rpol:statements/rpol:statement/" +
+    "rpol:conditions" {
+    description "This augments igp-conditions with ISIS conditions";
+    uses isis-match-conditions;
+  }
+
+  // rpc statements
+
+  // notification statements
+}

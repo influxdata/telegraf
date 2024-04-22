@@ -1,0 +1,813 @@
+module openconfig-macsec {
+  yang-version 1;
+  namespace "http://openconfig.net/yang/macsec";
+  prefix "oc-macsec";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-macsec-types { prefix macsec-types; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-keychain { prefix "oc-keychain"; }
+
+  organization
+    "OpenConfig working group";
+  contact
+    "Openconfig working group
+     www.openconfig.net";
+  description
+    "This module defines configuration and state data for
+     MACsec IEEE Std 802.1AE-2018.";
+
+  oc-ext:openconfig-version "1.1.1";
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  revision "2023-08-03" {
+    description
+      "Clarify in-cak and out-cak leaf descriptions.";
+    reference "1.1.1";
+  }
+
+revision "2023-06-08" {
+    description
+      "Support rx-late-pkts leaf.";
+    reference "1.1.0";
+  }
+
+  revision "2022-04-28" {
+    description
+      "Use global key chain model.";
+    reference "1.0.0";
+  }
+
+  revision "2020-05-01" {
+    description
+      "Move identifiers for scsa-[tr]x out of
+      counters container.";
+    reference "0.2.0";
+  }
+
+  revision "2019-07-01" {
+    description
+      "Initial public revision";
+    reference
+      "0.1.0";
+  }
+
+  grouping macsec-mka-key-config {
+    description
+      "MKA Key config grouping";
+
+    leaf id {
+      type oc-yang:hex-string {
+        length "1..64";
+      }
+      description
+        "Key identifier is used as the
+         Connectivity Association Key name (CKN)";
+    }
+
+    leaf key-clear-text {
+      type string;
+      description
+        "The key, used for signing and encrypting. Supplied as a clear text
+         string. When read, also returned as clear text string.";
+    }
+
+    leaf cryptographic-algorithm {
+      type enumeration {
+        enum AES_128_CMAC;
+        enum AES_256_CMAC;
+      }
+      description
+        "MKA Cryptographic authentication algorithm to use";
+    }
+
+    leaf valid-date-time {
+      type union {
+        type oc-yang:date-and-time;
+        type enumeration {
+          enum VALID_IMMEDIATELY {
+            description  "Key is valid immediately";
+          }
+        }
+      }
+      default VALID_IMMEDIATELY;
+      description
+        "Date and time the key starts being valid according to local date and
+         time configuration.";
+    }
+
+    leaf expiration-date-time {
+      type union {
+        type oc-yang:date-and-time;
+        type enumeration {
+          enum NO_EXPIRATION {
+            description  "Key does not expire";
+          }
+        }
+      }
+      default NO_EXPIRATION;
+      description
+        "Key date and time expiration according to local date and time
+         configuration.";
+    }
+  }
+
+  grouping macsec-mka-key-top {
+    description
+      "MKA Key top level grouping";
+
+    container mka-keys {
+      description
+        "Enclosing container for the list of MKA keys";
+
+      list mka-key {
+        key "id";
+
+        description
+          "List of MKA keys";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "Reference to the MKA key id";
+        }
+
+        container config {
+          description
+          "Configuration of MKA key";
+
+          uses macsec-mka-key-config;
+        }
+
+        container state {
+          config false;
+          description
+          "Operational state data for MKA key";
+
+          uses macsec-mka-key-config;
+        }
+      }
+    }
+  }
+
+  grouping macsec-mka-interface-config {
+    description
+      "MKA interface config grouping";
+
+    leaf mka-policy {
+      type leafref {
+        path "/macsec/mka/policies/policy/name";
+      }
+      description
+        "Apply MKA policy on the interface";
+    }
+
+    leaf key-chain {
+      type leafref {
+        path "/oc-keychain:keychains/oc-keychain:keychain/" +
+           "oc-keychain:name";
+      }
+      description
+        "Configure Key Chain name";
+    }
+  }
+
+  grouping macsec-mka-interface-counters {
+    description
+      "MKA interface state grouping";
+
+    leaf in-mkpdu {
+      type oc-yang:counter64;
+      description
+        "Validated MKPDU received count";
+    }
+
+    leaf in-sak-mkpdu {
+      type oc-yang:counter64;
+      description
+        "Validated MKPDU received SAK count";
+    }
+
+    leaf in-cak-mkpdu {
+      type oc-yang:counter64;
+      description
+        "Count of validated MKPDU  connectivity association key (CAK) pdus
+        received.  This counter is related to the group-cak feature in the
+        802.1X-2010 standard.";
+    }
+
+    leaf out-mkpdu {
+      type oc-yang:counter64;
+      description
+        "MKPDU sent count";
+    }
+
+    leaf out-sak-mkpdu {
+      type oc-yang:counter64;
+      description
+        "MKPDU SAK sent count";
+    }
+
+    leaf out-cak-mkpdu {
+      type oc-yang:counter64;
+      description
+        "Count of MKPDU connectivity association key (CAK) pdu's sent.
+        This counter is related to the group-cak feature in the
+        802.1X-2010 standard.";
+    }
+  }
+
+  grouping macsec-mka-interface-state {
+    description
+      "MKA interface state grouping";
+
+    container counters {
+      description
+        "MKA interface counters";
+
+      uses macsec-mka-interface-counters;
+    }
+  }
+
+  grouping macsec-mka-interface-top {
+    description
+      "MKA interface top level grouping";
+
+    container mka {
+      description
+        "Enclosing container for the MKA interface";
+
+      container config {
+        description
+          "Configuration data for MKA interface";
+
+        uses macsec-mka-interface-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for MKA interface";
+
+        uses macsec-mka-interface-config;
+        uses macsec-mka-interface-state;
+      }
+    }
+  }
+
+  grouping macsec-interface-config {
+    description
+      "Media Access Control Security (MACsec) config grouping";
+
+    leaf name {
+      type oc-if:base-interface-ref;
+      description
+        "Reference to the MACsec Ethernet interface";
+    }
+
+    leaf enable {
+      type boolean;
+      default "false";
+      description
+        "Enable MACsec on an interface";
+    }
+
+    leaf replay-protection {
+      type uint16;
+      default "0";
+      description
+        "MACsec window size, as defined by the number of out-of-order frames
+        that are accepted. A value of 0 means that frames are accepted only in
+        the correct order.";
+    }
+  }
+
+  grouping macsec-scsa-tx-interface-state {
+    description
+      "State leaves assigned with the TX Secure Channel and Secure
+      Association";
+
+    leaf sci-tx {
+      type oc-yang:hex-string {
+        length 16;
+      }
+      description
+        "Secure Channel Identifier.
+         Every Transmit Channel is uniquely identified using this field.";
+    }
+  }
+
+  grouping macsec-scsa-tx-interface-stats {
+    description
+      "TX Secure Channel and Secure Association Information";
+
+    leaf sc-auth-only {
+      type oc-yang:counter64;
+      description
+        "Secure Channel Authenticated only TX Packets counter.
+         This counter reflects the number of authenticated only transmitted
+         packets in a secure channel.";
+    }
+
+    leaf sc-encrypted {
+      type oc-yang:counter64;
+      description
+        "Secure Channel Encrypted TX Packets counter.
+         This counter reflects the number of encrypted and authenticated
+         transmitted packets in a secure channel.";
+    }
+
+    leaf sa-auth-only {
+      type oc-yang:counter64;
+      description
+        "Secure Association Authenticated only TX Packets counter.
+         This counter reflects the number of authenticated only, transmitted
+         packets in a secure association.";
+    }
+
+    leaf sa-encrypted {
+      type oc-yang:counter64;
+      description
+        "Secure Association Encrypted TX Packets counter.
+         This counter reflects the number of encrypted and authenticated
+         transmitted packets in a secure association.";
+    }
+  }
+
+  grouping macsec-scsa-rx-interface-state {
+    description
+      "State associated nwith RX Secure Channel and Secure Association
+      Information.";
+
+    leaf sci-rx {
+      type oc-yang:hex-string {
+        length 16;
+      }
+      description
+        "Secure Channel Identifier.
+         Every Receive Channel is uniquely identified using this field.";
+    }
+  }
+
+  grouping macsec-scsa-rx-interface-stats {
+    description
+      "RX Secure Channel and Secure Association Information";
+
+    leaf sc-invalid {
+      type oc-yang:counter64;
+      description
+        "Invalid Secure Channel RX Packets counter.
+         This counter reflects the number of invalid received packets in a
+         secure channel.";
+    }
+
+    leaf sc-valid {
+      type oc-yang:counter64;
+      description
+        "Valid Secure Channel RX Packets counter.
+         This counter reflects the number of valid received packets in a
+         secure channel.";
+    }
+
+    leaf sa-invalid {
+      type oc-yang:counter64;
+      description
+        "Invalid Secure Association RX Packets counter.
+         This counter reflects the number of integrity check fails for received
+         packets in a secure association.";
+    }
+
+    leaf sa-valid {
+      type oc-yang:counter64;
+      description
+        "Secure Association Valid RX Packets counter.
+         This counter reflects the number of packets in a secure association
+         that passed integrity check.";
+    }
+  }
+
+  grouping macsec-interface-counters {
+    description
+      "MACsec interface state grouping";
+
+    leaf tx-untagged-pkts {
+      type oc-yang:counter64;
+      description
+        "MACsec interface level Transmit untagged Packets counter.
+         This counter will increment if MACsec is enabled on interface and the
+         outgoing packet is not tagged with MACsec header.";
+    }
+
+    leaf rx-untagged-pkts {
+      type oc-yang:counter64;
+      description
+        "MACsec interface level Receive untagged Packets counter.
+         This counter will increment if MACsec is enabled on interface and the
+         incoming packet does not have MACsec tag.";
+    }
+
+    leaf rx-badtag-pkts {
+      type oc-yang:counter64;
+      description
+        "MACsec interface level Receive Bad Tag Packets counter.
+         This counter will increment if MACsec is enabled on interface and
+         incoming packet has incorrect MACsec tag.";
+    }
+
+    leaf rx-unknownsci-pkts {
+      type oc-yang:counter64;
+      description
+        "MACsec interface level Receive Unknown SCI Packets counter.
+         This counter will increment if MACsec is enabled on the interface and
+         SCI present in the MACsec tag of the incoming packet does not match any
+         SCI present in ingress SCI table.";
+    }
+
+    leaf rx-nosci-pkts {
+      type oc-yang:counter64;
+      description
+        "MACsec interface level Receive No SCI Packets counter.
+         This counter will increment if MACsec is enabled on interface and
+         incoming packet does not have SCI field in MACsec tag.";
+    }
+
+    leaf rx-late-pkts {
+      type oc-yang:counter64;
+      description
+        "MACsec interface level Receive Late Packets counter.
+        This counter will increment if MACsec is enabled on the interface and
+        packet number of incoming packet is less than the lowest acceptable
+        packet number and replay protection is enabled.";
+    }
+  }
+
+  grouping macsec-scsa-interface-top {
+    description
+      "Secure channel and Secure Association Statistics";
+
+    container scsa-tx {
+      config false;
+      description
+        "Enclosing container for transmitted packets for Secure Channel and
+         Secure Association";
+
+      list scsa-tx {
+        key "sci-tx";
+
+        description
+          "TX Secure Channel and Secure Association Statistics";
+
+        leaf sci-tx {
+          type leafref {
+            path "../state/sci-tx";
+          }
+          description
+            "TX Secure Channel and Secure Association Statistics";
+        }
+
+        container state {
+          description
+            "State container for macsec-scsa-tx-interface-stats";
+
+          uses macsec-scsa-tx-interface-state;
+
+          container counters {
+            description
+              "Counters container for macsec-scsa-tx-interface-stats";
+
+            uses macsec-scsa-tx-interface-stats;
+          }
+        }
+      }
+    }
+
+    container scsa-rx {
+      config false;
+      description
+        "Enclosing container for received packets for Secure Channel and
+         Secure Association";
+
+      list scsa-rx {
+        key "sci-rx";
+
+        description
+          "RX Secure Channel and Secure Association Statistics";
+
+        leaf sci-rx {
+          type leafref {
+            path "../state/sci-rx";
+          }
+          description
+            "RX Secure Channel and Secure Association Statistics";
+        }
+
+        container state {
+          description
+            "State container for macsec-scsa-rx-interface-stats";
+
+          uses macsec-scsa-rx-interface-state;
+
+          container counters {
+            description
+              "Counters container for macsec-scsa-rx-interface-stats";
+
+            uses macsec-scsa-rx-interface-stats;
+          }
+        }
+      }
+    }
+  }
+
+  grouping macsec-interface-top {
+    description
+      "Top-level grouping ";
+
+    container interfaces {
+      description
+        "Enclosing container for the MACsec interfaces list";
+
+      list interface {
+        key "name";
+        description
+          "List of interfaces on which MACsec is enabled / available";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the list key";
+        }
+
+        container config {
+          description
+            "Configuration data for MACsec on each interface";
+
+          uses macsec-interface-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data ";
+
+          uses macsec-interface-config;
+
+          container counters {
+            description
+              "MACsec interface counters";
+
+            uses macsec-interface-counters;
+          }
+        }
+
+        uses macsec-scsa-interface-top;
+
+        uses macsec-mka-interface-top;
+      }
+    }
+  }
+
+  grouping macsec-mka-policy-config {
+    description
+      "MKA policy config grouping";
+
+    leaf name {
+      type string;
+      description
+        "Name of the MKA policy.";
+    }
+
+    leaf key-server-priority {
+      type uint8;
+      default "16";
+      description
+        "Specifies the key server priority used by the MACsec Key Agreement
+        (MKA) protocol to select the key server when MACsec is enabled using
+        static connectivity association key (CAK) security mode. The switch with
+        the lower priority-number is selected as the key server. If the
+        priority-number is identical on both sides of a point-to-point link, the
+        MKA protocol selects the device with the lower MAC address as the key
+        server";
+    }
+
+    leaf-list macsec-cipher-suite {
+      type macsec-types:macsec-cipher-suite;
+      description
+        "Set Cipher suite(s) for SAK derivation";
+    }
+
+    leaf confidentiality-offset {
+      type macsec-types:confidentiality-offset;
+      default "0_BYTES";
+      description
+        "The confidentiality offset specifies a number of octets in an Ethernet
+         frame that are sent in unencrypted plain-text";
+    }
+
+    leaf delay-protection {
+      type boolean;
+      default "false";
+      description
+        "Traffic delayed longer than 2 seconds is rejected by the interfaces
+         enabled with delay protection.";
+    }
+
+    leaf include-icv-indicator {
+      type boolean;
+      default "true";
+      description
+        "Generate and include an Integrity Check Value (ICV) field in the MKPDU.
+         For compatibility with previous MACsec implementation that do not
+         require an ICV";
+    }
+
+    leaf sak-rekey-interval {
+      type uint32 {
+        range "0 | 30..65535";
+      }
+      default "0";
+      description
+        "SAK Rekey interval in seconds. The default value is 0 where no rekey is
+         performed.";
+    }
+
+    leaf sak-rekey-on-live-peer-loss {
+      type boolean;
+      default "false";
+      description
+        "Rekey on peer loss";
+    }
+
+    leaf use-updated-eth-header {
+      type boolean;
+      default "false";
+      description
+        "Use updated ethernet header for ICV calculation. In case the Ethernet
+         frame headers change, use the updated headers to calculate the ICV.";
+    }
+  }
+
+  grouping macsec-mka-global-counters {
+    description
+      "MKA global counters grouping";
+
+    leaf out-mkpdu-errors {
+      type oc-yang:counter64;
+      description
+        "MKPDU TX error count";
+    }
+
+    leaf in-mkpdu-icv-verification-errors {
+      type oc-yang:counter64;
+      description
+        "MKPDU RX ICV verification error count";
+    }
+
+    leaf in-mkpdu-validation-errors {
+      type oc-yang:counter64;
+      description
+        "MKPDU RX validation error count";
+    }
+
+    leaf in-mkpdu-bad-peer-errors {
+      type oc-yang:counter64;
+      description
+        "MKPDU RX bad peer message number error count";
+    }
+
+    leaf in-mkpdu-peer-list-errors {
+      type oc-yang:counter64;
+      description
+        "MKPDU RX non-recent peer list Message Number error count";
+    }
+
+    leaf sak-generation-errors {
+      type oc-yang:counter64;
+      description
+        "MKA error SAK generation count";
+    }
+
+    leaf sak-hash-errors {
+      type oc-yang:counter64;
+      description
+        "MKA error Hash Key generation count";
+    }
+
+    leaf sak-encryption-errors {
+      type oc-yang:counter64;
+      description
+        "MKA error SAK encryption/wrap count";
+    }
+
+    leaf sak-decryption-errors {
+      type oc-yang:counter64;
+      description
+        "MKA error SAK decryption/unwrap count";
+    }
+
+    leaf sak-cipher-mismatch-errors {
+      type oc-yang:counter64;
+      description
+        "MKA error SAK cipher mismatch count";
+    }
+  }
+
+  grouping macsec-mka-global-state {
+    description
+      "MKA global state grouping";
+
+    container counters {
+      description
+        "MKA global counters";
+
+      uses macsec-mka-global-counters;
+    }
+  }
+
+  grouping macsec-mka-global-top {
+    description
+      "MKA global top level grouping";
+
+    container state {
+      config false;
+      description
+        "Operational state data for MKA";
+
+      uses macsec-mka-global-state;
+    }
+  }
+
+  grouping macsec-mka-policy-top {
+    description
+      "MKA policy top level grouping";
+
+    container policies {
+      description
+        "Enclosing container for the list of MKA policies";
+
+      list policy {
+        key "name";
+
+        description
+          "List of MKA policies";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to MKA policy name";
+        }
+
+        container config {
+          description
+            "Configuration of the MKA policy";
+
+          uses macsec-mka-policy-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for MKA policy";
+
+          uses macsec-mka-policy-config;
+        }
+      }
+    }
+  }
+
+  grouping macsec-mka-top {
+    description
+      "MKA top level grouping";
+
+    container mka {
+      description
+        "The MKA";
+
+      uses macsec-mka-policy-top;
+      uses macsec-mka-global-top;
+    }
+  }
+
+  grouping macsec-top {
+    description
+      "MACsec top level grouping";
+
+    container macsec {
+      description
+        "The MACsec";
+
+      uses macsec-mka-top;
+      uses macsec-interface-top;
+    }
+  }
+
+  uses macsec-top;
+}

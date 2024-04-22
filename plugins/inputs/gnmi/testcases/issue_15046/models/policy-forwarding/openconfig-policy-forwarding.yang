@@ -1,0 +1,161 @@
+module openconfig-policy-forwarding {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/policy-forwarding";
+
+  prefix "oc-pf";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+
+  // Include submodules.
+  include openconfig-pf-forwarding-policies;
+  include openconfig-pf-path-groups;
+  include openconfig-pf-interfaces;
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    relating to policy-based forwarding. Policy-based forwarding is
+    utilised when a system chooses how to forward packets (including
+    applying data-plane operations such as encapsulation or
+    decapsulation) based on policies other than destination L2 or L3
+    header. Typically, systems may implement:
+
+     - IP policy-based routing, where routing may be done based on the
+       source plus destination of an IP packet; information within the
+       L4 header; or some combination of both.
+     - Encapsulation or decapsulation based on certain policy
+       information - for example, matching particular IP destinations
+       and decapsulating GRE headers.
+     - Class-based selection of egress routes - such as class-based
+       selection of an egress MPLS path.
+
+    The policies that are defined in this model are applied to a
+    particular ingress context of a network element (e.g., interface)
+    and are defined to apply following other interface policy such as
+    QoS classification and access control lists.
+
+    This module defines:
+
+     - policy-forwarding
+    |
+    |--- policies
+    |    |-- policy
+    |        |-- [match criteria]    How packets are defined to
+    |        |                       match policy.
+    |        |-- [forwarding-action] How packets matching should
+    |                                 be forwarded.
+    |--- interfaces
+    |    |-- interfaces
+    |        | -- apply-forwarding-policy  Forwarding policy to
+    |                                      used on the interface.
+    |--- path-selection-groups
+         |-- path-selection-group     A group of forwarding resources
+                                      that are grouped for purposes
+                                      of next-hop selection.
+
+    A forwarding-policy specifies the match criteria that it intends
+    to use to determine the packets that it reroutes - this may
+    consist of a number of criteria, such as DSCP. The action of the
+    policy results in a forwarding action being applied to matching
+    packets. For example, decapsulating the packet from a GRE header.
+    In order to enact the policy based on particular interfaces - the
+    forwarding-policy is applied to an interface via referencing it
+    within an 'apply-forwarding-policy' statement associated with an
+    interface.
+
+    In some cases (e.g., Class-Based Tunnel Selection) the forwarding
+    action does not resolve to a single egress action, and rather
+    normal forwarding rules are to be applied but considering a subset
+    of forwarding resources. In these cases, a path-selection-group
+    can be created, referencing the subset of forwarding paths that
+    should be used for the egress selection. In the case that a subset
+    of MPLS LSPs are eligible for, say, DSCP 46 marked packets, a
+    path-selection-group is created, referencing the subset of LSPs.
+    The forwarding action of the corresponding policy is set to
+    PATH_GROUP and references the configured group of LSPs.";
+
+  oc-ext:openconfig-version "0.6.1";
+
+  revision "2023-04-25" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.6.1";
+  }
+
+  revision "2023-03-27" {
+    description
+      "Add support for decap in one NI and further actions in other NIs.";
+    reference "0.6.0";
+  }
+
+  revision "2022-01-25" {
+    description
+      "Add GUE and MPLS-in-UDP decapsulation actions.";
+    reference "0.5.0";
+  }
+
+  revision "2021-08-06" {
+    description
+      "Update path to the network instance action to allow references
+      to other NIs.";
+    reference "0.4.0";
+  }
+
+  revision "2021-05-19" {
+    description
+      "Add a VRF selection policy type, and means to apply the
+      policy.";
+    reference "0.3.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2017-06-21" {
+    description
+      "Amend policy forwarding model based on ACL changes.";
+    reference "0.2.0";
+  }
+
+  revision "2017-02-28" {
+    description
+      "Initial public release of policy forwarding.";
+    reference "0.1.0";
+  }
+
+  revision "2016-11-08" {
+    description
+      "Initial revision.";
+    reference "0.0.1";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping policy-forwarding-top {
+    description
+      "Top-level grouping for Policy Forwarding";
+
+    container policy-forwarding {
+      description
+        "Configuration and operational state relating to policy-forwarding within
+        a network instance.";
+
+      uses pf-forwarding-policy-structural;
+      uses pf-interfaces-structural;
+      uses pf-path-groups-structural;
+    }
+  }
+}

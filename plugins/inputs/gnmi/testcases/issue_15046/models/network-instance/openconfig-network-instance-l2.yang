@@ -1,0 +1,927 @@
+submodule openconfig-network-instance-l2 {
+
+  belongs-to openconfig-network-instance {
+    prefix "oc-netinst";
+  }
+
+  // import some basic types
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-interfaces { prefix "oc-if"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-evpn-types { prefix oc-evpn-types; }
+  import openconfig-evpn { prefix "oc-evpn"; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module contains groupings which specifically relate to
+    Layer 2 network instance configuration and operational state
+    parameters.";
+
+  oc-ext:openconfig-version "4.4.0";
+
+  revision "2024-02-27" {
+    description
+      "Clarify metric to be used for route redistribution when
+      disable-metric-propagation is set to true.";
+    reference "4.4.0";
+  }
+
+  revision "2023-12-13" {
+    description
+      "Expand when statement for connection-points endpoints";
+    reference "4.3.0";
+  }
+
+  revision "2023-11-03" {
+    description
+      "Add reference URL for Route Redistribution rules";
+    reference "4.2.2";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "4.2.1";
+  }
+
+  revision "2023-09-07" {
+    description
+      "Add L2RIB Per Producer Next-Hop Capability";
+    reference "4.2.0";
+  }
+
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "4.1.1";
+  }
+
+  revision "2023-07-12" {
+    description
+      "Moved ethernet-segments to top level
+      container.";
+    reference "4.1.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify use of interface-ref.";
+    reference "4.0.3";
+  }
+
+  revision "2023-03-15" {
+    description
+      "Clarify that tables are to be deleted by the
+      network operating system";
+    reference "4.0.2";
+  }
+
+  revision "2023-02-07" {
+    description
+      "Add prefixes to identity values in when statements";
+    reference "4.0.1";
+  }
+
+  revision "2022-12-21" {
+    description
+      "Removal of global per network-instance MTU";
+    reference "4.0.0";
+  }
+
+  revision "2022-12-21" {
+    description
+      "Removal of interface list unique statement";
+    reference "3.1.0";
+  }
+
+  revision "2022-12-20" {
+    description
+      "Removal of top-level enabled-address-families leaf-list";
+    reference "3.0.0";
+  }
+
+  revision "2022-11-18" {
+    description
+      "Enforce network-instance type as mandatory, removal of top-level
+      enabled leaf, migrate IETF types to OpenConfig types";
+    reference "2.0.0";
+  }
+
+  revision "2022-09-15" {
+    description
+      "Add fallback-vrf option.";
+    reference "1.4.0";
+  }
+
+  revision "2022-07-04" {
+    description
+      "Add pcep protocol to network-instance";
+    reference "1.3.0";
+  }
+
+  revision "2022-06-21" {
+    description
+      "Add prefix to qualification netinst-ref.";
+    reference "1.2.0";
+  }
+
+  revision "2022-04-20" {
+    description
+      "Add support for l2rib state data";
+    reference "1.1.0";
+  }
+
+  revision "2022-04-19" {
+    description
+      "Description updates for DEFAULT_INSTANCE implementation
+      guidance and default value/guidance for protocol instances";
+    reference "1.0.0";
+  }
+
+  revision "2022-04-19" {
+    description
+      "Fix some broken xpath references in when statements.";
+    reference "0.16.3";
+
+  }
+
+  revision "2021-11-17" {
+    description
+      "Add prefix to qualification prefix to when statements
+      at identifier level.";
+    reference "0.16.2";
+  }
+
+  revision "2021-07-22" {
+    description
+      "Remove unused imported models.";
+    reference "0.16.1";
+  }
+
+  revision "2021-06-11" {
+    description
+      "Structural update for arp-proxy and
+      proxy-nd.";
+    reference "0.16.0";
+  }
+
+  revision "2021-01-25" {
+    description
+      "Add support for evpn";
+    reference "0.15.0";
+  }
+
+  revision "2020-06-20" {
+    description
+      "Add support for toggling metric propagation
+      when using table-connections.";
+    reference "0.14.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Revert fixes for paths in when statements";
+    reference "0.13.2";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Move BGP RIB into the protocol/bgp container.";
+    reference "0.12.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.11.1";
+  }
+
+  revision "2018-08-11" {
+    description
+      "Add vlan id as additional key in MAC table";
+    reference "0.11.0";
+  }
+
+  revision "2018-06-22" {
+    description
+      "Fix typo in OSPF when statement";
+    reference "0.10.2";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fix bugs in when statements";
+    reference "0.10.1";
+  }
+
+  revision "2018-02-19" {
+    description
+      "Add PIM and IGMP to network instance";
+    reference "0.10.0";
+  }
+
+  revision "2017-12-13" {
+    description
+      "Fix incorrect constraint on SR and MPLS containers";
+    reference "0.9.0";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes";
+    reference "0.8.1";
+  }
+
+  revision "2017-02-28" {
+    description
+      "Add OSPFv2 to network instance";
+    reference "0.8.0";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add policy forwarding to network instance";
+    reference "0.7.0";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Add AFT to the network instance";
+    reference "0.6.0";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add segment routing to network instance";
+    reference "0.5.0";
+  }
+
+  revision "2016-11-10" {
+    description
+      "Update model to include IS-IS.";
+    reference "0.4.1";
+  }
+
+  revision "2016-10-12" {
+    description
+      "Update table connections";
+    reference "0.4.0";
+  }
+
+  revision "2016-09-28" {
+    description
+      "Change L2 instance to submodule; add MAC table";
+    reference "0.3.0";
+  }
+
+  revision "2016-08-11" {
+    description
+      "Resolve repeated container names in routing protocols";
+    reference "0.2.3";
+  }
+
+  revision "2016-07-08" {
+    description
+      "Updated with refactored routing protocol models";
+    reference "0.2.1";
+  }
+
+  revision "2016-03-29" {
+    description
+      "Initial revision";
+    reference "0.2.0";
+  }
+
+  revision "2015-11-20" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  grouping l2ni-instance {
+    description
+      "Configuration and operational state parameters relating
+      to a Layer 2 network instance";
+
+    container fdb {
+      description
+        "Operational state and configuration parameters relating to
+        the forwarding database of the network instance";
+
+      container config {
+        description
+          "Configuration parameters relating to the FDB";
+        uses l2ni-fdb-mac-config;
+      }
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to the FDB";
+        uses l2ni-fdb-mac-config;
+      }
+
+       uses l2ni-mac-table-top;
+       uses oc-evpn:evpn-mac-mobility-top;
+       uses oc-evpn:evpn-arp-proxy-top;
+       uses oc-evpn:evpn-nd-proxy-top;
+       uses l2ni-l2rib-top;
+    }
+  }
+
+  grouping l2ni-fdb-mac-config {
+    description
+      "Parameters relating to FDB behaviour relating to MAC
+      addresses";
+
+    leaf mac-learning {
+      type boolean;
+      description
+        "When this leaf is set to true, MAC learning is enabled for
+        the network instance, such that MAC addresses are learned
+        from ingress frames and added to the FDB.";
+    }
+
+    leaf mac-aging-time {
+      // Cisco supports one aging time for local and remote, but
+      // can specify this time is absolute or against inactivity.
+      // ALU SROS supports different aging times for local and remote
+      // but does not allow absolute/inactivity specification.
+      // JNPR supports only a single aging time, and no specification
+      // of whether inactivity/absolute is used.
+      // It is easy to augment new options in here for local remote
+      // and an extra leaf to allow specification of the type of aging
+      // so this is left as a single value.
+      type uint16;
+      units seconds;
+      description
+        "The number of seconds of inactivity after which the entry
+        in the local FDB is timed out.";
+    }
+
+    leaf maximum-entries {
+      type uint16;
+      description
+        "The maximum number of MAC address entries that should be
+        accepted into the FDB";
+    }
+
+    uses oc-evpn:evpn-mac-vrf-config;
+  }
+
+  grouping l2ni-encapsulation-config {
+    description
+      "Encapsulation related configuration parameters for a L2
+      network instance";
+
+    leaf control-word {
+      type boolean;
+      description
+        "Whether the control-word should be used for the network
+        instance";
+      reference "RFC3985";
+    }
+  }
+
+  grouping l2ni-mac-table-config {
+    description
+      "Configuration data for MAC table entries";
+
+    leaf mac-address {
+      type oc-yang:mac-address;
+      description
+        "MAC address for the dynamic or static MAC table
+        entry";
+    }
+
+    leaf vlan {
+      //TODO(aashaikh): Consider whether this should just reflect the
+      //VLAN id or be a union type to also support displaying/setting
+      //the VLAN by name (i.e., global VLAN configured in the VLAN
+      // model).
+      type leafref {
+        path "../../../../../../vlans/vlan/config/vlan-id";
+      }
+      description
+        "VLAN on which the MAC address is present. The same MAC
+        address may be seen on multiple VLANs in some cases.";
+    }
+  }
+
+  grouping l2ni-mac-table-state {
+    description
+      "Operational state data for MAC table entries";
+
+    leaf age {
+      type uint64;
+      units seconds;
+      description
+        "The time in seconds since the MAC address has been in the
+        table";
+    }
+
+    leaf entry-type {
+      type enumeration {
+        enum STATIC {
+          description
+            "Statically programmed MAC table entry";
+        }
+        enum DYNAMIC {
+          description
+            "Dynamically learned MAC table entry";
+        }
+      }
+      description
+        "Indicates whether the entry was statically configured, or
+        dynamically learned.";
+    }
+
+    leaf evi {
+      type oc-evpn-types:vni-id;
+      description "EVPN EVI to associate with the BD/VLAN";
+    }
+  }
+
+  grouping l2ni-mac-table-top {
+    description
+      "Top-level grouping for MAC table list";
+
+
+    container mac-table {
+      description
+        "Table of learned or statically configured MAC addresses and
+        corresponding VLANs in the bridge domain";
+
+      container entries {
+        description
+          "Enclosing container for list of MAC table entries";
+
+        list entry {
+          key "mac-address vlan";
+          description
+            "List of learned MAC addresses";
+
+          leaf mac-address {
+            type leafref {
+              path "../config/mac-address";
+            }
+            description
+              "Reference to mac-address list key";
+          }
+
+          leaf vlan {
+            type leafref {
+              path "../config/vlan";
+            }
+            description
+              "Reference to vlan list key";
+          }
+
+          container config {
+            description
+              "Configuration data for MAC table entries";
+
+            uses l2ni-mac-table-config;
+          }
+
+          container state {
+
+            config false;
+
+            description
+              "Operational state data for MAC table entries";
+
+            uses l2ni-mac-table-config;
+            uses l2ni-mac-table-state;
+          }
+
+          container interface {
+            description
+              "Reference to the base and/or subinterface for the
+              MAC table entry";
+
+            uses oc-if:interface-ref;
+          }
+        }
+      }
+    }
+  }
+
+  grouping l2ni-l2rib-top {
+    description
+      "Top-level grouping for l2rib MAC and MAC-IP table list";
+
+    container l2rib {
+      config false;
+      description
+        "Operational state container for MAC address and MAC-IP address
+         information that is learned and installed into the MAC VRF Layer 2
+         Routing Information Base (L2RIB)";
+
+      container mac-table {
+        description
+          "Operational state container for MAC address information installed
+           into the MAC VRF of the L2RIB";
+
+        container entries {
+          description
+            "Enclosing container for list of MAC address entries";
+
+          list entry {
+            key "mac-address";
+            description "List of learned MAC addresses";
+
+            leaf mac-address {
+              type leafref {
+                path "../state/mac-address";
+              }
+              description "Leafref of MAC address object";
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state data for L2RIB MAC table object entry";
+              uses l2ni-l2rib-mac-table-state;
+            }
+
+            container producers {
+              description "Source producers for each MAC Table entry";
+              list producer {
+                key "producer";
+                description
+                  "List of producers for each MAC table entry";
+
+                leaf producer {
+                  type leafref {
+                    path "../state/producer";
+                  }
+                  description
+                    "Reference to producer list key";
+                }
+
+                container state {
+                  config false;
+                  description "State container for L2RIB MAC Table Entries";
+                  uses l2ni-l2rib-common-producer-state;
+                  uses l2ni-l2rib-mac-table-producer-state;
+                }
+              }
+            }
+          }
+        }
+        uses l2ni-l2rib-common-next-hop-group-state;
+        uses l2ni-l2rib-common-next-hop-state;
+      }
+
+      container mac-ip-table {
+        description
+          "Operational state container for MAC-IP address information installed
+           into the MAC VRF of the L2RIB";
+
+        container entries {
+          description
+            "Enclosing container for list of MAC-IP address entries";
+
+          list entry {
+            key "mac-address host-ip";
+            description "List of learned MAC-IP addresses";
+
+            leaf mac-address {
+              type leafref {
+                path "../state/mac-address";
+              }
+              description "Leafref of MAC-IP address object";
+            }
+
+            leaf host-ip {
+              type leafref {
+                path "../state/host-ip";
+              }
+              description "IP address of the Customer Edge device";
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state data for L2RIB MAC-IP table object entry";
+              uses l2ni-l2rib-mac-ip-table-state;
+            }
+
+            container producers {
+              description "Source producers for each MAC-IP Table entry";
+              list producer {
+                key "producer";
+                description
+                  "List of producers for each MAC-IP table entry";
+
+                leaf producer {
+                  type leafref {
+                    path "../state/producer";
+                  }
+                  description
+                    "Reference to producer list key";
+                }
+
+                container state {
+                  config false;
+                  description "State container for L2RIB MAC Table Entries";
+                  uses l2ni-l2rib-common-producer-state;
+                }
+              }
+            }
+          }
+        }
+        uses l2ni-l2rib-common-next-hop-group-state;
+        uses l2ni-l2rib-common-next-hop-state;
+      }
+    }
+  }
+
+  grouping l2ni-l2rib-mac-table-state {
+    description "L2RIB MAC Table Operational State Grouping";
+    uses l2ni-l2rib-common-state;
+  }
+
+  grouping l2ni-l2rib-mac-ip-table-state {
+    description "L2RIB Mac-IP Table Operational State Grouping";
+    uses l2ni-l2rib-common-state;
+
+    leaf host-ip {
+      type oc-inet:ip-address;
+      description
+        "Host IP address of the CE device for the L2RIB MAC-IP entry";
+      reference "RFC7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    leaf l3-vni {
+      type oc-evpn-types:evi-id;
+      description
+        "Symmetric IRB uses the same forwarding semantics when routing
+         between IP subnets with VRF Lite or MPLS L3VPNs. With symmetric IRB,
+         all traffic egressing and returning from a VTEP uses the same VNI.
+         Specifically, the same Layer 3 VNI (L3VNI) associated with the VRF
+         is used for all routed traffic. Layer3 VNI used for inter-subnet
+         routing";
+    }
+  }
+
+  grouping l2ni-l2rib-common-state {
+    description "L2RIB Common Property Operational State Data Grouping";
+
+    leaf mac-address {
+        type oc-yang:mac-address;
+        description "MAC address of the L2RIB MAC or MAC-IP entry";
+    }
+    leaf vlan {
+      type leafref {
+        path "../../../../../../../vlans/vlan/config/vlan-id";
+      }
+      description
+        "VLAN on which the MAC or MAC-IP address is present.";
+    }
+    leaf evi {
+      type oc-evpn-types:evi-id;
+      description "EVPN Instance Identifier for the MAC or MAC-IP";
+    }
+    leaf l2-vni {
+      type oc-evpn-types:evi-id;
+      description "Layer2 VNI segment mapped to given vlan-id";
+    }
+  }
+
+  grouping l2ni-l2rib-common-producer-state {
+    description "L2RIB Common Producer Attributes Operational State Data Grouping";
+
+    leaf producer {
+      type enumeration {
+        enum LOCAL {
+          description "local producer source";
+        }
+        enum STATIC {
+          description "static producer source";
+        }
+        enum BGP {
+          description "bgp producer source";
+        }
+      }
+      description "Source of the learned L2RIB route";
+    }
+
+    leaf seq-number {
+      type uint32;
+      description
+        "The sequence number is used to ensure that PEs retain the correct
+         MAC/IP Advertisement route when multiple updates occur for the same
+         MAC address";
+      reference "RFC7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    leaf mobility-state {
+      type enumeration {
+        enum FROZEN {
+          description
+            "Permanently frozen mac-address";
+        }
+        enum DUPLICATE {
+          description
+            "Duplicate mac-address";
+        }
+      }
+      description
+        "Indicates if learned MAC address is duplicate or frozen";
+      reference "draft-ietf-bess-evpn-irb-extended-mobility-05";
+    }
+
+    leaf esi {
+      type oc-evpn-types:esi;
+      description
+        "Ethernet Segment Identifier (ESI) for local and remote routes.
+         ESI is used to resolve the next-hop-group. All mac-addresses
+         learned with the same ESI should point to the same next-hop-group";
+    }
+
+    leaf sticky {
+      type boolean;
+      description "MAC address is sticky and not subjected to MAC moves";
+      reference "RFC7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    leaf next-hop {
+      type leafref {
+        path "../../../../../../next-hops/next-hop/index";
+      }
+      status deprecated;
+      description "Leafref next-hop for the MAC-IP table entry";
+    }
+
+    leaf-list next-hop-group {
+      type leafref {
+        path "../../../../../../next-hop-groups/next-hop-group/id";
+      }
+      description "Leafref next-hop-group for the MAC-IP table entry";
+    }
+  }
+
+  grouping l2ni-l2rib-common-next-hop-state {
+    description "L2RIB Common Next Hop Attributes Operational State Data Grouping";
+
+    container next-hops {
+      description "A next-hop associated with the MAC or MAC-IP entry";
+      list next-hop {
+        key "index";
+        description "List of next hop attributes for each MAC or MAC-IP";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "A unique index identifying the next-hop entry for the
+             MAC or MAC-IP entry";
+        }
+        container state {
+          description "State container for common next-hop attributes";
+          config false;
+          leaf index {
+            type uint64;
+            description "A unique entry for the next-hop.";
+          }
+          leaf peer-ip {
+            type oc-inet:ip-address;
+            description "Next hop peer address";
+          }
+          leaf label {
+            type oc-evpn-types:evi-id;
+            description "Next hop label representing the l2vni for the route";
+          }
+          leaf esi {
+            type oc-evpn-types:esi;
+            description "Ethernet Segment Identifier (ESI)";
+            reference "RFC7432: BGP MPLS-Based Ethernet VPN";
+          }
+          leaf resolved {
+            type boolean;
+            description
+              "Indicates if the path is eligible for forwarding as per evpn mass
+               withdraw procedures as defined in RFC 7432";
+          }
+          uses oc-if:interface-ref-common;
+        }
+      }
+    }
+  }
+
+  grouping l2ni-l2rib-common-next-hop-group-state {
+    description "L2RIB Common Next Hop Group Attributes Operational State Data Grouping";
+
+    container next-hop-groups {
+      description "Surrounding container for groups of L2RIB next-hops.";
+      list next-hop-group {
+        key "id";
+        description
+          "An individual set of next-hops grouped into a common group.
+           Each entry within an L2RIB can optionally point to a
+           next-hop-group.";
+
+        leaf id {
+          type leafref {
+            path "../state/id";
+          }
+          description
+            "A reference to a unique identifier for the next-hop-group.";
+        }
+        container state {
+          description "State container for common next-hop-group attributes";
+          config false;
+          leaf id {
+            type uint64;
+            description
+              "A unique identifier for the next-hop-group. This index is not
+               expected to be consistent across reboots, or reprogramming of
+               the next-hop-group. When updating a next-hop-group, if the group
+               is removed by the system or assigned an alternate identifier, the
+               system should send telemetry notifications deleting the previous
+               identifier. If the identifier of the next-hop-group is changed,
+               all L2RIB entries that reference it must also be updated.";
+          }
+          leaf esi {
+            type oc-evpn-types:esi;
+            description "Ethernet Segment Identifier (ESI)";
+            reference "RFC7432: BGP MPLS-Based Ethernet VPN";
+          }
+          leaf type {
+            type enumeration {
+              enum ESI {
+                description
+                  "Per ESI pathlist next-hop-group used for evpn mass withdraw procedures as defined in RFC 7432";
+              }
+              enum ESI_EVI {
+                description
+                  "Per ESI,EVI pathlist next-hop-group used for evpn aliasing procedures as defined in RFC 7432";
+              }
+              enum BASE_ECMP {
+                description
+                  "Base ECMP next-hop-group used in absence of evpn aliasing";
+              }
+            }
+            description "Type of next-hop-group";
+          }
+        }
+        container next-hops {
+          description
+            "Surrounding container for the list of next-hops within the next-hop-group.";
+          list next-hop {
+            key "index";
+            description
+              "An individual next-hop within the next-hop-group. Each next-hop is a
+               reference to an entry within the next-hop list.";
+
+            leaf index {
+              type leafref {
+                path "../state/index";
+              }
+              description
+                "A reference to the index for the next-hop within the the next-hop-group.";
+            }
+            container state {
+              description
+                "Operational state parameters related to a next-hop within the next-hop-group.";
+              config false;
+              leaf index {
+                type leafref {
+                  path "../../../../../../next-hops/next-hop/index";
+                }
+                description
+                  "A reference to the identifier for the next-hop to which the entry in the
+                   next-hop group corresponds.";
+              }
+            }
+          }
+        }
+
+      }
+    }
+  }
+
+  grouping l2ni-l2rib-mac-table-producer-state {
+    description "L2RIB MAC Table Operational State Data Grouping";
+
+    leaf derived-from-mac-ip {
+      type boolean;
+      description "Derived from BGP MAC-IP route-type 2";
+    }
+
+    leaf directly-received {
+      type boolean;
+      description "BGP learned MAC route-type 2";
+    }
+  }
+}

@@ -1,0 +1,10 @@
+- name: openconfig-p4rt
+  docs:
+    - yang/p4rt/openconfig-p4rt.yang
+    - yang/interfaces/openconfig-interfaces.yang
+    - yang/platform/openconfig-platform.yang
+  build:
+    - yang/p4rt/openconfig-p4rt.yang
+    - yang/interfaces/openconfig-interfaces.yang
+    - yang/platform/openconfig-platform.yang
+  run-ci: true

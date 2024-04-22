@@ -1,0 +1,1611 @@
+module openconfig-if-ip {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/interfaces/ip";
+
+  prefix "oc-ip";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-vlan { prefix oc-vlan; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This model defines data for managing configuration and
+    operational state on IP (IPv4 and IPv6) interfaces.
+
+    This model reuses data items defined in the IETF YANG model for
+    interfaces described by RFC 7277 with an alternate structure
+    (particularly for operational state data) and with
+    additional configuration items.
+
+    Portions of this code were derived from IETF RFC 7277.
+    Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "3.5.1";
+
+  revision "2024-03-13" {
+    description
+      "Update in-pkts and out-pkts descriptions.";
+    reference "3.5.1";
+  }
+
+  revision "2023-08-14" {
+    description
+      "Add multicast counters for IPv4, IPv6.";
+    reference "3.5.0";
+  }
+
+revision "2023-06-30" {
+    description
+      "Deprecate IPv6 router advertisment config suppress leaf and add config
+      mode leaf.";
+    reference "3.4.0";
+  }
+
+  revision "2023-04-12" {
+    description
+      "Add ipv4 address type configuration.";
+    reference "3.3.0";
+  }
+
+  revision "2023-02-06" {
+    description
+      "Add IPv6 link-local configuration.";
+    reference "3.2.0";
+  }
+
+  revision "2022-11-09" {
+    description
+      "Add additional IPv6 router-advertisement features.";
+    reference "3.1.0";
+  }
+
+  revision "2019-01-08" {
+    description
+      "Eliminate use of the 'empty' type.";
+    reference "3.0.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "2.3.1";
+  }
+
+  revision "2018-01-05" {
+    description
+      "Add logical loopback to interface.";
+    reference "2.3.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Added IPv6 router advertisement configuration.";
+    reference "2.1.0";
+  }
+
+  revision "2017-07-14" {
+    description
+      "Added Ethernet/IP state data; Add dhcp-client;
+      migrate to OpenConfig types modules; Removed or
+      renamed opstate values";
+    reference "2.0.0";
+  }
+
+  revision "2017-04-03"{
+    description
+      "Update copyright notice.";
+    reference "1.1.1";
+  }
+
+  revision "2016-12-22" {
+    description
+      "Fixes to Ethernet interfaces model";
+    reference "1.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // typedef statements
+
+  typedef ip-address-origin {
+    type enumeration {
+      enum OTHER {
+        description
+          "None of the following.";
+        }
+      enum STATIC {
+        description
+          "Indicates that the address has been statically
+          configured - for example, using NETCONF or a Command Line
+          Interface.";
+      }
+      enum DHCP {
+        description
+          "Indicates an address that has been assigned to this
+          system by a DHCP server.";
+      }
+      enum LINK_LAYER {
+        description
+          "Indicates an address created by IPv6 stateless
+          autoconfiguration that embeds a link-layer address in its
+          interface identifier.";
+      }
+      enum RANDOM {
+        description
+          "Indicates an address chosen by the system at
+          random, e.g., an IPv4 address within 169.254/16, an
+          RFC 4941 temporary address, or an RFC 7217 semantically
+          opaque address.";
+        reference
+          "RFC 4941: Privacy Extensions for Stateless Address
+                    Autoconfiguration in IPv6
+          RFC 7217: A Method for Generating Semantically Opaque
+                    Interface Identifiers with IPv6 Stateless
+                    Address Autoconfiguration (SLAAC)";
+      }
+    }
+    description
+     "The origin of an address.";
+  }
+
+  typedef neighbor-origin {
+    type enumeration {
+      enum OTHER {
+       description
+         "None of the following.";
+      }
+      enum STATIC {
+       description
+         "Indicates that the mapping has been statically
+          configured - for example, using NETCONF or a Command Line
+          Interface.";
+      }
+      enum DYNAMIC {
+       description
+        "Indicates that the mapping has been dynamically resolved
+        using, e.g., IPv4 ARP or the IPv6 Neighbor Discovery
+        protocol.";
+      }
+    }
+    description
+      "The origin of a neighbor entry.";
+  }
+
+  typedef ipv4-address-type {
+    type enumeration {
+      enum PRIMARY {
+        description
+          "The primary address on the interface. There can only be one primary
+          address associated on an interface.";
+      }
+      enum SECONDARY {
+        description
+          "Secondary address on an interface. There can be multiple secondary
+          addresses associated on an interface.";
+      }
+    }
+
+    description
+      "The type of an IPv4 address.";
+  }
+
+  // grouping statements
+
+  grouping ip-common-global-config {
+    description
+      "Shared configuration data for IPv4 or IPv6 assigned
+      globally on an interface.";
+
+    leaf dhcp-client {
+      type boolean;
+      default false;
+      description
+        "Enables a DHCP client on the interface in order to request
+        an address";
+    }
+  }
+
+  grouping ip-common-counters-state {
+    description
+      "Operational state for IP traffic statistics for IPv4 and
+      IPv6";
+
+    container counters {
+      description
+        "Packet and byte counters for IP transmission and
+        reception for the address family.";
+
+
+      leaf in-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of IP packets received for the specified
+          address family, including all IP unicast, multicast,
+          broadcast and error packets.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf in-octets {
+        type oc-yang:counter64;
+        description
+          "The total number of octets received in input IP packets
+          for the specified address family, including those received
+          in error.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf in-multicast-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of IP packets received for the specified
+          address family that are multicast packets.
+          Discontinuities in the value of this counter can occur
+          at re-initialization of the management system, and at
+          other times as indicated by the value of
+          'last-clear'.";
+        reference
+          "RFC 4293: Management Information Base for the Internet
+          Protocol (IP) - ipSystemStatsHCInMcastPkts";
+      }
+
+      leaf in-multicast-octets {
+        type oc-yang:counter64;
+        description
+          "The total number of octets received in input IP
+           multicast packets for the specified address
+           family, including those received in error.";
+        reference
+          "RFC 4293: Management Information Base for the Internet
+          Protocol (IP) - ipSystemStatsHCInMcastOctets";
+        }
+
+      leaf in-error-pkts {
+        // TODO: this counter combines several error conditions --
+        // could consider breaking them out to separate leaf nodes
+        type oc-yang:counter64;
+        description
+          "Number of IP packets discarded due to errors for the
+          specified address family, including errors in the IP
+          header, no route found to the IP destination, invalid
+          address, unknown protocol, etc.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf in-forwarded-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of input packets for which the device was not
+          their final IP destination and for which the device
+          attempted to find a route to forward them to that final
+          destination.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf in-forwarded-octets {
+        type oc-yang:counter64;
+        description
+          "The number of octets received in input IP packets
+          for the specified address family for which the device was
+          not their final IP destination and for which the
+          device attempted to find a route to forward them to that
+          final destination.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf in-discarded-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of input IP packets for the
+          specified address family, for which no problems were
+          encountered to prevent their continued processing, but
+          were discarded (e.g., for lack of buffer space).";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of IP packets for the
+          specified address family that the device supplied
+          to the lower layers for transmission.  This includes
+          packets generated locally and those forwarded by the
+          device as well as unicast, multicast and broadcast
+          packets.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-octets {
+        type oc-yang:counter64;
+        description
+          "The total number of octets in IP packets for the
+          specified address family that the device
+          supplied to the lower layers for transmission.  This
+          includes packets generated locally and those forwarded by
+          the device.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-multicast-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of IP multicast packets transmitted.
+
+          Discontinuities in the value of this counter can occur
+          at re-initialization of the management system, and at
+          other times as indicated by the value of
+          'last-clear'.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)
+            - ipSystemStatsHCOutMcastPkts";
+      }
+
+      leaf out-multicast-octets {
+        type oc-yang:counter64;
+        description
+          "The total number of IP multicast octets transmitted.  This
+          includes packets generated locally and those forwarded by
+          the device.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-error-pkts {
+        // TODO: this counter combines several error conditions --
+        // could consider breaking them out to separate leaf nodes
+        type oc-yang:counter64;
+        description
+          "Number of IP packets for the specified address family
+          locally generated and discarded due to errors, including
+          no route found to the IP destination.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-forwarded-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of packets for which this entity was not their
+          final IP destination and for which it was successful in
+          finding a path to their final destination.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-forwarded-octets {
+        type oc-yang:counter64;
+        description
+          "The number of octets in packets for which this entity was
+          not their final IP destination and for which it was
+          successful in finding a path to their final destination.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-discarded-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of output IP packets for the
+          specified address family for which no problem was
+          encountered to prevent their transmission to their
+          destination, but were discarded (e.g., for lack of
+          buffer space).";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+    }
+
+  }
+
+
+
+  grouping ipv4-global-config {
+    description
+      "Configuration data for IPv4 interfaces across
+      all addresses assigned to the interface";
+
+    leaf enabled {
+     type boolean;
+     default true;
+     description
+       "Controls whether IPv4 is enabled or disabled on this
+        interface.  When IPv4 is enabled, this interface is
+        connected to an IPv4 stack, and the interface can send
+        and receive IPv4 packets.";
+    }
+
+    leaf mtu {
+     type uint16 {
+       range "68..max";
+     }
+     units octets;
+     description
+       "The size, in octets, of the largest IPv4 packet that the
+        interface will send and receive.
+
+        The server may restrict the allowed values for this leaf,
+        depending on the interface's type.
+
+        If this leaf is not configured, the operationally used MTU
+        depends on the interface's type.";
+     reference
+       "RFC 791: Internet Protocol";
+    }
+
+    uses ip-common-global-config;
+
+
+  }
+
+  grouping ipv4-address-config {
+    description
+      "Per IPv4 adresss configuration data for the
+      interface.";
+
+    leaf ip {
+       type oc-inet:ipv4-address;
+       description
+        "The IPv4 address on the interface.";
+    }
+
+    leaf prefix-length {
+      type uint8 {
+       range "0..32";
+      }
+      description
+       "The length of the subnet prefix.";
+    }
+
+    leaf type {
+      type ipv4-address-type;
+      default PRIMARY;
+      description
+        "Specifies the explicit type of the IPv4 address being assigned
+        to the interface. By default, addresses are assumed to be a primary address.
+        Where secondary addresses is to be configured, this leaf should be set
+        to SECONDARY.";
+    }
+  }
+
+  grouping ipv4-neighbor-config {
+    description
+      "Per IPv4 neighbor configuration data. Neighbor
+      entries are analagous to static ARP entries, i.e., they
+      create a correspondence between IP and link-layer addresses";
+
+    leaf ip {
+     type oc-inet:ipv4-address;
+     description
+       "The IPv4 address of the neighbor node.";
+    }
+    leaf link-layer-address {
+     type oc-yang:phys-address;
+     mandatory true;
+     description
+       "The link-layer address of the neighbor node.";
+    }
+  }
+
+  grouping ipv4-address-state {
+    description
+      "State variables for IPv4 addresses on the interface";
+
+    leaf origin {
+      type ip-address-origin;
+      description
+       "The origin of this address, e.g., statically configured,
+       assigned by DHCP, etc..";
+    }
+  }
+
+  grouping ipv4-neighbor-state {
+    description
+      "State variables for IPv4 neighbor entries on the interface.";
+
+    leaf origin {
+      type neighbor-origin;
+      description
+        "The origin of this neighbor entry, static or dynamic.";
+    }
+  }
+
+  grouping ipv6-global-config {
+    description
+      "Configuration data at the global level for each
+      IPv6 interface";
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "Controls whether IPv6 is enabled or disabled on this
+        interface.  When IPv6 is enabled, this interface is
+        connected to an IPv6 stack, and the interface can send
+        and receive IPv6 packets.";
+    }
+
+    leaf mtu {
+      type uint32 {
+       range "1280..max";
+      }
+      units octets;
+      description
+        "The size, in octets, of the largest IPv6 packet that the
+        interface will send and receive.
+
+        The server may restrict the allowed values for this leaf,
+        depending on the interface's type.
+
+        If this leaf is not configured, the operationally used MTU
+        depends on the interface's type.";
+      reference
+        "RFC 2460: Internet Protocol, Version 6 (IPv6) Specification
+                  Section 5";
+    }
+
+    leaf dup-addr-detect-transmits {
+      type uint32;
+      default 1;
+      description
+        "The number of consecutive Neighbor Solicitation messages
+        sent while performing Duplicate Address Detection on a
+        tentative address.  A value of zero indicates that
+        Duplicate Address Detection is not performed on
+        tentative addresses.  A value of one indicates a single
+        transmission with no follow-up retransmissions.";
+      reference
+        "RFC 4862: IPv6 Stateless Address Autoconfiguration";
+    }
+
+    uses ip-common-global-config;
+  }
+
+  grouping ipv6-address-config {
+    description "Per-address configuration data for IPv6 interfaces";
+
+    leaf ip {
+      type oc-inet:ipv6-address;
+      description
+        "The IPv6 address on the interface.";
+    }
+
+    leaf prefix-length {
+      type uint8 {
+        range "0..128";
+      }
+      mandatory true;
+      description
+        "The length of the subnet prefix.";
+    }
+
+    leaf type {
+      type oc-inet:ipv6-address-type;
+      default GLOBAL_UNICAST;
+      description
+        "Specifies the explicit type of the IPv6 address being assigned
+        to the interface. By default, addresses are assumed to be
+        global unicast.  Where a link-local address is to be explicitly
+        configured, this leaf should be set to LINK_LOCAL.";
+    }
+
+  }
+
+  grouping ipv6-address-state {
+    description
+      "Per-address operational state data for IPv6 interfaces";
+
+    leaf origin {
+      type ip-address-origin;
+      description
+        "The origin of this address, e.g., static, dhcp, etc.";
+    }
+
+    leaf status {
+      type enumeration {
+        enum PREFERRED {
+          description
+            "This is a valid address that can appear as the
+            destination or source address of a packet.";
+        }
+        enum DEPRECATED {
+          description
+            "This is a valid but deprecated address that should
+            no longer be used as a source address in new
+            communications, but packets addressed to such an
+            address are processed as expected.";
+        }
+        enum INVALID {
+          description
+            "This isn't a valid address, and it shouldn't appear
+            as the destination or source address of a packet.";
+        }
+        enum INACCESSIBLE {
+          description
+            "The address is not accessible because the interface
+            to which this address is assigned is not
+            operational.";
+        }
+        enum UNKNOWN {
+          description
+            "The status cannot be determined for some reason.";
+        }
+        enum TENTATIVE {
+          description
+            "The uniqueness of the address on the link is being
+            verified.  Addresses in this state should not be
+            used for general communication and should only be
+            used to determine the uniqueness of the address.";
+        }
+        enum DUPLICATE {
+          description
+           "The address has been determined to be non-unique on
+            the link and so must not be used.";
+        }
+        enum OPTIMISTIC {
+          description
+            "The address is available for use, subject to
+            restrictions, while its uniqueness on a link is
+            being verified.";
+        }
+      }
+      description
+        "The status of an address.  Most of the states correspond
+        to states from the IPv6 Stateless Address
+        Autoconfiguration protocol.";
+      reference
+          "RFC 4293: Management Information Base for the
+                      Internet Protocol (IP)
+                      - IpAddressStatusTC
+            RFC 4862: IPv6 Stateless Address Autoconfiguration";
+    }
+  }
+
+  grouping ipv6-neighbor-config {
+    description
+      "Per-neighbor configuration data for IPv6 interfaces";
+
+    leaf ip {
+      type oc-inet:ipv6-address;
+      description
+        "The IPv6 address of the neighbor node.";
+    }
+
+    leaf link-layer-address {
+      type oc-yang:phys-address;
+      mandatory true;
+      description
+        "The link-layer address of the neighbor node.";
+    }
+  }
+
+  grouping ipv6-neighbor-state {
+    description "Per-neighbor state variables for IPv6 interfaces";
+
+    leaf origin {
+      type neighbor-origin;
+      description
+        "The origin of this neighbor entry.";
+    }
+    leaf is-router {
+      type boolean;
+      description
+        "Indicates that the neighbor node acts as a router.";
+    }
+    leaf neighbor-state {
+      type enumeration {
+        enum INCOMPLETE {
+          description
+          "Address resolution is in progress, and the link-layer
+                address of the neighbor has not yet been
+                determined.";
+        }
+        enum REACHABLE {
+          description
+          "Roughly speaking, the neighbor is known to have been
+                reachable recently (within tens of seconds ago).";
+        }
+        enum STALE {
+          description
+          "The neighbor is no longer known to be reachable, but
+                until traffic is sent to the neighbor no attempt
+                should be made to verify its reachability.";
+        }
+        enum DELAY {
+          description
+          "The neighbor is no longer known to be reachable, and
+                traffic has recently been sent to the neighbor.
+                Rather than probe the neighbor immediately, however,
+                delay sending probes for a short while in order to
+                give upper-layer protocols a chance to provide
+                reachability confirmation.";
+        }
+        enum PROBE {
+          description
+          "The neighbor is no longer known to be reachable, and
+                unicast Neighbor Solicitation probes are being sent
+                to verify reachability.";
+        }
+      }
+      description
+        "The Neighbor Unreachability Detection state of this
+        entry.";
+      reference
+        "RFC 4861: Neighbor Discovery for IP version 6 (IPv6)
+             Section 7.3.2";
+    }
+  }
+
+  grouping ip-vrrp-ipv6-config {
+    description
+      "IPv6-specific configuration data for VRRP on IPv6
+      interfaces";
+
+      leaf virtual-link-local {
+        type oc-inet:ip-address;
+        description
+          "For VRRP on IPv6 interfaces, sets the virtual link local
+          address";
+      }
+  }
+
+  grouping ip-vrrp-ipv6-state {
+    description
+      "IPv6-specific operational state for VRRP on IPv6 interfaces";
+
+    uses ip-vrrp-ipv6-config;
+  }
+
+  grouping ip-vrrp-tracking-config {
+    description
+      "Configuration data for tracking interfaces
+      in a VRRP group";
+
+    leaf-list track-interface {
+      type leafref {
+        path "/oc-if:interfaces/oc-if:interface/oc-if:name";
+      }
+      // TODO: we may need to add some restriction to ethernet
+      // or IP interfaces.
+      description
+        "Sets a list of one or more interfaces that should
+        be tracked for up/down events to dynamically change the
+        priority state of the VRRP group, and potentially
+        change the mastership if the tracked interface going
+        down lowers the priority sufficiently.  Any of the tracked
+        interfaces going down will cause the priority to be lowered.
+        Some implementations may only support a single
+        tracked interface.";
+    }
+
+    leaf priority-decrement {
+      type uint8 {
+        range 0..254;
+      }
+      default 0;
+      description "Set the value to subtract from priority when
+      the tracked interface goes down";
+    }
+  }
+
+  grouping ip-vrrp-tracking-state {
+    description
+      "Operational state data for tracking interfaces in a VRRP
+      group";
+  }
+
+  grouping ip-vrrp-tracking-top {
+    description
+      "Top-level grouping for VRRP interface tracking";
+
+    container interface-tracking {
+      description
+        "Top-level container for VRRP interface tracking";
+
+      container config {
+        description
+          "Configuration data for VRRP interface tracking";
+
+        uses ip-vrrp-tracking-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for VRRP interface tracking";
+
+        uses ip-vrrp-tracking-config;
+        uses ip-vrrp-tracking-state;
+      }
+    }
+  }
+
+  grouping ip-vrrp-config {
+    description
+      "Configuration data for VRRP on IP interfaces";
+
+    leaf virtual-router-id {
+      type uint8 {
+        range 1..255;
+      }
+      description
+        "Set the virtual router id for use by the VRRP group.  This
+        usually also determines the virtual MAC address that is
+        generated for the VRRP group";
+    }
+
+    leaf-list virtual-address {
+      type oc-inet:ip-address;
+      description
+        "Configure one or more virtual addresses for the
+        VRRP group";
+    }
+
+    leaf priority {
+      type uint8 {
+        range 1..254;
+      }
+      default 100;
+      description
+        "Specifies the sending VRRP interface's priority
+        for the virtual router.  Higher values equal higher
+        priority";
+    }
+
+    leaf preempt {
+      type boolean;
+      default true;
+      description
+        "When set to true, enables preemption by a higher
+        priority backup router of a lower priority master router";
+    }
+
+    leaf preempt-delay {
+      type uint16 {
+        range 0..3600;
+      }
+      default 0;
+      description
+        "Set the delay the higher priority router waits
+        before preempting";
+    }
+
+    leaf accept-mode {
+      type boolean;
+      // TODO: should we adopt the RFC default given the common
+      // operational practice of setting to true?
+      default false;
+      description
+        "Configure whether packets destined for
+        virtual addresses are accepted even when the virtual
+        address is not owned by the router interface";
+    }
+
+    leaf advertisement-interval {
+      type uint16 {
+        range 1..4095;
+      }
+      // TODO this range is theoretical -- needs to be validated
+      // against major implementations.
+      units "centiseconds";
+      default 100;
+      description
+        "Sets the interval between successive VRRP
+        advertisements -- RFC 5798 defines this as a 12-bit
+        value expressed as 0.1 seconds, with default 100, i.e.,
+        1 second.  Several implementation express this in units of
+        seconds";
+    }
+  }
+
+  grouping ip-vrrp-state {
+    description
+      "Operational state data for VRRP on IP interfaces";
+
+    leaf current-priority {
+      type uint8;
+      description "Operational value of the priority for the
+      interface in the VRRP group";
+    }
+  }
+
+  grouping ip-vrrp-top {
+    description
+      "Top-level grouping for Virtual Router Redundancy Protocol";
+
+    container vrrp {
+      description
+        "Enclosing container for VRRP groups handled by this
+        IP interface";
+
+      reference "RFC 5798 - Virtual Router Redundancy Protocol
+        (VRRP) Version 3 for IPv4 and IPv6";
+
+      list vrrp-group {
+        key "virtual-router-id";
+        description
+          "List of VRRP groups, keyed by virtual router id";
+
+        leaf virtual-router-id {
+          type leafref {
+            path "../config/virtual-router-id";
+          }
+          description
+            "References the configured virtual router id for this
+            VRRP group";
+        }
+
+        container config {
+          description
+            "Configuration data for the VRRP group";
+
+          uses ip-vrrp-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for the VRRP group";
+
+          uses ip-vrrp-config;
+          uses ip-vrrp-state;
+        }
+
+        uses ip-vrrp-tracking-top;
+      }
+    }
+  }
+
+  grouping ipv6-ra-config {
+    description
+      "Configuration parameters for IPv6 router advertisements.";
+
+    leaf enable {
+      type boolean;
+      default true;
+      description
+        "If set to false, all IPv6 router advertisement functions are
+        disabled.  The local system will not transmit router advertisement
+        messages and will not respond to router solicitation messages.";
+    }
+
+    leaf interval {
+      type uint32;
+      units seconds;
+      description
+        "The interval between periodic router advertisement neighbor
+        discovery messages sent on this interface expressed in
+        seconds.";
+    }
+
+    leaf lifetime {
+      type uint32;
+      units seconds;
+      description
+        "The lifetime advertised in the router advertisement neighbor
+        discovery message on this interface.";
+    }
+
+    leaf suppress {
+      status deprecated;
+      type boolean;
+      default false;
+      description
+        "When set to true, router advertisement neighbor discovery
+        messages are not transmitted on this interface.";
+    }
+
+    leaf mode {
+      type enumeration {
+        enum ALL {
+          description
+            "The system will transmit unsolicited router advertisement
+            messages and respond to router solicitation requests.";
+        }
+        enum DISABLE_UNSOLICITED_RA {
+          description
+            "Unsolicted router advertisement messages are not transmitted on
+            this interface.  Responses to router solicitation messages will
+            be transmitted.";
+        }
+      }
+      default "ALL";
+      description
+        "Mode controls which set of behaviors the local system should perform
+        to support IPv6 router advertisements.";
+      reference "RFC4861: Neighbor Discovery for IP version 6 (IPv6)";
+    }
+
+    leaf managed {
+      type boolean;
+      default false;
+      description
+        "When set to true, the managed address configuration (M) flag is set in
+        the advertised router advertisement. The M flag indicates that there are
+        addresses available via DHCPv6.";
+      reference "RFC4861: Neighbor Discovery for IPv6, section 4.2";
+    }
+
+    leaf other-config {
+      type boolean;
+      default false;
+      description
+        "When set to true, the other configuration (O) flag is set in the
+        advertised router advertisement. The O flag indicates that there is
+        other configuration available via DHCPv6 (e.g., DNS servers).";
+      reference "RFC4861: Neighbor Discovery for IPv6, section 4.2";
+    }
+  }
+
+  grouping ipv6-ra-prefix-config {
+    description
+      "Configuration parameters for an individual prefix within an IPv6
+      router advertisement.";
+
+    leaf prefix {
+      type oc-inet:ipv6-prefix;
+      description
+        "IPv6 prefix to be advertised within the router advertisement
+        message.";
+    }
+
+    leaf valid-lifetime {
+      type uint32;
+      units seconds;
+      description
+        "The length of time that the prefix is valid relative to the time
+        the packet was sent.";
+      reference "RFC4861: Neighbor Discovery for IPv6, section 4.6.2";
+    }
+
+    leaf preferred-lifetime {
+      type uint32;
+      units seconds;
+      description
+        "The length of time that the address within the prefix remains
+        in the preferred state, i.e., unrestricted use is allowed by
+        upper-layer protocols. See RFC4862 for a complete definition
+        of preferred behaviours.";
+      reference "RFC4861: Neighbor Discovery for IPv6, section 4.6.2";
+    }
+
+    leaf disable-advertisement {
+      type boolean;
+      description
+        "When set to true, the prefix is not advertised within
+        router advertisement messages that are sent as a result of
+        router soliciation messages.";
+    }
+
+    leaf disable-autoconfiguration {
+      type boolean;
+      description
+        "When set to true, the prefix is marked as not to be used for stateless
+        address configuration. This is achieved by setting the autonomous address
+        configuration bit for the prefix.";
+      reference "RFC4861: Neighbor Discovery for IPv6, section 4.6.1";
+    }
+
+    leaf enable-onlink {
+      type boolean;
+      description
+        "When set to true, the prefix is marked as being on link by setting the
+        L-bit for the prefix within a router advertisement.";
+      reference "RFC4861: Neighbor Discovery for IPv6, section 4.6.1";
+    }
+  }
+
+  grouping ipv4-proxy-arp-config {
+    description
+      "Configuration parameters for IPv4 proxy ARP";
+
+    leaf mode {
+      type enumeration {
+        enum DISABLE {
+          description
+            "The system should not respond to ARP requests that
+            do not specify an IP address configured on the local
+            subinterface as the target address.";
+        }
+        enum REMOTE_ONLY {
+          description
+            "The system responds to ARP requests only when the
+            sender and target IP addresses are in different
+            subnets.";
+        }
+        enum ALL {
+          description
+            "The system responds to ARP requests where the sender
+            and target IP addresses are in different subnets, as well
+            as those where they are in the same subnet.";
+        }
+      }
+      default "DISABLE";
+      description
+        "When set to a value other than DISABLE, the local system should
+        respond to ARP requests that are for target addresses other than
+        those that are configured on the local subinterface using its own
+        MAC address as the target hardware address. If the REMOTE_ONLY
+        value is specified, replies are only sent when the target address
+        falls outside the locally configured subnets on the interface,
+        whereas with the ALL value, all requests, regardless of their
+        target address are replied to.";
+      reference "RFC1027: Using ARP to Implement Transparent Subnet Gateways";
+    }
+  }
+
+  grouping ipv4-top {
+    description "Top-level configuration and state for IPv4
+    interfaces";
+
+    container ipv4 {
+      description
+        "Parameters for the IPv4 address family.";
+
+      container addresses {
+        description
+          "Enclosing container for address list";
+
+        list address {
+          key "ip";
+          description
+           "The list of configured IPv4 addresses on the interface.";
+
+          leaf ip {
+            type leafref {
+              path "../config/ip";
+            }
+            description "References the configured IP address";
+          }
+
+          container config {
+            description "Configuration data for each configured IPv4
+            address on the interface";
+
+            uses ipv4-address-config;
+
+          }
+
+          container state {
+
+            config false;
+            description "Operational state data for each IPv4 address
+            configured on the interface";
+
+            uses ipv4-address-config;
+            uses ipv4-address-state;
+          }
+
+        }
+      }
+
+      container proxy-arp {
+        description
+          "Configuration and operational state parameters
+          relating to proxy ARP. This functionality allows a
+          system to respond to ARP requests that are not
+          explicitly destined to the local system.";
+
+        container config {
+          description
+            "Configuration parameters for proxy ARP";
+          uses ipv4-proxy-arp-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters for proxy ARP";
+          uses ipv4-proxy-arp-config;
+        }
+      }
+
+      container neighbors {
+        description
+          "Enclosing container for neighbor list";
+
+        list neighbor {
+          key "ip";
+          description
+           "A list of mappings from IPv4 addresses to
+            link-layer addresses.
+
+            Entries in this list are used as static entries in the
+            ARP Cache.";
+          reference
+           "RFC 826: An Ethernet Address Resolution Protocol";
+
+          leaf ip {
+            type leafref  {
+              path "../config/ip";
+            }
+            description "References the configured IP address";
+          }
+
+          container config {
+            description "Configuration data for each configured IPv4
+            address on the interface";
+
+            uses ipv4-neighbor-config;
+
+          }
+
+          container state {
+
+            config false;
+            description "Operational state data for each IPv4 address
+            configured on the interface";
+
+            uses ipv4-neighbor-config;
+            uses ipv4-neighbor-state;
+          }
+        }
+      }
+
+      uses oc-if:sub-unnumbered-top;
+
+      container config {
+        description
+          "Top-level IPv4 configuration data for the interface";
+
+        uses ipv4-global-config;
+      }
+
+      container state {
+
+        config false;
+        description
+          "Top level IPv4 operational state data";
+
+        uses ipv4-global-config;
+        uses ip-common-counters-state;
+      }
+    }
+  }
+
+  grouping ipv6-top {
+    description
+      "Top-level configuration and state for IPv6 interfaces";
+
+    container ipv6 {
+      description
+       "Parameters for the IPv6 address family.";
+
+      container addresses {
+        description
+          "Enclosing container for address list";
+
+        list address {
+          key "ip";
+          description
+           "The list of configured IPv6 addresses on the interface.";
+
+          leaf ip {
+            type leafref {
+              path "../config/ip";
+            }
+            description "References the configured IP address";
+          }
+
+          container config {
+            description
+              "Configuration data for each IPv6 address on
+              the interface";
+
+            uses ipv6-address-config;
+
+          }
+
+          container state {
+
+            config false;
+            description
+              "State data for each IPv6 address on the
+              interface";
+
+            uses ipv6-address-config;
+            uses ipv6-address-state;
+          }
+        }
+      }
+
+      container router-advertisement {
+        description
+          "Configuration and operational state parameters relating to
+          router advertisements.";
+
+        container config {
+          description
+            "Configuration parameters relating to router advertisements
+            for IPv6.";
+          uses ipv6-ra-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to router
+             advertisements for IPv6.";
+          uses ipv6-ra-config;
+        }
+
+        container prefixes {
+          description
+            "Container for a list of prefixes that are included in the
+            router advertisement message.";
+
+          list prefix {
+            key "prefix";
+
+            description
+              "List of prefixes that are to be included in the IPv6
+              router-advertisement messages for the interface. The list
+              is keyed by the IPv6 prefix in CIDR representation.
+
+              Prefixes that are listed are those that are to be
+              advertised in router advertisement messages. Where there
+              are IPv6 global addresses configured on an interface and
+              the prefix is not listed in the prefix list, it MUST NOT
+              be advertised in the router advertisement message.";
+
+            leaf prefix {
+              type leafref {
+                path "../config/prefix";
+              }
+              description
+                "Reference to the IPv6 prefix key for the prefix list.";
+            }
+
+            container config {
+              description
+                "Configuration parameters corresponding to an IPv6 prefix
+                within the router advertisement.";
+
+              uses ipv6-ra-prefix-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters corresponding to an IPv6 prefix
+                within the router advertisement.";
+
+              uses ipv6-ra-prefix-config;
+            }
+          }
+        }
+      }
+
+      container neighbors {
+        description
+          "Enclosing container for list of IPv6 neighbors";
+
+        list neighbor {
+          key "ip";
+          description
+            "List of IPv6 neighbors";
+
+          leaf ip {
+            type leafref {
+              path "../config/ip";
+            }
+            description
+              "References the configured IP neighbor address";
+          }
+
+          container config {
+            description "Configuration data for each IPv6 address on
+            the interface";
+
+            uses ipv6-neighbor-config;
+
+          }
+
+          container state {
+
+            config false;
+            description "State data for each IPv6 address on the
+            interface";
+
+            uses ipv6-neighbor-config;
+            uses ipv6-neighbor-state;
+          }
+        }
+      }
+      uses oc-if:sub-unnumbered-top;
+
+      container config {
+        description "Top-level config data for the IPv6 interface";
+
+        uses ipv6-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Top-level operational state data for the IPv6 interface";
+
+        uses ipv6-global-config;
+        uses ip-common-counters-state;
+
+      }
+    }
+  }
+
+  // augment statements
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:subinterfaces/" +
+    "oc-if:subinterface" {
+    description
+      "IPv4 address family configuration for
+      interfaces";
+
+    uses ipv4-top;
+
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:subinterfaces/" +
+    "oc-if:subinterface" {
+    description
+      "IPv6 address family configuration for
+      interfaces";
+
+    uses ipv6-top;
+
+  }
+
+  // VRRP for IPv4 interfaces
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:subinterfaces/" +
+    "oc-if:subinterface/oc-ip:ipv4/oc-ip:addresses/oc-ip:address" {
+
+    description
+      "Additional IP addr family configuration for
+      interfaces";
+
+    uses ip-vrrp-top;
+
+  }
+
+  // VRRP for IPv6 interfaces
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:subinterfaces/" +
+    "oc-if:subinterface/oc-ip:ipv6/oc-ip:addresses/oc-ip:address" {
+    description
+      "Additional IP addr family configuration for
+      interfaces";
+
+    uses ip-vrrp-top;
+
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:subinterfaces/" +
+    "oc-if:subinterface/oc-ip:ipv6/oc-ip:addresses/oc-ip:address/" +
+    "vrrp/vrrp-group/config" {
+    description
+      "Additional VRRP data for IPv6 interfaces";
+
+    uses ip-vrrp-ipv6-config;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-if:subinterfaces/" +
+  "oc-if:subinterface/oc-ip:ipv6/oc-ip:addresses/oc-ip:address/vrrp/" +
+    "vrrp-group/state" {
+    description
+      "Additional VRRP data for IPv6 interfaces";
+
+    uses ip-vrrp-ipv6-state;
+  }
+
+  // Augments for for routed VLANs
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-vlan:routed-vlan" {
+    description
+      "IPv4 address family configuration for
+      interfaces";
+
+    uses ipv4-top;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-vlan:routed-vlan" {
+    description
+      "IPv6 address family configuration for
+      interfaces";
+
+    uses ipv6-top;
+  }
+
+  // VRRP for routed VLAN interfaces
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-vlan:routed-vlan/" +
+    "oc-ip:ipv4/oc-ip:addresses/oc-ip:address" {
+    description
+      "Additional IP addr family configuration for
+      interfaces";
+
+    uses ip-vrrp-top;
+
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-vlan:routed-vlan/" +
+    "oc-ip:ipv6/oc-ip:addresses/oc-ip:address" {
+    description
+      "Additional IP addr family configuration for
+      interfaces";
+
+    uses ip-vrrp-top;
+
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-vlan:routed-vlan/" +
+    "oc-ip:ipv6/oc-ip:addresses/oc-ip:address/vrrp/vrrp-group/config" {
+    description
+      "Additional VRRP data for IPv6 interfaces";
+
+    uses ip-vrrp-ipv6-config;
+  }
+
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-vlan:routed-vlan/" +
+    "oc-ip:ipv6/oc-ip:addresses/oc-ip:address/vrrp/vrrp-group/state" {
+    description
+      "Additional VRRP data for IPv6 interfaces";
+
+    uses ip-vrrp-ipv6-state;
+  }
+
+  // rpc statements
+
+  // notification statements
+}

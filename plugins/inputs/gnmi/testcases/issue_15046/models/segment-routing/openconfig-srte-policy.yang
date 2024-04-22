@@ -1,0 +1,675 @@
+module openconfig-srte-policy {
+  yang-version "1";
+  namespace "http://openconfig.net/yang/segment-routing/srte-policy";
+  prefix "oc-srte";
+
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-interfaces { prefix "oc-if"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+  import openconfig-aft { prefix "oc-aft"; }
+  import openconfig-segment-routing-types { prefix "oc-srt"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig Working group
+    www.openconfig.net";
+
+  description
+    "This module defines a collection of segment routing traffic
+    engineering policy operational states.
+
+    Each policy, identified by a combination of color and endpoint,
+    has one or more candidate paths learned from one or more sources.
+    The best valid/usable path is marked as active and programmed in
+    forwarding plane.
+
+    A candidate path, identified by protocol-origin, originator and
+    discriminator, can have one and more segment-list defining the
+    path traffic should take. Each segment-list is associated with a
+    weight for weighted load balancing.
+
+    Traffic counters related to SR policies are also defined in this
+    module.";
+
+  reference
+    "draft-ietf-spring-segment-routing-policy";
+
+  oc-ext:openconfig-version "0.2.3";
+
+  revision "2021-07-28" {
+    description
+      "Add qualify to when statements.";
+    reference "0.2.3";
+  }
+
+  revision "2020-11-06" {
+    description
+      "Update segment-lists nexthop state container to use index leaf
+      from aft-common-entry-nexthop-state.";
+    reference "0.2.2";
+  }
+
+  revision "2020-05-01" {
+    description
+      "Fix consistency of per-policy counters.";
+    reference "0.2.1";
+  }
+
+  revision "2020-03-31" {
+    description
+      "Updated traffic counters on policy and segment-list levels.";
+    reference "0.2.0";
+  }
+
+  revision "2019-09-24" {
+    description
+      "Initial revision of the SR-TE policy model.";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping oc-srte-policy-top {
+    description
+      "Top-level grouping used for SR-TE policy operational states.";
+
+    container te-policies {
+      config false;
+      description
+        "A collection of SR-TE policies in the system.";
+
+      list te-policy {
+        key "color endpoint";
+        description
+          "An individual SR-TE policy is identified by a combination
+          of color and endpoint.";
+
+        leaf color {
+          type leafref {
+            path "../state/color";
+          }
+          description
+            "A reference to the srte color in the state.";
+        }
+
+        leaf endpoint {
+          type leafref {
+            path "../state/endpoint";
+          }
+          description
+            "A reference to the srte endpoint in the state.";
+        }
+
+        container state {
+          config false;
+          description
+            "The operational state of parameters associated with
+            SR-TE policies.";
+
+          uses oc-srte-policy-state;
+
+          container counters {
+            description
+              "A collection of counters on the policy level. They
+              count the total traffic forwarded by the policy,
+              regardless of its installation source. The counters
+              should be persistent across policy state changes and
+              switches between active protocols.";
+
+              uses oc-srte-policy-counters;
+          }
+        }
+
+        uses oc-srte-candidate-path;
+      }
+    }
+  }
+
+  grouping oc-srte-policy-keys {
+    description
+      "Keys to identify a SR-TE policy.";
+
+    leaf color {
+      type uint32;
+      description
+        "When the policy is used for RIB resolution to a specific
+        Segment Routing Traffic Engineering path, the policy is used
+        when the color required in the policy (which may be specified
+        based on the value of a BGP extended colour community) matches
+        the value of this leaf. The color being set to 0 indicates
+        that the colour is a wildcard in the policy resolution.";
+    }
+
+    leaf endpoint {
+      type oc-srt:srte-endpoint-type;
+      description
+        "When the policy is used for RIB resolution to a Segment
+        Routing Traffic Engineering path, the policy is used when the
+        required endpoint (which may be the protocol next-hop) matches
+        the endpoint address specified in this leaf. When the leaf is
+        set to all zeros (0.0.0.0 or ::), the endpoint acts as a
+        wildcard in the policy resolution.";
+    }
+  }
+
+  grouping oc-srte-policy-state {
+    description
+      "Operational states specific to a SR-TE policy.";
+
+    uses oc-srte-policy-keys;
+
+    leaf name {
+      type string;
+      description
+        "The user friendly SR-TE policy name.";
+    }
+
+    leaf bsid {
+      type oc-srt:sr-sid-type;
+      description
+        "The Binding SID (BSID) assigned to the SR-TE policy,
+        expressed as an MPLS label or IPv6 address. Packets that are
+        ingress to the system with active segment matching the SID
+        value specified in this leaf should be forwarded according
+        to the policy. The specified Binding SID must be removed
+        from the segment list by the system.";
+    }
+
+    leaf active {
+      type boolean;
+      description
+        "A SR-TE policy is marked as active when at least one of its
+        candidate paths is valid/active and the policy has been
+        instantiated in the forwarding plane.";
+    }
+
+    leaf active-since {
+      type oc-types:timeticks64;
+      description
+        "Indication of the time the policy transitioned to the active
+        state.
+
+        The value is the timestamp in nanoseconds relative to the Unix
+        Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf active-transitions {
+      type oc-yang:counter64;
+      description
+        "The number of transitions to active state for the policy.";
+    }
+
+  }
+
+  grouping oc-srte-policy-counters {
+    description
+      "A collection of traffic counters on the SR-TE policy level.";
+
+    leaf in-pkts {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the incoming packets steered to
+        the SR-TE policy. It includes both labeled and unlabeled
+        steered traffic.";
+    }
+
+    leaf in-octets {
+      type oc-yang:counter64;
+      description
+        "The cumulative counter of the total incoming bytes steered
+        to the SR-TE policy. It includes both labeled and unlabeled
+        steered traffic.";
+    }
+
+    leaf in-labeled-pkts {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the incoming labeled packets steered
+        to the SR-TE policy. Labeled packets carries an active SID
+        (top-most SID in the stack) that matches the BSID associated
+        to this policy.";
+    }
+
+    leaf in-labeled-octets {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the total bytes of incoming labeled
+        traffic steered to the SR-TE policy. Labeled traffic carries
+        an active SID (top-most SID in the stack) that matches the
+        BSID associated to this policy.";
+    }
+
+    leaf out-pkts {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the outgoing packets after being
+        steered to the SR-TE policy. It includes both labeled and
+        unlabeled steered traffic.";
+    }
+
+    leaf out-octets {
+      type oc-yang:counter64;
+      description
+        "The cumulative counter of the total outgoing bytes after
+        being steered to the SR-TE policy. It includes both labeled
+        and unlabeled steered traffic. The counter should include the
+        segments pushed to packets.";
+    }
+
+    leaf out-labeled-pkts {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the outgoing labeled packets after
+        being steered to the SR-TE policy. Labeled packets carries
+        an active SID (top-most SID in the stack) that matches the
+        BSID associated to this policy.";
+    }
+
+    leaf out-labeled-octets {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the total bytes of outgoing labeled
+        traffic after being steered to the SR-TE policy. Labeled
+        traffic carries an active SID (top-most SID in the stack) that
+        matches the BSID associated to this policy. The counter should
+        include the segments pushed to packets.";
+    }
+  }
+
+  grouping oc-srte-candidate-path {
+    description
+      "A collection of candidate paths associated with the SR-TE
+      policy.";
+
+    container candidate-paths {
+      description
+        "One or more candidate paths may be associated to a SR-TE
+        policy. The best and usable one should be used as forwarding
+        next-hops.";
+
+      list candidate-path {
+        key "protocol-origin originator-asn originator-addr discriminator";
+        description
+          "An individual candidate path within the list of candidate
+          paths associated with this SR-TE policy. It is uniquely
+          identified by the combination of protocol-origin,
+          originator and discriminator";
+
+        leaf protocol-origin {
+          type leafref {
+            path "../state/protocol-origin";
+          }
+          description
+            "A reference to the component or protocol that originates
+            or signals the candidate path";
+        }
+
+        leaf originator-asn {
+          type leafref {
+            path "../state/originator-asn";
+          }
+          description
+            "A reference to the autonomous system that the node
+            originating the candidate path locates.";
+        }
+
+        leaf originator-addr {
+          type leafref {
+            path "../state/originator-addr";
+          }
+          description
+            "A reference to the address of the node originating the
+            candidate path.";
+        }
+
+        leaf discriminator {
+          type leafref {
+            path "../state/discriminator";
+          }
+          description
+            "A reference to the ID uniquely identifying the path
+            within the context of a policy learnt from a protocol.";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters associated with SR-TE
+            candidate paths.";
+
+          uses oc-srte-candidate-path-state;
+        }
+
+        container segment-lists {
+          description
+            "A collection of segment lists associated with the policy
+            candidate path.";
+
+          list segment-list {
+            key "id";
+            description
+              "An individual segment list within the list of segment
+              lists associated with this candidate path.";
+
+            leaf id {
+              type leafref {
+                path "../state/id";
+              }
+              description
+                "A reference to the segment-list that in use for the
+                candidate path.";
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state parameters associated with a
+                segment-list in a SR-TE candidate paths.";
+
+              uses oc-srte-segment-list-state;
+
+              container counters {
+                description
+                  "The counters of traffic steered to the segment-list.";
+
+                uses oc-srte-segment-list-common-counters;
+              }
+            }
+
+            container sids {
+              description
+                "The list of SIDs that make up the segment list. The
+                order of the SIDs is specified by ordering the list
+                according to index, in ascending order. The network
+                device should consider the top-most SID the entry with
+                the lowest index.";
+
+              list sid {
+                key "index";
+
+                description
+                  "List of SIDs that make up the segment list. The segment
+                  list is formed by ordering the set of SIDs that are
+                  specified by their index in ascending numerical order.";
+
+                leaf index {
+                  type leafref {
+                    path "../state/index";
+                  }
+                  description
+                    "Reference to the SID's index within the segment list
+                    which acts as the key of the list.";
+                }
+
+                container state {
+                  config false;
+                  description
+                    "Operational state parameters relating to the SID within
+                    the segment list.";
+                  uses oc-srte-segment-list-sids-state;
+                }
+              }
+            }
+
+            container next-hops {
+              description
+                "The set of next-hops which the segment-list is resolved to.
+                Traffic steered to the segment-list should be forwarded over
+                them.";
+
+              list next-hop {
+                key "index";
+                description
+                  "A next-hop the segment list is resolved to.";
+
+                leaf index {
+                  type leafref {
+                    path "../state/index";
+                  }
+                  description
+                    "A reference to the nexthop index in the state.";
+                }
+
+                container state {
+                  config false;
+                  description "State parameters for the nexthop.";
+
+                  uses oc-aft:aft-common-entry-nexthop-state;
+
+                  container counters {
+                    description
+                      "The counters of traffic steered to the segment-list on
+                      per next-hop basis.";
+                    uses oc-srte-segment-list-common-counters;
+                  }
+                }
+
+                uses oc-if:interface-ref-state;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping oc-srte-segment-list-state {
+    description
+      "Operational state specific to a segment-list in a
+      candidate-path.";
+
+    leaf id {
+      type uint32;
+      description
+        "A unique id identifying the segment-list.";
+    }
+
+    leaf valid {
+      type boolean;
+      description
+        "The validity of a segment-list should marked as true
+        when it is usable.";
+      reference
+        "draft-ietf-spring-segment-routing-policy.";
+    }
+
+    leaf invalid-reason {
+      type oc-srt:srte-invalid-sl-reason;
+      description
+        "If a segment-list is marked as invalid, this leaf should
+        indicate the reason.";
+    }
+
+    leaf weight {
+      type uint32;
+      description
+        "The weight of the segment list within the set of
+        segment lists specified for the candidate path. The
+        traffic that is forwarded according to the policy is
+        distributed across the set of segment-lists such that
+        each list receives weight/(sum of all weights) traffic.";
+    }
+
+  }
+
+  grouping oc-srte-candidate-path-state {
+    description
+      "Operational state specific to a SR-TE policy candidate path.";
+
+    leaf name {
+      type string;
+      description
+        "The user friendly SR-TE candidate path name.";
+    }
+
+    leaf protocol-origin {
+      type oc-srt:srte-protocol-type;
+      description
+        "The component or protocol that originates or signals the
+        candidate path.";
+    }
+
+    leaf originator-asn {
+      type uint32;
+      description
+        "The autonomous system that node originating the candidate
+        path locates.";
+      reference
+        "Section 2.4 of draft-ietf-spring-segment-routing-policy.";
+    }
+
+    leaf originator-addr {
+      type oc-inet:ipv6-address;
+      description
+        "The address of the node originating the candidate path.
+        Address in IPv4 can be represented as IPv6-encoded-IPv4 e.g.
+        ::FFFF:192.168.1.2 or a normal IPv6 address with the lowest
+        32 bits carrying the actual IPv4 address.";
+      reference
+        "Section 2.4 of draft-ietf-spring-segment-routing-policy.";
+    }
+
+    leaf discriminator {
+      type uint32;
+      description
+        "A 32 bit value uniquely identifying the path within the
+        context of a policy learnt from a protocol.";
+    }
+
+    leaf preference {
+      type uint32;
+      description
+        "When there are multiple candidate paths specified a
+        particular SR-TE policy. The preference is used to resolve
+        between them. And the one with higher preference is
+        preferred.
+        These paths may be learnt from a dynamic routing protocol,
+        or interface to the device, or from other static entries
+        configured on the system.";
+    }
+
+    leaf enlp {
+      type oc-srt:enlp-type;
+      description
+        "ENLP (Explicit NULL Label Policy) indicates whether Explicit
+        NULL labels are to be pushed on unlabeled IP packets that are
+        being steered into a given SR policy.";
+      reference "draft-ietf-idr-segment-routing-te-policy";
+    }
+
+    leaf valid {
+      type boolean;
+      description
+        "A path should be marked as valid when it is usable e.g. the
+        at least one segment-list is valid even though the path may
+        not be the best.";
+    }
+
+    leaf active {
+      type boolean;
+      description
+        "A candidate path is active when it is valid and it is
+        determined to be the best path of the SR-TE Policy.";
+    }
+
+    leaf active-since {
+      type oc-types:timeticks64;
+      description
+        "Indication of the time the path transitioned to the active
+        state.
+
+        The value is the timestamp in nanoseconds relative to the
+        Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf active-transitions {
+      type oc-yang:counter64;
+      description
+        "The number of transitions to active state for the candidate
+        path.";
+    }
+  }
+
+  grouping oc-srte-segment-list-common-counters {
+    description
+      "A collection of traffic counters on the segment-list level.";
+
+    leaf out-pkts {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the outgoing packets steered to the
+        segment list. The counter includes both labeled and unlabeled
+        steered traffic.";
+    }
+
+    leaf out-octets {
+      type oc-yang:counter64;
+      description
+        "The cumulative counter of the total outgoing bytes steered
+        to the segment list. The counter includes both labeled and
+        unlabeled steerted traffic.";
+    }
+
+    leaf out-labeled-pkts {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the incoming labeled packets steered
+        to the segment list.";
+    }
+
+    leaf out-labeled-octets {
+      type oc-yang:counter64;
+      description
+        "A cumulative counter of the total bytes of incoming labeled
+        traffic steered to the segment list.";
+    }
+  }
+
+  grouping oc-srte-segment-list-sids-state {
+    description
+      "Operational state relating to a SID within an SR-TE segment
+      list";
+
+    leaf index {
+      type uint64;
+      description
+        "The index of the SID within the segment list. The segment list is
+        applied by ordering the SID entries in ascending numerical order
+        beginning at 0.";
+    }
+
+    leaf value {
+      type oc-srt:sr-sid-type;
+      description
+        "The value of the SID that is to be used. Specified as an MPLS
+        label or IPv6 address.";
+    }
+
+    leaf mpls-ttl {
+      type uint8;
+      default 0;
+      description
+        "The TTL to be set if the type of the SID is an MPLS label. If the
+        value of the TTL is set to be 0, the value is picked by the local
+        implementation.";
+    }
+
+    leaf mpls-tc {
+      type uint8 {
+        range "0..7";
+      }
+      default 0;
+      description
+        "The value of the MPLS Traffic Class (TC) bits to be used if the
+        value of the SID is an MPLS label. In the case that the value is
+        set to 0, then the local implementation should choose the value.";
+    }
+  }
+}

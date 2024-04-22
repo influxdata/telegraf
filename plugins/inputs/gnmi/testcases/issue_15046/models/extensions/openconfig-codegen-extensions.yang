@@ -1,0 +1,80 @@
+module openconfig-codegen-extensions {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/openconfig-codegen-ext";
+
+  prefix "oc-codegen-ext";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module provides OpenConfig-specific code generation extensions to the
+    YANG language.";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision "2020-10-05" {
+    description
+      "Initial commit of code generation extensions.";
+    reference "0.1.0";
+  }
+
+  // extension statements
+
+  extension camelcase-name {
+    argument "name" {
+      yin-element false;
+    }
+    description
+       "When specified, this extension indicates a specific CamelCase name that
+       is to be used for the field, for example, this can allow for more natural
+       capitalisation than can be achieved algorithmically (e.g., IPv4Address rather
+       than Ipv4Address).";
+  }
+
+  extension field-number {
+    argument "number" {
+      yin-element false;
+    }
+    description
+      "field-number is used to explicitly specify the field number used in the
+      protocol buffer generated code instead of auto-generating them.
+
+      Only 1-1000 are valid numbers. The rest is either reserved for Protobuf
+      internal usage or for use by the generated code when generating field
+      numbers automatically.
+
+      Specification at
+      https://github.com/openconfig/ygot/blob/master/docs/yang-to-protobuf-transformations-spec.md#field-numbering";
+  }
+
+  extension field-number-offset {
+    argument "offset" {
+      yin-element false;
+    }
+    description
+      "field-number-offset is used within a uses statement to specify the
+      offset that is added to every explicit field-number for fields directly
+      within the grouping.
+
+      When field-number is used to explicitly specify Protobuf field numbers
+      used in the protocol buffer generated code, it's possible that different
+      fields having the same field number could collide when multiple logical
+      groupings are imported into the same schema tree location.
+      field-number-offset helps resolve this by adding a different offset to
+      each grouping.
+
+      Specification at
+      https://github.com/openconfig/ygot/blob/master/docs/yang-to-protobuf-transformations-spec.md#field-numbering";
+  }
+}

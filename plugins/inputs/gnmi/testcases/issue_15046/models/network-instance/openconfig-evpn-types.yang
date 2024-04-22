@@ -1,0 +1,305 @@
+module openconfig-evpn-types {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/evpn-types";
+
+  prefix "oc-evpn-types";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-yang-types { prefix oc-yang; }
+
+  // TODO:
+  // Include definitions of EVPN error notifications
+  // include openconfig-bgp-errors;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module contains general data definitions for use in EVPN
+    policy. It can be imported by modules that make use of EVPN
+    attributes";
+
+  oc-ext:openconfig-version "0.2.0";
+
+  revision "2021-06-21" {
+    description
+      "Add types needed for BGP l2vpn evpn support";
+    reference "0.2.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.1.1";
+  }
+
+  revision "2020-10-08" {
+    description
+      "Initial Revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  /* Identities */
+
+  identity EVPN_TYPE {
+    description "Base identity for a EVPN type";
+  }
+
+  identity VLAN_BASED {
+    base EVPN_TYPE;
+    description
+      "With this EVPN Type, an EVPN instance
+      consists of only a single broadcast domain.";
+     reference
+       "RFC 7432: BGP MPLS-Based Ethernet VPN, Section 6.1";
+  }
+
+  identity VLAN_BUNDLE {
+    base EVPN_TYPE;
+    description
+      "With this EVPN Type, an EVPN instance
+      corresponds to multiple broadcast domains.";
+     reference
+       "RFC 7432: BGP MPLS-Based Ethernet VPN, Section 6.2";
+  }
+
+  identity VLAN_AWARE {
+    base EVPN_TYPE;
+    description
+      "With this EVPN Type, an EVPN instance consists of multiple
+      broadcast domains (e.g., multiple VLANs) with each VLAN having its
+      own bridge table .";
+     reference
+       "RFC 7432: BGP MPLS-Based Ethernet VPN, Section 6.3";
+  }
+
+  identity EVPN_REDUNDANCY_MODE {
+    description
+      "Base identity for a EVPN capability";
+  }
+
+  identity SINGLE_ACTIVE {
+    base EVPN_REDUNDANCY_MODE;
+    description
+      "Indicates Single-Active redundancy mode for
+       a given Ethernet Segment (ES).";
+     reference
+       "RFC 7432: BGP MPLS-Based Ethernet VPN, Section 14.1.1";
+  }
+
+  identity ALL_ACTIVE {
+    base EVPN_REDUNDANCY_MODE;
+    description
+      "Indicates All-Active redundancy mode for
+       a given Ethernet Segment (ES).";
+     reference
+       "RFC 7432: BGP MPLS-Based Ethernet VPN, Section 14.1.2";
+  }
+
+  identity EVPN_CAPABILITY {
+    description "Base identity for a EVPN capability";
+  }
+
+  identity NVE {
+    base EVPN_CAPABILITY;
+    description
+      "An EVPN instance with the Network Virtualization Edge
+      the PE";
+    reference "draft-ietf-bess-evpn-inter-subnet-forwarding-10";
+  }
+
+  identity EVI {
+    base EVPN_CAPABILITY;
+    description
+      "An EVPN instance spanning the Provider Edge Devices
+      participating in that EVPN";
+    reference "RFC7432";
+  }
+
+  identity MAC_VRF {
+    base EVPN_CAPABILITY;
+    description
+      "A Virtual Routing and Forwarding table for Media Access
+      Control MAC addresses on a PE";
+    reference "RFC7432";
+  }
+
+  identity IP_VRF {
+    base EVPN_CAPABILITY;
+    description
+      "A VPN Routing and Forwarding table for IP routes on an NVE/
+      PE.  The IP routes could be populated by EVPN and IP-VPN address
+      families.  An IP-VRF is also an instantiation of a layer 3 VPN
+      in an NVE/PE";
+    reference "draft-ietf-bess-evpn-inter-subnet-forwarding-10";
+  }
+
+  identity IRB {
+    base EVPN_CAPABILITY;
+    description
+      "Integrated Routing and Bridging interface.  It connects an IP-
+      VRF to a BD or subnet";
+    reference "draft-ietf-bess-evpn-inter-subnet-forwarding-10";
+  }
+
+  typedef evi-id {
+    type uint32 {
+      range 1..16777215;
+    }
+    description
+      "Type definition representing a EVPN Instance Identifier";
+  }
+
+  typedef vni-id {
+    type uint32 {
+      range 1..16777215;
+    }
+    description
+      "Type definition representing a virtual network identifier";
+  }
+
+  typedef esi {
+    type oc-yang:hex-string {
+      length "20";
+    }
+    description
+      "10-octet Ethernet segment identifier (ESI)";
+  }
+
+  typedef esi-type {
+    type enumeration {
+      enum TYPE_0_OPERATOR_CONFIGURED {
+        value 0;
+        description
+          "Type 0 indicates the value must be provided.";
+      }
+      enum TYPE_1_LACP_BASED {
+        value 1;
+        description
+          "Type 1 when IEEE 802.1AX LACP is used between the PEs and CEs,
+          this ESI type indicates an auto-generated ESI value
+          determined from LACP.";
+      }
+      enum TYPE_2_BRIDGE_PROTOCOL_BASED {
+        value 2;
+        description
+          "Type 2 the ESI Value is auto-generated and determined based
+          on the Layer 2 bridge protocol";
+      }
+      enum TYPE_3_MAC_BASED {
+        value 3;
+        description
+          "Type 3 this type indicates a MAC-based ESI Value that can be auto-generated
+          or configured by the operator.";
+      }
+      enum TYPE_4_ROUTER_ID_BASED {
+        value 4;
+        description
+          "Type 4 this type indicates a router-ID ESI Value that can be auto-generated
+          or configured by the operator.";
+      }
+      enum TYPE_5_AS_BASED {
+        value 5;
+        description
+          "Type 5 this type indicates an Autonomous System (AS)-based ESI Value that can
+          be auto-generated or configured by the operator.";
+      }
+    }
+    description
+      "T-(ESI Type) is a 1-octet field (most significant octet) that
+      specifies the format of the remaining 9 octets (ESI Value).";
+    reference
+      "RFC 7432: BGP MPLS-Based Ethernet VPN page-16";
+  }
+
+  typedef mac-type {
+    type enumeration {
+      enum STATIC {
+        value 0;
+        description "Static MAC";
+      }
+      enum DYNAMIC {
+        value 1;
+        description "Dynamically learned MAC";
+      }
+      enum CONNECTED {
+        value 2;
+        description "Connected MAC";
+      }
+    }
+    description "Type of MAC, if it is static or has been learned";
+  }
+
+  // Mac origin type
+  typedef origin-type {
+    type enumeration {
+      enum LOCAL {
+        value 0;
+        description "Local MAC Address";
+      }
+      enum REMOTE {
+        value 1;
+        description "Remote MAC Address";
+      }
+      enum ALL {
+        value 2;
+        description "All MAC Address";
+      }
+    }
+    description "Origin of the MAC address";
+  }
+
+  typedef urib-nexthop-encap {
+    type enumeration {
+        enum NONE {
+            value 0;
+            description "Encapsulation not set";
+        }
+        enum VXLAN {
+            value 1;
+            description "VXLAN encapsulation";
+        }
+        enum INVALID {
+            value 2;
+            description "Encapsulation Invalid";
+        }
+    }
+    description "Type of encapsulation of the next hop";
+  }
+
+  typedef learning-mode {
+    type enumeration {
+      enum CONTROL_PLANE {
+        value 0;
+        description "Control Plane Learning";
+      }
+      enum DATA_PLANE {
+        value 1;
+        description "Data Plane Learning";
+      }
+    }
+    description
+      "Type of MAC address learning procedure";
+  }
+
+  typedef ethernet-tag {
+    type uint32;
+    description
+      "An Ethernet Tag ID is a 32-bit field containing either a 12-bit
+       or 24-bit identifier that identifies a particular broadcast
+       domain (e.g., a VLAN) in an EVPN instance.";
+    reference
+      "RFC 7432: BGP MPLS-Based Ethernet VPN page-10";
+  }
+}

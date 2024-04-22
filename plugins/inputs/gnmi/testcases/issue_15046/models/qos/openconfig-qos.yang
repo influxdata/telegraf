@@ -1,0 +1,197 @@
+module openconfig-qos {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/qos";
+
+  prefix "oc-qos";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // include submodules
+  include openconfig-qos-interfaces;
+  include openconfig-qos-elements;
+  include openconfig-qos-mem-mgmt;
+
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+    related to network quality-of-service.";
+
+  oc-ext:openconfig-version "0.11.2";
+
+  revision "2023-10-13" {
+    description
+      "Fix revision statement date";
+    reference "0.11.2";
+  }
+
+  revision "2023-10-08" {
+    description
+      "Clarification on WRED weight in case it is not present";
+    reference "0.11.1";
+  }
+
+  revision "2023-09-15" {
+    description
+      "Add support for ECN counters";
+    reference "0.11.0";
+  }
+
+revision "2023-07-26" {
+    description
+      "Add buffer management parameters in time unts (microseconds).
+       Make profiles reusable across LAGs and PHY of different speed";
+    reference "0.10.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify interface-ref usage.";
+    reference "0.9.1";
+  }
+
+  revision "2023-04-17" {
+    description
+      "Add support for relative RED min-threshold and max-threshold values.";
+    reference "0.9.0";
+  }
+
+  revision "2023-02-17" {
+    description
+      "Add queue identifier.";
+    reference "0.8.0";
+  }
+
+  revision "2023-02-08" {
+    description
+      "Remove incorrect output placement of interface-ref";
+    reference "0.7.0";
+  }
+
+  revision "2023-01-28" {
+    description
+      "Split groupings in interfaces for better leaf reuse.";
+    reference "0.6.1";
+  }
+
+  revision "2022-09-13" {
+    description
+      "Add queue octet drop counter.";
+    reference "0.6.0";
+  }
+
+  revision "2021-08-28" {
+    description
+      "Revision using latest revision of openconfig-qos-mem-mgmt submodule.";
+    reference "0.5.0";
+  }
+
+  revision "2021-06-28" {
+    description
+      "Revision to include buffer-allocation-profile-q-config
+      parameters in openconfig-qos-mem-mgmt submodule.";
+    reference "0.4.0";
+  }
+
+  revision "2021-04-28" {
+    description
+      "Revision updating buffer management and queue management
+      configuration.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Fix xpaths in when statements";
+    reference "0.2.3";
+  }
+
+  revision "2019-08-20" {
+    description
+      "Fix typo in classifiers container name";
+    reference "0.2.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-16" {
+    description
+      "Fix incorrect interface-ref placement";
+    reference "0.2.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+  grouping qos-config {
+    description
+      "Configuration data for global QoS";
+  }
+
+  grouping qos-state {
+    description
+      "Operational state data for global QoS";
+  }
+
+  grouping qos-top {
+    description
+      "Top-level grouping for QoS model";
+
+    container qos {
+      description
+        "Top-level container for QoS data";
+
+      container config {
+        description
+          "Configuration data for global QoS";
+
+        uses qos-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for global QoS";
+
+        uses qos-config;
+        uses qos-state;
+      }
+
+      uses qos-interfaces-top;
+      uses qos-classifier-top;
+      uses qos-forwarding-group-top;
+      uses qos-queue-top;
+      uses qos-scheduler-top;
+      uses qos-buffer-profile-top;
+      uses qos-queue-mgmt-profile-top;
+    }
+  }
+
+  // data definition statements
+
+  uses qos-top;
+
+  // augment statements
+
+  // rpc statements
+
+  // notification statements
+
+}

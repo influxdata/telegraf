@@ -1,0 +1,3718 @@
+submodule openconfig-isis-lsp {
+
+  belongs-to openconfig-isis {
+    prefix oc-isis;
+  }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-inet-types { prefix "inet"; }
+  import openconfig-isis-types { prefix "oc-isis-types"; }
+  import openconfig-isis-lsdb-types { prefix "oc-isis-lsdb-types"; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-mpls-types { prefix "oc-mplst"; }
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net ";
+
+  description
+    "This sub-module describes a YANG model for the IS-IS Link State
+    Database (LSDB).
+
+    Portions of this code were derived from IETF RFCs relating to the
+    IS-IS protocol.
+    Please reproduce this note if possible.
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "1.6.2";
+
+  revision "2024-02-20" {
+    description
+      "Fix typo in RFC reference for adjacency-state.";
+    reference "1.6.2";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "1.6.1";
+  }
+
+  revision "2023-05-01" {
+    description
+      "Add ISIS total-lsps counter.";
+    reference "1.6.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify use of the interface-ref type.";
+    reference "1.5.1";
+  }
+
+  revision "2023-03-27" {
+    description
+      "Add weighted ecmp.";
+    reference "1.5.0";
+  }
+
+  revision "2023-03-20" {
+    description
+      "Per-level global enabled configuration default false re-added to keep
+      backward compatibility.";
+    reference "1.4.1";
+  }
+
+  revision "2023-02-22" {
+    description
+      "Deprecate the instance leaf, and add a new instance-id leaf
+      that indicates the value to be used in the Instance Identifier
+      TLV.";
+    reference "1.4.0";
+  }
+
+  revision "2023-01-25" {
+    description
+      "Per-level global enabled configuration removed, since it duplicates
+      the level-capability leaf.";
+    reference "1.3.0";
+  }
+
+  revision "2023-01-04" {
+    description
+      "Add max ecmp paths for address family.";
+    reference "1.2.0";
+  }
+
+  revision "2022-09-20" {
+    description
+      "Add CSNP enable to IS-IS global configuration.";
+    reference "1.1.0";
+  }
+
+  revision "2022-05-10" {
+    description
+      "Modify internal/external route preference to unrestricted uint32
+      type.";
+    reference "1.0.0";
+  }
+
+  revision "2022-03-01" {
+    description
+      "Add simple key authentication support.";
+    reference "0.9.0";
+  }
+
+  revision "2022-02-24" {
+    description
+      "Add Hello PDU padding type to IS-IS global configuration.";
+    reference "0.8.0";
+  }
+
+  revision "2022-01-19" {
+    description
+      "Align revisions across modules.";
+    reference "0.7.1";
+  }
+
+  revision "2021-12-31" {
+    description
+      "Add support for per-interface hello authentication, and per-level
+      *SNP authentication.";
+    reference "0.7.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.6.2";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Support IGP-LDP sync per interface.";
+    reference "0.6.0";
+  }
+  revision "2020-02-04" {
+    description
+      "Consistent prefix for openconfig-mpls-types.";
+    reference "0.5.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.2";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fix bugs in when statements.";
+    reference "0.4.1";
+  }
+
+  revision "2018-05-14" {
+    description
+      "Update LSDB model to correct Extended IS reach TLV
+      bug. This change is backwards incompatible due to
+      adding an additional level of hierarchy to support
+      multiple instances of the TLV.";
+    reference "0.4.0";
+  }
+
+  revision "2017-07-26" {
+    description
+      "Update LSDB and fix bugs.";
+    reference "0.3.2";
+  }
+
+  revision "2017-05-15" {
+    description
+      "Refactor LSDB.";
+    reference "0.3.0";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Remove top-level /isis container";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add segment routing to IS-IS module";
+    reference "0.2.0";
+  }
+
+  revision "2016-10-18" {
+    description
+      "Initial revision of IS-IS models.";
+    reference "0.1.0";
+  }
+
+  typedef isis-metric-flags {
+    type enumeration {
+      enum INTERNAL {
+        description
+          "When this flag is not set, internal metrics are in use.";
+      }
+      enum UNSUPPORTED {
+        description
+          "When this flag (referred to as the S-bit) is set, then
+          the metric is unsupported.";
+      }
+    }
+    description
+      "Type definition for flags used in IS-IS metrics";
+  }
+
+  grouping isis-lsdb-link-characteristics-a-bit {
+    description
+      "Definition of the A bit, as used in IS-IS link delay TLVs.";
+
+    leaf a-bit {
+      type boolean;
+      description
+        "The A bit is set when the measured value of this parameter
+        exceeds its configured maximum threshold. The A bit is cleared
+        when the measured value falls below its configured reuse
+        threshold.";
+    }
+  }
+
+  grouping isis-lsdb-tlv-nlpid-state {
+    description
+      "NLP ID parameters for IS-IS.";
+
+    leaf-list nlpid {
+      type enumeration {
+        enum IPV4 {
+          description "IPv4 Address family.";
+        }
+        enum IPV6 {
+          description "IPv6 Address family.";
+        }
+      }
+      description
+        "Protocol supported. IPv4 is defined as (0xcc) and IPv6 -
+        (0x8e)";
+      reference
+        "RFC1195: Use of OSI IS-IS for Routing in TCP/IP and
+        Dual Environments. TLV 129. ";
+    }
+  }
+
+  grouping isis-lsdb-subtlv-type-state {
+    description
+      "Per-subTLV type operational state parameters for ISIS.";
+
+    leaf type {
+      type identityref {
+        base oc-isis-lsdb-types:ISIS_SUBTLV_TYPE;
+      }
+      description
+        "The type of subTLV being described. The type of subTLV is
+        expressed as a canonical name.";
+    }
+  }
+
+  grouping isis-lsdb-tlv-type-state {
+    description
+      "Per-subTLV type operational state parameters for ISIS.";
+
+    leaf type {
+      type identityref {
+        base oc-isis-lsdb-types:ISIS_TLV_TYPE;
+      }
+      description
+        "The type of TLV being described. The type of TLV is
+        expressed as a canonical name.";
+    }
+  }
+
+  grouping is-reachability-neighbor-state {
+    description
+      "This grouping defines is-reachability neighbor.";
+
+    container subtlvs {
+      description
+        "This container describes IS Neighbor sub-TLVs.";
+
+      list subtlv {
+        key "type";
+
+        description
+          "List of subTLV types in the LSDB for the specified TLV.";
+
+        leaf type {
+          type leafref {
+            path "../state/type";
+          }
+          description
+            "Reference to the sub-TLV type.";
+        }
+
+        container state {
+          description
+            "State parameters of IS neighbor state";
+
+          uses isis-lsdb-subtlv-type-state;
+        }
+
+        container admin-group {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_ADMIN_GROUP'" {
+            description
+              "Only include the administrative group container when
+              the sub-TLV is type 3";
+          }
+          description
+            "This container defines sub-TLV 3.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 3.";
+
+            leaf-list admin-group {
+              type uint32;
+              description
+                "The administrative group sub-TLV contains a 4-octet
+                bit mask assigned by the network administrator.  Each
+                set bit corresponds to one administrative group
+                assigned to the interface. By convention, the least
+                significant bit is referred to as group 0, and the
+                most significant bit is referred to as group 31.";
+              reference
+                "RFC5305: IS-IS Extensions for Traffic Engineering.
+                sub-TLV 3: TLV 22,23,141,222, 223.";
+            }
+          }
+        }
+
+        container link-id {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_LINK_ID'" {
+            description
+              "Only include the link identifier container when the
+              sub-TLV is type 4";
+          }
+          description
+            "This container defines sub-TLV 4.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 4.";
+
+            leaf local {
+              type uint32;
+              description
+                "The value field of this sub-TLV contains 4 octets of
+                Link Local Identifier followed by 4 octets of Link
+                Remote Identifier.";
+              reference
+                "RFC5307: IS-IS Extensions in Support of Generalized
+                Multi-Protocol Label Switching (GMPLS). sub-TLV 3: TLV
+                22,23,141,222, 223.";
+            }
+
+            leaf remote {
+              type uint32;
+              description
+                "If the Link Remote Identifier is unknown, it is set
+                to 0.";
+              reference
+                "RFC5307: IS-IS Extensions in Support of Generalized
+                Multi-Protocol Label Switching (GMPLS). sub-TLV 3: TLV
+                22,23,141,222, 223.";
+            }
+          }
+        }
+
+        container ipv4-interface-address {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_IPV4_INTERFACE_ADDRESS'" {
+            description
+              "Only include the IPv4 interface address group container
+              when the sub-TLV is type 6";
+          }
+          description
+            "This container defines sub-TLV 6.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 6.";
+
+            leaf-list address {
+              type inet:ipv4-address;
+              description
+                "A 4-octet IPv4 address for the interface described by
+                the (main) TLV. This sub-TLV can occur multiple
+                times.";
+              reference
+                "RFC5305: IS-IS Extensions for Traffic Engineering.
+                sub-TLV 6: TLV 22,23,41,222,223.";
+            }
+          }
+        }
+
+        container ipv4-neighbor-address {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_IPV4_NEIGHBOR_ADDRESS'" {
+            description
+              "Only include the IPv4 neighbor address container when
+              the sub-TLV is type 8.";
+          }
+          description
+            "This container defines sub-TLV 8.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 8.";
+
+            leaf-list address {
+              type inet:ipv4-address;
+              description
+                "A single IPv4 address for a neighboring router on
+                this link. This sub-TLV can occur multiple times.";
+              reference
+                "RFC5305: IS-IS Extensions for Traffic Engineering.
+                sub-TLV 8: TLV 22,23, 141,222,223.";
+            }
+          }
+        }
+
+        container max-link-bandwidth {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_MAX_LINK_BANDWIDTH'" {
+            description
+              "Only include the maximum link bandwidth container when
+              the sub-TLV is type 9.";
+          }
+          description
+            "This container defines sub-TLV 9.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 9.";
+
+            leaf bandwidth {
+              type oc-types:ieeefloat32;
+              units "bytes per second";
+              description
+                "The maximum bandwidth that can be used on this link
+                in this direction (from the system originating the LSP
+                to its neighbors).  It is encoded in 32 bits in IEEE
+                floating point format.  The units are bytes (not
+                bits!) per second.";
+              reference
+                "RFC5305: IS-IS Extensions for Traffic Engineering.
+                sub-TLV 9: TLV 22,23,141,222,223.";
+            }
+          }
+        }
+
+        container max-reservable-link-bandwidth {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_MAX_RESERVABLE_BANDWIDTH'" {
+            description
+              "Only include the maximum reservable link bandwidth
+              container when the sub-TLV type is 10.";
+          }
+          description
+            "This container defines sub-TLV 10.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 10.";
+
+            leaf bandwidth {
+              type oc-types:ieeefloat32;
+              units "bytes per second";
+              description
+                "The maximum amount of bandwidth that can be reserved
+                in this direction on this link.  Note that for
+                oversubscription purposes,  this can be greater than
+                the bandwidth of the link. It is encoded  in 32 bits
+                in IEEE floating point format.  The units are bytes
+                (not bits!) per second.";
+              reference
+                "RFC5305: IS-IS Extensions for Traffic Engineering.
+                Sub-TLV 10: TLV 22,23,141,222,223.";
+            }
+          }
+        }
+
+        container unreserved-bandwidth {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_UNRESERVED_BANDWIDTH'" {
+            description
+              "Only include the unreserved bandwidth container when
+              the sub-TLV type is 11.";
+          }
+          description
+            "This container defines unreserved-bandwidth. The units
+            are bytes per second.";
+
+          reference
+            "RFC5305: IS-IS Extensions for Traffic Engineering. sub-
+            TLV 11: TLV 22,23,141,222,223";
+
+          list setup-priority {
+            key "priority";
+
+            leaf priority {
+              type leafref {
+                path "../state/priority";
+              }
+              description
+                "Reference to the setup priority to which the
+                unreserved bandwidth corresponds.";
+            }
+
+            description
+              "Setup priority (0 through 7) for unreserved
+              bandwidth.";
+
+            container state {
+              description
+                "State parameters of IS Extended Reachability sub-TLV
+                11.";
+
+              leaf priority {
+                type uint8 {
+                  range "0..7";
+                }
+                description
+                  "Setup priority level of 0 through 7 to be used by
+                  Unreserved Bandwidth sub-TLV 11.";
+              }
+
+              leaf bandwidth {
+                type oc-types:ieeefloat32;
+                units "bytes per second";
+                description
+                  "The amount of bandwidth reservable in this
+                  direction on this link. Note that for
+                  oversubscription purposes, this can be greater than
+                  the bandwidth of the link. It contains eight 32-bit
+                  IEEE floating point numbers(one for each priority).
+                  The units are bytes (not bits!) per second. The
+                  values correspond to the bandwidth that can be
+                  reserved with a setup priority of 0 through 7,
+                  arranged in increasing order with priority 0
+                  occurring at the start of the sub-TLV, and priority
+                  7 at the end of the sub-TLV.";
+              }
+            }
+          }
+        }
+
+        container ipv6-interface-address {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_IPV6_INTERFACE_ADDRESS'" {
+            description
+              "Only include the IPv6 interface address when the
+              sub-TLV type is 12.";
+          }
+          description
+            "This container defines sub-TLV 12.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 12.";
+
+            leaf-list address {
+              type inet:ipv6-address;
+              description
+                "Contains a 16-octet IPv6 address for the interface
+                described by the containing  Extended IS Reachability
+                TLV. This sub-TLV can occur multiple times.";
+              reference
+                "RFC6119: IPv6 Traffic Engineering in IS-IS. sub-TLV
+                12: TLV 22,23,141,222,223.";
+            }
+          }
+        }
+
+        container ipv6-neighbor-address {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_IPV6_NEIGHBOR_ADDRESS'" {
+            description
+              "Only include the IPv6 neighbor address when the
+              sub-TLV type is 13.";
+          }
+          description
+            "This container defines sub-TLV 13.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 13.";
+
+            leaf-list address {
+              type inet:ipv6-address;
+              description
+                "Contains a 16-octet IPv6 address for a neighboring
+                router on the link described by the (main) TLV. This
+                sub-TLV can occur multiple times.";
+              reference
+                "RFC6119: IPv6 Traffic Engineering in IS-IS. sub-TLV
+                13: ISIS TLV 22,23,141,222,223.";
+            }
+          }
+        }
+
+        container extended-admin-group {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_EXTENDED_ADMIN_GROUP'" {
+            description
+              "Only include the extended admin group when the
+              sub-TLV type is 14.";
+          }
+          description
+            "This container defines sub-TLV 14.";
+          container state {
+            description
+              "State parameters of sub-TLV 14.";
+
+            leaf-list extended-admin-group {
+              type uint32;
+              description
+                "The extended-admin-group sub-TLV is used in addition
+                to the Administrative Groups when it is desirable to
+                make more than 32 colors available for advertisement
+                in a network.";
+              reference
+                "RFC7308: Extended Administrative Groups in MPLS
+                Traffic Engineering (MPLS-TE). sub-TLV 14: TLV
+                22,23,141,222,223.";
+            }
+          }
+        }
+
+        container te-default-metric {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_TE_DEFAULT_METRIC'" {
+            description
+              "Only include the default traffic engineering metric
+              container when the sub-TLV type is 18.";
+          }
+          description
+            "This container defines sub-TLV 18.";
+          container state {
+            description
+              "State parameters of sub-TLV 18.";
+
+            leaf metric {
+              type uint32;
+              description
+                "This metric is administratively assigned and can be
+                used to present a differently weighted topology to
+                traffic engineering SPF calculations. To preclude
+                overflow within a traffic engineering SPF
+                implementation, all metrics greater than or equal to
+                MAX_PATH_METRIC SHALL be considered to have a metric
+                of MAX_PATH_METRIC.";
+              reference
+                "RFC5305: IS-IS Extensions for Traffic Engineering.
+                sub-TLV 18: TLV 22,23,141,222,223.";
+            }
+          }
+        }
+
+        container link-attributes {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_LINK_ATTRIBUTES'" {
+            description
+              "Only include the link attributes container when the
+              sub-TLV is type 19.";
+          }
+          description
+            "This container defines link-attributes.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              19.";
+
+            leaf-list local-protection {
+              type enumeration {
+                enum LOCAL_PROTECTION {
+                  description
+                    "If set, local protection is available for the
+                    link.";
+                }
+                enum LINK_EXCLUDED {
+                  description
+                    "If set, the link is excluded from local
+                    protection.";
+                }
+              }
+              description
+                "Link local-protection attributes.";
+
+              reference
+                "RFC5029: Definition of an IS-IS Link Attribute Sub-
+                TLV. TLV 22, sub-TLV 19.";
+            }
+          }
+        }
+
+        container link-protection-type {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_LINK_PROTECTION_TYPE'" {
+            description
+              "Only include the link protection type container when
+              the sub-TLV type 20.";
+          }
+          description
+            "ISIS LSDB parameters relating to the type of link
+            protection offered.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 20.";
+
+            leaf-list type {
+              type enumeration {
+                enum EXTRA_TRAFFIC {
+                  description
+                    "If set the link has extra traffic protection. If
+                    the link is of type Extra Traffic, it means that
+                    the link is protecting another link or links. The
+                    LSPs on a link of this type will be lost if any of
+                    the links it is protecting fail.";
+                }
+                enum UNPROTECTED {
+                  description
+                    "If set, the link is unprotected. If the link is
+                    of type Unprotected, it means that there is no
+                    other link protecting this link.  The LSPs on a
+                    link of this type will be lost if the link
+                    fails.";
+                }
+                enum SHARED {
+                  description
+                    "If set, the link has shared protection. If the
+                    link is of type Shared, it means that there are
+                    one or more disjoint links of type Extra Traffic
+                    that are protecting this link.  These Extra
+                    Traffic links are shared between one or more links
+                    of type Shared.";
+                }
+                enum ONE_ONE {
+                  description
+                    "If set, the link has dedicated 1:1 protection. If
+                    the link is of type Dedicated 1:1, it means that
+                    there is one dedicated disjoint link of type Extra
+                    Traffic that is protecting this link.";
+                }
+                enum PLUS_ONE {
+                  description
+                    "If set, the link has dedicated 1+1 protection. If
+                    the link is of type Dedicated 1+1, it means that a
+                    dedicated disjoint link is protecting this link.
+                    However, the protecting link is not advertised in
+                    the link state database and is therefore not
+                    available for the routing of LSPs.";
+                }
+                enum ENHANCED {
+                  description
+                    "If set the link has enhanced protection.  If the
+                    link is of type Enhanced, it means that a
+                    protection scheme that is more reliable than
+                    Dedicated 1+1, e.g., 4 fiber BLSR/MS-SPRING, is
+                    being used to protect this link.";
+                }
+              }
+              description
+                "Link protection capabilities.";
+              reference
+                "RFC5307: IS-IS Extensions in Support of Generalized
+                Multi-Protocol  Label Switching (GMPLS). sub-TLV 20:
+                TLV 22,23,141,222,223.";
+            }
+          }
+        }
+
+        container bandwidth-constraints {
+          when "../state/type =" +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_BANDWIDTH_CONSTRAINTS'" {
+            description
+              "Only include the bandwidth constraints container when
+              the sub-TLV is type 22.";
+          }
+          description
+            "This container defines bandwidth-constraints. For DS-TE,
+            the existing Maximum Reservable link bandwidth parameter
+            is retained, but its semantics is generalized and
+            interpreted as the aggregate bandwidth constraint across
+            all Class-Types";
+
+          reference
+            "RFC4124: Protocol Extensions for Support of Diffserv-
+            aware MPLS Traffic Engineering. sub-TLV 22: TLV 22, 23,
+            141, 222,223";
+
+          list bandwidth-constraint {
+            key "model-id";
+
+            description
+              "List of the Bandwidth Constraints sub-TLV instances
+              present in the TLV.";
+
+            leaf model-id {
+              type leafref {
+                path "../state/model-id";
+              }
+              description
+                "Reference to the model ID associated with the
+                instance of the Bandwidth Constraints sub-TLV.";
+            }
+
+            container state {
+              description
+                "State parameters of IS Extended Reachability sub-TLV
+                22.";
+
+              leaf model-id {
+                type uint8;
+                description
+                  "Identifier for the Bandwidth Constraints  Model
+                  currently in use by the LSR initiating the IGP
+                  advertisement.";
+              }
+            }
+
+            container constraints {
+              description
+                "Constraints contained within the Bandwidth
+                Constraints sub-TLV";
+
+              list constraint {
+                key "constraint-id";
+
+                description
+                  "List of the constraints within the Bandwidth
+                  Constraints sub-TLV. The BC0 level is indicated by
+                  the constraint-id leaf being set to 0, with BCN
+                  being indicated by constraint-id N.";
+
+                leaf constraint-id {
+                  type leafref {
+                    path "../state/constraint-id";
+                  }
+                  description
+                    "Reference to the unique ID for the BCN level.";
+                }
+
+                container state {
+                  description
+                    "Operational state parameters of the BCN level";
+
+                  leaf constraint-id {
+                    type uint32;
+                    description
+                      "Unique reference for the bandwidth constraint level. BC0
+                      is indicated by this leaf being set to zero, with BCN
+                      represented by this leaf being set to N.";
+                  }
+
+                  leaf bandwidth {
+                    type oc-types:ieeefloat32;
+                    units "bytes per second";
+                    description
+                      "The bandwidth constraint, expressed as a 32-bit IEEE
+                      floating point number expressed in bytes per second.";
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        container unconstrained-lsp {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_UNCONSTRAINED_LSP'" {
+            description
+              "Only include the unconstrained LSP container when the
+              sub-TLV is type 23.";
+          }
+          description
+            "This container defines sub-TLV 23.";
+          container state {
+            description
+              "State parameters of sub-TLV 23.";
+
+            uses isis-lsdb-subtlv-type-state;
+
+            leaf count {
+              type uint16;
+              description
+                "Unconstrained TE LSP count(TE Label Switched Paths
+                (LSPs) signalled with zero bandwidth).";
+              reference
+                "RFC5330: A Link-Type sub-TLV to Convey the Number of
+                Traffic Engineering Label Switched Paths Signalled
+                with Zero Reserved Bandwidth across a Link. sub-TLV
+                23: TLV 22,23,141,222,223";
+            }
+          }
+        }
+
+        container adjacency-sids {
+          when "../state/type =   'oc-isis-lsdb-types:IS_REACHABILITY_ADJ_SID'" {
+            description
+              "Only include the adjacency SIDs container when the
+              sub-TLV type is 31";
+          }
+
+          description
+            "This container defines segment routing adjacency SIDs.";
+
+          list adjacency-sid {
+            key "value";
+
+            description
+              "Adjacency Segment-IDs List. An IGP-Adjacency Segment is
+              an IGP segment attached to a unidirectional adjacency or
+              a set of unidirectional adjacencies. By default, an IGP-
+              Adjacency Segment is local to the node which advertises
+              it.";
+
+            leaf value {
+              type leafref {
+                path "../state/value";
+              }
+              description
+                "Reference to the value of the Adjacency-SID.";
+            }
+
+            container state {
+              description
+                "State parameters of Adjacency-SID.";
+
+              leaf value {
+                type uint32;
+                description
+                  "Adjacency-SID value.";
+              }
+
+              leaf-list flags {
+                type enumeration {
+                  enum ADDRESS_FAMILY {
+                    description
+                      "Address-family flag. When unset, the Adj-SID
+                      refers to an adjacency with outgoing IPv4
+                      encapsulation. If set then the Adj-SID refers to
+                      an adjacency with outgoing IPv6 encapsulation.";
+                  }
+                  enum BACKUP {
+                    description
+                      "Backup flag. When set, the Adj-SID refers to an
+                      adjacency being protected (e.g.: using IPFRR or
+                      MPLS-FRR).";
+                  }
+                  enum VALUE {
+                    description
+                      "Value flag. When set, the SID carries a value
+                      (instead of an index). By default the flag is
+                      SET.";
+                  }
+                  enum LOCAL {
+                    description
+                      "Local flag. When set, the value/index carried
+                      by the SID has local significance. By default
+                      the flag is SET.";
+                  }
+                  enum SET {
+                    description
+                      "Set flag. When set, the S-Flag indicates that
+                      the Adj-SID refers to a set of adjacencies.";
+                  }
+                }
+                description
+                  "Flags associated with Adj-Segment-ID.";
+              }
+
+              leaf weight {
+                type uint8;
+                description
+                  "Value that represents the weight of the Adj-SID for
+                  the purpose of load balancing.";
+              }
+            }
+          }
+
+          reference
+            "draft-ietf-isis-segment-routing-extensions. sub-TLV 31:
+            TLV 22, 222, 223, 141. ";
+        }
+
+        container lan-adjacency-sids {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_ADJ_LAN_SID'" {
+            description
+              "Only include the LAN adjacency SID container when
+              the sub-TLV is type 32.";
+          }
+          description
+            "This container defines segment routing LAN adjacency
+            SIDs";
+
+          list lan-adjacency-sid {
+            key "value";
+
+            description
+              "Adjacency Segment-IDs List. An IGP-Adjacency Segment is
+              an IGP segment attached to a unidirectional adjacency or
+              a set of unidirectional adjacencies. By default, an IGP-
+              Adjacency Segment is local to the node which advertises
+              it.";
+
+            leaf value {
+              type leafref {
+                path "../state/value";
+              }
+              description
+                "Reference to the value of the LAN Adjacency-SID.";
+            }
+
+            container state {
+              description
+                "State parameters of LAN Adjacency-SID.";
+
+              leaf value {
+                type uint32;
+                description
+                  "LAN Adjacency-SID value.";
+              }
+
+              leaf-list flags {
+                type enumeration {
+                  enum ADDRESS_FAMILY {
+                    description
+                      "Address-family flag. When unset, the Adj-SID
+                      refers to an adjacency with outgoing IPv4
+                      encapsulation. If set then the Adj-SID refers to
+                      an adjacency with outgoing IPv6 encapsulation.";
+                  }
+                  enum BACKUP {
+                    description
+                      "Backup flag. When set, the Adj-SID refers to an
+                      adjacency being protected (e.g.: using IPFRR or
+                      MPLS-FRR).";
+                  }
+                  enum VALUE {
+                    description
+                      "Value flag. When set, the SID carries a value
+                      (instead of an index). By default the flag is
+                      SET.";
+                  }
+                  enum LOCAL {
+                    description
+                      "Local flag. When set, the value/index carried
+                      by the SID has local significance. By default
+                      the flag is SET.";
+                  }
+                  enum SET {
+                    description
+                      "Set flag. When set, the S-Flag indicates that
+                      the Adj-SID refers to a set of adjacencies.";
+                  }
+                }
+                description
+                  "Flags associated with LAN-Adj-Segment-ID.";
+              }
+
+              leaf weight {
+                type uint8;
+                description
+                   "Value that represents the weight of the Adj-SID
+                   for the purpose of load balancing.";
+              }
+
+              leaf neighbor-id {
+                type oc-isis-types:system-id;
+                description
+                  "System ID of the neighbor associated with the LAN-
+                  Adj-Segment-ID value.";
+              }
+            }
+          }
+
+          reference
+            "draft-ietf-isis-segment-routing-extensions. sub-TLV 32:
+            TLV 22, 222, 223, 141.";
+        }
+
+        container link-delay {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_LINK_DELAY'" {
+            description
+              "Include the link delay container only when the sub-TLV
+              type is type 33.";
+          }
+          description
+            "This container defines unidirectional link delay.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 33: TLV 22, 23, 141, 222, 223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              33.";
+
+            uses isis-lsdb-link-characteristics-a-bit;
+
+            leaf delay {
+              type uint32;
+              units microseconds;
+              description
+                "Average link delay value (in microseconds) between
+                two directly connected IS-IS neighbors over a
+                configurable interval.";
+            }
+          }
+        }
+
+        container min-max-link-delay {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_MIN_MAX_LINK_DELAY'" {
+            description
+              "Only include the min/max link delay container when the
+              sub-TLV is type 34.";
+          }
+          description
+            "This container defines min/max link delay.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 34: TLV 22, 23, 141, 222, 223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              34.";
+
+            uses isis-lsdb-link-characteristics-a-bit;
+
+            leaf min-delay {
+              type uint32;
+              units microseconds;
+              description
+                "Minimum measured link delay value(in microseconds)
+                between two directly connected IS-IS neighbors over a
+                configurable interval.";
+            }
+
+            leaf max-delay {
+              type uint32;
+              units microseconds;
+              description
+                "Maximum measured link delay value(in microseconds)
+                between two directly connected IS-IS neighbors over a
+                configurable interval.";
+            }
+          }
+        }
+
+        container link-delay-variation {
+          when "../state/type = " +
+                "'oc-isis-lsdb-types:IS_REACHABILITY_LINK_DELAY_VARIATION'" {
+            description
+              "Only include the link delay variation container when
+              the sub-TLV is type 35.";
+          }
+          description
+            "This container defines unidirectional link delay
+            variation.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 35: TLV 22,23,141,222,223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              35.";
+
+            leaf delay {
+              type uint32;
+              units microseconds;
+              description
+                "Average link delay between two directly connected IS-
+                IS neighbors over a configurable interval.";
+            }
+          }
+        }
+
+        container link-loss {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_LINK_LOSS'" {
+            description
+              "Only include the link loss container when the sub-TLV
+              is type 36.";
+          }
+          description
+            "This container defines unidirectional link loss delay.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 36: TLV 22, 23, 141, 222, 223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              36.";
+
+            uses isis-lsdb-link-characteristics-a-bit;
+
+            leaf link-loss {
+              type uint32;
+              description
+                "Link packet loss as a percentage of the total traffic
+                sent over a configurable interval. The basic unit is
+                0.000003%, where (2^24 - 2) is 50.331642%. This value
+                is the highest packet-loss percentage that can be
+                expressed (the assumption being that precision is more
+                important on high-speed links than the ability to
+                advertise loss rates greater than this, and that high-
+                speed links with over 50% loss are unusable).
+                Therefore, measured values that are larger than the
+                field maximum SHOULD be encoded as the maximum
+                value.";
+            }
+          }
+        }
+
+        container residual-bandwidth {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_RESIDUAL_BANDWIDTH'" {
+            description
+              "Only include the resdiual bandwidth container when the
+              sub-TLV is type 37.";
+          }
+          description
+            "This container defines unidirectional residual
+            bandwidth.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 37: TLV 22, 23, 141, 222, 223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              37.";
+
+            leaf bandwidth {
+              type oc-types:ieeefloat32;
+              units "bytes per second";
+              description
+                "Residual bandwidth on a link,forwarding adjacency
+                [RFC4206], or bundled link in IEEE floating-point
+                format with units of bytes per second. For a link or
+                forwarding adjacency, residual bandwidth is defined to
+                be the Maximum Bandwidth [RFC5305] minus the bandwidth
+                currently allocated to RSVP-TE label switched paths.
+                For a bundled link, residual bandwidth is defined to
+                be the sum of the component link residual
+                bandwidths.";
+            }
+          }
+        }
+
+        container available-bandwidth {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_AVAILABLE_BANDWIDTH'" {
+            description
+              "Only include the available bandwdith container when the
+              sub-TLV is type 38.";
+          }
+          description
+            "This container defines unidirectional lavailable
+            bandwidth.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 38: TLV 22, 23, 141, 222, 223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              38.";
+
+            uses isis-lsdb-subtlv-type-state;
+
+            leaf bandwidth {
+              type oc-types:ieeefloat32;
+              units "bytes per second";
+              description
+                "The available bandwidth on a link, forwarding
+                adjacency, or bundled link in IEEE floating-point
+                format with units of bytes per second. For a link or
+                forwarding adjacency, available bandwidth is defined
+                to be residual bandwidth minus the measured bandwidth
+                used for the actual forwarding of non-RSVP-TE label
+                switched path packets.  For a bundled link, available
+                bandwidth is defined to be the sum of the component
+                link available bandwidths minus the measured bandwidth
+                used for the actual forwarding of non-RSVP-TE label
+                switched path packets.  For a bundled link, available
+                bandwidth is defined to be the sum of the component
+                link available bandwidths.";
+            }
+          }
+        }
+
+        container utilized-bandwidth {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_REACHABILITY_UTILIZED_BANDWIDTH'" {
+            description
+              "Only include the utilized bandwidth container when the
+              TLV is type 39.";
+          }
+          description
+            "This container defines unidirectional utilized
+            bandwidth.";
+
+          reference
+            "RFC7810: IS-IS Traffic Engineering (TE) Metric
+            Extensions. sub-TLV 39: TLV 22, 23, 141, 222, 223.";
+
+          container state {
+            description
+              "State parameters of IS Extended Reachability sub-TLV
+              39.";
+
+            uses isis-lsdb-subtlv-type-state;
+
+            leaf bandwidth {
+              type oc-types:ieeefloat32;
+              units "bytes per second";
+              description
+                "The bandwidth utilization on a link, forwarding
+                adjacency, or bundled link in IEEE floating-point
+                format with units of bytes per second.  For a link or
+                forwarding adjacency, bandwidth utilization represents
+                the actual utilization of the link (i.e., as measured
+                by the advertising node).  For a bundled link,
+                bandwidth utilization is defined to be the sum of the
+                component link bandwidth utilizations.";
+            }
+          }
+        }
+      }
+    }
+
+    uses isis-lsdb-undefined-subtlv;
+  }
+
+  grouping isis-lsdb-undefined-tlv {
+    description
+      "Grouping for unknown TLVs in the IS-IS LSDB";
+
+    container undefined-tlvs {
+      description
+        "Surrounding container for a list of unknown TLVs.";
+
+      list undefined-tlv {
+        key "type";
+        description
+          "List of TLVs that are not defined within the model, or are
+          not recognised by the system.";
+
+        leaf type {
+          type leafref {
+            path "../state/type";
+          }
+          description
+            "Reference to the undefined TLV's type";
+        }
+
+        container state {
+          description
+            "State parameters of the undefined TLV.";
+
+          uses undefined-tlv-state;
+        }
+      }
+    }
+  }
+
+  grouping isis-lsdb-undefined-subtlv {
+    description
+      "Grouping for unknown Sub-TLVs in the IS-IS LSDB.";
+
+    container undefined-subtlvs {
+      description
+        "This container describes undefined ISIS TLVs.";
+
+      list undefined-subtlv {
+        key "type";
+
+        description
+          "Sub-TLVs that are not defined in the model or not
+          recognised by system.";
+
+        leaf type {
+          type leafref {
+            path "../state/type";
+          }
+          description
+            "Reference to the type of the undefined sub-TLV";
+        }
+
+        container state {
+          description
+            "State parameters of the undefined sub-TLV.";
+
+          uses undefined-subtlv-state;
+        }
+      }
+    }
+  }
+
+  grouping isis-lsdb-prefix-state {
+    description
+      "This grouping defines prefix reachability.";
+
+     container subtlvs {
+      description
+        "This container describes IS prefix sub-TLVs.";
+
+      list subtlv {
+        key "type";
+
+        description
+          "List of subTLV types in the LSDB for the specified TLV.";
+
+        leaf type {
+          type leafref {
+            path "../state/type";
+          }
+          description
+            "Reference to the sub-TLV type";
+        }
+
+        container state {
+          description
+            "State parameters for a prefix.";
+
+          uses isis-lsdb-subtlv-type-state;
+        }
+
+      container tag {
+        when "../state/type = " +
+             "'oc-isis-lsdb-types:IP_REACHABILITY_TAG'" {
+          description
+            "Only include the tag container when the sub-TLV is type
+            1.";
+        }
+        description
+          "This container defines sub-TLV 1.";
+
+        container state {
+          description
+            "State parameters of sub-TLV 1.";
+
+          leaf-list tag32 {
+            type uint32;
+            description
+              "List of 32-bit tags associated with the prefix. Example
+              uses of these tags include carrying BGP standard (or
+              extended) communities and controlling redistribution
+              between levels and areas, different routing protocols,
+              or multiple instances of IS-IS running on the same
+              router.";
+            reference
+              "RFC5130: A Policy Control Mechanism in IS-IS Using
+              Administrative Tags. sub-TLV 1.";
+          }
+        }
+      }
+
+      container tag64 {
+        when "../state/type = " +
+             "'oc-isis-lsdb-types:IP_REACHABILITY_TAG64'" {
+          description
+            "Only include the tag64 container when the sub-TLV is type
+            2.";
+        }
+        description
+          "This container defines sub-TLV 2.";
+
+        container state {
+          description
+            "State parameters of sub-TLV 2.";
+
+          leaf-list tag64 {
+            type uint64;
+            description
+              "List of 64-bit tags associated with the prefix. Example
+              uses of these tags include carrying BGP standard (or
+              extended) communities and controlling redistribution
+              between levels and areas, different routing protocols,
+              or multiple instances of IS-IS running on the same
+              router.";
+            reference
+              "RFC5130: A Policy Control Mechanism in IS-IS Using
+              Administrative Tags. sub-TLV 2.";
+          }
+        }
+      }
+
+      container flags {
+        when "../state/type = " +
+             "'oc-isis-lsdb-types:IP_REACHABILITY_PREFIX_FLAGS'" {
+          description
+            "Only include the flags container when the sub-TLV is type
+            4.";
+        }
+        description
+          "This container defines sub-TLV 4.";
+
+        container state {
+          description
+            "State parameters of sub-TLV 4.";
+
+          uses isis-lsdb-subtlv-type-state;
+
+          leaf-list flags {
+            type enumeration {
+              enum EXTERNAL_FLAG {
+                description
+                  "External prefix flag. Set if the prefix has been
+                  redistributed from another protocol. This includes
+                  the case where multiple virtual routers are
+                  supported and the source of the redistributed prefix
+                  is another IS-IS instance.";
+              }
+              enum READVERTISEMENT_FLAG {
+                description
+                  "Readvertisement flag. Set when the prefix has been
+                  leaked from one level to another (upwards or
+                  downwards).";
+              }
+              enum NODE_FLAG {
+                description
+                  "Node flag. Set when the prefix identifies the
+                  advertising router, i.e., the prefix is a host
+                  prefix advertising  a globally reachable address
+                  typically associated with a loopback address.";
+              }
+            }
+            description
+              "Additional prefix reachability flags.";
+
+            reference
+              "RFC7794: IS-IS Prefix Attributes for Extended IPv4 and
+              IPv6 Reachability. sub-TLV 4.";
+            }
+          }
+        }
+
+        container ipv4-source-router-id {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IP_REACHABILITY_IPV4_ROUTER_ID'" {
+            description
+              "Only include the IPv4 Source Router ID container when
+              the sub-TLV is type 11.";
+          }
+          description
+            "This container defines sub-TLV 11.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 11.";
+
+            uses isis-lsdb-subtlv-type-state;
+
+            leaf router-id {
+              type inet:ipv4-address;
+              description
+                "IPv4 Source router ID address. In cases where the
+                advertisement is an identifier for the advertising
+                router (e.g., with the N-flag set in the Prefix
+                Attribute Flags sub-TLV), it may be useful for other
+                routers to know the source of the advertisement. When
+                reachability advertisement is leaked from one level to
+                another, Router ID advertised is always the Router ID
+                of the IS-IS instance that originated the
+                advertisement. This would be true even if the prefix
+                had been learned from another protocol.";
+              reference
+                "RFC7794: IS-IS Prefix Attributes for Extended IPv4
+                and IPv6 Reachability. sub-TLV 11";
+            }
+          }
+        }
+
+        container ipv6-source-router-id {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IP_REACHABILITY_IPV6_ROUTER_ID'" {
+            description
+              "Only include the IPv6 Source Router ID container when
+              the sub-TLV is type 12.";
+          }
+          description
+            "This container defines sub-TLV 12.";
+
+          container state {
+            description
+              "State parameters of sub-TLV 12.";
+
+            uses isis-lsdb-subtlv-type-state;
+
+            leaf router-id {
+              type inet:ipv6-address;
+              description
+                "IPv6 Source router ID address. In cases where the
+                advertisement is an identifier for the advertising
+                router (e.g., with the N-flag set in the Prefix
+                Attribute Flags sub-TLV), it may be useful for other
+                routers to know the source of the advertisement. When
+                reachability advertisement is leaked from one level to
+                another, Router ID advertised is always the Router ID
+                of the IS-IS instance that originated the
+                advertisement. This would be true even if the prefix
+                had been learned from another protocol.";
+              reference
+                "RFC7794: IS-IS Prefix Attributes for Extended IPv4
+                and IPv6 Reachability. sub-TLV 12.";
+            }
+          }
+        }
+
+        uses isis-lsdb-prefix-sid-state;
+      }
+    }
+
+    uses isis-lsdb-undefined-subtlv;
+  }
+
+  grouping isis-lsdb-prefix-sid-state {
+    description
+      "This grouping defines ISIS Prefix SID.";
+
+    container prefix-sids {
+      when "../state/type = " +
+           "'oc-isis-lsdb-types:IP_REACHABILITY_PREFIX_SID'" {
+        description
+          "Only include the Prefix SID container when
+          the sub-TLV is type 3.";
+      }
+      description
+        "This container defines segment routing extensions for
+        prefixes.";
+
+      reference
+        "draft-ietf-isis-segment-routing-extensions. sub-TLV 3: TLV
+        135, 235, 236, 237.";
+
+      list prefix-sid {
+        key "value";
+
+        description
+         "Prefix Segment-ID list. IGP-Prefix Segment is an IGP segment
+         attached to an IGP prefix. An IGP-Prefix Segment is global
+         (unless explicitly advertised otherwise) within the SR/IGP
+         domain.";
+
+        leaf value {
+          type leafref {
+            path "../state/value";
+          }
+          description
+            "Reference to the value of the prefix SID.";
+        }
+
+        container state {
+          description
+            "State parameters for Prefix-SID.";
+
+          leaf value {
+            type uint32;
+            description
+              "IGP Prefix-SID value.";
+          }
+
+          leaf-list flags {
+            type enumeration {
+              enum READVERTISEMENT {
+                description
+                  "Readvertisment flag. When set, the prefix to which
+                  this Prefix-SID is attached, has been propagated by
+                  the router either from another level or from
+                  redistribution.";
+              }
+              enum NODE {
+                description
+                  "Node flag. When set, the Prefix-SID refers to the
+                  router identified by the prefix. Typically, the
+                  N-Flag is set on Prefix-SIDs attached to a router
+                  loopback address.";
+              }
+              enum NO_PHP {
+                description
+                  "Penultimate-Hop-Popping flag. When set, then the
+                  penultimate hop MUST NOT pop the Prefix-SID before
+                  delivering the packet to the node that advertised
+                  the Prefix-SID.";
+              }
+              enum EXPLICIT_NULL {
+                description
+                  "Explicit-Null flag. When set, any upstream neighbor
+                  of the Prefix-SID originator MUST replace the
+                  Prefix-SID with a Prefix-SID having an Explicit-NULL
+                  value (0 for IPv4 and 2 for IPv6) before forwarding
+                  the packet.";
+              }
+              enum VALUE {
+                description
+                  "Value flag. When set, the Prefix-SID carries a
+                  value (instead of an index). By default the flag is
+                  UNSET.";
+              }
+              enum LOCAL {
+                description
+                  "Local flag. When set, the value/index carried by
+                  the Prefix-SID has local significance. By default
+                  the flag is UNSET.";
+              }
+            }
+            description
+              "Flags associated with Prefix Segment-ID.";
+          }
+
+          leaf algorithm {
+            type uint8;
+            description
+              "Prefix-SID algorithm to be used for path computation.";
+          }
+        }
+      }
+    }
+  }
+
+  grouping isis-lsdb-common-metric-specification {
+    description
+      "Common definitions of the metric in IS-IS.";
+
+    container default-metric {
+      description
+        "This container defines ISIS Default Metric.";
+
+      container state {
+        description
+          "State parameters for default-metric.";
+
+        leaf flags {
+          type enumeration {
+            enum INTERNAL {
+              description
+                "When set to zero, indicates internal metrics.";
+            }
+          }
+          description
+            "ISIS Default-Metric Flags.";
+        }
+
+        leaf metric {
+          type oc-isis-types:narrow-metric;
+          description
+            "ISIS default metric value. This is a metric understood by
+            every Intermediate system in the domain. Each circuit
+            shall have a positive  integral value assigned for this
+            metric. The value may be associated with any  objective
+            function of the circuit, but by convention is intended to
+            measure the capacity of the circuit for handling traffic,
+            for example, its throughput in  bits-per-second. Higher
+            values indicate a lower capacity.";
+        }
+      }
+    }
+
+    container delay-metric {
+     description
+       "This container defines the ISIS delay metric.";
+
+      container state {
+        description
+          "State parameters of delay-metric.";
+
+        leaf metric {
+          type oc-isis-types:narrow-metric;
+          description
+            "ISIS delay metric value. This metric measures the transit
+            delay of the associated circuit. It is an optional metric,
+            which if assigned to a circuit shall have a positive
+            integral value. Higher values indicate a longer transit
+            delay.";
+        }
+
+        leaf-list flags {
+          type isis-metric-flags;
+          description
+            "ISIS Delay Metric Flags.";
+        }
+      }
+    }
+
+    container expense-metric {
+      description
+        "This container defines the ISIS expense metric.";
+
+      container state {
+        description
+          "State parameters of expense-metric.";
+
+        leaf metric {
+          type oc-isis-types:narrow-metric;
+          description
+            "ISIS expense metric value. This metric measures the
+            monetary cost of utilising the associated circuit. It is
+            an optional metric, which if assigned to a circuit shall
+            have a positive integral value1). Higher values indicate a
+            larger monetary expense.";
+        }
+
+        leaf-list flags {
+          type isis-metric-flags;
+          description
+            "ISIS Expense Metric Flags.";
+        }
+      }
+    }
+
+    container error-metric {
+      description
+        "This container defines the ISIS error metric.";
+
+      container state {
+        description
+          "State parameters of error-metric.";
+
+        leaf metric {
+          type oc-isis-types:narrow-metric;
+          description
+            "ISIS error metric value. This metric measures the
+            residual error probability of the associated circuit. It
+            is an optional metric, which if assigned to a circuit
+            shall have a non-zero value. Higher values indicate a
+            larger probability of undetected errors on the circuit.";
+        }
+
+        leaf-list flags {
+          type isis-metric-flags;
+          description
+            "IS-IS error metric flags.";
+        }
+      }
+    }
+  }
+
+  grouping isis-lsdb-neighbor {
+    description
+      "This grouping defines attributes of an ISIS standard
+      neighbor.";
+
+    container state {
+      description
+        "State parameters of IS standard neighbor.";
+
+      leaf system-id {
+        type oc-isis-types:system-id;
+        description
+          "System-ID of IS neighbor.";
+      }
+    }
+
+    uses isis-lsdb-common-metric-specification;
+
+  }
+
+  grouping ipv4-prefix-attributes-state {
+   description
+     "This group defines attributes of an IPv4 standard prefix.";
+
+    container state {
+     description
+       "State parameters of IPv4 standard prefix.";
+
+      leaf up-down {
+        type boolean;
+        description
+          "The up/down bit. Set if a prefix is advertised from a
+          higher level to a lower level (e.g., level 2 to level 1),
+          indicating that the prefix has traveled down the hierarchy.
+          Prefixes that have the up/down bit set may only be
+          advertised down the hierarchy, i.e., to lower levels. When a
+          prefix is first injected into IS-IS, the bit is UNSET.";
+      }
+
+      leaf prefix {
+        type inet:ipv4-prefix;
+        description
+          "IPv4 prefix contained within reachability TLVs.";
+      }
+    }
+
+    uses isis-lsdb-common-metric-specification;
+  }
+
+  grouping isis-lsdb-common-mt-id {
+    description
+      "Common definition of the multi-topology ID";
+
+    leaf mt-id {
+      type uint16 {
+        range "0..4095";
+      }
+      description
+        "Multi-topology ID";
+    }
+  }
+
+  grouping ipv4-prefix-extended-state {
+    description
+      "This grouping defines attributes of an IPv4 extended prefix.";
+
+    container state {
+      description
+        "State parameters of an IPv4 extended prefix.";
+      uses ipv4-prefix-extended-params-state;
+    }
+
+    uses isis-lsdb-prefix-state;
+  }
+
+  grouping ipv4-mt-prefix-extended-state {
+    description
+      "State parameters that relate to an IPv4 prefix in a
+      multi-topology context.";
+
+    container state {
+      description
+        "State parameters of an IPv4 extended prefix.";
+      uses ipv4-prefix-extended-params-state;
+      uses isis-lsdb-common-mt-id;
+    }
+
+    uses isis-lsdb-prefix-state;
+  }
+
+  grouping ipv4-prefix-extended-params-state {
+    description
+      "State parameters that relate to an IPv4 prefix";
+
+    leaf up-down {
+      type boolean;
+      description
+        "The up/down bit. Set if a prefix is advertised from a
+        higher level to a lower level (e.g., level 2 to level 1),
+        indicating that the prefix has traveled down the hierarchy.
+        Prefixes that have the up/down bit set may only be
+        advertised down the hierarchy, i.e., to lower levels. When a
+        prefix is first injected into IS-IS, the bit is UNSET.";
+    }
+
+    leaf s-bit {
+      type boolean;
+      description
+        "The Sub-TLV present bit. If UNSET, the octets of Sub-TLVs
+        are not present. Otherwise, the bit is set and the octet
+        following the prefix will contain the length of the Sub-TLV
+        portion of the structure.";
+    }
+
+    leaf prefix {
+      type inet:ipv4-prefix;
+      description
+        "IPv4 prefix contained within extended reachability TLVs.";
+    }
+
+    leaf metric {
+      type oc-isis-types:wide-metric;
+      description
+        "ISIS metric value.";
+    }
+  }
+
+  grouping ipv6-prefix-extended-state {
+    description
+      "State parameters relating to an IPv6 prefix.";
+
+    container state {
+      description
+        "State parameters of IPv6 prefix attributes";
+
+      uses ipv6-prefix-extended-params-state;
+    }
+
+    uses isis-lsdb-prefix-state;
+  }
+
+  grouping ipv6-mt-prefix-extended-state {
+    description
+      "State parameters relating to a multi-topology IPv6
+      prefix.";
+
+    container state {
+      description
+        "State parameters relating an IPv6 prefix attribute";
+      uses ipv6-prefix-extended-params-state;
+      uses isis-lsdb-common-mt-id;
+    }
+
+    uses isis-lsdb-prefix-state;
+  }
+
+  grouping ipv6-prefix-extended-params-state {
+    description
+      "Common parameters of an IPv6 extended prefix.";
+
+    leaf up-down {
+      type boolean;
+      description
+        "The up/down bit. Set if a prefix is advertised from a
+        higher level to a lower level (e.g., level 2 to level 1),
+        indicating that the prefix has traveled down the hierarchy.
+        Prefixes that have the up/down bit set may only be
+        advertised down the hierarchy, i.e., to lower levels. When a
+        prefix is first injected into IS-IS, the bit is UNSET.";
+    }
+
+    leaf x-bit {
+      type boolean;
+      description
+        "The external bit. Set when the prefix was distributed into
+        IS-IS from another routing protocol.";
+    }
+
+    leaf s-bit {
+      type boolean;
+      description
+        "The sub-tlv present bit. If UNSET, the octets of Sub-TLVs
+         are not present. Otherwise, the bit is set and the octet
+         following the prefix will contain the length of the Sub-TLV
+         portion of the structure.";
+    }
+
+    leaf prefix {
+      type inet:ipv6-prefix;
+      description
+        "IPv6 prefix contained within extended reachability TLVs.";
+    }
+
+    leaf metric {
+      type oc-isis-types:wide-metric;
+      description
+        "ISIS metric value.";
+    }
+  }
+
+  grouping isis-lsdb-common-extisreach-neighbors {
+    description
+      "Common structure for the Extended IS Reachability and IS
+      Reachability Neighbour attributes.";
+
+    container neighbors {
+      description
+        "This container describes IS neighbors.";
+
+      list neighbor {
+        key "system-id";
+        description
+          "This list describes ISIS extended neighbors and
+          reachability attributes.";
+
+        leaf system-id {
+          type leafref {
+            path "../state/system-id";
+          }
+          description
+            "Reference to the neighboring system's system ID.";
+        }
+
+        container state {
+          description
+            "State parameters corresponding to the extended
+            neighbour.";
+
+          leaf system-id {
+            type oc-isis-types:system-id;
+            description
+              "System-id of the neighbor.";
+          }
+        }
+
+        container instances {
+          description
+            "This list contains all instances of an adjacency
+            between the originating IS and the remote IS.
+            Multiple instances are used where there are
+            parallel adjacencies between two systems.";
+
+          list instance {
+            key "id";
+
+            description
+              "Instance of the TLV to the remote IS neighbor.";
+
+            leaf id {
+              type leafref {
+                path "../state/id";
+              }
+              description
+                "Reference to the unique identifier for
+                the instance of the extended IS
+                reachability sub-TLV.";
+            }
+
+            container state {
+              description
+                "State parameters of extended neighbor";
+
+              leaf id {
+                type uint64;
+                description
+                  "Unique identifier for the instance of the
+                  TLV for the IS neighbor. The instance
+                  ID is not required to be consistent across
+                  across readvertisements of the LSP.";
+              }
+
+              leaf metric {
+                type oc-isis-types:wide-metric;
+                description
+                  "Metric value.";
+              }
+            }
+            uses is-reachability-neighbor-state;
+          }
+        }
+      }
+    }
+  }
+
+  grouping isis-lsdb-mtis-common {
+    description
+      "Common grouping for structure used within the multi-topology IS
+      neighbour and multi-topology IS neighbour attribute TLVs.";
+
+    container neighbors {
+      description
+        "MT-IS neigbor attributes.";
+
+      list neighbor {
+        key "mt-id system-id";
+        description
+          "This container describes IS neighbors.";
+
+        leaf mt-id {
+          type leafref {
+            path "../state/mt-id";
+          }
+          description
+          "Reference to the topology that the neighbor is
+          within.";
+        }
+
+        leaf system-id {
+          type leafref {
+            path "../state/system-id";
+          }
+          description
+            "Reference to the System ID of the neighbor.";
+        }
+
+        container state {
+          description
+            "Operational state parameters related to the
+            MT ISN TLV.";
+
+          uses mt-isis-neighbor-state;
+        }
+
+        container instances {
+          description
+            "This list contains all instances of an adjacency
+            between the originating and remote IS. Multiple
+            instances are used to indicate where there are
+            parallel adjacencies between systems.";
+
+          list instance {
+            key "id";
+
+            description
+              "Instance of TLV-222 between the originating
+              and remote IS.";
+
+            leaf id {
+              type leafref {
+                path "../state/id";
+              }
+              description
+                "Reference to the unique identifier for the
+                instance of the multi-topology IS neighbor
+                TLV instance.";
+            }
+
+            uses mt-isis-neighbor-instance;
+          }
+        }
+      }
+    }
+  }
+
+  grouping mt-isis-neighbor-state {
+    description
+      "This grouping defines state parameters that are related to
+      each neighbour entry for the MT ISN TLV.";
+
+    leaf mt-id {
+      type uint16 {
+        range "0..4095";
+      }
+      description
+        "Identifier of a topology being announced.";
+    }
+
+    leaf system-id {
+      type oc-isis-types:system-id;
+      description
+        "System-id of the IS neighbor.";
+    }
+  }
+
+  grouping mt-isis-neighbor-instance {
+    description
+      "This grouping defines list of ISIS multi-topology neighbors for
+      extended ISIS LSP (multiple system IDs).";
+
+     container state {
+      description
+        "State parameters of MT neighbor.";
+
+      leaf metric {
+        type oc-isis-types:wide-metric;
+        description
+          "ISIS metric value.";
+      }
+
+      leaf id {
+        type uint64;
+        description
+          "Unique identifier for the TLV instance for the
+          neighbor. The ID is not required to be consistent
+          across readvertisements of the LSP.";
+      }
+    }
+    uses is-reachability-neighbor-state;
+  }
+
+  grouping isis-lsdb-generic-tlv {
+    description
+      "Generic TLV encoding grouping.";
+
+    leaf type {
+      type uint8;
+      description
+        "TLV Type.";
+    }
+
+    leaf length {
+      type uint8;
+      description
+        "TLV length.";
+    }
+
+    leaf value {
+      type binary;
+      description
+        "TLV value.";
+    }
+  }
+
+  grouping undefined-tlv-state {
+    description
+      "Generic grouping defining an unknown TLV.";
+
+    uses isis-lsdb-generic-tlv;
+  }
+
+  grouping undefined-subtlv-state {
+    description
+      "Generic grouping defining an unknown sub-TLV.";
+
+    uses isis-lsdb-generic-tlv;
+  }
+
+  grouping lsp-state {
+    description
+      "This grouping defines ISIS LSP state information.";
+
+    leaf lsp-id {
+     type leafref {
+        path "../state/lsp-id";
+      }
+
+      description
+        "A reference to the Link State PDU ID.";
+    }
+
+    container state {
+      description
+        "State parameters of Link State PDU.";
+
+      leaf lsp-id {
+        type oc-isis-types:lsp-id;
+        description
+          "LSP ID of the LSP.";
+      }
+
+      leaf maximum-area-addresses {
+        type uint8;
+        description
+          "Number of area addresses permitted for this ISs area. 0
+          indicates the IS only supports three area addresses (by
+          default). Any number inclusive of 1 and 254 indicates the
+          number of areas allowed.";
+      }
+
+      leaf version {
+        type uint8;
+        default 1;
+        description
+          "PDU version. This is set to 1.";
+      }
+
+      leaf version2 {
+        type uint8;
+        default 1;
+        description
+          "PDU version2. This is set to 1";
+      }
+
+      leaf id-length {
+        type uint8;
+        description
+          "Length of the ID field of NSAP addresses and NETs used in
+          this routing domain.";
+      }
+
+      leaf pdu-type {
+        type enumeration {
+          enum LEVEL_1 {
+            description "This enum describes ISIS level 1 PDU.";
+          }
+          enum LEVEL_2 {
+            description "This enum describes ISIS level 2 PDU.";
+          }
+        }
+         description
+           "Link State PDU type.";
+      }
+
+      leaf remaining-lifetime {
+         type uint16;
+         units "seconds";
+         description
+           "Remaining lifetime in seconds before the LSP expiration.";
+      }
+
+      leaf sequence-number {
+         type uint32;
+         description
+           "Sequence number of the LSP.";
+      }
+
+      leaf checksum {
+         type uint16;
+         description
+           "Checksum of the LSP.";
+      }
+
+      leaf pdu-length {
+         type uint16;
+         description
+           "Total length of the LSP.";
+      }
+
+      leaf-list flags {
+        type enumeration {
+          enum PARTITION_REPAIR {
+            description
+              "When set, the originator supports partition
+              repair.";
+          }
+          enum ATTACHED_ERROR {
+            description
+              "When set, the originator is attached to another
+              area using the referred metric.";
+          }
+          enum ATTACHED_EXPENSE {
+            description
+              "When set, the originator is attached to another
+              area using the referred metric.";
+          }
+          enum ATTACHED_DELAY {
+            description
+              "When set, the originator is attached to another
+              area using the referred metric.";
+          }
+          enum ATTACHED_DEFAULT {
+            description
+              "When set, the originator is attached to another
+              area using the referred metric.";
+          }
+          enum OVERLOAD {
+            description
+              "When set, the originator is overloaded, and must
+              be avoided in path calculation.";
+          }
+        }
+        description
+          "LSP Type-Block flags.";
+      }
+
+      leaf is-type {
+        type oc-isis-types:level-number;
+        description
+          "Type of neighboring system.";
+      }
+    }
+
+    container tlvs {
+      description
+        "This container defines Link State PDU State TLVs.";
+
+      list tlv {
+        key "type";
+
+        description
+          "List of TLV types in the LSDB for the specified LSP.";
+
+        leaf type {
+          type leafref {
+            path "../state/type";
+          }
+          description
+            "Reference to the TLV's type.";
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the specified
+            LSP";
+
+          uses isis-lsdb-tlv-type-state;
+        }
+
+        container area-address {
+          when "../state/type = 'oc-isis-lsdb-types:AREA_ADDRESSES'" {
+            description
+              "Include area address parameters only when the TLV type
+              is TLV 1.";
+          }
+
+          description
+            "This container defines TLV 1.";
+
+          container state {
+            description
+              "State parameters of ISIS TLV 1.";
+
+            leaf-list address {
+              type oc-isis-types:area-address;
+              description
+                "Area adress(es) of the IS. Set of manual area
+                addresses of this IS.";
+             reference
+              "ISO 10589 Intermediate System to Intermediate System
+              Intra- Domain Routeing Exchange Protocol for use in
+              Conjunction with the Protocol for Providing the
+              Connectionless-mode Network Service (ISO 8473 )
+              International Standard 10589: 2002, Second Edition,
+              2002. TLV 1.";
+            }
+          }
+        }
+
+        container lsp-buffer-size {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:LSP_BUFFER_SIZE'" {
+            description
+              "Include the LSP buffer size parameters only when the
+              TLV type is TLV 14.";
+          }
+
+          description
+            "This container defines TLV 14 - the LSP Buffer Size
+            TLV.";
+
+          container state {
+            description
+              "State parameters of TLV 14.";
+
+            leaf size {
+              type uint16;
+              units "bytes";
+              description
+                "The maximum MTU that the advertising system can
+                receive, expressed in bytes.";
+              reference
+               "ISO 10589 Intermediate System to Intermediate System
+               Intra- Domain Routeing Exchange Protocol for use in
+               Conjunction with the Protocol for Providing the
+               Connectionless-mode Network Service (ISO 8473 )
+               International Standard 10589: 2002, Second Edition,
+               2002. TLV 14.";
+            }
+          }
+        }
+
+        container nlpid {
+          when "../state/type = 'oc-isis-lsdb-types:NLPID'" {
+            description
+              "Include NLPID specification only when the TLV type is
+              TLV 129.";
+          }
+
+          description
+            "This container defines TLV 129.";
+
+          container state {
+           description
+             "State parameters of ISIS TLV 129.";
+
+            uses isis-lsdb-tlv-nlpid-state;
+          }
+        }
+
+        container hostname {
+          when "../state/type = 'oc-isis-lsdb-types:DYNAMIC_NAME'" {
+            description
+              "Include the dynamic hostname TLV only when the TLV is
+              type 137.";
+          }
+          description
+            "This container defines TLV 137.";
+
+          container state {
+            description
+              "State parameters of ISIS TLV 137.";
+
+            leaf-list hostname {
+              type string;
+              description
+                "Name of the node.";
+
+              reference
+                "RFC6233: IS-IS Registry Extension for Purges, RFC
+                5301: Dynamic Hostname Exchange Mechanism for IS-IS.
+                TLV 137";
+           }
+         }
+        }
+
+        container ipv4-interface-addresses {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IPV4_INTERFACE_ADDRESSES'" {
+            description
+              "Include the IPv4 interface addresses TLV only when the
+              TLV is type 132.";
+          }
+          description
+            "This container defines TLV 132.";
+
+          container state {
+            description
+              "State parameters of ISIS TLV 132.";
+
+            leaf-list address {
+              type inet:ipv4-address;
+              description
+                "IPv4 address(es) of the interface corresponding to
+                the SNPA over which this PDU is to be transmitted.";
+             reference
+              "RFC1195: Use of OSI IS-IS for Routing in TCP/IP and
+              Dual Environments. TLV 132.";
+            }
+          }
+        }
+
+        container ipv6-interface-addresses {
+          when "../state/type = " +
+                "'oc-isis-lsdb-types:IPV6_INTERFACE_ADDRESSES'" {
+            description
+              "Include the IPv6 interface addresses TLV only when the
+              TLV is type 232.";
+          }
+          description
+            "This container defines TLV 232.";
+
+          container state {
+            description
+              "State parameters of ISIS TLV 232.";
+
+            leaf-list address {
+              type inet:ipv6-address;
+              description
+                "IPv6 interface addresses of the node.  MUST contain
+                only the non-link-local IPv6 addresses assigned to the
+                IS.";
+              reference
+                "RFC5308: Routing IPv6 with IS-IS. TLV 232.";
+            }
+          }
+        }
+
+        container ipv4-te-router-id {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IPV4_TE_ROUTER_ID'" {
+            description
+              "Include the IPv4 traffic engineering router ID TLV only
+              when the TLV is type 134.";
+          }
+          description
+            "This container defines TLV 134.";
+
+          container state {
+            description
+              "State parameters of ISIS TLV 134.";
+
+            leaf-list router-id {
+              type inet:ipv4-address;
+              description
+                "IPv4 Traffic Engineering router ID of the node. For
+                traffic engineering, it guarantees that we have a
+                single stable address that can always be referenced in
+                a path that will be reachable from multiple hops away,
+                regardless of the state of the node's interfaces.";
+             reference
+              "RFC5305: IS-IS Extensions for Traffic Engineering. TLV
+              134.";
+            }
+          }
+        }
+
+        container ipv6-te-router-id {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IPV6_TE_ROUTER_ID'" {
+            description
+              "Include the IPv6 traffic engineering router ID TLV only
+              when the TLV is type 140.";
+          }
+          description
+            "This container defines TLV 140.";
+
+          container state {
+            description
+              "State parameters of ISIS TLV 140.";
+
+            leaf-list router-id {
+              type inet:ipv6-address;
+              description
+                "IPv6 Traffic Engineering router ID of the node. For
+                traffic engineering, it guarantees that we have a
+                single stable address that can always be referenced in
+                a path that will be reachable from multiple hops away,
+                regardless of the state of the node's interfaces.";
+              reference
+                "RFC6119: IPv6 Traffic Engineering in IS-IS. TLV
+                140.";
+            }
+          }
+        }
+
+        container instance-ids {
+          when "../state/type = 'oc-isis-lsdb-types:INSTANCE_ID'" {
+            description
+              "Include the ISIS Instance Identifier TLV only when the
+              TLV is type 7.";
+          }
+          description
+            "This container defines ISIS Instance Identifier TLV.";
+          reference "RFC6822: IS-IS Multi-Instance. TLV 7.";
+
+          list instance-id {
+            key "instance-id";
+
+            description
+              "A list of instance IDs received within TLV 7 within an
+              IS-IS LSP. In the case that more than one instance of
+              TLV 7 is included in the LSP, the instance IDs specified
+              within the instances are concatenated within this
+              list.";
+
+            leaf instance-id {
+              type leafref {
+                path "../state/instance-id";
+              }
+              description
+                "Reference to the unique instance ID.";
+            }
+            container state {
+              description
+                "State parameters of ISIS TLV 7.";
+
+              leaf instance-id {
+                type uint16;
+                description
+                  "An Instance Identifier (IID) to uniquely identify
+                  an IS-IS instance. When the IID = 0, the list of
+                  supported ITIDs MUST NOT be present. An IID-TLV with
+                  IID = 0 MUST NOT appear in an SNP or LSP. When the
+                  TLV appears (with a non-zero IID) in an SNP or LSP,
+                  exactly one ITID. MUST be present indicating the
+                  topology with which the PDU is associated. If no
+                  ITIDs or multiple ITIDs are present or the IID is
+                  zero, then the PDU MUST be ignored.";
+              }
+
+              leaf-list topology-id {
+                type uint16;
+                description
+                  "Instance-Specific Topology Identifiers (ITIDs).";
+              }
+            }
+          }
+        }
+
+        container ipv4-srlgs {
+          when "../state/type = 'oc-isis-lsdb-types:IPV4_SRLG'" {
+            description
+              "Include the IPv4 SRLG TLV only when the TLV is type
+              138.";
+          }
+         description
+           "This container defines ISIS SRLG TLV 138.";
+
+         reference
+            "RFC5307: IS-IS Extensions in Support of Generalized
+            Multi-Protocol Label Switching (GMPLS). TLV 138.";
+
+          list ipv4-srlg {
+            key "instance-number";
+
+            description
+              "Instance of the IPv4 SRLG TLV";
+
+            leaf instance-number {
+              type leafref {
+                path "../state/instance-number";
+              }
+              description
+                "Reference to the instance number of TLV 138.";
+            }
+
+            container state {
+              description
+                "State parameters of TLV 138.";
+
+              leaf instance-number {
+                type uint32;
+                description
+                  "An arbitrary unsigned 32-bit integer used to
+                  disambiguate the instance of TLV 138. The instance
+                  identifier is synthesised by the system
+                  and may be renumbered for the same SRLG definition
+                  in subsequent advertised LSPs if (and only if) the
+                  entire list of SRLGs is replaced.";
+              }
+
+              leaf system-id {
+                type oc-isis-types:system-id;
+                description
+                  "Neighbor system ID.";
+              }
+
+              leaf psn-number {
+                type uint8;
+                description
+                  "Pseudonode number if the neighbor is on a LAN
+                  interface.";
+              }
+
+              leaf-list flags {
+                type enumeration {
+                  enum NUMBERED {
+                    description
+                      "When set, the interface is numbered, whereas if
+                      unset indicates that the interface is
+                      unnumbered.";
+                  }
+                }
+                description
+                  "SRLG flags.";
+              }
+
+              leaf ipv4-interface-address {
+                type inet:ipv4-address;
+                description
+                  "IPv4 interface address.";
+              }
+
+              leaf ipv4-neighbor-address {
+                type inet:ipv4-address;
+                description
+                  "IPv4 neighbor address.";
+              }
+
+              leaf-list srlg-value {
+                type uint32;
+                description
+                  "List of SRLG values.";
+              }
+            }
+          }
+        }
+
+        container ipv6-srlgs {
+          when "../state/type = 'oc-isis-lsdb-types:IPV6_SRLG'" {
+            description
+              "Include the IPv6 SRLG TLV only when the TLV is type
+              139.";
+          }
+          description
+            "This container defines ISIS SRLG TLV.";
+
+          reference
+            "RFC6119: IPv6 Traffic Engineering in IS-IS. TLV 139.";
+
+          list ipv6-srlg {
+            key "instance-number";
+
+            description
+              "Instance of the IPv6 SRLG TLV.";
+
+            leaf instance-number {
+              type leafref {
+                path "../state/instance-number";
+              }
+              description
+                "Reference to the instance number of the IPv6 Shared
+                Risk Link Group (SRLG) TLV.";
+            }
+
+            container state {
+              description
+                "State parameters of TLV 139.";
+
+              leaf instance-number {
+                type uint32;
+                description
+                  "An arbitrary unsigned 32-bit integer used to
+                  disambiguate the instance of TLV 138. The instance
+                  identifier is synthesised by the system
+                  and may be renumbered for the same SRLG definition
+                  in subsequent advertised LSPs if (and only if) the
+                  entire list of SRLGs is replaced.";
+              }
+
+              leaf system-id {
+                type oc-isis-types:system-id;
+                description
+                  "Neighbor system ID.";
+              }
+
+              leaf psn-number {
+                type uint8;
+                description
+                  "Pseudonode number if the neighbor is on a LAN
+                  interface.";
+              }
+
+              leaf-list flags {
+                type enumeration {
+                  enum NA {
+                    description
+                      "When set, the IPv6 neighbour address is
+                      included, whereas if unset, it is omitted";
+                  }
+                }
+                description
+                  "IPv6 SRLG flags.";
+              }
+
+              leaf ipv6-interface-address {
+                type inet:ipv6-address;
+                description
+                  "IPv6 interface address or Link Local Identifier.";
+              }
+
+              leaf ipv6-neighbor-address {
+                type inet:ipv6-address;
+                description
+                  "IPv6 neighbor address or Link Remote Identifier.";
+              }
+
+              leaf-list srlg-value {
+                type uint32;
+                description
+                  "SRLG values.";
+              }
+            }
+          }
+        }
+
+        container purge-oi {
+          when "../state/type = 'oc-isis-lsdb-types:PURGE_OI'" {
+            description
+              "Only include the purge originator identitication TLV
+              when the TLV type is 13.";
+          }
+          description
+            "This container defines ISIS purge TLV.";
+
+          reference
+            "RFC6232: Purge Originator Identification TLV for IS-IS.
+            TLV 13.";
+
+          container state {
+            description
+              "State parameters of TLV 13.";
+
+            leaf system-id-count {
+              type uint8;
+              description
+                "Number of system IDs carried in this TLV.";
+            }
+
+            leaf source-system-id {
+              type oc-isis-types:system-id;
+              description
+                "System ID of the Intermediate System that inserted
+                this TLV.";
+            }
+
+            leaf received-system-id {
+              type oc-isis-types:system-id;
+              description
+                "System ID of the Intermediate System from which the
+                purge was received.";
+            }
+          }
+        }
+
+        container router-capabilities {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:ROUTER_CAPABILITY'" {
+            description
+              "Only include the router capability TLV when the TLV is
+              type 242.";
+          }
+          description
+            "This container defines router capabilities.";
+
+          list capability {
+            key "instance-number";
+
+            description
+              "This list describes IS Router capabilities.";
+
+            reference
+              "RFC4971: Intermediate System to Intermediate System
+              (IS-IS) Extensions for Advertising Router Information.
+              TLV 242.";
+
+            leaf instance-number {
+              type leafref {
+                path "../state/instance-number";
+              }
+              description
+                "Reference to the instance number of the router
+                capability TLV.";
+            }
+
+            container state {
+              description
+                "State parameters of TLV 242.";
+
+              leaf instance-number {
+                type uint32;
+                description
+                  "A unique instance number for the instance of the
+                  router capabilities TLV. The instance number should
+                  be autogenerated by the producer of the data and may
+                  be renumbered if the entire LSP contents are
+                  replaced in subsequent advertisements.";
+              }
+
+              leaf router-id {
+                type inet:ipv4-address;
+                description
+                  "IPv4 router-id.";
+              }
+
+              leaf-list flags {
+                type enumeration {
+                  enum FLOOD {
+                    description
+                      "When the S bit is set(1), the IS - IS Router
+                      CAPABILITY TLV MUST be flooded across the entire
+                      routing domain. When the S bit is not set(0),
+                      the TLV MUST NOT be leaked between levels . This
+                      bit MUST NOT be altered during the TLV
+                      leaking.";
+                  }
+                  enum DOWN {
+                    description
+                      "When the IS-IS Router CAPABILITY TLV is leaked
+                      from level - 2 to level-1, the Down bit MUST be
+                      set. Otherwise, this bit MUST be clear. IS - IS
+                      Router capability TLVs with the Down bit set
+                      MUST NOT be leaked from level - 1 to level-2.
+                      This is to prevent TLV looping.";
+                  }
+                }
+                description
+                  "Router capability flags.";
+              }
+            }
+
+            container subtlvs {
+              description
+                "This container describes router capability TLV
+                sub-TLVs";
+
+              list subtlv {
+                key "type";
+                description
+                  "List of subTLV types in the LSDB for the specified
+                  TLV";
+
+                leaf type {
+                  type leafref {
+                    path "../state/type";
+                  }
+                  description
+                    "Reference to the sub-TLV type";
+                }
+
+                container state {
+                  description
+                    "State parameters of IS Router Capabilities";
+
+                  uses isis-lsdb-subtlv-type-state;
+                 }
+
+                container segment-routing-algorithms {
+                  when "../state/type = " +
+                       "'oc-isis-lsdb-types:ROUTER_CAPABILITY_SR_ALGORITHM'" {
+                    description
+                      "Only include segment routing algorithm when the
+                      sub-TLV is type 19.";
+                  }
+                  description
+                    "This container defines SR algorithm sub-TLV 19.";
+
+                  reference
+                    "draft-ietf-isis-segment-routing-extensions.
+                     TLV 242, sub-TLV 19";
+
+                    container state {
+                      description
+                        "State parameters of sub-TLV 19 - Segment
+                        Routing Algorithm.";
+
+                      leaf-list algorithm {
+                        type enumeration {
+                          enum SPF {
+                            value 0;
+                            description
+                              "Shortest Path First (SPF) algorithm
+                              based on link metric.  This is the
+                              well-known shortest path algorithm as
+                              computed by the IS-IS Decision process.
+                              Consistent with the deployed practice
+                              for link-state protocols, algorithm 0
+                              permits any node to overwrite the SPF
+                              path with a different path based on
+                              local policy.";
+                          }
+                          enum STRICT_SPF {
+                            value 1;
+                            description
+                              "Strict Shortest Path First (SPF)
+                              algorithm based on link metric. The
+                              algorithm is identical to algorithm 0
+                              but algorithm 1 requires that all nodes
+                              along the path will honor the SPF
+                              routing decision. Local policy MUST NOT
+                              alter the forwarding decision computed
+                              by algorithm 1 at the node claiming to
+                              support algorithm 1.";
+                          }
+                        }
+                        description
+                          "The Segment Routing algorithm that is
+                          described by the TLV.";
+                      }
+                    }
+                }
+
+                container segment-routing-capability {
+                  when "../state/type = " +
+                       "'oc-isis-lsdb-types:ROUTER_CAPABILITY_SR_CAPABILITY'" {
+                    description
+                      "Only include the SR capability sub-TLV when
+                      the sub-TLV type is 2.";
+                  }
+                  description
+                    "This container defines SR Capability sub-TLV 2.";
+
+                  reference
+                    "draft-ietf-isis-segment-routing-extensions. TLV
+                    242, sub-TLV 2.";
+
+                  container state {
+                    description
+                      "State parameters of IS SR Router Capability";
+
+                    leaf-list flags {
+                      type enumeration {
+                        enum IPV4_MPLS {
+                          description
+                            "When set, the router is capable of
+                            processing SR MPLS encapsulated IPv4
+                            packets on all interfaces.";
+                        }
+                        enum IPV6_MPLS {
+                          description
+                            "When set, the router is capable of
+                            processing SR MPLS encapsulated IPv6
+                            packets on all interfaces.";
+                        }
+                        enum IPV6_SR {
+                          description
+                            "When set, the router is capable of
+                            processing the IPv6 Segment Routing Header
+                            on all interfaces.";
+                        }
+                      }
+                      description
+                        "Segment Routing Capability Flags.";
+                    }
+                  }
+
+                  container srgb-descriptors {
+                    description
+                      "SRGB Descriptors included within the SR
+                      capability sub-TLV";
+
+                    list srgb-descriptor {
+                      key "range";
+                      description
+                        "Descriptor entry within the SR capabilty
+                        sub-TLV";
+
+                      leaf range {
+                        type leafref {
+                          path "../state/range";
+                        }
+                        description
+                          "Reference to unique SRGB Descriptor.";
+                      }
+
+                      container state {
+                        description
+                          "State parameters of the SR range";
+
+                        leaf range {
+                          type uint32;
+                          description
+                            "Number of SRGB elements. The range
+                            value MUST be greater than 0.";
+                        }
+
+                        leaf label {
+                          type oc-mplst:mpls-label;
+                          description
+                            "The first value of the SRGB when
+                            expressed as an MPLS label.";
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            uses isis-lsdb-undefined-subtlv;
+          }
+        }
+
+        container is-reachability {
+          when "../state/type = 'oc-isis-lsdb-types:IIS_NEIGHBORS'" {
+            description
+              "Include IIS_NEIGHBORS sub-TLV when the TLV type is 2.";
+          }
+          description
+            "This container describes list of ISIS neighbors and
+            attributes.";
+
+           reference
+             "ISO 10589, Intermediate System to Intermediate System
+             Intra- Domain Routeing Exchange Protocol for use in
+             Conjunction with the Protocol for Providing the
+             Connectionless-mode Network Service (ISO 8473),
+             International Standard 10589: 2002, Second Edition,
+             2002. TLV 2.";
+
+          container neighbors {
+            description
+              "This container describes IS neighbors.";
+
+            list neighbor {
+              key "system-id";
+              description
+                "IS reachability neighbor attributes.";
+
+              leaf system-id {
+                type leafref {
+                  path "../state/system-id";
+                }
+                description
+                  "Reference to the system ID of the neighbor.";
+              }
+
+              uses isis-lsdb-neighbor;
+            }
+          }
+        }
+
+        container ipv4-internal-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IPV4_INTERNAL_REACHABILITY'" {
+            description
+              "Include IPv4 internal reachability TLV when the TLV
+              type is specified as 128.";
+          }
+          description
+            "This container defines list of IPv4 internal reachability
+            information.";
+
+          reference
+            "RFC1195: OSI ISIS for IP and Dual Environments. RFC5302:
+            Domain-Wide Prefix Distribution with Two-Level IS-IS. TLV
+            128";
+
+          container prefixes {
+            description
+              "This container describes IS prefixes.";
+
+            list prefix {
+              key "prefix";
+
+              description
+                "IPv4 prefixes and internal reachability attributes.";
+
+              leaf prefix {
+                type leafref {
+                  path "../state/prefix";
+                }
+                description
+                  "Reference to the IPv4 prefix";
+              }
+
+              uses ipv4-prefix-attributes-state;
+            }
+          }
+        }
+
+        container ipv4-external-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IPV4_EXTERNAL_REACHABILITY'" {
+            description
+              "Include IPv4 external reachability when the TLV type
+              is set to 130.";
+          }
+          description
+           "This container defines list of IPv4 external reachability
+            information.";
+
+          reference
+            "RFC1195: OSI ISIS for IP and Dual Environments.  RFC5302:
+            Domain-Wide Prefix Distribution with Two-Level IS-IS. TLV
+            130";
+
+          container prefixes {
+            description
+              "This container describes IS neighbors.";
+
+            list prefix {
+              key "prefix";
+
+              description
+                "IPv4 external prefixes and reachability attributes.";
+
+              leaf prefix {
+                type leafref {
+                  path "../state/prefix";
+                }
+                description
+                  "Reference to the IPv4 prefix.";
+              }
+
+              uses ipv4-prefix-attributes-state;
+            }
+          }
+        }
+
+        container authentication {
+          when "../state/type = 'oc-isis-lsdb-types:AUTHENTICATION'" {
+            description
+              "Only include the authentication TLV when the TLV is
+              type 10.";
+          }
+          description
+            "This container defines authentication information of the
+            node.";
+
+          reference
+            "ISO 10589 Intermediate System to Intermediate System
+            Intra- Domain Routeing Exchange Protocol for use in
+            Conjunction with the Protocol for Providing the
+            Connectionless-mode Network Service (ISO 8473)
+            International Standard 10589: 2002, Second Edition, 2002.
+            TLV 10.";
+
+          container state {
+            description
+              "State parameters of TLV 10.";
+
+            leaf crypto-type {
+              type enumeration {
+                enum HMAC_MD5 {
+                  description
+                    "HMAC-MD5 Authentication type.";
+                }
+                enum CLEARTEXT {
+                  description
+                    "Cleartext Authentication type.";
+                }
+               }
+               description
+                 "Authentication type to be used.";
+            }
+
+            leaf authentication-key {
+              type string;
+              description
+                "Authentication key to be used.";
+            }
+          }
+        }
+
+        container extended-is-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:EXTENDED_IS_REACHABILITY'" {
+            description
+              "Only included the extended IS reachability TLV when the
+              TLV is type 22.";
+          }
+
+          description
+            "This container defines list of ISIS extended reachability
+            neighbors.";
+
+          reference
+            "RFC5305: IS-IS Extensions for Traffic Engineering. TLV
+            22.";
+
+          uses isis-lsdb-common-extisreach-neighbors;
+        }
+
+        container extended-ipv4-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:EXTENDED_IPV4_REACHABILITY'" {
+            description
+              "Only include the extended IPv4 reachability container
+              when the TLV type is 135.";
+          }
+          description
+            "This container defines list of IPv4 extended reachability
+            information.";
+
+          reference
+            "RFC5305: IS-IS Extensions for Traffic Engineering. TLV
+            135";
+
+          container prefixes {
+            description
+              "This container describes IS prefixes.";
+
+            list prefix {
+              key "prefix";
+
+              description
+                "This list describes IPv4 extended prefixes and
+                attributes.";
+
+              leaf prefix {
+                type leafref {
+                  path "../state/prefix";
+                }
+                description
+                  "Reference to the IPv4 prefix that the TLV describes
+                  the attributes of.";
+              }
+
+              uses ipv4-prefix-extended-state;
+            }
+          }
+        }
+
+        container ipv6-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IPV6_REACHABILITY'" {
+            description
+              "Only include the IPv6 reachability container when the
+              TLV type is 236.";
+          }
+          description
+            "This container defines list of IPv6 reachability
+            information.";
+
+          reference
+            "RFC5308: Routing IPv6 with IS-IS. TLV 236";
+
+          container prefixes {
+            description
+              "This container describes IS prefixes.";
+
+            list prefix {
+              key "prefix";
+
+              description
+                "This list defines IPv6 extended prefix attributes.";
+
+              leaf prefix {
+                type leafref {
+                  path "../state/prefix";
+                }
+                description
+                  "Reference to the IPv6 prefix that the TLV
+                  corresponds to.";
+              }
+
+              uses ipv6-prefix-extended-state;
+            }
+          }
+        }
+
+        container multi-topology {
+          when "../state/type = 'oc-isis-lsdb-types:MULTI_TOPOLOGY'" {
+            description
+              "Only include the multi-topology container when the TLV
+              is type 229.";
+          }
+
+          description
+            "This container defines the topology supported.";
+
+          reference
+            "RFC5120: M-ISIS: Multi Topology (MT) Routing in
+            Intermediate System to Intermediate Systems (IS-ISs). TLV
+            229";
+
+          container topologies {
+            description
+              "This container describes IS topologies.";
+
+            list topology {
+              key "mt-id";
+
+              description
+                "This list describes a topology.";
+
+              leaf mt-id {
+                type leafref {
+                  path "../state/mt-id";
+                }
+                description
+                  "Reference to the multi-topology ID being described
+                  by the list entry.";
+              }
+
+              container state {
+                description
+                  "State parameters of IS multi-topology TLV 229.";
+
+                leaf mt-id {
+                  type uint16 {
+                    range "0 .. 4095";
+                  }
+                  description
+                    "Multi-topology ID.";
+                }
+
+                leaf attributes {
+                  type enumeration {
+                    enum OVERLOAD {
+                      description
+                        "When set, node is overloaded, still part of
+                        the topology but cannot be used for transit.";
+                    }
+                    enum ATTACHED {
+                      description
+                        "When set, node is attached to another area
+                        using the referred metric and can be used as
+                        default gateway.";
+                    }
+                  }
+                  description
+                    "Attributes of the LSP for the associated
+                    topology.";
+                }
+              }
+            }
+          }
+        }
+
+        container isis-neighbor-attribute {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:IS_NEIGHBOR_ATTRIBUTE'" {
+            description
+              "Only include the neighbor attribute container when the
+              TLV is type 23.";
+          }
+          description
+            "This container defines list of ISIS topology neighbors
+            for extended ISIS LSP (multiple system IDs). ";
+
+          reference
+            "RFC5311: Simplified Extension of Link State PDU (LSP)
+            Space for IS-IS. TLV 23. It is identical in format  to the
+            extended IS reachability TLV 22.";
+
+          uses isis-lsdb-common-extisreach-neighbors;
+        }
+
+        container is-alias-id {
+          when "../state/type = 'oc-isis-lsdb-types:ISIS_ALIAS_ID'" {
+            description
+              "Only include the ISIS alias ID container when the TLV
+              is type 24.";
+          }
+
+          description
+            "This container defines the IS-Alias TLV which allows
+             extension-capable ISs to recognize the Originating System
+             of an Extended LSP set. It identifies the Normal system-
+             id of the Originating System.";
+
+          reference
+            "RFC5311: Simplified Extension of Link State PDU (LSP)
+             Space for IS-IS TLV 24.";
+
+          container state {
+            config false;
+            description
+              "State parameters of alias ID.";
+
+            leaf alias-id {
+              type oc-isis-types:system-id;
+              description
+                "List of alias ID(s).";
+            }
+          }
+        }
+
+        container mt-isn {
+          when "../state/type = 'oc-isis-lsdb-types:MT_ISN'" {
+            description
+              "Only include the MT ISN container when the TLV is type
+              222.";
+          }
+          description
+            "This container defines list of ISIS multi-topology
+            neighbors.";
+
+          reference
+            "RFC5120: M-ISIS: Multi Topology (MT) Routing in
+            Intermediate System to Intermediate Systems (IS-ISs). TLV
+            222.";
+
+          uses isis-lsdb-mtis-common;
+        }
+
+        container mt-isis-neighbor-attribute {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:MT_IS_NEIGHBOR_ATTRIBUTE'" {
+            description
+              "Only include the MT ISIS neighbor attribute container
+              when the TLV is type 223.";
+          }
+
+          description
+            "This container defines list of ISIS multi-topology
+            neighbors.";
+
+          reference
+            "RFC5311: Simplified Extension of Link State PDU (LSP)
+            Space for IS-IS. TLV 223. It is identical in format to the
+            MT-ISN TLV 222.";
+
+          uses isis-lsdb-mtis-common;
+        }
+
+        container mt-ipv4-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:MT_IPV4_REACHABILITY'" {
+            description
+              "Only include the multi-topology IPv4 reachability
+              container when the TLV is type 235.";
+          }
+          description
+            "This container defines list of IPv4 reachability
+            Information in multi-topology environment.";
+
+          reference
+            "RFC5120: M-ISIS: Multi Topology (MT) Routing in
+            Intermediate System to Intermediate Systems (IS-ISs). TLV
+            235.";
+
+          container prefixes {
+            description
+              "This container describes IS prefixes.";
+
+            list prefix {
+              key "mt-id prefix";
+
+              leaf mt-id {
+                type leafref {
+                  path "../state/mt-id";
+                }
+                description
+                  "Reference to the topology ID of the topology that
+                  the prefix is within.";
+              }
+
+              leaf prefix {
+                type leafref {
+                  path "../state/prefix";
+                }
+                description
+                  "Reference to the prefix to which reachability is
+                  being advertised.";
+              }
+
+              description
+                "IPv4 prefixes that are contained within MT
+                reachability TLV.";
+
+              uses ipv4-mt-prefix-extended-state;
+            }
+          }
+        }
+
+        container mt-ipv6-reachability {
+          when "../state/type = " +
+               "'oc-isis-lsdb-types:MT_IPV6_REACHABILITY'" {
+            description
+              "Only include the multi-topology IPv6 reachability
+              container when the TLV is type 237.";
+          }
+          description
+            "This container defines list of IPv6 reachability
+            information in multi - topology environment.";
+
+          reference
+            "RFC5120: M-ISIS: Multi Topology (MT) Routing in
+            Intermediate System to Intermediate Systems (IS-ISs). TLV
+            237.";
+
+          container prefixes {
+            description
+              "This container describes IS prefixes.";
+
+            list prefix {
+              key "prefix mt-id";
+              description
+                  "List of IPv6 prefixes contained within MT
+                  reachability TLV.";
+
+              leaf prefix {
+                type leafref {
+                  path "../state/prefix";
+                }
+                description
+                  "Reference to the IPv6 prefix described by the
+                  TLV.";
+              }
+
+              leaf mt-id {
+                type leafref {
+                  path "../state/mt-id";
+                }
+                description
+                  "Reference to the multi-topology ID.";
+              }
+
+              uses ipv6-mt-prefix-extended-state;
+            }
+          }
+        }
+      }
+    }
+
+    uses isis-lsdb-undefined-tlv;
+  }
+}

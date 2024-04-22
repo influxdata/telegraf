@@ -1,0 +1,447 @@
+module openconfig-igmp {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/igmp";
+
+  prefix "oc-igmp";
+
+  // import some basic types/interfaces
+  import openconfig-igmp-types { prefix oc-igmp-types; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-acl { prefix "oc-acl"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-interfaces { prefix oc-if; }
+  import ietf-inet-types { prefix "inet"; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "An OpenConfig model for Internet Group Management Protocol (IGMP).";
+
+  oc-ext:openconfig-version "0.3.1";
+
+  revision "2023-02-03" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.3.1";
+  }
+
+  revision "2021-05-17" {
+    description
+      "Add Static Mapping for IGMP at interface.";
+    reference "0.3.0";
+  }
+
+  revision "2019-07-09" {
+    description
+      "Re-indent module to two spaces.
+      Normalise timeticks64 usage to nanoseconds.";
+    reference "0.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+    "Add OpenConfig module metadata extensions.";
+    reference "0.1.1";
+  }
+
+  revision "2018-02-19" {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping admin-config {
+    description
+      "Re-usable grouping to enable or disable a particular feature.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "When set to true, the functionality within which this
+        leaf is defined is enabled, when set to false it is
+        explicitly disabled.";
+    }
+  }
+
+  grouping igmp-interface-config {
+    description
+      "Configuration data for IGMP on each interface.";
+
+    leaf interface-id {
+      type oc-if:interface-id;
+      description
+        "Reference to an interface on which IGMP is enabled.";
+    }
+
+    uses admin-config;
+
+    leaf version {
+      type oc-igmp-types:igmp-version;
+      description
+        "IGMP Version.";
+    }
+
+    leaf query-interval {
+      type oc-igmp-types:igmp-interval-type;
+      description
+        "Interval at which the router sends the IGMP membership
+        queries.";
+    }
+
+    leaf filter-prefixes {
+      type string;
+      // TODO work out what this should be.
+      // On Juniper it's a "policy" and on Cisco a sort of "class map"
+      description
+        "List used to filter joins.";
+    }
+  }
+
+  grouping igmp-counters-per-version {
+    description
+      "Counters for each IGMP protocol version.";
+
+    container state {
+      config false;
+      description
+        "Counters for each IGMP protocol version.";
+
+      leaf v1 {
+        type uint32;
+        description
+          "IGMP v1.";
+      }
+      leaf v2 {
+        type uint32;
+        description
+          "IGMP v2.";
+      }
+      leaf v3 {
+        type uint32;
+        description
+          "IGMP v3.";
+      }
+    }
+  }
+
+  grouping igmp-interface-counters {
+    description
+      "State and session data for IGMP on each interface.";
+
+
+    container counters {
+      description
+        "Counters avaiable on a per interface bases for IGMP.";
+
+      container queries {
+        description
+          "IGMP membership queries.";
+
+        container sent {
+          description
+            "Number of IGMP membership queries sent.";
+          uses igmp-counters-per-version;
+        }
+
+        container received {
+          description
+            "Number of IGMP membership queries received.";
+          uses igmp-counters-per-version;
+        }
+      }
+
+      container reports {
+        description
+          "Number of IGMP membership reports received.";
+        uses igmp-counters-per-version;
+      }
+    }
+  }
+
+  grouping igmp-snooping-state {
+    description
+      "IGMP membership snooping state.";
+
+    leaf group {
+      type inet:ipv4-address;
+      description
+        "Multicast address.";
+    }
+
+    leaf source {
+      type inet:ipv4-address;
+      description
+        "Source address of multicast.";
+    }
+
+    leaf reporter {
+      type inet:ipv4-address;
+      description
+        "Address of the last reporter.";
+    }
+  }
+
+  grouping igmp-static-config {
+    description
+      "IGMP membership static configuration.";
+
+    leaf static-group {
+      type inet:ipv4-address;
+      description
+        "Multicast address.";
+    }
+
+    leaf source {
+      type inet:ipv4-address;
+      description
+        "Source address of multicast.";
+    }
+  }
+
+  grouping igmp-static-top {
+    description
+      "Top Container for the static IGMP membership.";
+
+      container static-membership-groups {
+      description
+        "List of IGMP Membership information.";
+
+      list static-groups {
+        key "static-group";
+        description
+          "Multicast group membership.";
+
+        leaf static-group {
+          type leafref {
+            path "../config/static-group";
+          }
+          description
+            "Multicast address.";
+        }
+
+        container config {
+          description
+            "Multicast group membership.";
+
+          uses igmp-static-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Multicast group membership.";
+
+          uses igmp-static-config;
+        }
+      }
+    }
+  }
+
+  grouping igmp-snooping-structural {
+    description
+      "IGMP membership information determined through snooping.";
+
+    container membership-groups {
+      description
+        "List of IGMP Membership information.";
+
+      list group {
+        key "group";
+        config false;
+        description
+          "Multicast group membership.";
+
+        leaf group {
+          type leafref {
+            path "../state/group";
+          }
+          description
+            "Multicast address.";
+        }
+
+        container state {
+          config false;
+          description
+            "Multicast group membership.";
+
+          uses igmp-snooping-state;
+        }
+      }
+    }
+  }
+
+  grouping igmp-interface-state {
+    description
+      "IGMP interface state.";
+
+    leaf query-expires {
+      type oc-types:timeticks64;
+       description
+      "This timestamp indicates the time that the next query is sent
+      expressed relative to the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+  }
+
+  grouping igmp-interface-top {
+    description
+      "Configuration and state data for IGMP on each interface.";
+
+    container interfaces {
+      description
+        "The interfaces on which IGMP is configured.";
+
+      list interface {
+        key "interface-id";
+        description
+          "This container defines interface IGMP configuration and
+          state information.
+
+          The interface referenced is based on the interface and
+          subinterface leaves within the interface-ref container -
+          which reference an entry in the /interfaces/interface list -
+          and should not rely on the value of the list key.";
+
+        leaf interface-id {
+          type leafref {
+            path "../config/interface-id";
+          }
+          description
+            "Reference to an interface on which IGMP is enabled.";
+        }
+
+        container config {
+          description
+            "IGMP interface configuration.";
+
+          uses igmp-interface-config;
+        }
+
+        container state {
+          config false;
+          description
+            "This container defines state information for IGMP
+            interfaces.";
+
+          uses igmp-interface-state;
+          uses igmp-interface-config;
+        }
+
+        uses igmp-interface-counters;
+        uses igmp-snooping-structural;
+        uses igmp-static-top;
+        uses oc-if:interface-ref;
+      }
+    }
+  }
+
+  grouping igmp-ssm-maps-config {
+    description
+      "A Source Specific Multicast (SSM) mapping. This allows
+      IGMP v2 hosts to be able to join in SSM environments
+      by translating IGMP v2 reports into IGMP v3 reports.
+      The request in an IGMP v2 join is sent toward the source
+      address found by matching the multicast address.";
+
+    leaf source {
+      type inet:ipv4-address;
+      description
+        "Multicast source address.";
+    }
+
+    leaf ssm-ranges {
+      type leafref {
+        path "/oc-acl:acl/oc-acl:acl-sets/oc-acl:acl-set/" +
+          "oc-acl:config/oc-acl:name";
+      }
+      description
+        "List of accepted source specific multicast (SSM) address
+        ranges.";
+    }
+  }
+
+  grouping igmp-global-config {
+    description
+      "This grouping defines global config options for IGMP.";
+
+  }
+
+  grouping igmp-global-top {
+    description
+      "Top level grouping for global IGMP configuration.";
+
+    container ssm {
+      description
+        "Source specific multicast (SSM).";
+
+      container mappings {
+        description
+          "A list of source specific multicast (SSM) mappings.";
+
+        list mapping {
+          key "source";
+          description
+            "A Source Specific Multicast (SSM) mapping. This allows
+            IGMP v2 hosts to be able to join in SSM environments
+            by translating IGMP v2 reports into IGMP v3 reports.
+            The request in an IGMP v2 join is sent toward the source
+            address found by matching the multicast address.";
+
+          leaf source {
+            type leafref {
+              path "../config/source";
+            }
+            description
+              "Multicast source address.";
+          }
+
+          container config {
+            description
+              "Configuration for SSM maps.";
+            uses igmp-ssm-maps-config;
+          }
+          container state {
+            config false;
+            description
+              "State for SSM maps.";
+            uses igmp-ssm-maps-config;
+          }
+        }
+      }
+    }
+  }
+
+  grouping igmp-top {
+    description
+      "Top-level grouping for IGMP.";
+
+    container igmp {
+      description
+        "Top-level IGMP configuration and operational state.";
+
+      container global {
+        description
+          "Global IGMP configuration and operational state.";
+        uses igmp-global-top;
+      }
+
+      uses igmp-interface-top;
+    }
+  }
+
+  // data definition statements
+}

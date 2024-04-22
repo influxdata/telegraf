@@ -1,0 +1,885 @@
+submodule openconfig-bgp-neighbor {
+
+  belongs-to openconfig-bgp {
+    prefix "oc-bgp";
+  }
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-routing-policy { prefix oc-rpol; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-bgp-types { prefix oc-bgp-types; }
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-bfd { prefix oc-bfd; }
+
+  // Include the common submodule
+  include openconfig-bgp-common;
+  include openconfig-bgp-common-multiprotocol;
+  include openconfig-bgp-peer-group;
+  include openconfig-bgp-common-structure;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This sub-module contains groupings that are specific to the
+    neighbor context of the OpenConfig BGP module.";
+
+  oc-ext:openconfig-version "9.7.1";
+
+  revision "2023-12-28" {
+    description
+      "Clarification to last-prefix-limit-exceeded in description";
+          reference "9.7.1";
+  }
+
+  revision "2023-12-28" {
+    description
+      "Add support for controling use of link-bandwidth extended
+      community for BGP multipath.";
+          reference "9.7.0";
+  }
+
+  revision "2023-11-02" {
+    description
+      "Fix revision '2023-03-31': send-community-type was added to the
+       wrong grouping.
+      Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.6.0";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Add default apply policy to global and per afi-safi config.";
+    reference "9.5.0";
+  }
+
+  revision "2023-06-27" {
+    description
+      "Clarify bgp neighbor-port, remote-port and local-port descriptions";
+    reference "9.4.1";
+  }
+
+  revision "2023-04-01" {
+    description
+      "Add support for BGP large communities [rfc8092] in
+      send-community.
+      Leaf send-community was replaced by the leaf-list
+      send-community-type to allow the combination of different
+      community types";
+    reference "9.4.0";
+  }
+
+  revision "2023-03-31" {
+    description
+      "Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.3.0";
+  }
+
+  revision "2022-12-12" {
+    description
+      "Removed the default of enabled leaf of AFI-SAFI
+      at neighbor/peer-group to support BGP inheritance model.";
+    reference "9.2.0";
+  }
+
+  revision "2022-05-21" {
+    description
+      "Added extended-next-hop-encoding leaf.";
+    reference "9.1.0";
+  }
+
+  revision "2022-04-26" {
+    description
+      "Transition decimal64 types to uint16 for various BGP timers";
+    reference "9.0.0";
+  }
+
+  revision "2022-03-21" {
+    description
+      "Add BGP port";
+    reference "8.1.0";
+  }
+
+  revision "2021-12-01" {
+    description
+      "Add prefix-limit-received, add prefix-limit
+      state nodes, change/relocate restart-timer";
+    reference "8.0.0";
+  }
+
+  revision "2021-10-21" {
+    description
+      "Removal of top-level /bgp container";
+    reference "7.0.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "6.1.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "6.1.0";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Normalise timestamp units to nanoseconds.";
+    reference "6.0.0";
+  }
+
+  revision "2019-05-28" {
+    description
+      "Clarify prefix counter descriptions, add received-pre-policy
+      counter.";
+    reference "5.2.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Add BGP RIB to the top-level BGP container";
+    reference "5.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "5.0.2";
+  }
+
+  revision "2018-08-20" {
+    description
+      "Correct description of AFI-SAFI enabled leaf.";
+    reference "5.0.1";
+  }
+
+  revision "2018-04-11" {
+    description
+      "Correct naming of BGP maximum prefix warning percentage leaf.";
+    reference "5.0.0";
+  }
+
+  revision "2018-03-20" {
+    description
+      "Added SR-TE policy SAFI";
+    reference "4.1.0";
+  }
+
+  revision "2017-07-30" {
+    description
+      "Clarification of add-paths send-max leaf";
+    reference "4.0.1";
+  }
+
+  revision "2017-07-10" {
+    description
+      "Add error notifications; moved add-paths config; add AS
+      prepend policy features; removed unneeded config leaves";
+    reference "4.0.0";
+  }
+
+  revision "2017-02-02" {
+    description
+      "Bugfix to remove remaining global-level policy data";
+    reference "3.0.1";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add dynamic neighbor support, migrate to OpenConfig types";
+    reference "3.0.0";
+  }
+
+  revision "2016-06-21" {
+    description
+      "OpenConfig BGP refactor";
+    reference "2.1.1";
+  }
+
+  grouping bgp-neighbor-config {
+    description
+      "Configuration parameters relating to a base BGP neighbor that
+      are not also applicable to any other context
+      (e.g., peer group)";
+
+    leaf peer-group {
+      type leafref {
+        path "../../../../peer-groups/peer-group/peer-group-name";
+      }
+      description
+        "The peer-group with which this neighbor is associated";
+    }
+
+    leaf neighbor-address {
+        type oc-inet:ip-address;
+        description
+          "Address of the BGP peer, either in IPv4 or IPv6";
+    }
+
+    leaf neighbor-port {
+        type oc-inet:port-number;
+        default 179;
+        description
+          "Destination TCP port number of the BGP peer when initiating a
+          session from the local router";
+    }
+
+    leaf enabled {
+        type boolean;
+        default true;
+        description
+          "Whether the BGP peer is enabled. In cases where the
+          enabled leaf is set to false, the local system should not
+          initiate connections to the neighbor, and should not
+          respond to TCP connections attempts from the neighbor. If
+          the state of the BGP session is ESTABLISHED at the time
+          that this leaf is set to false, the BGP session should be
+          ceased.";
+    }
+  }
+
+  grouping bgp-neighbor-use-multiple-paths {
+    description
+      "Multipath configuration and state applicable to a BGP
+      neighbor";
+
+    container use-multiple-paths {
+      description
+        "Parameters related to the use of multiple-paths for the same
+        NLRI when they are received only from this neighbor";
+
+      container config {
+        description
+          "Configuration parameters relating to multipath";
+        uses bgp-common-use-multiple-paths-config;
+      }
+      container state {
+        config false;
+        description
+          "State parameters relating to multipath";
+        uses bgp-common-use-multiple-paths-config;
+      }
+
+      container ebgp {
+        description
+          "Multipath configuration for eBGP";
+        container config {
+          description
+            "Configuration parameters relating to eBGP multipath";
+          uses bgp-common-use-multiple-paths-ebgp-as-options-config;
+        }
+        container state {
+          config false;
+          description
+            "State information relating to eBGP multipath";
+          uses bgp-common-use-multiple-paths-ebgp-as-options-config;
+        }
+      }
+    }
+  }
+
+  grouping bgp-neighbor-state {
+    description
+      "Operational state parameters relating only to a BGP neighbor";
+
+    leaf session-state {
+      type enumeration {
+          enum IDLE {
+            description
+              "neighbor is down, and in the Idle state of the
+              FSM";
+          }
+          enum CONNECT {
+            description
+              "neighbor is down, and the session is waiting for
+              the underlying transport session to be established";
+          }
+          enum ACTIVE {
+            description
+              "neighbor is down, and the local system is awaiting
+              a conncetion from the remote peer";
+          }
+          enum OPENSENT {
+            description
+              "neighbor is in the process of being established.
+              The local system has sent an OPEN message";
+          }
+          enum OPENCONFIRM {
+            description
+              "neighbor is in the process of being established.
+              The local system is awaiting a NOTIFICATION or
+              KEEPALIVE message";
+          }
+          enum ESTABLISHED {
+            description
+              "neighbor is up - the BGP session with the peer is
+              established";
+          }
+        }
+      description
+        "Operational state of the BGP peer";
+    }
+
+    leaf last-established {
+      type oc-types:timeticks64;
+      description
+        "This timestamp indicates the time that the
+        BGP session last transitioned in or out of the Established
+        state.  The value is the timestamp in nanoseconds relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).
+
+        The BGP session uptime can be computed by clients as the
+        difference between this value and the current time in UTC
+        (assuming the session is in the ESTABLISHED state, per the
+        session-state leaf).";
+    }
+
+    leaf established-transitions {
+      type oc-yang:counter64;
+      description
+        "Number of transitions to the Established state for
+        the neighbor session.  This value is analogous to the
+        bgpPeerFsmEstablishedTransitions object from the standard
+        BGP-4 MIB";
+      reference
+        "RFC 4273 - Definitions of Managed Objects for BGP-4";
+    }
+
+    leaf-list supported-capabilities {
+      type identityref {
+        base oc-bgp-types:BGP_CAPABILITY;
+      }
+      description
+        "BGP capabilities negotiated as supported with the peer";
+    }
+
+    container messages {
+      description
+        "Counters for BGP messages sent and received from the
+        neighbor";
+      container sent {
+        description
+          "Counters relating to BGP messages sent to the neighbor";
+        uses bgp-neighbor-counters-message-types-state;
+        }
+
+      container received {
+        description
+          "Counters for BGP messages received from the neighbor";
+        uses bgp-neighbor-counters-message-types-state;
+      }
+    }
+
+    container queues {
+      description
+        "Counters related to queued messages associated with the
+        BGP neighbor";
+      uses bgp-neighbor-queue-counters-state;
+    }
+
+    leaf dynamically-configured {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, the peer was configured dynamically
+        due to an inbound connection request from a specified source prefix
+        within a dynamic-neighbor-prefix.";
+    }
+
+    leaf last-prefix-limit-exceeded {
+      type oc-types:timeticks64;
+      description
+        "This timestamp indicates the time that the BGP session last
+        violated a configured recived (pre-policy) or accepted (post-policy)
+        max prefix-limit for any AFI/SAFI combination
+        on the session.  The value is the timestamp in nanoseconds relative
+        to the Unix Epoch (Jan 1, 1970 00:00:00 UTC).
+
+        If the 'prefix-limit-exceeded' node is set to true for any AFI/SAFI
+        on the session, then the next restart time for the session can be
+        calculated as this value plus the configured 'restart-time' under
+        the neighbor timers.
+
+        This value should be retained across established sessions and is only
+        set/updated when prefix-limit-exceeded transitions from false/unset to
+        true.";
+    }
+  }
+
+  grouping bgp-neighbor-counters-message-types-state {
+    description
+      "Grouping of BGP message types, included for re-use
+      across counters";
+
+    leaf UPDATE {
+      type uint64;
+      description
+        "Number of BGP UPDATE messages announcing, withdrawing
+        or modifying paths exchanged.";
+    }
+
+    leaf NOTIFICATION {
+      type uint64;
+      description
+        "Number of BGP NOTIFICATION messages indicating an
+        error condition has occurred exchanged.";
+    }
+
+    leaf last-notification-time {
+      type oc-types:timeticks64;
+      description
+        "This timestamp indicates the time that a NOTIFICATION
+        message was sent or received on the peering session
+        (based on whether this leaf is associated with
+        sent or received messages).
+
+        The value is the timestamp in nanoseconds relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf last-notification-error-code {
+      type identityref {
+        base oc-bgp-types:BGP_ERROR_CODE;
+      }
+      description
+        "Indicates the last BGP error sent or received on the peering
+        session (based on whether this leaf is associated with
+        sent or received messages).";
+    }
+
+    leaf last-notification-error-subcode {
+      type identityref {
+        base oc-bgp-types:BGP_ERROR_SUBCODE;
+      }
+      description
+        "Indicates the last BGP error subcode sent or received on
+        the peering session (based on whether this leaf is associated
+        with sent or received messages)";
+    }
+  }
+
+  grouping bgp-neighbor-queue-counters-state {
+    description
+      "Counters relating to the message queues associated with the
+      BGP peer";
+
+    leaf input {
+      type uint32;
+      description
+        "The number of messages received from the peer currently
+        queued";
+    }
+
+    leaf output {
+      type uint32;
+      description
+        "The number of messages queued to be sent to the peer";
+    }
+  }
+
+  grouping bgp-neighbor-transport-state {
+    description
+      "Operational state parameters relating to the transport session
+      used for the BGP session";
+
+    leaf local-port {
+      type oc-inet:port-number;
+      description
+        "Local, source TCP port being used for the TCP session supporting
+        the BGP session";
+    }
+
+    leaf remote-address {
+      type oc-inet:ip-address;
+      description
+        "Remote address to which the BGP session has been
+        established";
+    }
+
+    leaf remote-port {
+      type oc-inet:port-number;
+      description
+        "The source TCP port being used by the peer for the TCP session
+        supporting the BGP session.  This is expected to be the same value
+        as the configured neighbor-port if the local device initiated the
+        connection or a different TCP port if the peer initiated the TCP
+        session.";
+    }
+  }
+
+  grouping bgp-neighbor-error-handling-state {
+    description
+      "Operational state parameters relating to enhanced error
+      error handling for BGP";
+
+    leaf erroneous-update-messages {
+      type uint32;
+      description
+        "The number of BGP UPDATE messages for which the
+        treat-as-withdraw mechanism has been applied based
+        on erroneous message contents";
+    }
+  }
+
+  grouping bgp-neighbor-timers-state {
+    description
+      "Operational state parameters relating to BGP timers associated
+      with the BGP session";
+
+    leaf negotiated-hold-time {
+      type uint16;
+      description
+        "The negotiated hold-time for the BGP session";
+    }
+  }
+
+  grouping bgp-neighbor-afi-safi-graceful-restart-state {
+    description
+      "Operational state variables relating to the graceful-restart
+      mechanism on a per-AFI-SAFI basis";
+
+    leaf received {
+      type boolean;
+      description
+        "This leaf indicates whether the neighbor advertised the
+        ability to support graceful-restart for this AFI-SAFI";
+    }
+
+    leaf advertised {
+      type boolean;
+      description
+        "This leaf indicates whether the ability to support
+        graceful-restart has been advertised to the peer";
+    }
+  }
+
+  grouping bgp-neighbor-graceful-restart-state {
+    description
+      "Operational state information relevant to graceful restart
+      for BGP";
+
+    leaf peer-restart-time {
+      type uint16 {
+        range 0..4096;
+      }
+      description
+        "The period of time (advertised by the peer) that
+        the peer expects a restart of a BGP session to
+        take";
+    }
+
+    leaf peer-restarting {
+      type boolean;
+      description
+        "This flag indicates whether the remote neighbor is currently
+        in the process of restarting, and hence received routes are
+        currently stale";
+    }
+
+    leaf local-restarting {
+      type boolean;
+      description
+        "This flag indicates whether the local neighbor is currently
+        restarting. The flag is unset after all NLRI have been
+        advertised to the peer, and the End-of-RIB (EOR) marker has
+        been unset";
+    }
+
+    leaf mode {
+      type enumeration {
+        enum HELPER_ONLY {
+          description
+            "The local router is operating in helper-only mode, and
+            hence will not retain forwarding state during a local
+            session restart, but will do so during a restart of the
+            remote peer";
+        }
+        enum BILATERAL {
+          description
+            "The local router is operating in both helper mode, and
+            hence retains forwarding state during a remote restart,
+            and also maintains forwarding state during local session
+            restart";
+        }
+        enum REMOTE_HELPER {
+          description
+            "The local system is able to retain routes during restart
+            but the remote system is only able to act as a helper";
+        }
+      }
+      description
+        "Ths leaf indicates the mode of operation of BGP graceful
+        restart with the peer";
+    }
+  }
+
+  grouping bgp-neighbor-afi-safi-state {
+    description
+      "Operational state parameters relating to an individual AFI,
+      SAFI for a neighbor";
+
+    leaf active {
+      type boolean;
+      description
+        "This value indicates whether a particular AFI-SAFI has
+        been succesfully negotiated with the peer. An AFI-SAFI
+        may be enabled in the current running configuration, but a
+        session restart may be required in order to negotiate the new
+        capability.";
+    }
+
+    container prefixes {
+      description "Prefix counters for the BGP session";
+      leaf received {
+        type uint32;
+        description
+          "The number of prefixes that are received from the
+          neighbor after applying any policies. This count is the
+          number of prefixes present in the post-policy Adj-RIB-In
+          for the neighbor";
+      }
+
+      leaf received-pre-policy {
+        type uint32;
+        description
+          "The number of prefixes that are received from the
+          neighbor before applying any policies. This count is
+          the number of prefixes present in the pre-policy
+          Adj-RIB-In for the neighbor";
+      }
+
+      leaf sent {
+        type uint32;
+        description
+          "The number of prefixes that are advertised to the
+          neighbor after applying any policies. This count is
+          the number of prefixes present in the post-policy
+          Adj-RIB-Out for the neighbor";
+      }
+
+      leaf installed {
+        type uint32;
+        description
+          "The number of prefices received from the neighbor that
+          are installed in the network instance RIB and actively used
+          for forwarding.
+
+          Routes that are actively used for forwarding are
+           defined to be those that:
+           - are selected, after the application of policies, to be
+             included in the Adj-RIB-In-Post, AND
+           - are selected by best path selection and hence installed
+             in the Loc-RIB (either as the only route, or as part of
+             a multipath set, AND
+           - are selected, after the application of protocol
+             preferences (e.g., administrative distance) as the
+             route to be used by the system's RIB";
+      }
+    }
+  }
+
+  grouping bgp-neighbor-afi-safi-list {
+    description
+      "List of address-families associated with the BGP neighbor";
+
+    list afi-safi {
+      key "afi-safi-name";
+
+      description
+        "AFI,SAFI configuration available for the
+        neighbour or group";
+
+
+      leaf afi-safi-name {
+        type leafref {
+          path "../config/afi-safi-name";
+        }
+        description
+          "Reference to the AFI-SAFI name used as a key
+          for the AFI-SAFI list";
+      }
+
+      container config {
+        description
+          "Configuration parameters for the AFI-SAFI";
+        uses bgp-common-mp-afi-safi-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to the AFI-SAFI";
+        uses bgp-common-mp-afi-safi-config;
+        uses bgp-neighbor-afi-safi-state;
+      }
+
+
+      container graceful-restart {
+        description
+          "Parameters relating to BGP graceful-restart";
+        container config {
+          description
+            "Configuration options for BGP graceful-restart";
+          uses bgp-common-mp-afi-safi-graceful-restart-config;
+        }
+        container state {
+          config false;
+          description
+            "State information for BGP graceful-restart";
+          uses bgp-common-mp-afi-safi-graceful-restart-config;
+          uses bgp-neighbor-afi-safi-graceful-restart-state;
+        }
+      }
+
+      uses bgp-common-structure-neighbor-group-add-paths;
+      uses bgp-common-mp-all-afi-safi-list-contents;
+      uses bgp-neighbor-use-multiple-paths;
+    }
+  }
+
+  grouping bgp-neighbor-base {
+    description
+      "Parameters related to a BGP neighbor";
+
+    container config {
+      description
+        "Configuration parameters relating to the BGP neighbor or
+        group";
+      uses bgp-neighbor-config;
+      uses bgp-common-neighbor-group-config;
+    }
+    container state {
+      config false;
+      description
+        "State information relating to the BGP neighbor";
+      uses bgp-neighbor-config;
+      uses bgp-common-neighbor-group-config;
+      uses bgp-neighbor-state;
+    }
+
+    container timers {
+      description
+        "Timers related to a BGP neighbor";
+      container config {
+        description
+          "Configuration parameters relating to timers used for the
+          BGP neighbor";
+        uses bgp-common-neighbor-group-timers-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to the timers used for the BGP
+          neighbor";
+        uses bgp-common-neighbor-group-timers-config;
+        uses bgp-neighbor-timers-state;
+      }
+    }
+
+    container transport {
+      description
+        "Transport session parameters for the BGP neighbor";
+      container config {
+        description
+          "Configuration parameters relating to the transport
+          session(s) used for the BGP neighbor";
+        uses bgp-common-neighbor-group-transport-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to the transport session(s)
+          used for the BGP neighbor";
+        uses bgp-common-neighbor-group-transport-config;
+        uses bgp-neighbor-transport-state;
+      }
+    }
+
+    container error-handling {
+      description
+        "Error handling parameters used for the BGP neighbor or
+        group";
+      container config {
+        description
+          "Configuration parameters enabling or modifying the
+          behavior or enhanced error handling mechanisms for the BGP
+          neighbor";
+        uses bgp-common-neighbor-group-error-handling-config;
+      }
+      container state {
+        config false;
+        description
+          "State information relating to enhanced error handling
+          mechanisms for the BGP neighbor";
+        uses bgp-common-neighbor-group-error-handling-config;
+        uses bgp-neighbor-error-handling-state;
+      }
+    }
+
+    container graceful-restart {
+      description
+        "Parameters relating the graceful restart mechanism for BGP";
+      container config {
+        description
+          "Configuration parameters relating to graceful-restart";
+        uses bgp-common-graceful-restart-config;
+      }
+      container state {
+        config false;
+        description
+          "State information associated with graceful-restart";
+        uses bgp-common-graceful-restart-config;
+        uses bgp-neighbor-graceful-restart-state;
+      }
+    }
+
+    uses bgp-common-structure-neighbor-group-logging-options;
+    uses bgp-common-structure-neighbor-group-ebgp-multihop;
+    uses bgp-common-structure-neighbor-group-route-reflector;
+    uses bgp-common-structure-neighbor-group-as-path-options;
+    uses bgp-neighbor-use-multiple-paths;
+    uses oc-rpol:apply-policy-group;
+
+    container afi-safis {
+      description
+        "Per-address-family configuration parameters associated with
+        the neighbor";
+      uses bgp-neighbor-afi-safi-list;
+    }
+  }
+
+  grouping bgp-neighbor-list {
+    description
+      "The list of BGP neighbors";
+
+    list neighbor {
+      key "neighbor-address";
+      description
+        "List of BGP neighbors configured on the local system,
+        uniquely identified by peer IPv[46] address";
+
+      leaf neighbor-address {
+        type leafref {
+          path "../config/neighbor-address";
+        }
+        description
+          "Reference to the address of the BGP neighbor used as
+          a key in the neighbor list";
+      }
+
+      uses bgp-neighbor-base;
+      uses oc-bfd:bfd-enable;
+    }
+
+  }
+}

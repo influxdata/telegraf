@@ -1,0 +1,119 @@
+module openconfig-openflow-types {
+
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/openflow/types";
+
+  prefix "openflow-types";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines types related to the Openflow configuration
+    and operational state model.";
+
+  oc-ext:openconfig-version "0.2.0";
+
+  revision "2022-05-24" {
+    description
+      "Remove module extension oc-ext:regexp-posix by making pattern regexes
+      conform to RFC6020/7950.
+
+      Types impacted:
+      - datapath-id";
+    reference "0.2.0";
+  }
+
+  revision "2020-06-30" {
+    description
+      "Add OpenConfig POSIX pattern extensions.";
+    reference "0.1.3";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "0.1.1";
+  }
+
+  revision "2017-06-01" {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  typedef failure-mode {
+    type enumeration {
+      enum SECURE {
+        description
+          "Packets and messages destined to the controllers are
+          dropped. Flow entries continue to expire according to
+          their timeouts.";
+      }
+      enum STANDALONE {
+        description
+          "Processes all packets using the OFPP_NORMAL reserved
+          port. The switch acts as a legacy Ethernet switch or
+          router.";
+      }
+    }
+    description
+      "Type to define Openflow failure mode.";
+  }
+
+  typedef transport {
+    type enumeration {
+      enum TCP {
+        description
+          "Transmission Control Protocol (TCP).";
+      }
+      enum TLS {
+        description
+          "Transport Layer Security (TLS).";
+      }
+    }
+    description
+      "Type to define Openflow transport protocol.";
+  }
+
+  typedef auxiliary-id {
+    type uint8 {
+      range "0..15";
+    }
+    description
+      "A Controller may have multiple auxiliary connections as
+      specified by the Openflow protocol. The main Controller
+      connection should always have the auxiliary-id set to zero.
+      All other connections must have an auxiliary-id different
+      from 0.";
+  }
+
+  typedef datapath-id {
+    type string {
+      pattern '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){7}';
+      oc-ext:posix-pattern '^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){7}$';
+    }
+    description
+        "The datapath-id type represents an OpenFlow
+        datapath identifier. The lower 48-bits are for
+        a MAC address, while the upper 16-bits are
+        implementer-defined.";
+  }
+
+}

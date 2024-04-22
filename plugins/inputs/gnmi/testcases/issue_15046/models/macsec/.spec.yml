@@ -1,0 +1,7 @@
+- name: openconfig-macsec
+  docs:
+    - yang/macsec/openconfig-macsec.yang
+    - yang/macsec/openconfig-macsec-types.yang
+  build:
+    - yang/macsec/openconfig-macsec.yang
+  run-ci: true

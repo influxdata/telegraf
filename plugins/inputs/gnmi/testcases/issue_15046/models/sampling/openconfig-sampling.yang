@@ -1,0 +1,44 @@
+module openconfig-sampling {
+  yang-version "1";
+  namespace "http://openconfig.net/yang/sampling";
+  prefix "oc-sampling";
+
+  import openconfig-extensions {
+    prefix oc-ext;
+  }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines top-level configuration and operational
+    state data related to traffic sampling.
+
+    For modularity purposes, the top-level sampling container provides
+    a natural attachment point for implementations such as sFlow, IPFix,
+    NETFLOW";
+
+  revision 2022-06-21 {
+    description
+      "Initial revision";
+    reference "0.1.0";
+  }
+
+  oc-ext:openconfig-version "0.1.0";
+
+  grouping sampling-top {
+    description
+      "Top level sampling containers";
+
+    container sampling {
+      description
+        "Top-level container for sampling-related configuration and
+        operational state data";
+    }
+  }
+
+  uses sampling-top;
+}

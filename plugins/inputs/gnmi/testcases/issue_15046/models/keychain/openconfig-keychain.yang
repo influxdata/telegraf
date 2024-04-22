@@ -1,0 +1,311 @@
+module openconfig-keychain {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/oc-keychain";
+
+  prefix "oc-keychain";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-keychain-types { prefix oc-keychain-types; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-yang-types { prefix oc-yang; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module describes a YANG model for keychain configuration
+    and management. These keys can be changed frequently to
+    increase security in long-lived connections. A keychain can be used
+    for authenticaion in a number of scenarios, including in routing protocols
+    (e.g. BGP, IS-IS, OSPF).  A keychain provides a solution for storing
+    a number of different keys, each key string value is associated with a
+    specific key id, name, the lifetime that the key is valid and an
+    encryption algorithm.
+
+    This model defines a central location for defining named keychains,
+    which may be then referenced by other models such as routing protocol
+    management.";
+
+  oc-ext:openconfig-version "0.4.0";
+
+  revision "2022-11-05" {
+    description
+      "Update key-id to a union of hex-string and uint64.";
+    reference "0.4.0";
+  }
+
+  revision "2022-03-05" {
+    description
+      "Add prefix qualification to keychain-ref";
+    reference "0.3.0";
+  }
+
+  revision "2021-12-31" {
+    description
+      "Add keychain-ref type to allow for a resuable reference to a keychain.";
+    reference "0.2.0";
+  }
+
+  revision "2021-10-01" {
+    description
+      "Initial revision of keychain model.";
+    reference "0.1.0";
+  }
+
+  typedef keychain-ref {
+    type leafref {
+      path "/oc-keychain:keychains/oc-keychain:keychain/" +
+           "oc-keychain:config/oc-keychain:name";
+    }
+    description
+      "A reference to a keychain defined on the system that can be used by
+      modules that require access to keychains.";
+  }
+
+  grouping valid-lifetime-config {
+    description
+      "This grouping defines key begin lifetime parameters.";
+
+    leaf start-time {
+      type oc-types:timeticks64;
+      description
+        "The time at which the key becomes valid for use.
+        The value is the timestamp in nanoseconds relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf end-time {
+      type oc-types:timeticks64;
+      description
+        "The time at which the key becomes invalid for use.
+        The value is the timestamp in nanoseconds relative to
+        the Unix Epoch (Jan 1, 1970 00:00:00 UTC).
+
+        Leaving this value unset, or setting it to 0, indicates that
+        the key remains valid forever (no end time).";
+    }
+  }
+
+  grouping lifetime-symmetry-config {
+    description
+      "Grouping to define configuration data for managing how
+      send and receive lifetime are specified.";
+
+    leaf send-and-receive {
+      type boolean;
+      description
+        "When this is set to true (the default value), the specified
+        send lifetime is also used in the receive direction.  When set
+        to false, the device should use the specified receive-lifetime
+        for the receive direction (asymmetric mode).  If send-and-receive
+        is false, and the device does not support asymmetric configuration,
+        the config should be rejected as unsupported.";
+      default true;
+    }
+  }
+
+  grouping lifetime-base {
+    description
+      "This grouping defines key lifetime parameters.";
+
+    container send-lifetime {
+      description
+        "Specifies the lifetime of the key for sending authentication
+        information to the peer.";
+
+      container config {
+        description
+          "Configuration data for key send lifetime.";
+
+        uses valid-lifetime-config;
+        uses lifetime-symmetry-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for key send lifetime.";
+
+        uses valid-lifetime-config;
+        uses lifetime-symmetry-config;
+      }
+    }
+
+    container receive-lifetime {
+      description
+        "Specify the validity lifetime of the key in the receive direction.
+        Some platforms may only support symmetric send and receive lifetimes,
+        in which case the receive-lifetime is typically not specified.";
+
+      container config {
+        description
+          "Configuration data for key receive lifetime.";
+
+        uses valid-lifetime-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for key receive lifetime.";
+
+        uses valid-lifetime-config;
+      }
+    }
+  }
+
+  grouping keychain-base-config {
+    description
+      "This grouping defines key-chain parameters.";
+
+    leaf name {
+      type string;
+      description
+        "Keychain name.";
+    }
+
+    leaf tolerance {
+      type union {
+        type enumeration {
+          enum FOREVER {
+            description
+              "Receive key does not expire (equivalent to infinite tolerance).";
+          }
+        }
+        type uint32;
+      }
+      description
+        "Tolerance (overlap time) that a receive key should be accepted.  May be
+        expressed as range in seconds, or using the FOREVER value to indicate
+        that the key does not expire.  The default value should be 0, i.e., no
+        tolerance.";
+    }
+  }
+
+  grouping keychain-key-config {
+    description "This grouping defines key-chain key parameters.";
+
+    leaf key-id {
+      type union {
+        type oc-yang:hex-string {
+          length "1..64";
+        }
+        type uint64;
+      }
+      description
+        "Identifier for the key within the keychain.";
+    }
+
+    leaf secret-key {
+      type string;
+      description
+        "Authentication key supplied as an encrypted value.  The system should store and
+        return the key in encrypted form.";
+    }
+
+    leaf crypto-algorithm {
+      type identityref {
+        base oc-keychain-types:CRYPTO_TYPE;
+      }
+      description
+        "Cryptographic algorithm associated with the key.  Note that not all cryptographic
+        algorithms are available in all contexts (e.g., across different protocols).";
+    }
+  }
+
+  grouping keychain-key-base {
+    description
+      "This grouping defines keychain parameters";
+
+  container keys {
+    description
+    "list of keys to be stored";
+      list key {
+        key "key-id";
+        description
+          "List of configured keys for the keychain.";
+
+        leaf key-id {
+          type leafref {
+            path "../config/key-id";
+          }
+          description
+            "Reference to key id.";
+        }
+
+        container config {
+          description
+            "This container defines keychain key configuration.";
+
+          uses keychain-key-config;
+        }
+
+        container state {
+          config false;
+          description
+            "This container defines keychain key state.";
+
+          uses keychain-key-config;
+        }
+
+        uses lifetime-base;
+        }
+    }
+  }
+
+  grouping keychain-common-base {
+    description
+      "This grouping defines keychain parameters";
+
+    container config {
+      description
+        "This container defines keychain configuration.";
+
+      uses keychain-base-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines keychain state information.";
+
+      uses keychain-base-config;
+    }
+  }
+
+  grouping keychain-top {
+    description
+      "This grouping define top level structure.";
+
+    container keychains {
+      description
+        "This container defines keychains.";
+
+      list keychain {
+        key "name";
+        description
+          "List of defined keychains.";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to configured keychain name";
+        }
+
+        uses keychain-common-base;
+        uses keychain-key-base;
+      }
+    }
+  }
+
+  uses keychain-top;
+}

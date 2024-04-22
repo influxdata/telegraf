@@ -1,0 +1,583 @@
+submodule openconfig-ospfv2-global {
+
+  belongs-to openconfig-ospfv2 {
+    prefix "oc-ospfv2";
+  }
+
+  import ietf-yang-types { prefix "yang"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-routing-policy { prefix "oc-rpol"; }
+  import openconfig-ospf-types { prefix "oc-ospft"; }
+
+  // Include common submodule
+  include openconfig-ospfv2-common;
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This submodule provides OSPFv2 configuration and operational
+    state parameters that are global to a particular OSPF instance";
+
+  oc-ext:openconfig-version "0.5.1";
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "0.5.1";
+  }
+
+  revision "2023-08-25" {
+    description
+      "Add leaf metric to lsdb-summary-lsa-state.";
+    reference "0.5.0";
+  }
+
+  revision "2023-08-09" {
+    description
+      "Update interface key to use interface-id type";
+    reference "0.4.3";
+  }
+
+  revision "2023-07-05" {
+    description
+      "Fix typo in experimental-te leaf description.";
+    reference "0.4.2";
+  }
+
+  revision "2023-03-06" {
+    description
+      "Clarify use of interface-ref.";
+    reference "0.4.1";
+  }
+
+  revision "2022-02-10" {
+    description
+      "Fix spelling error in retransmission-queue-length leaf.";
+    reference "0.4.0";
+  }
+
+  revision "2021-07-28" {
+    description
+      "Add prefix to qualify when statements.";
+    reference "0.3.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "0.3.0";
+  }
+
+  revision "2019-11-28" {
+    description
+      "Revert path changes in when statements in LSDB model";
+    reference "0.2.2";
+  }
+
+  revision "2019-11-05" {
+    description
+      "Fix paths in when statements in LSDB model";
+    reference "0.2.1";
+  }
+
+  revision "2019-07-09" {
+    description
+      "Normalise all timeticks64 to be expressed in nanoseconds.";
+    reference "0.2.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.1.3";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Bug fixes in when statements in lsdb";
+    reference "0.1.2";
+  }
+
+  revision "2017-08-24" {
+    description
+      "Minor formatting fixes.";
+    reference "0.1.1";
+  }
+
+  revision "2017-02-28"{
+    description
+      "Initial public release of OSPFv2";
+    reference "0.1.0";
+  }
+
+  revision "2016-06-24" {
+    description
+      "Initial revision";
+    reference "0.0.1";
+  }
+
+  grouping ospfv2-global-config {
+    description
+      "Global configuration for OSPFv2";
+
+    leaf router-id {
+      type yang:dotted-quad;
+      description
+        "A 32-bit number represented as a dotted quad assigned to
+        each router running the OSPFv2 protocol. This number should
+        be unique within the autonomous system";
+      reference "rfc2828";
+    }
+
+    leaf summary-route-cost-mode {
+      type enumeration {
+        enum RFC1583_COMPATIBLE {
+          description
+            "Specify that summary routes should assume the cost of
+            the lowest-cost more-specific route as per the behaviour
+            specified in RFC1583";
+        }
+        enum RFC2328_COMPATIBLE {
+          description
+            "Specify that summary routes should assume the cost of the
+            highest-cost more-specific route as per the revised
+            behaviour specified in RFC2328";
+        }
+      }
+      default "RFC2328_COMPATIBLE";
+      description
+        "Specify how costs for the summary routes should be specified
+        as per the behaviour in the original OSPF specification
+        RFC1583, or alternatively whether the revised behaviour
+        described in RFC2328 should be utilised";
+    }
+
+    leaf igp-shortcuts {
+      type boolean;
+      description
+        "When this leaf is set to true, OSPFv2 will route traffic to
+        a remote system via any LSP to the system that is marked as
+        shortcut eligible.";
+    }
+
+    leaf log-adjacency-changes {
+      type boolean;
+      description
+        "When this leaf is set to true, a log message will be
+        generated when the state of an OSPFv2 neighbour changes.";
+    }
+
+    leaf hide-transit-only-networks {
+      type boolean;
+      description
+        "When this leaf is set to true, do not advertise prefixes
+        into OSPFv2 that correspond to transit interfaces, as per
+        the behaviour discussed in RFC6860.";
+      reference
+        "RFC6860 - Hiding Transit-Only Networks in OSPF";
+    }
+  }
+
+  grouping ospfv2-global-spf-timers-config {
+    description
+      "Configuration parameters relating to global SPF timer
+      parameters for OSPFv2";
+
+    leaf initial-delay {
+      // rjs TODO: IS-IS model has this as decimal64 - should it be
+      // that or uint32 msec?
+      type uint32;
+      units msec;
+      description
+        "The value of this leaf specifies the time between a change
+        in topology being detected and the first run of the SPF
+        algorithm.";
+    }
+
+    leaf maximum-delay {
+      // rjs TODO: same question as above
+      type uint32;
+      units msec;
+      description
+        "The value of this leaf specifies the maximum delay between
+        a topology change being detected and the SPF algorithm
+        running. This value is used for implementations that support
+        increasing the wait time between SPF runs.";
+    }
+
+    // rjs TODO: some questions here around what we should specify:
+    // JUNOS has rapid-runs and holddown
+    // Cisco has maximum time between runs, and then a doubling of
+    // the wait interval up to that maximum.
+    // ALU has first-wait, second-wait, max-wait
+  }
+
+  grouping ospfv2-global-lsa-generation-timers-config {
+    description
+      "Configuration parameters relating to global LSA generation
+      parameters for OSPFv2";
+
+    leaf initial-delay {
+      type uint32;
+      units msec;
+      description
+        "The value of this leaf specifies the time between the first
+        time an LSA is generated and advertised and the subsequent
+        generation of that LSA.";
+    }
+
+    leaf maximum-delay {
+      type uint32;
+      units msec;
+      description
+        "The value of this leaf specifies the maximum time between the
+        generation of an LSA and the subsequent re-generation of that
+        LSA. This value is used in implementations that support
+        increasing delay between generation of an LSA";
+    }
+  }
+
+  grouping ospfv2-global-spf-timers-state {
+    description
+      "Operational state parameters relating to OSPFv2 global
+      timers";
+
+    uses ospfv2-common-timers;
+  }
+
+  grouping ospfv2-global-lsa-generation-timers-state {
+    description
+      "Operational state parameters relating to OSPFv2 global
+      timers";
+
+    uses ospfv2-common-timers;
+  }
+
+  grouping ospfv2-global-graceful-restart-config {
+    description
+      "Configuration parameters relating to graceful restart for
+      OSPFv2";
+
+    leaf enabled {
+      type boolean;
+      description
+        "When the value of this leaf is set to true, graceful restart
+        is enabled on the local system. In this case, the system will
+        use Grace-LSAs to signal that it is restarting to its
+        neighbors.";
+    }
+
+    leaf helper-only {
+      type boolean;
+      description
+        "Operate graceful-restart only in helper mode. When this leaf
+        is set to true, the local system does not use Grace-LSAs to
+        indicate that it is restarting, but will accept Grace-LSAs
+        from remote systems, and suppress withdrawl of adjacencies
+        of the system for the grace period specified";
+    }
+  }
+
+  grouping ospfv2-global-mpls-config {
+    description
+      "Configuration parameters for OSPFv2 options which
+      relate to MPLS";
+
+    leaf traffic-engineering-extensions {
+      type boolean;
+      description
+        "When this leaf is set to true, use traffic engineering
+        extensions for OSPF to advertise TE parameters via type 10
+        Opaque LSAs";
+    }
+  }
+
+  grouping ospfv2-global-inter-areapp-config {
+    description
+      "Configuration parameters for OSPFv2 policies which propagate
+      prefixes between areas";
+
+    leaf src-area {
+      type leafref {
+        // we are at ospf/global/inter-area-propagation-policies/...
+        // inter-area-propagation-policy/config/src-area
+        path "../../../../../areas/area/identifier";
+      }
+      description
+        "The area from which prefixes are to be exported.";
+    }
+
+    leaf dst-area {
+      type leafref {
+        // we are at ospf/global/inter-area-propagation-policies/...
+        // inter-area-propagation-policy/config/src-area
+        path "../../../../../areas/area/identifier";
+      }
+      description
+        "The destination area to which prefixes are to be imported";
+    }
+
+    uses oc-rpol:apply-policy-import-config;
+    uses oc-rpol:default-policy-import-config;
+  }
+
+  grouping ospfv2-global-max-metric-config {
+    description
+      "Configuration paramters relating to setting the OSPFv2
+      maximum metric.";
+
+    leaf set {
+      type boolean;
+      description
+        "When this leaf is set to true, all non-stub interfaces of
+        the local system are advertised with the maximum metric,
+        such that the router does not act as a transit system,
+        (similarly to the IS-IS overload functionality).";
+      reference
+        "RFC3137 - OSPF Stub Router Advertisement";
+    }
+
+    leaf timeout {
+      type uint64;
+      units "seconds";
+      description
+        "The delay, in seconds, after which the advertisement of
+        entities with the maximum metric should be cleared, and
+        the system reverts to the default, or configured, metrics.";
+    }
+
+    leaf-list include {
+      type identityref {
+        base "oc-ospft:MAX_METRIC_INCLUDE";
+      }
+      description
+        "By default, the maximum metric is advertised for all
+        non-stub interfaces of a device. When identities are
+        specified within this leaf-list, additional entities
+        are also advertised with the maximum metric according
+        to the values within the list.";
+    }
+
+    leaf-list trigger {
+      type identityref {
+        base "oc-ospft:MAX_METRIC_TRIGGER";
+      }
+      description
+        "By default, the maximum metric is only advertised
+        when the max-metric/set leaf is specified as true.
+        In the case that identities are specified within this
+        list, they provide additional triggers (e.g., system
+        boot) that may cause the max-metric to be set. In this
+        case, the system should still honour the timeout specified
+        by the max-metric/timeout leaf, and clear the max-metric
+        advertisements after the expiration of this timer.";
+    }
+  }
+
+  grouping ospfv2-global-structural {
+    description
+      "Top level structural grouping for OSPFv2 global parameters";
+
+    container global {
+      description
+        "Configuration and operational state parameters for settings
+        that are global to the OSPFv2 instance";
+
+      container config {
+        description
+          "Global configuration parameters for OSPFv2";
+        uses ospfv2-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for OSPFv2";
+        uses ospfv2-global-config;
+      }
+
+      container timers {
+        description
+          "Configuration and operational state parameters for OSPFv2
+          timers";
+
+        container spf {
+          description
+            "Configuration and operational state parameters relating
+            to timers governing the operation of SPF runs";
+
+          container config {
+            description
+              "Configuration parameters relating to global OSPFv2
+              SPF timers";
+            uses ospfv2-global-spf-timers-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to the global
+              OSPFv2 SPF timers";
+            uses ospfv2-global-spf-timers-config;
+            uses ospfv2-global-spf-timers-state;
+          }
+        }
+
+        container max-metric {
+          description
+            "Configuration and operational state parameters relating
+            to setting the OSPFv2 maximum metric.";
+
+          container config {
+            description
+              "Configuration parameters relating to setting the OSPFv2
+              maximum metric for a set of advertised entities.";
+            uses ospfv2-global-max-metric-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to setting the
+              OSPFv2 maximum metric for a set of advertised entities.";
+            uses ospfv2-global-max-metric-config;
+          }
+        }
+
+        container lsa-generation {
+          description
+            "Configuration and operational state parameters relating
+            to timers governing the generation of LSAs by the local
+            system";
+
+          container config {
+            description
+              "Configuration parameters relating to the generation of
+              LSAs by the local system";
+            uses ospfv2-global-lsa-generation-timers-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to the generation
+              of LSAs by the local system";
+            uses ospfv2-global-lsa-generation-timers-config;
+            uses ospfv2-global-lsa-generation-timers-state;
+          }
+        }
+      }
+
+      container graceful-restart {
+        description
+          "Configuration and operational state parameters for OSPFv2
+          graceful restart";
+
+        container config {
+          description
+            "Configuration parameters relating to OSPFv2 graceful
+            restart";
+          uses ospfv2-global-graceful-restart-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to OSPFv2 graceful
+            restart";
+          uses ospfv2-global-graceful-restart-config;
+        }
+      }
+
+      container mpls {
+        description
+          "OSPFv2 parameters relating to MPLS";
+
+        container config {
+          description
+            "Configuration parameters relating to MPLS for OSPFv2";
+          uses ospfv2-global-mpls-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to MPLS for
+            OSPFv2";
+          uses ospfv2-global-mpls-config;
+        }
+
+        container igp-ldp-sync {
+          description
+            "OSPFv2 parameters relating to LDP/IGP synchronization";
+
+          container config {
+            description
+              "Configuration parameters relating to LDP/IG
+              synchronization.";
+            uses ospfv2-common-mpls-igp-ldp-sync-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state variables relating to LDP/IGP
+              synchronization";
+            uses ospfv2-common-mpls-igp-ldp-sync-config;
+          }
+        }
+      }
+
+      container inter-area-propagation-policies {
+        description
+          "Policies defining how inter-area propagation should be performed
+          by the OSPF instance";
+
+        list inter-area-propagation-policy {
+          key "src-area dst-area";
+          description
+            "A list of connections between pairs of areas - routes are
+            propagated from the source (src) area to the destination (dst)
+            area according to the policy specified";
+
+          leaf src-area {
+            type leafref {
+              path "../config/src-area";
+            }
+            description
+              "Reference to the source area";
+          }
+
+          leaf dst-area {
+            type leafref {
+              path "../config/dst-area";
+            }
+            description
+              "Reference to the destination area";
+          }
+
+          container config {
+            description
+              "Configuration parameters relating to the inter-area
+              propagation policy";
+            uses ospfv2-global-inter-areapp-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to the inter-area
+              propagation policy";
+            uses ospfv2-global-inter-areapp-config;
+          }
+        }
+      }
+    }
+  }
+}

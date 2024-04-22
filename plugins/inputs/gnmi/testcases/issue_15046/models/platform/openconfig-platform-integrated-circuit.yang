@@ -1,0 +1,180 @@
+module openconfig-platform-integrated-circuit {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/platform/integrated-circuit";
+
+  prefix "oc-ic";
+
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  organization "OpenConfig working group";
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines extensions to the OpenConfig platform model
+    that apply to integrated circuit (INTEGRATED_CIRCUIT) components.
+    These components are generically forwarding NPUs or ASICs within
+    the system for which configuration or state is applicable.";
+
+  oc-ext:openconfig-version "0.3.1";
+
+  revision "2022-04-20" {
+    description
+      "Remove unused import";
+    reference "0.3.1";
+  }
+
+  revision "2021-08-09" {
+    description
+      "Amendments to the platform capacity model.";
+    reference "0.3.0";
+  }
+
+  revision "2021-07-08" {
+    description
+      "Adding integrated circuit memory parity error counters.";
+    reference "0.2.0";
+  }
+
+  revision "2021-06-21" {
+    description
+      "Fix typos in description statements.";
+    reference "0.1.2";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace.";
+    reference "0.1.1";
+  }
+
+  revision "2021-05-16" {
+    description
+      "Initial revision with platform capacity.";
+    reference "0.1.0";
+  }
+
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  grouping backplane-facing-capacity-structural {
+    description
+      "Structural grouping for reporting on backplane-facing capacity of an integrated
+      circuit.";
+
+    container backplane-facing-capacity {
+      description
+        "This container allows a particular INTEGRATED_CIRCUIT to report its
+        available backplane-facing bandwidth. Where an integrated circuit is connected
+        by one or more links to the system's backplane, the capacity is the total cross-
+        sectional bandwidth available from the input ports of the integrated circuit
+        across the fabric. The capacity should also reflect the operational status of
+        the links.";
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to backplane capacity.";
+
+        uses backplane-capacity-state;
+      }
+    }
+  }
+
+  grouping backplane-capacity-state {
+    description
+      "Operational state relating to backplane capacity.";
+
+    leaf total {
+      type uint64;
+      units "bits per second";
+      description
+        "Total backplane-facing capacity that is available in the presence
+        of no link failures or degradation.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf total-operational-capacity {
+      type uint64;
+      units "bits per second";
+      description
+        "Total backplane-facing capacity that is currently available based
+        on the active links.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf consumed-capacity {
+      type uint64;
+      units "bits per second";
+      description
+        "Backplane-facing capacity that is consumed by front-panel ports that are connected
+        to the integrated circuit and are operationally up.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf available-pct {
+      type uint16;
+      description
+        "Percentage of the total backplane-facing capacity that is currently available to the front
+        panel ports taking into account failures and/or degradation within the system.
+
+        In the case that there is more backplane-facing capacity available than the front-panel
+        ports consume, this value may be greater than 100%.";
+      oc-ext:telemetry-on-change;
+    }
+  }
+
+  grouping integrated-circuit-memory {
+    description
+      "Structural grouping for integrated circuit memory.";
+
+    container memory {
+      description
+        "Container for integrated circuit memory.";
+
+      container state {
+        config false;
+        description
+          "Operational state parameters relating to integrated circuit memory.";
+
+        uses integrated-circuit-memory-state;
+      }
+    }
+  }
+
+  grouping integrated-circuit-memory-state {
+    description
+      "Counters that correspond to parity errors in integrated circuit memory";
+
+    leaf corrected-parity-errors {
+      type uint64;
+      description
+        "Number of corrected parity errors. Single bit ECC errors can be
+        detected and corrected by most integrated circuits.";
+    }
+
+    leaf uncorrected-parity-errors {
+      type uint64;
+      description
+        "Number of uncorrected parity errors. Multi-bit ECC errors can be
+        detected but cannot be corrected by most integrated circuits.";
+    }
+
+    leaf total-parity-errors {
+      type uint64;
+      description
+        "Total number of parity errors. This includes both the corrected and
+        uncorrected parity errors.";
+    }
+  }
+
+  augment "/oc-platform:components/oc-platform:component/oc-platform:integrated-circuit" {
+    description
+      "Augment integrated circuit components with backplane-facing capacity and memory errors.";
+    uses backplane-facing-capacity-structural;
+    uses integrated-circuit-memory;
+  }
+}

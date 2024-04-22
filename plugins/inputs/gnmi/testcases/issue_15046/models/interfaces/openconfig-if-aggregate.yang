@@ -1,0 +1,249 @@
+module openconfig-if-aggregate {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/interfaces/aggregate";
+
+  prefix "oc-lag";
+
+  // import some basic types
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-if-ethernet { prefix oc-eth; }
+  import iana-if-type { prefix ianaift; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Model for managing aggregated (aka bundle, LAG) interfaces.";
+
+  oc-ext:openconfig-version "2.4.4";
+
+  revision "2022-06-28" {
+    description
+      "Remove reference to invalid oc-ift type check";
+    reference "2.4.4";
+  }
+
+  revision "2020-05-01" {
+    description
+      "Update when statements to reference config nodes
+      from config true elements.";
+    reference "2.4.3";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Update import prefix for iana-if-type module";
+    reference "2.4.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "2.3.2";
+  }
+
+  revision "2018-03-23" {
+    description
+      "Fix/cleanup when statements in aggregates model.";
+    reference "2.3.1";
+  }
+
+  revision "2018-01-05" {
+    description
+      "Add logical loopback to interface.";
+    reference "2.3.0";
+  }
+
+  revision "2017-12-22" {
+    description
+      "Add IPv4 proxy ARP configuration.";
+    reference "2.2.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Added IPv6 router advertisement configuration.";
+    reference "2.1.0";
+  }
+
+  revision "2017-07-14" {
+    description
+      "Added Ethernet/IP state data; Add dhcp-client;
+      migrate to OpenConfig types modules; Removed or
+      renamed opstate values";
+    reference "2.0.0";
+  }
+
+  revision "2016-12-22" {
+    description
+      "Fixes to Ethernet interfaces model";
+    reference "1.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  typedef aggregation-type {
+    type enumeration {
+      enum LACP {
+        description "LAG managed by LACP";
+      }
+      enum STATIC {
+        description "Statically configured bundle / LAG";
+      }
+    }
+    description
+      "Type to define the lag-type, i.e., how the LAG is
+      defined and managed";
+  }
+
+  // grouping statements
+
+
+  grouping aggregation-logical-config {
+    description
+      "Configuration data for aggregate interfaces";
+
+
+    leaf lag-type {
+      type aggregation-type;
+      description
+        "Sets the type of LAG, i.e., how it is
+        configured / maintained";
+    }
+
+    leaf min-links {
+      type uint16;
+      description
+        "Specifies the mininum number of member
+        interfaces that must be active for the aggregate interface
+        to be available";
+    }
+  }
+
+  grouping aggregation-logical-state {
+    description
+      "Operational state data for aggregate interfaces";
+
+    leaf lag-speed {
+      type uint32;
+      units Mbps;
+      description
+        "Reports effective speed of the aggregate interface,
+        based on speed of active member interfaces";
+    }
+
+    leaf-list member {
+      when "../../config/lag-type = 'STATIC'" {
+        description
+          "The simple list of member interfaces is active
+          when the aggregate is statically configured";
+      }
+      type oc-if:base-interface-ref;
+      description
+        "List of current member interfaces for the aggregate,
+        expressed as references to existing interfaces";
+    }
+  }
+
+  grouping aggregation-logical-top {
+    description "Top-level data definitions for LAGs";
+
+    container aggregation {
+
+      description
+        "Options for logical interfaces representing
+        aggregates";
+
+      container config {
+        description
+          "Configuration variables for logical aggregate /
+          LAG interfaces";
+
+        uses aggregation-logical-config;
+      }
+
+      container state {
+
+        config false;
+        description
+          "Operational state variables for logical
+          aggregate / LAG interfaces";
+
+        uses aggregation-logical-config;
+        uses aggregation-logical-state;
+
+      }
+    }
+  }
+
+  grouping ethernet-if-aggregation-config {
+    description
+      "Adds configuration items for Ethernet interfaces
+      belonging to a logical aggregate / LAG";
+
+    leaf aggregate-id {
+      type leafref {
+        path "/oc-if:interfaces/oc-if:interface/oc-if:name";
+      }
+      description
+        "Specify the logical aggregate interface to which
+        this interface belongs";
+    }
+  }
+
+  // data definition statements
+
+  // augment statements
+
+  augment "/oc-if:interfaces/oc-if:interface" {
+
+    description "Adds LAG configuration to the interface module";
+
+    uses aggregation-logical-top {
+      when "oc-if:config/oc-if:type = 'ianaift:ieee8023adLag'" {
+        description
+          "active when the interface is set to type LAG";
+      }
+    }
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-eth:ethernet/" +
+    "oc-eth:config" {
+    description
+      "Adds LAG settings to individual Ethernet interfaces";
+
+    uses ethernet-if-aggregation-config;
+  }
+
+  augment "/oc-if:interfaces/oc-if:interface/oc-eth:ethernet/" +
+    "oc-eth:state" {
+    description
+      "Adds LAG settings to individual Ethernet interfaces";
+
+    uses ethernet-if-aggregation-config;
+  }
+
+  // rpc statements
+
+  // notification statements
+
+}

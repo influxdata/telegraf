@@ -1,0 +1,9 @@
+- name: openconfig-openflow
+  docs:
+    - yang/openflow/openconfig-openflow-types.yang
+    - yang/system/openconfig-system.yang
+    - yang/openflow/openconfig-openflow.yang
+  build:
+    - yang/system/openconfig-system.yang
+    - yang/openflow/openconfig-openflow.yang
+  run-ci: true

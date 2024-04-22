@@ -1,0 +1,374 @@
+module openconfig-system-controlplane {
+    yang-version "1";
+
+    namespace "http://openconfig.net/yang/system-controlplane";
+    prefix "oc-sys-copp";
+
+    import openconfig-extensions {
+        prefix oc-ext;
+    }
+    import openconfig-system {
+        prefix oc-sys;
+    }
+    import openconfig-acl {
+        prefix oc-acl;
+    }
+    import openconfig-qos {
+        prefix oc-qos;
+    }
+
+    organization
+      "OpenConfig working group";
+    contact
+      "www.openconfig.net";
+
+    description
+      "This module adds configuration and operational state relating to
+       policies for traffic destined to the system's control-plane.
+       Particularly, it allows for mechanisms to:
+        - apply an ACL that forwards or drops traffic towards the control-plane.
+        - classify traffic that is destined to the control-plane according to
+          a QoS classifier.
+        - schedule traffic that has been forwarded towards the control-plane,
+          to allow for policies such as rate limits to be applied.
+       The configured policies apply generically to all control-planes that
+       exist within the system, and should be mapped to the internal interfaces
+       via which packets are forwarded to control-plane modules.
+       When a packet is received at an input interface - it is classified into a
+       forwarding group which drains to a specific queue. If this input mapping
+       is sufficient, the CPU-facing interface uses the specified scheduler
+       to determine how to drain queues. If more granular remapping is required
+       (e.g., to classify control-plane traffic more granularly), a user specifies
+       an alternate classifier that is used to reclassify traffic into
+       a new set of forwarding-groups (and hence queues) that can subsequently
+       be scheduled by the specified scheduler.
+       The specified control-plane ACL is applied to traffic received by the
+       control-plane of the system.";
+
+    oc-ext:openconfig-version "0.2.0";
+    oc-ext:catalog-organization "openconfig";
+    oc-ext:origin "openconfig";
+
+    revision "2023-03-03" {
+      description
+        "Add missing state container to ACL.";
+      reference "0.2.0";
+    }
+
+    revision "2021-08-02" {
+      description
+        "Initial revision.";
+      reference "0.1.0";
+    }
+
+    grouping system-controlplane-top {
+      description
+        "Top-level structural grouping for control-plane traffic policies.";
+
+      container control-plane-traffic {
+        description
+          "Policies and configuration relating to the traffic destined towards
+            the system control-plane.";
+
+        container ingress {
+          description
+            "Control-plane traffic parameters relating to ingress traffic.
+            This refers to traffic that is being received by the system's
+            control plane from external-to-the-controlplane sources.";
+
+          uses system-controlplane-acl-common-top;
+
+          container qos {
+            description
+              "Configuration and operational state relating to QoS policies
+              that are applied to control-plane traffic.";
+
+            container classifier {
+              description
+                "Configuration and state parameters relating to the QoS
+                classifier that is applied to control plane traffic. A QoS
+                classifier - defined in /qos/classifiers specifies how traffic
+                is mapped to QoS queues. The classifier specified in this
+                container and corresponding state allows for traffic towards
+                the control-plane to be classified.";
+
+              container config {
+                description
+                  "Configuration parameters relating to QoS classifier
+                  applied to match control plane traffic.";
+                uses system-controlplane-qos-classifier-config;
+              }
+
+              container state {
+                config false;
+                description
+                  "Operational state parameters relating to the QoS classifier
+                  applied to match control plane traffic.";
+                uses system-controlplane-qos-classifier-config;
+              }
+
+              container terms {
+                config false;
+                description
+                  "Operational state and counters relating to the classifier
+                  applied to control-plane traffic.";
+
+                list term {
+                  key "id";
+
+                  description
+                    "A list of the terms within the QoS classifier being
+                    applied for control-plane traffic. Each term has
+                    corresponding operational state parameters.";
+
+                  leaf id {
+                    type leafref {
+                      path "../state/id";
+                    }
+                    description
+                      "Reference to the identifier for the classifier term.";
+                  }
+
+                  container state {
+                    config false;
+                    description
+                      "Operational state parameters relating to a term within
+                      the applied control-plane classifier";
+
+                    uses system-controlplane-qos-classifier-term-state;
+                    uses oc-qos:qos-interface-classifier-match-counters-state;
+                  }
+                }
+              }
+            }
+
+            container scheduler-policy {
+              description
+                "Configuration and operational state relating to the QoS
+                scheduler policy that is applied to control-plane traffic.
+                The scheduler policy determines how traffic, classified by
+                the specified control-plane classifier is rate-limited towards
+                the control-plane. The scheduler policy is defined in
+                /qos/scheduler-policies.";
+
+              container config {
+                description
+                  "Configuration parameters relating to the scheduler-policy
+                  that is to be applied control-plane traffic.";
+
+                uses system-controlplane-qos-scheduler-config;
+              }
+
+              container state {
+                config false;
+                description
+                  "Operational state parameters relating to the scheduler policy
+                  applied to the control-plane traffic.";
+
+                uses system-controlplane-qos-scheduler-config;
+              }
+
+              container scheduler-statistics {
+                config false;
+                description
+                  "Operational state and counters relating to the
+                  scheduler-policy applied to control plane traffic.";
+
+                list scheduler {
+                  key "sequence";
+                  description
+                    "List of the schedulers that are part of the scheduler-policy
+                    specified.";
+
+                  leaf sequence {
+                    type leafref {
+                      path "../state/sequence";
+                    }
+                    description
+                      "Reference to the sequence ID for the scheduler.";
+                  }
+
+                  container state {
+                    description
+                      "Operational state parameters relating to the scheduler
+                      policy.";
+
+                    uses system-controlplane-qos-scheduler-seq-state;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        container egress {
+          description
+            "Control-plane traffic parameters relating to egress traffic.
+            This refers to traffic that is sent by the system's control
+            plane to external-to-the-controlplane destinations.";
+
+          uses system-controlplane-acl-common-top;
+        }
+      }
+    }
+
+    grouping system-controlplane-acl-common-top {
+      description
+        "Common structural grouping for ACL configuration and state for
+        control plane traffic.";
+
+      container acl {
+        description
+          "Configuration and operational state parameters relating to the
+          access control list applied to control-plane traffic.";
+
+        list acl-set {
+          key "set-name type";
+
+          description
+            "List of the ACL that is to be applied in the specific ingress
+            or egress context. The key of the list specifies the type of
+            traffic to be matched, along with a reference to an ACL
+            configured in the OpenConfig ACL model within the /acl hierarchy.";
+
+          leaf set-name {
+            type leafref {
+              path "../config/set-name";
+            }
+            description
+              "Reference to the name of the ACL-set to be applied.";
+          }
+
+          leaf type {
+            type leafref {
+              path "../config/type";
+            }
+            description
+              "Reference to the type of the ACL-set to be applied.";
+          }
+
+          container config {
+            description
+              "Configuration parameters relating to the ACL to be applied.";
+
+            uses system-controlplane-common-acl-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters relating to the ACL to be applied.";
+            uses system-controlplane-common-acl-config;
+          }
+
+          uses oc-acl:interface-acl-entries-top;
+        }
+      }
+    }
+
+    grouping system-controlplane-common-acl-config {
+      description
+        "Grouping for ACL parameters relating to the system control-plane.";
+
+      leaf set-name {
+        type leafref {
+            path "/oc-acl:acl/oc-acl:acl-sets/oc-acl:acl-set/" +
+                  "oc-acl:config/oc-acl:name";
+        }
+        description
+          "Reference to the ACL to be applied to traffic
+          in the specified context (ingress or egress).";
+      }
+
+      leaf type {
+        type leafref {
+          path "/oc-acl:acl/oc-acl:acl-sets/oc-acl:acl-set" +
+              "[oc-acl:name=current()/../set-name]" +
+              "/oc-acl:config/oc-acl:type";
+        }
+        description
+          "Reference to the ACL set type applied to traffic
+          in the specified context (ingress or egress).";
+      }
+    }
+
+    grouping system-controlplane-qos-classifier-config {
+      description
+        "Grouping for configuration parameters relating to QoS classifiers
+        for the system control-plane.";
+
+      leaf name {
+          type leafref {
+              path "/oc-qos:qos/oc-qos:classifiers/oc-qos:classifier/" +
+              "oc-qos:config/oc-qos:name";
+          }
+          description
+            "Reference to a classifier that is used to classify traffic
+              destined to the control-plane of the system.
+              This classifier determines how packets that match each terms
+              are classified into forwarding groups, and subsequently into
+              queues to be forwarded.";
+      }
+    }
+
+    grouping system-controlplane-qos-classifier-term-state {
+      description
+        "Grouping for control-plane traffic specific leaves required for
+        each configuration term.";
+
+      leaf id {
+        // Current location /system/control-plane/ingress/qos/classifier/
+        // terms/term/state/id
+        type leafref {
+          path "/oc-qos:qos/oc-qos:classifiers/" +
+              "oc-qos:classifier[oc-qos:name=current()/../../../../config/name]" +
+              "/oc-qos:terms/oc-qos:term/oc-qos:config/oc-qos:id";
+        }
+        description
+          "Reference to a term identifier within the configured control-plane
+          classifier.";
+      }
+    }
+
+    grouping system-controlplane-qos-scheduler-config {
+      description
+        "Grouping for configuration parameters relating to the QoS scheduler
+        policy for control-plane traffic.";
+
+      leaf name {
+          type leafref {
+              path "/oc-qos:qos/oc-qos:scheduler-policies/oc-qos:scheduler-policy/" +
+              "oc-qos:config/oc-qos:name";
+          }
+          description
+            "Reference to a scheduler policy that determines rate limits, or
+            shaping of packets towards the control-plane.";
+      }
+    }
+
+    grouping system-controlplane-qos-scheduler-seq-state {
+      description
+        "Grouping for operational state parameters relating to indivual
+        schedulers within the applied scheduler policy.";
+
+      leaf sequence {
+        type leafref {
+          path "/oc-qos:qos/oc-qos:scheduler-policies/oc-qos:scheduler-policy" +
+             "[oc-qos:name=current()/../../../../config/name]" +
+             "/oc-qos:schedulers/oc-qos:scheduler/oc-qos:config/" +
+             "oc-qos:sequence";
+        }
+        description
+          "Reference to a scheduler within the configured scheduler policy.";
+      }
+
+      uses oc-qos:qos-scheduler-common-state;
+    }
+
+    augment "/oc-sys:system" {
+        description
+          "Add control-plane configuration and state to the system model.";
+
+        uses system-controlplane-top;
+    }
+}

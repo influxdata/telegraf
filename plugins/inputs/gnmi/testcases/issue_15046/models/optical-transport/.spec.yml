@@ -1,0 +1,56 @@
+- name: openconfig-terminal-device
+  docs:
+    - yang/optical-transport/openconfig-transport-types.yang
+    - yang/platform/openconfig-platform-types.yang
+    - yang/optical-transport/openconfig-terminal-device.yang
+    - yang/platform/openconfig-platform-transceiver.yang
+  build:
+    - yang/optical-transport/openconfig-terminal-device.yang
+    - yang/platform/openconfig-platform.yang
+  run-ci: true
+- name: openconfig-optical-amplifier
+  docs:
+    - yang/optical-transport/openconfig-transport-types.yang
+    - yang/platform/openconfig-platform-types.yang
+    - yang/optical-transport/openconfig-transport-line-common.yang
+    - yang/optical-transport/openconfig-optical-amplifier.yang
+    - yang/optical-transport/openconfig-channel-monitor.yang
+    - yang/platform/openconfig-platform.yang
+  build:
+    - yang/optical-transport/openconfig-optical-amplifier.yang
+  run-ci: true
+- name: openconfig-wavelength-router
+  docs:
+    - yang/optical-transport/openconfig-transport-types.yang
+    - yang/optical-transport/openconfig-transport-line-common.yang
+    - yang/optical-transport/openconfig-wavelength-router.yang
+    - yang/optical-transport/openconfig-channel-monitor.yang
+  build:
+    - yang/optical-transport/openconfig-wavelength-router.yang
+  run-ci: true
+- name: openconfig-transport-line-connectivity
+  docs:
+    - yang/optical-transport/openconfig-transport-line-connectivity.yang
+  build:
+    - yang/optical-transport/openconfig-transport-line-connectivity.yang
+  run-ci: true
+- name: openconfig-transport-line-protection
+  docs:
+    - yang/platform/openconfig-platform-types.yang
+    - yang/optical-transport/openconfig-transport-line-protection.yang
+    - yang/platform/openconfig-platform.yang
+  build:
+    - yang/optical-transport/openconfig-transport-line-protection.yang
+  run-ci: true
+- name: openconfig-optical-attenuator
+  docs:
+    - yang/optical-transport/openconfig-optical-attenuator.yang
+  build:
+    - yang/optical-transport/openconfig-optical-attenuator.yang
+  run-ci: true
+- name: openconfig-channel-monitor
+  docs:
+    - yang/optical-transport/openconfig-channel-monitor.yang
+  build:
+    - yang/optical-transport/openconfig-channel-monitor.yang
+  run-ci: true

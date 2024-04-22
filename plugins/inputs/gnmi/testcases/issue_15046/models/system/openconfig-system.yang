@@ -1,0 +1,1300 @@
+module openconfig-system {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/system";
+
+  prefix "oc-sys";
+
+  // import some basic types
+  import openconfig-inet-types { prefix oc-inet; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-aaa { prefix oc-aaa; }
+  import openconfig-system-logging { prefix oc-log; }
+  import openconfig-system-terminal { prefix oc-sys-term; }
+  import openconfig-procmon { prefix oc-proc; }
+  import openconfig-platform { prefix oc-platform; }
+  import openconfig-alarms { prefix oc-alarms; }
+  import openconfig-messages { prefix oc-messages; }
+  import openconfig-license { prefix oc-license; }
+  import openconfig-network-instance { prefix oc-ni; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "Model for managing system-wide services and functions on
+    network devices.
+
+    Portions of this code were derived from IETF RFC 7317.
+    Please reproduce this note if possible.
+
+    IETF code is subject to the following copyright and license:
+    Copyright (c) IETF Trust and the persons identified as authors of
+    the code.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, is permitted pursuant to, and subject to the license
+    terms contained in, the Simplified BSD License set forth in
+    Section 4.c of the IETF Trust's Legal Provisions Relating
+    to IETF Documents (http://trustee.ietf.org/license-info).";
+
+  oc-ext:openconfig-version "2.0.0";
+
+  revision "2023-12-20" {
+    description
+      "Change NTP offset, root-delay, and root-dispersion to int64 nanoseconds,
+      and update their descriptions for accuracy and clarity.";
+    reference "2.0.0";
+  }
+
+  revision "2023-10-26" {
+    description
+      "Add up-time leaf and promote module to version 1.0.";
+    reference "1.0.0";
+  }
+
+  revision "2023-06-16" {
+    description
+      "Reordered imports to be alphabetical.";
+    reference "0.17.1";
+  }
+
+  revision "2022-12-20" {
+    description
+      "Added network instance leaf to ntp client, and dropped
+      ntp-source-address from global to individual config. Removed ntp prefix.";
+    reference "0.17.0";
+  }
+
+  revision "2022-12-19" {
+    description
+      "Update last configuration timestamp documentation.";
+    reference "0.16.1";
+  }
+
+  revision "2022-09-28" {
+    description
+      "Add last configuration timestamp leaf.";
+    reference "0.16.0";
+  }
+
+  revision "2022-07-25" {
+    description
+      "Add system software version.";
+    reference "0.15.0";
+  }
+
+  revision "2022-07-20" {
+    description
+      "Added routing-mac system MAC address.";
+    reference "0.14.0";
+  }
+
+  revision "2022-07-12" {
+    description
+      "Modify ntp enabled description to reflect true and false case.";
+    reference "0.13.1";
+  }
+
+  revision "2021-07-20" {
+    description
+      "Adding list of mount points.";
+    reference "0.13.0";
+  }
+
+  revision "2021-07-14" {
+    description
+      "Support for additional RAM usage counters.";
+    reference "0.12.0";
+  }
+
+  revision "2021-06-28" {
+    description
+      "Adding system memory error counters.";
+    reference "0.11.1";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.10.1";
+  }
+
+  revision "2020-04-13" {
+    description
+      "Remove the existing grpc-service, and add a new list
+      of the gRPC servers in a new module.";
+    reference "0.10.0";
+  }
+
+  revision "2020-03-25" {
+    description
+      "Fix typo in description statement for ipv4-address
+      list.";
+    reference "0.9.1";
+  }
+
+  revision "2020-01-07" {
+    description
+      "Add import of license management model.";
+    reference "0.9.0";
+  }
+
+  revision "2019-03-15" {
+    description
+      "Update boot time to be nanoseconds since epoch.";
+    reference "0.8.0";
+  }
+
+  revision "2019-01-29" {
+    description
+      "Add messages module to the system model";
+    reference "0.7.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.6.1";
+  }
+
+  revision "2018-07-17" {
+    description
+      "Add gRPC server data";
+    reference "0.6.0";
+  }
+
+  revision "2018-01-21" {
+    description
+      "Add cpu utilization data";
+    reference "0.5.0";
+  }
+
+  revision "2017-12-15" {
+    description
+      "Add alarms to the system model";
+    reference "0.4.0";
+  }
+
+  revision "2017-09-18" {
+    description
+      "Updated to use OpenConfig types modules";
+    reference "0.3.0";
+  }
+
+  revision "2017-07-06" {
+    description
+      "Move to oc-inet types, add IETF attribution, add RADIUS
+      counters, changed password leaf names to indicate hashed";
+    reference "0.2.0";
+  }
+
+  revision "2017-01-29" {
+    description
+      "Initial public release";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  identity NTP_AUTH_TYPE {
+    description
+      "Base identity for encryption schemes supported for NTP
+      authentication keys";
+  }
+
+  identity NTP_AUTH_MD5 {
+    base NTP_AUTH_TYPE;
+    description
+      "MD5 encryption method";
+  }
+
+  // typedef statements
+
+  typedef timezone-name-type {
+    type string;
+    description
+      "A time zone name as used by the Time Zone Database,
+       sometimes referred to as the 'Olson Database'.
+
+       The exact set of valid values is an implementation-specific
+       matter.  Client discovery of the exact set of time zone names
+       for a particular server is out of scope.";
+    reference
+      "BCP 175: Procedures for Maintaining the Time Zone Database";
+   }
+
+  // grouping statements
+
+  grouping system-clock-config {
+    description
+      "Configuration data for system-wide clock configuration";
+
+    leaf timezone-name {
+      type timezone-name-type;
+      description
+        "The TZ database name to use for the system, such
+         as 'Europe/Stockholm'.";
+      reference "IANA Time Zone Database
+        http://www.iana.org/time-zones";
+    }
+  }
+
+  grouping system-clock-state {
+    description
+      "Operational state data for system-wide clock configuration";
+  }
+
+  grouping system-clock-top {
+    description
+      "Top-level grouping for system-wide clock configuration";
+
+    container clock {
+      description
+        "Top-level container for clock configuration data";
+
+      container config {
+        description
+          "Configuration data for system clock";
+
+        uses system-clock-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Operational state data for system clock";
+
+        uses system-clock-config;
+        uses system-clock-state;
+      }
+    }
+  }
+
+  grouping system-global-config {
+    description "system-wide configuration parameters";
+
+    leaf hostname {
+      type oc-inet:domain-name;
+      description
+        "The hostname of the device -- should be a single domain
+        label, without the domain.";
+    }
+
+    leaf domain-name {
+      type oc-inet:domain-name;
+      description
+        "Specifies the domain name used to form fully qualified name
+        for unqualified hostnames.";
+    }
+
+    leaf login-banner {
+      type string;
+      description
+        "The console login message displayed before the login prompt,
+        i.e., before a user logs into the system.";
+    }
+
+    leaf motd-banner {
+      type string;
+      description
+        "The console message displayed after a user logs into the
+        system.  They system may append additional standard
+        information such as the current system date and time, uptime,
+        last login timestamp, etc.";
+    }
+  }
+
+  grouping mount-point-state {
+    description
+      "Operational state data for the mount point.";
+
+    leaf name {
+      type string;
+      description
+        "Mount point name.";
+    }
+
+    leaf storage-component {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component/" +
+          "oc-platform:name";
+      }
+
+      description
+        "In the case that the filesystem that is mounted corresponds to a
+        physical or logical component within the system, this leaf provides
+        a reference to the hosting component within the /components
+        hierarchy.
+
+        The reference should be to the most specific component (e.g., if an
+        entry for /dev/sda1 exists, then this should be referred to,
+        otherwise a reference to /dev/sda may be provided.";
+    }
+
+    leaf size {
+      type uint64;
+      units megabytes;
+      description
+        "The total size of the initialised filesystem.";
+    }
+
+    leaf available {
+      type uint64;
+      units megabytes;
+      description
+        "The amount of unused space on the filesystem.";
+    }
+
+    leaf utilized {
+      type uint64;
+      units megabytes;
+      description
+        "The amount of space currently in use on the filesystem.";
+    }
+  }
+
+  grouping system-global-state {
+    description
+      "Global operational state data for the system";
+
+    leaf current-datetime {
+        type oc-yang:date-and-time;
+        description
+          "The current system date and time.";
+    }
+
+    leaf up-time {
+        type oc-types:timeticks64;
+        units "nanoseconds";
+        description
+          "The amount of time since the network operating system was
+          initialized.";
+    }
+
+    leaf boot-time {
+        type oc-types:timeticks64;
+        units "nanoseconds";
+        description
+          "This timestamp indicates the time that the system was last
+          restarted.  The value is the timestamp in nanoseconds relative
+          to the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf software-version {
+        type string;
+        description
+          "Operating system version of the currently active controller
+          of the device.  It is required that this value matches the
+          value of the state/software-version leaf in the component
+          of type OPERATING_SYSTEM.";
+    }
+
+    leaf last-configuration-timestamp {
+      type oc-types:timeticks64;
+      units "nanoseconds";
+      description
+        "Indicates the monotonically increasing timestamp at which the
+        last configuration change was made. This may may be through CLI,
+        gNMI or some other mechanism. The value is the timestamp in
+        nanoseconds relative to the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+  }
+
+  grouping mount-points-top {
+    description
+      "Top-level grouping for mount points data.";
+
+    container mount-points {
+      config false;
+      description
+        "When a system has a set of filesystems that are attached to a
+        directory (i.e., mounted on the system) they are expected to be
+        present in this list. If the system has the concept of mounting
+        physical or virtual resources to a mount point within the root
+        filesystem (/) they should also be included in this list.";
+
+      list mount-point {
+        key "name";
+        description
+          "List of mount points in the system.";
+
+        leaf name {
+          type leafref {
+            path "../state/name";
+          }
+          description
+            "Reference to the key for list of mount points.";
+        }
+
+        container state {
+          config false;
+          description
+            "State of system mount point.";
+          uses mount-point-state;
+        }
+      }
+    }
+  }
+
+  grouping system-dns-config {
+    description "DNS / resolver related configuration data";
+
+    leaf-list search {
+      type oc-inet:domain-name;
+      ordered-by user;
+      description
+        "An ordered list of domains to search when resolving
+        a host name.";
+    }
+  }
+
+  grouping system-dns-state {
+    description
+      "Operational state data for system DNS resolver";
+  }
+
+  grouping system-dns-servers-config {
+    description
+      "Configuration data for DNS resolvers";
+
+    //RFC 7317 includes a single-value choice statement to for
+    //TCP and UDP transport.  This has been removed since it the
+    //transport protocol is not generally available as an options
+    //on target devices.  It may be added back if and when needed.
+
+    leaf address {
+      type oc-inet:ip-address;
+      description
+        "The address of the DNS server, can be either IPv4
+        or IPv6.";
+    }
+
+    leaf port {
+      type oc-inet:port-number;
+      default 53;
+      description
+        "The port number of the DNS server.";
+    }
+
+    //RFC 7317 includes resolver timeout and attempts options. These
+    //have been omitted as they are not available on many targets. If
+    //and when they are required, they may be added back in.
+  }
+
+  grouping system-dns-static-config {
+    description
+      "Configuration data for static host entries";
+
+    leaf hostname {
+      type string;
+      description
+        "Hostname for the static DNS entry";
+    }
+
+    leaf-list alias {
+      type string;
+      description
+        "Additional aliases for the hostname";
+    }
+
+    leaf-list ipv4-address {
+      type oc-inet:ipv4-address;
+      description
+        "List of IPv4 addresses for the host entry";
+    }
+
+    leaf-list ipv6-address {
+      type oc-inet:ipv6-address;
+      description
+        "List of IPv6 addresses for the host entry";
+    }
+  }
+
+  grouping system-dns-static-state {
+    description
+      "Operational state data for static host entries";
+  }
+
+  grouping system-dns-static-top {
+    description
+      "Top-level grouping for static DNS host entries";
+
+    container host-entries {
+      description
+        "Enclosing container for list of static host entries";
+
+      list host-entry {
+        key "hostname";
+        description
+          "List of static host entries";
+
+        leaf hostname {
+          type leafref {
+            path "../config/hostname";
+          }
+          description
+            "Reference to the hostname list key";
+        }
+
+        container config {
+          description
+            "Configuration data for static host entries";
+
+          uses system-dns-static-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for static host entries";
+
+          uses system-dns-static-config;
+          uses system-dns-static-state;
+        }
+      }
+    }
+  }
+
+  grouping system-dns-servers-state {
+    description
+      "Operational state data for DNS resolvers";
+
+  }
+
+  grouping system-dns-servers-top {
+    description
+      "Top-level grouping for the list of DNS resolvers.";
+
+    container servers {
+      description
+        "Enclosing container for DNS resolver list";
+
+      list server {
+        key "address";
+        ordered-by user;
+        description
+          "List of the DNS servers that the resolver should query.
+
+           When the resolver is invoked by a calling application, it
+           sends the query to the first name server in this list.  If
+           no response has been received within 'timeout' seconds,
+           the resolver continues with the next server in the list.
+           If no response is received from any server, the resolver
+           continues with the first server again.  When the resolver
+           has traversed the list 'attempts' times without receiving
+           any response, it gives up and returns an error to the
+           calling application.
+
+           Implementations MAY limit the number of entries in this
+           list.";
+
+        leaf address {
+          type leafref {
+            path "../config/address";
+          }
+          description
+            "References the configured address of the DNS server";
+        }
+
+        container config {
+          description
+            "Configuration data for each DNS resolver";
+
+          uses system-dns-servers-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for each DNS resolver";
+
+          uses system-dns-servers-config;
+          uses system-dns-servers-state;
+        }
+
+      }
+    }
+  }
+
+  grouping system-dns-top {
+    description
+      "Top-level grouping for DNS / resolver config and operational
+      state data";
+
+    container dns {
+      description
+        "Enclosing container for DNS resolver data";
+
+      container config {
+        description
+          "Configuration data for the DNS resolver";
+
+        uses system-dns-config;
+
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for the DNS resolver";
+
+        uses system-dns-config;
+        uses system-dns-state;
+
+      }
+
+      uses system-dns-servers-top;
+      uses system-dns-static-top;
+    }
+  }
+
+  grouping system-ntp-server-config {
+    description
+      "Configuration data for NTP servers";
+
+    leaf address {
+      type oc-inet:host;
+      description
+        "The address or hostname of the NTP server.";
+    }
+
+    leaf port {
+      type oc-inet:port-number;
+      default 123;
+      description
+        "The port number of the NTP server.";
+    }
+
+    leaf version {
+      type uint8 {
+        range 1..4;
+      }
+      default 4;
+      description
+        "Version number to put in outgoing NTP packets";
+    }
+
+    leaf association-type {
+      type enumeration {
+        enum SERVER {
+          description
+            "Use client association mode.  This device
+             will not provide synchronization to the
+             configured NTP server.";
+        }
+        enum PEER {
+          description
+            "Use symmetric active association mode.
+             This device may provide synchronization
+             to the configured NTP server.";
+        }
+        enum POOL {
+          description
+            "Use client association mode with one or
+             more of the NTP servers found by DNS
+             resolution of the domain name given by
+             the 'address' leaf.  This device will not
+             provide synchronization to the servers.";
+        }
+      }
+      default SERVER;
+      description
+        "The desired association type for this NTP server.";
+    }
+    leaf iburst {
+      type boolean;
+      default false;
+      description
+        "Indicates whether this server should enable burst
+        synchronization or not.";
+    }
+    leaf prefer {
+      type boolean;
+      default false;
+      description
+        "Indicates whether this server should be preferred
+        or not.";
+    }
+
+    leaf network-instance {
+      type oc-ni:network-instance-ref;
+      description
+        "The network instance used to find this server.";
+    }
+
+    leaf source-address {
+      type oc-inet:ip-address;
+      description
+        "Source address to use on outgoing NTP packets";
+    }
+  }
+
+  grouping system-ntp-server-state {
+    description
+      "Operational state data for NTP servers";
+
+    leaf stratum {
+      type uint8;
+      description
+        "Indicates the level of the server in the NTP hierarchy. As
+        stratum number increases, the accuracy is degraded.  Primary
+        servers are stratum while a maximum value of 16 indicates
+        unsynchronized.  The values have the following specific
+        semantics:
+
+        | 0      | unspecified or invalid
+        | 1      | primary server (e.g., equipped with a GPS receiver)
+        | 2-15   | secondary server (via NTP)
+        | 16     | unsynchronized
+        | 17-255 | reserved";
+      reference
+        "RFC 5905 - Network Time Protocol Version 4: Protocol and
+        Algorithms Specification";
+    }
+
+    leaf root-delay {
+      type int64;
+      units "nanoseconds";
+      description
+        "The total round-trip delay to the reference clock, in nanoseconds.";
+      reference
+        "RFC 5905 - Network Time Protocol Version 4: Protocol and
+        Algorithms Specification, Section 7.3";
+    }
+
+    leaf root-dispersion {
+      type int64;
+      units "nanoseconds";
+      description
+        "The maximum error inherent in the measurement, accumulated over the
+        stratum levels from the reference clock.";
+      reference
+        "RFC 5905 - Network Time Protocol Version 4: Protocol and
+        Algorithms Specification, Section 4";
+    }
+
+    leaf offset {
+      type int64;
+      units "nanoseconds";
+      description
+        "Estimate of the current time offset from the peer.  This is
+        the time difference of the peer's clock minus the local clock.";
+      reference
+        "RFC 5905 - Network Time Protocol Version 4: Protocol and
+        Algorithms Specification, Section 8";
+    }
+
+    leaf poll-interval {
+      type uint32;
+      units "seconds";
+      description
+        "Polling interval of the peer";
+    }
+  }
+
+  grouping system-ntp-server-top {
+    description
+      "Top-level grouping for the list of NTP servers";
+
+    container servers {
+      description
+        "Enclosing container for the list of NTP servers";
+
+      list server {
+        key "address";
+        description
+          "List of NTP servers to use for system clock
+          synchronization.  If '/system/ntp/enabled'
+          is 'true', then the system will attempt to
+          contact and utilize the specified NTP servers.";
+
+        leaf address {
+          type leafref {
+            path "../config/address";
+          }
+          description
+            "References the configured address or hostname of the
+            NTP server.";
+        }
+
+        container config {
+          description
+            "Configuration data for an NTP server.";
+
+          uses system-ntp-server-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for an NTP server.";
+
+          uses system-ntp-server-config;
+          uses system-ntp-server-state;
+        }
+      }
+    }
+  }
+
+  grouping system-ntp-auth-keys-config {
+    description
+      "Configuration data ";
+
+    leaf key-id {
+      type uint16;
+      description
+        "Integer identifier used by the client and server to
+        designate a secret key.  The client and server must use
+        the same key id.";
+    }
+
+    leaf key-type {
+      type identityref {
+        base NTP_AUTH_TYPE;
+      }
+      description
+        "Encryption type used for the NTP authentication key";
+    }
+
+    leaf key-value {
+      type string;
+      description
+        "NTP authentication key value";
+    }
+  }
+
+  grouping system-ntp-auth-keys-state {
+    description
+      "Operational state data for NTP auth key data";
+  }
+
+  grouping system-ntp-auth-keys-top {
+    description
+      "Top-level grouping for NTP auth key data";
+
+    container ntp-keys {
+      description
+        "Enclosing container for list of NTP authentication keys";
+
+      list ntp-key {
+        key "key-id";
+        description
+          "List of NTP authentication keys";
+
+        leaf key-id {
+          type leafref {
+            path "../config/key-id";
+          }
+          description
+            "Reference to auth key-id list key";
+        }
+
+        container config {
+          description
+            "Configuration data for NTP auth keys";
+
+          uses system-ntp-auth-keys-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for NTP auth keys";
+
+          uses system-ntp-auth-keys-config;
+          uses system-ntp-auth-keys-state;
+        }
+      }
+    }
+  }
+
+  grouping system-ntp-config {
+    description
+      "Configuration data for system-wide NTP operation.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Enables and disables the NTP protocol and indicates that the system should
+        attempt to synchronize the system clock with an NTP server
+        from the servers defined in the 'ntp/server' list.";
+    }
+
+    leaf enable-ntp-auth {
+      type boolean;
+      default false;
+      description
+        "Enable or disable NTP authentication -- when enabled, the
+        system will only use packets containing a trusted
+        authentication key to synchronize the time.";
+    }
+  }
+
+  grouping system-ntp-state {
+    description
+      "Operational state data for system-wide NTP operation.";
+
+    leaf auth-mismatch {
+      type oc-yang:counter64;
+      description
+        "Count of the number of NTP packets received that were not
+        processed due to authentication mismatch.";
+    }
+  }
+
+  grouping system-ntp-top {
+    description
+      "Top-level grouping for configuration and state data for NTP";
+
+    container ntp {
+      description
+        "Top-level container for NTP configuration and state";
+
+      container config {
+        description
+          "Configuration data for NTP client.";
+
+        uses system-ntp-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for NTP services.";
+
+        uses system-ntp-config;
+        uses system-ntp-state;
+      }
+      uses system-ntp-auth-keys-top;
+      uses system-ntp-server-top;
+    }
+  }
+
+  grouping system-routing-macaddr-config {
+    description
+      "Configuration data for system's routing MAC addresses.";
+
+    leaf routing-mac {
+      type oc-yang:mac-address;
+      description
+        "Any packets destined to this MAC address must be sent through the
+        routing pipeline by the system. This MAC address is used to identify
+        routed packets in addition to any other MAC addresses that the system
+        may already have been using to perform routing.
+
+        It is not expected that this MAC address will be used as the
+        source MAC address of any routed packet, as the source MAC address of
+        any packets generated by the system, or a MAC address used in ARP
+        response. This MAC address may not be allocated from the block of
+        MAC address that system owns. For instance, it's allocation could
+        be managed by an external controller.";
+    }
+  }
+
+  grouping system-macaddr-top {
+    description
+      "Top-level grouping for configuration and state of system's MAC addresses.";
+
+    container mac-address {
+      description
+        "Top-level container for system's MAC address configuration and state";
+
+      container config {
+        description
+          "Configuration data for routing MAC address.";
+
+        uses system-routing-macaddr-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for routing MAC address.";
+
+        uses system-routing-macaddr-config;
+      }
+    }
+  }
+
+  grouping system-memory-config {
+    description
+      "Configuration data for system memory";
+  }
+
+  grouping system-memory-state {
+    description
+      "Operational state data for system memory";
+
+    leaf physical {
+      type uint64;
+      units bytes;
+      // TODO: consider making units in megabytes
+      description
+        "Reports the total physical memory available on the
+        system.";
+    }
+
+    leaf reserved {
+      type uint64;
+      units bytes;
+      description
+        "Memory reserved for system use";
+    }
+
+    leaf used {
+      type uint64;
+      units bytes;
+      description
+        "Memory that has been used and not available for allocation.";
+    }
+
+    leaf free {
+      type uint64;
+      units bytes;
+      description
+        "Memory that is not used and is available for allocation.";
+    }
+  }
+
+  grouping system-memory-error-counters {
+    description
+      "Counters for system memory errors.";
+
+    leaf correctable-ecc-errors {
+      type uint64;
+      description
+        "Count of correctable ECC errors. Systems with ECC memory
+        are capable of correcting Single-bit ECC errors.";
+    }
+
+    leaf uncorrectable-ecc-errors {
+      type uint64;
+      description
+        "Count of uncorrectable ECC errors. Systems with ECC
+        memory are capable of detecting multi-bit ECC errors,
+        but cannot correct them.";
+    }
+
+    leaf total-ecc-errors {
+      type uint64;
+      description
+        "Count of total ECC errors, this includes both correctable
+        and uncorrectable ECC errors.";
+    }
+  }
+
+  grouping system-memory-top {
+    description
+      "Top-level grouping for system memory data definitions";
+
+    container memory {
+      description
+        "Top-level container for system memory data";
+
+      container config {
+        description
+          "Configuration data for system memory";
+
+        uses system-memory-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for system memory";
+
+        container counters {
+          description
+            "Counters for tracking system memory errors";
+            uses system-memory-error-counters;
+        }
+
+        uses system-memory-config;
+        uses system-memory-state;
+      }
+    }
+  }
+
+  grouping system-cpu-state {
+    description
+      "Operational state data for the system CPU(s)";
+
+    leaf index {
+      type union {
+        type enumeration {
+          enum ALL {
+            description
+              "Index value indicating all CPUs in the system";
+          }
+        }
+        type uint32;
+      }
+      description
+        "The CPU index for each processor core on the system.  On a
+        single-core system, the index should be zero.  The ALL
+        index signifies an aggregation of the CPU utilization
+        statistics over all cores in the system.";
+    }
+
+    container total {
+      description
+        "Total CPU utilization.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container user {
+      description
+        "Percentage of CPU time spent running in user space.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container kernel {
+      description
+        "Percentage of CPU time spent running in kernel space.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container nice {
+      description
+        "Percentage of CPU time spent running low-priority (niced)
+        user processes.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container idle {
+      description
+        "Percentage of CPU time spent idle.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container wait {
+      description
+        "Percentage of CPU time spent waiting for I/O.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container hardware-interrupt {
+      description
+        "Percentage of CPU time spent servicing hardware interrupts.";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+
+    container software-interrupt {
+      description
+        "Percentage of CPU time spent servicing software interrupts";
+
+      uses oc-types:avg-min-max-instant-stats-pct;
+    }
+  }
+
+  grouping system-cpu-top {
+    description
+      "Top-level grouping for system CPU data";
+
+    container cpus {
+      config false;
+      description
+        "Enclosing container for the list of CPU cores on the
+        system";
+
+      list cpu {
+        key "index";
+        description
+          "List of CPU cores on the system (including logical CPUs
+          on hyperthreaded systems), keyed by either a numerical
+          index, or the ALL value for an entry representing the
+          aggregation across all CPUs.";
+
+        leaf index {
+          type leafref {
+            path "../state/index";
+          }
+          description
+            "Reference to list key";
+        }
+
+        container state {
+          description
+            "Operational state data for the system CPU(s)";
+
+          uses system-cpu-state;
+        }
+      }
+    }
+  }
+
+  grouping system-top {
+    description
+      "Top level system data containers";
+
+    container system {
+      description
+        "Enclosing container for system-related configuration and
+        operational state data";
+
+      container config {
+        description "Global configuration data for the system";
+
+        uses system-global-config;
+      }
+
+      container state {
+        config false;
+        description "Global operational state data for the system";
+
+        uses system-global-config;
+        uses system-global-state;
+      }
+
+      uses mount-points-top;
+      uses oc-aaa:aaa-top;
+      uses oc-alarms:alarms-top;
+      uses oc-log:logging-top;
+      uses oc-proc:procmon-processes-top;
+      uses oc-messages:messages-top;
+      uses oc-license:license-top;
+      uses oc-sys-term:system-ssh-server-top;
+      uses oc-sys-term:system-telnet-server-top;
+      uses system-clock-top;
+      uses system-cpu-top;
+      uses system-dns-top;
+      uses system-macaddr-top;
+      uses system-memory-top;
+      uses system-ntp-top;
+    }
+  }
+
+  // data definition statements
+  uses system-top;
+}

@@ -1,0 +1,250 @@
+module openconfig-ethernet-segments {
+
+  // namespace
+  namespace "http://openconfig.net/yang/ethernet-segments";
+
+  prefix "oc-es";
+
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-evpn-types { prefix oc-evpn-types; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module contains definitions of ethernet segements.
+     The ethernet segments are used in EVPN services are
+     defined for the whole device";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision "2021-06-28" {
+   description
+     "First Version";
+   reference  "0.1.0";
+  }
+
+
+grouping evpn-ethernet-segment-df-config {
+    description
+      "Configuration parameters for the Designated forwarding
+      Election";
+
+    leaf df-election-method {
+      type enumeration {
+        enum DEFAULT {
+          value 0;
+          description
+            "The default Designated Forwarder Election election method";
+        }
+        enum HIGHEST_RANDOM_WEIGHT {
+          value 1;
+          description
+            "The highest random weight (HRW) method";
+          reference
+            "RFC8584: Framework for Ethernet VPN Designated Forwarder
+            Election Extensibility";
+        }
+        enum PREFERENCE {
+          value 2;
+          description
+            "The preference based method";
+          reference
+            "RFC8584: Framework for Ethernet VPN Designated Forwarder
+            Election Extensibility";
+        }
+      }
+      description
+        "Select the Designated Forwarder Election (DF) election method";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN.
+        RFC 8584:Framework for Ethernet VPN Designated Forwarder
+        Election Extensibility";
+    }
+
+    leaf preference {
+      when "../df-election-method = 'PREFERENCE'" {
+      description
+        "The preference value is only applicable
+        to the preference based method";
+      }
+      type uint16;
+      description
+        "Defines a 2-octet value that indicates the PE
+        preference to become the DF in the Ethernet-Segment.";
+      reference
+        "RFC8584: Framework for Ethernet VPN Designated Forwarder
+        Election Extensibility";
+    }
+
+    leaf revertive {
+      when "../df-election-method = 'PREFERENCE'" {
+      description
+        "The revertive value is only applicable
+        to the preference method";
+      }
+      type boolean;
+      default true;
+      description
+        "The 'preempt' or 'revertive' behavior. This option will allow a
+        non-revertive behavior in the DF election.";
+      reference
+        "RFC8584: Framework for Ethernet VPN Designated Forwarder
+        Election Extensibility";
+    }
+
+    leaf election-wait-time {
+      when "../df-election-method = 'PREFERENCE'" {
+      description
+        "The Designated Forwarder Election wait-time is only applicable
+        to the preference method";
+      }
+      type uint32;
+      description
+        "Designated Forwarder Election wait-time. When the DF timer expires,
+        the PE device selects the DF based on the highest preference value";
+      reference
+        "RFC8584: Framework for Ethernet VPN Designated Forwarder
+        Election Extensibility";
+    }
+  }
+
+  grouping evpn-ethernet-segment-df-top {
+    description
+      "Top grouping for the configuration and state parameters
+      for the Designated forwarding Election";
+
+    container df-election {
+      description
+        "Top container for the configuration and state parameters
+        for the Designated forwarding Election";
+
+      container config {
+        description
+          "Configuration parameters for the Designated forwarding Election";
+
+        uses evpn-ethernet-segment-df-config;
+      }
+
+      container state {
+        description
+          "Configuration parameters for the Designated forwarding Election";
+        config false;
+
+        uses evpn-ethernet-segment-df-config;
+      }
+    }
+  }
+
+  grouping evpn-ethernet-segment-config {
+    description
+      "Configuration attributes for the Ethernet
+      Segment.";
+
+    leaf name {
+      type string;
+      description
+        "Ethernet Segment name";
+    }
+
+    leaf esi-type {
+      type oc-evpn-types:esi-type;
+      default "TYPE_0_OPERATOR_CONFIGURED";
+      description
+        "ESI Type is a 1-octet field (most significant octet) that
+        specifies the format of the remaining 9 octets (ESI Value).";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN page-16";
+    }
+
+    leaf esi {
+      type union {
+        type oc-evpn-types:esi;
+        type enumeration {
+          enum AUTO {
+            description
+              "This ESI type indicates an auto-generated ESI value.";
+            reference
+              "RFC 7432: BGP MPLS-Based Ethernet VPN";
+          }
+        }
+      }
+      description
+        "Ethernet Segment Identifier (ESI) value.
+        For ESI Type 0: The esi leaf value is directly configured by the operator.
+        For ESI Type 1: The AUTO enum must be used.
+        For ESI Type 2: The AUTO enum must be used.
+        For ESI Type 3: The directly configured or AUTO enum must be used.
+        For ESI Type 4: The directly configured or AUTO enum must be used.
+        For ESI Type 5: The directly configured or AUTO enum must be used.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN.";
+    }
+
+    leaf redundancy-mode {
+      type identityref {
+        base oc-evpn-types:EVPN_REDUNDANCY_MODE;
+      }
+      description
+        "Multihoming options for load balancing of
+        traffic in the Ethernet Segment.";
+      reference
+        "RFC 7432: BGP MPLS-Based Ethernet VPN";
+    }
+
+    uses oc-if:interface-ref-common;
+  }
+
+  grouping evpn-ethernet-segment-top {
+    description
+      "Top-level grouping for ethernet segments. An Ethernet Segment
+      is referenced by a name and an ESI";
+
+    container ethernet-segments {
+      description
+        "Top-level container for ethernet segments. An Ethernet Segment
+        is referenced by a name and an ESI";
+
+      list ethernet-segment {
+        key "name";
+        description
+          "List of Ethernet Segments.";
+
+        leaf name {
+          type leafref {
+            path '../config/name';
+          }
+          description
+            "Ethernet Segment Name ";
+        }
+
+        container config {
+          description
+            "Configuration data for the Ethernet Segments.";
+
+          uses evpn-ethernet-segment-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for the Ethernet Segments.";
+
+          uses evpn-ethernet-segment-config;
+        }
+
+        uses evpn-ethernet-segment-df-top;
+      }
+    }
+  }
+
+  uses evpn-ethernet-segment-top;
+
+}

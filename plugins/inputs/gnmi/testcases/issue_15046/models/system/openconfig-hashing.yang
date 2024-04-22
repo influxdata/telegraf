@@ -1,0 +1,366 @@
+module openconfig-hashing {
+    yang-version "1";
+
+    // namespace
+    namespace "http://openconfig.net/yang/hashing";
+
+    prefix "oc-hashing";
+
+    // import some basic types
+    import openconfig-extensions { prefix oc-ext; }
+    import openconfig-system {prefix oc-sys;}
+    import openconfig-interfaces {prefix oc-intf;}
+
+    // meta
+    organization "OpenConfig working group";
+
+    contact
+        "OpenConfig working group
+        netopenconfig@googlegroups.com";
+
+    description
+        "Model for managing hashing policies that would be referenced by the
+        interfaces model.";
+
+
+    oc-ext:openconfig-version "0.1.0";
+
+    revision "2023-08-08" {
+        description "Initial hashing model.";
+        reference "0.1.0";
+    }
+
+    oc-ext:catalog-organization "openconfig";
+    oc-ext:origin "openconfig";
+
+    grouping hashing-inputs {
+        description
+            "Top level container for inputs to be used for hashing policies.";
+
+        leaf ingress-interface {
+            type boolean;
+            description
+                "Include the ingress subinterface identified in the
+                calculation of the hash.";
+        }
+        leaf ip-protocol-type {
+            type boolean;
+            description
+                "Include the IP protocol type in the calculation of the hash.";
+        }
+    }
+
+    grouping ipv4-ipv6-inputs-top {
+        description
+            "The top level container for ipv4 and ipv6 header
+            fields used for the hash computation.";
+
+        leaf src-addr {
+            type boolean;
+            description
+                "Use the source address in the calculation of the hash.";
+        }
+
+        leaf dst-addr {
+            type boolean;
+            description
+                "Use the destination address in the calculation of the hash.";
+        }
+
+        leaf src-port {
+            type boolean;
+            description
+                "Use the source port from the transport header in the calculation
+                of the hash.";
+        }
+
+        leaf dst-port {
+            type boolean;
+            description
+                "Use the destination port from the transport header in the
+                calculation of the hash.";
+        }
+    }
+
+    grouping ipv6-inputs-top {
+        description
+            "The top level container specifially for ipv6 header
+            fields used for the hash computation.";
+
+        leaf flow-label {
+            type boolean;
+            description
+                "Use the flow label in the IPv6 header
+                to calculate the hash.";
+        }
+    }
+
+    grouping hashing-policy-config {
+        description
+            "Configuration data for hashing policies.";
+
+        leaf name {
+            type string;
+            description
+                "The name of the hashing policy.
+                When a configured user-controlled policy is created by the
+                system, it is instantiated with the same name in the
+                /system/hashing-policies/hashing-policy/name list.";
+        }
+
+        leaf seed {
+            type uint64;
+            description
+                "The seed used to initialize the hash algorithm";
+        }
+
+        leaf algorithm {
+            type string;
+            description
+                "The name of hash algorithm. This algorithm MUST
+                be a supported algorithm";
+        }
+    }
+
+    grouping hashing-policy-top {
+        description
+            "Top level grouping for hashing configuration and operational state
+            data.";
+
+        container hashing-policies {
+            description
+                "Top level container for hashing, including configuration and
+                state data.";
+
+            list hashing-policy {
+                key "name";
+
+                description
+                    "The list of named policies to be used on the device.";
+
+                leaf name {
+                    type leafref {
+                        path "../config/name";
+                    }
+                    description
+                        "References the name of the hashing policy.";
+                }
+                container config {
+                    description
+                        "Configurable items at the global hash policy level.";
+
+                    uses hashing-policy-config;
+                }
+                container state {
+                    config false;
+                    description
+                        "Operational state data at the global hash policy
+                        level.";
+
+                    uses hashing-policy-config;
+                }
+
+                container hash-field-modes {
+                    description
+                        "Container for specifying inputs to be used when
+                        calculating the hash.";
+
+                    container config {
+                        description
+                            "Configurable items at the hashing inputs level.";
+                        uses hashing-inputs;
+                    }
+                    container state {
+                        config false;
+                        description
+                            "Operational state data at the hashing
+                            inputs level.";
+                        uses hashing-inputs;
+                    }
+
+                    container ipv4 {
+                        description
+                            "The IPv4 fields that should be used to
+                            compute the hash.";
+                        container config {
+                            description
+                                "Configurable data at the hashing
+                                inputs level for IPv4.";
+                            uses ipv4-ipv6-inputs-top;
+                        }
+
+                        container state {
+                            config false;
+                            description
+                                "Operational state data at the hashing
+                                inputs level for IPv4.";
+                            uses ipv4-ipv6-inputs-top;
+                        }
+                    }
+
+                    container ipv6 {
+                        description
+                            "The IPv6 fields that should be used to
+                            compute the hash.";
+
+                        container config {
+                            description
+                                "Configurable data at the hashing
+                                inputs level for IPv6.";
+
+                            uses ipv4-ipv6-inputs-top;
+                            uses ipv6-inputs-top;
+                        }
+
+                        container state {
+                            config false;
+                            description
+                                "Operational state data at the hashing
+                                inputs level for IPv6.";
+
+                            uses ipv4-ipv6-inputs-top;
+                            uses ipv6-inputs-top;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    grouping supported-algorithms-state {
+        description
+            "Top-level container for the supported algorithms.";
+        leaf name {
+            type string;
+            description
+                "Name of the supported algorithm.";
+        }
+        leaf description {
+            type string;
+            description
+                "Description of the supported algorithm.";
+        }
+    }
+    grouping supported-algorithms-top {
+        description
+            "Top-level container of the supported algorithms for supported
+            algorithms.  The list of algorithms are expected to be defined by
+            the target device.";
+        container algorithms {
+            description
+                "Container for vendor supported hashing algorithms.";
+            uses vendor-hashing-algorithms;
+        }
+    }
+
+    grouping hashing-algo-top {
+        description
+            "Top level container of the supported algorithms for supported
+            algorithms.";
+        container hashing-algorithms {
+            config false;
+            description
+                "Container of the supported algorithms for supported
+                algorithms.";
+            list hashing-algorithm {
+                key "name";
+
+                description
+                    "List of the supported algorithms for supported
+                    algorithms.";
+
+                leaf name {
+                    type leafref {
+                        path ../state/name;
+                    }
+                    description
+                        "Reference to the supported algorithm list key.";
+                }
+
+                container state {
+                    description
+                        "Operational data for the supported algorithm.";
+                    config false;
+
+                    leaf name {
+                        type string;
+                        description
+                            "Name of the supported algorithm.";
+                    }
+
+                    leaf description {
+                        type string;
+                        description
+                            "Description of the supported algorithm.";
+                    }
+                }
+            }
+        }
+    }
+
+    grouping vendor-hashing-algorithms {
+        description
+            "Supported hashing algorithms per vender.";
+        container vendor {
+            description
+                "Specify the vendor. Each vendor should have its own set of
+                supported algorithms. For each supported algorithm, a name
+                and a description should be defined. An implementation must
+                augment this model using the schema described in the
+                vendor_counter_guide reference.
+
+                e.g.
+                augment /system/hashing/vendor {
+                    container <vendor name> {
+                        container <platform name> {
+                            uses hashing-algo-top;
+                        }
+                    }
+                }";
+            reference
+                "https://github.com/openconfig/public/tree/master/doc/vendor_counter_guide.md";
+        }
+    }
+
+    grouping hashing-top {
+        description
+            "Top-level container for Hashing algorithms and hashing policies";
+        container hashing {
+            description
+                "Container for Hashing algorithms and hashing policies";
+            uses supported-algorithms-top;
+            uses hashing-policy-top;
+        }
+    }
+
+    augment "/oc-sys:system" {
+        description
+            "Augment for Hashing algorithms and hashing policies";
+
+        uses hashing-top;
+    }
+
+    augment "/oc-intf:interfaces/oc-intf:interface/oc-intf:config" {
+        description
+            "Augment for configuration data hashing policy on the interface.";
+        leaf hashing-policy {
+            type leafref {
+                path "/oc-sys:system/hashing/hashing-policies/hashing-policy/name";
+            }
+            description "The configuration data hashing policy to be used when
+                hashing packets coming in on the interface.";
+        }
+    }
+
+    augment "/oc-intf:interfaces/oc-intf:interface/oc-intf:state" {
+        description
+            "Augment for operational data hashing policy on the iinterface.";
+        leaf hashing-policy {
+            type leafref {
+                path "/oc-sys:system/hashing/hashing-policies/hashing-policy/name";
+            }
+            description "The operational data hashing policy to be used when
+                hashing packets coming in on the interface.";
+        }
+    }
+}

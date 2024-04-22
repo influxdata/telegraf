@@ -1,0 +1,8 @@
+- name: openconfig-qos
+  docs:
+    - yang/qos/openconfig-qos-types.yang
+    - yang/qos/openconfig-qos.yang
+  build:
+    - yang/qos/openconfig-qos-types.yang
+    - yang/qos/openconfig-qos.yang
+  run-ci: true

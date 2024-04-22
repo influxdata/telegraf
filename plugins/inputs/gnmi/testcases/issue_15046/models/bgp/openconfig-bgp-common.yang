@@ -1,0 +1,849 @@
+submodule openconfig-bgp-common {
+
+  belongs-to openconfig-bgp {
+    prefix "oc-bgp";
+  }
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-bgp-types { prefix oc-bgp-types; }
+  import openconfig-routing-policy { prefix oc-rpol; }
+  import openconfig-types { prefix oc-types; }
+  import openconfig-inet-types { prefix oc-inet; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This sub-module contains common groupings that are common across
+    multiple contexts within the BGP module. That is to say that they
+    may be application to a subset of global, peer-group or neighbor
+    contexts.";
+
+  oc-ext:openconfig-version "9.7.1";
+
+  revision "2023-12-28" {
+    description
+      "Clarification to last-prefix-limit-exceeded in description";
+          reference "9.7.1";
+  }
+
+  revision "2023-12-28" {
+    description
+      "Add support for controling use of link-bandwidth extended
+      community for BGP multipath.";
+          reference "9.7.0";
+  }
+
+  revision "2023-11-02" {
+    description
+      "Fix revision '2023-03-31': send-community-type was added to the
+       wrong grouping.
+      Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.6.0";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Add default apply policy to global and per afi-safi config.";
+    reference "9.5.0";
+  }
+
+  revision "2023-06-27" {
+    description
+      "Clarify bgp remote-port description";
+    reference "9.4.1";
+  }
+
+  revision "2023-04-01" {
+    description
+      "Add support for BGP large communities [rfc8092] in
+      send-community.
+      Leaf send-community was replaced by the leaf-list
+      send-community-type to allow the combination of different
+      community types";
+    reference "9.4.0";
+  }
+
+  revision "2023-03-31" {
+    description
+      "Allow configuring send-community per AFI-SAFI at
+       neighbor/peer-group.";
+    reference "9.3.0";
+  }
+
+  revision "2022-12-12" {
+    description
+      "Removed the default of enabled leaf of AFI-SAFI
+      at neighbor/peer-group to support BGP inheritance model.";
+    reference "9.2.0";
+  }
+
+  revision "2022-05-21" {
+    description
+      "Added extended-next-hop-encoding leaf.";
+    reference "9.1.0";
+  }
+
+  revision "2022-04-26" {
+    description
+      "Transition decimal64 types to uint16 for various BGP timers";
+    reference "9.0.0";
+  }
+
+  revision "2022-03-21" {
+    description
+      "Add BGP port";
+    reference "8.1.0";
+  }
+
+  revision "2021-12-01" {
+    description
+      "Add prefix-limit-received, add prefix-limit
+      state nodes, change/relocate restart-timer";
+    reference "8.0.0";
+  }
+
+  revision "2021-10-21" {
+    description
+      "Removal of top-level /bgp container";
+    reference "7.0.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "6.1.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "6.1.0";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Normalise timestamp units to nanoseconds.";
+    reference "6.0.0";
+  }
+
+  revision "2019-05-28" {
+    description
+      "Clarify prefix counter descriptions, add received-pre-policy
+      counter.";
+    reference "5.2.0";
+  }
+
+  revision "2019-04-16" {
+    description
+      "Add BGP RIB to the top-level BGP container";
+    reference "5.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "5.0.2";
+  }
+
+  revision "2018-08-20" {
+    description
+      "Correct description of AFI-SAFI enabled leaf.";
+    reference "5.0.1";
+  }
+
+  revision "2018-04-11" {
+    description
+      "Correct naming of BGP maximum prefix warning percentage leaf.";
+    reference "5.0.0";
+  }
+
+  revision "2018-03-20" {
+    description
+      "Added SR-TE policy SAFI";
+    reference "4.1.0";
+  }
+
+  revision "2017-07-30" {
+    description
+      "Clarification of add-paths send-max leaf";
+    reference "4.0.1";
+  }
+
+  revision "2017-07-10" {
+    description
+      "Add error notifications; moved add-paths config; add AS
+      prepend policy features; removed unneeded config leaves";
+    reference "4.0.0";
+  }
+
+  revision "2017-02-02" {
+    description
+      "Bugfix to remove remaining global-level policy data";
+    reference "3.0.1";
+  }
+
+  revision "2017-01-26" {
+    description
+      "Add dynamic neighbor support, migrate to OpenConfig types";
+    reference "3.0.0";
+  }
+
+  revision "2016-06-21" {
+    description
+      "OpenConfig BGP refactor";
+    reference "2.1.1";
+  }
+
+  grouping bgp-common-neighbor-group-timers-config {
+    description
+      "Config parameters related to timers associated with the BGP
+      peer";
+
+    leaf connect-retry {
+      type uint16;
+      default 30;
+      description
+        "Time interval in seconds between attempts to establish a
+        session with the peer.";
+    }
+
+    leaf hold-time {
+      type uint16;
+      default 90;
+      description
+        "Time interval in seconds that a BGP session will be
+        considered active in the absence of keepalive or other
+        messages from the peer.  The hold-time is typically
+        set to 3x the keepalive-interval.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4, Sec. 10";
+    }
+
+    leaf keepalive-interval {
+      type uint16;
+      default 30;
+      description
+        "Time interval in seconds between transmission of keepalive
+        messages to the neighbor.  Typically set to 1/3 the
+        hold-time.";
+    }
+
+    leaf minimum-advertisement-interval {
+      type uint16;
+      default 30;
+      description
+        "Minimum time which must elapse between subsequent UPDATE
+        messages relating to a common set of NLRI being transmitted
+        to a peer. This timer is referred to as
+        MinRouteAdvertisementIntervalTimer by RFC 4721 and serves to
+        reduce the number of UPDATE messages transmitted when a
+        particular set of NLRI exhibit instability.";
+      reference
+        "RFC 4271 - A Border Gateway Protocol 4, Sec 9.2.1.1";
+    }
+
+    leaf restart-time {
+      type uint16;
+      units "seconds";
+      description
+        "Time interval in seconds after which the BGP session is
+        re-established after being torn down due to exceeding any
+        configured max prefix-limit.";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-config {
+    description
+      "Neighbor level configuration items.";
+
+    leaf peer-as {
+      type oc-inet:as-number;
+      description
+        "AS number of the peer.";
+    }
+
+    leaf local-as {
+      type oc-inet:as-number;
+      description
+        "The local autonomous system number that is to be used
+        when establishing sessions with the remote peer or peer
+        group, if this differs from the global BGP router
+        autonomous system number.";
+    }
+
+    leaf peer-type {
+        type oc-bgp-types:peer-type;
+        description
+          "Explicitly designate the peer or peer group as internal
+          (iBGP) or external (eBGP).";
+    }
+
+    leaf auth-password {
+      type oc-types:routing-password;
+      description
+        "Configures an MD5 authentication password for use with
+        neighboring devices.";
+    }
+
+    leaf remove-private-as {
+      // could also make this a container with a flag to enable
+      // remove-private and separate option.  here, option implies
+      // remove-private is enabled.
+      type oc-bgp-types:remove-private-as-option;
+      description
+        "Remove private AS numbers from updates sent to peers - when
+        this leaf is not specified, the AS_PATH attribute should be
+        sent to the peer unchanged";
+    }
+
+    leaf route-flap-damping {
+      type boolean;
+      default false;
+      description
+        "Enable route flap damping.";
+    }
+
+    leaf send-community {
+      status deprecated;
+      type oc-bgp-types:community-type;
+      default "NONE";
+      description
+        "This leaf has been deprecated and replaced by send-community-type to
+        support large communities.
+
+        Specify which types of community should be sent to the
+        neighbor or group. The default is to not send the
+        community attribute";
+    }
+
+    leaf-list send-community-type {
+      type oc-bgp-types:community-type;
+      description
+        "Specify which types of community should be sent to the
+        neighbor or group. The default is to not send the
+        community attribute";
+    }
+
+    leaf description {
+      type string;
+      description
+        "An optional textual description (intended primarily for use
+        with a peer or group";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-transport-config {
+    description
+      "Configuration parameters relating to the transport protocol
+      used by the BGP session to the peer";
+
+    leaf tcp-mss {
+      type uint16;
+      description
+        "Sets the max segment size for BGP TCP sessions.";
+    }
+
+    leaf mtu-discovery {
+      type boolean;
+      default false;
+      description
+        "Turns path mtu discovery for BGP TCP sessions on (true)
+        or off (false)";
+    }
+
+    leaf passive-mode {
+      type boolean;
+      default false;
+      description
+        "Wait for peers to issue requests to open a BGP session,
+        rather than initiating sessions from the local router.";
+    }
+
+    leaf local-address {
+      type union {
+        type oc-inet:ip-address;
+        type string;
+      }
+      //TODO:  the string should be converted to a leafref type
+      //to point to an interface when YANG 1.1 is available with
+      //leafrefs in union types.
+      description
+        "Set the local IP (either IPv4 or IPv6) address to use
+        for the session when sending BGP update messages.  This
+        may be expressed as either an IP address or reference
+        to the name of an interface.";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-error-handling-config {
+    description
+      "Configuration parameters relating to enhanced error handling
+      behaviours for BGP";
+
+    leaf treat-as-withdraw {
+      type boolean;
+      default "false";
+      description
+        "Specify whether erroneous UPDATE messages for which the
+        NLRI can be extracted are reated as though the NLRI is
+        withdrawn - avoiding session reset";
+      reference "draft-ietf-idr-error-handling-16";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-logging-options-config {
+    description
+      "Configuration parameters specifying the logging behaviour for
+      BGP sessions to the peer";
+
+    leaf log-neighbor-state-changes {
+      type boolean;
+      default "true";
+      description
+        "Configure logging of peer state changes.  Default is
+        to enable logging of peer state changes.";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-multihop-config {
+    description
+      "Configuration parameters specifying the multihop behaviour for
+      BGP sessions to the peer";
+
+    leaf enabled {
+      type boolean;
+      default "false";
+      description
+        "When enabled the referenced group or neighbors are permitted
+        to be indirectly connected - including cases where the TTL
+        can be decremented between the BGP peers";
+    }
+
+    leaf multihop-ttl {
+      type uint8;
+      description
+        "Time-to-live value to use when packets are sent to the
+        referenced group or neighbors and ebgp-multihop is enabled";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-route-reflector-config {
+    description
+      "Configuration parameters determining whether the behaviour of
+      the local system when acting as a route-reflector";
+
+    leaf route-reflector-cluster-id {
+      type oc-bgp-types:rr-cluster-id-type;
+      description
+        "route-reflector cluster id to use when local router is
+        configured as a route reflector.  Commonly set at the group
+        level, but allows a different cluster
+        id to be set for each neighbor.";
+    }
+
+    leaf route-reflector-client {
+      type boolean;
+      default "false";
+      description
+        "Configure the neighbor as a route reflector client.";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-as-path-options-config {
+    description
+      "Configuration parameters allowing manipulation of the AS_PATH
+      attribute";
+
+    leaf allow-own-as {
+      type uint8;
+      default 0;
+      description
+        "Specify the number of occurrences of the local BGP speaker's
+        AS that can occur within the AS_PATH before it is rejected.";
+    }
+
+    leaf replace-peer-as {
+      type boolean;
+      default "false";
+      description
+        "Replace occurrences of the peer's AS in the AS_PATH
+        with the local autonomous system number";
+    }
+
+    leaf disable-peer-as-filter {
+      type boolean;
+      default "false";
+      description
+        "When set to true, the system advertises routes to a peer
+        even if the peer's AS was in the AS path.  The default
+        behavior (false) suppresses advertisements to peers if
+        their AS number is in the AS path of the route.";
+    }
+  }
+
+  grouping bgp-common-neighbor-group-add-paths-config {
+    description
+      "Configuration parameters specfying whether the local system
+      will send or receive multiple paths using ADD_PATHS";
+
+    leaf receive {
+      type boolean;
+      default false;
+      description
+        "Enable capability negotiation to receive multiple path
+        advertisements for an NLRI from the neighbor or group";
+      reference
+        "RFC 7911 - Advertisement of Multiple Paths in BGP";
+    }
+
+    leaf send {
+      type boolean;
+      default false;
+      description
+        "Enable capability negotiation to send multiple path
+        advertisements for an NLRI from the neighbor or group";
+      reference
+        "RFC 7911 - Advertisement of Multiple Paths in BGP";
+    }
+
+    leaf send-max {
+      type uint8;
+      description
+        "The maximum total number of paths to advertise to neighbors
+        for a single NLRI.  This includes the single best path as
+        well as additional paths advertised when add-paths is
+        enabled.";
+    }
+
+    leaf eligible-prefix-policy {
+      type leafref {
+        path "/oc-rpol:routing-policy/oc-rpol:policy-definitions/" +
+          "oc-rpol:policy-definition/oc-rpol:name";
+      }
+      description
+        "A reference to a routing policy which can be used to
+        restrict the prefixes for which add-paths is enabled";
+    }
+  }
+
+  grouping bgp-common-graceful-restart-config {
+    description
+      "Configuration parameters relating to BGP graceful restart.";
+
+    leaf enabled {
+      type boolean;
+      description
+        "Enable or disable the graceful-restart capability.";
+    }
+
+    leaf restart-time {
+      type uint16 {
+        range 0..4096;
+      }
+      description
+        "Estimated time (in seconds) for the local BGP speaker to
+        restart a session. This value is advertise in the graceful
+        restart BGP capability.  This is a 12-bit value, referred to
+        as Restart Time in RFC4724.  Per RFC4724, the suggested
+        default value is <= the hold-time value.";
+    }
+
+    leaf stale-routes-time {
+      type uint16;
+      description
+        "An upper-bound on the time thate stale routes will be
+        retained by a router after a session is restarted. If an
+        End-of-RIB (EOR) marker is received prior to this timer
+        expiring stale-routes will be flushed upon its receipt - if
+        no EOR is received, then when this timer expires stale paths
+        will be purged. This timer is referred to as the
+        Selection_Deferral_Timer in RFC4724";
+    }
+
+    leaf helper-only {
+      type boolean;
+      description
+        "Enable graceful-restart in helper mode only. When this
+        leaf is set, the local system does not retain forwarding
+        its own state during a restart, but supports procedures
+        for the receiving speaker, as defined in RFC4724.";
+    }
+  }
+
+  grouping bgp-common-use-multiple-paths-config {
+    description
+      "Generic configuration options relating to use of multiple
+      paths for a referenced AFI-SAFI, group or neighbor";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Whether the use of multiple paths for the same NLRI is
+        enabled for the neighbor. This value is overridden by
+        any more specific configuration value.";
+    }
+  }
+
+  grouping bgp-common-use-multiple-paths-ebgp-as-options-config {
+    description
+      "Configuration parameters specific to eBGP multipath applicable
+      to all contexts";
+
+    leaf allow-multiple-as {
+     type boolean;
+     default "false";
+     description
+      "Allow multipath to use paths from different neighbouring
+      ASes.  The default is to only consider multiple paths from
+      the same neighbouring AS.";
+    }
+  }
+
+  grouping bgp-common-global-group-use-multiple-paths {
+    description
+      "Common grouping used for both global and groups which provides
+      configuration and state parameters relating to use of multiple
+      paths";
+
+    container use-multiple-paths {
+      description
+        "Parameters related to the use of multiple paths for the
+        same NLRI";
+
+      container config {
+        description
+          "Configuration parameters relating to multipath";
+        uses bgp-common-use-multiple-paths-config;
+      }
+      container state {
+        config false;
+        description
+          "State parameters relating to multipath";
+        uses bgp-common-use-multiple-paths-config;
+      }
+
+      container ebgp {
+        description
+          "Multipath parameters for eBGP";
+        container link-bandwidth-ext-community {
+          description
+            "Usage of DMZ Link-Bandwidth extended community";
+          container config {
+            description
+            "Configuration parameters relating to usage of link-bandwidth";
+            uses bgp-common-use-multiple-paths-link-bandwidth-config;
+          }
+          container state {
+            config false;
+            description
+            "State information relating to usage of link-bandwidth";
+            uses bgp-common-use-multiple-paths-link-bandwidth-config;
+          }
+        }
+        container config {
+          description
+            "Configuration parameters relating to eBGP multipath";
+          uses bgp-common-use-multiple-paths-ebgp-config;
+        }
+        container state {
+          config false;
+          description
+            "State information relating to eBGP multipath";
+          uses bgp-common-use-multiple-paths-ebgp-config;
+        }
+      }
+
+      container ibgp {
+        description
+          "Multipath parameters for iBGP";
+        container link-bandwidth-ext-community {
+          description
+            "Usage of DMZ Link-Bandwidth extended community";
+          container config {
+            description
+            "Configuration parameters relating to usage of link-bandwidth";
+            uses bgp-common-use-multiple-paths-link-bandwidth-config;
+          }
+          container state {
+            config false;
+            description
+            "State information relating to usage of link-bandwidth";
+            uses bgp-common-use-multiple-paths-link-bandwidth-config;
+          }
+        }
+        container config {
+          description
+            "Configuration parameters relating to iBGP multipath";
+          uses bgp-common-use-multiple-paths-ibgp-config;
+        }
+        container state {
+          config false;
+          description
+            "State information relating to iBGP multipath";
+          uses bgp-common-use-multiple-paths-ibgp-config;
+        }
+      }
+    }
+  }
+
+  grouping bgp-common-use-multiple-paths-link-bandwidth-config {
+    description
+      "Parameters controlling usage of  of DMZ Link-Bandwidth
+      extended community in pultipath RIB/FIB formation";
+    leaf enabled {
+      type boolean;
+      description
+      "When set to TRUE, BGP multiplepath shall distributed traffic
+      load among contributing routes proportionally to value of
+      Local Administrator subfield of link-bandwidth extended
+      community [draft-ietf-idr-link-bandwidth-07].
+      This leaf has no effect if BGP multi-path is disabled or
+      if maximum-path attribute of BGP multi-path value is set
+      to 1";
+    }
+  }
+
+  grouping bgp-common-use-multiple-paths-ebgp-config {
+    description
+      "Configuration parameters relating to multipath for eBGP";
+
+    leaf allow-multiple-as {
+     type boolean;
+     default "false";
+     description
+      "Allow multipath to use paths from different neighbouring
+      ASes.  The default is to only consider multiple paths from
+      the same neighbouring AS.";
+    }
+
+    leaf maximum-paths {
+     type uint32;
+     default 1;
+     description
+      "Maximum number of parallel paths to consider when using
+      BGP multipath. The default is use a single path.";
+    }
+  }
+
+  grouping bgp-common-use-multiple-paths-ibgp-config {
+    description
+      "Configuration parmaeters relating to multipath for iBGP";
+
+    leaf maximum-paths {
+      type uint32;
+      default 1;
+      description
+        "Maximum number of parallel paths to consider when using
+        iBGP multipath. The default is to use a single path";
+    }
+  }
+
+  grouping bgp-common-route-selection-options-config {
+    description
+      "Set of configuration options that govern best
+       path selection.";
+
+    leaf always-compare-med {
+      type boolean;
+      default "false";
+      description
+        "Compare multi-exit discriminator (MED) value from
+        different ASes when selecting the best route.  The
+        default behavior is to only compare MEDs for paths
+        received from the same AS.";
+    }
+
+    leaf ignore-as-path-length {
+      type boolean;
+      default "false";
+      description
+        "Ignore the AS path length when selecting the best path.
+        The default is to use the AS path length and prefer paths
+        with shorter length.";
+    }
+
+    leaf external-compare-router-id {
+      type boolean;
+      default "true";
+      description
+        "When comparing similar routes received from external
+        BGP peers, use the router-id as a criterion to select
+        the active path.";
+    }
+
+    leaf advertise-inactive-routes {
+      type boolean;
+      default "false";
+      description
+        "Advertise inactive routes to external peers.  The
+        default is to only advertise active routes.";
+    }
+
+    leaf enable-aigp {
+      type boolean;
+      default false;
+      description
+        "Flag to enable sending / receiving accumulated IGP
+        attribute in routing updates";
+    }
+
+    leaf ignore-next-hop-igp-metric {
+      type boolean;
+      default "false";
+      description
+        "Ignore the IGP metric to the next-hop when calculating
+        BGP best-path. The default is to select the route for
+        which the metric to the next-hop is lowest";
+    }
+  }
+
+  grouping bgp-common-route-selection-options {
+    description
+      "Configuration and state relating to route selection options";
+
+    container route-selection-options {
+      description
+        "Parameters relating to options for route selection";
+      container config {
+        description
+          "Configuration parameters relating to route selection
+          options";
+        uses bgp-common-route-selection-options-config;
+      }
+      container state {
+        config false;
+        description
+          "State information for the route selection options";
+        uses bgp-common-route-selection-options-config;
+      }
+    }
+  }
+
+  grouping bgp-common-state {
+    description
+      "Grouping containing common counters relating to prefixes and
+      paths";
+
+    leaf total-paths {
+      type uint32;
+      description
+        "Total number of BGP paths within the context";
+    }
+
+    leaf total-prefixes {
+      type uint32;
+      description
+        "Total number of BGP prefixes received within the context";
+    }
+  }
+
+
+}

@@ -1,0 +1,2255 @@
+module openconfig-isis {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/openconfig-isis";
+
+  prefix "oc-isis";
+
+  // import some basic types
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+  import openconfig-isis-types { prefix "oc-isis-types"; }
+  import openconfig-routing-policy { prefix "oc-rpol"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-interfaces { prefix "oc-if"; }
+  import openconfig-segment-routing { prefix "oc-sr"; }
+  import openconfig-bfd { prefix "oc-bfd"; }
+  import openconfig-keychain { prefix "oc-keychain"; }
+  import openconfig-keychain-types { prefix "oc-keychain-types"; }
+
+  // Include submodules:
+  // IS-IS LSP is the LSDB for IS-IS.
+  include openconfig-isis-lsp;
+  // IS-IS RT is routing-related features for IS-IS
+  include openconfig-isis-routing;
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net ";
+
+  description
+    "This module describes a YANG model for ISIS protocol configuration.
+    It is a limited subset of all of the configuration parameters
+    available in the variety of vendor implementations, hence it is
+    expected that it would be augmented with vendor - specific configuration
+    data as needed. Additional modules or submodules to handle other
+    aspects of ISIS configuration, including policy, routing, types,
+    LSDB and additional address families are also expected. This model
+    supports the following ISIS configuration level hierarchy:
+
+    ISIS
+    +-> { global ISIS configuration}
+        +-> levels +-> { level config}
+            +-> { system-level-counters }
+            +-> { level link-state-database}
+        +-> interface +-> { interface config }
+            +-> { circuit-counters }
+            +-> { levels config }
+            +-> { level adjacencies }";
+
+  oc-ext:openconfig-version "1.6.2";
+
+  revision "2024-02-20" {
+    description
+      "Fix typo in RFC reference for adjacency-state.";
+    reference "1.6.2";
+  }
+
+  revision "2023-11-01" {
+    description
+      "Refactor apply policy to separate default policy in it's own common
+      set of groupings";
+    reference "1.6.1";
+  }
+
+  revision "2023-05-01" {
+    description
+      "Add ISIS total-lsps counter.";
+    reference "1.6.0";
+  }
+
+  revision "2023-04-25" {
+    description
+      "Clarify use of the interface-ref type.";
+    reference "1.5.1";
+  }
+
+  revision "2023-03-27" {
+    description
+      "Add weighted ecmp.";
+    reference "1.5.0";
+  }
+
+  revision "2023-03-20" {
+    description
+      "Per-level global enabled configuration default false re-added to keep
+      backward compatibility.";
+    reference "1.4.1";
+  }
+
+  revision "2023-02-22" {
+    description
+      "Deprecate the instance leaf, and add a new instance-id leaf
+      that indicates the value to be used in the Instance Identifier
+      TLV.";
+    reference "1.4.0";
+  }
+
+  revision "2023-01-25" {
+    description
+      "Per-level global enabled configuration removed, since it duplicates
+      the level-capability leaf.";
+    reference "1.3.0";
+  }
+
+  revision "2023-01-04" {
+    description
+      "Add max ecmp paths for address family.";
+    reference "1.2.0";
+  }
+
+  revision "2022-09-20" {
+    description
+      "Add CSNP enable to IS-IS global configuration.";
+    reference "1.1.0";
+  }
+
+  revision "2022-05-10" {
+    description
+      "Modify internal/external route preference to unrestricted uint32
+      type.";
+    reference "1.0.0";
+  }
+
+  revision "2022-03-01" {
+    description
+      "Add simple authentication key support.";
+    reference "0.9.0";
+  }
+
+  revision "2022-02-24" {
+    description
+      "Add Hello PDU padding type to IS-IS global configuration.";
+    reference "0.8.0";
+  }
+
+  revision "2022-01-19" {
+    description
+      "Align revisions across modules.";
+    reference "0.7.1";
+  }
+
+  revision "2021-12-31" {
+    description
+      "Add support for per-interface hello authentication, and per-level
+      *SNP authentication.";
+    reference "0.7.0";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "0.6.2";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add bfd support without augmentation.";
+    reference "0.6.1";
+  }
+
+  revision "2020-03-24" {
+    description
+      "Support IGP-LDP sync per interface.";
+    reference "0.6.0";
+  }
+
+  revision "2020-02-04" {
+    description
+      "Consistent prefix for openconfig-mpls-types.";
+    reference "0.5.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.4.2";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fix bugs in when statements.";
+    reference "0.4.1";
+  }
+
+  revision "2018-06-05" {
+    description
+      "Fix bugs in when statements.";
+    reference "0.4.1";
+  }
+
+  revision "2018-05-14" {
+    description
+      "Update LSDB model to correct Extended IS reach TLV
+      bug. This change is backwards incompatible due to
+      adding an additional level of hierarchy to support
+      multiple instances of the TLV.";
+    reference "0.4.0";
+  }
+
+  revision "2017-07-26" {
+    description
+      "Update LSDB and fix bugs.";
+    reference "0.3.2";
+  }
+
+  revision "2017-05-15" {
+    description
+      "Refactor LSDB.";
+    reference "0.3.0";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Remove top-level /isis container";
+    reference "0.2.1";
+  }
+
+  revision "2016-12-15" {
+    description
+      "Add segment routing to IS-IS module";
+    reference "0.2.0";
+  }
+
+  revision "2016-10-18" {
+    description
+      "Initial revision of IS-IS models.";
+    reference "0.1.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // extension statements
+
+  // feature statements
+
+  // identity statements
+
+  // typedef statements
+
+  // grouping statements
+
+  grouping isis-global-config {
+    description
+      "This grouping defines global configuration options for ISIS router.";
+
+    leaf instance {
+      type string;
+      default 0;
+      description
+        "ISIS Instance. This leaf has been deprecated. The instance name
+        is specified within the
+        /network-instances/network-instance/protocols/protocol/config/name
+        leaf (list key). If a user requires a specific instance identifier
+        used in the Instance Identifier TLV to be configured the instance-id
+        leaf is used.";
+      status deprecated;
+    }
+
+    leaf instance-id {
+      type uint16;
+      description
+        "When specified, this leaf explicitly indicates the instance identifier
+        that is to be used for the IS-IS instance. The value should be included
+        in the Instance Identifier (IID) TLV.";
+      reference "RFC6822: IS-IS Multi-Instance";
+    }
+
+
+    leaf-list net {
+      type oc-isis-types:net;
+      description
+        "ISIS network entity title (NET). The first 8 bits are usually
+        49 (private AFI), next 16 bits represent area, next 48 bits represent
+        system id and final 8 bits are set to 0.";
+      reference
+        "International Organization for Standardization, Information
+        technology - Open Systems Interconnection-Network service
+        Definition - ISO/ IEC 8348:2002.";
+    }
+
+    leaf maximum-area-addresses {
+      type uint8;
+      default 3;
+      description
+        "Maximum areas supported.";
+    }
+
+    leaf level-capability {
+      type oc-isis-types:level-type;
+      default "LEVEL_1_2";
+      description
+        "ISIS level capability(level-1, level-2, level-1-2).";
+    }
+
+    leaf max-ecmp-paths {
+      type uint8;
+      description
+        "ISIS max-paths count.";
+    }
+
+    leaf weighted-ecmp {
+      type boolean;
+      default "false";
+      description
+        "When set to true, all eligible multipath IS-IS routes associated with
+        the instance are programmed to use weighted ECMP. An IS-IS route is
+        eligible for weighted ECMP if all the next-hop interfaces in the
+        multipath set have a load-balancing-weight other than 'none'.";
+    }
+
+    leaf poi-tlv {
+      type boolean;
+      default false;
+      description
+        "ISIS purge TLV. When set to true, a TLV is added to purges to record
+         the system ID  of the IS generating the purge.";
+      reference "RFC6232: Purge Originator Identification TLV for IS-IS. TLV 13.";
+    }
+
+    leaf iid-tlv {
+      type boolean;
+      default false;
+      description
+        "ISIS Instance Identifier TLV. When set to trues, the IID-TLV identifies
+        the unique instance as well as the topology/topologies to which the
+        PDU applies.";
+      reference "RFC6822: IS-IS Multi-Instance. TLV 7";
+    }
+
+    leaf fast-flooding {
+      type boolean;
+      default true;
+      description
+        "When set to true, IS will always flood the LSP that triggered an SPF
+     before the router actually runs the SPF computation.";
+    }
+
+    leaf csnp-enable-on-p2p-links {
+      type boolean;
+      default true;
+      description
+        "When set to true, ISIS will always enable CSNP on P2P Links.";
+    }
+
+    leaf hello-padding {
+      type oc-isis-types:hello-padding-type;
+      default "STRICT";
+      description
+        "Controls the padding type for IS-IS Hello PDUs on a global level.";
+    }
+  }
+
+  grouping admin-config {
+    description
+      "Re-usable grouping to enable or disable a particular IS-IS feature.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "When set to true, the functionality within which this leaf is
+        defined is enabled, when set to false it is explicitly disabled.";
+    }
+  }
+
+  grouping admin-config-deprecated {
+    description
+      "Re-usable grouping for the enabled leaf in contexts where it is deprecated.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      status deprecated;
+      description
+        "Formerly this leaf was used to enable or disable the functionality
+        within the context specified. This leaf is DEPRECATED.";
+    }
+  }
+
+  grouping isis-authentication-check-config {
+    description
+      "This grouping defines ISIS authentication check.";
+
+    leaf authentication-check {
+      type boolean;
+      default true;
+      description
+        "When set to true, reject all ISIS protocol PDUs that either have a mismatch
+        in authentication-type or authentication-key.";
+    }
+  }
+
+  grouping isis-authentication-type-config {
+    description
+      "This grouping defines the ISIS authentication type.";
+
+    leaf auth-type {
+      type identityref {
+        base oc-keychain-types:AUTH_TYPE;
+      }
+      description
+        "The type of authentication used in the applicable IS-IS PDUs
+        (simple_key, keychain).";
+    }
+  }
+
+  grouping isis-simple-key-authentication-config {
+    description
+      "This grouping defines ISIS simple authentication config.";
+
+    leaf auth-mode {
+      type identityref {
+        base oc-isis-types:AUTH_MODE;
+      }
+      description
+        "The type of authentication used in the applicable IS-IS PDUs.
+
+        This leaf along with the sibling leaf 'auth-password' can be used
+        to configure the simple key authentication.";
+    }
+
+    leaf auth-password {
+      type oc-types:routing-password;
+      description
+        "The authentication key used in the applicable IS-IS PDUs. The key in the
+        packet may be encrypted according to the configured authentication type.";
+    }
+  }
+  grouping isis-metric-style-config {
+    description
+      "This grouping defines ISIS metric style.";
+
+    leaf metric-style {
+      type oc-isis-types:metric-style;
+      description
+        "ISIS metric style types(narrow, wide).";
+    }
+  }
+
+  grouping isis-hello-authentication-config {
+    description
+      "Configuration options for IS-IS hello authentication.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Enabled or disable ISIS Hello authentication. Hello authentication
+        is used on a per-interface basis to authenticate adjacencies on the
+        interface.";
+    }
+
+    leaf keychain {
+      type oc-keychain:keychain-ref;
+      description
+        "Reference to a keychain that should be used for hello authentication.";
+    }
+  }
+
+  grouping isis-hello-authentication-group {
+    description
+      "This grouping defines ISIS hello-authentication.";
+
+    container config {
+      description
+        "This container defines ISIS authentication configuration.";
+
+      uses isis-hello-authentication-config;
+      uses isis-authentication-type-config;
+      uses isis-simple-key-authentication-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines ISIS authentication state.";
+
+      uses isis-hello-authentication-config;
+      uses isis-authentication-type-config;
+      uses isis-simple-key-authentication-config;
+    }
+  }
+
+  grouping isis-ldp-igp-config {
+    description
+      "This grouping defines ISIS/LDP Synchronization configuration.";
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "When set to true, rely on IGP/LDP synchronization. IGP cost for
+     link is maintained at max until LDP adjacencies are established ";
+      reference "RFC5443: LDP IGP Synchronization.";
+    }
+
+    leaf post-session-up-delay {
+      type uint16;
+      units seconds;
+      description
+        "Specifies a delay, expressed in units of seconds,
+        between the LDP session to the IGP neighbor being established, and
+        it being considered synchronized by the IGP.";
+    }
+  }
+
+  grouping isis-te-config {
+    description
+      "This grouping defines ISIS Traffic Engineering configuration.";
+
+    leaf ipv4-router-id {
+      type oc-inet:ipv4-address;
+      description
+        "IPv4 MPLS Traffic Engineering Router-ID.";
+    }
+
+    leaf ipv6-router-id {
+      type oc-inet:ipv6-address;
+      description
+        "IPv6 MPLS Traffic Engineering Router-ID.";
+    }
+  }
+
+  grouping isis-reference-bandwidth-config {
+    description
+      "This grouping defines ISIS Reference Bandwidth Configuration.";
+
+    leaf reference-bandwidth {
+      type uint32;
+      description
+        "ISIS Reference Bandwidth value";
+    }
+  }
+
+  grouping isis-overload-bit-set-config {
+    description
+      "This grouping defines ISIS Overload Bit.";
+
+    leaf set-bit {
+      type boolean;
+      default false;
+      description
+        "When set to true, IS-IS overload bit is set.";
+    }
+
+    leaf set-bit-on-boot {
+      type boolean;
+      default false;
+      description
+        "When set to true, the IS-IS overload bit is set on system boot.";
+    }
+
+    leaf advertise-high-metric {
+      type boolean;
+      default false;
+      description
+        "When set to true, the local IS advertises links with the highest
+        available metric regardless of their configured metric. The metric
+        value is based on the metric style - if wide metrics are utilised
+        the metric is advertised as 16777214, otherwise they are advertised
+        with a value of 63.";
+    }
+  }
+
+  grouping isis-overload-bit-reset-config {
+    description
+      "This grouping defines ISIS Overload Bit Reset Triggers";
+
+    leaf reset-trigger {
+      type identityref {
+          base oc-isis-types:OVERLOAD_RESET_TRIGGER_TYPE;
+      }
+      description
+        "In the case that the system sets the overload bit on start, the
+        system should reset the bit (i.e., clear the overload bit) upon
+        the specified trigger.";
+    }
+
+    leaf delay {
+      type uint16;
+      units seconds;
+      description
+        "If a reset trigger is specified, the system should delay resetting
+        the overload bit for the specified number of seconds after the
+        trigger occurs.";
+    }
+  }
+
+  grouping isis-attached-bit-config {
+    description
+      "This grouping defines ISIS Attached Bit";
+
+    leaf ignore-bit {
+      type boolean;
+      default false;
+      description
+        "When set to true, if the attached bit is set on an incoming Level 1
+        IS-IS, the local system ignores it. In this case the local system
+        does not set a default route to the L1L2 router advertising the PDU
+        with the attached bit set.";
+    }
+
+    leaf suppress-bit {
+      type boolean;
+      default false;
+      description
+        "When set to true, if the local IS acts as a L1L2 router, then the
+        attached bit is not advertised in locally generated PDUs.";
+    }
+  }
+
+  grouping overload-bit-group {
+    description
+      "This grouping defines ISIS Overload Bit.";
+
+    container config {
+      description
+        "This container defines ISIS Overload Bit configuration.";
+
+      uses isis-overload-bit-set-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines state for ISIS Overload Bit.";
+
+      uses isis-overload-bit-set-config;
+    }
+
+    container reset-triggers {
+      description
+        "This container defines state for ISIS Overload Bit reset triggers";
+
+      list reset-trigger {
+        key "reset-trigger";
+
+        description
+          "This list describes ISIS Overload reset trigger reasons.";
+
+        leaf reset-trigger {
+          type leafref {
+            path "../config/reset-trigger";
+          }
+          description
+            "Reference to the reset trigger reason";
+        }
+
+        container config {
+          description
+            "This container defines ISIS Overload Bit reset trigger
+            configuration.";
+
+          uses isis-overload-bit-reset-config;
+        }
+
+        container state {
+          config false;
+          description
+            "This container defines state for ISIS Overload Bit reset
+            triggers.";
+
+          uses isis-overload-bit-reset-config;
+        }
+      }
+    }
+  }
+
+
+  grouping isis-base-level-config {
+    description
+      "This grouping defines ISIS Level configuration.";
+
+    leaf level-number {
+      type oc-isis-types:level-number;
+      description
+        "ISIS level number (level-1, level-2).";
+    }
+  }
+
+  grouping isis-interface-level-config {
+    description
+      "This grouping defines ISIS Interface Level configuration.";
+
+    leaf level-number {
+      type oc-isis-types:level-number;
+      description
+        "ISIS level number(level-1, level-2).";
+    }
+
+    leaf passive {
+      type boolean;
+      default false;
+      description
+        "ISIS passive interface admin enable/disable function.";
+    }
+
+    leaf priority {
+      type uint8 {
+        range "0 .. 127";
+      }
+      description
+        "ISIS neighbor priority(LAN hello PDU only).";
+    }
+  }
+
+  grouping isis-hello-timers-config {
+    description
+      "This grouping defines ISIS hello timers configuration.";
+
+    leaf hello-interval {
+      type uint32;
+      description
+        "ISIS hello-interval value.";
+    }
+
+    leaf hello-multiplier {
+      type uint8;
+      description
+        "ISIS hello-multiplier value.";
+    }
+  }
+
+  grouping isis-interface-config {
+    description
+      "This grouping defines ISIS interface configuration.";
+
+    leaf interface-id {
+      type oc-if:interface-id;
+      description
+        "Interface for which ISIS configuration is to be applied.";
+    }
+
+    leaf passive {
+      type boolean;
+      default false;
+      description
+        "When set to true, the referenced interface is a passive interface
+        such that it is not eligible to establish adjacencies with other
+        systems, but is advertised into the IS-IS topology.";
+    }
+
+    leaf hello-padding {
+      type oc-isis-types:hello-padding-type;
+      description
+        "Controls the padding type for IS-IS Hello PDUs.";
+    }
+
+    leaf circuit-type {
+      type oc-isis-types:circuit-type;
+      description
+        "ISIS circuit type (p2p, broadcast).";
+    }
+  }
+
+  grouping isis-adaptive-timers-state {
+    description
+      "This grouping defines ISIS adaptive timers state";
+
+    leaf adaptive-timer {
+      type oc-isis-types:adaptive-timer-type;
+        description
+          "ISIS adaptive timer types (linear, exponential).";
+    }
+  }
+
+  grouping isis-lsp-generation-timers-config {
+    description
+      "This grouping defines ISIS LSP Generation timers configuration";
+
+    leaf lsp-max-wait-interval {
+      type uint64;
+      units milliseconds;
+      description
+        "Time interval in milliseconds that specifies max interval between
+         two consecutive occurrences of an LSP being generated.";
+    }
+
+    leaf lsp-first-wait-interval {
+      type uint64;
+      units milliseconds;
+      description
+        "Time interval in milliseconds that specifies the first LSP generation
+        delay.";
+    }
+
+    leaf lsp-second-wait-interval {
+      type uint64;
+      units milliseconds;
+      description
+        "Time interval in milliseconds that specifies the millisecond LSP
+         generation delay.";
+    }
+  }
+
+  grouping isis-lsp-timers-config {
+    description
+      "This grouping defines ISIS LSP timers configuration";
+
+    leaf lsp-lifetime-interval {
+      type uint16;
+      units seconds;
+      default 1200;
+      description
+        "Time interval in seconds that specifies how long an LSP remains in
+        LSDB without being refreshed.";
+    }
+
+    leaf lsp-refresh-interval {
+      type uint16;
+      units seconds;
+      description
+        "Time interval in seconds that specifies how often route topology
+         that a device originates is transmitted in LSPs.";
+    }
+  }
+
+  grouping isis-spf-timers-config {
+    description
+      "This grouping defines ISIS SPF timers configuration.";
+
+    leaf spf-hold-interval {
+      type uint64;
+      units milliseconds;
+      default 5000;
+      description
+        "SPF Hold Down time interval in milliseconds.";
+    }
+
+    leaf spf-first-interval {
+      type uint64;
+      units milliseconds;
+      description
+        "Time interval in milliseconds between the
+        detection of topology change and when the SPF algorithm runs.";
+    }
+    leaf spf-second-interval {
+      type uint64;
+      units milliseconds;
+      description
+        "Time interval in milliseconds between the first and second
+         SPF calculation.";
+    }
+  }
+
+  grouping isis-interface-timers-config {
+    description
+      "This grouping defines ISIS interface timers configuration.";
+
+    leaf csnp-interval {
+      type uint16;
+      units seconds;
+      description
+        "The interval, specified in seconds, at which periodic CSNP packets
+        should be transmitted by the local IS.";
+    }
+
+    leaf lsp-pacing-interval {
+      type uint64;
+      units milliseconds;
+      description
+        "The interval interval in milliseconds between the
+        detection of topology change and when the SPF algorithm runs.";
+    }
+  }
+
+  grouping isis-interface-weighted-ecmp-config {
+    description
+      "This grouping defines ISIS weighted ECMP configuration";
+
+    leaf load-balancing-weight {
+      description
+        "The load-balancing weight of the interface, which applies when
+        weighted ECMP is enabled and the interface is part of a multipath set.";
+      type union {
+        type uint32 {
+          range "1..4294967295";
+        }
+        type enumeration {
+          enum "auto" {
+              description "Load-balancing weight is based on the bandwidth of
+              the parent interface (port or LAG)";
+          }
+          enum "none" {
+              description "The interface should not participate in weighted
+              ECMP";
+          }
+        }
+      }
+      default "auto";
+    }
+  }
+
+  grouping isis-transport-config {
+    description
+      "This grouping defines configuration parameters relating to the
+      transport protocol used by the ISIS.";
+
+    leaf lsp-mtu-size {
+      type uint16;
+      description
+        "The maximum size in bytes of an IS-IS Link state PDU.";
+    }
+  }
+
+  grouping isis-graceful-restart-config {
+    description
+      "This grouping defines ISIS graceful restart configuration.";
+
+    leaf helper-only {
+      type boolean;
+      description
+        "Enable or disable the IS-IS graceful restart helper function. When
+        this leaf is set, the local system does not utilise the IS-IS
+        graceful restart procedures during its own restart, but supports
+        retaining forwarding information during a remote speaker's restart.";
+    }
+    reference "RFC 5306: Restart Signaling for IS-IS.";
+  }
+
+  // configuration context containers
+  grouping inter-level-propagation-policies-structural {
+    description
+      "Propagate prefixes between IS-IS levels.";
+
+    container inter-level-propagation-policies {
+      description
+        "Policies to propagate prefixes between IS-IS levels.";
+
+      container level1-to-level2 {
+        description
+          "Policies relating to prefixes to be propagated from
+          Level 1 to Level 2.";
+
+        container config {
+          description
+            "Configuration parameters relating to the propagation
+            of prefixes from IS-IS Level 1 to Level 2.";
+
+          uses inter-level-propagation-policy-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the
+            propagation of prefixes from IS-IS Level 1 to Level 2.";
+
+          uses inter-level-propagation-policy-config;
+        }
+
+      }
+
+      container level2-to-level1 {
+        description
+          "Policies relating to prefixes to be propagated from
+           Level2 to Level 1.";
+
+        container config {
+          description
+            "Configuration parameters relating to the propagation
+            of prefixes from IS-IS Level 2 to Level 1.";
+
+          uses inter-level-propagation-policy-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state parameters relating to the propagation
+            of prefixes from IS-IS Level 2 to Level 1.";
+
+          uses inter-level-propagation-policy-config;
+        }
+      }
+    }
+  }
+
+  grouping inter-level-propagation-policy-config {
+    description
+      "Policy governing the propagation of prefixes between levels.";
+
+    uses oc-rpol:apply-policy-import-config;
+    uses oc-rpol:default-policy-import-config;
+  }
+
+  grouping isis-mpls-config {
+    description
+      "This grouping defines MPLS-related features in IS-IS";
+
+    container mpls {
+      description
+        "Configuration and operational state relating to MPLS-related
+        features in IS-IS";
+
+      container igp-ldp-sync {
+        description
+          "Configuration and operational state relating to synchronisation
+          between the LDP and IS-IS";
+
+        container config {
+          description
+            "This container defines ISIS/IGP configuration.";
+
+          uses isis-ldp-igp-config;
+        }
+
+        container state {
+          config false;
+          description
+            "This container defines state information for ISIS/LDP Sync.";
+
+          uses isis-ldp-igp-config;
+        }
+      }
+    }
+  }
+
+  grouping isis-global-base {
+    description
+      "This grouping describes ISIS Global router.";
+
+    container config {
+      description
+        "This container defines ISIS global configuration router.";
+
+      uses isis-authentication-check-config;
+      uses isis-global-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines state for ISIS global router.";
+
+      uses isis-authentication-check-config;
+      uses isis-global-config;
+    }
+
+    container lsp-bit {
+      description
+        "This container defines ISIS LSP Operational Bits.";
+
+      container overload-bit {
+        description
+          "This container defines Overload Bit configuration.";
+        uses overload-bit-group;
+      }
+
+      container attached-bit {
+        description
+          "This container defines Attached Bit.";
+
+        container config {
+          description
+            "This container defines Attached Bit configuration.";
+
+          uses isis-attached-bit-config;
+        }
+
+        container state {
+          config false;
+          description
+            "This container defines state for Link State PDU Bit.";
+
+          uses isis-attached-bit-config;
+        }
+      }
+    }
+
+    container reference-bandwidth {
+      description
+        "This container defines ISIS Reference Bandwidth.";
+
+      container config {
+        description
+          "This container defines Reference Bandwidth configuration";
+        uses isis-reference-bandwidth-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state for Reference Bandwidth.";
+
+        uses isis-reference-bandwidth-config;
+      }
+    }
+
+    container nsr {
+      description
+        "This container defines ISIS Non-Stop Routing.";
+
+      container config {
+        description
+          "This container defines Non-Stop-Routing configuration.";
+
+        uses admin-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state for Non-Stop-Routing";
+
+        uses admin-config;
+      }
+    }
+
+    container graceful-restart {
+      description
+        "This container defines ISIS Graceful Restart.";
+
+      container config {
+        description
+          "This container defines ISIS graceful-restart configuration.";
+
+        uses admin-config;
+        uses isis-graceful-restart-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state information for ISIS graceful-restart.";
+
+        uses admin-config;
+        uses isis-graceful-restart-config;
+      }
+    }
+
+    container timers {
+      description
+        "This container defines ISIS timers.";
+
+      container config {
+        description
+          "This container defines ISIS global timers configuration.";
+
+        uses isis-lsp-timers-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state information for ISIS global timers.";
+
+        uses isis-lsp-timers-config;
+      }
+
+      container spf {
+        description
+          "This container defines ISIS SPF timer settings.";
+
+        container config {
+          description
+            "This container defines ISIS SPF timers configuration.";
+
+          uses isis-spf-timers-config;
+        }
+
+        container state {
+         config false;
+         description
+          "This container defines state information for ISIS SPF timers.";
+
+         uses isis-spf-timers-config;
+         uses isis-adaptive-timers-state;
+       }
+      }
+
+      container lsp-generation {
+        description
+          "This container defines ISIS LSP Generation.";
+
+        container config {
+          description
+            "This container defines ISIS LSP Generation timers
+            configuration.";
+
+          uses isis-lsp-generation-timers-config;
+        }
+
+        container state {
+          config false;
+          description
+            "This container defines state information for ISIS LSP Generation
+            timers.";
+
+          uses isis-lsp-generation-timers-config;
+          uses isis-adaptive-timers-state;
+        }
+      }
+    }
+
+    container transport {
+      description
+        "This container defines ISIS transport.";
+
+      container config {
+        description
+          "This container defines ISIS transport related configuration.";
+
+        uses isis-transport-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state information for ISIS transport
+          parameters.";
+
+        uses isis-transport-config;
+      }
+    }
+
+    uses isis-mpls-config;
+
+    container igp-shortcuts {
+      description
+        "This container defines IGP shortcuts configuration and state
+        information.";
+
+      uses isis-shortcuts-afi-list;
+    }
+
+    container afi-safi {
+      description
+        "This container defines address-family specific configuration
+        and state information.";
+
+      uses isis-afi-safi-list;
+    }
+
+    uses oc-sr:sr-igp-top;
+  }
+
+  grouping isis-route-preference-config {
+    description
+      "This grouping defines ISIS route preference configuration";
+
+    leaf external-route-preference {
+      type uint32;
+      description
+        "Administrative Distance (preference) for external ISIS routes.";
+    }
+
+    leaf internal-route-preference {
+      type uint32;
+      description
+        "Administrative Distance (preference) for internal ISIS routes.";
+    }
+  }
+
+  grouping isis-interfaces {
+    description
+      "This grouping defines ISIS interfaces configured on local system.";
+
+    list interface {
+      key "interface-id";
+
+      description
+        "This list contains ISIS interfaces.
+
+        The interface referenced is based on the interface and
+        subinterface leaves within the interface-ref container -
+        which reference an entry in the /interfaces/interface list -
+        and should not rely on the value of the list key.";
+
+      leaf interface-id {
+        type leafref {
+          path "../config/interface-id";
+        }
+        description
+          "Reference to interface-id";
+      }
+
+      uses isis-interface-group;
+      uses isis-mpls-config;
+      uses oc-if:interface-ref;
+    }
+  }
+
+  grouping isis-interface-group {
+    description
+      "This grouping defines ISIS interfaces configured on local system.";
+
+    container config {
+      description
+        "This container defines ISIS interface configuration.";
+
+      uses admin-config;
+      uses isis-interface-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines state information for ISIS interfaces.";
+
+      uses admin-config;
+      uses isis-interface-config;
+    }
+
+    container circuit-counters {
+      description
+        "This container defines state information for ISIS circuit counters.";
+
+      uses circuit-counters-structural;
+    }
+
+    container authentication {
+      description
+        "This container defines ISIS authentication.";
+
+      uses isis-hello-authentication-group;
+    }
+
+    container afi-safi {
+      description
+        "This container defines address-family specific configuration
+        and state information.";
+
+      uses isis-if-global-afi-safi-list;
+    }
+
+    container levels {
+      description
+        "This container defines ISIS level specific configuration and
+        state information.";
+
+      uses isis-interface-levels;
+    }
+
+    container timers {
+      description
+        "This container describes ISIS interface timers configuration";
+
+      container config {
+        description
+          "Configuration parameters relating to interface
+          timers for IS-IS";
+
+        uses isis-interface-timers-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state information for ISIS interface timers.";
+
+        uses isis-interface-timers-config;
+      }
+    }
+
+    container weighted-ecmp {
+      description
+        "This container defines ISIS interface weighted ECMP options";
+
+      container config {
+        description
+          "Configuration parameters relating to weighted ecmp";
+        uses isis-interface-weighted-ecmp-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines state information for weighted ecmp";
+        uses isis-interface-weighted-ecmp-config;
+      }
+    }
+
+    uses oc-bfd:bfd-enable;
+    container bfd {
+      description
+        "This container defines BFD.";
+
+      container config {
+        description
+          "This container defines BFD configuration parameters.";
+
+        uses isis-bfd-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines BFD state information.";
+
+        uses isis-bfd-config;
+      }
+    }
+  }
+
+  grouping isis-bfd-config {
+    description
+      "This grouping defines Bidirectionl-Forwarding-Detection
+      configuration.";
+
+    //There is also BFD state under adjacency
+    leaf bfd-tlv {
+      type boolean;
+      description
+        "When set to true, BFD TLV is used. This enables support for the IS-IS
+        BFD TLV options, which specify that a BFD session must be established
+        before an IS-IS adjacency can transition to the established state.
+        This option should be enabled on all IS-IS neighbors on a shared
+        interface.";
+      reference "RFC6213. TLV 148";
+    }
+    reference "RFC5880: Bidirectional Forwarding Detection (BFD).";
+  }
+
+
+  grouping isis-levels {
+    description
+      "This grouping defines global ISIS Levels.";
+
+    list level {
+      key "level-number";
+
+      description
+        "Configuration and operational state parameters related to a
+        particular level within the IS-IS protocol instance";
+
+      leaf level-number {
+        type leafref {
+          path "../config/level-number";
+        }
+        description
+          "Reference to ISIS level-number.";
+      }
+
+      uses isis-level-group;
+    }
+  }
+
+  grouping isis-interface-levels {
+    description
+      "This grouping defines ISIS interface Levels.";
+
+    list level {
+      key "level-number";
+      description
+        "Configuration and operational state parameters related to a
+        particular level on an IS-IS enabled interface.";
+
+      leaf level-number {
+        type leafref {
+          path "../config/level-number";
+        }
+        description
+          "Reference to ISIS level-number.";
+      }
+
+      uses isis-interface-level-group;
+    }
+  }
+
+  grouping isis-level-group {
+    description
+      "This grouping defines ISIS level configuration and state
+      information.";
+
+    container config {
+      description
+        "This container defines ISIS level based configuration.";
+
+      uses admin-config-deprecated;
+      uses isis-base-level-config;
+      uses isis-metric-style-config;
+      uses isis-authentication-check-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines ISIS level state information.";
+
+      uses admin-config;
+      uses isis-base-level-config;
+      uses isis-metric-style-config;
+      uses isis-authentication-check-config;
+    }
+
+    container system-level-counters {
+      description
+        "This container defines ISIS system level counters.";
+
+      uses system-level-counters-structural;
+    }
+
+    container link-state-database {
+      config false;
+      description
+        "This container defines ISIS LSDB.";
+
+      list lsp {
+        key "lsp-id";
+        description
+          "This list describes LSPs in the LSDB.";
+        uses lsp-state;
+      }
+    }
+
+    container traffic-engineering {
+      description
+        "This container defines ISIS TE.";
+
+      container config {
+        description
+          "This container defines ISIS TE configuration.";
+
+        uses admin-config;
+        uses isis-te-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines ISIS TE state information.";
+
+        uses admin-config;
+        uses isis-te-config;
+      }
+    }
+
+    container route-preference {
+      description
+        "This container defines Administrative Distance (or preference)
+        assigned to ISIS routes (level1 internal, level2 internal, level1
+        external, level2 external).";
+
+      container config {
+        description
+          "This container defines route preference configuration.";
+        uses isis-route-preference-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines ISIS route preference state information.";
+        uses isis-route-preference-config;
+      }
+    }
+
+    container authentication {
+      description
+        "This container defines ISIS authentication.";
+      uses isis-level-authentication-group;
+    }
+  }
+
+  grouping isis-level-authentication-group {
+    description
+      "Grouping containing structural elements for authentication in IS-IS.";
+
+    container config {
+      description
+        "Configuration parameters relating to IS-IS authentication.";
+
+      uses isis-level-authentication-config;
+      uses isis-authentication-type-config;
+      uses isis-simple-key-authentication-config;
+    }
+
+    container state {
+      config false;
+      description
+        "Operational state parameters relating to IS-IS authentication.";
+      uses isis-level-authentication-config;
+      uses isis-authentication-type-config;
+      uses isis-simple-key-authentication-config;
+    }
+  }
+
+  grouping isis-level-authentication-config {
+    description
+      "Configuration leaves for IS-IS authentication.";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, authentication of IS-IS PSNP, CSNP and
+        LSP packets is enabled using the specified authentication details in
+        the sibling leaves.
+
+        The sibling 'disable-<type>' leaves can be used to override the value
+        of this leaf and disable authentication for a specific packet type.";
+    }
+
+    leaf disable-csnp {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, authentication is disabled for CSNP
+        packets, overriding the value of the enabled leaf in this context.";
+    }
+
+    leaf disable-psnp {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, authentication is disabled for PSNP
+        packets, overriding the value of the enabled leaf in this context.";
+    }
+
+    leaf disable-lsp {
+      type boolean;
+      default false;
+      description
+        "When this leaf is set to true, authentication is disabled for LSP
+        packets, overriding the value of the enabled leaf in this context.";
+    }
+
+    leaf keychain {
+      type oc-keychain:keychain-ref;
+      description
+        "Reference to the keychain that should be used for authenticating IS-IS
+        packets - the keychain may contain either a simple password, or
+        HMAC-MD5 key that is used for authenticating CSNP, PSNP and LSP packets
+        within the specified IS-IS level.";
+    }
+  }
+
+  grouping isis-interface-level-group {
+    description
+      "This grouping defines ISIS interface level.";
+
+    container config {
+      description
+        "This container defines interface ISIS level configuration.";
+
+      uses isis-interface-level-config;
+      uses admin-config;
+    }
+
+    container state {
+      config false;
+      description
+        "This container defines interface ISIS level state information.";
+
+      uses isis-interface-level-config;
+      uses admin-config;
+    }
+
+    container packet-counters {
+      description
+        "This container defines ISIS interface packet counters.";
+
+      uses packet-counters-structural;
+    }
+
+    container adjacencies {
+      config false;
+      description
+        "This container defines ISIS adjacencies.";
+
+      list adjacency {
+        key "system-id";
+
+        description
+          "List of the local system's IS-IS adjacencies.";
+
+        leaf system-id {
+          type leafref {
+            path "../state/system-id";
+          }
+          description
+            "Reference to the IS neighbor.";
+        }
+
+        container state {
+          description
+            "Operational state relating to the IS-IS adjacency with the
+            remote system";
+
+          uses adjacency-state;
+        }
+      }
+    }
+
+    container timers {
+      description
+        "This container defines ISIS timers.";
+
+      container config {
+        description
+          "This container defines ISIS interface hello-timers configuration.";
+
+        uses isis-hello-timers-config;
+      }
+
+      container state {
+        config false;
+        description
+          "This container defines ISIS interface hello-timers state.";
+
+        uses isis-hello-timers-config;
+      }
+    }
+
+    container afi-safi {
+      description
+        "This container defines address-family specific configuration
+        and state information.";
+
+      uses isis-if-afi-safi-list;
+    }
+
+    container hello-authentication {
+      description
+        "This container defines ISIS authentication.";
+
+      uses isis-hello-authentication-group;
+    }
+  }
+
+
+  grouping isis-top {
+    description
+      "This grouping define top-level ISIS model data.";
+
+    container isis {
+      description
+        "This container defines top-level ISIS configuration and state
+        information.";
+
+      container global {
+        description
+          "This container defines global ISIS configuration and state
+          information.";
+
+        uses isis-global-base;
+        uses inter-level-propagation-policies-structural;
+      }
+
+      container levels {
+        description
+          "This container defines ISIS level configuration and state
+          information.";
+        uses isis-levels;
+      }
+
+      container interfaces {
+        description
+          "This container defines global ISIS interface configuration and
+          state information.";
+        uses isis-interfaces;
+      }
+    }
+  }
+
+  grouping adjacency-state {
+    description
+      "This grouping defines ISIS adjacency.";
+
+    leaf system-id {
+     type oc-isis-types:system-id;
+      description
+        "ISIS neighbor system-id.";
+    }
+
+    leaf neighbor-ipv4-address {
+      type oc-inet:ipv4-address;
+      description
+        "ISIS Neighbor IPv4 address.";
+    }
+
+    leaf neighbor-ipv6-address {
+      type oc-inet:ipv6-address;
+      description
+        "ISIS Neighbor IPv6 address.";
+    }
+
+    leaf neighbor-snpa {
+      type oc-isis-types:snpa;
+      description
+        "ISIS neighbor SNPA.";
+    }
+
+    leaf local-extended-circuit-id {
+      type oc-isis-types:extended-circuit-id;
+      description
+        "Local extended circuit ID.";
+    }
+    leaf neighbor-extended-circuit-id {
+      type oc-isis-types:extended-circuit-id;
+      description
+        "ISIS neighbor extended circuit ID.";
+    }
+
+    leaf priority {
+      type uint8 {
+        range "0..127";
+      }
+      description
+        "Priority of the neighboring IS(LAN Hello only).";
+    }
+
+    leaf dis-system-id {
+      type oc-isis-types:system-id;
+      description
+        "DIS System ID(LAN hello only).";
+    }
+
+    leaf neighbor-circuit-type {
+      type oc-isis-types:level-type;
+      description
+        "Received ISIS circuit type (level-1, level-2, level-1-2).";
+    }
+
+    leaf adjacency-type {
+      type oc-isis-types:level-type;
+      description
+        "Formed ISIS adjacency type(level-1, level-2, level-1-2).";
+    }
+
+    leaf adjacency-state {
+      type oc-isis-types:isis-interface-adj-state;
+      description
+        "P2P 3-way ISIS adjacency state(up, down, init, failed).";
+      reference "RFC5303: TLV 240.";
+    }
+
+    leaf up-timestamp {
+      type oc-types:timeticks64;
+      description
+        "Time at which the adjacency transitioned into the up state, expressed
+        as number of nanoseconds since the Unix epoch (Jan 1, 1970 00:00:00
+        UTC).";
+    }
+
+    leaf multi-topology {
+      type boolean;
+      description
+        "When set to true, ISIS multi-topology is supported.";
+      reference "RFC5129. TLV 229.";
+    }
+
+    leaf-list topology {
+      type identityref {
+        base oc-isis-types:AFI_SAFI_TYPE;
+      }
+      description
+        "ISIS topology type support(ipv4-unicast, ipv6-unicast,
+        ipv4-multicast, ipv6-multicast).";
+    }
+
+    leaf restart-support {
+      type boolean;
+      description
+        "When set to true, Graceful-restart signaling is supported.";
+    }
+
+    leaf restart-suppress {
+      type boolean;
+      description
+        "When set to true, adjacency is not advertised. The SA bit is used by a
+        starting router to  request that its neighbor suppress advertisement of
+        the adjacency  to the starting router in the neighbor's LSPs.";
+    }
+
+    leaf restart-status {
+      type boolean;
+      description
+        "When set to true, neighbor is being helped. The RR bit is used by a
+        (re)starting router to signal to its neighbors that a (re)start is in
+        progress.";
+    }
+
+    leaf-list area-address {
+      type oc-isis-types:area-address;
+      description
+        "List of ISIS area-address(es).";
+    }
+
+    leaf-list nlpid {
+      type enumeration {
+        enum IPV4 {
+          description
+      "IPv4 Address family.";
+        }
+        enum IPV6 {
+          description
+      "IPv6 Address family.";
+        }
+      }
+      description
+        "Supported Protocol. IPv4 is defined as (0xcc)
+        and IPv6 - (0x8e). ISIS reference is TLV 129.";
+    }
+
+    // TODO(bogdanov): update when BFD model is integrated.
+    //leaf ipv4-bfd-status {
+      //type oc-isis-types:bfd-state;
+      //description
+      //  "IPv4 BFD session status.";
+    //}
+    //leaf ipv6-bfd-status {
+      //type oc-isis-types:bfd-state;
+      //description
+      //  "IPv4 BFD session status. ";
+    //}
+
+  }
+
+  grouping packet-counters-generic-state {
+    description
+      "Operational state parameters relating to LSP packet counters.";
+
+    leaf received {
+      type oc-yang:counter32;
+      description
+        "The number of the specified type of PDU received on the interface.";
+    }
+    leaf processed {
+      type oc-yang:counter32;
+      description
+        "The number of the specified type of PDU received on the interface
+        that have been processed by the local system.";
+    }
+    leaf dropped {
+      type oc-yang:counter32;
+      description
+        "The number of the specified type of PDU received on the interface
+        that have been dropped.";
+    }
+
+    leaf sent {
+      type oc-yang:counter32;
+      description
+        "The number of the specified type of PDU that have been sent by the
+        local system on the interface.";
+    }
+
+    leaf retransmit {
+      type oc-yang:counter32;
+      description
+        "The number of the specified type of PDU that that have been
+        retransmitted by the local system on the interface.";
+    }
+  }
+
+  grouping packet-counters-structural {
+    description
+      "This grouping defines ISIS packet counter state.";
+
+    container lsp {
+      description
+        "This container defines LSP packet counters.";
+
+     container state {
+      config false;
+      description
+        "This container defines LSP PDU counters.";
+
+      uses packet-counters-generic-state;
+     }
+    }
+
+    container iih {
+      description
+        "This container defines IIH packet counters.";
+
+      container state {
+        config false;
+        description
+          "Operational counters relating to IIH PDUs";
+
+        uses packet-counters-generic-state;
+      }
+    }
+
+    container ish {
+      description
+        "This container defines ISH packet counters.";
+
+     container state {
+      config false;
+      description
+        "Operational state relating to ISH PDUs.";
+
+      uses packet-counters-generic-state;
+     }
+    }
+
+    container esh {
+     description
+       "This container defines ESH packet counters.";
+     container state {
+      config false;
+      description
+        "Operational state relating to ESH PDUs";
+
+      uses packet-counters-generic-state;
+     }
+    }
+
+    container psnp {
+     description
+      "This container defines PSNP packet counters.";
+
+      container state {
+        config false;
+        description
+          "Packet counters relating to PSNPs.";
+
+        uses packet-counters-generic-state;
+      }
+    }
+
+    container csnp {
+      description
+        "Operational state parameters relating to CSNPs.";
+
+      container state {
+        config false;
+        description
+          "Packet counters relating to CSNPs.";
+
+        uses packet-counters-generic-state;
+      }
+    }
+
+    container unknown {
+      description
+        "Operational state parameters relating to IS-IS PDUs that are not
+        otherwise classified - referred to as Unknown PDUs.";
+
+      container state {
+        config false;
+        description
+          "Packet counters relating to unknown PDUs.";
+
+        uses packet-counters-generic-state;
+      }
+    }
+  }
+
+  grouping system-level-counters-state {
+    description
+      "IS-IS counters that are relevant to the system IS-IS context.";
+
+    leaf total-lsps {
+      type oc-yang:counter32;
+      description
+        "Number of LSPs in the database at the system level.";
+    }
+
+    leaf corrupted-lsps {
+      type oc-yang:counter32;
+      description
+        "Number of corrupted in-memory LSPs detected. LSPs received from the
+        wire with a bad checksum are silently dropped and not counted. LSPs
+        received from the wire with parse errors are counted by lsp-errors. MIB
+        Entry: SysCorrLSPs.";
+    }
+
+    leaf database-overloads {
+      type oc-yang:counter32;
+      description
+        "Number of times the database has become
+        overloaded.
+        MIB entry: SysLSPL(Level)DbaseOloads.";
+    }
+
+    leaf manual-address-drop-from-areas {
+      type oc-yang:counter32;
+      description
+        "Number of times a manual address has been dropped from area.
+        MIB Entry: SysManAddrDropFromAreas.";
+    }
+
+    leaf exceed-max-seq-nums {
+      type oc-yang:counter32;
+      description
+        "The number of times the system has attempted to exceed the maximum
+        sequence number. MIB Entry: SysAttmptToExMaxSeqNums.";
+    }
+    leaf seq-num-skips {
+      type oc-yang:counter32;
+      description
+        "Number of times a sequence number skip has occurred. MIB Entry:
+        SysSeqNumSkips.";
+    }
+
+    leaf own-lsp-purges {
+      type oc-yang:counter32;
+      description
+        "Number of times a zero-aged copy of the system's
+        own LSP is received from some other node.
+        MIB Entry: isisSysOwnLSPPurges.";
+    }
+
+    leaf id-len-mismatch {
+      type oc-yang:counter32;
+      description
+        "Number of times a PDU is received with a different value for ID field
+        length from that of the receiving system. MIB Entry:
+        isisSysIDFieldLenMismatches.";
+    }
+
+    leaf part-changes {
+      type oc-yang:counter32;
+      description
+        "The number of partition changes detected. MIB Entry: SysPartChanges.";
+    }
+
+    leaf max-area-address-mismatches {
+      type oc-yang:counter32;
+      description
+        "Number of times a PDU is received with a different value for
+        MaximumAreaAddresses from that of the receiving system. MIB Entry:
+        SysMaxAreaAddrMismatches.";
+    }
+
+    leaf auth-fails {
+      type oc-yang:counter32;
+      description
+        "The number of authentication key failures.
+         MIB Entry: SysAuthFails.";
+    }
+
+    leaf spf-runs {
+      type oc-yang:counter32;
+      description
+        "The number of times SPF was ran at this level.";
+    }
+
+    leaf auth-type-fails {
+      type oc-yang:counter32;
+      description
+        "The number of authentication type mismatches.";
+    }
+
+    leaf lsp-errors {
+      type oc-yang:counter32;
+      description
+        "The number of received LSPs with errors.";
+    }
+  }
+
+  grouping system-level-counters-structural {
+    description
+      "This grouping defines system level counters.";
+
+    container state {
+      config false;
+      description
+        "The container defines a list of system counters for the IS.";
+
+      uses system-level-counters-state;
+    }
+  }
+
+  grouping circuit-counters-state {
+    description
+      "Operational state parameters relating to counters specific to one
+      interface or circuit.";
+
+    leaf adj-changes {
+      type oc-yang:counter32;
+      description
+        "Number of times an adjacency state change has occurred on this circuit.
+        MIB Entry: CircAdjChanges.";
+    }
+
+    leaf init-fails {
+      type oc-yang:counter32;
+      description
+        "Number of times initialization of this circuit has failed. This counts
+        events such as PPP NCP failures. MIB Entry: CircInitFails.";
+    }
+
+    leaf rejected-adj {
+      type oc-yang:counter32;
+      description
+        "Number of times an adjacency has been rejected on this circuit. MIB
+        Entry: CircRejAdjs.";
+    }
+
+    leaf id-field-len-mismatches {
+      type oc-yang:counter32;
+      description
+        "Number of times an IS-IS control PDU with an ID field length different
+        from that for this system has been received.
+        MIB Entry: CircIDFieldLenMismatches.";
+    }
+
+    leaf max-area-address-mismatches {
+      type oc-yang:counter32;
+      description
+        "Number of times an IS-IS control PDU with a max area address field
+        different from that for this system has been received. MIB Entry:
+        CircMaxAreaAddrMismatches.";
+    }
+
+    leaf auth-type-fails {
+      type oc-yang:counter32;
+      description
+        "Number of times an IS-IS control PDU with an auth type field different
+        from that for this system has been received. MIB Entry:
+        CircAuthTypeFails.";
+    }
+
+    leaf auth-fails {
+      type oc-yang:counter32;
+      description
+        "Number of times an IS-IS control PDU with the correct auth type has
+        failed to pass authentication validation. MIB Entry: CircAuthFails.";
+    }
+
+    leaf lan-dis-changes {
+      type oc-yang:counter32;
+      description
+        "Number of times the Designated IS has changed on this circuit at this
+        level. If the circuit is point to point, this count is zero. MIB Entry:
+        CircLANDesISChanges.";
+    }
+
+    leaf adj-number {
+      type uint32;
+      description
+        "Number of adjacencies on this circuit.
+        MIB Entry: CircNumAdj.";
+    }
+  }
+
+  grouping circuit-counters-structural {
+    description
+      "This grouping defines circuit counters.";
+
+    container state {
+      config false;
+      description
+          "The container defines a list of counters for IS circuit.";
+
+     uses circuit-counters-state;
+    }
+  }
+}

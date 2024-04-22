@@ -1,0 +1,226 @@
+module openconfig-programming-errors {
+  prefix "oc-pgrmerrs";
+
+  namespace "http://openconfig.net/yang/programming-errors";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-inet-types { prefix "oc-inet"; }
+  import openconfig-network-instance { prefix "oc-ni"; }
+  import openconfig-platform { prefix "oc-platform"; }
+  import openconfig-types { prefix "oc-types"; }
+  import openconfig-yang-types { prefix "oc-yang"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module provides detailed information about the hardware programming
+    state of various types of routes within a particular network instance.
+    It can be used to track where there are routing hardware programming errors
+    on a device.";
+
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision "2022-10-11" {
+    description
+      "Initial revision.";
+    reference "0.1.0";
+  }
+
+  grouping ip-routes-common-config {
+    description
+      "IP routes hardware programming error common configuration parameters";
+
+    leaf enabled {
+      type boolean;
+      description
+        "This leaf indicates whether IP routes hardware programming error tracking
+        is enabled or not";
+    }
+  }
+
+  grouping programming-errors-top {
+    description
+      "Top-level grouping for AFT hardware programming errors in OpenConfig.";
+
+    container programming-errors {
+      description
+        "Detailed information about the AFT hardware programming state of various types of
+        routes within a particular network instance. It can be used to track where there
+        are AFT hardware programming errors on a device.";
+
+      container ip-routes {
+        description
+          "The IP AFT/routes hardware programming status within the network-instance.
+          IP Route programming reports are divided into a set of sub-categories:
+           - failed programming -- A prefix which is not present in the AFT state is
+             attempted to be added into the hardware but failed.  Traffic destined for
+             this prefix will not be matched.
+           - stale programming -- A prefix is already in the AFT is requested to
+             be updated but failed.  Traffic destined for this prefix will be
+             forwarded to the old next-hop.  AFT telemetry should continue to
+             reflect the old next-hop for the prefix.
+           - drop programming - these routes are explicitly programmed into hardware
+             to point to a destination that discards packets.
+
+          Lifecycle of entries/prefixes in the above 3 containers is tied to AFT
+          telemetry data. When the route gets removed from AFT telemetry data
+          corresponding entry/prefix will be deleted from above containers as well";
+
+        container config {
+          description
+            "IP route hardware programming errors Configuration parameters";
+
+          uses ip-routes-common-config;
+        }
+
+        container state {
+          config false;
+          description
+            "IP route hardware programming errors State parameters";
+
+          leaf total-errors {
+            type oc-yang:counter64;
+            description
+              "Total number of IP route hardware programming errors encountered";
+          }
+
+          uses ip-routes-common-config;
+        }
+
+        container failed-routes {
+          config false;
+          description
+            "Surrounding container for the list of routes that failed hardware
+            programming.";
+
+          list failed {
+            key "prefix";
+
+            description
+              "A prefix that was attempted to the programmed into hardware, but the
+              programming operation failed.";
+
+            leaf prefix {
+              type leafref {
+                path "../state/prefix";
+              }
+              description
+                "Reference to the prefix that keys the failed list.";
+            }
+
+            container state {
+              description
+                "Operational state parameters relating to a failed programming
+                operation.";
+              uses route-state-common;
+            }
+          }
+        }
+
+        container stale-routes {
+          config false;
+          description
+            "Surrounding container for the list of routes that are currently in
+            a stale state.";
+
+          list stale {
+            key "prefix";
+
+            description
+              "A prefix that is currently installed in hardware, but a subsequent
+              operation to update its programming failed - such that the entry in
+              hardware is stale.";
+
+            leaf prefix {
+              type leafref {
+                path "../state/prefix";
+              }
+              description
+                "Reference to the prefix that keys the stale list.";
+            }
+
+            container state {
+              description
+                "Operational state parameters relating to a stale route.";
+              uses route-state-common;
+            }
+          }
+        }
+
+        container drop-routes {
+          config false;
+          description
+            "Surrounding container for the list of routes that are currently in
+            a drop state.";
+
+          list drop {
+            key "prefix";
+
+            description
+              "A prefix that is currently installed in hardware but with an explicit
+              instruction that it should discard packets that are destined towards
+              it.";
+
+            leaf prefix {
+              type leafref {
+                path "../state/prefix";
+              }
+              description
+                "Reference to the prefix that keys the drop list.";
+            }
+
+            container state {
+              description
+                "Operational state parameters relating to a drop route.";
+              uses route-state-common;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping route-state-common {
+    description
+      "Common parameters that correspond to a particular route type.";
+
+    leaf prefix {
+      type oc-inet:ip-prefix;
+      description
+        "The IPv4 or IPv6 prefix that the route state corresponds to.";
+    }
+
+    leaf time {
+      type oc-types:timeticks64;
+      description
+        "Represents the time the hardware route programming state change was
+        detected by the monitoring subsystem expressed as nanoseconds since
+        the Unix epoch.";
+    }
+
+    leaf-list dest-component {
+      type leafref {
+        path "/oc-platform:components/oc-platform:component/oc-platform:name";
+      }
+      description
+        "The destination component for the route hardware programming";
+    }
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance" {
+    description
+      "Augment the network-instance model with the hardware programming
+      errors container.";
+
+    uses programming-errors-top;
+  }
+}

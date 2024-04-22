@@ -1,0 +1,935 @@
+module openconfig-acl {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/acl";
+
+  prefix "oc-acl";
+
+  import openconfig-packet-match { prefix oc-match; }
+  import openconfig-interfaces { prefix oc-if; }
+  import openconfig-yang-types { prefix oc-yang; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state
+    data for network access control lists (i.e., filters, rules,
+    etc.).  ACLs are organized into ACL sets, with each set
+    containing one or more ACL entries.  ACL sets are identified
+    by a unique name, while each entry within a set is assigned
+    a sequence-id that determines the order in which the ACL
+    rules are applied to a packet.  Note that ACLs are evaluated
+    in ascending order based on the sequence-id (low to high).
+
+    Individual ACL rules specify match criteria based on fields in
+    the packet, along with an action that defines how matching
+    packets should be handled. Entries have a type that indicates
+    the type of match criteria, e.g., MAC layer, IPv4, IPv6, etc.";
+
+  oc-ext:openconfig-version "1.3.3";
+
+  revision "2023-02-06" {
+    description
+      "Add clarifying comments on use of interface-ref.";
+    reference "1.3.3";
+  }
+
+  revision "2023-01-29" {
+    description
+      "Update sequence-id reference to allow model to be re-used
+      outside of ACL context.";
+    reference "1.3.2";
+  }
+
+  revision "2022-12-20" {
+    description
+      "Remove unused openconfig-inet-types import";
+    reference "1.3.1";
+  }
+
+  revision "2022-06-01" {
+    description
+      "Add the management of prefix lists
+      that can be used in matches";
+    reference "1.3.0";
+   }
+
+  revision "2022-01-14" {
+    description
+      "Fix when statements for MIXED mode ACLs";
+    reference "1.2.2";
+  }
+
+  revision "2021-06-16" {
+    description
+      "Remove trailing whitespace";
+    reference "1.2.1";
+  }
+
+  revision "2021-03-17" {
+    description
+      "Add MPLS filter Support.";
+      reference "1.2.0";
+  }
+
+  revision "2019-11-27" {
+    description
+      "Fix xpaths in when statements.";
+    reference "1.1.1";
+  }
+
+  revision "2019-10-25" {
+    description
+      "Update when statements.";
+    reference "1.1.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "1.0.2";
+  }
+
+  revision "2018-04-24" {
+    description
+      "Clarified order of ACL evaluation";
+    reference "1.0.1";
+  }
+
+  revision "2017-05-26" {
+    description
+      "Separated ACL entries by type";
+    reference "1.0.0";
+  }
+
+  revision "2016-08-08" {
+    description
+      "OpenConfig public release";
+    reference "0.2.0";
+  }
+
+  revision "2016-01-22" {
+    description
+      "Initial revision";
+    reference "TBD";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  identity ACL_TYPE {
+    description
+      "Base identity for types of ACL sets";
+  }
+
+  identity ACL_IPV4 {
+    base ACL_TYPE;
+    description
+      "IP-layer ACLs with IPv4 addresses";
+  }
+
+  identity ACL_IPV6 {
+    base ACL_TYPE;
+    description
+      "IP-layer ACLs with IPv6 addresses";
+  }
+
+  identity ACL_L2 {
+    base ACL_TYPE;
+    description
+      "MAC-layer ACLs";
+  }
+
+  identity ACL_MIXED {
+    base ACL_TYPE;
+    description
+      "Mixed-mode ACL that specifies L2 and L3 protocol
+      fields.  This ACL type is not implemented by many
+      routing/switching devices.";
+  }
+
+  identity ACL_MPLS {
+    base ACL_TYPE;
+    description
+      "An ACL that matches on fields from the MPLS header.";
+  }
+
+  // ACL action type
+
+  identity FORWARDING_ACTION {
+    description
+      "Base identity for actions in the forwarding category";
+  }
+
+  identity ACCEPT {
+    base FORWARDING_ACTION;
+    description
+      "Accept the packet";
+  }
+
+  identity DROP {
+    base FORWARDING_ACTION;
+    description
+      "Drop packet without sending any ICMP error message";
+  }
+
+  identity REJECT {
+    base FORWARDING_ACTION;
+    description
+      "Drop the packet and send an ICMP error message to the source";
+  }
+
+  identity LOG_ACTION {
+    description
+      "Base identity for defining the destination for logging
+      actions";
+  }
+
+  identity LOG_SYSLOG {
+    base LOG_ACTION;
+    description
+      "Log the packet in Syslog";
+  }
+
+  identity LOG_NONE {
+    base LOG_ACTION;
+    description
+      "No logging";
+  }
+
+  identity ACL_COUNTER_CAPABILITY {
+    description
+      "Base identity for system to indicate how it is able to report
+      counters";
+  }
+
+  identity INTERFACE_ONLY {
+    base ACL_COUNTER_CAPABILITY;
+    description
+      "ACL counters are available and reported only per interface";
+  }
+
+  identity AGGREGATE_ONLY {
+    base ACL_COUNTER_CAPABILITY;
+    description
+      "ACL counters are aggregated over all interfaces, and reported
+      only per ACL entry";
+  }
+
+  identity INTERFACE_AGGREGATE {
+    base ACL_COUNTER_CAPABILITY;
+    description
+      "ACL counters are reported per interface, and also aggregated
+      and reported per ACL entry.";
+  }
+
+  // grouping statements
+
+  // input interface
+  grouping input-interface-config {
+    description
+      "Config of interface";
+
+  }
+
+  grouping input-interface-state {
+    description
+      "State information of interface";
+  }
+
+  grouping input-interface-top {
+    description
+      "Input interface top level container";
+
+    container input-interface {
+      description
+        "Input interface container. The interface is resolved based
+         on the interface and subinterface leaves of the interface-ref
+         container, which are references to entries in the /interfaces
+         list.";
+
+      container config {
+        description
+          "Config data";
+        uses input-interface-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State information";
+        uses input-interface-config;
+        uses input-interface-state;
+      }
+
+      uses oc-if:interface-ref;
+
+    }
+  }
+
+  // Action Type
+  grouping action-config {
+    description
+      "Config of action type";
+
+
+    leaf forwarding-action {
+      type identityref {
+        base FORWARDING_ACTION;
+      }
+      mandatory true;
+      description
+        "Specifies the forwarding action.  One forwarding action
+        must be specified for each ACL entry";
+    }
+
+    leaf log-action {
+      type identityref {
+        base LOG_ACTION;
+      }
+      default LOG_NONE;
+      description
+        "Specifies the log action and destination for
+        matched packets.  The default is not to log the
+        packet.";
+    }
+
+
+  }
+
+  grouping action-state {
+    description
+      "State information of action type";
+
+  }
+
+  grouping action-top {
+    description
+      "ACL action type top level container";
+
+    container actions {
+      description
+        "Enclosing container for list of ACL actions associated
+        with an entry";
+
+      container config {
+        description
+          "Config data for ACL actions";
+        uses action-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State information for ACL actions";
+        uses action-config;
+        uses action-state;
+      }
+    }
+  }
+
+  grouping acl-counters-state {
+    description
+      "Common grouping for ACL counters";
+
+    leaf matched-packets {
+      type oc-yang:counter64;
+      description
+        "Count of the number of packets matching the current ACL
+        entry.
+
+        An implementation should provide this counter on a
+        per-interface per-ACL-entry if possible.
+
+        If an implementation only supports ACL counters per entry
+        (i.e., not broken out per interface), then the value
+        should be equal to the aggregate count across all interfaces.
+
+        An implementation that provides counters per entry per
+        interface is not required to also provide an aggregate count,
+        e.g., per entry -- the user is expected to be able implement
+        the required aggregation if such a count is needed.";
+    }
+
+    leaf matched-octets {
+      type oc-yang:counter64;
+      description
+        "Count of the number of octets (bytes) matching the current
+        ACL entry.
+
+        An implementation should provide this counter on a
+        per-interface per-ACL-entry if possible.
+
+        If an implementation only supports ACL counters per entry
+        (i.e., not broken out per interface), then the value
+        should be equal to the aggregate count across all interfaces.
+
+        An implementation that provides counters per entry per
+        interface is not required to also provide an aggregate count,
+        e.g., per entry -- the user is expected to be able implement
+        the required aggregation if such a count is needed.";
+    }
+
+  }
+
+  // Access List Entries
+
+  grouping access-list-entries-config {
+    description
+      "Access List Entries (ACE) config.";
+
+    leaf sequence-id {
+      type uint32;
+      description
+        "The sequence id determines the order in which ACL entries
+        are applied.  The sequence id must be unique for each entry
+        in an ACL set.  Target devices should apply the ACL entry
+        rules in ascending order determined by sequence id (low to
+        high), rather than the relying only on order in the list.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "A user-defined description, or comment, for this Access List
+        Entry.";
+    }
+
+  }
+
+  grouping access-list-entries-state {
+    description
+      "Access List Entries state.";
+
+    uses acl-counters-state;
+
+  }
+
+  grouping access-list-entries-top {
+    description
+      "Access list entries to level container";
+
+    container acl-entries {
+      description
+        "Access list entries container";
+
+      list acl-entry {
+        key "sequence-id";
+        description
+          "List of ACL entries comprising an ACL set";
+
+        leaf sequence-id {
+          type leafref {
+            path "../config/sequence-id";
+          }
+          description
+            "references the list key";
+        }
+
+        container config {
+          description
+            "Access list entries config";
+          uses access-list-entries-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State information for ACL entries";
+          uses access-list-entries-config;
+          uses access-list-entries-state;
+        }
+
+        uses oc-match:ethernet-header-top {
+          when "../../config/type='ACL_L2' or " +
+            "../../config/type='ACL_MIXED'" {
+            description
+              "MAC-layer fields are valid when the ACL type is L2 or
+              MIXED";
+          }
+        }
+
+        uses oc-match:ipv4-protocol-fields-top {
+          when "../../config/type='ACL_IPV4' or " +
+            "../../config/type='ACL_MIXED'" {
+            description
+              "IPv4-layer fields are valid when the ACL type is
+              IPv4 or MIXED";
+          }
+        }
+
+        uses oc-match:mpls-header-top {
+          when "../../config/type='ACL_MPLS' or " +
+            "../../config/type='ACL_MIXED'" {
+            description
+              "MPLS-layer fields are valid when the ACL type is
+              MPLS or MIXED";
+          }
+        }
+
+        uses oc-match:ipv6-protocol-fields-top {
+          when "../../config/type='ACL_IPV6' or " +
+            "../../config/type='ACL_MIXED'" {
+            description
+              "IPv6-layer fields are valid when the ACL type is
+              IPv6 or MIXED";
+          }
+        }
+
+        uses oc-match:transport-fields-top {
+          when "../../config/type='ACL_IPV6' or " +
+            "../../config/type='ACL_IPV4' or " +
+            "../../config/type='ACL_MIXED'" {
+            description
+              "Transport-layer fields are valid when specifying
+              L3 or MIXED ACL types";
+          }
+        }
+
+        uses input-interface-top;
+        uses action-top;
+      }
+    }
+  }
+
+  grouping acl-set-config {
+    description
+      "Access Control List config";
+
+    leaf name {
+      type string;
+      description
+        "The name of the access-list set";
+    }
+
+    leaf type {
+      type identityref {
+        base ACL_TYPE;
+      }
+      description
+        "The type determines the fields allowed in the ACL entries
+        belonging to the ACL set (e.g., IPv4, IPv6, etc.)";
+    }
+
+    leaf description {
+      type string;
+      description
+        "Description, or comment, for the ACL set";
+    }
+
+  }
+
+  grouping acl-set-state {
+    description
+      "Access Control List state";
+  }
+
+  grouping acl-set-top {
+    description
+      "Access list entries variables top level container";
+
+    container acl-sets {
+      description
+        "Access list entries variables enclosing container";
+
+      list acl-set {
+        key "name type";
+        description
+          "List of ACL sets, each comprising of a list of ACL
+          entries";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the name list key";
+        }
+
+        leaf type {
+          type leafref {
+            path "../config/type";
+          }
+          description
+            "Reference to the type list key";
+        }
+
+        container config {
+          description
+            "Access list config";
+          uses acl-set-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Access list state information";
+          uses acl-set-config;
+          uses acl-set-state;
+        }
+        uses access-list-entries-top;
+      }
+    }
+  }
+
+  grouping interface-acl-entries-config {
+    description
+      "Configuration data for per-interface ACLs";
+
+  }
+
+  grouping interface-acl-entries-state {
+    description
+      "Operational state data for per-interface ACL entries";
+
+    leaf sequence-id {
+      type leafref {
+        path "/oc-acl:acl/oc-acl:acl-sets/" +
+          "oc-acl:acl-set[oc-acl:name=current()/../../../../set-name]" +
+          "[oc-acl:type=current()/../../../../type]/" +
+          "oc-acl:acl-entries/oc-acl:acl-entry/oc-acl:sequence-id";
+      }
+      description
+        "Reference to an entry in the ACL set applied to an
+        interface";
+    }
+
+    uses acl-counters-state;
+
+  }
+
+  grouping interface-acl-entries-top {
+    description
+      "Top-level grouping for per-interface ACL entries";
+
+    container acl-entries {
+      config false;
+      description
+        "Enclosing container for list of references to ACLs";
+
+      list acl-entry {
+        key "sequence-id";
+        description
+          "List of ACL entries assigned to an interface";
+
+        leaf sequence-id {
+          type leafref {
+            path "../state/sequence-id";
+          }
+          description
+            "Reference to per-interface acl entry key";
+        }
+
+        // no config container since the enclosing container is
+        // read-only
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for per-interface ACL entries";
+
+          uses interface-acl-entries-config;
+          uses interface-acl-entries-state;
+        }
+      }
+    }
+  }
+
+  grouping interface-ingress-acl-config {
+    description
+      "Configuration data for per-interface ingress ACLs";
+
+    leaf set-name {
+      type leafref {
+        path "../../../../../../acl-sets/acl-set/config/name";
+      }
+      description
+        "Reference to the ACL set name applied on ingress";
+    }
+
+    leaf type {
+      type leafref {
+        path "../../../../../../acl-sets/acl-set[name=current()/../set-name]" +
+          "/config/type";
+      }
+      description
+        "Reference to the ACL set type applied on ingress";
+    }
+  }
+
+  grouping interface-ingress-acl-state {
+    description
+      "Operational state data for the per-interface ingress ACL";
+  }
+
+  grouping interface-ingress-acl-top {
+    description
+      "Top-level grouping for per-interface ingress ACL data";
+
+    container ingress-acl-sets {
+      description
+        "Enclosing container the list of ingress ACLs on the
+        interface";
+
+      list ingress-acl-set {
+        key "set-name type";
+        description
+          "List of ingress ACLs on the interface";
+
+        leaf set-name {
+          type leafref {
+            path "../config/set-name";
+          }
+          description
+            "Reference to set name list key";
+        }
+
+        leaf type {
+          type leafref {
+            path "../config/type";
+          }
+          description
+            "Reference to type list key";
+        }
+
+        container config {
+          description
+            "Configuration data ";
+
+          uses interface-ingress-acl-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for interface ingress ACLs";
+
+          uses interface-ingress-acl-config;
+          uses interface-ingress-acl-state;
+        }
+
+        uses interface-acl-entries-top;
+      }
+    }
+  }
+
+  grouping interface-egress-acl-config {
+    description
+      "Configuration data for per-interface egress ACLs";
+
+    leaf set-name {
+      type leafref {
+        path "../../../../../../acl-sets/acl-set/config/name";
+      }
+      description
+        "Reference to the ACL set name applied on egress";
+    }
+
+    leaf type {
+      type leafref {
+        path "../../../../../../acl-sets/acl-set[name=current()/../set-name]" +
+          "/config/type";
+      }
+      description
+        "Reference to the ACL set type applied on egress.";
+    }
+  }
+
+  grouping interface-egress-acl-state {
+    description
+      "Operational state data for the per-interface egress ACL";
+  }
+
+  grouping interface-egress-acl-top {
+    description
+      "Top-level grouping for per-interface egress ACL data";
+
+    container egress-acl-sets {
+      description
+        "Enclosing container the list of egress ACLs on the
+        interface";
+
+      list egress-acl-set {
+        key "set-name type";
+        description
+          "List of egress ACLs on the interface";
+
+        leaf set-name {
+          type leafref {
+            path "../config/set-name";
+          }
+          description
+            "Reference to set name list key";
+        }
+
+        leaf type {
+          type leafref {
+            path "../config/type";
+          }
+          description
+            "Reference to type list key";
+        }
+
+        container config {
+          description
+            "Configuration data ";
+
+          uses interface-egress-acl-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state data for interface egress ACLs";
+
+          uses interface-egress-acl-config;
+          uses interface-egress-acl-state;
+        }
+
+        uses interface-acl-entries-top;
+      }
+    }
+  }
+
+  grouping acl-interfaces-config {
+    description
+      "Configuration data for interface references";
+
+    leaf id {
+      type oc-if:interface-id;
+      description
+        "User-defined identifier for the interface -- a common
+        convention could be '<if name>.<subif index>'";
+    }
+  }
+
+  grouping acl-interfaces-state {
+    description
+      "Operational state data for interface references";
+  }
+
+  grouping acl-interfaces-top {
+    description
+      "Top-level grouping for interface-specific ACL data";
+
+    container interfaces {
+      description
+        "Enclosing container for the list of interfaces on which
+        ACLs are set";
+
+      list interface {
+        key "id";
+        description
+          "List of interfaces on which ACLs are set. The interface is resolved
+          based on the interface and subinterface leaves of the interface-ref
+          container, which are references to entries in the /interfaces
+          list. The key of the list is an arbitrary value that the
+          implementation should not use to resolve an interface name.";
+
+        leaf id {
+          type leafref {
+            path "../config/id";
+          }
+          description
+            "Reference to the interface id list key";
+        }
+
+        container config {
+          description
+            "Configuration for ACL per-interface data";
+
+          uses acl-interfaces-config;
+        }
+
+        container state {
+
+          config false;
+
+          description
+            "Operational state for ACL per-interface data";
+
+          uses acl-interfaces-config;
+          uses acl-interfaces-state;
+        }
+
+        uses oc-if:interface-ref;
+        uses interface-ingress-acl-top;
+        uses interface-egress-acl-top;
+      }
+    }
+  }
+
+
+  grouping acl-config {
+    description
+      "Global configuration data for ACLs";
+  }
+
+  grouping acl-state {
+    description
+      "Global operational state data for ACLs";
+
+    leaf counter-capability {
+      type identityref {
+        base ACL_COUNTER_CAPABILITY;
+      }
+      description
+        "System reported indication of how ACL counters are reported
+        by the target";
+    }
+  }
+  grouping acl-top {
+    description
+      "Top level grouping for ACL data and structure";
+
+    container acl {
+      description
+        "Top level enclosing container for ACL model config
+        and operational state data";
+
+      container config {
+        description
+          "Global config data for ACLs";
+
+        uses acl-config;
+      }
+
+      container state {
+
+        config false;
+
+        description
+          "Global operational state data for ACLs";
+
+        uses acl-config;
+        uses acl-state;
+      }
+
+      uses acl-set-top;
+      uses acl-interfaces-top;
+    }
+  }
+
+  // data definition statements
+  uses acl-top;
+
+  // augment statements
+
+
+}

@@ -1,0 +1,125 @@
+module openconfig-aft-summary {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/aft-summary";
+
+  prefix "oc-aftsummary";
+
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-policy-types { prefix "oc-pol-types"; }
+  import openconfig-network-instance { prefix "oc-ni"; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module provides summary of aft entry counts per protocol type for each network
+    instance.";
+
+  oc-ext:openconfig-version "0.2.0";
+
+  revision "2024-01-12" {
+    description
+      "Change count of entries from counter64 to uint64.";
+    reference "0.2.0";
+  }
+
+  revision "2023-11-09" {
+    description
+      "Initial version.";
+    reference "0.1.0";
+  }
+
+  grouping protocols-state {
+    description
+      "Grouping for protocol type state.";
+
+    leaf origin-protocol {
+      description
+        "Protocol type that keys the protocol list.";
+
+      type identityref {
+        base "oc-pol-types:INSTALL_PROTOCOL_TYPE";
+      }
+    }
+
+    container counters {
+      description
+      "Enclosing container for aft entry counters";
+
+      leaf aft-entries {
+        description
+          "Total number of entries in the aft.";
+        type uint64;
+      }
+    }
+  }
+
+  grouping aft-summary {
+    description
+      "A summary of aft entries by protocol type.";
+
+    container protocols {
+      description
+        "Enclosing container for a list of protocols";
+      list protocol {
+        key "origin-protocol";
+
+        description
+          "Protocol type that keys the aft entry count list.";
+
+        leaf origin-protocol {
+          type leafref {
+            path "../state/origin-protocol";
+          }
+          description
+            "Reference to the protocol type which added the aft entry.";
+        }
+
+        container state {
+          description
+            "State parameters for the aft entry list.";
+          uses protocols-state;
+        }
+      }
+    }
+  }
+
+  grouping aft-summary-ipv4 {
+    description
+      "Grouping of all aft summaries for ipv4.";
+      container ipv4-unicast {
+        description
+          "Container for ipv4 unicast aft summary by protocol type.";
+        uses aft-summary;
+      }
+  }
+
+  grouping aft-summary-ipv6 {
+    description
+      "Grouping of all aft summaries for ipv6.";
+      container ipv6-unicast {
+        description
+          "Container for ipv6 aft counts by protocol type.";
+        uses aft-summary;
+      }
+  }
+
+  augment "/oc-ni:network-instances/oc-ni:network-instance/oc-ni:afts" {
+    description
+      "Augment the afts model with the aft summary container.";
+
+    container aft-summaries {
+      uses aft-summary-ipv4;
+      uses aft-summary-ipv6;
+
+      description
+        "Aft summary for the network instance.";
+    }
+  }
+
+}

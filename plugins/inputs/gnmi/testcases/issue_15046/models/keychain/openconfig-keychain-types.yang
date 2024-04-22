@@ -1,0 +1,140 @@
+module openconfig-keychain-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/oc-keychain-types";
+
+  prefix "oc-keychain-types";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module contains general data definitions for use in
+    keychain-based authentication.";
+
+  oc-ext:openconfig-version "0.2.0";
+
+  revision "2022-03-01" {
+    description
+      "Remove NONE identity from AUTH_TYPE";
+    reference "0.2.0";
+  }
+
+  revision "2021-10-01" {
+    description
+      "Initial revision of types for keychain model";
+    reference "0.1.0";
+  }
+
+
+  identity AUTH_TYPE {
+    description
+    "Base identify to define the type of authentication";
+  }
+
+  identity SIMPLE_KEY {
+    base AUTH_TYPE;
+    description
+    "Authentication is provided via a simple authentication key. The
+    key is configured at each end, and the exchange of the key may be
+    encrypted or not";
+  }
+
+  identity KEYCHAIN {
+    base AUTH_TYPE;
+    description
+    "This identity indicates that the authentication is selected
+    from a keychain.";
+  }
+
+  identity CRYPTO_TYPE {
+    description
+      "Base identify for the cryptographic algorithm";
+  }
+
+  identity CRYPTO_NONE{
+    base CRYPTO_TYPE;
+      description
+        "No encryption is used";
+  }
+
+  identity MD5 {
+    base CRYPTO_TYPE;
+      description
+        "MD5 message-digest algorithm produces a 128-bit hash value.";
+      reference
+        "RFC 1321 - The MD5 Message-Digest Algorithm";
+  }
+
+  identity HMAC_MD5 {
+    base CRYPTO_TYPE;
+      description
+        "HMAC-MD5 keyed hash algorithm constructed from MD5 hash
+        function and used as a HMAC.";
+      reference
+        "RFC 2104 - HMAC: Keyed-Hashing for Message Authentication";
+  }
+
+  identity SHA_1 {
+    base CRYPTO_TYPE;
+      description
+        "SHA-1 cryptographic hash function that produces a 160-bit hash value.";
+      reference
+        "RFC 3174 - US Secure Hash Algorithm 1 (SHA1)";
+  }
+  identity HMAC_SHA_1 {
+    base CRYPTO_TYPE;
+      description
+        "HMAC-SHA-1 keyed hash algorithm constructed from SHA-1 hash
+        function and used as a HMAC.";
+  }
+
+  identity HMAC_SHA_1_12 {
+    base CRYPTO_TYPE;
+      description
+        "HMAC-SHA-1-12 algorithm";
+  }
+
+  identity HMAC_SHA_1_20 {
+    base CRYPTO_TYPE;
+      description
+        "HMAC-SHA-1-20 algorithm";
+  }
+
+  identity HMAC_SHA_1_96 {
+    base CRYPTO_TYPE;
+      description
+        "HMAC-SHA-1-96 keyed hash algorithm constructed from SHA-1 hash
+        function and used as a HMAC, operating on 64-byte blocks of data.";
+      reference
+        "RFC 2404 - The Use of HMAC-SHA-1-96 within ESP and AH";
+  }
+
+  identity HMAC_SHA_256 {
+    base CRYPTO_TYPE;
+      description
+        "HMAC-SHA-256 keyed hash algorithm constructed from the secure
+        SHA-256 hash function and used as a HMAC.";
+      reference
+        "RFC 6234 - US Secure Hash Algorithms (SHA and SHA-based
+        HMAC and HKDF)";
+  }
+
+  identity AES_28_CMAC_96 {
+    base CRYPTO_TYPE;
+      description
+        "AES-128-CMAC-96 keyed hash function based on a AES-128 block
+        cipher.";
+      reference
+        "RFC 4494 - The AES-CMAC-96 Algorithm and Its Use with IPsec";
+  }
+}

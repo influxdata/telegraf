@@ -1,0 +1,7 @@
+- name: openconfig-mpls
+  docs:
+    - yang/mpls/openconfig-mpls-types.yang
+    - yang/mpls/openconfig-mpls.yang
+  build:
+    - yang/mpls/openconfig-mpls.yang
+  run-ci: true
