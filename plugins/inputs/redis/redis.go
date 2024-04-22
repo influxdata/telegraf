@@ -32,10 +32,11 @@ type RedisCommand struct {
 }
 
 type Redis struct {
-	Commands []*RedisCommand `toml:"commands"`
-	Servers  []string        `toml:"servers"`
-	Username string          `toml:"username"`
-	Password string          `toml:"password"`
+	Commands      []*RedisCommand `toml:"commands"`
+	Servers       []string        `toml:"servers"`
+	Username      string          `toml:"username"`
+	Password      string          `toml:"password"`
+	NodeDiscovery bool            `toml:"node_discovery"`
 
 	tls.ClientConfig
 
@@ -55,6 +56,12 @@ type Client interface {
 type RedisClient struct {
 	client *redis.Client
 	tags   map[string]string
+}
+
+type redisClusterNode struct {
+	nodeId string
+	host   string
+	port   string
 }
 
 // RedisFieldTypes defines the types expected for each of the fields redis reports on
@@ -222,7 +229,7 @@ func (r *Redis) Init() error {
 }
 
 func (r *Redis) connect() error {
-	if r.connected {
+	if r.connected && !r.NodeDiscovery {
 		return nil
 	}
 
@@ -281,18 +288,61 @@ func (r *Redis) connect() error {
 			},
 		)
 
-		tags := map[string]string{}
-		if u.Scheme == "unix" {
-			tags["socket"] = u.Path
-		} else {
-			tags["server"] = u.Hostname()
-			tags["port"] = u.Port()
-		}
+		if r.NodeDiscovery {
+			nodes, err := discoverNodes(&RedisClient{client, make(map[string]string)})
+			if err != nil {
+				return err
+			}
+			if nodes == nil {
+				return fmt.Errorf("unable to discover nodes from %s", address)
+			}
+			for _, node := range nodes {
 
-		r.clients = append(r.clients, &RedisClient{
-			client: client,
-			tags:   tags,
-		})
+				nodeAddress := ""
+				if node.host == "" {
+					nodeAddress = address
+				} else {
+					nodeAddress = fmt.Sprintf("%s:%s", node.host, node.port)
+				}
+
+				discoveredClient := redis.NewClient(
+					&redis.Options{
+						Addr:      nodeAddress,
+						Username:  username,
+						Password:  password,
+						Network:   u.Scheme,
+						PoolSize:  1,
+						TLSConfig: tlsConfig,
+					},
+				)
+
+				tags := map[string]string{
+					"server": u.Hostname(),
+					"port":   node.port,
+					"nodeId": node.nodeId,
+					// "replication_role": node.replicationRole,
+				}
+
+				r.clients = append(r.clients, &RedisClient{
+					client: discoveredClient,
+					tags:   tags,
+				})
+			}
+
+		} else {
+			tags := map[string]string{}
+			if u.Scheme == "unix" {
+				tags["socket"] = u.Path
+			} else {
+				tags["server"] = u.Hostname()
+				tags["port"] = u.Port()
+			}
+
+			r.clients = append(r.clients, &RedisClient{
+				client: client,
+				tags:   tags,
+			})
+		}
 	}
 
 	r.connected = true
@@ -302,7 +352,7 @@ func (r *Redis) connect() error {
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
-	if !r.connected {
+	if !r.connected || r.NodeDiscovery {
 		err := r.connect()
 		if err != nil {
 			return err
@@ -344,6 +394,26 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 	return nil
 }
 
+func discoverNodes(client Client) ([]redisClusterNode, error) {
+	val, err := client.Do("string", "cluster", "nodes")
+
+	if err != nil {
+		if strings.Contains(err.Error(), "unexpected type=") {
+			return nil, fmt.Errorf("could not get command result: %w", err)
+		}
+
+		return nil, err
+	}
+
+	str, ok := val.(string)
+	if ok {
+		return parseClusterNodes(str)
+	} else {
+		return nil, fmt.Errorf("could not discover nodes: %w", err)
+	}
+
+}
+
 func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
 	info, err := client.Info().Result()
 	if err != nil {
@@ -352,6 +422,50 @@ func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
 
 	rdr := strings.NewReader(info)
 	return gatherInfoOutput(rdr, acc, client.BaseTags())
+}
+
+// Parse the list of nodes from a `cluster nodes` command
+// This response looks like:
+//
+//	d1861060fe6a534d42d8a19aeb36600e18785e04 127.0.0.1:6379 myself - 0 1318428930 1 connected 0-1364
+//	3886e65cc906bfd9b1f7e7bde468726a052d1dae 127.0.0.1:6380 master - 1318428930 1318428931 2 connected 1365-2729
+//	d289c575dcbc4bdd2931585fd4339089e461a27d 127.0.0.1:6381 master - 1318428931 1318428931 3 connected 2730-4095
+//
+// Per Redis docs:
+// (https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/)
+//
+//	In the above listing the different fields are in order:
+//	node id, address:port, flags, last ping sent, last pong received,
+//	configuration epoch, link state, slots.
+func parseClusterNodes(nodesResponse string) ([]redisClusterNode, error) {
+
+	lines := strings.Split(nodesResponse, "\n")
+	var nodes []redisClusterNode
+
+	for _, line := range lines {
+		fields := strings.Fields(line)
+
+		if len(fields) >= 8 {
+			endpointParts := strings.FieldsFunc(fields[1], func(r rune) bool {
+				return strings.ContainsRune(":@", r)
+			})
+			if string(fields[1][0]) == ":" {
+				endpointParts = append([]string{""}, endpointParts...)
+			}
+
+			nodes = append(nodes, redisClusterNode{
+				nodeId: fields[0],
+				host:   endpointParts[0],
+				port:   endpointParts[1],
+			})
+		} else if len(fields) == 0 {
+			continue
+		} else {
+			return nil, fmt.Errorf("unexpected cluster node: \"%s\"", line)
+		}
+	}
+
+	return nodes, nil
 }
 
 // gatherInfoOutput gathers

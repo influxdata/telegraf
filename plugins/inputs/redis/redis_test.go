@@ -3,6 +3,7 @@ package redis
 import (
 	"bufio"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -60,6 +61,86 @@ func TestRedisConnectIntegration(t *testing.T) {
 
 	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
+}
+
+func TestRedisConnectWithNodeDiscoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	servicePort := "6379"
+	container := testutil.Container{
+		Image:        "redis:alpine",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		Cmd: []string{
+			"redis-server",
+			"--port", servicePort,
+			"--appendonly", "yes",
+			"--cluster-enabled", "yes",
+			"--cluster-config-file", "nodes.conf",
+			"--cluster-node-timeout", "5000",
+		},
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer container.Terminate()
+
+	addr := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
+
+	r := &Redis{
+		Log:           testutil.Logger{},
+		Servers:       []string{addr},
+		NodeDiscovery: true,
+	}
+
+	var acc testutil.Accumulator
+
+	err = acc.GatherError(r.Gather)
+	require.NoError(t, err)
+}
+
+func TestParseClusterNodes(t *testing.T) {
+
+	var tests = map[string]struct {
+		clusterNodesResponse string
+		expectedNodes        []redisClusterNode
+	}{
+		"SingleContainerCluster": {
+			"5998443a50112d5a7fa619c0b044451df052974e :6379@16379 myself,master - 0 0 0 connected\n",
+			[]redisClusterNode{
+				{nodeId: "5998443a50112d5a7fa619c0b044451df052974e", host: "", port: "6379"},
+			},
+		},
+		"ClusterNodesResponseA": {
+			`d1861060fe6a534d42d8a19aeb36600e18785e04 127.0.0.1:6379 myself - 0 1318428930 1 connected 0-1364
+			3886e65cc906bfd9b1f7e7bde468726a052d1dae 127.0.0.1:6380 master - 1318428930 1318428931 2 connected 1365-2729
+			d289c575dcbc4bdd2931585fd4339089e461a27d 127.0.0.1:6381 master - 1318428931 1318428931 3 connected 2730-4095`,
+			[]redisClusterNode{
+				{nodeId: "d1861060fe6a534d42d8a19aeb36600e18785e04", host: "127.0.0.1", port: "6379"},
+				{nodeId: "3886e65cc906bfd9b1f7e7bde468726a052d1dae", host: "127.0.0.1", port: "6380"},
+				{nodeId: "d289c575dcbc4bdd2931585fd4339089e461a27d", host: "127.0.0.1", port: "6381"},
+			},
+		},
+		"ClusterNodesResponseB": {
+			`4ce37a099986f2d0465955e2e66937d6893aa0e1 10.64.82.45:11006@16379 myself,master - 0 1713739012000 5 connected 5462-10922
+			d6eb119a1f050982cc901ae663e7448867e49f7c 10.64.82.46:11005@16379 master - 0 1713739011916 4 connected 10923-16383
+			3a386fb6930d8f6c1a6536082071eb2f32590d31 10.64.82.46:11007@16379 master - 0 1713739012922 6 connected 0-5461`,
+			[]redisClusterNode{
+				{nodeId: "4ce37a099986f2d0465955e2e66937d6893aa0e1", host: "10.64.82.45", port: "11006"},
+				{nodeId: "d6eb119a1f050982cc901ae663e7448867e49f7c", host: "10.64.82.46", port: "11005"},
+				{nodeId: "3a386fb6930d8f6c1a6536082071eb2f32590d31", host: "10.64.82.46", port: "11007"},
+			},
+		},
+	}
+
+	for tname, tt := range tests {
+		testResponse, _ := parseClusterNodes(tt.clusterNodesResponse)
+		if !reflect.DeepEqual(testResponse, tt.expectedNodes) {
+			// t.Errorf("%s fail!", tname)
+			t.Error(tname, "fail! Got:\n", testResponse, "\nExpected:\n", tt.expectedNodes)
+		}
+	}
 }
 
 func TestRedis_Commands(t *testing.T) {
