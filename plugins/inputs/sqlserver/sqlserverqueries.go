@@ -1399,6 +1399,7 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerRecentBackups string = `
+DECLARE @TimeZoneOffset INT = (SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET()));
 SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
@@ -1433,12 +1434,12 @@ SELECT
 	d.database_id as [database_id],
 	d.state_desc AS [state],
 	d.recovery_model_desc AS [recovery_model],
-	DATEDIFF(SECOND,{d '1970-01-01'}, bf.LastBackupTime) AS [last_full_backup_time],
-	bf.backup_size AS [full_backup_size_bytes],
-	DATEDIFF(SECOND,{d '1970-01-01'}, bd.LastBackupTime) AS [last_differential_backup_time],
-	bd.backup_size AS [differential_backup_size_bytes],
-	DATEDIFF(SECOND,{d '1970-01-01'}, bt.LastBackupTime) AS [last_transaction_log_backup_time],
-	bt.backup_size AS [transaction_log_backup_size_bytes]
+	DATEDIFF(SECOND, {d '1970-01-01'}, DATEADD(MINUTE, -@TimeZoneOffset, bf.LastBackupTime)) AS [last_full_backup_time],
+    	bf.backup_size AS [full_backup_size_bytes],
+    	DATEDIFF(SECOND, {d '1970-01-01'}, DATEADD(MINUTE, -@TimeZoneOffset, bd.LastBackupTime)) AS [last_differential_backup_time],
+    	bd.backup_size AS [differential_backup_size_bytes],
+    	DATEDIFF(SECOND, {d '1970-01-01'}, DATEADD(MINUTE, -@TimeZoneOffset, bt.LastBackupTime)) AS [last_transaction_log_backup_time],
+    	bt.backup_size AS [transaction_log_backup_size_bytes]
 FROM sys.databases d
 LEFT JOIN BackupsWithSize bf ON (d.name = bf.[Database] AND (bf.Type = 'Full' OR bf.Type IS NULL))
 LEFT JOIN BackupsWithSize bd ON (d.name = bd.[Database] AND (bd.Type = 'Differential' OR bd.Type IS NULL))
