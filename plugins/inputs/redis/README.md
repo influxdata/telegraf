@@ -43,6 +43,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # username = ""
   # password = ""
 
+  ## Optional Node Discovery
+  ## Enabling has the Telegraf agent connects to the define server
+  ## and issue a `cluster nodes` command which lists nodes on a Redis Cluster.
+  ## Telegraf then pulls metrics from all discovered nodes.
+  ## It assumes consistent tls/auth configuration for each.
+  # node_discovery = true
+
   ## Optional TLS Config
   ## Check tls/config.go ClientConfig for more options
   # tls_enable = true
