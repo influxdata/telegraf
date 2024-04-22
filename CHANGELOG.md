@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
-## Unreleased
+## v1.30.2 [2024-04-22]
 
 ### Important Changes
 
@@ -12,6 +12,46 @@
   the system as systemd needs to read all unit-files matching the pattern in
   each gather cycle. If you use specific patterns and want to collect non-loaded
   units, please set the `collect_disabled_units` option to `true`.
+
+### Bugfixes
+
+- [#15054](https://github.com/influxdata/telegraf/pull/15054) `agent` Ensure import of required package for pprof support
+- [#15155](https://github.com/influxdata/telegraf/pull/15155) `inputs.diskio` Update path from /sys/block to /sys/class/block
+- [#15146](https://github.com/influxdata/telegraf/pull/15146) `inputs.modbus` Avoid overflow when calculating with uint16 addresses
+- [#15144](https://github.com/influxdata/telegraf/pull/15144) `inputs.nvidia` Include power limit field for v11
+- [#15178](https://github.com/influxdata/telegraf/pull/15178) `inputs.opcua` Make sure to always create a request
+- [#15176](https://github.com/influxdata/telegraf/pull/15176) `inputs.phpfpm` Check for error before continue processing
+- [#15195](https://github.com/influxdata/telegraf/pull/15195) `inputs.prometheus` Correctly handle host header
+- [#15078](https://github.com/influxdata/telegraf/pull/15078) `inputs.prometheus` Remove duplicate response_timeout option
+- [#15154](https://github.com/influxdata/telegraf/pull/15154) `inputs.sqlserver` Honor timezone on backup metrics
+- [#15129](https://github.com/influxdata/telegraf/pull/15129) `inputs.systemd_units` Reconnect if connection is lost
+- [#15108](https://github.com/influxdata/telegraf/pull/15108) `inputs.systemd_units` Revert to only gather loaded units by default
+- [#15132](https://github.com/influxdata/telegraf/pull/15132) `inputs.win_eventlog` Handle empty query correctly
+- [#15157](https://github.com/influxdata/telegraf/pull/15157) `outputs.opensearch` Correctly error during failures or disconnect
+- [#15196](https://github.com/influxdata/telegraf/pull/15196) `outputs.sql` Enable the use of krb5 with mssql driver
+- [#15168](https://github.com/influxdata/telegraf/pull/15168) `systemd` Remove 5 second timeout, use default (90 seconds)
+
+### Dependency Updates
+
+- [#15087](https://github.com/influxdata/telegraf/pull/15087) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go from 1.62.563 to 1.62.708
+- [#15163](https://github.com/influxdata/telegraf/pull/15163) `deps` Bump github.com/aliyun/alibaba-cloud-sdk-go from 1.62.708 to 1.62.713
+- [#15086](https://github.com/influxdata/telegraf/pull/15086) `deps` Bump github.com/apache/iotdb-client-go from 0.12.2-0.20220722111104-cd17da295b46 to 1.2.0-tsbs
+- [#15125](https://github.com/influxdata/telegraf/pull/15125) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.36.1 to 1.37.0
+- [#15164](https://github.com/influxdata/telegraf/pull/15164) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.27.1 to 1.27.4
+- [#15161](https://github.com/influxdata/telegraf/pull/15161) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.25.2 to 1.25.5
+- [#15162](https://github.com/influxdata/telegraf/pull/15162) `deps` Bump github.com/go-sql-driver/mysql from 1.7.1 to 1.8.1
+- [#15084](https://github.com/influxdata/telegraf/pull/15084) `deps` Bump github.com/gophercloud/gophercloud from 1.9.0 to 1.11.0
+- [#15126](https://github.com/influxdata/telegraf/pull/15126) `deps` Bump github.com/jackc/pgtype from 1.14.2 to 1.14.3
+- [#15100](https://github.com/influxdata/telegraf/pull/15100) `deps` Bump github.com/prometheus/client_golang from 1.18.0 to 1.19.0
+- [#15127](https://github.com/influxdata/telegraf/pull/15127) `deps` Bump github.com/redis/go-redis/v9 from 9.2.1 to 9.5.1
+- [#15082](https://github.com/influxdata/telegraf/pull/15082) `deps` Bump github.com/shirou/gopsutil from v3.23.11 to v3.24.3
+- [#15085](https://github.com/influxdata/telegraf/pull/15085) `deps` Bump github.com/testcontainers/testcontainers-go from 0.27.0 to 0.29.1
+- [#15160](https://github.com/influxdata/telegraf/pull/15160) `deps` Bump github.com/vmware/govmomi from 0.33.1 to 0.37.0
+- [#15193](https://github.com/influxdata/telegraf/pull/15193) `deps` Bump golang.org/x/net from 0.22.0 to 0.23.0
+- [#15128](https://github.com/influxdata/telegraf/pull/15128) `deps` Bump golang.org/x/oauth2 from 0.18.0 to 0.19.0
+- [#15124](https://github.com/influxdata/telegraf/pull/15124) `deps` Bump k8s.io/client-go from 0.29.2 to 0.29.3
+- [#15123](https://github.com/influxdata/telegraf/pull/15123) `deps` Bump super-linter/super-linter from 6.3.0 to 6.3.1
+- [#15083](https://github.com/influxdata/telegraf/pull/15083) `deps` Bump tj-actions/changed-files from 43 to 44
 
 ## v1.30.1 [2024-04-01]
 
