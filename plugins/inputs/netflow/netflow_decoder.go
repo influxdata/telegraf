@@ -562,7 +562,8 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	buf := bytes.NewBuffer(payload)
 	if err := netflow.DecodeMessageVersion(buf, templates, &msg9, &msg10); err != nil {
 		if errors.Is(err, netflow.ErrorTemplateNotFound) {
-			d.Log.Warnf("%v; skipping packet", err)
+			msg := "Skipping packet until the device resends the required template..."
+			d.Log.Warnf("%v. %s", err, msg)
 			return nil, nil
 		}
 		return nil, fmt.Errorf("decoding message failed: %w", err)
