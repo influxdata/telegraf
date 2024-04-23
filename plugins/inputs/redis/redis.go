@@ -428,7 +428,7 @@ func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
 //	configuration epoch, link state, slots.
 func parseClusterNodes(nodesResponse string) ([]redisClusterNode, error) {
 	lines := strings.Split(nodesResponse, "\n")
-	var nodes []redisClusterNode
+	nodes := make([]redisClusterNode, 0, len(lines))
 
 	for _, line := range lines {
 		fields := strings.Fields(line)
