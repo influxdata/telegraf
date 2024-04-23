@@ -14,6 +14,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  NOT AVAILABLE
+
 ## Configuration
 
 ```toml @sample.conf
@@ -21,12 +33,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.amd_rocm_smi]]
   ## Optional: path to rocm-smi binary, defaults to $PATH via exec.LookPath
   # bin_path = "/opt/rocm/bin/rocm-smi"
-
-  ## Optional: specifies plugin behavior regarding missing rocm-smi binary
-  ## Available choices:
-  ##   - error: telegraf will return an error on startup
-  ##   - ignore: telegraf will ignore this plugin
-  # startup_error_behavior = "error"
 
   ## Optional: timeout for GPU polling
   # timeout = "5s"
