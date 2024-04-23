@@ -39,10 +39,6 @@ func (*NvidiaSMI) SampleConfig() string {
 	return sampleConfig
 }
 
-func (smi *NvidiaSMI) Init() error {
-	return nil
-}
-
 func (smi *NvidiaSMI) Start(telegraf.Accumulator) error {
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
 		binPath, err := exec.LookPath("nvidia-smi")
