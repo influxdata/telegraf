@@ -353,6 +353,9 @@ func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 func (c *CtrlXDataLayer) Stop() {
 	c.cancel()
 	c.wg.Wait()
+	if c.connection != nil {
+		c.connection.CloseIdleConnections()
+	}
 }
 
 // Gather is called by telegraf to collect the metrics.

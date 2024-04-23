@@ -588,6 +588,10 @@ func (p *Prometheus) Start(_ telegraf.Accumulator) error {
 func (p *Prometheus) Stop() {
 	p.cancel()
 	p.wg.Wait()
+
+	if p.client != nil {
+		p.client.CloseIdleConnections()
+	}
 }
 
 func init() {

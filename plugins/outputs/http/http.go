@@ -102,6 +102,10 @@ func (h *HTTP) Connect() error {
 }
 
 func (h *HTTP) Close() error {
+	if h.client != nil {
+		h.client.CloseIdleConnections()
+	}
+
 	return nil
 }
 
