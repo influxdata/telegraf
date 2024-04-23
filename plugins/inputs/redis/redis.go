@@ -297,11 +297,9 @@ func (r *Redis) connect() error {
 				return fmt.Errorf("unable to discover nodes from %s", address)
 			}
 			for _, node := range nodes {
-				nodeAddress := ""
-				if node.host == "" {
-					nodeAddress = address
-				} else {
-					nodeAddress = fmt.Sprintf("%s:%s", node.host, node.port)
+				nodeAddress := address
+				if node.host != "" {
+					nodeAddress = node.host + ":" + node.port
 				}
 
 				discoveredClient := redis.NewClient(
@@ -395,18 +393,14 @@ func discoverNodes(client Client) ([]redisClusterNode, error) {
 	val, err := client.Do("string", "cluster", "nodes")
 
 	if err != nil {
-		if strings.Contains(err.Error(), "unexpected type=") {
-			return nil, fmt.Errorf("could not get command result: %w", err)
-		}
-
 		return nil, err
 	}
 
 	str, ok := val.(string)
-	if ok {
-		return parseClusterNodes(str)
+	if !ok {
+		return nil, fmt.Errorf("could not discover nodes: %w", err)
 	}
-	return nil, fmt.Errorf("could not discover nodes: %w", err)
+	return parseClusterNodes(str)
 }
 
 func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
@@ -439,24 +433,24 @@ func parseClusterNodes(nodesResponse string) ([]redisClusterNode, error) {
 	for _, line := range lines {
 		fields := strings.Fields(line)
 
-		if len(fields) >= 8 {
-			endpointParts := strings.FieldsFunc(fields[1], func(r rune) bool {
-				return strings.ContainsRune(":@", r)
-			})
-			if string(fields[1][0]) == ":" {
-				endpointParts = append([]string{""}, endpointParts...)
-			}
-
-			nodes = append(nodes, redisClusterNode{
-				nodeID: fields[0],
-				host:   endpointParts[0],
-				port:   endpointParts[1],
-			})
-		} else if len(fields) == 0 {
+		if len(fields) == 0 {
 			continue
-		} else {
+		}
+		if len(fields) < 8 {
 			return nil, fmt.Errorf("unexpected cluster node: \"%s\"", line)
 		}
+
+		endpointParts := strings.FieldsFunc(fields[1], func(r rune) bool {
+			return strings.ContainsRune(":@", r)
+		})
+		if string(fields[1][0]) == ":" {
+			endpointParts = append([]string{""}, endpointParts...)
+		}
+		nodes = append(nodes, redisClusterNode{
+			nodeID: fields[0],
+			host:   endpointParts[0],
+			port:   endpointParts[1],
+		})
 	}
 
 	return nodes, nil
