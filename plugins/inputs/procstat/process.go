@@ -104,6 +104,15 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
+	// Linux fixup for gopsutils exposing the disk-only-IO instead of the total
+	// I/O as for example on Windows
+	if rc, wc, err := collectTotalReadWrite(p); err == nil {
+		fields[prefix+"read_bytes"] = rc
+		fields[prefix+"write_bytes"] = wc
+		fields[prefix+"disk_read_bytes"] = io.ReadBytes
+		fields[prefix+"disk_write_bytes"] = io.WriteBytes
+	}
+
 	createdAt, err := p.CreateTime() // returns epoch in ms
 	if err == nil {
 		fields[prefix+"created_at"] = createdAt * 1000000 // ms to ns

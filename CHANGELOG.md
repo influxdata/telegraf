@@ -1,6 +1,16 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- [PR #15186](https://github.com/influxdata/telegraf/pull/15186) changes the
+  meaning of `inputs.procstat` fields `read_bytes` and `write_bytes` on Linux
+  to now contain _all_ I/O operations for consistency with other
+  operating-systems. The previous values are output as `disk_read_bytes` and
+  `disk_write_bytes` measuring _only_ the I/O on the storage layer.
+
 ## v1.30.2 [2024-04-22]
 
 ### Important Changes

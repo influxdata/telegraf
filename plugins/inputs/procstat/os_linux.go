@@ -6,6 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+
+	"github.com/prometheus/procfs"
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/shirou/gopsutil/v3/process"
@@ -75,4 +78,28 @@ func findBySystemdUnits(units []string) ([]processGroup, error) {
 
 func findByWindowsServices(_ []string) ([]processGroup, error) {
 	return nil, nil
+}
+
+func collectTotalReadWrite(proc Process) (r, w uint64, err error) {
+	path := procfs.DefaultMountPoint
+	if hp := os.Getenv("HOST_PROC"); hp != "" {
+		path = hp
+	}
+
+	fs, err := procfs.NewFS(path)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	p, err := fs.Proc(int(proc.PID()))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	stat, err := p.IO()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return stat.RChar, stat.WChar, nil
 }

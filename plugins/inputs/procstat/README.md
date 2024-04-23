@@ -159,6 +159,8 @@ Below are an example set of tags and fields:
     - cpu_time_system (float)
     - cpu_time_user (float)
     - cpu_usage (float)
+    - disk_read_bytes (int, Linux only, *telegraf* may need to be ran as **root**)
+    - disk_write_bytes (int, Linux only, *telegraf* may need to be ran as **root**)
     - involuntary_context_switches (int)
     - major_faults (int)
     - memory_anonymous (int)

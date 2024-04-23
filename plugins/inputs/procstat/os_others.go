@@ -25,3 +25,7 @@ func findBySystemdUnits(_ []string) ([]processGroup, error) {
 func findByWindowsServices(_ []string) ([]processGroup, error) {
 	return nil, nil
 }
+
+func collectTotalReadWrite(_ Process) (r, w uint64, err error) {
+	return 0, 0, errors.ErrUnsupported
+}
