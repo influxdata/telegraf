@@ -27,7 +27,6 @@ import (
 var sampleConfig string
 
 var (
-	firstTimestamp time.Time
 	execCommand    = exec.Command // execCommand is used to mock commands in tests.
 	dfltActivities = []string{"DISK"}
 )
@@ -70,9 +69,12 @@ type Sysstat struct {
 
 	// DeviceTags adds the possibility to add additional tags for devices.
 	DeviceTags map[string][]map[string]string `toml:"device_tags"`
-	interval   int
 
 	Log telegraf.Logger
+
+	// Used to autodetect how long the sadc command should run for
+	interval       int
+	firstTimestamp time.Time
 }
 
 const cmd = "sadf"
@@ -105,10 +107,10 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if s.interval == 0 {
-		if firstTimestamp.IsZero() {
-			firstTimestamp = time.Now()
+		if s.firstTimestamp.IsZero() {
+			s.firstTimestamp = time.Now()
 		} else {
-			s.interval = int(time.Since(firstTimestamp).Seconds() + 0.5)
+			s.interval = int(time.Since(s.firstTimestamp).Seconds() + 0.5)
 		}
 	}
 
