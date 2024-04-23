@@ -577,6 +577,34 @@ func (d *netflowDecoder) Decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			case netflow.TemplateFlowSet:
 			case netflow.NFv9OptionsTemplateFlowSet:
 			case netflow.OptionsDataFlowSet:
+				for _, record := range fs.Records {
+					tags := map[string]string{
+						"source":  src,
+						"version": "NetFlowV9",
+					}
+					fields := make(map[string]interface{})
+					for _, value := range record.ScopesValues {
+						decodedFields, err := d.decodeValueV9(value)
+						if err != nil {
+							d.Log.Errorf("decoding option record %+v failed: %v", record, err)
+							continue
+						}
+						for _, field := range decodedFields {
+							fields[field.Key] = field.Value
+						}
+					}
+					for _, value := range record.OptionsValues {
+						decodedFields, err := d.decodeValueV9(value)
+						if err != nil {
+							d.Log.Errorf("decoding option record %+v failed: %v", record, err)
+							continue
+						}
+						for _, field := range decodedFields {
+							fields[field.Key] = field.Value
+						}
+					}
+					metrics = append(metrics, metric.New("netflow_options", tags, fields, t))
+				}
 			case netflow.DataFlowSet:
 				for _, record := range fs.Records {
 					tags := map[string]string{
