@@ -59,7 +59,7 @@ type RedisClient struct {
 }
 
 type redisClusterNode struct {
-	nodeId string
+	nodeID string
 	host   string
 	port   string
 }
@@ -297,7 +297,6 @@ func (r *Redis) connect() error {
 				return fmt.Errorf("unable to discover nodes from %s", address)
 			}
 			for _, node := range nodes {
-
 				nodeAddress := ""
 				if node.host == "" {
 					nodeAddress = address
@@ -319,8 +318,7 @@ func (r *Redis) connect() error {
 				tags := map[string]string{
 					"server": u.Hostname(),
 					"port":   node.port,
-					"nodeId": node.nodeId,
-					// "replication_role": node.replicationRole,
+					"nodeID": node.nodeID,
 				}
 
 				r.clients = append(r.clients, &RedisClient{
@@ -328,7 +326,6 @@ func (r *Redis) connect() error {
 					tags:   tags,
 				})
 			}
-
 		} else {
 			tags := map[string]string{}
 			if u.Scheme == "unix" {
@@ -408,10 +405,8 @@ func discoverNodes(client Client) ([]redisClusterNode, error) {
 	str, ok := val.(string)
 	if ok {
 		return parseClusterNodes(str)
-	} else {
-		return nil, fmt.Errorf("could not discover nodes: %w", err)
 	}
-
+	return nil, fmt.Errorf("could not discover nodes: %w", err)
 }
 
 func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
@@ -438,7 +433,6 @@ func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
 //	node id, address:port, flags, last ping sent, last pong received,
 //	configuration epoch, link state, slots.
 func parseClusterNodes(nodesResponse string) ([]redisClusterNode, error) {
-
 	lines := strings.Split(nodesResponse, "\n")
 	var nodes []redisClusterNode
 
@@ -454,7 +448,7 @@ func parseClusterNodes(nodesResponse string) ([]redisClusterNode, error) {
 			}
 
 			nodes = append(nodes, redisClusterNode{
-				nodeId: fields[0],
+				nodeID: fields[0],
 				host:   endpointParts[0],
 				port:   endpointParts[1],
 			})
