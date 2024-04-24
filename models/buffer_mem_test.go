@@ -47,14 +47,19 @@ func MetricTime(sec int64) telegraf.Metric {
 }
 
 func BenchmarkAddMetrics(b *testing.B) {
-	buf := NewBuffer("test", "", 10000)
+	buf := newTestMemoryBuffer("test", "", 10000)
 	m := Metric()
 	for n := 0; n < b.N; n++ {
 		buf.Add(m)
 	}
 }
 
-func setup(b *Buffer) *Buffer {
+func newTestMemoryBuffer(name string, alias string, capacity int) *MemoryBuffer {
+	bm := NewBufferMetrics(name, alias, capacity)
+	return NewMemoryBuffer(capacity, bm)
+}
+
+func setup(b *MemoryBuffer) *MemoryBuffer {
 	b.MetricsAdded.Set(0)
 	b.MetricsWritten.Set(0)
 	b.MetricsDropped.Set(0)
@@ -62,14 +67,14 @@ func setup(b *Buffer) *Buffer {
 }
 
 func TestBuffer_LenEmpty(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	require.Equal(t, 0, b.Len())
 }
 
 func TestBuffer_LenOne(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m)
 
 	require.Equal(t, 1, b.Len())
@@ -77,7 +82,7 @@ func TestBuffer_LenOne(t *testing.T) {
 
 func TestBuffer_LenFull(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m, m, m)
 
 	require.Equal(t, 5, b.Len())
@@ -85,7 +90,7 @@ func TestBuffer_LenFull(t *testing.T) {
 
 func TestBuffer_LenOverfill(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	setup(b)
 	b.Add(m, m, m, m, m, m)
 
@@ -93,14 +98,14 @@ func TestBuffer_LenOverfill(t *testing.T) {
 }
 
 func TestBuffer_BatchLenZero(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	batch := b.Batch(0)
 
 	require.Empty(t, batch)
 }
 
 func TestBuffer_BatchLenBufferEmpty(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	batch := b.Batch(2)
 
 	require.Empty(t, batch)
@@ -108,7 +113,7 @@ func TestBuffer_BatchLenBufferEmpty(t *testing.T) {
 
 func TestBuffer_BatchLenUnderfill(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m)
 	batch := b.Batch(2)
 
@@ -117,7 +122,7 @@ func TestBuffer_BatchLenUnderfill(t *testing.T) {
 
 func TestBuffer_BatchLenFill(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m)
 	batch := b.Batch(2)
 	require.Len(t, batch, 2)
@@ -125,7 +130,7 @@ func TestBuffer_BatchLenFill(t *testing.T) {
 
 func TestBuffer_BatchLenExact(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m)
 	batch := b.Batch(2)
 	require.Len(t, batch, 2)
@@ -133,7 +138,7 @@ func TestBuffer_BatchLenExact(t *testing.T) {
 
 func TestBuffer_BatchLenLargerThanBuffer(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(6)
 	require.Len(t, batch, 5)
@@ -141,7 +146,7 @@ func TestBuffer_BatchLenLargerThanBuffer(t *testing.T) {
 
 func TestBuffer_BatchWrap(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(2)
 	b.Accept(batch)
@@ -151,7 +156,7 @@ func TestBuffer_BatchWrap(t *testing.T) {
 }
 
 func TestBuffer_BatchLatest(t *testing.T) {
-	b := setup(NewBuffer("test", "", 4))
+	b := setup(newTestMemoryBuffer("test", "", 4))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -165,7 +170,7 @@ func TestBuffer_BatchLatest(t *testing.T) {
 }
 
 func TestBuffer_BatchLatestWrap(t *testing.T) {
-	b := setup(NewBuffer("test", "", 4))
+	b := setup(newTestMemoryBuffer("test", "", 4))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -181,7 +186,7 @@ func TestBuffer_BatchLatestWrap(t *testing.T) {
 }
 
 func TestBuffer_MultipleBatch(t *testing.T) {
-	b := setup(NewBuffer("test", "", 10))
+	b := setup(newTestMemoryBuffer("test", "", 10))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -207,7 +212,7 @@ func TestBuffer_MultipleBatch(t *testing.T) {
 }
 
 func TestBuffer_RejectWithRoom(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -230,7 +235,7 @@ func TestBuffer_RejectWithRoom(t *testing.T) {
 }
 
 func TestBuffer_RejectNothingNewFull(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -253,7 +258,7 @@ func TestBuffer_RejectNothingNewFull(t *testing.T) {
 }
 
 func TestBuffer_RejectNoRoom(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 
 	b.Add(MetricTime(2))
@@ -282,7 +287,7 @@ func TestBuffer_RejectNoRoom(t *testing.T) {
 }
 
 func TestBuffer_RejectRoomExact(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	batch := b.Batch(2)
@@ -306,7 +311,7 @@ func TestBuffer_RejectRoomExact(t *testing.T) {
 }
 
 func TestBuffer_RejectRoomOverwriteOld(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -331,7 +336,7 @@ func TestBuffer_RejectRoomOverwriteOld(t *testing.T) {
 }
 
 func TestBuffer_RejectPartialRoom(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 
 	b.Add(MetricTime(2))
@@ -358,7 +363,7 @@ func TestBuffer_RejectPartialRoom(t *testing.T) {
 }
 
 func TestBuffer_RejectNewMetricsWrapped(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -401,7 +406,7 @@ func TestBuffer_RejectNewMetricsWrapped(t *testing.T) {
 }
 
 func TestBuffer_RejectWrapped(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -432,7 +437,7 @@ func TestBuffer_RejectWrapped(t *testing.T) {
 }
 
 func TestBuffer_RejectAdjustFirst(t *testing.T) {
-	b := setup(NewBuffer("test", "", 10))
+	b := setup(newTestMemoryBuffer("test", "", 10))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -480,7 +485,7 @@ func TestBuffer_RejectAdjustFirst(t *testing.T) {
 
 func TestBuffer_AddDropsOverwrittenMetrics(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m, m, m)
 	b.Add(m, m, m, m, m)
@@ -491,7 +496,7 @@ func TestBuffer_AddDropsOverwrittenMetrics(t *testing.T) {
 
 func TestBuffer_AcceptRemovesBatch(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m)
 	batch := b.Batch(2)
 	b.Accept(batch)
@@ -500,7 +505,7 @@ func TestBuffer_AcceptRemovesBatch(t *testing.T) {
 
 func TestBuffer_RejectLeavesBatch(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m)
 	batch := b.Batch(2)
 	b.Reject(batch)
@@ -509,7 +514,7 @@ func TestBuffer_RejectLeavesBatch(t *testing.T) {
 
 func TestBuffer_AcceptWritesOverwrittenBatch(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(5)
@@ -522,7 +527,7 @@ func TestBuffer_AcceptWritesOverwrittenBatch(t *testing.T) {
 
 func TestBuffer_BatchRejectDropsOverwrittenBatch(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(5)
@@ -535,7 +540,7 @@ func TestBuffer_BatchRejectDropsOverwrittenBatch(t *testing.T) {
 
 func TestBuffer_MetricsOverwriteBatchAccept(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(3)
@@ -547,7 +552,7 @@ func TestBuffer_MetricsOverwriteBatchAccept(t *testing.T) {
 
 func TestBuffer_MetricsOverwriteBatchReject(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(3)
@@ -559,7 +564,7 @@ func TestBuffer_MetricsOverwriteBatchReject(t *testing.T) {
 
 func TestBuffer_MetricsBatchAcceptRemoved(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(3)
@@ -571,7 +576,7 @@ func TestBuffer_MetricsBatchAcceptRemoved(t *testing.T) {
 
 func TestBuffer_WrapWithBatch(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 
 	b.Add(m, m, m)
 	b.Batch(3)
@@ -582,7 +587,7 @@ func TestBuffer_WrapWithBatch(t *testing.T) {
 
 func TestBuffer_BatchNotRemoved(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m, m, m)
 	b.Batch(2)
 	require.Equal(t, 5, b.Len())
@@ -590,7 +595,7 @@ func TestBuffer_BatchNotRemoved(t *testing.T) {
 
 func TestBuffer_BatchRejectAcceptNoop(t *testing.T) {
 	m := Metric()
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(2)
 	b.Reject(batch)
@@ -606,7 +611,7 @@ func TestBuffer_AcceptCallsMetricAccept(t *testing.T) {
 			accept++
 		},
 	}
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(mm, mm, mm)
 	batch := b.Batch(2)
 	b.Accept(batch)
@@ -621,7 +626,7 @@ func TestBuffer_AddCallsMetricRejectWhenNoBatch(t *testing.T) {
 			reject++
 		},
 	}
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	setup(b)
 	b.Add(mm, mm, mm, mm, mm)
 	b.Add(mm, mm)
@@ -636,7 +641,7 @@ func TestBuffer_AddCallsMetricRejectWhenNotInBatch(t *testing.T) {
 			reject++
 		},
 	}
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	setup(b)
 	b.Add(mm, mm, mm, mm, mm)
 	batch := b.Batch(2)
@@ -654,7 +659,7 @@ func TestBuffer_RejectCallsMetricRejectWithOverwritten(t *testing.T) {
 			reject++
 		},
 	}
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(mm, mm, mm, mm, mm)
 	batch := b.Batch(5)
 	b.Add(mm, mm)
@@ -671,7 +676,7 @@ func TestBuffer_AddOverwriteAndReject(t *testing.T) {
 			reject++
 		},
 	}
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(mm, mm, mm, mm, mm)
 	batch := b.Batch(5)
 	b.Add(mm, mm, mm, mm, mm)
@@ -695,7 +700,7 @@ func TestBuffer_AddOverwriteAndRejectOffset(t *testing.T) {
 			accept++
 		},
 	}
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	b.Add(mm, mm, mm)
 	b.Add(mm, mm, mm, mm)
 	require.Equal(t, 2, reject)
@@ -714,7 +719,7 @@ func TestBuffer_AddOverwriteAndRejectOffset(t *testing.T) {
 }
 
 func TestBuffer_RejectEmptyBatch(t *testing.T) {
-	b := setup(NewBuffer("test", "", 5))
+	b := setup(newTestMemoryBuffer("test", "", 5))
 	batch := b.Batch(2)
 	b.Add(MetricTime(1))
 	b.Reject(batch)
