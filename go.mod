@@ -224,8 +224,6 @@ require (
 	modernc.org/sqlite v1.29.5
 )
 
-require github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
-
 require (
 	cloud.google.com/go v0.112.0 // indirect
 	cloud.google.com/go/compute v1.23.4 // indirect
@@ -261,6 +259,7 @@ require (
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/alecthomas/participle v0.4.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
