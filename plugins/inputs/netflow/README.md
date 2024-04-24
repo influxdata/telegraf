@@ -100,6 +100,22 @@ Currently the following `data-type`s are supported:
 - `ip`     IPv4 or IPv6 address
 - `proto`  mapping of layer-4 protocol numbers to names
 
+## Troubleshooting
+
+### `Error template not found` warnings
+
+Those warnings usually occur in cases where Telegraf is restarted or reloaded
+while the flow-device is already streaming data.
+As background, the Netflow and IPFIX protocols rely on templates sent by the
+flow-device to decode fields. Without those templates, it is not clear what the
+data-type and size of the payload is and this makes it impossible to correctly
+interpret the data. However, templates are sent by the flow-device, usually at
+the start of streaming and in regular intervals (configurable in the device) and
+Telegraf has no means to trigger sending of the templates. Therefore, we need to
+skip the packets until the templates are resent by the device.
+
+### Template
+
 ## Metrics
 
 Metrics depend on the format used as well as on the information provided
