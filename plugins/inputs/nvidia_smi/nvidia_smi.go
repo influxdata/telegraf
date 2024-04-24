@@ -27,10 +27,9 @@ var sampleConfig string
 
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
-	BinPath              string          `toml:"bin_path"`
-	Timeout              config.Duration `toml:"timeout"`
-	StartupErrorBehavior string          `toml:"startup_error_behavior"`
-	Log                  telegraf.Logger `toml:"-"`
+	BinPath string          `toml:"bin_path"`
+	Timeout config.Duration `toml:"timeout"`
+	Log     telegraf.Logger `toml:"-"`
 
 	ignorePlugin bool
 	once         sync.Once
@@ -40,26 +39,19 @@ func (*NvidiaSMI) SampleConfig() string {
 	return sampleConfig
 }
 
-func (smi *NvidiaSMI) Init() error {
+func (smi *NvidiaSMI) Start(telegraf.Accumulator) error {
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
 		binPath, err := exec.LookPath("nvidia-smi")
 		if err != nil {
-			switch smi.StartupErrorBehavior {
-			case "ignore":
-				smi.ignorePlugin = true
-				smi.Log.Warnf("nvidia-smi not found on the system, ignoring: %s", err)
-				return nil
-			case "", "error":
-				return fmt.Errorf("nvidia-smi not found in %q and not in PATH; please make sure nvidia-smi is installed and/or is in PATH", smi.BinPath)
-			default:
-				return fmt.Errorf("unknown startup behavior setting: %s", smi.StartupErrorBehavior)
-			}
+			return &internal.StartupError{Err: err}
 		}
 		smi.BinPath = binPath
 	}
 
 	return nil
 }
+
+func (smi *NvidiaSMI) Stop() {}
 
 // Gather implements the telegraf interface
 func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {

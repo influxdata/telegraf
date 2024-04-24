@@ -132,7 +132,7 @@ func (r *RunningInput) Start(acc telegraf.Accumulator) error {
 
 	// Check if the plugin reports a retry-able error, otherwise we exit.
 	var serr *internal.StartupError
-	if !errors.As(err, &serr) || !serr.Retry {
+	if !errors.As(err, &serr) {
 		return err
 	}
 
@@ -140,6 +140,9 @@ func (r *RunningInput) Start(acc telegraf.Accumulator) error {
 	switch r.Config.StartupErrorBehavior {
 	case "", "error": // fall-trough to return the actual error
 	case "retry":
+		if !serr.Retry {
+			return err
+		}
 		r.log.Infof("Startup failed: %v; retrying...", err)
 		return nil
 	case "ignore":
