@@ -173,6 +173,10 @@ func (e *ElasticsearchQuery) connectToES() error {
 	return nil
 }
 
+func (e *ElasticsearchQuery) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+
 // Gather writes the results of the queries from Elasticsearch to the Accumulator.
 func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
@@ -195,6 +199,12 @@ func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (e *ElasticsearchQuery) Stop() {
+	if e.httpclient != nil {
+		e.httpclient.CloseIdleConnections()
+	}
 }
 
 func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {

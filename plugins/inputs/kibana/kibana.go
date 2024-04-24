@@ -123,6 +123,10 @@ func (*Kibana) SampleConfig() string {
 	return sampleConfig
 }
 
+func (k *Kibana) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+
 func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
 		client, err := k.createHTTPClient()
@@ -148,6 +152,12 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (k *Kibana) Stop() {
+	if k.client != nil {
+		k.client.CloseIdleConnections()
+	}
 }
 
 func (k *Kibana) createHTTPClient() (*http.Client, error) {
