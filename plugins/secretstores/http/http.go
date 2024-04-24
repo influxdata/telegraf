@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/blues/jsonata-go"
 
@@ -22,6 +23,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+const defaultIdleConnTimeoutMinutes = 5
 
 type HTTP struct {
 	URL                string            `toml:"url"`
@@ -47,6 +50,12 @@ func (h *HTTP) SampleConfig() string {
 
 func (h *HTTP) Init() error {
 	ctx := context.Background()
+
+	// Prevent idle connections from hanging around forever on telegraf reload
+	if h.HTTPClientConfig.IdleConnTimeout == 0 {
+		h.HTTPClientConfig.IdleConnTimeout = config.Duration(defaultIdleConnTimeoutMinutes * time.Minute)
+	}
+
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
