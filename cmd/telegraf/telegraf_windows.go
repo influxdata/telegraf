@@ -144,7 +144,7 @@ func (t *Telegraf) runAsWindowsService() error {
 			return err
 		}
 	} else {
-		err = logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+		err = logger.SetupLogging(logger.Config{LogTarget: "eventlog"})
 		if err != nil {
 			return err
 		}

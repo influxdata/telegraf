@@ -137,7 +137,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return fmt.Errorf("unknown command %q", cCtx.Args().First())
 		}
 
-		err := logger.SetupLogging(logger.LogConfig{})
+		err := logger.SetupLogging(logger.Config{})
 		if err != nil {
 			return err
 		}
@@ -372,6 +372,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 
 	// Make sure we safely erase secrets
 	defer memguard.Purge()
+	defer logger.CloseLogging()
 
 	return app.Run(args)
 }
@@ -383,8 +384,7 @@ func main() {
 	agent := Telegraf{}
 	pprof := NewPprofServer()
 	c := config.NewConfig()
-	err := runApp(os.Args, os.Stdout, pprof, c, &agent)
-	if err != nil {
+	if err := runApp(os.Args, os.Stdout, pprof, c, &agent); err != nil {
 		log.Fatalf("E! %s", err)
 	}
 }
