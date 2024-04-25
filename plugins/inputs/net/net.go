@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
@@ -35,7 +35,7 @@ func (*NetIOStats) SampleConfig() string {
 
 func (n *NetIOStats) Init() error {
 	if !n.IgnoreProtocolStats {
-		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.net", "ignore_protocol_stats", "false",
+		config.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.net", "ignore_protocol_stats", "false",
 			telegraf.DeprecationInfo{
 				Since:     "1.27.3",
 				RemovalIn: "1.36.0",

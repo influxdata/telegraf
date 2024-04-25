@@ -535,7 +535,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	// Warn when explicitly setting the old snmp translator
 	if c.Agent.SnmpTranslator == "netsnmp" {
-		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
+		PrintOptionValueDeprecationNotice(telegraf.Warn, "agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
 			Since:     "1.25.0",
 			RemovalIn: "2.0.0",
 			Notice:    "Use 'gosmi' instead",
@@ -1359,7 +1359,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldPass []string
 	c.getFieldStringSlice(tbl, "pass", &oldPass)
 	if len(oldPass) > 0 {
-		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "pass", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "pass", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldinclude' instead",
@@ -1369,7 +1369,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldFieldPass []string
 	c.getFieldStringSlice(tbl, "fieldpass", &oldFieldPass)
 	if len(oldFieldPass) > 0 {
-		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fieldpass", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fieldpass", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldinclude' instead",
@@ -1381,7 +1381,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldDrop []string
 	c.getFieldStringSlice(tbl, "drop", &oldDrop)
 	if len(oldDrop) > 0 {
-		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "drop", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "drop", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldexclude' instead",
@@ -1391,7 +1391,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldFieldDrop []string
 	c.getFieldStringSlice(tbl, "fielddrop", &oldFieldDrop)
 	if len(oldFieldDrop) > 0 {
-		models.PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fielddrop", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fielddrop", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldexclude' instead",

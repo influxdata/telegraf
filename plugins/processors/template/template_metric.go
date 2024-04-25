@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/config"
 )
 
 var (
@@ -47,7 +47,7 @@ func (m *TemplateMetric) String() string {
 
 func (m *TemplateMetric) TagList() map[string]string {
 	onceTagList.Do(func() {
-		models.PrintOptionValueDeprecationNotice(
+		config.PrintOptionValueDeprecationNotice(
 			telegraf.Warn, "processors.template", "template", "{{.TagList}}",
 			telegraf.DeprecationInfo{
 				Since:     "1.28.0",
@@ -61,7 +61,7 @@ func (m *TemplateMetric) TagList() map[string]string {
 
 func (m *TemplateMetric) FieldList() map[string]interface{} {
 	onceFieldList.Do(func() {
-		models.PrintOptionValueDeprecationNotice(
+		config.PrintOptionValueDeprecationNotice(
 			telegraf.Warn, "processors.template", "template", "{{.FieldList}}",
 			telegraf.DeprecationInfo{
 				Since:     "1.28.0",

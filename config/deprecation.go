@@ -12,7 +12,6 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -169,7 +168,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 
 func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
 	info := c.collectDeprecationInfo(category, name, plugin, false)
-	models.PrintPluginDeprecationNotice(info.logLevel, info.Name, info.info)
+	PrintPluginDeprecationNotice(info.logLevel, info.Name, info.info)
 
 	if info.logLevel == telegraf.Error {
 		return errors.New("plugin deprecated")
@@ -178,7 +177,7 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	// Print deprecated options
 	deprecatedOptions := make([]string, 0)
 	for _, option := range info.Options {
-		models.PrintOptionDeprecationNotice(option.logLevel, info.Name, option.Name, option.info)
+		PrintOptionDeprecationNotice(option.logLevel, info.Name, option.Name, option.info)
 		if option.logLevel == telegraf.Error {
 			deprecatedOptions = append(deprecatedOptions, option.Name)
 		}
@@ -327,5 +326,49 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 			}
 		}
 		fn(field, fieldValue)
+	}
+}
+
+func deprecationPrefix(level telegraf.Escalation) string {
+	switch level {
+	case telegraf.Warn:
+		return "W! " + color.YellowString("DeprecationWarning")
+	case telegraf.Error:
+		return "E! " + color.RedString("DeprecationError")
+	}
+	return ""
+}
+
+func PrintPluginDeprecationNotice(level telegraf.Escalation, name string, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+
+		log.Printf(
+			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, name, info.Since, info.RemovalIn, info.Notice,
+		)
+	}
+}
+
+func PrintOptionDeprecationNotice(level telegraf.Escalation, plugin, option string, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+		log.Printf(
+			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
+		)
+	}
+}
+
+func PrintOptionValueDeprecationNotice(level telegraf.Escalation, plugin, option string, value interface{}, info telegraf.DeprecationInfo) {
+	switch level {
+	case telegraf.Warn, telegraf.Error:
+		prefix := deprecationPrefix(level)
+		log.Printf(
+			`%s: Value "%+v" for option %q of plugin %q deprecated since version %s and will be removed in %s: %s`,
+			prefix, value, option, plugin, info.Since, info.RemovalIn, info.Notice,
+		)
 	}
 }

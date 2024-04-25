@@ -16,10 +16,10 @@ import (
 	"github.com/srebhan/protobufquery"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
@@ -93,7 +93,7 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsXML) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsXML...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xml", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xml", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
 				RemovalIn: "2.0.0",
 				Notice:    "use 'xpath' instead",
@@ -107,7 +107,7 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsJSON) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsJSON...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
 				RemovalIn: "2.0.0",
 				Notice:    "use 'xpath' instead",
@@ -119,7 +119,7 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsMsgPack) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
 				RemovalIn: "2.0.0",
 				Notice:    "use 'xpath' instead",
@@ -141,7 +141,7 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsProto) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsProto...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
 				RemovalIn: "2.0.0",
 				Notice:    "use 'xpath' instead",
