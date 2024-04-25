@@ -27,7 +27,7 @@ type DeprecationInfo struct {
 	info     telegraf.DeprecationInfo
 }
 
-func (di *DeprecationInfo) determineEscalation(telegrafVersion *semver.Version) error {
+func (di *DeprecationInfo) determineEscalation() error {
 	di.logLevel = telegraf.None
 	if di.info.Since == "" {
 		return nil
@@ -115,7 +115,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			info.DeprecationInfo.info = pi
 		}
 	}
-	if err := info.determineEscalation(c.version); err != nil {
+	if err := info.determineEscalation(); err != nil {
 		panic(fmt.Errorf("plugin %q: %w", info.Name, err))
 	}
 	if info.logLevel != telegraf.None {
@@ -147,7 +147,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		if len(tags) > 2 {
 			optionInfo.info.RemovalIn = tags[1]
 		}
-		if err := optionInfo.determineEscalation(c.version); err != nil {
+		if err := optionInfo.determineEscalation(); err != nil {
 			panic(fmt.Errorf("plugin %q option %q: %w", info.Name, field.Name, err))
 		}
 
@@ -168,7 +168,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 
 func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
 	info := c.collectDeprecationInfo(category, name, plugin, false)
-	PrintPluginDeprecationNotice(info.logLevel, info.Name, info.info)
+	printPluginDeprecationNotice(info.logLevel, info.Name, info.info)
 
 	if info.logLevel == telegraf.Error {
 		return errors.New("plugin deprecated")
@@ -177,7 +177,7 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	// Print deprecated options
 	deprecatedOptions := make([]string, 0)
 	for _, option := range info.Options {
-		PrintOptionDeprecationNotice(option.logLevel, info.Name, option.Name, option.info)
+		PrintOptionDeprecationNotice(info.Name, option.Name, option.info)
 		if option.logLevel == telegraf.Error {
 			deprecatedOptions = append(deprecatedOptions, option.Name)
 		}
@@ -339,7 +339,7 @@ func deprecationPrefix(level telegraf.Escalation) string {
 	return ""
 }
 
-func PrintPluginDeprecationNotice(level telegraf.Escalation, name string, info telegraf.DeprecationInfo) {
+func printPluginDeprecationNotice(level telegraf.Escalation, name string, info telegraf.DeprecationInfo) {
 	switch level {
 	case telegraf.Warn, telegraf.Error:
 		prefix := deprecationPrefix(level)
@@ -351,10 +351,20 @@ func PrintPluginDeprecationNotice(level telegraf.Escalation, name string, info t
 	}
 }
 
-func PrintOptionDeprecationNotice(level telegraf.Escalation, plugin, option string, info telegraf.DeprecationInfo) {
-	switch level {
+func PrintOptionDeprecationNotice(plugin, option string, info telegraf.DeprecationInfo) {
+	// Determine the log-level
+	di := &DeprecationInfo{
+		Name: plugin,
+		info: info,
+	}
+	if err := di.determineEscalation(); err != nil {
+		log.Printf("E! Determining log-level for option %s in plugin %s failed: %v", option, plugin, err)
+		return
+	}
+
+	switch di.logLevel {
 	case telegraf.Warn, telegraf.Error:
-		prefix := deprecationPrefix(level)
+		prefix := deprecationPrefix(di.logLevel)
 		log.Printf(
 			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
 			prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
@@ -362,10 +372,20 @@ func PrintOptionDeprecationNotice(level telegraf.Escalation, plugin, option stri
 	}
 }
 
-func PrintOptionValueDeprecationNotice(level telegraf.Escalation, plugin, option string, value interface{}, info telegraf.DeprecationInfo) {
-	switch level {
+func PrintOptionValueDeprecationNotice(plugin, option string, value interface{}, info telegraf.DeprecationInfo) {
+	// Determine the log-level
+	di := &DeprecationInfo{
+		Name: plugin,
+		info: info,
+	}
+	if err := di.determineEscalation(); err != nil {
+		log.Printf("E! Determining log-level for option %s in plugin %s failed: %v", option, plugin, err)
+		return
+	}
+
+	switch di.logLevel {
 	case telegraf.Warn, telegraf.Error:
-		prefix := deprecationPrefix(level)
+		prefix := deprecationPrefix(di.logLevel)
 		log.Printf(
 			`%s: Value "%+v" for option %q of plugin %q deprecated since version %s and will be removed in %s: %s`,
 			prefix, value, option, plugin, info.Since, info.RemovalIn, info.Notice,

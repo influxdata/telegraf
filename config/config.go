@@ -54,6 +54,9 @@ var (
 
 	// Password specified via command-line
 	Password Secret
+
+	// telegrafVersion contains the parsed semantic Telegraf version
+	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -86,7 +89,6 @@ type Config struct {
 	// like the other plugins because they need to be garbage collected (See issue #11809)
 
 	Deprecations map[string][]int64
-	version      *semver.Version
 
 	Persister *persister.Persister
 
@@ -136,11 +138,9 @@ func NewConfig() *Config {
 	}
 
 	// Handle unknown version
-	version := internal.Version
-	if version == "" || version == "unknown" {
-		version = "0.0.0-unknown"
+	if internal.Version != "" && internal.Version != "unknown" {
+		telegrafVersion = semver.New(internal.Version)
 	}
-	c.version = semver.New(version)
 
 	tomlCfg := &toml.Config{
 		NormFieldName: toml.DefaultConfig.NormFieldName,
@@ -535,7 +535,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	// Warn when explicitly setting the old snmp translator
 	if c.Agent.SnmpTranslator == "netsnmp" {
-		PrintOptionValueDeprecationNotice(telegraf.Warn, "agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
+		PrintOptionValueDeprecationNotice("agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
 			Since:     "1.25.0",
 			RemovalIn: "2.0.0",
 			Notice:    "Use 'gosmi' instead",
@@ -1359,7 +1359,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldPass []string
 	c.getFieldStringSlice(tbl, "pass", &oldPass)
 	if len(oldPass) > 0 {
-		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "pass", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(plugin, "pass", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldinclude' instead",
@@ -1369,7 +1369,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldFieldPass []string
 	c.getFieldStringSlice(tbl, "fieldpass", &oldFieldPass)
 	if len(oldFieldPass) > 0 {
-		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fieldpass", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(plugin, "fieldpass", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldinclude' instead",
@@ -1381,7 +1381,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldDrop []string
 	c.getFieldStringSlice(tbl, "drop", &oldDrop)
 	if len(oldDrop) > 0 {
-		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "drop", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(plugin, "drop", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldexclude' instead",
@@ -1391,7 +1391,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	var oldFieldDrop []string
 	c.getFieldStringSlice(tbl, "fielddrop", &oldFieldDrop)
 	if len(oldFieldDrop) > 0 {
-		PrintOptionDeprecationNotice(telegraf.Warn, plugin, "fielddrop", telegraf.DeprecationInfo{
+		PrintOptionDeprecationNotice(plugin, "fielddrop", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
 			RemovalIn: "2.0.0",
 			Notice:    "use 'fieldexclude' instead",

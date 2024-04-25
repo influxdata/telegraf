@@ -238,7 +238,7 @@ func (p *PowerStat) parsePackageMetrics() error {
 // Also, it warns if deprecated metric has been set.
 func (p *PowerStat) parseCPUMetrics() error {
 	if slices.Contains(p.CPUMetrics, cpuBusyCycles) {
-		config.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.intel_powerstat", "cpu_metrics", cpuBusyCycles, telegraf.DeprecationInfo{
+		config.PrintOptionValueDeprecationNotice("inputs.intel_powerstat", "cpu_metrics", cpuBusyCycles, telegraf.DeprecationInfo{
 			Since:     "1.23.0",
 			RemovalIn: "2.0.0",
 			Notice:    "'cpu_c0_state_residency' metric name should be used instead.",

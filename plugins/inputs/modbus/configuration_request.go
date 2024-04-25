@@ -80,7 +80,6 @@ func (c *ConfigurationPerRequest) Check() error {
 		case "", "none", "shrink", "rearrange":
 		case "aggressive":
 			config.PrintOptionValueDeprecationNotice(
-				telegraf.Warn,
 				"inputs.modbus",
 				"optimization",
 				"aggressive",

@@ -48,7 +48,7 @@ func (m *TemplateMetric) String() string {
 func (m *TemplateMetric) TagList() map[string]string {
 	onceTagList.Do(func() {
 		config.PrintOptionValueDeprecationNotice(
-			telegraf.Warn, "processors.template", "template", "{{.TagList}}",
+			"processors.template", "template", "{{.TagList}}",
 			telegraf.DeprecationInfo{
 				Since:     "1.28.0",
 				RemovalIn: "1.34.0",
@@ -62,7 +62,7 @@ func (m *TemplateMetric) TagList() map[string]string {
 func (m *TemplateMetric) FieldList() map[string]interface{} {
 	onceFieldList.Do(func() {
 		config.PrintOptionValueDeprecationNotice(
-			telegraf.Warn, "processors.template", "template", "{{.FieldList}}",
+			"processors.template", "template", "{{.FieldList}}",
 			telegraf.DeprecationInfo{
 				Since:     "1.28.0",
 				RemovalIn: "1.34.0",

@@ -35,7 +35,7 @@ func (*NetIOStats) SampleConfig() string {
 
 func (n *NetIOStats) Init() error {
 	if !n.IgnoreProtocolStats {
-		config.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.net", "ignore_protocol_stats", "false",
+		config.PrintOptionValueDeprecationNotice("inputs.net", "ignore_protocol_stats", "false",
 			telegraf.DeprecationInfo{
 				Since:     "1.27.3",
 				RemovalIn: "1.36.0",
