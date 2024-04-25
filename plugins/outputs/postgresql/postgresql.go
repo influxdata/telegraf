@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
@@ -484,7 +484,7 @@ func newPostgresql() *Postgresql {
 		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
 		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
 		RetryMaxBackoff:            config.Duration(time.Second * 15),
-		Logger:                     models.NewLogger("outputs", "postgresql", ""),
+		Logger:                     logger.NewLogger("outputs", "postgresql", ""),
 		LogLevel:                   "warn",
 	}
 

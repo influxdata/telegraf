@@ -1,6 +1,6 @@
 package logger
 
-import "github.com/influxdata/telegraf/config"
+import "time"
 
 // Config contains the log configuration settings
 type Config struct {
@@ -15,9 +15,9 @@ type Config struct {
 	// logger will fall back to stderr
 	Logfile string
 	// will rotate when current file at the specified time interval
-	RotationInterval config.Duration
+	RotationInterval time.Duration
 	// will rotate when current file size exceeds this parameter.
-	RotationMaxSize config.Size
+	RotationMaxSize int64
 	// maximum rotated files to keep (older ones will be deleted)
 	RotationMaxArchives int
 	// pick a timezone to use when logging. or type 'local' for local time.

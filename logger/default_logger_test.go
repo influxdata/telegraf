@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/influxdata/telegraf/config"
 )
 
 func TestWriteLogToFile(t *testing.T) {
@@ -106,7 +104,7 @@ func TestWriteToTruncatedFile(t *testing.T) {
 func TestWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := createBasicConfig(filepath.Join(tempDir, "test.log"))
-	cfg.RotationMaxSize = config.Size(30)
+	cfg.RotationMaxSize = 30
 	require.NoError(t, SetupLogging(cfg))
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	t.Cleanup(func() { require.NoError(t, actualLogger.Close()) })

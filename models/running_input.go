@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -40,7 +41,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	}
 
 	inputErrorsRegister := selfstat.Register("gather", "errors", tags)
-	logger := NewLogger("inputs", config.Name, config.Alias)
+	logger := logging.NewLogger("inputs", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		inputErrorsRegister.Incr(1)
 		GlobalGatherErrors.Incr(1)
