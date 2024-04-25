@@ -412,16 +412,16 @@
 ### Important Changes
 
 - [#13791](https://github.com/influxdata/telegraf/pull/13791) `metricpass`
-Removed the Python compatibility support for "not", "and", and "or" keywords.
-This support was incorrectly removing these keywords from actual data. Users
-should instead use the standard "!", "&&", and "||" operators.
+  Removed the Python compatibility support for "not", "and", and "or" keywords.
+  This support was incorrectly removing these keywords from actual data. Users
+  should instead use the standard "!", "&&", and "||" operators.
 - [#13856](https://github.com/influxdata/telegraf/pull/13856) `parsers.avro`
-The avro processor will no longer create a timestamp field by default unless
-explicitly provided in the parser config.
+  The avro processor will no longer create a timestamp field by default unless
+  explicitly provided in the parser config.
 - [#13778](https://github.com/influxdata/telegraf/pull/13778) `packaging`
-The default permissions on `/etc/telegraf/telegraf.conf` and
-`/etc/telegraf/telegraf.d` on new installs will drop read access for other.
-Updates and upgrades do not change permissions.
+  The default permissions on `/etc/telegraf/telegraf.conf` and
+  `/etc/telegraf/telegraf.d` on new installs will drop read access for other.
+  Updates and upgrades do not change permissions.
 
 ### New Plugins
 
@@ -4330,7 +4330,7 @@ See [EXTERNAL_PLUGINS.md](/EXTERNAL_PLUGINS.md) for a full list of external plug
 
 ### New Plugins
 
-- [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
+- [basicstats](plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
 - [bond](./plugins/inputs/bond/README.md) - Thanks to @ildarsv
 - [cratedb](./plugins/outputs/cratedb/README.md) - Thanks to @felixge
 - [dcos](./plugins/inputs/dcos/README.md) - Thanks to @influxdata
@@ -4651,10 +4651,10 @@ See [EXTERNAL_PLUGINS.md](/EXTERNAL_PLUGINS.md) for a full list of external plug
 ### Release Notes
 
 - Users of the windows `ping` plugin will need to drop or migrate their
-measurements in order to continue using the plugin. The reason for this is that
-the windows plugin was outputting a different type than the linux plugin. This
-made it impossible to use the `ping` plugin for both windows and linux
-machines.
+  measurements in order to continue using the plugin. The reason for this is that
+  the windows plugin was outputting a different type than the linux plugin. This
+  made it impossible to use the `ping` plugin for both windows and linux
+  machines.
 
 - Ceph: the `ceph_pgmap_state` metric content has been modified to use a unique field `count`, with each state expressed as a `state` tag.
 
@@ -4675,17 +4675,17 @@ count           3           state=active+clean+scrubbing
 ```
 
 - The [Riemann output plugin](./plugins/outputs/riemann) has been rewritten
-and the previous riemann plugin is _incompatible_ with the new one. The reasons
-for this are outlined in issue [#1878](https://github.com/influxdata/telegraf/issues/1878).
-The previous riemann output will still be available using
-`outputs.riemann_legacy` if needed, but that will eventually be deprecated.
-It is highly recommended that all users migrate to the new riemann output plugin.
+  and the previous riemann plugin is _incompatible_ with the new one. The reasons
+  for this are outlined in issue [#1878](https://github.com/influxdata/telegraf/issues/1878).
+  The previous riemann output will still be available using
+  `outputs.riemann_legacy` if needed, but that will eventually be deprecated.
+  It is highly recommended that all users migrate to the new riemann output plugin.
 
 - Generic [socket_listener](./plugins/inputs/socket_listener) and
-[socket_writer](./plugins/outputs/socket_writer) plugins have been implemented
-for receiving and sending UDP, TCP, unix, & unix-datagram data. These plugins
-will replace udp_listener and tcp_listener, which are still available but will
-be deprecated eventually.
+  [socket_writer](./plugins/outputs/socket_writer) plugins have been implemented
+  for receiving and sending UDP, TCP, unix, & unix-datagram data. These plugins
+  will replace udp_listener and tcp_listener, which are still available but will
+  be deprecated eventually.
 
 ### Features
 
@@ -4787,17 +4787,17 @@ be deprecated eventually.
 ### Release Notes
 
 - The StatsD plugin will now default all "delete_" config options to "true". This
-will change te default behavior for users who were not specifying these parameters
-in their config file.
+  will change te default behavior for users who were not specifying these parameters
+  in their config file.
 
 - The StatsD plugin will also no longer save it's state on a service reload.
-Essentially we have reverted PR [#887](https://github.com/influxdata/telegraf/pull/887).
-The reason for this is that saving the state in a global variable is not
-thread-safe (see [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102)),
-and this creates issues if users want to define multiple instances
-of the statsd plugin. Saving state on reload may be considered in the future,
-but this would need to be implemented at a higher level and applied to all
-plugins, not just statsd.
+  Essentially we have reverted PR [#887](https://github.com/influxdata/telegraf/pull/887).
+  The reason for this is that saving the state in a global variable is not
+  thread-safe (see [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102)),
+  and this creates issues if users want to define multiple instances
+  of the statsd plugin. Saving state on reload may be considered in the future,
+  but this would need to be implemented at a higher level and applied to all
+  plugins, not just statsd.
 
 ### Features
 
@@ -4876,11 +4876,11 @@ plugins, not just statsd.
 - Telegraf now supports two new types of plugins: processors & aggregators.
 
 - On systemd Telegraf will no longer redirect it's stdout to /var/log/telegraf/telegraf.log.
-On most systems, the logs will be directed to the systemd journal and can be
-accessed by `journalctl -u telegraf.service`. Consult the systemd journal
-documentation for configuring journald. There is also a [`logfile` config option](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf#L70)
-available in 1.1, which will allow users to easily configure telegraf to
-continue sending logs to /var/log/telegraf/telegraf.log.
+  On most systems, the logs will be directed to the systemd journal and can be
+  accessed by `journalctl -u telegraf.service`. Consult the systemd journal
+  documentation for configuring journald. There is also a [`logfile` config option](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf#L70)
+  available in 1.1, which will allow users to easily configure telegraf to
+  continue sending logs to /var/log/telegraf/telegraf.log.
 
 ### Features
 
@@ -4998,12 +4998,12 @@ should now look like:
 ```
 
 - Telegraf now supports being installed as an official windows service,
-which can be installed via
-`> C:\Program Files\Telegraf\telegraf.exe --service install`
+  which can be installed via
+  `> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 - `flush_jitter` behavior has been changed. The random jitter will now be
-evaluated at every flush interval, rather than once at startup. This makes it
-consistent with the behavior of `collection_jitter`.
+  evaluated at every flush interval, rather than once at startup. This makes it
+  consistent with the behavior of `collection_jitter`.
 
 - postgresql plugins now handle oid and name typed columns seamlessly, previously they were ignored/skipped.
 
@@ -5107,12 +5107,12 @@ consistent with the behavior of `collection_jitter`.
 ### Release Notes
 
 - net_response and http_response plugins timeouts will now accept duration
-strings, ie, "2s" or "500ms".
+  strings, ie, "2s" or "500ms".
 - Input plugin Gathers will no longer be logged by default, but a Gather for
-_each_ plugin will be logged in Debug mode.
+  _each_ plugin will be logged in Debug mode.
 - Debug mode will no longer print every point added to the accumulator. This
-functionality can be duplicated using the `file` output plugin and printing
-to "stdout".
+  functionality can be duplicated using the `file` output plugin and printing
+  to "stdout".
 
 ### Features
 
@@ -5141,43 +5141,43 @@ to "stdout".
 ### Release Notes
 
 - **Breaking change** in jolokia plugin. See the
-[jolokia README](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/jolokia/README.md)
-for updated configuration. The plugin will now support proxy mode and will make
-POST requests.
+  [jolokia README](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/jolokia/README.md)
+  for updated configuration. The plugin will now support proxy mode and will make
+  POST requests.
 
 - New [agent] configuration option: `metric_batch_size`. This option tells
-telegraf the maximum batch size to allow to accumulate before sending a flush
-to the configured outputs. `metric_buffer_limit` now refers to the absolute
-maximum number of metrics that will accumulate before metrics are dropped.
+  telegraf the maximum batch size to allow to accumulate before sending a flush
+  to the configured outputs. `metric_buffer_limit` now refers to the absolute
+  maximum number of metrics that will accumulate before metrics are dropped.
 
 - There is no longer an option to
-`flush_buffer_when_full`, this is now the default and only behavior of telegraf.
+  `flush_buffer_when_full`, this is now the default and only behavior of telegraf.
 
 - **Breaking Change**: docker plugin tags. The cont_id tag no longer exists, it
-will now be a field, and be called container_id. Additionally, cont_image and
-cont_name are being renamed to container_image and container_name.
+  will now be a field, and be called container_id. Additionally, cont_image and
+  cont_name are being renamed to container_image and container_name.
 
 - **Breaking Change**: docker plugin measurements. The `docker_cpu`, `docker_mem`,
-`docker_blkio` and `docker_net` measurements are being renamed to
-`docker_container_cpu`, `docker_container_mem`, `docker_container_blkio` and
-`docker_container_net`. Why? Because these metrics are
-specifically tracking per-container stats. The problem with per-container stats,
-in some use-cases, is that if containers are short-lived AND names are not
-kept consistent, then the series cardinality will balloon very quickly.
-So adding "container" to each metric will:
-(1) make it more clear that these metrics are per-container, and
-(2) allow users to easily drop per-container metrics if cardinality is an
-issue (`namedrop = ["docker_container_*"]`)
+  `docker_blkio` and `docker_net` measurements are being renamed to
+  `docker_container_cpu`, `docker_container_mem`, `docker_container_blkio` and
+  `docker_container_net`. Why? Because these metrics are
+  specifically tracking per-container stats. The problem with per-container stats,
+  in some use-cases, is that if containers are short-lived AND names are not
+  kept consistent, then the series cardinality will balloon very quickly.
+  So adding "container" to each metric will:
+  (1) make it more clear that these metrics are per-container, and
+  (2) allow users to easily drop per-container metrics if cardinality is an
+  issue (`namedrop = ["docker_container_*"]`)
 
 - `tagexclude` and `taginclude` are now available, which can be used to remove
-tags from measurements on inputs and outputs. See
-[the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
-for more details.
+  tags from measurements on inputs and outputs. See
+  [the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
+  for more details.
 
 - **Measurement filtering:** All measurement filters now match based on glob
-only. Previously there was an undocumented behavior where filters would match
-based on _prefix_ in addition to globs. This means that a filter like
-`fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
+  only. Previously there was an undocumented behavior where filters would match
+  based on _prefix_ in addition to globs. This means that a filter like
+  `fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
 
 - **datadog**: measurement and field names will no longer have `_` replaced by `.`
 
@@ -5187,17 +5187,17 @@ based on _prefix_ in addition to globs. This means that a filter like
   - rethinkdb: `host -> rethinkdb_host`
 
 - **Breaking Change**: The `win_perf_counters` input has been changed to
-sanitize field names, replacing `/Sec` and `/sec` with `_persec`, as well as
-spaces with underscores. This is needed because Graphite doesn't like slashes
-and spaces, and was failing to accept metrics that had them.
-The `/[sS]ec` -> `_persec` is just to make things clearer and uniform.
+  sanitize field names, replacing `/Sec` and `/sec` with `_persec`, as well as
+  spaces with underscores. This is needed because Graphite doesn't like slashes
+  and spaces, and was failing to accept metrics that had them.
+  The `/[sS]ec` -> `_persec` is just to make things clearer and uniform.
 
 - **Breaking Change**: snmp plugin. The `host` tag of the snmp plugin has been
-changed to the `snmp_host` tag.
+  changed to the `snmp_host` tag.
 
 - The `disk` input plugin can now be configured with the `HOST_MOUNT_PREFIX` environment variable.
-This value is prepended to any mountpaths discovered before retrieving stats.
-It is not included on the report path. This is necessary for reporting host disk stats when running from within a container.
+  This value is prepended to any mountpaths discovered before retrieving stats.
+  It is not included on the report path. This is necessary for reporting host disk stats when running from within a container.
 
 ### Features
 
@@ -5249,10 +5249,10 @@ It is not included on the report path. This is necessary for reporting host disk
 
 - Breaking change in the dovecot input plugin. See Features section below.
 - Graphite output templates are now supported. See the
-[Output Formats README](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite)
+  [Output Formats README](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite)
 - Possible breaking change for the librato and graphite outputs. Telegraf will
-no longer insert field names when the field is simply named `value`. This is
-because the `value` field is redundant in the graphite/librato context.
+  no longer insert field names when the field is simply named `value`. This is
+  because the `value` field is redundant in the graphite/librato context.
 
 ### Features
 
@@ -5375,9 +5375,9 @@ because the `value` field is redundant in the graphite/librato context.
 ### Release Notes
 
 - The pass/drop parameters have been renamed to fielddrop/fieldpass parameters,
-to more accurately indicate their purpose.
+  to more accurately indicate their purpose.
 - There are also now namedrop/namepass parameters for passing/dropping based
-on the metric _name_.
+  on the metric _name_.
 - Experimental windows builds now available.
 
 ### Features
@@ -5398,19 +5398,19 @@ on the metric _name_.
 ### Release Notes
 
 - Users of the `exec` and `kafka_consumer` (and the new `nats_consumer`
-and `mqtt_consumer` plugins) can now specify the incoming data
-format that they would like to parse. Currently supports: "json", "influx", and
-"graphite"
+  and `mqtt_consumer` plugins) can now specify the incoming data
+  format that they would like to parse. Currently supports: "json", "influx", and
+  "graphite"
 - Users of message broker and file output plugins can now choose what data format
-they would like to output. Currently supports: "influx" and "graphite"
+  they would like to output. Currently supports: "influx" and "graphite"
 - More info on parsing _incoming_ data formats can be found
-[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md)
+  [here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md)
 - More info on serializing _outgoing_ data formats can be found
-[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
+  [here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
 - Telegraf now has an option `flush_buffer_when_full` that will flush the
-metric buffer whenever it fills up for each output, rather than dropping
-points and only flushing on a set time interval. This will default to `true`
-and is in the `[agent]` config section.
+  metric buffer whenever it fills up for each output, rather than dropping
+  points and only flushing on a set time interval. This will default to `true`
+  and is in the `[agent]` config section.
 
 ### Features
 
@@ -5440,12 +5440,12 @@ and is in the `[agent]` config section.
 ### Release Notes
 
 - Statsd timing measurements are now aggregated into a single measurement with
-fields.
+  fields.
 - Graphite output now inserts tags into the bucket in alphabetical order.
 - Normalized TLS/SSL support for output plugins: MQTT, AMQP, Kafka
 - `verify_ssl` config option was removed from Kafka because it was actually
-doing the opposite of what it claimed to do (yikes). It's been replaced by
-`insecure_skip_verify`
+  doing the opposite of what it claimed to do (yikes). It's been replaced by
+  `insecure_skip_verify`
 
 ### Features
 
@@ -5471,13 +5471,13 @@ doing the opposite of what it claimed to do (yikes). It's been replaced by
 ### Release Notes
 
 - Telegraf now keeps a fixed-length buffer of metrics per-output. This buffer
-defaults to 10,000 metrics, and is adjustable. The buffer is cleared when a
-successful write to that output occurs.
+  defaults to 10,000 metrics, and is adjustable. The buffer is cleared when a
+  successful write to that output occurs.
 - The docker plugin has been significantly overhauled to add more metrics
-and allow for docker-machine (incl OSX) support.
-[See the readme](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/README.md)
-for the latest measurements, fields, and tags. There is also now support for
-specifying a docker endpoint to get metrics from.
+  and allow for docker-machine (incl OSX) support.
+  [See the readme](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/README.md)
+  for the latest measurements, fields, and tags. There is also now support for
+  specifying a docker endpoint to get metrics from.
 
 ### Features
 
@@ -5520,24 +5520,24 @@ specifying a docker endpoint to get metrics from.
 ### Release Notes
 
 - Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`
-and configuration files are in `/etc/telegraf`
+  and configuration files are in `/etc/telegraf`
 - **breaking change** `plugins` have been renamed to `inputs`. This was done because
-`plugins` is too generic, as there are now also "output plugins", and will likely
-be "aggregator plugins" and "filter plugins" in the future. Additionally,
-`inputs/` and `outputs/` directories have been placed in the root-level `plugins/`
-directory.
+  `plugins` is too generic, as there are now also "output plugins", and will likely
+  be "aggregator plugins" and "filter plugins" in the future. Additionally,
+  `inputs/` and `outputs/` directories have been placed in the root-level `plugins/`
+  directory.
 - **breaking change** the `io` plugin has been renamed `diskio`
 - **breaking change** plugin measurements aggregated into a single measurement.
 - **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
-for configuration.
+  for configuration.
 - **breaking change** `twemproxy` plugin: `prefix` option removed.
 - **breaking change** `procstat` cpu measurements are now prepended with `cpu_time_`
-instead of only `cpu_`
+  instead of only `cpu_`
 - **breaking change** some command-line flags have been renamed to separate words.
-`-configdirectory` -> `-config-directory`, `-filter` -> `-input-filter`,
-`-outputfilter` -> `-output-filter`
+  `-configdirectory` -> `-config-directory`, `-filter` -> `-input-filter`,
+  `-outputfilter` -> `-output-filter`
 - The prometheus plugin schema has not been changed (measurements have not been
-aggregated).
+  aggregated).
 
 ### Packaging change note
 
@@ -5550,7 +5550,7 @@ configurations overwritten by the upgrade. There is a backup stored at
 - Plugin measurements aggregated into a single measurement.
 - Added ability to specify per-plugin tags
 - Added ability to specify per-plugin measurement suffix and prefix.
-(`name_prefix` and `name_suffix`)
+  (`name_prefix` and `name_suffix`)
 - Added ability to override base plugin measurement name. (`name_override`)
 
 ### Bug Fixes
@@ -5591,13 +5591,13 @@ configurations overwritten by the upgrade. There is a backup stored at
 ### Release Notes
 
 - **breaking change** The `kafka` plugin has been renamed to `kafka_consumer`.
-and most of the config option names have changed.
-This only affects the kafka consumer _plugin_ (not the
-output). There were a number of problems with the kafka plugin that led to it
-only collecting data once at startup, so the kafka plugin was basically non-
-functional.
+  and most of the config option names have changed.
+  This only affects the kafka consumer _plugin_ (not the
+  output). There were a number of problems with the kafka plugin that led to it
+  only collecting data once at startup, so the kafka plugin was basically non-
+  functional.
 - Plugins can now be specified as a list, and multiple plugin instances of the
-same type can be specified, like this:
+  same type can be specified, like this:
 
 ```toml
 [[inputs.cpu]]
@@ -5631,7 +5631,7 @@ same type can be specified, like this:
 ### Release Notes
 
 - 0.2.1 has a bug where all lists within plugins get duplicated, this includes
-lists of servers/URLs. 0.2.2 is being released solely to fix that bug
+  lists of servers/URLs. 0.2.2 is being released solely to fix that bug
 
 ### Bug Fixes
 
@@ -5642,15 +5642,15 @@ lists of servers/URLs. 0.2.2 is being released solely to fix that bug
 ### Release Notes
 
 - Telegraf will no longer use docker-compose for "long" unit test, it has been
-changed to just run docker commands in the Makefile. See `make docker-run` and
-`make docker-kill`. `make test` will still run all unit tests with docker.
+  changed to just run docker commands in the Makefile. See `make docker-run` and
+  `make docker-kill`. `make test` will still run all unit tests with docker.
 - Long unit tests are now run in CircleCI, with docker & race detector
 - Redis plugin tag has changed from `host` to `server`
 - HAProxy plugin tag has changed from `host` to `server`
 - UDP output now supported
 - Telegraf will now compile on FreeBSD
 - Users can now specify outputs as lists, specifying multiple outputs of the
-same type.
+  same type.
 
 ### Features
 
@@ -5678,17 +5678,17 @@ same type.
 
 - The -test flag will now only output 2 collections for plugins that need it
 - There is a new agent configuration option: `flush_interval`. This option tells
-Telegraf how often to flush data to InfluxDB and other output sinks. For example,
-users can set `interval = "2s"` and `flush_interval = "60s"` for Telegraf to
-collect data every 2 seconds, and flush every 60 seconds.
+  Telegraf how often to flush data to InfluxDB and other output sinks. For example,
+  users can set `interval = "2s"` and `flush_interval = "60s"` for Telegraf to
+  collect data every 2 seconds, and flush every 60 seconds.
 - `precision` and `utc` are no longer valid agent config values. `precision` has
-moved to the `influxdb` output config, where it will continue to default to "s"
+  moved to the `influxdb` output config, where it will continue to default to "s"
 - debug and test output will now print the raw line-protocol string
 - Telegraf will now, by default, round the collection interval to the nearest
-even interval. This means that `interval="10s"` will collect every :00, :10, etc.
-To ease scale concerns, flushing will be "jittered" by a random amount so that
-all Telegraf instances do not flush at the same time. Both of these options can
-be controlled via the `round_interval` and `flush_jitter` config options.
+  even interval. This means that `interval="10s"` will collect every :00, :10, etc.
+  To ease scale concerns, flushing will be "jittered" by a random amount so that
+  all Telegraf instances do not flush at the same time. Both of these options can
+  be controlled via the `round_interval` and `flush_jitter` config options.
 - Telegraf will now retry metric flushes twice
 
 ### Features
@@ -5701,7 +5701,7 @@ be controlled via the `round_interval` and `flush_jitter` config options.
 - [#241](https://github.com/influxdata/telegraf/pull/241): MQTT Output. Thanks @shirou!
 - Memory plugin: cached and buffered measurements re-added
 - Logging: additional logging for each collection interval, track the number
-of metrics collected and from how many inputs.
+  of metrics collected and from how many inputs.
 - [#240](https://github.com/influxdata/telegraf/pull/240): procstat plugin, thanks @ranjib!
 - [#244](https://github.com/influxdata/telegraf/pull/244): netstat plugin, thanks @shirou!
 - [#262](https://github.com/influxdata/telegraf/pull/262): zookeeper plugin, thanks @jrxFive!
@@ -5732,24 +5732,24 @@ of metrics collected and from how many inputs.
 ### Release Notes
 
 - InfluxDB output config change: `url` is now `urls`, and is a list. Config files
-will still be backwards compatible if only `url` is specified.
+  will still be backwards compatible if only `url` is specified.
 - The -test flag will now output two metric collections
 - Support for filtering telegraf outputs on the CLI -- Telegraf will now
-allow filtering of output sinks on the command-line using the `-outputfilter`
-flag, much like how the `-filter` flag works for inputs.
+  allow filtering of output sinks on the command-line using the `-outputfilter`
+  flag, much like how the `-filter` flag works for inputs.
 - Support for filtering on config-file creation -- Telegraf now supports
-filtering to -sample-config command. You can now run
-`telegraf -sample-config -filter cpu -outputfilter influxdb` to get a config
-file with only the cpu plugin defined, and the influxdb output defined.
+  filtering to -sample-config command. You can now run
+  `telegraf -sample-config -filter cpu -outputfilter influxdb` to get a config
+  file with only the cpu plugin defined, and the influxdb output defined.
 - **Breaking Change**: The CPU collection plugin has been refactored to fix some
-bugs and outdated dependency issues. At the same time, I also decided to fix
-a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle.
-Also, all CPU time measurements now have it indicated in their name, so cpu_idle
-will become cpu_time_idle. Additionally, cpu_time measurements are going to be
-dropped in the default config.
+  bugs and outdated dependency issues. At the same time, I also decided to fix
+  a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle.
+  Also, all CPU time measurements now have it indicated in their name, so cpu_idle
+  will become cpu_time_idle. Additionally, cpu_time measurements are going to be
+  dropped in the default config.
 - **Breaking Change**: The memory plugin has been refactored and some measurements
-have been renamed for consistency. Some measurements have also been removed from being outputted. They are still being collected by gopsutil, and could easily be
-re-added in a "verbose" mode if there is demand for it.
+  have been renamed for consistency. Some measurements have also been removed from being outputted. They are still being collected by gopsutil, and could easily be
+  re-added in a "verbose" mode if there is demand for it.
 
 ### Features
 
@@ -5760,7 +5760,7 @@ re-added in a "verbose" mode if there is demand for it.
 - [#187](https://github.com/influxdata/telegraf/pull/187): Retry output sink connections on startup.
 - [#220](https://github.com/influxdata/telegraf/pull/220): Add port tag to apache plugin. Thanks @neezgee!
 - [#217](https://github.com/influxdata/telegraf/pull/217): Add filtering for output sinks
-and filtering when specifying a config file.
+  and filtering when specifying a config file.
 
 ### Bug Fixes
 

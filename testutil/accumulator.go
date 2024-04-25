@@ -407,6 +407,40 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	require.Fail(t, msg)
 }
 
+func (a *Accumulator) AssertContainsTaggedField(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		flag := false
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		if !reflect.DeepEqual(fields, p.Fields) {
+			continue
+		} else {
+			flag = true
+		}
+
+		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) && flag {
+			return
+		}
+	}
+	// We've failed. spit out some debug logging
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			t.Log("measurement", p.Measurement, "tags", p.Tags, "fields", p.Fields)
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %q with tags %v and fields %v", measurement, tags, fields)
+	require.Fail(t, msg)
+}
+
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	t *testing.T,
 	measurement string,
