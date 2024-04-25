@@ -273,6 +273,7 @@ install: $(buildbin)
 # Telegraf build per platform.  This improves package performance by sharing
 # the bin between deb/rpm/tar packages over building directly into the package
 # directory.
+.PHONY: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
