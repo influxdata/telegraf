@@ -21,7 +21,7 @@ func TestPluginDeprecation(t *testing.T) {
 	}
 	var tests = []struct {
 		name     string
-		level    telegraf.Escalation
+		level    telegraf.LogLevel
 		expected string
 	}{
 		{
@@ -94,7 +94,7 @@ func TestPluginOptionDeprecation(t *testing.T) {
 		since         string
 		removal       string
 		expected      string
-		expectedLevel telegraf.Escalation
+		expectedLevel telegraf.LogLevel
 	}{
 		{
 			name:          "Error level",
@@ -180,7 +180,7 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 		removal       string
 		value         interface{}
 		expected      string
-		expectedLevel telegraf.Escalation
+		expectedLevel telegraf.LogLevel
 	}{
 		{
 			name:          "Error level",

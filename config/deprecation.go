@@ -23,7 +23,7 @@ type DeprecationInfo struct {
 	// Name of the plugin or plugin option
 	Name string
 	// LogLevel is the level of deprecation which currently corresponds to a log-level
-	logLevel telegraf.Escalation
+	logLevel telegraf.LogLevel
 	info     telegraf.DeprecationInfo
 }
 
@@ -329,7 +329,7 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 	}
 }
 
-func deprecationPrefix(level telegraf.Escalation) string {
+func deprecationPrefix(level telegraf.LogLevel) string {
 	switch level {
 	case telegraf.Warn:
 		return "W! " + color.YellowString("DeprecationWarning")
@@ -339,7 +339,7 @@ func deprecationPrefix(level telegraf.Escalation) string {
 	return ""
 }
 
-func printPluginDeprecationNotice(level telegraf.Escalation, name string, info telegraf.DeprecationInfo) {
+func printPluginDeprecationNotice(level telegraf.LogLevel, name string, info telegraf.DeprecationInfo) {
 	switch level {
 	case telegraf.Warn, telegraf.Error:
 		prefix := deprecationPrefix(level)
