@@ -1,7 +1,5 @@
 package telegraf
 
-var Debug bool
-
 // LogLevel denotes the level for logging
 type LogLevel int
 
@@ -13,8 +11,8 @@ func (e LogLevel) String() string {
 		return "WARN"
 	case Info:
 		return "INFO"
-		// case Debug
-		// 	return "DEBUG"
+	case Debug:
+		return "DEBUG"
 	}
 	return "NONE"
 }
@@ -29,11 +27,13 @@ const (
 	// Info will log error messages, warnings and information messages
 	Info
 	// Debug will log all of the above and debugging messages issued by plugins
-	//Debug
+	Debug
 )
 
 // Logger defines an plugin-related interface for logging.
 type Logger interface {
+	Level() LogLevel
+
 	// Errorf logs an error message, patterned after log.Printf.
 	Errorf(format string, args ...interface{})
 	// Error logs an error message, patterned after log.Print.

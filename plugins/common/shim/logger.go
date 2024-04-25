@@ -23,6 +23,10 @@ func NewLogger() *Logger {
 	return &Logger{}
 }
 
+func (l *Logger) Level() telegraf.LogLevel {
+	return telegraf.Info
+}
+
 // Errorf logs an error message, patterned after log.Printf.
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	log.Printf("E! "+format, args...)

@@ -279,9 +279,8 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	// Setup logging as configured.
-	telegraf.Debug = c.Agent.Debug || t.debug
 	logConfig := logger.LogConfig{
-		Debug:               telegraf.Debug,
+		Debug:               c.Agent.Debug || t.debug,
 		Quiet:               c.Agent.Quiet || t.quiet,
 		LogTarget:           c.Agent.LogTarget,
 		Logfile:             c.Agent.Logfile,

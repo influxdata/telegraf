@@ -51,6 +51,20 @@ func NewLogAccumulator(tb testing.TB) *LogAccumulator {
 	}
 }
 
+func (la *LogAccumulator) Level() telegraf.LogLevel {
+	switch la.emitLevel {
+	case pgx.LogLevelInfo:
+		return telegraf.Info
+	case pgx.LogLevelWarn:
+		return telegraf.Warn
+	case pgx.LogLevelError:
+		return telegraf.Error
+	case pgx.LogLevelNone:
+		return telegraf.None
+	}
+	return telegraf.Debug
+}
+
 func (la *LogAccumulator) append(level pgx.LogLevel, format string, args []interface{}) {
 	la.tb.Helper()
 

@@ -54,7 +54,9 @@ type Runner interface {
 	Run(string, []string, time.Duration) ([]byte, []byte, error)
 }
 
-type CommandRunner struct{}
+type CommandRunner struct {
+	debug bool
+}
 
 func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 	// Limit the number of bytes.

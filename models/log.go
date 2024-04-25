@@ -9,20 +9,26 @@ import (
 
 // Logger defines a logging structure for plugins.
 type Logger struct {
-	OnErrs []func()
-	Name   string // Name is the plugin name, will be printed in the `[]`.
+	Name     string // Name is the plugin name, will be printed in the `[]`.
+	LogLevel telegraf.LogLevel
+	OnErrs   []func()
 }
 
 // NewLogger creates a new logger instance
 func NewLogger(pluginType, name, alias string) *Logger {
 	return &Logger{
-		Name: logName(pluginType, name, alias),
+		Name:     logName(pluginType, name, alias),
+		LogLevel: telegraf.Info,
 	}
 }
 
 // OnErr defines a callback that triggers only when errors are about to be written to the log
 func (l *Logger) OnErr(f func()) {
 	l.OnErrs = append(l.OnErrs, f)
+}
+
+func (l *Logger) Level() telegraf.LogLevel {
+	return l.LogLevel
 }
 
 // Errorf logs an error message, patterned after log.Printf.
