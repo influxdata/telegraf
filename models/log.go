@@ -2,29 +2,47 @@ package models
 
 import (
 	"log"
-	"reflect"
 
 	"github.com/influxdata/telegraf"
 )
 
 // Logger defines a logging structure for plugins.
 type Logger struct {
-	Name     string // Name is the plugin name, will be printed in the `[]`.
+	Category string
+	Name     string
+	Alias    string
 	LogLevel telegraf.LogLevel
-	OnErrs   []func()
+
+	prefix  string
+	onError []func()
 }
 
 // NewLogger creates a new logger instance
-func NewLogger(pluginType, name, alias string) *Logger {
+func NewLogger(category, name, alias string) telegraf.Logger {
+	var prefix string
+	if category != "" {
+		prefix = "[" + category
+		if name != "" {
+			prefix += "." + name
+		}
+		if alias != "" {
+			prefix += "::" + alias
+		}
+		prefix += "] "
+	}
+
 	return &Logger{
-		Name:     logName(pluginType, name, alias),
+		Category: category,
+		Name:     name,
+		Alias:    alias,
 		LogLevel: telegraf.Info,
+		prefix:   prefix,
 	}
 }
 
 // OnErr defines a callback that triggers only when errors are about to be written to the log
-func (l *Logger) OnErr(f func()) {
-	l.OnErrs = append(l.OnErrs, f)
+func (l *Logger) RegisterErrorCallback(f func()) {
+	l.onError = append(l.onError, f)
 }
 
 func (l *Logger) Level() telegraf.LogLevel {
@@ -33,77 +51,46 @@ func (l *Logger) Level() telegraf.LogLevel {
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	for _, f := range l.OnErrs {
+	log.Printf("E! "+l.prefix+format, args...)
+	for _, f := range l.onError {
 		f()
 	}
-	log.Printf("E! ["+l.Name+"] "+format, args...)
 }
 
 // Error logs an error message, patterned after log.Print.
 func (l *Logger) Error(args ...interface{}) {
-	for _, f := range l.OnErrs {
+	for _, f := range l.onError {
 		f()
 	}
-	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
+	log.Print(append([]interface{}{"E! " + l.prefix}, args...)...)
 }
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, args...)
+	log.Printf("D! "+l.prefix+" "+format, args...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
 func (l *Logger) Debug(args ...interface{}) {
-	log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+	log.Print(append([]interface{}{"D! " + l.prefix}, args...)...)
 }
 
 // Warnf logs a warning message, patterned after log.Printf.
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, args...)
+	log.Printf("W! "+l.prefix+format, args...)
 }
 
 // Warn logs a warning message, patterned after log.Print.
 func (l *Logger) Warn(args ...interface{}) {
-	log.Print(append([]interface{}{"W! [" + l.Name + "] "}, args...)...)
+	log.Print(append([]interface{}{"W! " + l.prefix}, args...)...)
 }
 
 // Infof logs an information message, patterned after log.Printf.
 func (l *Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! ["+l.Name+"] "+format, args...)
+	log.Printf("I! "+l.prefix+format, args...)
 }
 
 // Info logs an information message, patterned after log.Print.
 func (l *Logger) Info(args ...interface{}) {
-	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
-}
-
-// logName returns the log-friendly name/type.
-func logName(pluginType, name, alias string) string {
-	if alias == "" {
-		return pluginType + "." + name
-	}
-	return pluginType + "." + name + "::" + alias
-}
-
-func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
-	valI := reflect.ValueOf(i)
-
-	if valI.Type().Kind() != reflect.Ptr {
-		valI = reflect.New(reflect.TypeOf(i))
-	}
-
-	field := valI.Elem().FieldByName("Log")
-	if !field.IsValid() {
-		return
-	}
-
-	switch field.Type().String() {
-	case "telegraf.Logger":
-		if field.CanSet() {
-			field.Set(reflect.ValueOf(logger))
-		}
-	default:
-		logger.Debugf("Plugin %q defines a 'Log' field on its struct of an unexpected type %q. Expected telegraf.Logger",
-			valI.Type().Name(), field.Type().String())
-	}
+	log.Print(append([]interface{}{"I! " + l.prefix}, args...)...)
 }

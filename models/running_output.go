@@ -77,7 +77,7 @@ func NewRunningOutput(
 
 	writeErrorsRegister := selfstat.Register("write", "errors", tags)
 	logger := NewLogger("outputs", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger.RegisterErrorCallback(func() {
 		writeErrorsRegister.Incr(1)
 	})
 	SetLoggerOnPlugin(output, logger)

@@ -31,7 +31,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 
 	aggErrorsRegister := selfstat.Register("aggregate", "errors", tags)
 	logger := NewLogger("aggregators", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger.RegisterErrorCallback(func() {
 		aggErrorsRegister.Incr(1)
 	})
 

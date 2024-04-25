@@ -14,7 +14,7 @@ func TestErrorCounting(t *testing.T) {
 		map[string]string{"input": "test"},
 	)
 	iLog := Logger{Name: "inputs.test"}
-	iLog.OnErr(func() {
+	iLog.RegisterErrorCallback(func() {
 		reg.Incr(1)
 	})
 	iLog.Error("something went wrong")

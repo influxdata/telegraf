@@ -32,7 +32,11 @@ const (
 
 // Logger defines an plugin-related interface for logging.
 type Logger interface {
+	// Level returns the configured log-level of the logger
 	Level() LogLevel
+
+	// RegisterErrorCallback registers a callback triggered when logging errors
+	RegisterErrorCallback(func())
 
 	// Errorf logs an error message, patterned after log.Printf.
 	Errorf(format string, args ...interface{})
