@@ -77,8 +77,8 @@ func createFileLogger(cfg Config) (io.WriteCloser, error) {
 
 	writer, err := rotate.NewFileWriter(
 		cfg.Logfile,
-		time.Duration(cfg.RotationInterval),
-		int64(cfg.RotationMaxSize),
+		cfg.RotationInterval,
+		cfg.RotationMaxSize,
 		cfg.RotationMaxArchives,
 	)
 	if err != nil {
