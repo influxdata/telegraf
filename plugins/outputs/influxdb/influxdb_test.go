@@ -214,3 +214,23 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	// We only have one URL, so we expect an error
 	require.Error(t, err)
 }
+
+func TestInfluxDBLocalAddress(t *testing.T) {
+	output := influxdb.InfluxDB{
+		URLs:      []string{"http://localhost:8086"},
+		LocalAddr: "localhost",
+
+		CreateHTTPClientF: func(_ *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return &MockClient{
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+	}
+
+	require.NoError(t, output.Connect())
+}
