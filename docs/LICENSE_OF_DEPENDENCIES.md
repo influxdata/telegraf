@@ -46,7 +46,7 @@ following works:
 - github.com/antchfx/jsonquery [MIT License](https://github.com/antchfx/jsonquery/blob/master/LICENSE)
 - github.com/antchfx/xmlquery [MIT License](https://github.com/antchfx/xmlquery/blob/master/LICENSE)
 - github.com/antchfx/xpath [MIT License](https://github.com/antchfx/xpath/blob/master/LICENSE)
-- github.com/antlr/antlr4/runtime/Go/antlr [BSD 3-Clause "New" or "Revised" License](https://github.com/antlr/antlr4/blob/master/LICENSE.txt)
+- github.com/antlr4-go/antlr [BSD 3-Clause "New" or "Revised" License](https://github.com/antlr/antlr4/blob/master/LICENSE.txt)
 - github.com/apache/arrow/go [Apache License 2.0](https://github.com/apache/arrow/blob/master/LICENSE.txt)
 - github.com/apache/iotdb-client-go [Apache License 2.0](https://github.com/apache/iotdb-client-go/blob/main/LICENSE)
 - github.com/apache/thrift [Apache License 2.0](https://github.com/apache/thrift/blob/master/LICENSE)
