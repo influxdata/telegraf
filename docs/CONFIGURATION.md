@@ -387,12 +387,12 @@ Parameters that can be used with any input plugin:
 - **collection_jitter**:
   Overrides the `collection_jitter` setting of the [agent][Agent] for the
   plugin.  Collection jitter is used to jitter the collection by a random
-  [interval][].
+  [interval][]. Jitter must have a value different from 0 to override agent setting.
 
 - **collection_offset**:
   Overrides the `collection_offset` setting of the [agent][Agent] for the
   plugin. Collection offset is used to shift the collection by the given
-  [interval][].
+  [interval][]. Offset must have a value different from 0 to override agent setting.
 
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
@@ -477,7 +477,8 @@ Parameters that can be used with any output plugin:
 - **flush_interval**: The maximum time between flushes.  Use this setting to
   override the agent `flush_interval` on a per plugin basis.
 - **flush_jitter**: The amount of time to jitter the flush interval.  Use this
-  setting to override the agent `flush_jitter` on a per plugin basis.
+  setting to override the agent `flush_jitter` on a per plugin basis. You must 
+  set a value different from 0 to override agent setting.
 - **metric_batch_size**: The maximum number of metrics to send at once.  Use
   this setting to override the agent `metric_batch_size` on a per plugin basis.
 - **metric_buffer_limit**: The maximum number of unsent metrics to buffer.
