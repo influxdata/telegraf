@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
 	"github.com/jmespath/go-jmespath"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
+	commonaliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -47,7 +47,8 @@ type (
 
 		Log telegraf.Logger `toml:"-"`
 
-		client        aliyuncmsClient
+		cmsClient aliyuncmsClient
+
 		windowStart   time.Time
 		windowEnd     time.Time
 		dt            *discoveryTool
@@ -55,8 +56,6 @@ type (
 		discoveryData map[string]interface{}
 		measurement   string
 	}
-
-	// metric describes what metrics to get
 	metric struct {
 		ObjectsFilter                 string   `toml:"objects_filter"`
 		MetricNames                   []string `toml:"names"`
@@ -67,77 +66,42 @@ type (
 		dtLock               sync.Mutex                   // Guard for discoveryTags & dimensions
 		discoveryTags        map[string]map[string]string // Internal data structure that can enrich metrics with tags
 		dimensionsUdObj      map[string]string
-		dimensionsUdArr      []map[string]string // Parsed Dimesnsions JSON string (unmarshalled)
-		requestDimensions    []map[string]string // this is the actual dimensions list that would be used in API request
+		dimensionsUdArr      []map[string]string // Parsed Dimensions JSON string (unmarshalled)
+		requestDimensions    []map[string]string // this is the actual dimensions list that would be used in the API request
 		requestDimensionsStr string              // String representation of the above
 
 	}
-
 	aliyuncmsClient interface {
 		DescribeMetricList(request *cms.DescribeMetricListRequest) (response *cms.DescribeMetricListResponse, err error)
 	}
 )
 
-// https://www.alibabacloud.com/help/doc-detail/40654.htm?gclid=Cj0KCQjw4dr0BRCxARIsAKUNjWTAMfyVUn_Y3OevFBV3CMaazrhq0URHsgE7c0m0SeMQRKlhlsJGgIEaAviyEALw_wcB
-var aliyunRegionList = []string{
-	"cn-qingdao",
-	"cn-beijing",
-	"cn-zhangjiakou",
-	"cn-huhehaote",
-	"cn-hangzhou",
-	"cn-shanghai",
-	"cn-shenzhen",
-	"cn-heyuan",
-	"cn-chengdu",
-	"cn-hongkong",
-	"ap-southeast-1",
-	"ap-southeast-2",
-	"ap-southeast-3",
-	"ap-southeast-5",
-	"ap-south-1",
-	"ap-northeast-1",
-	"us-west-1",
-	"us-east-1",
-	"eu-central-1",
-	"eu-west-1",
-	"me-east-1",
-}
-
 func (*AliyunCMS) SampleConfig() string {
 	return sampleConfig
 }
 
+// Init performs checks of plugin inputs and initializes internals
 func (s *AliyunCMS) Init() error {
 	if s.Project == "" {
 		return errors.New("project is not set")
 	}
 
-	var (
-		roleSessionExpiration = 600
-		sessionExpiration     = 600
-	)
-	configuration := &providers.Configuration{
-		AccessKeyID:           s.AccessKeyID,
-		AccessKeySecret:       s.AccessKeySecret,
-		AccessKeyStsToken:     s.AccessKeyStsToken,
-		RoleArn:               s.RoleArn,
-		RoleSessionName:       s.RoleSessionName,
-		RoleSessionExpiration: &roleSessionExpiration,
-		PrivateKey:            s.PrivateKey,
-		PublicKeyID:           s.PublicKeyID,
-		SessionExpiration:     &sessionExpiration,
-		RoleName:              s.RoleName,
-	}
-	credentialProviders := []providers.Provider{
-		providers.NewConfigurationCredentialProvider(configuration),
-		providers.NewEnvCredentialProvider(),
-		providers.NewInstanceMetadataProvider(),
-	}
-	credential, err := providers.NewChainProvider(credentialProviders).Retrieve()
+	// Get credentials using common library
+	credential, err := commonaliyun.GetCredentials(commonaliyun.CredentialConfig{
+		AccessKeyID:       s.AccessKeyID,
+		AccessKeySecret:   s.AccessKeySecret,
+		AccessKeyStsToken: s.AccessKeyStsToken,
+		RoleArn:           s.RoleArn,
+		RoleSessionName:   s.RoleSessionName,
+		PrivateKey:        s.PrivateKey,
+		PublicKeyID:       s.PublicKeyID,
+		RoleName:          s.RoleName,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to retrieve credential: %w", err)
+		return err
 	}
-	s.client, err = cms.NewClientWithOptions("", sdk.NewConfig(), credential)
+
+	s.cmsClient, err = cms.NewClientWithOptions("", sdk.NewConfig(), credential)
 	if err != nil {
 		return fmt.Errorf("failed to create cms client: %w", err)
 	}
@@ -167,7 +131,7 @@ func (s *AliyunCMS) Init() error {
 
 	// Check regions
 	if len(s.Regions) == 0 {
-		s.Regions = aliyunRegionList
+		s.Regions = commonaliyun.DefaultRegions()
 		s.Log.Infof("'regions' is not set. Metrics will be queried across %d regions:\n%s",
 			len(s.Regions), strings.Join(s.Regions, ","))
 	}
@@ -182,7 +146,7 @@ func (s *AliyunCMS) Init() error {
 		}
 	}
 
-	s.discoveryData, err = s.dt.getDiscoveryDataAcrossRegions(nil)
+	s.discoveryData, err = s.dt.GetDiscoveryDataAcrossRegions(nil)
 	if err != nil {
 		s.Log.Errorf("Discovery tool is not activated: %v", err)
 		s.dt = nil
@@ -191,7 +155,7 @@ func (s *AliyunCMS) Init() error {
 
 	s.Log.Infof("%d object(s) discovered...", len(s.discoveryData))
 
-	//  Special setting for acs_oss project since the API differs
+	// Special setting for acs_oss project since the API differs
 	if s.Project == "acs_oss" {
 		s.dimensionKey = "BucketName"
 	}
@@ -199,9 +163,9 @@ func (s *AliyunCMS) Init() error {
 	return nil
 }
 
-// Start plugin discovery loop, metrics are gathered through Gather
+// Start a plugin discovery loop, metrics are gathered through Gather
 func (s *AliyunCMS) Start(telegraf.Accumulator) error {
-	// Start periodic discovery process
+	// Start a periodic discovery process
 	if s.dt != nil {
 		s.dt.start()
 	}
@@ -209,16 +173,15 @@ func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 	return nil
 }
 
+// Gather implements telegraf.Inputs interface
 func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 	s.updateWindow(time.Now())
-
-	// limit concurrency or we can easily exhaust user connection limit
 	lmtr := limiter.NewRateLimiter(s.RateLimit, time.Second)
 	defer lmtr.Stop()
 
 	var wg sync.WaitGroup
 	for _, m := range s.Metrics {
-		// Prepare internal structure with data from discovery
+		// Prepare an internal structure with data from discovery
 		s.prepareTagsAndDimensions(m)
 		wg.Add(len(m.MetricNames))
 		for _, metricName := range m.MetricNames {
@@ -230,7 +193,6 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 		}
 		wg.Wait()
 	}
-
 	return nil
 }
 
@@ -241,6 +203,7 @@ func (s *AliyunCMS) Stop() {
 	}
 }
 
+// Gather given metric and emit error
 func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 	// https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.6.701.54025679zh6wiR
 	// The start and end times are executed in the mode of
@@ -253,84 +216,133 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 		// this is the first run, no window info, so just get a single period
 		s.windowStart = windowEnd.Add(-time.Duration(s.Period))
 	} else {
-		// subsequent window, start where last window left off
+		// subsequent window, start where the last window left off
 		s.windowStart = s.windowEnd
 	}
 
 	s.windowEnd = windowEnd
 }
 
+// parseTimestamp normalizes various timestamp representations into seconds since epoch.
+func (s *AliyunCMS) parseTimestamp(v interface{}) (int64, bool) { //nolint:revive // Valid case
+	switch t := v.(type) {
+	case int64:
+		return t, true
+	case float64:
+		// CMS timestamps are in ms
+		return int64(t) / 1000, true
+	case int:
+		return int64(t), true
+	case json.Number:
+		if val, err := t.Int64(); err == nil {
+			return val, true
+		}
+	default:
+	}
+	return 0, false
+}
+
+// enrichTagsWithDiscovery applies discovery tags and returns whether the datapoint should be kept.
+func (s *AliyunCMS) enrichTagsWithDiscovery(tags map[string]string, m *metric, id string) bool {
+	if m.discoveryTags == nil {
+		return true
+	}
+	disc, ok := m.discoveryTags[id]
+	if !ok && !m.AllowDataPointWODiscoveryData {
+		s.Log.Warnf("Instance %q is not found in discovery, skipping monitoring datapoint...", id)
+		return false
+	}
+	for k, v := range disc {
+		tags[k] = v
+	}
+	return true
+}
+
 // Gather given metric and emit error
-func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *metric) error {
+func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, m *metric) error {
 	for _, region := range s.Regions {
-		req := cms.CreateDescribeMetricListRequest()
-		req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
-		req.MetricName = metricName
-		req.Length = "10000"
-		req.Namespace = s.Project
-		req.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
-		req.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
-		req.Dimensions = metric.requestDimensionsStr
-		req.RegionId = region
-
 		for more := true; more; {
-			resp, err := s.client.DescribeMetricList(req)
+			dataPoints, nextToken, err := s.fetchCMSDatapoints(region, metricName, m)
 			if err != nil {
-				return fmt.Errorf("failed to query metricName list: %w", err)
+				return err
 			}
-			if resp.Code != "200" {
-				s.Log.Errorf("failed to query metricName list: %v", resp.Message)
+			if len(dataPoints) == 0 {
+				s.Log.Debug("No metrics returned from CMS")
 				break
 			}
-
-			var datapoints []map[string]interface{}
-			if err := json.Unmarshal([]byte(resp.Datapoints), &datapoints); err != nil {
-				return fmt.Errorf("failed to decode response datapoints: %w", err)
-			}
-
-			if len(datapoints) == 0 {
-				s.Log.Debugf("No metrics returned from CMS, response msg: %s", resp.Message)
-				break
-			}
-
 		NextDataPoint:
-			for _, datapoint := range datapoints {
-				fields := make(map[string]interface{}, len(datapoint))
-				tags := make(map[string]string, len(datapoint))
-				datapointTime := int64(0)
-				for key, value := range datapoint {
+			for _, dp := range dataPoints {
+				fields := make(map[string]interface{}, len(dp))
+				tags := make(map[string]string, len(dp))
+				var ts int64
+
+				for key, value := range dp {
 					switch key {
 					case "instanceId", "BucketName":
-						tags[key] = value.(string)
-						if metric.discoveryTags != nil { // discovery can be not activated
-							// Skipping data point if discovery data not exist
-							_, ok := metric.discoveryTags[value.(string)]
-							if !ok &&
-								!metric.AllowDataPointWODiscoveryData {
-								s.Log.Warnf("Instance %q is not found in discovery, skipping monitoring datapoint...", value.(string))
-								continue NextDataPoint
-							}
-
-							for k, v := range metric.discoveryTags[value.(string)] {
-								tags[k] = v
-							}
+						strVal, ok := value.(string)
+						if !ok {
+							s.Log.Warnf("Unexpected non-string %q value in datapoint, skipping...", key)
+							continue NextDataPoint
+						}
+						tags[key] = strVal
+						if keep := s.enrichTagsWithDiscovery(tags, m, strVal); !keep {
+							continue NextDataPoint
 						}
 					case "userId":
-						tags[key] = value.(string)
+						if str, ok := value.(string); ok {
+							tags[key] = str
+						}
 					case "timestamp":
-						datapointTime = int64(value.(float64)) / 1000
+						parsed, ok := s.parseTimestamp(value)
+						if !ok {
+							s.Log.Warnf("Unexpected timestamp type %T, skipping datapoint", value)
+							continue NextDataPoint
+						}
+						ts = parsed
 					default:
 						fields[formatField(metricName, key)] = value
 					}
 				}
-				acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
+
+				acc.AddFields(s.measurement, fields, tags, time.Unix(ts, 0))
 			}
 
-			req.NextToken = resp.NextToken
-			more = req.NextToken != ""
+			more = nextToken != ""
 		}
 	}
 	return nil
+}
+
+// fetchCMSDatapoints queries CMS for datapoints and returns them along with the pagination token (if any).
+func (s *AliyunCMS) fetchCMSDatapoints(region, metricName string, metric *metric) ([]map[string]interface{}, string, error) {
+	req := cms.CreateDescribeMetricListRequest()
+	req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
+	req.MetricName = metricName
+	req.Length = "10000"
+	req.Namespace = s.Project
+	req.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
+	req.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
+	req.Dimensions = metric.requestDimensionsStr
+	req.RegionId = region
+
+	cmsResp, err := s.cmsClient.DescribeMetricList(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to query metricName list: %w", err)
+	}
+	if cmsResp.Code != "200" {
+		s.Log.Errorf("failed to query metricName list: %v", cmsResp.Message)
+		return nil, cmsResp.NextToken, nil
+	}
+
+	var dataPoints []map[string]interface{}
+	if err := json.Unmarshal([]byte(cmsResp.Datapoints), &dataPoints); err != nil {
+		return nil, "", fmt.Errorf("failed to decode response datapoints: %w", err)
+	}
+	if len(dataPoints) == 0 {
+		s.Log.Debugf("No metrics returned from CMS, response msg: %s", cmsResp.Message)
+		return nil, cmsResp.NextToken, nil
+	}
+	return dataPoints, cmsResp.NextToken, nil
 }
 
 // tag helper
@@ -373,12 +385,10 @@ func (s *AliyunCMS) prepareTagsAndDimensions(metric *metric) {
 	if s.dt == nil { // Discovery is not activated
 		return
 	}
-
-	// Reading all data from buffered channel
 L:
 	for {
 		select {
-		case s.discoveryData = <-s.dt.dataChan:
+		case s.discoveryData = <-s.dt.DataChan:
 			newData = true
 			continue
 		default:
@@ -386,8 +396,8 @@ L:
 		}
 	}
 
-	// new data arrives (so process it) or this is the first call
-	if newData || len(metric.discoveryTags) == 0 {
+	// new data arrives (so process it), or this is the first call, or we have initial discovery data
+	if newData || len(metric.discoveryTags) == 0 || (len(s.discoveryData) > 0 && len(metric.requestDimensions) == 0) {
 		metric.dtLock.Lock()
 		defer metric.dtLock.Unlock()
 
@@ -436,16 +446,9 @@ L:
 
 				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
-
-			// if no dimension configured in config file, use discovery data
-			if len(metric.dimensionsUdArr) == 0 && len(metric.dimensionsUdObj) == 0 {
-				metric.requestDimensions = append(
-					metric.requestDimensions,
-					map[string]string{s.dimensionKey: instanceID})
-			}
 		}
 
-		// add dimensions filter from config file
+		// add dimension filter from a config file if specified
 		if len(metric.dimensionsUdArr) != 0 {
 			metric.requestDimensions = append(metric.requestDimensions, metric.dimensionsUdArr...)
 		}
@@ -453,14 +456,20 @@ L:
 			metric.requestDimensions = append(metric.requestDimensions, metric.dimensionsUdObj)
 		}
 
-		// Unmarshalling to string
-		reqDim, err := json.Marshal(metric.requestDimensions)
-		if err != nil {
-			s.Log.Errorf("Can't marshal metric request dimensions %v :%v",
-				metric.requestDimensions, err)
-			metric.requestDimensionsStr = ""
+		// Marshal dimensions to string for API request
+		// Only send dimensions if explicitly configured in config file
+		if len(metric.requestDimensions) > 0 {
+			reqDim, err := json.Marshal(metric.requestDimensions)
+			if err != nil {
+				s.Log.Errorf("Can't marshal metric request dimensions %v :%v",
+					metric.requestDimensions, err)
+				metric.requestDimensionsStr = ""
+			} else {
+				metric.requestDimensionsStr = string(reqDim)
+			}
 		} else {
-			metric.requestDimensionsStr = string(reqDim)
+			// No dimensions configured - let CMS API return all instances
+			metric.requestDimensionsStr = ""
 		}
 	}
 }

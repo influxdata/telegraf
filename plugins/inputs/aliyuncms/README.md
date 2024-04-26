@@ -81,6 +81,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## - acs_rds_dashboard
   ## - acs_slb_dashboard
   ## - acs_vpc_eip
+  ## Note: RDS Performance metrics are now supported via the dedicated aliyunrds plugin
   regions = ["cn-hongkong"]
 
   ## Requested AliyunCMS aggregation Period (required)
@@ -178,7 +179,7 @@ Plugin Configuration utilizes [preset metric items references][2]
 ## Metrics
 
 Each Aliyun CMS Project monitored records a measurement with fields for each
-available Metric Statistic Project and Metrics are represented in [snake
+available Metric Statistic Project, and Metrics are represented in [snake
 case](https://en.wikipedia.org/wiki/Snake_case)
 
 - aliyuncms_{project}
@@ -186,6 +187,11 @@ case](https://en.wikipedia.org/wiki/Snake_case)
   - {metric}_minimum     (metric Minimum value)
   - {metric}_maximum     (metric Maximum value)
   - {metric}_value       (metric Value value)
+
+## RDS Performance metrics
+
+You can use the dedicated [aliyunrds](../aliyunrds/README.md) plugin to
+collect RDS Performance metrics.
 
 ## Example Output
 
