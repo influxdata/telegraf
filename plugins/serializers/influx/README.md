@@ -35,7 +35,7 @@ for interoperability.
   ## to set the timestamp of the data during ingestion. This is generally NOT
   ## what you want as it can lead to data points captured at different times
   ## getting omitted due to similar data.
-  # influx_omit_timestamp = true
+  # influx_omit_timestamp = false
 ```
 
 ## Metrics
