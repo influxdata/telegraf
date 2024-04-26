@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jmespath/go-jmespath"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,8 +17,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
-	"github.com/jmespath/go-jmespath"
-
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -27,6 +29,7 @@ import (
 var sampleConfig string
 
 type (
+	// AliyunCMS is Aliyun cms config info.
 	AliyunCMS struct {
 		AccessKeyID       string `toml:"access_key_id"`
 		AccessKeySecret   string `toml:"access_key_secret"`
@@ -37,6 +40,7 @@ type (
 		PublicKeyID       string `toml:"public_key_id"`
 		RoleName          string `toml:"role_name"`
 
+		MetricServices    []string        `toml:"metric_services"`
 		Regions           []string        `toml:"regions"`
 		DiscoveryInterval config.Duration `toml:"discovery_interval"`
 		Period            config.Duration `toml:"period"`
@@ -47,7 +51,9 @@ type (
 
 		Log telegraf.Logger `toml:"-"`
 
-		client        aliyuncmsClient
+		cmsClient aliyuncmsClient
+		rdsClient aliyunrdsClient
+
 		windowStart   time.Time
 		windowEnd     time.Time
 		dt            *discoveryTool
@@ -56,7 +62,7 @@ type (
 		measurement   string
 	}
 
-	// metric describes what metrics to get
+	// Metric describes what metrics to get
 	metric struct {
 		ObjectsFilter                 string   `toml:"objects_filter"`
 		MetricNames                   []string `toml:"names"`
@@ -73,8 +79,17 @@ type (
 
 	}
 
+	// Dimension describe how to get metrics
+	Dimension struct {
+		Value string `toml:"value"`
+	}
+
 	aliyuncmsClient interface {
 		DescribeMetricList(request *cms.DescribeMetricListRequest) (response *cms.DescribeMetricListResponse, err error)
+	}
+
+	aliyunrdsClient interface {
+		DescribeDBInstancePerformance(request *rds.DescribeDBInstancePerformanceRequest) (response *rds.DescribeDBInstancePerformanceResponse, err error)
 	}
 )
 
@@ -107,6 +122,7 @@ func (*AliyunCMS) SampleConfig() string {
 	return sampleConfig
 }
 
+// Init perform checks of plugin inputs and initialize internals
 func (s *AliyunCMS) Init() error {
 	if s.Project == "" {
 		return errors.New("project is not set")
@@ -137,9 +153,17 @@ func (s *AliyunCMS) Init() error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve credential: %w", err)
 	}
-	s.client, err = cms.NewClientWithOptions("", sdk.NewConfig(), credential)
+	s.cmsClient, err = cms.NewClientWithOptions("", sdk.NewConfig(), credential)
 	if err != nil {
 		return fmt.Errorf("failed to create cms client: %w", err)
+	}
+
+	// check metrics dimensions consistency
+	if s.Project == "acs_rds_dashboard" && slices.Contains(s.MetricServices, "rds") {
+		s.rdsClient, err = rds.NewClientWithOptions("", sdk.NewConfig(), credential)
+		if err != nil {
+			return fmt.Errorf("failed to create rds client: %w", err)
+		}
 	}
 
 	// check metrics dimensions consistency
@@ -172,7 +196,13 @@ func (s *AliyunCMS) Init() error {
 			len(s.Regions), strings.Join(s.Regions, ","))
 	}
 
-	// Init discovery...
+	//Check metric services
+	if len(s.MetricServices) == 0 {
+		s.MetricServices = []string{"cms"}
+		s.Log.Info("'metric_services' is not set. Metrics will be queried from the cms service")
+	}
+
+	//Init discovery...
 	if s.dt == nil { // Support for tests
 		s.dt, err = newDiscoveryTool(s.Regions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
 		if err != nil {
@@ -191,7 +221,7 @@ func (s *AliyunCMS) Init() error {
 
 	s.Log.Infof("%d object(s) discovered...", len(s.discoveryData))
 
-	//  Special setting for acs_oss project since the API differs
+	// Special setting for acs_oss project since the API differs
 	if s.Project == "acs_oss" {
 		s.dimensionKey = "BucketName"
 	}
@@ -209,6 +239,7 @@ func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 	return nil
 }
 
+// Gather implements telegraf.Inputs interface
 func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 	s.updateWindow(time.Now())
 
@@ -263,34 +294,105 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 // Gather given metric and emit error
 func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *metric) error {
 	for _, region := range s.Regions {
-		req := cms.CreateDescribeMetricListRequest()
-		req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
-		req.MetricName = metricName
-		req.Length = "10000"
-		req.Namespace = s.Project
-		req.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
-		req.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
-		req.Dimensions = metric.requestDimensionsStr
-		req.RegionId = region
-
 		for more := true; more; {
-			resp, err := s.client.DescribeMetricList(req)
-			if err != nil {
-				return fmt.Errorf("failed to query metricName list: %w", err)
-			}
-			if resp.Code != "200" {
-				s.Log.Errorf("failed to query metricName list: %v", resp.Message)
-				break
-			}
-
 			var datapoints []map[string]interface{}
-			if err := json.Unmarshal([]byte(resp.Datapoints), &datapoints); err != nil {
-				return fmt.Errorf("failed to decode response datapoints: %w", err)
-			}
+			var respCms cms.DescribeMetricListResponse
+			reqCms := cms.CreateDescribeMetricListRequest()
 
-			if len(datapoints) == 0 {
-				s.Log.Debugf("No metrics returned from CMS, response msg: %s", resp.Message)
-				break
+			if s.rdsClient != nil && metric.Service == "rds" {
+				for _, instanceID := range metric.requestDimensions {
+					req := rds.CreateDescribeDBInstancePerformanceRequest()
+					req.DBInstanceId = instanceID["instanceId"]
+					req.Key = metricName
+					startTime := s.windowStart.UTC()
+					req.StartTime = fmt.Sprintf("%d-%02d-%02dT%02d:%02dZ", startTime.Year(), startTime.Month(),
+						startTime.Day(), startTime.Hour(), startTime.Minute())
+					endTime := s.windowEnd.UTC()
+					req.EndTime = fmt.Sprintf("%d-%02d-%02dT%02d:%02dZ", endTime.Year(), endTime.Month(),
+						endTime.Day(), endTime.Hour(), endTime.Minute())
+					req.RegionId = region
+
+					resp, err := s.rdsClient.DescribeDBInstancePerformance(req)
+
+					if err != nil {
+						return fmt.Errorf("failed to get the database instance performance metrics: %w", err)
+					}
+					if resp.GetHttpStatus() != 200 {
+						s.Log.Errorf("failed to get the database instance performance metrics: %v", resp.BaseResponse.GetHttpContentString())
+						break
+					}
+
+					for _, performanceKey := range resp.PerformanceKeys.PerformanceKey {
+						for _, performanceValue := range performanceKey.Values.PerformanceValue {
+							parsedTime, err := time.Parse(time.RFC3339, performanceValue.Date)
+							if err != nil {
+								return fmt.Errorf("failed to parse response performance time datapoints: %w", err)
+							}
+
+							if strings.Contains(performanceValue.Value, "&") {
+								performanceKeys := strings.Split(performanceKey.ValueFormat, "&")
+								performanceValues := strings.Split(performanceValue.Value, "&")
+
+								for i, value := range performanceValues {
+									valueAsFloat, err := strconv.ParseFloat(value, 32)
+									if err != nil {
+										return fmt.Errorf("failed to convert the performance value string to an float: %w", err)
+									}
+									datapoints = append(datapoints,
+										map[string]interface{}{
+											"instanceId":       instanceID["instanceId"],
+											performanceKeys[i]: valueAsFloat,
+											"timestamp":        parsedTime.Unix(),
+										})
+								}
+							} else {
+								valueAsFloat, err := strconv.ParseFloat(performanceValue.Value, 32)
+								if err != nil {
+									return fmt.Errorf("failed to convert the performance value string to an float: %w", err)
+								}
+								datapoints = append(datapoints,
+									map[string]interface{}{
+										"instanceId":               instanceID["instanceId"],
+										performanceKey.ValueFormat: valueAsFloat,
+										"timestamp":                parsedTime.Unix(),
+									})
+							}
+						}
+					}
+
+					if len(datapoints) == 0 {
+						s.Log.Debugf("No rds performance metrics returned from RDS, response msg: %s", resp.GetHttpContentString())
+						break
+					}
+				}
+			} else {
+				reqCms.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
+				reqCms.MetricName = metricName
+				reqCms.Length = "10000"
+				reqCms.Namespace = s.Project
+				reqCms.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
+				reqCms.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
+				reqCms.Dimensions = metric.requestDimensionsStr
+				reqCms.RegionId = region
+
+				respCms, err := s.cmsClient.DescribeMetricList(reqCms)
+
+				if err != nil {
+					return fmt.Errorf("failed to query metricName list: %w", err)
+				}
+				if respCms.Code != "200" {
+					s.Log.Errorf("failed to query metricName list: %v", respCms.Message)
+					break
+				}
+
+				if err := json.Unmarshal([]byte(respCms.Datapoints), &datapoints); err != nil {
+					return fmt.Errorf("failed to decode response datapoints: %w", err)
+				}
+
+				if len(datapoints) == 0 {
+					s.Log.Debugf("No metrics returned from CMS, response msg: %s", respCms.Message)
+					break
+				}
 			}
 
 		NextDataPoint:
@@ -318,7 +420,11 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 					case "userId":
 						tags[key] = value.(string)
 					case "timestamp":
-						datapointTime = int64(value.(float64)) / 1000
+						if reflect.TypeOf(value).String() == "int64" {
+							datapointTime = value.(int64)
+						} else {
+							datapointTime = int64(value.(float64)) / 1000
+						}
 					default:
 						fields[formatField(metricName, key)] = value
 					}
@@ -326,8 +432,8 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 				acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
 			}
 
-			req.NextToken = resp.NextToken
-			more = req.NextToken != ""
+			reqCms.NextToken = respCms.NextToken
+			more = reqCms.NextToken != ""
 		}
 	}
 	return nil

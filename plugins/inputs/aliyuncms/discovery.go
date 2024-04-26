@@ -134,7 +134,7 @@ func newDiscoveryTool(
 		case "acs_ocs":
 			return nil, noDiscoverySupportErr
 		case "acs_oss":
-			// oss is really complicated and its' own format
+			// oss is really complicated and has its own format
 			return nil, noDiscoverySupportErr
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
@@ -380,7 +380,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		commonRequest.TransToAcsRequest()
 
 		// Get discovery data using common request
-		data, err := dt.getDiscoveryData(cli, commonRequest, lmtr)
+		data, err = dt.getDiscoveryData(cli, commonRequest, lmtr)
 		if err != nil {
 			return nil, err
 		}
