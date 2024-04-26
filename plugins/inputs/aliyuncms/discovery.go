@@ -15,6 +15,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/polardb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
@@ -122,6 +123,7 @@ func newDiscoveryTool(
 			responseRootKey = "Instances"
 			responseObjectIDKey = "InstanceId"
 		case "acs_rds_dashboard":
+			//rds.CreateDescribeDBInstancePerformanceRequest()
 			dscReq[region] = rds.CreateDescribeDBInstancesRequest()
 			responseRootKey = "Items"
 			responseObjectIDKey = "DBInstanceId"
@@ -142,13 +144,15 @@ func newDiscoveryTool(
 			responseObjectIDKey = "AllocationId"
 		case "acs_kvstore":
 			return nil, noDiscoverySupportErr
-		case "acs_mns_new":
+		case "acsgit new":
 			return nil, noDiscoverySupportErr
 		case "acs_cdn":
 			//API replies are in its own format.
 			return nil, noDiscoverySupportErr
 		case "acs_polardb":
-			return nil, noDiscoverySupportErr
+			dscReq[region] = polardb.CreateDescribeDBNodePerformanceRequest()
+			responseRootKey = "Items"
+			responseObjectIDKey = "DBInstanceId"
 		case "acs_gdb":
 			return nil, noDiscoverySupportErr
 		case "acs_ads":
@@ -384,6 +388,9 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 
 		//Get discovery data using common request
 		data, err = dt.getDiscoveryData(cli, commonRequest, lmtr)
+
+		dt.lg.Infof("RESULT: %+v | ERROR: %+v", data, err)
+		//DBInstanceDescription
 		if err != nil {
 			return nil, err
 		}
@@ -392,6 +399,8 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 			resultData[k] = v
 		}
 	}
+	dt.lg.Infof("RESULT 1: %+v", resultData)
+
 	return resultData, nil
 }
 
