@@ -176,9 +176,8 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 
 				var err error
 				timestamp, err = internal.ParseTimestamp(c.TimestampFormat, result.String(), c.Location)
-
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("unable to parse timestamp %q: %w", result.String(), err)
 				}
 			}
 		}
