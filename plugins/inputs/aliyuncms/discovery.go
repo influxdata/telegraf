@@ -134,7 +134,7 @@ func newDiscoveryTool(
 		case "acs_ocs":
 			return nil, noDiscoverySupportErr
 		case "acs_oss":
-			// oss is really complicated and its' own format
+			// oss is really complicated and has its own format
 			return nil, noDiscoverySupportErr
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
@@ -356,7 +356,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 	resultData := make(map[string]interface{})
 
 	for region, cli := range dt.cli {
-		// Building common request, as the code below is the same no matter
+		// Building a common request, as the code below is the same no matter
 		// which aliyun object type (project) is used
 		dscReq, ok := dt.req[region]
 		if !ok {
@@ -379,10 +379,10 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		commonRequest.QueryParams["PageSize"] = strconv.Itoa(dt.reqDefaultPageSize)
 		commonRequest.TransToAcsRequest()
 
-		// Get discovery data using common request
-		data, err := dt.getDiscoveryData(cli, commonRequest, lmtr)
-		if err != nil {
-			return nil, err
+		// Get discovery data using a common request
+		data, discoveryDataErr := dt.getDiscoveryData(cli, commonRequest, lmtr)
+		if discoveryDataErr != nil {
+			return nil, discoveryDataErr
 		}
 
 		for k, v := range data {
