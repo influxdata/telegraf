@@ -1,6 +1,7 @@
 package influxdb_v2_test
 
 import (
+	"net"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -99,4 +100,15 @@ func TestUnused(_ *testing.T) {
 	thing.Close()
 	thing.SampleConfig()
 	outputs.Outputs["influxdb_v2"]()
+}
+
+func TestInfluxDBLocalAddress(t *testing.T) {
+	t.Log("Starting server")
+	server, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer server.Close()
+
+	output := influxdb.InfluxDB{LocalAddr: "localhost"}
+	require.NoError(t, output.Connect())
+	require.NoError(t, output.Close())
 }
