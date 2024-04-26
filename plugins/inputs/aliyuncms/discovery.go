@@ -39,7 +39,7 @@ type discoveryTool struct {
 
 	respRootKey     string //Root key in JSON response where to look for discovery data
 	respObjectIDKey string //Key in element of array under root key, that stores object ID
-	//for ,majority of cases it would be InstanceId, for OSS it is BucketName. This key is also used in dimension filtering// )
+	//for ,the majority of cases it would be InstanceId, for OSS it is BucketName. This key is also used in dimension filtering// )
 	wg       sync.WaitGroup              //WG for primary discovery goroutine
 	interval time.Duration               //Discovery interval
 	done     chan bool                   //Done channel to stop primary discovery goroutine
@@ -63,7 +63,6 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 	}
 
 	ptrV := reflect.Indirect(reflect.ValueOf(req))
-
 	for i := 0; i < ptrV.NumField(); i++ {
 		if ptrV.Field(i).Type().String() == "*requests.RpcRequest" {
 			if !ptrV.Field(i).CanInterface() {
@@ -71,7 +70,6 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 			}
 
 			rpcReq, ok := ptrV.Field(i).Interface().(*requests.RpcRequest)
-
 			if !ok {
 				return nil, fmt.Errorf("can't convert interface of %q to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
 			}
@@ -134,7 +132,7 @@ func newDiscoveryTool(
 		case "acs_ocs":
 			return nil, noDiscoverySupportErr
 		case "acs_oss":
-			// oss is really complicated and its' own format
+			// oss is really complicated and it its own format
 			return nil, noDiscoverySupportErr
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
@@ -316,7 +314,6 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 		if lmtr != nil {
 			<-lmtr //Rate limiting
 		}
-
 		resp, err = cli.ProcessCommonRequest(req)
 		if err != nil {
 			return nil, err
@@ -381,9 +378,9 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		commonRequest.QueryParams = rpcReq.QueryParams
 		commonRequest.QueryParams["PageSize"] = strconv.Itoa(dt.reqDefaultPageSize)
 		commonRequest.TransToAcsRequest()
-
 		//Get discovery data using common request
 		data, err = dt.getDiscoveryData(cli, commonRequest, lmtr)
+
 		if err != nil {
 			return nil, err
 		}
@@ -392,6 +389,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 			resultData[k] = v
 		}
 	}
+
 	return resultData, nil
 }
 
