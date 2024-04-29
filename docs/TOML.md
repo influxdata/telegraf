@@ -19,8 +19,8 @@ TOML technically does not support multiple files, this is done as a convenience 
 users.
 
 Users should be aware that when Telegraf reads a user's config, if multiple
-files or directories are read in, all files are combined into a single string
-during the launch process.
+files or directories are read in, each file is read one at a time and all
+plugins are combined into a single running Telegraf config.
 
 ## Single Table vs Array of Tables
 
