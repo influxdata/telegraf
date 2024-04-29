@@ -196,6 +196,12 @@ func (c *GNMI) Init() error {
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
 
+	// Warn about configures insecure cipher suites
+	insecure := internaltls.InsecureCiphers(c.ClientConfig.TLSCipherSuites)
+	if len(insecure) > 0 {
+		c.Log.Warnf("Configured insecure cipher suites: %s", strings.Join(insecure, ","))
+	}
+
 	return nil
 }
 

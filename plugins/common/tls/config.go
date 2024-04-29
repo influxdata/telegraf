@@ -19,15 +19,16 @@ const TLSMinVersionDefault = tls.VersionTLS12
 
 // ClientConfig represents the standard client TLS config.
 type ClientConfig struct {
-	TLSCA               string `toml:"tls_ca"`
-	TLSCert             string `toml:"tls_cert"`
-	TLSKey              string `toml:"tls_key"`
-	TLSKeyPwd           string `toml:"tls_key_pwd"`
-	TLSMinVersion       string `toml:"tls_min_version"`
-	InsecureSkipVerify  bool   `toml:"insecure_skip_verify"`
-	ServerName          string `toml:"tls_server_name"`
-	RenegotiationMethod string `toml:"tls_renegotiation_method"`
-	Enable              *bool  `toml:"tls_enable"`
+	TLSCA               string   `toml:"tls_ca"`
+	TLSCert             string   `toml:"tls_cert"`
+	TLSKey              string   `toml:"tls_key"`
+	TLSKeyPwd           string   `toml:"tls_key_pwd"`
+	TLSMinVersion       string   `toml:"tls_min_version"`
+	TLSCipherSuites     []string `toml:"tls_cipher_suites"`
+	InsecureSkipVerify  bool     `toml:"insecure_skip_verify"`
+	ServerName          string   `toml:"tls_server_name"`
+	RenegotiationMethod string   `toml:"tls_renegotiation_method"`
+	Enable              *bool    `toml:"tls_enable"`
 
 	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;use 'tls_cert' instead"`
@@ -134,6 +135,15 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 
 	if c.ServerName != "" {
 		tlsConfig.ServerName = c.ServerName
+	}
+
+	if len(c.TLSCipherSuites) != 0 {
+		cipherSuites, err := ParseCiphers(c.TLSCipherSuites)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not parse server cipher suites %s: %w", strings.Join(c.TLSCipherSuites, ","), err)
+		}
+		tlsConfig.CipherSuites = cipherSuites
 	}
 
 	return tlsConfig, nil
