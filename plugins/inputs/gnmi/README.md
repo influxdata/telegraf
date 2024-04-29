@@ -248,3 +248,17 @@ to `subscription` to use the subscription path as `path` tag.
 Other devices might omit the prefix in updates altogether. Here setting
 `path_guessing_strategy` to `common path` can help to infer the `path` tag by
 using the part of the path that is common to all values in the update.
+
+### TLS handshake failure
+
+When receiving an error like
+
+```text
+2024-01-01T00:00:00Z E! [inputs.gnmi] Error in plugin: failed to setup subscription: rpc error: code = Unavailable desc = connection error: desc = "transport: authentication handshake failed: remote error: tls: handshake failure"
+```
+
+this might be due to insecure TLS configurations in the GNMI server. Please
+check the minimum TLS version provided by the server as well as the cipher suite
+used. You might want to use the `tls_min_version` or `tls_cipher_suites` setting
+respectively to work-around the issue. Please be careful to not undermine the
+security of the connection between the plugin and the device!
