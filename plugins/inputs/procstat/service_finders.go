@@ -8,10 +8,23 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-func findByPidFiles(paths []string) ([]processGroup, error) {
+type processFinder struct {
+	errPidFiles map[string]bool
+	log         telegraf.Logger
+}
+
+func newProcessFinder(log telegraf.Logger) *processFinder {
+	return &processFinder{
+		errPidFiles: make(map[string]bool),
+		log:         log,
+	}
+}
+
+func (f *processFinder) findByPidFiles(paths []string) ([]processGroup, error) {
 	groups := make([]processGroup, 0, len(paths))
 	for _, path := range paths {
 		buf, err := os.ReadFile(path)
@@ -24,8 +37,9 @@ func findByPidFiles(paths []string) ([]processGroup, error) {
 		}
 
 		p, err := process.NewProcess(int32(pid))
-		if err != nil {
-			return nil, fmt.Errorf("failed to find process for PID %d of file %q: %w", pid, path, err)
+		if err != nil && !f.errPidFiles[path] {
+			f.log.Errorf("failed to find process for PID %d of file %q: %v", pid, path, err)
+			f.errPidFiles[path] = true
 		}
 		groups = append(groups, processGroup{
 			processes: []*process.Process{p},
@@ -46,7 +60,7 @@ func findByCgroups(cgroups []string) ([]processGroup, error) {
 
 		files, err := filepath.Glob(path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to determin files for cgroup %q: %w", cgroup, err)
+			return nil, fmt.Errorf("failed to determine files for cgroup %q: %w", cgroup, err)
 		}
 
 		for _, fpath := range files {
