@@ -87,7 +87,12 @@ func (w *WinEventLog) Start(_ telegraf.Accumulator) error {
 }
 
 func (w *WinEventLog) Stop() {
-	_ = _EvtClose(w.subscription)
+	w.Log.Debug("Closing subscription handles")
+	err := _EvtClose(w.subscription)
+	if err != nil {
+		w.Log.Errorf("Error closing subscription handle: %v", err)
+	}
+	w.Log.Debug("Close complete")
 }
 
 func (w *WinEventLog) GetState() interface{} {
@@ -258,6 +263,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	w.Log.Debug("Gather: done")
 	return nil
 }
 
