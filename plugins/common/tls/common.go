@@ -25,7 +25,7 @@ func init() {
 			tlsCipherMapSecure[s.Name] = s.ID
 		}
 
-		suites = tls.CipherSuites()
+		suites = tls.InsecureCipherSuites()
 		tlsCipherMapInsecure = make(map[string]uint16, len(suites))
 		for _, s := range suites {
 			tlsCipherMapInsecure[s.Name] = s.ID

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"go.step.sm/crypto/pemutil"
 
@@ -140,8 +139,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	if len(c.TLSCipherSuites) != 0 {
 		cipherSuites, err := ParseCiphers(c.TLSCipherSuites)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"could not parse server cipher suites %s: %w", strings.Join(c.TLSCipherSuites, ","), err)
+			return nil, fmt.Errorf("could not parse client cipher suites: %w", err)
 		}
 		tlsConfig.CipherSuites = cipherSuites
 	}
@@ -177,8 +175,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 	if len(c.TLSCipherSuites) != 0 {
 		cipherSuites, err := ParseCiphers(c.TLSCipherSuites)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"could not parse server cipher suites %s: %w", strings.Join(c.TLSCipherSuites, ","), err)
+			return nil, fmt.Errorf("could not parse server cipher suites: %w", err)
 		}
 		tlsConfig.CipherSuites = cipherSuites
 	}
