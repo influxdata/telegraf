@@ -212,6 +212,10 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 	// Parse individual update message and create measurements
 	for _, field := range valueFields {
+		if field.path.empty() {
+			continue
+		}
+
 		// Prepare tags from prefix
 		fieldTags := field.path.Tags()
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
