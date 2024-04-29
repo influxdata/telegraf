@@ -149,10 +149,10 @@ to use them.
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
-  ## Inline notation (default_tags not supported yet)
+  ## Inline notation (default_tags and monitoring_params not supported yet)
   # nodes = [
-  #   {name="node1", namespace="", identifier_type="", identifier="",}
-  #   {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
+  #   {name="node1", namespace="", identifier_type="", identifier=""},
+  #   {name="node2", namespace="", identifier_type="", identifier=""}
   # ]
   #
   ## Bracketed notation
@@ -214,10 +214,10 @@ to use them.
   ## Node ID Configuration.  Array of nodes with the same settings as above.
   ## Use either the inline notation or the bracketed notation, not both.
   #
-  ## Inline notation (default_tags not supported yet)
+  ## Inline notation (default_tags and monitoring_params not supported yet)
   # nodes = [
-  #  {name="node1", namespace="", identifier_type="", identifier="",}
-  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
+  #  {name="node1", namespace="", identifier_type="", identifier=""},
+  #  {name="node2", namespace="", identifier_type="", identifier=""}
   #]
   #
   ## Bracketed notation
