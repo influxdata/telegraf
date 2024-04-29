@@ -20,7 +20,7 @@ users.
 
 Users should be aware that when Telegraf reads a user's config, if multiple
 files or directories are read in, each file is read one at a time and all
-plugins are combined into a single running Telegraf config.
+plugins are combined into a single running Telegraf process.
 
 ## Single Table vs Array of Tables
 
