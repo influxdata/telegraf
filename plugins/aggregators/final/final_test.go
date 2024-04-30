@@ -159,7 +159,6 @@ func TestOutputStrategyTimeout(t *testing.T) {
 	final := &Final{
 		OutputStrategy: "timeout",
 		SeriesTimeout:  config.Duration(30 * time.Second),
-		RenameFields:   true,
 	}
 	require.NoError(t, final.Init())
 
@@ -216,7 +215,6 @@ func TestOutputStrategyPeriodic(t *testing.T) {
 	final := &Final{
 		OutputStrategy: "periodic",
 		SeriesTimeout:  config.Duration(30 * time.Second),
-		RenameFields:   true,
 	}
 	require.NoError(t, final.Init())
 
@@ -277,11 +275,11 @@ func TestOutputStrategyPeriodic(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 }
 
-func TestRenameFieldsFalse(t *testing.T) {
+func TestKeepOriginalFieldNames(t *testing.T) {
 	final := &Final{
-		OutputStrategy: "periodic",
-		SeriesTimeout:  config.Duration(30 * time.Second),
-		RenameFields:   false,
+		OutputStrategy:         "periodic",
+		SeriesTimeout:          config.Duration(30 * time.Second),
+		KeepOriginalFieldNames: true,
 	}
 
 	require.NoError(t, final.Init())

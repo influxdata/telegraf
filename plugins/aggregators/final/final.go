@@ -15,9 +15,9 @@ import (
 var sampleConfig string
 
 type Final struct {
-	OutputStrategy string          `toml:"output_strategy"`
-	SeriesTimeout  config.Duration `toml:"series_timeout"`
-	RenameFields   bool            `toml:"rename_fields"`
+	OutputStrategy         string          `toml:"output_strategy"`
+	SeriesTimeout          config.Duration `toml:"series_timeout"`
+	KeepOriginalFieldNames bool            `toml:"keep_original_field_names"`
 
 	// The last metric for all series which are active
 	metricCache map[uint64]telegraf.Metric
@@ -26,7 +26,6 @@ type Final struct {
 func NewFinal() *Final {
 	return &Final{
 		SeriesTimeout: config.Duration(5 * time.Minute),
-		RenameFields:  true,
 	}
 }
 
@@ -67,13 +66,13 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 			continue
 		}
 		var fields map[string]any
-		if m.RenameFields {
-			fields = map[string]interface{}{}
+		if m.KeepOriginalFieldNames {
+			fields = metric.Fields()
+		} else {
+			fields = map[string]any{}
 			for _, field := range metric.FieldList() {
 				fields[field.Key+"_final"] = field.Value
 			}
-		} else {
-			fields = metric.Fields()
 		}
 
 		acc.AddFields(metric.Name(), fields, metric.Tags(), metric.Time())
