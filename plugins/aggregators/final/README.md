@@ -32,6 +32,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## aggregator and will not get sent to the output plugins.
   # drop_original = false
 
+  ## If true, _final is added to every field name
+  # rename_fields = true
+
   ## The time that a series is not updated until considering it final. Ignored
   ## when output_strategy is "periodic".
   # series_timeout = "5m"

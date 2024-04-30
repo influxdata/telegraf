@@ -159,6 +159,7 @@ func TestOutputStrategyTimeout(t *testing.T) {
 	final := &Final{
 		OutputStrategy: "timeout",
 		SeriesTimeout:  config.Duration(30 * time.Second),
+		RenameFields:   true,
 	}
 	require.NoError(t, final.Init())
 
@@ -215,6 +216,7 @@ func TestOutputStrategyPeriodic(t *testing.T) {
 	final := &Final{
 		OutputStrategy: "periodic",
 		SeriesTimeout:  config.Duration(30 * time.Second),
+		RenameFields:   true,
 	}
 	require.NoError(t, final.Init())
 
@@ -266,9 +268,42 @@ func TestOutputStrategyPeriodic(t *testing.T) {
 		metric.New(
 			"m",
 			tags,
-			map[string]interface{}{"a_final": int64(4)},
+			map[string]interface{}{
+				"a_final": 4,
+			},
 			now.Add(time.Second*-20),
 		),
 	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics())
+}
+
+func TestRenameFieldsFalse(t *testing.T) {
+	final := &Final{
+		OutputStrategy: "periodic",
+		SeriesTimeout:  config.Duration(30 * time.Second),
+		RenameFields:   false,
+	}
+
+	require.NoError(t, final.Init())
+
+	now := time.Now()
+	tags := map[string]string{"foo": "bar"}
+	m1 := metric.New("m",
+		tags,
+		map[string]any{"a": 3},
+		now.Add(time.Second*-90))
+
+	var acc testutil.Accumulator
+	final.Add(m1)
+	final.Push(&acc)
+	expected := []telegraf.Metric{
+		metric.New(
+			"m",
+			tags,
+			map[string]any{"a": 3},
+			now.Add(time.Second*-90),
+		),
+	}
+
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 }
