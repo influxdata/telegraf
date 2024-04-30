@@ -10,20 +10,20 @@ import (
 )
 
 type DiskBuffer struct {
-	BufferMetrics
+	BufferStats
 
 	walFile *wal.Log
 }
 
-func NewDiskBuffer(name string, capacity int, path string, metrics BufferMetrics) *DiskBuffer {
+func NewDiskBuffer(name string, capacity int, path string, stats BufferStats) *DiskBuffer {
 	// todo capacity
 	walFile, err := wal.Open(path+"/"+name, nil)
 	if err != nil {
 		return nil // todo error handling
 	}
 	return &DiskBuffer{
-		BufferMetrics: metrics,
-		walFile:       walFile,
+		BufferStats: stats,
+		walFile:     walFile,
 	}
 }
 

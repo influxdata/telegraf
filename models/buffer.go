@@ -10,12 +10,6 @@ var (
 	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
 )
 
-const (
-	StrategyMemory   = "memory"
-	StrategyDisk     = "disk"
-	StrategyOverflow = "overflow"
-)
-
 type Buffer interface {
 
 	// Len returns the number of metrics currently in the buffer.
@@ -37,9 +31,9 @@ type Buffer interface {
 	Reject([]telegraf.Metric)
 }
 
-// BufferMetrics holds common metrics used for buffer implementations.
+// BufferStats holds common metrics used for buffer implementations.
 // Implementations of Buffer should embed this struct in them.
-type BufferMetrics struct {
+type BufferStats struct {
 	MetricsAdded   selfstat.Stat
 	MetricsWritten selfstat.Stat
 	MetricsDropped selfstat.Stat
@@ -51,26 +45,28 @@ type BufferMetrics struct {
 func NewBuffer(name string, alias string, capacity int, strategy string, path string) Buffer {
 	bm := NewBufferMetrics(name, alias, capacity)
 
-	if strategy == StrategyDisk {
+	switch strategy {
+	case "", "memory":
+		return NewMemoryBuffer(capacity, bm)
+	case "disk":
 		return NewDiskBuffer(name, capacity, path, bm)
-	} else if strategy == StrategyOverflow {
+	case "overflow":
 		// todo implementme
 		// todo log currently unimplemented
 		return NewMemoryBuffer(capacity, bm)
-	} else if strategy == StrategyMemory || strategy == "" {
-		return NewMemoryBuffer(capacity, bm)
 	}
+
 	// todo log invalid buffer strategy configuration provided, falling back to memory
 	return NewMemoryBuffer(capacity, bm)
 }
 
-func NewBufferMetrics(name string, alias string, capacity int) BufferMetrics {
+func NewBufferMetrics(name string, alias string, capacity int) BufferStats {
 	tags := map[string]string{"output": name}
 	if alias != "" {
 		tags["alias"] = alias
 	}
 
-	bm := BufferMetrics{
+	bm := BufferStats{
 		MetricsAdded: selfstat.Register(
 			"write",
 			"metrics_added",
@@ -102,17 +98,17 @@ func NewBufferMetrics(name string, alias string, capacity int) BufferMetrics {
 	return bm
 }
 
-func (b *BufferMetrics) metricAdded() {
+func (b *BufferStats) metricAdded() {
 	b.MetricsAdded.Incr(1)
 }
 
-func (b *BufferMetrics) metricWritten(metric telegraf.Metric) {
+func (b *BufferStats) metricWritten(metric telegraf.Metric) {
 	AgentMetricsWritten.Incr(1)
 	b.MetricsWritten.Incr(1)
 	metric.Accept()
 }
 
-func (b *BufferMetrics) metricDropped(metric telegraf.Metric) {
+func (b *BufferStats) metricDropped(metric telegraf.Metric) {
 	AgentMetricsDropped.Incr(1)
 	b.MetricsDropped.Incr(1)
 	metric.Reject()

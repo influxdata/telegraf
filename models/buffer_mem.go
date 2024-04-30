@@ -9,7 +9,7 @@ import (
 // MemoryBuffer stores metrics in a circular buffer.
 type MemoryBuffer struct {
 	sync.Mutex
-	BufferMetrics
+	BufferStats
 
 	buf   []telegraf.Metric
 	first int // index of the first/oldest metric
@@ -21,14 +21,14 @@ type MemoryBuffer struct {
 	batchSize  int // number of metrics currently in the batch
 }
 
-func NewMemoryBuffer(capacity int, metrics BufferMetrics) *MemoryBuffer {
+func NewMemoryBuffer(capacity int, stats BufferStats) *MemoryBuffer {
 	return &MemoryBuffer{
-		BufferMetrics: metrics,
-		buf:           make([]telegraf.Metric, capacity),
-		first:         0,
-		last:          0,
-		size:          0,
-		cap:           capacity,
+		BufferStats: stats,
+		buf:         make([]telegraf.Metric, capacity),
+		first:       0,
+		last:        0,
+		size:        0,
+		cap:         capacity,
 	}
 }
 

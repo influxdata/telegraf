@@ -38,8 +38,8 @@ type OutputConfig struct {
 	NamePrefix   string
 	NameSuffix   string
 
-	BufferStrategy      string
-	BufferFileDirectory string
+	BufferStrategy  string
+	BufferDirectory string
 }
 
 // RunningOutput contains the output configuration
@@ -100,7 +100,7 @@ func NewRunningOutput(
 	}
 
 	ro := &RunningOutput{
-		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferFileDirectory),
+		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            config,
