@@ -25,10 +25,11 @@ var sampleConfig string
 type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
+	BufferSize   config.Size     `toml:"buffer_size"`
 	Signal       string          `toml:"signal"`
 	RestartDelay config.Duration `toml:"restart_delay"`
+	StopOnError  bool            `toml:"stop_on_error"`
 	Log          telegraf.Logger `toml:"-"`
-	BufferSize   config.Size     `toml:"buffer_size"`
 
 	process      *process.Process
 	acc          telegraf.Accumulator
@@ -59,10 +60,11 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}
-	e.process.Log = e.Log
-	e.process.RestartDelay = time.Duration(e.RestartDelay)
 	e.process.ReadStdoutFn = e.outputReader
 	e.process.ReadStderrFn = e.cmdReadErr
+	e.process.RestartDelay = time.Duration(e.RestartDelay)
+	e.process.StopOnError = e.StopOnError
+	e.process.Log = e.Log
 
 	if err = e.process.Start(); err != nil {
 		// if there was only one argument, and it contained spaces, warn the user
