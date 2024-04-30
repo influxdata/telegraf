@@ -203,6 +203,22 @@ func (c *GNMI) Init() error {
 		c.Log.Warnf("Configured insecure cipher suites: %s", strings.Join(insecure, ","))
 	}
 
+	// Check the TLS configuration
+	if _, err := c.ClientConfig.TLSConfig(); err != nil {
+		if errors.Is(err, internaltls.ErrCipherUnsupported) {
+			secure, insecure := internaltls.Ciphers()
+			c.Log.Info("Supported secure ciphers:")
+			for _, name := range secure {
+				c.Log.Infof("  %s", name)
+			}
+			c.Log.Info("Supported insecure ciphers:")
+			for _, name := range insecure {
+				c.Log.Infof("  %s", name)
+			}
+		}
+		return err
+	}
+
 	return nil
 }
 

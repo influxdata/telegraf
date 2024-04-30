@@ -1,10 +1,13 @@
 package tls
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 )
+
+var ErrCipherUnsupported = errors.New("unsupported cipher")
 
 // InsecureCiphers returns the list of insecure ciphers among the list of given ciphers
 func InsecureCiphers(ciphers []string) []string {
@@ -20,6 +23,19 @@ func InsecureCiphers(ciphers []string) []string {
 	return insecure
 }
 
+// Ciphers returns the list of supported ciphers
+func Ciphers() (secure, insecure []string) {
+	for c := range tlsCipherMapSecure {
+		secure = append(secure, c)
+	}
+
+	for c := range tlsCipherMapInsecure {
+		insecure = append(insecure, c)
+	}
+
+	return secure, insecure
+}
+
 // ParseCiphers returns a `[]uint16` by received `[]string` key that represents ciphers from crypto/tls.
 // If some of ciphers in received list doesn't exists  ParseCiphers returns nil with error
 func ParseCiphers(ciphers []string) ([]uint16, error) {
@@ -31,7 +47,7 @@ func ParseCiphers(ciphers []string) ([]uint16, error) {
 		if !ok {
 			idInsecure, ok := tlsCipherMapInsecure[cipher]
 			if !ok {
-				return nil, fmt.Errorf("unsupported cipher %q", cipher)
+				return nil, fmt.Errorf("%q %w", cipher, ErrCipherUnsupported)
 			}
 			id = idInsecure
 		}
