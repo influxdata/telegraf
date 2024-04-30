@@ -34,6 +34,7 @@ func TestGather(t *testing.T) {
 		Name:      "sine",
 		Amplitude: 1.0,
 		Period:    0.5,
+		BaseLine:  2.0,
 	}
 	testStep := &step{
 		Name:  "step",
@@ -87,7 +88,7 @@ func TestGather(t *testing.T) {
 			require.GreaterOrEqual(t, 6.0, v)
 			require.LessOrEqual(t, 1.0, v)
 		case "sine":
-			require.Equal(t, 0.0, v)
+			require.Equal(t, 2.0, v)
 		case "step":
 			require.Equal(t, 0.0, v)
 		default:
