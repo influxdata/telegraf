@@ -26,7 +26,6 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/Mellanox/rdmamap v1.1.0
 	github.com/PaesslerAG/gval v1.2.2
-	github.com/aarthikrao/wal v0.0.8
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
 	github.com/alitto/pond v1.8.3
@@ -186,6 +185,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.30.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.17.0
+	github.com/tidwall/wal v1.1.7
 	github.com/tinylib/msgp v1.1.9
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/vapourismo/knx-go v0.0.0-20240217175130-922a0d50c241
@@ -452,6 +452,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/tinylru v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/twmb/murmur3 v1.1.7 // indirect
