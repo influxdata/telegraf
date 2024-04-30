@@ -88,9 +88,12 @@ func (p *program) Start(_ service.Service) error {
 }
 
 func (p *program) Stop(_ service.Service) error {
+	fmt.Println("stop telegraf service called")
 	var empty struct{}
 	stop <- empty // signal reloadLoop to finish (context cancel)
-	<-stop        // wait for reloadLoop to finish and close channel
+	fmt.Println("waiting for reloadLoop to finish")
+	<-stop // wait for reloadLoop to finish and close channel
+	fmt.Println("reloadLoop finished")
 	return nil
 }
 

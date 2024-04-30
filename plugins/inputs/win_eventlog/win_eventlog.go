@@ -127,8 +127,8 @@ func (w *WinEventLog) SetState(state interface{}) error {
 
 // Gather Windows Event Log entries
 func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
+	w.Log.Debug("Gather: start")
 	for {
-		w.Log.Debug("Gather: fetching events")
 		events, err := w.fetchEvents(w.subscription)
 		if err != nil {
 			if errors.Is(err, ERROR_NO_MORE_ITEMS) {
@@ -138,7 +138,6 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		w.Log.Debugf("Fetched %d events\n", len(events))
 		for i := range events {
 			// Prepare fields names usage counter
 			var fieldsUsage = map[string]int{}
@@ -149,7 +148,6 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			evt := reflect.ValueOf(&event).Elem()
 			timeStamp := time.Now()
 			// Walk through all fields of Event struct to process System tags or fields
-			w.Log.Debugf("Processing event with ID: %d\n", event.EventID)
 			for i := 0; i < evt.NumField(); i++ {
 				fieldName := evt.Type().Field(i).Name
 				fieldType := evt.Field(i).Type().String()
@@ -236,8 +234,6 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			w.Log.Debug("Done processing events, starting XML fields")
-
 			// Unroll additional XML
 			var xmlFields []EventField
 			if w.ProcessUserData {
@@ -258,7 +254,6 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Pass collected metrics
-			w.Log.Debugf("Passing metric to accumulator with %d fields\n", len(fields))
 			acc.AddFields("win_eventlog", fields, tags, timeStamp)
 		}
 	}
@@ -342,7 +337,6 @@ func (w *WinEventLog) evtSubscribe() (EvtHandle, error) {
 }
 
 func (w *WinEventLog) fetchEventHandles(subsHandle EvtHandle) ([]EvtHandle, error) {
-	w.Log.Debug("Fetching event handles: start")
 	var eventsNumber uint32
 	var evtReturned uint32
 
@@ -358,12 +352,10 @@ func (w *WinEventLog) fetchEventHandles(subsHandle EvtHandle) ([]EvtHandle, erro
 		return nil, err
 	}
 
-	w.Log.Debug("Fetching event handles: end")
 	return eventHandles[:evtReturned], nil
 }
 
 func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
-	w.Log.Debug("Fetching events: start")
 	var events []Event
 
 	eventHandles, err := w.fetchEventHandles(subsHandle)
@@ -372,7 +364,6 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 	}
 
 	var evterr error
-	w.Log.Debugf("Fetched %d event handles\n", len(eventHandles))
 	for _, eventHandle := range eventHandles {
 		if eventHandle == 0 {
 			continue
@@ -388,7 +379,6 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 			evterr = err
 		}
 	}
-	w.Log.Debug("Fetched events: done")
 	return events, evterr
 }
 
