@@ -149,6 +149,7 @@ func (p *Procstat) Init() error {
 
 		// New-style operations
 		for i := range p.Filter {
+			p.Filter[i].Log = p.Log
 			if err := p.Filter[i].Init(); err != nil {
 				return fmt.Errorf("initializing filter %d failed: %w", i, err)
 			}
@@ -200,17 +201,23 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 		}
 		count += len(r.PIDs)
 		for _, pid := range r.PIDs {
+			// Check if the process is still running
+			proc, err := p.createProcess(pid)
+			if err != nil {
+				// No problem; process may have ended after we found it or it
+				// might be delivered from a non-checking source like a PID file
+				// of a dead process.
+				continue
+			}
+
 			// Use the cached processes as we need the existing instances
 			// to compute delta-metrics (e.g. cpu-usage).
-			proc, found := p.processes[pid]
-			if !found {
+			if cached, found := p.processes[pid]; found {
+				proc = cached
+			} else {
 				// We've found a process that was not recorded before so add it
 				// to the list of processes
-				proc, err = p.createProcess(pid)
-				if err != nil {
-					// No problem; process may have ended after we found it
-					continue
-				}
+
 				// Assumption: if a process has no name, it probably does not exist
 				if name, _ := proc.Name(); name == "" {
 					continue

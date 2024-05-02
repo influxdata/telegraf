@@ -7,28 +7,32 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf/filter"
 	"github.com/shirou/gopsutil/v3/process"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 type Filter struct {
-	Name            string   `toml:"name"`
-	PidFiles        []string `toml:"pid_files"`
-	SystemdUnits    []string `toml:"systemd_units"`
-	SupervisorUnits []string `toml:"supervisor_units"`
-	WinService      []string `toml:"win_services"`
-	CGroups         []string `toml:"cgroups"`
-	Patterns        []string `toml:"patterns"`
-	Users           []string `toml:"users"`
-	Executables     []string `toml:"executables"`
-	ProcessNames    []string `toml:"process_names"`
-	RecursionDepth  int      `toml:"recursion_depth"`
+	Name            string          `toml:"name"`
+	PidFiles        []string        `toml:"pid_files"`
+	SystemdUnits    []string        `toml:"systemd_units"`
+	SupervisorUnits []string        `toml:"supervisor_units"`
+	WinService      []string        `toml:"win_services"`
+	CGroups         []string        `toml:"cgroups"`
+	Patterns        []string        `toml:"patterns"`
+	Users           []string        `toml:"users"`
+	Executables     []string        `toml:"executables"`
+	ProcessNames    []string        `toml:"process_names"`
+	RecursionDepth  int             `toml:"recursion_depth"`
+	Log             telegraf.Logger `toml:"-"`
 
 	filterSupervisorUnit string
 	filterCmds           []*regexp.Regexp
 	filterUser           filter.Filter
 	filterExecutable     filter.Filter
 	filterProcessName    filter.Filter
+	finder               *processFinder
 }
 
 func (f *Filter) Init() error {
@@ -80,6 +84,8 @@ func (f *Filter) Init() error {
 		return fmt.Errorf("compiling process-names filter for %q failed: %w", f.Name, err)
 	}
 
+	// Setup the process finder
+	f.finder = newProcessFinder(f.Log)
 	return nil
 }
 
@@ -89,7 +95,7 @@ func (f *Filter) ApplyFilter() ([]processGroup, error) {
 	var groups []processGroup
 	switch {
 	case len(f.PidFiles) > 0:
-		g, err := findByPidFiles(f.PidFiles)
+		g, err := f.finder.findByPidFiles(f.PidFiles)
 		if err != nil {
 			return nil, err
 		}
