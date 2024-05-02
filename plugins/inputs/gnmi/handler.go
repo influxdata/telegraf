@@ -41,6 +41,7 @@ type handler struct {
 	trace               bool
 	canonicalFieldNames bool
 	trimSlash           bool
+	tagPathPrefix       bool
 	guessPathStrategy   string
 	log                 telegraf.Logger
 	keepalive.ClientParameters
@@ -180,7 +181,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range headerTags {
 			tags[key] = val
 		}
-		for key, val := range fullPath.Tags() {
+		for key, val := range fullPath.Tags(h.tagPathPrefix) {
 			tags[key] = val
 		}
 
@@ -213,7 +214,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	// Parse individual update message and create measurements
 	for _, field := range valueFields {
 		// Prepare tags from prefix
-		fieldTags := field.path.Tags()
+		fieldTags := field.path.Tags(h.tagPathPrefix)
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
 		for key, val := range headerTags {
 			tags[key] = val

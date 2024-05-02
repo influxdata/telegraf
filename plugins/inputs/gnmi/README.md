@@ -88,6 +88,9 @@ details on how to use them.
   ##   subscription -- use the subscription path
   # path_guessing_strategy = "none"
 
+  ## Prefix tags from path keys with the path element
+  # prefix_tag_key_with_path = false
+
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
