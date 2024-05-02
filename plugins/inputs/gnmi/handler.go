@@ -212,6 +212,10 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 	// Parse individual update message and create measurements
 	for _, field := range valueFields {
+		if field.path.empty() {
+			continue
+		}
+
 		// Prepare tags from prefix
 		fieldTags := field.path.Tags()
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
@@ -258,8 +262,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				relative := field.path.segments[len(aliasInfo.segments):len(field.path.segments)]
 				key = strings.Join(relative, "/")
 			} else {
-				// Otherwise use the last path element as the field key.
-				key = field.path.segments[len(field.path.segments)-1]
+				// Otherwise use the last path element as the field key if it
+				// exists.
+				if len(field.path.segments) > 0 {
+					key = field.path.segments[len(field.path.segments)-1]
+				}
 			}
 			key = strings.ReplaceAll(key, "-", "_")
 		}
