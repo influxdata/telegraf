@@ -50,6 +50,7 @@ type InfluxDB struct {
 	UserAgent        string            `toml:"user_agent"`
 	ContentEncoding  string            `toml:"content_encoding"`
 	UintSupport      bool              `toml:"influx_uint_support"`
+	OmitTimestamp    bool              `toml:"influx_omit_timestamp"`
 	PingTimeout      config.Duration   `toml:"ping_timeout"`
 	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
 	tls.ClientConfig
@@ -158,7 +159,10 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, localAddr *net.TCPAddr, proxy
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{UintSupport: i.UintSupport}
+	serializer := &influx.Serializer{
+		UintSupport:   i.UintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}

@@ -46,9 +46,10 @@ func (e FieldError) Error() string {
 
 // Serializer is a serializer for line protocol.
 type Serializer struct {
-	MaxLineBytes int  `toml:"influx_max_line_bytes"`
-	SortFields   bool `toml:"influx_sort_fields"`
-	UintSupport  bool `toml:"influx_uint_support"`
+	MaxLineBytes  int  `toml:"influx_max_line_bytes"`
+	SortFields    bool `toml:"influx_sort_fields"`
+	UintSupport   bool `toml:"influx_uint_support"`
+	OmitTimestamp bool `toml:"influx_omit_timestamp"`
 
 	bytesWritten int
 
@@ -153,8 +154,10 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 
 func (s *Serializer) buildFooter(m telegraf.Metric) {
 	s.footer = s.footer[:0]
-	s.footer = append(s.footer, ' ')
-	s.footer = strconv.AppendInt(s.footer, m.Time().UnixNano(), 10)
+	if !s.OmitTimestamp {
+		s.footer = append(s.footer, ' ')
+		s.footer = strconv.AppendInt(s.footer, m.Time().UnixNano(), 10)
+	}
 	s.footer = append(s.footer, '\n')
 }
 

@@ -30,6 +30,12 @@ for interoperability.
   ## integer values.  Enabling this option will result in field type errors if
   ## existing data has been written.
   influx_uint_support = false
+
+  ## When true, Telegraf will omit the timestamp on data to allow InfluxDB
+  ## to set the timestamp of the data during ingestion. This is generally NOT
+  ## what you want as it can lead to data points captured at different times
+  ## getting omitted due to similar data.
+  # influx_omit_timestamp = false
 ```
 
 ## Metrics

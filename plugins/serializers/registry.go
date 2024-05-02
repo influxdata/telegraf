@@ -94,6 +94,9 @@ type Config struct {
 	// Support unsigned integer output; influx format only
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 
+	// Omit timestamp from output; influx format only
+	InfluxOmitTimestamp bool `toml:"influx_omit_timestamp"`
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string `toml:"prefix"`
 

@@ -58,6 +58,7 @@ type InfluxDB struct {
 	ContentEncoding           string            `toml:"content_encoding"`
 	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
+	OmitTimestamp             bool              `toml:"influx_omit_timestamp"`
 	Precision                 string            `toml:"precision" deprecated:"1.0.0;option is ignored"`
 	Log                       telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
@@ -202,7 +203,10 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *InfluxDB) udpClient(address *url.URL, localAddr *net.UDPAddr) (Client, error) {
-	serializer := &influx.Serializer{UintSupport: i.InfluxUintSupport}
+	serializer := &influx.Serializer{
+		UintSupport:   i.InfluxUintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
@@ -229,7 +233,10 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, localAddr *
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{UintSupport: i.InfluxUintSupport}
+	serializer := &influx.Serializer{
+		UintSupport:   i.InfluxUintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
