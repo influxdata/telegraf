@@ -25,15 +25,15 @@ import (
 var sampleConfig string
 
 type OpenTelemetry struct {
-	ServiceAddress      string   `toml:"service_address"`
-	SpanDimensions      []string `toml:"span_dimensions"`
-	LogRecordDimensions []string `toml:"log_record_dimensions"`
-	MetricsSchema       string   `toml:"metrics_schema"`
+	ServiceAddress      string          `toml:"service_address"`
+	SpanDimensions      []string        `toml:"span_dimensions"`
+	LogRecordDimensions []string        `toml:"log_record_dimensions"`
+	MetricsSchema       string          `toml:"metrics_schema"`
+	MaxMsgSize          config.Size     `toml:"max_msg_size"`
+	Timeout             config.Duration `toml:"timeout"`
+	Log                 telegraf.Logger `toml:"-"`
 
 	tls.ServerConfig
-	Timeout config.Duration `toml:"timeout"`
-
-	Log telegraf.Logger `toml:"-"`
 
 	listener   net.Listener // overridden in tests
 	grpcServer *grpc.Server
@@ -58,6 +58,9 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	}
 	if o.Timeout > 0 {
 		grpcOptions = append(grpcOptions, grpc.ConnectionTimeout(time.Duration(o.Timeout)))
+	}
+	if o.MaxMsgSize > 0 {
+		grpcOptions = append(grpcOptions, grpc.MaxRecvMsgSize(int(o.MaxMsgSize)))
 	}
 
 	logger := &otelLogger{o.Log}
