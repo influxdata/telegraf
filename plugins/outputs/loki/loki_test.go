@@ -469,3 +469,38 @@ func TestMetricSorting(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestSanitizeLabelName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "no change",
+			input:    "foobar",
+			expected: "foobar",
+		},
+		{
+			name:     "replace invalid first charachter",
+			input:    "3foobar",
+			expected: "_foobar",
+		},
+		{
+			name:     "replace invalid later charachter",
+			input:    "foobar.foobar",
+			expected: "foobar_foobar",
+		},
+		{
+			name:     "numbers allowed later",
+			input:    "foobar.foobar.2002",
+			expected: "foobar_foobar_2002",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, sanitizeLabelName(tt.input))
+		})
+	}
+}
