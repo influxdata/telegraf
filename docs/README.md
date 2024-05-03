@@ -32,14 +32,6 @@
 * [Nightlies][]
 * [Profiling][]
 
-## Tutorials
-
-*
-
-## How-To
-
-*
-
 ## Reference
 
 * [Aggregators & Processors][]
@@ -49,6 +41,14 @@
 * [Template Pattern][]
 * [TOML][]
 * [TLS][]
+
+## Blog Posts
+
+* [Common Expression Language][]
+* [Config Recommendations and Performance Monitoring][]
+* [Deploying Telegraf via Docker Compose][]
+* [Reduce Binary Size][]
+* [Storing Secrets][]
 
 [Aggregators & Processors]: /docs/AGGREGATORS_AND_PROCESSORS.md
 [Aggregators]: /docs/AGGREGATORS.md
@@ -79,3 +79,9 @@
 [TLS]: /docs/TLS.md
 [TOML]: /docs/TOML.md
 [Windows Service]: /docs/WINDOWS_SERVICE.md
+
+[Config Recommendations and Performance Monitoring]: https://www.influxdata.com/blog/telegraf-best-practices/
+[Deploying Telegraf via Docker Compose]: https://www.influxdata.com/blog/telegraf-deployment-strategies-docker-compose/
+[Common Expression Language]: https://www.influxdata.com/blog/using-common-expression-language-metric-filtering-telegraf/
+[Storing Secrets]: https://www.influxdata.com/blog/storing-secrets-telegraf/
+[Reduce Binary Size]: https://www.influxdata.com/blog/how-reduce-telegraf-binary-size/
