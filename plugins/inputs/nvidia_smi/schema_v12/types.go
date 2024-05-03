@@ -114,6 +114,7 @@ type smi struct {
 			MaxPowerLimit       string `xml:"max_power_limit"`
 			MinPowerLimit       string `xml:"min_power_limit"`
 			PowerDraw           string `xml:"power_draw"`
+			PowerLimit          string `xml:"power_limit"`
 			PowerState          string `xml:"power_state"`
 			RequestedPowerLimit string `xml:"requested_power_limit"`
 		} `xml:"gpu_power_readings"`
