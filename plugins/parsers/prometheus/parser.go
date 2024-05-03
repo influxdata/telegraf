@@ -15,7 +15,7 @@ import (
 )
 
 func AcceptsContent(header http.Header) bool {
-	return expfmt.ResponseFormat(header) != expfmt.FmtUnknown
+	return expfmt.ResponseFormat(header).FormatType() != expfmt.TypeUnknown
 }
 
 type Parser struct {
