@@ -307,12 +307,10 @@ func TestKeepOriginalFieldNames(t *testing.T) {
 }
 
 func TestAddTags(t *testing.T) {
-
 	final := &Final{
-		OutputStrategy:         "periodic",
-		SeriesTimeout:          config.Duration(30 * time.Second),
-		KeepOriginalFieldNames: true,
-		Tags:                   map[string]string{"k1": "v1"},
+		OutputStrategy: "periodic",
+		SeriesTimeout:  config.Duration(30 * time.Second),
+		Tags:           map[string]string{"k1": "v1"},
 	}
 
 	require.NoError(t, final.Init())
@@ -331,7 +329,7 @@ func TestAddTags(t *testing.T) {
 		metric.New(
 			"m",
 			map[string]string{"foo": "bar", "k1": "v1"},
-			map[string]any{"a": 3},
+			map[string]any{"a_final": 3},
 			now.Add(time.Second*-90),
 		),
 	}
