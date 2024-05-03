@@ -15,9 +15,10 @@ import (
 var sampleConfig string
 
 type Final struct {
-	OutputStrategy         string          `toml:"output_strategy"`
-	SeriesTimeout          config.Duration `toml:"series_timeout"`
-	KeepOriginalFieldNames bool            `toml:"keep_original_field_names"`
+	OutputStrategy         string            `toml:"output_strategy"`
+	SeriesTimeout          config.Duration   `toml:"series_timeout"`
+	KeepOriginalFieldNames bool              `toml:"keep_original_field_names"`
+	Tags                   map[string]string `toml:"tags"`
 
 	// The last metric for all series which are active
 	metricCache map[uint64]telegraf.Metric
@@ -75,7 +76,17 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 			}
 		}
 
-		acc.AddFields(metric.Name(), fields, metric.Tags(), metric.Time())
+		origTags := metric.TagList()
+		tags := make(map[string]string, len(origTags)+len(m.Tags))
+		for _, tag := range origTags {
+			tags[tag.Key] = tag.Value
+		}
+
+		for k, v := range m.Tags {
+			tags[k] = v
+		}
+
+		acc.AddFields(metric.Name(), fields, tags, metric.Time())
 		delete(m.metricCache, id)
 	}
 }

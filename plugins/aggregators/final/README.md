@@ -43,6 +43,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   timeout  -- output a metric if no new input arrived for `series_timeout`
   ##   periodic -- output the last received metric every `period`
   # output_strategy = "timeout"
+
+  ## Tags that should be added to the downsampled metrics
+  # tags = { "t1" = "v1" }
 ```
 
 ### Output strategy

@@ -305,3 +305,36 @@ func TestKeepOriginalFieldNames(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 }
+
+func TestAddTags(t *testing.T) {
+
+	final := &Final{
+		OutputStrategy:         "periodic",
+		SeriesTimeout:          config.Duration(30 * time.Second),
+		KeepOriginalFieldNames: true,
+		Tags:                   map[string]string{"k1": "v1"},
+	}
+
+	require.NoError(t, final.Init())
+
+	now := time.Now()
+	tags := map[string]string{"foo": "bar"}
+	m1 := metric.New("m",
+		tags,
+		map[string]any{"a": 3},
+		now.Add(time.Second*-90))
+
+	var acc testutil.Accumulator
+	final.Add(m1)
+	final.Push(&acc)
+	expected := []telegraf.Metric{
+		metric.New(
+			"m",
+			map[string]string{"foo": "bar", "k1": "v1"},
+			map[string]any{"a": 3},
+			now.Add(time.Second*-90),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics())
+}
