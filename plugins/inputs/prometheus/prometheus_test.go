@@ -722,9 +722,9 @@ go_memstats_gc_sys_bytes 6.0936192e+07
 go_memstats_heap_alloc_bytes 1.581062048e+09
 # EOF
 `
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/openmetrics-text;version=1.0.0")
-		w.Write([]byte(data))
+		_, _ = w.Write([]byte(data))
 	}))
 	defer ts.Close()
 
@@ -770,9 +770,9 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("testdata", "openmetric-proto.bin"))
 	require.NoError(t, err)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/openmetrics-protobuf;version=1.0.0")
-		w.Write([]byte(data))
+		_, _ = w.Write(data)
 	}))
 	defer ts.Close()
 
@@ -781,6 +781,65 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 		URLs:          []string{ts.URL},
 		URLTag:        "",
 		MetricVersion: 2,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"openmetric",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+		testutil.MustMetric(
+			"openmetric",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+		testutil.MustMetric(
+			"openmetric",
+			map[string]string{},
+			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestContentTypeOverride(t *testing.T) {
+	const data = `
+# HELP go_memstats_gc_cpu_fraction The fraction of this program's available CPU time used by the GC since the program started.
+# TYPE go_memstats_gc_cpu_fraction gauge
+go_memstats_gc_cpu_fraction -0.00014404354379774563
+# HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata.
+# TYPE go_memstats_gc_sys_bytes gauge
+go_memstats_gc_sys_bytes 6.0936192e+07
+# HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and still in use.
+# TYPE go_memstats_heap_alloc_bytes gauge
+go_memstats_heap_alloc_bytes 1.581062048e+09
+# EOF
+`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Provide a wrong version
+		w.Header().Add("Content-Type", "application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily; encoding=delimited")
+		_, _ = w.Write([]byte(data))
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:                 &testutil.Logger{},
+		URLs:                []string{ts.URL},
+		URLTag:              "",
+		MetricVersion:       2,
+		ContentTypeOverride: "openmetrics-text",
 	}
 	require.NoError(t, p.Init())
 
