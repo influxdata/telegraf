@@ -80,9 +80,23 @@ func (k *KafkaConsumerGroup) getTopicPartitionKey(topic string, partition int32)
 func (k *KafkaConsumerGroup) Stop() {
 	k.cancel()
 	k.wg.Wait()
+
+	if k.clusterAdmin != nil {
+		k.clusterAdmin.Close()
+	}
+	if k.client != nil {
+		k.client.Close()
+	}
 }
 
 func (k *KafkaConsumerGroup) Init() error {
+	if len(k.Brokers) == 0 {
+		return fmt.Errorf("broker list must not be empty")
+	}
+	if len(k.ConsumerGroups) < 1 {
+		return fmt.Errorf("consumer groups must not be empty")
+	}
+
 	cfg := sarama.NewConfig()
 	cfg.Version = sarama.V0_10_2_0
 
