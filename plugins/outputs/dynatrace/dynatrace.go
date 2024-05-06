@@ -261,10 +261,3 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 
 	return nil
 }
-
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
-}
