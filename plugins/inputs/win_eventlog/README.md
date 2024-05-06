@@ -69,6 +69,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## events will be logged.
   # from_beginning = false
 
+  ## Number of events to fetch in one batch
+  # event_batch_size = 5
+
   # Process UserData XML to fields, if this node exists in Event XML
   # process_userdata = true
 
