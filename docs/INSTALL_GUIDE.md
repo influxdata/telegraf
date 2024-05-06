@@ -41,7 +41,7 @@ binaries built by InfluxData. This is important as Homebrew builds with CGO,
 which means there are some differences between the official binaries and those
 found with Homebrew.
 
-[homebrew formulae]: https://formulae.brew.sh/formula/telegraf
+[Homebrew Formula]: https://formulae.brew.sh/formula/telegraf
 
 ## InfluxData Linux package repository
 
