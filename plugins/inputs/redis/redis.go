@@ -415,6 +415,11 @@ func gatherInfoOutput(
 				gatherCommandstateLine(name, kline, acc, tags)
 				continue
 			}
+			if section == "Latencystats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherLatencystatsLine(name, kline, acc, tags)
+				continue
+			}
 			if section == "Replication" && replicationSlaveMetricPrefix.MatchString(name) {
 				kline := strings.TrimSpace(parts[1])
 				gatherReplicationLine(name, kline, acc, tags)
@@ -515,7 +520,7 @@ func gatherKeyspaceLine(
 //
 //	cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
 //
-// Tag: cmdstat=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
+// Tag: command=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
 func gatherCommandstateLine(
 	name string,
 	line string,
@@ -555,6 +560,46 @@ func gatherCommandstateLine(
 		}
 	}
 	acc.AddFields("redis_cmdstat", fields, tags)
+}
+
+// Parse the special latency_percentiles_usec lines.
+// Example:
+//
+//	latency_percentiles_usec_zadd:p50=9.023,p99=28.031,p99.9=43.007
+//
+// Tag: command=zadd; Fields: p50=9.023,p99=28.031,p99.9=43.007
+func gatherLatencystatsLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	globalTags map[string]string,
+) {
+	if !strings.HasPrefix(name, "latency_percentiles_usec") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range globalTags {
+		tags[k] = v
+	}
+	tags["command"] = strings.TrimPrefix(name, "latency_percentiles_usec_")
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		switch kv[0] {
+		case "p50", "p99", "p99.9":
+			fval, err := strconv.ParseFloat(kv[1], 64)
+			if err == nil {
+				fields[kv[0]] = fval
+			}
+		}
+	}
+	acc.AddFields("redis_latency_percentiles_usec", fields, tags)
 }
 
 // Parse the special Replication line
