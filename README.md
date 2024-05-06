@@ -48,8 +48,8 @@ For a basic walkthrough see [quick start](/docs/QUICK_START.md).
 
 ## 📖 Documentation
 
-For a full list of documentation, including tutorials, reference and other
-material start with the [Docs directory](/docs/README.md).
+For a full list of documentation including tutorials, reference and other
+material, start with the [Docs directory](/docs/README.md).
 
 Additionally, each plugin has its own README that includes details about how to
 configure, use, and sometimes debug or troubleshoot. Look under the
