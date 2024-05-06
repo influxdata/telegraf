@@ -148,9 +148,9 @@ that comes with [git for windows](https://gitforwindows.org/).
 
 ## Custom builder
 
-Telegraf also provides a way of building a custom, minimized binary using the
-[custom builder][]. This takes a user's configuration file(s), determine what
-plugins are required, and build a binary with only those plugins. This greatly
+Telegraf also provides a way of building a custom minimized binary using the
+[custom builder][]. This takes a user's configuration file(s), determines what
+plugins are required, and builds a binary with only those plugins. This greatly
 reduces the size of the Telegraf binary.
 
 [custom builder]: https://github.com/influxdata/telegraf/tree/master/tools/custom_builder
