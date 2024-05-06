@@ -26,10 +26,10 @@ import (
 var sampleConfig string
 
 // Define the warning to show if we cannot get a metric name.
-const emptyNameWarning = `Got empty metric-name for response, usually indicating
-configuration issues as the response cannot be related to any subscription.
-Please open an issue on https://github.com/influxdata/telegraf including your
-device model and the following response data:
+const emptyNameWarning = `Got empty metric-name for response (field %q), usually
+indicating configuration issues as the response cannot be related to any
+subscription.Please open an issue on https://github.com/influxdata/telegraf
+including your device model and the following response data:
 %+v
 This message is only printed once.`
 
