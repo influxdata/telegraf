@@ -117,8 +117,8 @@ helm search repo influxdata
 ## Nightly builds
 
 [Nightly builds][] are available and are generated from the master branch each
-day at around midnight UTC. The artifacts includes both binary packages, RPM &
-DEB packages, as well as nighty Docker images that are hosted on [quay.io][].
+day at around midnight UTC. The artifacts include both binary packages, RPM &
+DEB packages, as well as nightly Docker images that are hosted on [quay.io][].
 
 [Nightly builds]: /docs/NIGHTLIES.md
 [quay.io]: https://quay.io/repository/influxdb/telegraf-nightly?tab=tags&tag=latest
