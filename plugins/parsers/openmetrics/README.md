@@ -126,9 +126,14 @@ prometheus go_goroutines=69
 prometheus,unit=seconds process_cpu_seconds=4200722.46
 ```
 
- hold more than one value and the field keys aren't generic. The resulting metrics are sparse, but for some outputs they may be easier to process or query, including those that are more efficient with column-oriented data. The telegraf metric name is the same for all metrics in the input instance. It can be set with the name_override setting and defaults to "prometheus". To have multiple metric names, you can use multiple instances of the plugin, each with its own name_override.
+The resulting metrics are sparse, but for some outputs they may be easier to
+process or query, including those that are more efficient with column-oriented
+data. The telegraf metric name is the same for all metrics in the input
+instance. It can be set with the `name_override` setting and defaults to
+"prometheus". To have multiple metric names, you can use multiple instances of
+the plugin, each with its own `name_override`.
 
-metric_version = 2 uses the same histogram format as the histogram aggregator
+`metric_version = 2` uses the same histogram format as the histogram aggregator
 
 ## Regenerating OpenMetrics code
 
