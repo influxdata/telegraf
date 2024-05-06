@@ -29,7 +29,7 @@ available from the [InfluxData downloads][] page or from the
 
 ## Homebrew
 
-A [Homebrew Formulae][] for Telegraf that updates after each release:
+A [Homebrew Formula][] for Telegraf that updates after each release:
 
 ```shell
 brew update
