@@ -1,22 +1,57 @@
 package tls
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 )
+
+var ErrCipherUnsupported = errors.New("unsupported cipher")
+
+// InsecureCiphers returns the list of insecure ciphers among the list of given ciphers
+func InsecureCiphers(ciphers []string) []string {
+	var insecure []string
+
+	for _, c := range ciphers {
+		cipher := strings.ToUpper(c)
+		if _, ok := tlsCipherMapInsecure[cipher]; ok {
+			insecure = append(insecure, c)
+		}
+	}
+
+	return insecure
+}
+
+// Ciphers returns the list of supported ciphers
+func Ciphers() (secure, insecure []string) {
+	for c := range tlsCipherMapSecure {
+		secure = append(secure, c)
+	}
+
+	for c := range tlsCipherMapInsecure {
+		insecure = append(insecure, c)
+	}
+
+	return secure, insecure
+}
 
 // ParseCiphers returns a `[]uint16` by received `[]string` key that represents ciphers from crypto/tls.
 // If some of ciphers in received list doesn't exists  ParseCiphers returns nil with error
 func ParseCiphers(ciphers []string) ([]uint16, error) {
 	suites := []uint16{}
 
-	for _, cipher := range ciphers {
-		v, ok := tlsCipherMap[cipher]
+	for _, c := range ciphers {
+		cipher := strings.ToUpper(c)
+		id, ok := tlsCipherMapSecure[cipher]
 		if !ok {
-			return nil, fmt.Errorf("unsupported cipher %q", cipher)
+			idInsecure, ok := tlsCipherMapInsecure[cipher]
+			if !ok {
+				return nil, fmt.Errorf("%q %w", cipher, ErrCipherUnsupported)
+			}
+			id = idInsecure
 		}
-		suites = append(suites, v)
+		suites = append(suites, id)
 	}
 
 	return suites, nil

@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package gnmi
 
@@ -195,6 +196,28 @@ func (c *GNMI) Init() error {
 		c.internalAliases[newInfoFromString(encodingPath)] = alias
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
+
+	// Warn about configures insecure cipher suites
+	insecure := internaltls.InsecureCiphers(c.ClientConfig.TLSCipherSuites)
+	if len(insecure) > 0 {
+		c.Log.Warnf("Configured insecure cipher suites: %s", strings.Join(insecure, ","))
+	}
+
+	// Check the TLS configuration
+	if _, err := c.ClientConfig.TLSConfig(); err != nil {
+		if errors.Is(err, internaltls.ErrCipherUnsupported) {
+			secure, insecure := internaltls.Ciphers()
+			c.Log.Info("Supported secure ciphers:")
+			for _, name := range secure {
+				c.Log.Infof("  %s", name)
+			}
+			c.Log.Info("Supported insecure ciphers:")
+			for _, name := range insecure {
+				c.Log.Infof("  %s", name)
+			}
+		}
+		return err
+	}
 
 	return nil
 }
