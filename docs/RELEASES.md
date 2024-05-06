@@ -4,7 +4,7 @@ Telegraf has four minor releases a year in March, June, September, and
 December. In between each of those minor releases, there are 2-4 bug fix
 releases that happen every 3 weeks.
 
-This [Google Calendar][] is kept up to date for upcoming releases dates.
+This [Google Calendar][] is kept up to date for upcoming release dates.
 Additionally, users can look at the [GitHub milestones][] for the next minor
 and bug fix release.
 
