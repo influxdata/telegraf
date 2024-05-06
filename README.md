@@ -40,7 +40,7 @@ and when releases are made.
 ## 💻 Usage
 
 Users define a TOML configuration with the plugins and settings they wish to
-use, then pass that configurations to Telegraf, and the the Telegraf agent
+use, then pass that configuration to Telegraf. The Telegraf agent then
 collects data from inputs at each interval and sends data to outputs at each
 flush interval.
 
