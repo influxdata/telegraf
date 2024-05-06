@@ -7,7 +7,7 @@ latest updates and changes by version.
 
 [changelog]: /CHANGELOG.md
 
-There are wide range of places to obtain Telegraf from:
+There are many places to obtain Telegraf from:
 
 * [Binary downloads](#binary-downloads)
 * [Homebrew](#homebrew)
