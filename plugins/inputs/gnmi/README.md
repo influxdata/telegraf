@@ -91,9 +91,6 @@ details on how to use them.
   ## Prefix tags from path keys with the path element
   # prefix_tag_key_with_path = false
 
-  ## enable client-side TLS and define CA to authenticate the device
-  # enable_tls = false
-  # tls_ca = "/etc/telegraf/ca.pem"
   ## Optional client-side TLS to authenticate the device
   ## Set to true/false to enforce TLS being enabled/disabled. If not set,
   ## enable TLS only if any of the other options are specified.
@@ -117,10 +114,6 @@ details on how to use them.
   # tls_renegotiation_method = "never"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
-
-  ## define client-side TLS certificate & key to authenticate to the device
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
 
   ## gNMI subscription prefix (optional, can usually be left empty)
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths

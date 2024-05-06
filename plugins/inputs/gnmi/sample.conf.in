@@ -41,12 +41,11 @@
   ##   subscription -- use the subscription path
   # path_guessing_strategy = "none"
 
+  ## Prefix tags from path keys with the path element
+  # prefix_tag_key_with_path = false
+
   ## Optional client-side TLS to authenticate the device
 {{template "/plugins/common/tls/client.conf"}}
-
-  ## define client-side TLS certificate & key to authenticate to the device
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
 
   ## gNMI subscription prefix (optional, can usually be left empty)
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
