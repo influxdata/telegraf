@@ -39,6 +39,7 @@ func (q *Query) prepare(host string, username, password config.Secret) error {
 	}
 	q.tagFilter = f
 
+	// Setup the connection parameters
 	q.host = host
 	if q.host != "" {
 		q.connectionParams = append(q.connectionParams, q.host)

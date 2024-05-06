@@ -40,17 +40,30 @@ to use them.
   # username = ""
   # password = ""
 
+  ## WMI query to execute, multiple methods are possible
   [[inputs.win_wmi.query]]
-    # a string representing the WMI namespace to be queried
+    ## Namespace, class and a list of properties to use in the WMI query
     namespace = "root\\cimv2"
-    # a string representing the WMI class to be queried
     class_name = "Win32_Volume"
-    # an array of strings representing the properties of the WMI class to be queried
     properties = ["Name", "Capacity", "FreeSpace"]
-    # a string specifying a WHERE clause to use as a filter for the WQL
-    filter = 'NOT Name LIKE "\\\\?\\%"'
-    # WMI class properties which should be considered tags instead of fields
-    tag_properties = ["Name"]
+    ## Optional WHERE clause for the WQL query
+    # filter = 'NOT Name LIKE "\\\\?\\%"'
+    ## Returned properties to use as tags instead of fields
+    # tag_properties = ["Name"]
+
+  # ## WMI method to invoke, multiple methods are possible
+  # [[inputs.win_wmi.method]]
+  #   ## WMI namespace, class and method to use
+  #   namespace = 'root\default'
+  #   class_name = "StdRegProv"
+  #   method = "GetStringValue"
+  #   ## Returned WMI method values to use as tags instead of fields
+  #   # tag_properties = ["ReturnValue"]
+  #   ## Named arguments for the method call
+  #   [inputs.win_wmi.method.arguments]
+  #     hDefKey = '2147483650'
+  #     sSubKeyName = 'Software\Microsoft\windows NT\CurrentVersion'
+  #     sValueName = 'ProductName'
 ```
 
 ### namespace
@@ -75,6 +88,30 @@ Language (WQL). See [WHERE Clause][WHERE] for more information.
 [WHERE]: https://learn.microsoft.com/en-us/windows/win32/wmisdk/where-clause?source=recommendations
 
 ### tag_properties
+
+Properties which should be considered tags instead of fields.
+
+### Method settings
+
+#### namespace
+
+A string representing the WMI namespace containing the method to call.
+For example, `root\default`.
+
+#### class_name
+
+A string representing the WMI class of the method. For example, `StdRegProv`.
+
+#### method
+
+Name of the method to call. For example, `GetStringValue`
+
+#### arguments
+
+Key-value pair(s) to use as arguments when calling the method, please check the
+method documentation for required and optional arguments.
+
+#### tag_properties
 
 Properties which should be considered tags instead of fields.
 

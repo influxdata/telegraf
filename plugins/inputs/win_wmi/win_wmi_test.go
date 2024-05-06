@@ -8,7 +8,10 @@ import (
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -74,4 +77,43 @@ func TestQuery(t *testing.T) {
 	require.Equal(t, sysDrive, acc.Metrics[0].Tags["Name"])
 	// FreeSpace property was collected as a field
 	require.NotEmpty(t, acc.Metrics[0].Fields["FreeSpace"])
+}
+
+func TestMethod(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	plugin := &Wmi{
+		Methods: []Method{
+			{
+				Namespace: "ROOT\\default",
+				ClassName: "StdRegProv",
+				Method:    "GetStringValue",
+				Arguments: map[string]interface{}{
+					"hDefKey":     `2147483650`,
+					"sSubKeyName": `software\microsoft\windows nt\currentversion`,
+					"sValueName":  `ProductName`,
+				},
+				TagPropertiesInclude: []string{"ReturnValue"},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"StdRegProv",
+			map[string]string{"ReturnValue": "0"},
+			map[string]interface{}{"sValue": "Windows ..."},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime())
 }
