@@ -16,7 +16,7 @@ Telegraf uses semantic versioning.
 
 PRs that resolve issues are released in the next release. PRs that introduce
 new features are held for the next minor release. Users can view what
-[GitHub milestones][] a PR belongs to to when they want to determine the release
+[GitHub milestones][] a PR belongs to when they want to determine the release
 it will go out with.
 
 [Google Calendar]: https://calendar.google.com/calendar/embed?src=c_1ikq7u4f5c4o6mh9ep4duo3avk%40group.calendar.google.com
