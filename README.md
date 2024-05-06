@@ -74,7 +74,7 @@ Also, join us on our [Community Slack](https://influxdata.com/slack) or
 [Community Forums](https://community.influxdata.com/) if you have questions or
 comments for our engineering teams.
 
-If your completely new to Telegraf and InfluxDB, you can also enroll for free at
+If you are completely new to Telegraf and InfluxDB, you can also enroll for free at
 [InfluxDB university](https://www.influxdata.com/university/) to take courses to
 learn more.
 
