@@ -1,3 +1,5 @@
+//go:build windows
+
 package win_wmi
 
 import (
@@ -168,7 +170,7 @@ func (m *Method) execute(acc telegraf.Accumulator) error {
 		tags["source"] = m.host
 	}
 
-	oleutil.ForEach(outputProperties, func(p *ole.VARIANT) error {
+	err = oleutil.ForEach(outputProperties, func(p *ole.VARIANT) error {
 		// Name of the returned result item
 		nameProperty, err := p.ToIDispatch().GetProperty("Name")
 		if err != nil {
@@ -209,6 +211,10 @@ func (m *Method) execute(acc telegraf.Accumulator) error {
 		}
 		return fmt.Errorf("cannot handle property %q with value %v", name, property)
 	})
+	if err != nil {
+		return fmt.Errorf("cannot iterate the output properties: %w", err)
+	}
+
 	acc.AddFields(m.ClassName, fields, tags)
 
 	return nil
