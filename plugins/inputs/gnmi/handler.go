@@ -3,6 +3,7 @@ package gnmi
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -237,7 +238,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		if name == "" {
 			h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
 			if !h.emptyNameWarnShown {
-				h.log.Warnf(emptyNameWarning, response.Update)
+				if buf, err := json.Marshal(response); err == nil {
+					h.log.Warnf(emptyNameWarning, field.path, string(buf))
+				} else {
+					h.log.Warnf(emptyNameWarning, field.path, response.Update)
+				}
 				h.emptyNameWarnShown = true
 			}
 		}
