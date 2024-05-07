@@ -10,7 +10,7 @@ require (
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
-	github.com/Azure/azure-kusto-go v0.15.0
+	github.com/Azure/azure-kusto-go v0.15.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor v0.11.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20230531184854-c06a8eff66fe
