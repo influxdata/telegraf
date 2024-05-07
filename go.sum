@@ -636,8 +636,8 @@ github.com/Azure/azure-amqp-common-go/v4 v4.2.0 h1:q/jLx1KJ8xeI8XGfkOWMN9XrXzAfV
 github.com/Azure/azure-amqp-common-go/v4 v4.2.0/go.mod h1:GD3m/WPPma+621UaU6KNjKEo5Hl09z86viKwQjTpV0Q=
 github.com/Azure/azure-event-hubs-go/v3 v3.6.2 h1:7rNj1/iqS/i3mUKokA2n2eMYO72TB7lO7OmpbKoakKY=
 github.com/Azure/azure-event-hubs-go/v3 v3.6.2/go.mod h1:n+ocYr9j2JCLYqUqz9eI+lx/TEAtL/g6rZzyTFSuIpc=
-github.com/Azure/azure-kusto-go v0.15.0 h1:Igr6JELHChySkmN/py5OHnqAUFVU004q+HB7oddDrTk=
-github.com/Azure/azure-kusto-go v0.15.0/go.mod h1:twZbo+gYmZPDzzMOqExT7rEZ6kyKFvZxqUl3DoTwaIo=
+github.com/Azure/azure-kusto-go v0.15.2 h1:OlABJilic9TythSgWW6i8Fd0SgNTg0t9jBu6WVsaixM=
+github.com/Azure/azure-kusto-go v0.15.2/go.mod h1:9F2zvXH8B6eWzgI1S4k1ZXAIufnBZ1bv1cW1kB1n3D0=
 github.com/Azure/azure-pipeline-go v0.1.8/go.mod h1:XA1kFWRVhSK+KNFiOhfv83Fv8L9achrP7OxIzeTn1Yg=
 github.com/Azure/azure-pipeline-go v0.2.3 h1:7U9HBg1JFK3jHl5qmo4CTZKFTVgMwdFHMVtCdfBE21U=
 github.com/Azure/azure-pipeline-go v0.2.3/go.mod h1:x841ezTBIMG6O3lAcl8ATHnsOPVl2bqk7S3ta6S6u4k=
