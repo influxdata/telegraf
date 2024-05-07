@@ -122,7 +122,7 @@ to use them.
   #   tags = ""
   #   fields = ""
   ## Value supported is int, float, unit
-  #   [[inputs.mqtt_consumer.topic.types]]
+  #   [inputs.mqtt_consumer.topic_parsing.types]
   #      key = type
 ```
 
