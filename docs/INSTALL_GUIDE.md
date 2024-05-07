@@ -153,4 +153,4 @@ Telegraf also provides a way of building a custom minimized binary using the
 plugins are required, and builds a binary with only those plugins. This greatly
 reduces the size of the Telegraf binary.
 
-[custom builder]: https://github.com/influxdata/telegraf/tree/master/tools/custom_builder
+[custom builder]: /tools/custom_builder
