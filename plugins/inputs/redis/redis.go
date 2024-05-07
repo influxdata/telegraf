@@ -665,11 +665,18 @@ func gatherErrorstatsLine(
 	}
 	tags["err"] = strings.TrimPrefix(name, "errorstat_")
 	kv := strings.Split(line, "=")
-	ival, err := strconv.ParseInt(kv[1], 10, 64)
-	if err == nil {
-		fields := map[string]interface{}{"total": ival}
-		acc.AddFields("redis_errorstat", fields, tags)
+	if len(kv) < 2 {
+		acc.AddError(fmt.Errorf("invalid line for %q: %s", name, line))
+		return
 	}
+	ival, err := strconv.ParseInt(kv[1], 10, 64)
+	if err != nil {
+		acc.AddError(fmt.Errorf("parsing value in line %q failed: %w", line, err))
+		return
+	}
+
+	fields := map[string]interface{}{"total": ival}
+	acc.AddFields("redis_errorstat", fields, tags)
 }
 
 func init() {

@@ -15,8 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type testClient struct {
-}
+type testClient struct{}
 
 func (t *testClient) BaseTags() map[string]string {
 	return map[string]string{"host": "redis.net"}
@@ -384,6 +383,24 @@ func TestRedis_ParseIntOnString(t *testing.T) {
 	clientsInTimeout, ok := m.Fields["clients_in_timeout_table"]
 	require.True(t, ok)
 	require.IsType(t, int64(0), clientsInTimeout)
+}
+
+func TestRedis_GatherErrorstatsLine(t *testing.T) {
+	var acc testutil.Accumulator
+	globalTags := map[string]string{}
+
+	gatherErrorstatsLine("FOO", "BAR", &acc, globalTags)
+	require.Len(t, acc.Errors, 1)
+	require.Equal(t, "invalid line for \"FOO\": BAR", acc.Errors[0].Error())
+
+	acc = testutil.Accumulator{}
+	gatherErrorstatsLine("FOO", "BAR=a", &acc, globalTags)
+	require.Len(t, acc.Errors, 1)
+	require.Equal(t, "parsing value in line \"BAR=a\" failed: strconv.ParseInt: parsing \"a\": invalid syntax", acc.Errors[0].Error())
+
+	acc = testutil.Accumulator{}
+	gatherErrorstatsLine("FOO", "BAR=77", &acc, globalTags)
+	require.Empty(t, acc.Errors)
 }
 
 const testOutput = `# Server
