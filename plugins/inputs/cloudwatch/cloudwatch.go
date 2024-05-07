@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,8 +49,8 @@ type CloudWatch struct {
 	RecentlyActive        string          `toml:"recently_active"`
 	BatchSize             int             `toml:"batch_size"`
 	IncludeLinkedAccounts bool            `toml:"include_linked_accounts"`
-
-	Log telegraf.Logger `toml:"-"`
+	MetricFormat          string          `toml:"metric_format"`
+	Log                   telegraf.Logger `toml:"-"`
 
 	client          cloudwatchClient
 	statFilter      filter.Filter
@@ -96,6 +97,14 @@ func (*CloudWatch) SampleConfig() string {
 func (c *CloudWatch) Init() error {
 	if len(c.Namespace) != 0 {
 		c.Namespaces = append(c.Namespaces, c.Namespace)
+	}
+
+	switch c.MetricFormat {
+	case "":
+		c.MetricFormat = "sparse"
+	case "dense", "sparse":
+	default:
+		return fmt.Errorf("invalid metric_format: %s", c.MetricFormat)
 	}
 
 	err := c.initializeCloudWatch()
@@ -462,7 +471,21 @@ func (c *CloudWatch) aggregateMetrics(
 			tags["region"] = c.Region
 
 			for i := range result.Values {
-				grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i])
+				if c.MetricFormat == "dense" {
+					// Remove the IDs from the result ID to get the statistic type
+					// e.g. "average" from "average_0_0"
+					re := regexp.MustCompile(`_\d+_\d+$`)
+					statisticType := re.ReplaceAllString(*result.Id, "")
+
+					// Remove the statistic type from the label to get the AWS Metric name
+					// e.g. "CPUUtilization" from "CPUUtilization_average"
+					re = regexp.MustCompile(`_?` + regexp.QuoteMeta(statisticType) + `$`)
+					tags["statistic"] = re.ReplaceAllString(*result.Label, "")
+
+					grouper.Add(namespace, tags, result.Timestamps[i], statisticType, result.Values[i])
+				} else {
+					grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i])
+				}
 			}
 		}
 	}
