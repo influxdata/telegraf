@@ -91,9 +91,9 @@ require (
 	github.com/google/gnxi v0.0.0-20231026134436-d82d9936af15
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v32 v32.1.0
-	github.com/google/gopacket v1.1.19
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.6.0
+	github.com/gopacket/gopacket v1.2.0
 	github.com/gopcua/opcua v0.5.3
 	github.com/gophercloud/gophercloud v1.11.0
 	github.com/gorcon/rcon v1.3.5
@@ -141,7 +141,7 @@ require (
 	github.com/multiplay/go-ts3 v1.1.0
 	github.com/nats-io/nats-server/v2 v2.10.9
 	github.com/nats-io/nats.go v1.32.0
-	github.com/netsampler/goflow2/v2 v2.1.2
+	github.com/netsampler/goflow2/v2 v2.1.3
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nwaples/tacplus v0.0.3
