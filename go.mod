@@ -60,7 +60,7 @@ require (
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.3.1
 	github.com/compose-spec/compose-go v1.20.2
-	github.com/coocood/freecache v1.2.3
+	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/couchbase/go-couchbase v0.1.1
