@@ -480,7 +480,7 @@ func (c *CloudWatch) aggregateMetrics(
 					// Remove the statistic type from the label to get the AWS Metric name
 					// e.g. "CPUUtilization" from "CPUUtilization_average"
 					re = regexp.MustCompile(`_?` + regexp.QuoteMeta(statisticType) + `$`)
-					tags["statistic"] = re.ReplaceAllString(*result.Label, "")
+					tags["metric_name"] = re.ReplaceAllString(*result.Label, "")
 
 					grouper.Add(namespace, tags, result.Timestamps[i], statisticType, result.Values[i])
 				} else {

@@ -230,7 +230,7 @@ func TestGatherDenseMetric(t *testing.T) {
 	tags := map[string]string{}
 	tags["region"] = "us-east-1"
 	tags["load_balancer_name"] = "p-example1"
-	tags["statistic"] = "latency"
+	tags["metric_name"] = "latency"
 
 	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)

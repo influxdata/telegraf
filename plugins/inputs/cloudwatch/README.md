@@ -105,8 +105,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Metric Format
   ## This determines the format of the produces metrics. 'sparse', the default
   ## will produce a unique field for each statistic. 'dense' will report all
-  ## statistics will be in a field called value and have a statistic tag
-  ## defining the name of the statisitc. See the plugin README for examples.
+  ## statistics will be in a field called value and have a metric_name tag
+  ## defining the name of the statistic. See the plugin README for examples.
   # metric_format = "sparse"
 
   ## Maximum requests per second. Note that the global default AWS rate limit
@@ -240,7 +240,7 @@ Sparse metrics produce a set of fields for every AWS Metric.
 For example:
 
 ```text
-cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875,latency_sample_count=4029,latency_sum=19.382705211639404 1459542420000000000
+cloudwatch_aws_usage,class=None,resource=GetSecretValue,service=Secrets\ Manager,type=API call_count_maximum=1,call_count_minimum=1,call_count_sum=8,call_count_sample_count=8,call_count_average=1 1715097720000000000
 ```
 
 ### Dense Metrics
@@ -248,12 +248,12 @@ cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1 latency_average
 Dense metrics are generated when `metric_format` is set to `dense`.
 
 Dense metrics use the same fields over and over for every AWS Metric and
-differentiate between AWS Metrics using a tag called `statistic` with the AWS
+differentiate between AWS Metrics using a tag called `metric_name` with the AWS
 Metric name:
 
 - cloudwatch_{namespace}
   - Tags
-    - statistic (AWS Metric name)
+    - metric_name (AWS Metric name)
   - Fields
     - sum         (metric Sum value)
     - average     (metric Average value)
@@ -264,7 +264,7 @@ Metric name:
 For example:
 
 ```text
-cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1,statistic=latency average=0.004810798017284538,maximum=0.1100282669067383,minimum=0.0006084442138671875,sample_count=4029,sum=19.382705211639404 1459542420000000000
+cloudwatch_aws_usage,class=None,resource=GetSecretValue,service=Secrets\ Manager,metric_name=call_count,type=API sum=6,sample_count=6,average=1,maximum=1,minimum=1 1715097840000000000
 ```
 
 ### Tags
