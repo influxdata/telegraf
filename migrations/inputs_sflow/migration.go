@@ -10,6 +10,11 @@ import (
 	"github.com/influxdata/telegraf/migrations/common"
 )
 
+const msg = `
+    Replacement 'inputs.netflow' will output a different metric format.
+	Please adapt your queries!
+`
+
 // Define "old" data structure
 type sflow struct {
 	ServiceAddress string `toml:"service_address"`
@@ -54,7 +59,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	buf = append(buf, []byte("\n")...)
 
 	// Create the new content to output
-	return buf, "", nil
+	return buf, msg, nil
 }
 
 // Register the migration function for the plugin type
