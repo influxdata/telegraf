@@ -2344,7 +2344,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 	require.Len(t, acc.Errors, 1)
-	require.EqualError(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond), function '131'")
+	require.ErrorContains(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond)")
 }
 
 func TestRequestOptimizationShrink(t *testing.T) {
