@@ -100,7 +100,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/gosnmp/gosnmp v1.37.0
-	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
+	github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18
 	github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240
 	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
 	github.com/hashicorp/consul/api v1.26.1
