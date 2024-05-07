@@ -21,6 +21,7 @@ type Method struct {
 	ClassName            string                 `toml:"class_name"`
 	Method               string                 `toml:"method"`
 	Arguments            map[string]interface{} `toml:"arguments"`
+	FieldMapping         map[string]string      `toml:"fields"`
 	Filter               string                 `toml:"filter"`
 	TagPropertiesInclude []string               `toml:"tag_properties"`
 
@@ -184,6 +185,12 @@ func (m *Method) execute(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("failed to get value for output property %s: %w", name, err)
 		}
+
+		// Map the fieldname if provided
+		if n, found := m.FieldMapping[name]; found {
+			name = n
+		}
+
 		// We might get either scalar values or an array of values...
 		if value := property.Value(); value != nil {
 			if m.tagFilter != nil && m.tagFilter.Match(name) {

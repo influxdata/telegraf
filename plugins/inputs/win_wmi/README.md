@@ -64,6 +64,9 @@ to use them.
   #     hDefKey = '2147483650'
   #     sSubKeyName = 'Software\Microsoft\windows NT\CurrentVersion'
   #     sValueName = 'ProductName'
+  #   ## Mapping of the name of the returned property to a field-name
+  #   [inputs.win_wmi.method.fields]
+  #       sValue = "product_name"
 ```
 
 ### Remote execution
