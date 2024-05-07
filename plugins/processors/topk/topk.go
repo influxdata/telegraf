@@ -190,13 +190,6 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{}
 }
 
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
-
 func convert(in interface{}) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
