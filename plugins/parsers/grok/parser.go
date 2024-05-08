@@ -214,7 +214,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(values) == 0 {
-		p.Log.Debugf("Grok no match found for: %q", line)
+		p.Log.Debugf("Grok no match found for or no data extracted from: %q", line)
 		return nil, nil
 	}
 
