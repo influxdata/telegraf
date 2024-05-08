@@ -49,6 +49,10 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Since:  "1.15.0",
 		Notice: "use 'inputs.tail' with 'grok' data format instead",
 	},
+	"sflow": {
+		Since:  "1.31.0",
+		Notice: "use 'inputs.netflow' instead",
+	},
 	"snmp_legacy": {
 		Since:     "1.0.0",
 		RemovalIn: "1.30.0",
