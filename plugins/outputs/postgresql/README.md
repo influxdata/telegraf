@@ -274,6 +274,17 @@ tag_table_add_column_templates = [
 ]
 ```
 
+#### Index
+
+Create an index on time and tag columns for faster querying of data.
+
+```toml
+create_templates = [
+    '''CREATE TABLE {{ .table }} ({{ .columns }})''',
+    '''CREATE INDEX ON {{ .table }} USING btree({{ .columns.Keys.Identifiers | join "," }})'''
+  ]
+```
+
 ## Error handling
 
 When the plugin encounters an error writing to the database, it attempts to
