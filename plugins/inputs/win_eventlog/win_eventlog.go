@@ -34,6 +34,7 @@ type WinEventLog struct {
 	EventlogName           string          `toml:"eventlog_name"`
 	Query                  string          `toml:"xpath_query"`
 	FromBeginning          bool            `toml:"from_beginning"`
+	BatchSize              uint32          `toml:"event_batch_size"`
 	ProcessUserData        bool            `toml:"process_userdata"`
 	ProcessEventData       bool            `toml:"process_eventdata"`
 	Separator              string          `toml:"separator"`
@@ -57,6 +58,11 @@ func (*WinEventLog) SampleConfig() string {
 }
 
 func (w *WinEventLog) Init() error {
+	// Set default for batch-size
+	if w.BatchSize < 1 {
+		w.BatchSize = 5
+	}
+
 	w.subscriptionFlag = EvtSubscribeToFutureEvents
 	if w.FromBeginning {
 		w.subscriptionFlag = EvtSubscribeStartAtOldestRecord
@@ -330,15 +336,10 @@ func (w *WinEventLog) evtSubscribe() (EvtHandle, error) {
 }
 
 func (w *WinEventLog) fetchEventHandles(subsHandle EvtHandle) ([]EvtHandle, error) {
-	var eventsNumber uint32
 	var evtReturned uint32
 
-	eventsNumber = 5
-
-	eventHandles := make([]EvtHandle, eventsNumber)
-
-	err := _EvtNext(subsHandle, eventsNumber, &eventHandles[0], 0, 0, &evtReturned)
-	if err != nil {
+	eventHandles := make([]EvtHandle, w.BatchSize)
+	if err := _EvtNext(subsHandle, w.BatchSize, &eventHandles[0], 0, 0, &evtReturned); err != nil {
 		if errors.Is(err, ERROR_INVALID_OPERATION) && evtReturned == 0 {
 			return nil, ERROR_NO_MORE_ITEMS
 		}
