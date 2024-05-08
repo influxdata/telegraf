@@ -4,8 +4,10 @@ package parser
 import (
 	"bytes"
 	_ "embed"
+	"encoding/base64"
 	gobin "encoding/binary"
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -20,6 +22,7 @@ type Parser struct {
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
 	ParseTags    []string        `toml:"parse_tags"`
+	Base64Fields []string        `toml:"base64_fields"`
 	Log          telegraf.Logger `toml:"-"`
 	parser       telegraf.Parser
 }
@@ -29,6 +32,20 @@ func (p *Parser) Init() error {
 	case "", "override", "override-with-timestamp":
 	default:
 		return fmt.Errorf("unrecognized merge value: %s", p.Merge)
+	}
+
+	// Validate that Base64Fields is a subset of ParseFields
+	for _, field64 := range p.Base64Fields {
+		var found bool
+		for _, field := range p.ParseFields {
+			if field64 == field {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("unrecognized base64 parse field '%s' found, should also be included in parse_fields", field64)
+		}
 	}
 
 	return nil
@@ -54,11 +71,12 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 		// parse fields
 		for _, key := range p.ParseFields {
+			b64 := slices.Contains(p.Base64Fields, key)
 			for _, field := range metric.FieldList() {
 				if field.Key != key {
 					continue
 				}
-				value, err := p.toBytes(field.Value)
+				value, err := p.toBytes(field.Value, b64)
 				if err != nil {
 					p.Log.Errorf("could not convert field %s: %v; skipping", key, err)
 					continue
@@ -160,17 +178,27 @@ func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
 }
 
-func (p *Parser) toBytes(value interface{}) ([]byte, error) {
+func (p *Parser) toBytes(value interface{}, b64 bool) ([]byte, error) {
+	var raw []byte
 	if v, ok := value.(string); ok {
-		return []byte(v), nil
+		raw = []byte(v)
+	} else {
+		var buf bytes.Buffer
+		if err := gobin.Write(&buf, internal.HostEndianness, value); err != nil {
+			return nil, err
+		}
+		raw = buf.Bytes()
 	}
 
-	var buf bytes.Buffer
-	if err := gobin.Write(&buf, internal.HostEndianness, value); err != nil {
-		return nil, err
+	if b64 {
+		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(raw)))
+		n, err := base64.StdEncoding.Decode(decoded, raw)
+		if err != nil {
+			return nil, err
+		}
+		return decoded[:n], nil
 	}
-
-	return buf.Bytes(), nil
+	return raw, nil
 }
 
 func init() {
