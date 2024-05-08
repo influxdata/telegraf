@@ -728,6 +728,7 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) ([]telegraf.Fiel
 	key := fmt.Sprintf("type_%d", elementID)
 	if !d.logged[key] {
 		d.Log.Debugf("unknown Netflow v9 data field %v", field)
+		d.logged[key] = true
 	}
 	v, err := decodeHex(raw)
 	if err != nil {
@@ -761,6 +762,7 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) ([]telegraf.F
 		}
 		if !d.logged[key] {
 			d.Log.Debugf("unknown IPFIX PEN data field %v", field)
+			d.logged[key] = true
 		}
 		name := fmt.Sprintf("type_%d_%s%d", field.Pen, prefix, elementID)
 		v, err := decodeHex(raw)
@@ -809,6 +811,7 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) ([]telegraf.F
 	key := fmt.Sprintf("type_%d", elementID)
 	if !d.logged[key] {
 		d.Log.Debugf("unknown IPFIX data field %v", field)
+		d.logged[key] = true
 	}
 	v, err := decodeHex(raw)
 	if err != nil {
