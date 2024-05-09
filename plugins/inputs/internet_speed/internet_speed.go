@@ -117,12 +117,19 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		})
 	}
 
+	lossPercent := 0.0
+	if pLoss == -1 {
+		lossPercent = -1
+	} else {
+		lossPercent = pLoss * 100.0
+	}
+
 	fields := map[string]any{
 		"download":    is.server.DLSpeed.Mbps(),
 		"upload":      is.server.ULSpeed.Mbps(),
 		"latency":     timeDurationMillisecondToFloat64(is.server.Latency),
 		"jitter":      timeDurationMillisecondToFloat64(is.server.Jitter),
-		"packet_loss": pLoss,
+		"packet_loss": lossPercent,
 		"location":    is.server.Name,
 	}
 	tags := map[string]string{
