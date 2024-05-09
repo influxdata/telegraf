@@ -22,6 +22,7 @@ var sampleConfig string
 type File struct {
 	Files             []string `toml:"files"`
 	FileTag           string   `toml:"file_tag"`
+	FilePathTag       string   `toml:"file_path_tag"`
 	CharacterEncoding string   `toml:"character_encoding"`
 
 	parserFunc telegraf.ParserFunc
@@ -53,6 +54,11 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		for _, m := range metrics {
 			if f.FileTag != "" {
 				m.AddTag(f.FileTag, filepath.Base(k))
+			}
+			if f.FilePathTag != "" {
+				if absPath, err := filepath.Abs(k); err == nil {
+					m.AddTag(f.FilePathTag, absPath)
+				}
 			}
 			acc.AddMetric(m)
 		}
