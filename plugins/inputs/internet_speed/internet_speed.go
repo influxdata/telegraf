@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
+	"github.com/showwin/speedtest-go/speedtest/transport"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -83,6 +84,13 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
 
+	analyzer := speedtest.NewPacketLossAnalyzer(&speedtest.PacketLossAnalyzerOptions{
+		RemoteSamplingInterval: time.Millisecond * 100,
+		SamplingDuration:       time.Second * 15,
+	})
+
+	pLoss := -1.0
+
 	if is.TestMode == testModeMulti {
 		err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
 		if err != nil {
@@ -92,6 +100,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("upload test failed failed: %w", err)
 		}
+		pLoss, _ = analyzer.RunMulti(is.servers.Hosts())
 	} else {
 		err = is.server.DownloadTest()
 		if err != nil {
@@ -101,14 +110,20 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("upload test failed failed: %w", err)
 		}
+		_ = analyzer.Run(is.server.Host, func(packetLoss *transport.PLoss) {
+			if packetLoss != nil && packetLoss.Sent != 0 {
+				pLoss = packetLoss.Loss()
+			}
+		})
 	}
 
 	fields := map[string]any{
-		"download": is.server.DLSpeed,
-		"upload":   is.server.ULSpeed,
-		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
-		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
-		"location": is.server.Name,
+		"download":    is.server.DLSpeed.Mbps(),
+		"upload":      is.server.ULSpeed.Mbps(),
+		"latency":     timeDurationMillisecondToFloat64(is.server.Latency),
+		"jitter":      timeDurationMillisecondToFloat64(is.server.Jitter),
+		"packet_loss": pLoss,
+		"location":    is.server.Name,
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
@@ -148,7 +163,7 @@ func (is *InternetSpeed) findClosestServer() error {
 
 	// Return the first match or the server with the lowest latency
 	// when filter mismatch all servers.
-	var min int64 = math.MaxInt64
+	var minLatency int64 = math.MaxInt64
 	selectIndex := -1
 	for index, server := range is.servers {
 		if is.serverFilter.Match(server.ID) {
@@ -156,8 +171,8 @@ func (is *InternetSpeed) findClosestServer() error {
 			break
 		}
 		if server.Latency > 0 {
-			if min > server.Latency.Milliseconds() {
-				min = server.Latency.Milliseconds()
+			if minLatency > server.Latency.Milliseconds() {
+				minLatency = server.Latency.Milliseconds()
 				selectIndex = index
 			}
 		}
