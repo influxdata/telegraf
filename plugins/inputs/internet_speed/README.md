@@ -64,14 +64,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 It collects the following fields:
 
-| Name           | field name  | type    | Unit |
-|----------------|-------------|---------|------|
-| Download Speed | download    | float64 | Mbps |
-| Upload Speed   | upload      | float64 | Mbps |
-| Latency        | latency     | float64 | ms   |
-| Jitter         | jitter      | float64 | ms   |
-| Packet Loss    | packet_loss | float64 | pr   |
-| Location       | location    | string  | -    |
+| Name           | Field Name  | Type    | Unit        | 
+|----------------|-------------|---------|-------------|
+| Download Speed | download    | float64 | Mbps        |
+| Upload Speed   | upload      | float64 | Mbps        |
+| Latency        | latency     | float64 | ms          |
+| Jitter         | jitter      | float64 | ms          |
+| Packet Loss    | packet_loss | float64 | probability |
+| Location       | location    | string  | -           |
 
 And the following tags:
 
