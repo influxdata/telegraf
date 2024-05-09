@@ -64,7 +64,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 It collects the following fields:
 
-| Name           | Field Name  | Type    | Unit        | 
+| Name           | Field Name  | Type    | Unit        |
 |----------------|-------------|---------|-------------|
 | Download Speed | download    | float64 | Mbps        |
 | Upload Speed   | upload      | float64 | Mbps        |
