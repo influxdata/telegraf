@@ -85,8 +85,8 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	}
 
 	analyzer := speedtest.NewPacketLossAnalyzer(&speedtest.PacketLossAnalyzerOptions{
-		RemoteSamplingInterval: time.Millisecond * 100,
-		SamplingDuration:       time.Second * 15,
+		PacketSendingInterval: time.Millisecond * 100,
+		SamplingDuration:      time.Second * 15,
 	})
 
 	pLoss := -1.0
