@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package win_wmi
 
@@ -48,7 +47,7 @@ func TestInit(t *testing.T) {
 	require.NoError(t, plugin.Init())
 }
 
-func TestQuery(t *testing.T) {
+func TestQueryIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -79,7 +78,7 @@ func TestQuery(t *testing.T) {
 	require.NotEmpty(t, acc.Metrics[0].Fields["FreeSpace"])
 }
 
-func TestMethod(t *testing.T) {
+func TestMethodIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
