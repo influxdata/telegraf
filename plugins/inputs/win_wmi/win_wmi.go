@@ -22,6 +22,7 @@ type Wmi struct {
 	Username config.Secret   `toml:"username"`
 	Password config.Secret   `toml:"password"`
 	Queries  []Query         `toml:"query"`
+	Methods  []Method        `toml:"method"`
 	Log      telegraf.Logger `toml:"-"`
 }
 
@@ -34,6 +35,13 @@ func (w *Wmi) Init() error {
 		q := &w.Queries[i]
 		if err := q.prepare(w.Host, w.Username, w.Password); err != nil {
 			return fmt.Errorf("preparing query %q failed: %w", q.ClassName, err)
+		}
+	}
+
+	for i := range w.Methods {
+		m := &w.Methods[i]
+		if err := m.prepare(w.Host, w.Username, w.Password); err != nil {
+			return fmt.Errorf("preparing method %q failed: %w", m.Method, err)
 		}
 	}
 
@@ -55,6 +63,15 @@ func (w *Wmi) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(q.execute(acc))
 		}(query)
 	}
+
+	for _, method := range w.Methods {
+		wg.Add(1)
+		go func(m Method) {
+			defer wg.Done()
+			acc.AddError(m.execute(acc))
+		}(method)
+	}
+
 	wg.Wait()
 
 	return nil

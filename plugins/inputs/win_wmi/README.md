@@ -40,43 +40,114 @@ to use them.
   # username = ""
   # password = ""
 
+  ## WMI query to execute, multiple methods are possible
   [[inputs.win_wmi.query]]
-    # a string representing the WMI namespace to be queried
+    ## Namespace, class and a list of properties to use in the WMI query
     namespace = "root\\cimv2"
-    # a string representing the WMI class to be queried
     class_name = "Win32_Volume"
-    # an array of strings representing the properties of the WMI class to be queried
     properties = ["Name", "Capacity", "FreeSpace"]
-    # a string specifying a WHERE clause to use as a filter for the WQL
-    filter = 'NOT Name LIKE "\\\\?\\%"'
-    # WMI class properties which should be considered tags instead of fields
-    tag_properties = ["Name"]
+    ## Optional WHERE clause for the WQL query
+    # filter = 'NOT Name LIKE "\\\\?\\%"'
+    ## Returned properties to use as tags instead of fields
+    # tag_properties = ["Name"]
+
+  # ## WMI method to invoke, multiple methods are possible
+  # [[inputs.win_wmi.method]]
+  #   ## WMI namespace, class and method to use
+  #   namespace = 'root\default'
+  #   class_name = "StdRegProv"
+  #   method = "GetStringValue"
+  #   ## Returned WMI method values to use as tags instead of fields
+  #   # tag_properties = ["ReturnValue"]
+  #   ## Named arguments for the method call
+  #   [inputs.win_wmi.method.arguments]
+  #     hDefKey = '2147483650'
+  #     sSubKeyName = 'Software\Microsoft\windows NT\CurrentVersion'
+  #     sValueName = 'ProductName'
+  #   ## Mapping of the name of the returned property to a field-name
+  #   [inputs.win_wmi.method.fields]
+  #       sValue = "product_name"
 ```
 
-### namespace
+### Remote execution
 
-A string representing the WMI namespace to be queried. For example,
-`root\\cimv2`.
+This plugin allows to execute queries and methods on a remote host. To do so,
+you need to provide the `host` as a hostname or IP-address as well as the
+credentials to execute the query or method as.
 
-### class_name
+Please note, the remote machine must be configured to allow remote execution and
+the user needs to have sufficient permission to execute the query or method!
+Check the [Microsoft guide][remotedoc] for how to do this and test the
+connection with the `Get-WmiObject` method first.
 
-A string representing the WMI class to be queried. For example,
-`Win32_Processor`.
+[remotedoc]:  https://learn.microsoft.com/en-us/windows/win32/wmisdk/connecting-to-wmi-on-a-remote-computer#configuring-a-computer-for-a-remote-connection
 
-### properties
+### Query settings
 
-An array of strings representing the properties of the WMI class to be queried.
+To issue a query you need to provide the `namespace` (e.g. `root\cimv2`) and the
+`class_name` (e.g. `Win32_Processor`) for the WMI query. Furthermore, you need
+to define which `properties` to output. An asterix (`*`) will output all values
+provided by the query.
 
-### filter
+The `filter` setting specifies a WHERE clause passed to the query in the
+WMI Query Language (WQL). See [WHERE Clause][WHERE] for more information.
 
-A string specifying a WHERE clause to use as a filter for the WMI Query
-Language (WQL). See [WHERE Clause][WHERE] for more information.
+The `tag_properties` allows to provide a list of returned properties that should
+be provided as tags instead of fields in the metric.
 
 [WHERE]: https://learn.microsoft.com/en-us/windows/win32/wmisdk/where-clause?source=recommendations
 
-### tag_properties
+As an example
 
-Properties which should be considered tags instead of fields.
+```toml
+[[inputs.win_wmi]]
+  [[inputs.win_wmi.query]]
+    namespace = "root\\cimv2"
+    class_name = "Win32_Processor"
+    properties = ["Name"]
+```
+
+corresponds to executing
+
+```powershell
+Get-WmiObject -Namespace "root\cimv2" -Class "Win32_Processor" -Property "Name"
+```
+
+### Method settings
+
+To invoke a method you need to provide the `namespace` (e.g. `root\default`),
+the `class_name` (e.g. `StdRegProv`) and the `method` name
+(e.g. `GetStringValue`)for the method to invoke. Furthermore, you may need to
+provide `arguments` as key-value pair(s) to the method. The number and type of
+arguments depends on the method specified above.
+
+Check the [WMI reference][wmireferenc] for available methods and their
+arguments.
+
+The `tag_properties` allows to provide a list of returned properties that should
+be provided as tags instead of fields in the metric.
+
+[wmireferenc]: https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-reference
+
+As an example
+
+```toml
+[[inputs.win_wmi]]
+  [[inputs.win_wmi.method]]
+    namespace = 'root\default'
+    class_name = "StdRegProv"
+    method = "GetStringValue"
+    [inputs.win_wmi.method.arguments]
+      hDefKey = '2147483650'
+      sSubKeyName = 'Software\Microsoft\windows NT\CurrentVersion'
+      sValueName = 'ProductName'
+```
+
+corresponds to executing
+
+```powershell
+Invoke-WmiMethod -Namespace "root\default" -Class "StdRegProv" -Name "GetStringValue" @(2147483650,"Software\Microsoft\windows NT\CurrentVersion", "ProductName")
+```
 
 ## Metrics
 
