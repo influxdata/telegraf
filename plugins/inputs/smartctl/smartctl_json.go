@@ -21,13 +21,33 @@ type smartctlDeviceJSON struct {
 		Type     string `json:"type"`
 		Protocol string `json:"protocol"`
 	} `json:"device"`
-	Vendor          string `json:"vendor"`
-	Product         string `json:"product"`
-	ModelFamily     string `json:"model_family"`
-	ModelName       string `json:"model_name"`
-	SerialNumber    string `json:"serial_number"`
-	FirmwareVersion string `json:"firmware_version"`
-	Wwn             struct {
+	Vendor                           string `json:"vendor"`
+	Product                          string `json:"product"`
+	ModelFamily                      string `json:"model_family"`
+	ModelName                        string `json:"model_name"`
+	SerialNumber                     string `json:"serial_number"`
+	FirmwareVersion                  string `json:"firmware_version"`
+	SCSIVendor                       string `json:"scsi_vendor"`
+	SCSIModelName                    string `json:"scsi_model_name"`
+	SCSIRevision                     string `json:"scsi_revision"`
+	SCSIVersion                      string `json:"scsi_version"`
+	SCSIProtectionType               int    `json:"scsi_protection_type"`
+	SCSIProtectionIntervalBytesPerLB int    `json:"scsi_protection_interval_bytes_per_lb"`
+	SCSIGrownDefectList              int    `json:"scsi_grown_defect_list"`
+	LogicalBlockSize                 int    `json:"logical_block_size"`
+	RotationRate                     int    `json:"rotation_rate"`
+	SCSITransportProtocol            struct {
+		Name string `json:"name"`
+	} `json:"scsi_transport_protocol"`
+	SCSIStartStopCycleCounter struct {
+		SpecifiedCycleCountOverDeviceLifetime int `json:"specified_cycle_count_over_device_lifetime"`
+		AccumulatedStartStopCycles            int `json:"accumulated_start_stop_cycles"`
+	} `json:"scsi_start_stop_cycle_counter"`
+	PowerOnTime struct {
+		Hours   int `json:"hours"`
+		Minutes int `json:"minutes"`
+	} `json:"power_on_time"`
+	Wwn struct {
 		Naa int   `json:"naa"`
 		Oui int   `json:"oui"`
 		ID  int64 `json:"id"`

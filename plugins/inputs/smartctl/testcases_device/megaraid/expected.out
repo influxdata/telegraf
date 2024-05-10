@@ -1,4 +1,4 @@
-smartctl,model=ST6000NM0115-1YZ110,name=/dev/bus/6,serial=ZAD2C11G,type=sat+megaraid\,14,wwn=5000c500a496983d capacity=6001175126016i,firmware="SN04",health_ok=true,temperature=25i 1711726425026052398
+smartctl,model=ST6000NM0115-1YZ110,name=/dev/bus/6,serial=ZAD2C11G,type=sat+megaraid\,14,wwn=5000c500a496983d capacity=6001175126016i,firmware="SN04",health_ok=true,logical_block_size=512i,power_on_hours=44316i,rotation_rate=7200i,temperature=25i 1711726425026052398
 smartctl_attributes,model=ST6000NM0115-1YZ110,name=Raw_Read_Error_Rate,serial=ZAD2C11G,type=sat+megaraid\,14,wwn=5000c500a496983d raw_value=181426040i,threshold=44i,value=83i,worst=64i 1711726425026052398
 smartctl_attributes,model=ST6000NM0115-1YZ110,name=Spin_Up_Time,serial=ZAD2C11G,type=sat+megaraid\,14,wwn=5000c500a496983d raw_value=0i,threshold=0i,value=91i,worst=91i 1711726425026052398
 smartctl_attributes,model=ST6000NM0115-1YZ110,name=Start_Stop_Count,serial=ZAD2C11G,type=sat+megaraid\,14,wwn=5000c500a496983d raw_value=62i,threshold=20i,value=100i,worst=100i 1711726425026052398

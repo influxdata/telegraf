@@ -42,10 +42,12 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName string, devic
 	tags := map[string]string{
 		"name":   device.Device.Name,
 		"type":   device.Device.Type,
-		"model":  device.ModelName,
 		"serial": device.SerialNumber,
 	}
 
+	if device.ModelName != "" {
+		tags["model"] = device.ModelName
+	}
 	if device.Vendor != "" {
 		tags["vendor"] = device.Vendor
 	}
@@ -60,6 +62,49 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName string, devic
 		"health_ok":   device.SmartStatus.Passed,
 		"temperature": device.Temperature.Current,
 		"firmware":    device.FirmwareVersion,
+	}
+
+	if device.SCSIVendor != "" {
+		fields["scsi_vendor"] = device.SCSIVendor
+	}
+	if device.SCSIModelName != "" {
+		fields["scsi_model"] = device.SCSIModelName
+	}
+	if device.SCSIRevision != "" {
+		fields["scsi_revision"] = device.SCSIRevision
+	}
+	if device.SCSIVersion != "" {
+		fields["scsi_version"] = device.SCSIVersion
+	}
+	if device.SCSITransportProtocol.Name != "" {
+		fields["scsi_transport_protocol"] = device.SCSITransportProtocol.Name
+	}
+	if device.SCSIProtectionType != 0 {
+		fields["scsi_protection_type"] = device.SCSIProtectionType
+	}
+	if device.SCSIProtectionIntervalBytesPerLB != 0 {
+		fields["scsi_protection_interval_bytes_per_lb"] = device.SCSIProtectionIntervalBytesPerLB
+	}
+	if device.SCSIGrownDefectList != 0 {
+		fields["scsi_grown_defect_list"] = device.SCSIGrownDefectList
+	}
+	if device.LogicalBlockSize != 0 {
+		fields["logical_block_size"] = device.LogicalBlockSize
+	}
+	if device.RotationRate != 0 {
+		fields["rotation_rate"] = device.RotationRate
+	}
+	if device.SCSIStartStopCycleCounter.SpecifiedCycleCountOverDeviceLifetime != 0 {
+		fields["specified_cycle_count_over_device_lifetime"] = device.SCSIStartStopCycleCounter.SpecifiedCycleCountOverDeviceLifetime
+	}
+	if device.SCSIStartStopCycleCounter.AccumulatedStartStopCycles != 0 {
+		fields["accumulated_start_stop_cycles"] = device.SCSIStartStopCycleCounter.AccumulatedStartStopCycles
+	}
+	if device.PowerOnTime.Hours != 0 {
+		fields["power_on_hours"] = device.PowerOnTime.Hours
+	}
+	if device.PowerOnTime.Minutes != 0 {
+		fields["power_on_minutes"] = device.PowerOnTime.Minutes
 	}
 
 	// Add NVMe specific fields

@@ -183,6 +183,8 @@ func TestDeviceHelperProcess(t *testing.T) {
 		filename = "testcases_device/megaraid/response.json"
 	} else if slices.Contains(args, "/dev/sdb") {
 		filename = "testcases_device/scsi/response.json"
+	} else if slices.Contains(args, "/dev/sdaa") {
+		filename = "testcases_device/scsi_extended/response.json"
 	} else {
 		fmt.Fprint(os.Stdout, "unknown filename")
 		os.Exit(42) //nolint:revive // os.Exit called intentionally
