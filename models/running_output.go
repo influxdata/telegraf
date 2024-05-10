@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -76,8 +77,8 @@ func NewRunningOutput(
 	}
 
 	writeErrorsRegister := selfstat.Register("write", "errors", tags)
-	logger := NewLogger("outputs", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("outputs", config.Name, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		writeErrorsRegister.Incr(1)
 	})
 	SetLoggerOnPlugin(output, logger)

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -33,8 +34,8 @@ func NewRunningSerializer(serializer serializers.Serializer, config *SerializerC
 	}
 
 	serializerErrorsRegister := selfstat.Register("serializer", "errors", tags)
-	logger := NewLogger("serializers", config.DataFormat+"::"+config.Parent, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("serializers", config.DataFormat+"::"+config.Parent, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		serializerErrorsRegister.Incr(1)
 	})
 	SetLoggerOnPlugin(serializer, logger)

@@ -279,14 +279,13 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	// Setup logging as configured.
-	telegraf.Debug = c.Agent.Debug || t.debug
-	logConfig := logger.LogConfig{
-		Debug:               telegraf.Debug,
+	logConfig := logger.Config{
+		Debug:               c.Agent.Debug || t.debug,
 		Quiet:               c.Agent.Quiet || t.quiet,
 		LogTarget:           c.Agent.LogTarget,
 		Logfile:             c.Agent.Logfile,
-		RotationInterval:    c.Agent.LogfileRotationInterval,
-		RotationMaxSize:     c.Agent.LogfileRotationMaxSize,
+		RotationInterval:    time.Duration(c.Agent.LogfileRotationInterval),
+		RotationMaxSize:     int64(c.Agent.LogfileRotationMaxSize),
 		RotationMaxArchives: c.Agent.LogfileRotationMaxArchives,
 		LogWithTimezone:     c.Agent.LogWithTimezone,
 	}

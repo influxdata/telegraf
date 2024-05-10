@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -38,7 +39,7 @@ type Shim struct {
 	Processor telegraf.StreamingProcessor
 	Output    telegraf.Output
 
-	log *Logger
+	log telegraf.Logger
 
 	// streams
 	stdin  io.Reader
@@ -59,7 +60,7 @@ func New() *Shim {
 		stdin:    os.Stdin,
 		stdout:   os.Stdout,
 		stderr:   os.Stderr,
-		log:      NewLogger(),
+		log:      logger.NewLogger("", "", ""),
 	}
 }
 

@@ -2,15 +2,12 @@ package logger
 
 import (
 	"bytes"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/influxdata/telegraf/config"
 )
 
 func TestWriteLogToFile(t *testing.T) {
@@ -18,7 +15,7 @@ func TestWriteLogToFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	cfg := createBasicLogConfig(tmpfile.Name())
+	cfg := createBasicConfig(tmpfile.Name())
 	err = SetupLogging(cfg)
 	require.NoError(t, err)
 	log.Printf("I! TEST")
@@ -34,7 +31,7 @@ func TestDebugWriteLogToFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	cfg := createBasicLogConfig(tmpfile.Name())
+	cfg := createBasicConfig(tmpfile.Name())
 	cfg.Debug = true
 	err = SetupLogging(cfg)
 	require.NoError(t, err)
@@ -50,7 +47,7 @@ func TestErrorWriteLogToFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	cfg := createBasicLogConfig(tmpfile.Name())
+	cfg := createBasicConfig(tmpfile.Name())
 	cfg.Quiet = true
 	err = SetupLogging(cfg)
 	require.NoError(t, err)
@@ -67,7 +64,7 @@ func TestAddDefaultLogLevel(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	cfg := createBasicLogConfig(tmpfile.Name())
+	cfg := createBasicConfig(tmpfile.Name())
 	cfg.Debug = true
 	err = SetupLogging(cfg)
 	require.NoError(t, err)
@@ -83,7 +80,7 @@ func TestWriteToTruncatedFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	cfg := createBasicLogConfig(tmpfile.Name())
+	cfg := createBasicConfig(tmpfile.Name())
 	cfg.Debug = true
 	err = SetupLogging(cfg)
 	require.NoError(t, err)
@@ -106,15 +103,11 @@ func TestWriteToTruncatedFile(t *testing.T) {
 
 func TestWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
-	cfg := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
-	cfg.LogTarget = LogTargetFile
-	cfg.RotationMaxSize = config.Size(30)
-	writer, err := newLogWriter(cfg)
-	require.NoError(t, err)
+	cfg := createBasicConfig(filepath.Join(tempDir, "test.log"))
+	cfg.RotationMaxSize = 30
+	require.NoError(t, SetupLogging(cfg))
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-	closer, isCloser := writer.(io.Closer)
-	require.True(t, isCloser)
-	t.Cleanup(func() { require.NoError(t, closer.Close()) })
+	t.Cleanup(func() { require.NoError(t, actualLogger.Close()) })
 
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
@@ -124,23 +117,23 @@ func TestWriteToFileInRotation(t *testing.T) {
 
 func TestLogTargetSettings(t *testing.T) {
 	actualLogger = nil
-	cfg := LogConfig{
+	cfg := Config{
 		LogTarget: "",
 		Quiet:     true,
 	}
 	err := SetupLogging(cfg)
 	require.NoError(t, err)
-	logger, isTelegrafLogger := actualLogger.(*telegrafLog)
+	logger, isTelegrafLogger := actualLogger.(*defaultLogger)
 	require.True(t, isTelegrafLogger)
 	require.Equal(t, logger.internalWriter, os.Stderr)
 
-	cfg = LogConfig{
+	cfg = Config{
 		LogTarget: "stderr",
 		Quiet:     true,
 	}
 	err = SetupLogging(cfg)
 	require.NoError(t, err)
-	logger, isTelegrafLogger = actualLogger.(*telegrafLog)
+	logger, isTelegrafLogger = actualLogger.(*defaultLogger)
 	require.True(t, isTelegrafLogger)
 	require.Equal(t, logger.internalWriter, os.Stderr)
 }
@@ -148,7 +141,7 @@ func TestLogTargetSettings(t *testing.T) {
 func BenchmarkTelegrafLogWrite(b *testing.B) {
 	var msg = []byte("test")
 	var buf bytes.Buffer
-	w, err := newTelegrafWriter(&buf, LogConfig{})
+	w, err := newTelegrafWriter(&buf, Config{})
 	if err != nil {
 		panic("Unable to create log writer.")
 	}
@@ -161,10 +154,10 @@ func BenchmarkTelegrafLogWrite(b *testing.B) {
 	}
 }
 
-func createBasicLogConfig(filename string) LogConfig {
-	return LogConfig{
+func createBasicConfig(filename string) Config {
+	return Config{
 		Logfile:             filename,
-		LogTarget:           LogTargetFile,
+		LogTarget:           "file",
 		RotationMaxArchives: -1,
 	}
 }

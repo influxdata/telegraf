@@ -8,7 +8,7 @@ import (
 	"math"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/config"
 )
 
 //go:embed sample_request.conf
@@ -79,8 +79,7 @@ func (c *ConfigurationPerRequest) Check() error {
 		switch def.Optimization {
 		case "", "none", "shrink", "rearrange":
 		case "aggressive":
-			models.PrintOptionValueDeprecationNotice(
-				telegraf.Warn,
+			config.PrintOptionValueDeprecationNotice(
 				"inputs.modbus",
 				"optimization",
 				"aggressive",

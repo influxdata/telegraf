@@ -108,7 +108,7 @@ func (g *Groundwork) Init() error {
 		func(fields interface{}, format string, a ...interface{}) {
 			g.Log.Debug(adaptLog(fields, format, a...))
 		},
-		func() bool { return telegraf.Debug },
+		func() bool { return g.Log.Level() >= telegraf.Debug },
 	)
 	return nil
 }

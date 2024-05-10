@@ -2248,7 +2248,6 @@ func TestRequestEmptyFields(t *testing.T) {
 }
 
 func TestRequestMultipleSlavesOneFail(t *testing.T) {
-	telegraf.Debug = true
 	modbus := Modbus{
 		Name:              "Test",
 		Controller:        "tcp://localhost:1502",

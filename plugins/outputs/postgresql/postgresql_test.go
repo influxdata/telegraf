@@ -51,6 +51,22 @@ func NewLogAccumulator(tb testing.TB) *LogAccumulator {
 	}
 }
 
+func (la *LogAccumulator) Level() telegraf.LogLevel {
+	switch la.emitLevel {
+	case pgx.LogLevelInfo:
+		return telegraf.Info
+	case pgx.LogLevelWarn:
+		return telegraf.Warn
+	case pgx.LogLevelError:
+		return telegraf.Error
+	case pgx.LogLevelNone:
+		return telegraf.None
+	}
+	return telegraf.Debug
+}
+
+func (*LogAccumulator) RegisterErrorCallback(func()) {}
+
 func (la *LogAccumulator) append(level pgx.LogLevel, format string, args []interface{}) {
 	la.tb.Helper()
 
@@ -318,7 +334,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 	defer dsn.Destroy()
 	plugin := newPostgresql()
 	plugin.Connection = dsn
-	plugin.Logger = NewLogAccumulator(t)
+	plugin.Logger = testutil.Logger{}
 	plugin.LogLevel = "debug"
 	model := models.NewRunningOutput(
 		plugin,

@@ -14,6 +14,12 @@ type Logger struct {
 	Quiet bool
 }
 
+func (l Logger) Level() telegraf.LogLevel {
+	return telegraf.Debug
+}
+
+func (Logger) RegisterErrorCallback(func()) {}
+
 // Errorf logs an error message, patterned after log.Printf.
 func (l Logger) Errorf(format string, args ...interface{}) {
 	log.Printf("E! ["+l.Name+"] "+format, args...)

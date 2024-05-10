@@ -10,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/influxdata/telegraf"
+	"github.com/urfave/cli/v2"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/migrations"
-	"github.com/urfave/cli/v2"
 )
 
 func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
@@ -84,8 +84,7 @@ To migrate the file 'mysettings.conf' use
 					},
 					Action: func(cCtx *cli.Context) error {
 						// Setup logging
-						telegraf.Debug = cCtx.Bool("debug")
-						logConfig := logger.LogConfig{Debug: telegraf.Debug}
+						logConfig := logger.Config{Debug: cCtx.Bool("debug")}
 						if err := logger.SetupLogging(logConfig); err != nil {
 							return err
 						}
