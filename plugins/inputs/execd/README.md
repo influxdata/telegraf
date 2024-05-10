@@ -13,6 +13,9 @@ new line to the process's STDIN.
 
 STDERR from the process will be relayed to Telegraf as errors in the logs.
 
+[Input Data Formats]: ../../../docs/DATA_FORMATS_INPUT.md
+[inputs.exec]: ../exec/README.md
+
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
 This plugin is a service input. Normal plugins gather metrics determined by the
@@ -74,84 +77,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example
 
-### Daemon written in bash using STDIN signaling
+See the examples directory for basic examples in different languages expecting
+various signals from Telegraf:
 
-```bash
-#!/bin/bash
-
-counter=0
-
-while IFS= read -r LINE; do
-    echo "counter_bash count=${counter}"
-    let counter=counter+1
-done
-```
-
-```toml
-[[inputs.execd]]
-  command = ["plugins/inputs/execd/examples/count.sh"]
-  signal = "STDIN"
-```
-
-### Go daemon using SIGHUP
-
-```go
-package main
-
-import (
-    "fmt"
-    "os"
-    "os/signal"
-    "syscall"
-)
-
-func main() {
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, syscall.SIGHUP)
-
-    counter := 0
-
-    for {
-        <-c
-
-        fmt.Printf("counter_go count=%d\n", counter)
-        counter++
-    }
-}
-
-```
-
-```toml
-[[inputs.execd]]
-  command = ["plugins/inputs/execd/examples/count.go.exe"]
-  signal = "SIGHUP"
-```
-
-### Ruby daemon running standalone
-
-```ruby
-#!/usr/bin/env ruby
-
-counter = 0
-
-loop do
-  puts "counter_ruby count=#{counter}"
-  STDOUT.flush
-
-  counter += 1
-  sleep 1
-end
-```
-
-```toml
-[[inputs.execd]]
-  command = ["plugins/inputs/execd/examples/count.rb"]
-  signal = "none"
-```
-
-[Input Data Formats]: ../../../docs/DATA_FORMATS_INPUT.md
-[inputs.exec]: ../exec/README.md
+- [Go](./examples/count.go): Example expects `signal = "SIGHUP"`
+- [Python](./examples/count.py): Example expects `signal = "none"`
+- [Ruby](./examples/count.rb): Example expects `signal = "none"`
+- [shell](./examples/count.sh): Example expects `signal = "STDIN"`
 
 ## Metrics
 
+Varies depending on the users data.
+
 ## Example Output
+
+Varies depending on the users data.
