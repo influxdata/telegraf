@@ -104,7 +104,7 @@ As an example
   [[inputs.win_wmi.query]]
     namespace = "root\\cimv2"
     class_name = "Win32_Processor"
-    properties = ["Name""]
+    properties = ["Name"]
 ```
 
 corresponds to executing
