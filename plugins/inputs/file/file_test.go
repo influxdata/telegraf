@@ -42,8 +42,9 @@ func TestFileTag(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 	r := File{
-		Files:   []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
-		FileTag: "filename",
+		Files:       []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
+		FileTag:     "filename",
+		FilePathTag: "filepath",
 	}
 	require.NoError(t, r.Init())
 
@@ -56,10 +57,11 @@ func TestFileTag(t *testing.T) {
 	require.NoError(t, r.Gather(&acc))
 
 	for _, m := range acc.Metrics {
-		for key, value := range m.Tags {
-			require.Equal(t, r.FileTag, key)
-			require.Equal(t, filepath.Base(r.Files[0]), value)
-		}
+		require.Contains(t, m.Tags, "filename")
+		require.Equal(t, filepath.Base(r.Files[0]), m.Tags["filename"])
+
+		require.Contains(t, m.Tags, "filepath")
+		require.True(t, filepath.IsAbs(m.Tags["filepath"]))
 	}
 }
 
