@@ -73,7 +73,7 @@ It collects the following fields:
 | Packet Loss    | packet_loss | float64 | percentage |
 | Location       | location    | string  | -          |
 
-**Note**: The `packet_loss` will return -1, if packet loss test is not applicable.
+The `packet_loss` will return -1, if packet loss not applicable.
 
 And the following tags:
 
