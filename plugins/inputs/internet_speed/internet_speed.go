@@ -98,9 +98,14 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 		err = is.server.MultiUploadTestContext(context.Background(), is.servers)
 		if err != nil {
-			return fmt.Errorf("upload test failed failed: %w", err)
+			return fmt.Errorf("upload test failed: %w", err)
 		}
-		pLoss, _ = analyzer.RunMulti(is.servers.Hosts())
+		// Not all servers are applicable for packet loss testing.
+		// If err != nil, we skip it and just report a warning.
+		pLoss, err = analyzer.RunMulti(is.servers.Hosts())
+		if err != nil {
+			is.Log.Warnf("packet loss test failed: %s", err)
+		}
 	} else {
 		err = is.server.DownloadTest()
 		if err != nil {
@@ -108,17 +113,23 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 		err = is.server.UploadTest()
 		if err != nil {
-			return fmt.Errorf("upload test failed failed: %w", err)
+			return fmt.Errorf("upload test failed: %w", err)
 		}
-		_ = analyzer.Run(is.server.Host, func(packetLoss *transport.PLoss) {
+		// Not all servers are applicable for packet loss testing.
+		// If err != nil, we skip it and just report a warning.
+		err = analyzer.Run(is.server.Host, func(packetLoss *transport.PLoss) {
 			if packetLoss != nil && packetLoss.Sent != 0 {
 				pLoss = packetLoss.Loss()
 			}
 		})
+		if err != nil {
+			is.Log.Warnf("packet loss test failed: %s", err)
+		}
 	}
 
 	lossPercent := 0.0
 	if pLoss == -1 {
+		// If all servers are not applicable, returned -1.
 		lossPercent = -1
 	} else {
 		lossPercent = pLoss * 100.0

@@ -73,6 +73,8 @@ It collects the following fields:
 | Packet Loss    | packet_loss | float64 | percentage |
 | Location       | location    | string  | -          |
 
+**Note**: The `packet_loss` will return -1, if packet loss test is not applicable.
+
 And the following tags:
 
 | Name      | tag name  |
@@ -85,4 +87,5 @@ And the following tags:
 
 ```text
 internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=single download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810,packet_loss=0.05377,location="Somewhere, TX" 1675458921000000000
+internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=multi download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810,packet_loss=-1,location="Somewhere, TX" 1675458921000000000
 ```
