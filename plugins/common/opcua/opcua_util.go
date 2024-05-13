@@ -157,6 +157,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		opcua.ApplicationURI(appuri),
 		opcua.ApplicationName(appname),
 		opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)),
+		opcua.SessionTimeout(time.Duration(o.Config.SessionTimeout)),
 	)
 
 	certFile := o.Config.Certificate

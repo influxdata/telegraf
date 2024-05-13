@@ -40,6 +40,10 @@ to use them.
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
   #
+  # Maximum time that a session shall remain open without activity.
+  # Default is 20 minutes.
+  # session_timeout = "60s"
+  #
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
   ## "Basic256Sha256", or "auto"
   # security_policy = "auto"
