@@ -617,7 +617,7 @@ func TestBindXmlStatsV3(t *testing.T) {
 	})
 }
 
-func TestBindUnparseableURL(t *testing.T) {
+func TestBindUnparsableURL(t *testing.T) {
 	b := Bind{
 		Urls: []string{"://example.com"},
 	}

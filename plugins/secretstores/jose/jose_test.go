@@ -158,7 +158,7 @@ func TestResolverInvalid(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestGetNonExistant(t *testing.T) {
+func TestGetNonExistent(t *testing.T) {
 	secretKey := "a secret"
 	secretVal := "I won't tell"
 

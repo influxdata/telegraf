@@ -97,7 +97,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #    # win_service = []
   #
   #    ## Process filters, multiple are allowed
-  #    ## Regular expressions to use for matching againt the full command
+  #    ## Regular expressions to use for matching against the full command
   #    # patterns = ['.*']
   #    ## List of users owning the process (wildcards are supported)
   #    # users = ['*']

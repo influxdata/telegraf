@@ -111,7 +111,7 @@ func (h *MetricHandler) AddBool(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseBoolBytes(value)
 	if err != nil {
-		return errors.New("unparseable bool")
+		return errors.New("unparsable bool")
 	}
 	h.metric.AddField(fk, fv)
 	return nil

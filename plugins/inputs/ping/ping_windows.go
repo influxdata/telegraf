@@ -99,10 +99,10 @@ func (p *Ping) args(url string) []string {
 // It returns (<transmitted packets>, <received reply>, <received packet>, <average response>, <min response>, <max response>)
 func processPingOutput(out string) (statistics, error) {
 	// So find a line contain 3 numbers except reply lines
-	var statsLine, aproxs []string = nil, nil
+	var statsLine, approxs []string = nil, nil
 	err := errors.New("fatal error processing ping output")
 	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
-	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
+	approx := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	tttLine := regexp.MustCompile(`TTL=\d+`)
 	lines := strings.Split(out, "\n")
 	var replyReceived = 0
@@ -113,8 +113,8 @@ func processPingOutput(out string) (statistics, error) {
 			if statsLine == nil {
 				statsLine = stat.FindStringSubmatch(line)
 			}
-			if statsLine != nil && aproxs == nil {
-				aproxs = aprox.FindStringSubmatch(line)
+			if statsLine != nil && approxs == nil {
+				approxs = approx.FindStringSubmatch(line)
 			}
 		}
 	}
@@ -147,19 +147,19 @@ func processPingOutput(out string) (statistics, error) {
 	stats.replyReceived = replyReceived
 	stats.packetsReceived = packetsReceived
 
-	// aproxs data should contain 4 members: entireExpression + ( min, max, avg )
-	if len(aproxs) != 4 {
+	// approxs data should contain 4 members: entireExpression + ( min, max, avg )
+	if len(approxs) != 4 {
 		return stats, err
 	}
-	min, err := strconv.Atoi(aproxs[1])
+	min, err := strconv.Atoi(approxs[1])
 	if err != nil {
 		return stats, err
 	}
-	max, err := strconv.Atoi(aproxs[2])
+	max, err := strconv.Atoi(approxs[2])
 	if err != nil {
 		return stats, err
 	}
-	avg, err := strconv.Atoi(aproxs[3])
+	avg, err := strconv.Atoi(approxs[3])
 	if err != nil {
 		return statistics{}, err
 	}

@@ -157,7 +157,7 @@ In case you see a `Collection took longer than expected` warning, there might
 be a burst of events logged and the API is not able to deliver them fast enough
 to complete processing within the specified interval. Tweaking the
 `event_batch_size` setting might help to mitigate the issue.
-The said warning does not indicate data-loss, but you should investige the
+The said warning does not indicate data-loss, but you should investigate the
 amount of events you log.
 
 ## Metrics

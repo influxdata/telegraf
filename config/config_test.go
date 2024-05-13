@@ -471,7 +471,7 @@ func TestConfig_InlineTables(t *testing.T) {
 	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
 	require.Len(t, c.Outputs, 2)
 
-	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
+	output, ok := c.Outputs[1].Output.(*MockupOutputPlugin)
 	require.True(t, ok)
 	require.Equal(t, map[string]string{"Authorization": "Token test", "Content-Type": "application/json"}, output.Headers)
 	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
@@ -484,7 +484,7 @@ func TestConfig_SliceComment(t *testing.T) {
 	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
 	require.Len(t, c.Outputs, 1)
 
-	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
+	output, ok := c.Outputs[0].Output.(*MockupOutputPlugin)
 	require.True(t, ok)
 	require.Equal(t, []string{"test"}, output.Scopes)
 }
@@ -510,7 +510,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 
 	expectedPrefix := []string{"Telegraf/", ""}
 	for i, plugin := range c.Outputs {
-		output, ok := plugin.Output.(*MockupOuputPlugin)
+		output, ok := plugin.Output.(*MockupOutputPlugin)
 		require.True(t, ok)
 		require.Equal(t, expectedPrefix[i], output.NamespacePrefix)
 	}
@@ -1453,7 +1453,7 @@ func (m *MockupProcessorPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) 
 }
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
-type MockupOuputPlugin struct {
+type MockupOutputPlugin struct {
 	URL             string            `toml:"url"`
 	Headers         map[string]string `toml:"headers"`
 	Scopes          []string          `toml:"scopes"`
@@ -1462,16 +1462,16 @@ type MockupOuputPlugin struct {
 	tls.ClientConfig
 }
 
-func (m *MockupOuputPlugin) Connect() error {
+func (m *MockupOutputPlugin) Connect() error {
 	return nil
 }
-func (m *MockupOuputPlugin) Close() error {
+func (m *MockupOutputPlugin) Close() error {
 	return nil
 }
-func (m *MockupOuputPlugin) SampleConfig() string {
+func (m *MockupOutputPlugin) SampleConfig() string {
 	return "Mockup test output plugin"
 }
-func (m *MockupOuputPlugin) Write(_ []telegraf.Metric) error {
+func (m *MockupOutputPlugin) Write(_ []telegraf.Metric) error {
 	return nil
 }
 
@@ -1624,10 +1624,10 @@ func init() {
 
 	// Register the mockup output plugin for the required names
 	outputs.Add("azure_monitor", func() telegraf.Output {
-		return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"}
+		return &MockupOutputPlugin{NamespacePrefix: "Telegraf/"}
 	})
 	outputs.Add("http", func() telegraf.Output {
-		return &MockupOuputPlugin{}
+		return &MockupOutputPlugin{}
 	})
 	outputs.Add("serializer_test_new", func() telegraf.Output {
 		return &MockupOutputPluginSerializerNew{}

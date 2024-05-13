@@ -90,6 +90,6 @@ of versions and small set of GPUs. Currently the latest ROCm version tested is
 information provided by `rocm-smi` can vary so that some fields would start/stop
 appearing in the metrics upon updates.  The `rocm-smi` JSON output is not
 perfectly homogeneous and is possibly changing in the future, hence parsing and
-unmarshaling can start failing upon updating ROCm.
+unmarshalling can start failing upon updating ROCm.
 
 Inspired by the current state of the art of the `nvidia-smi` plugin.

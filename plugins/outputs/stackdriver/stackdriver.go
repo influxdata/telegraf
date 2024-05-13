@@ -49,7 +49,7 @@ type Stackdriver struct {
 	counterCache    *counterCache
 	filterCounter   filter.Filter
 	filterGauge     filter.Filter
-	fitlerHistogram filter.Filter
+	filterHistogram filter.Filter
 }
 
 const (
@@ -100,7 +100,7 @@ func (s *Stackdriver) Init() error {
 	if err != nil {
 		return fmt.Errorf("creating gauge filter failed: %w", err)
 	}
-	s.fitlerHistogram, err = filter.Compile(s.MetricHistogram)
+	s.filterHistogram, err = filter.Compile(s.MetricHistogram)
 	if err != nil {
 		return fmt.Errorf("creating histogram filter failed: %w", err)
 	}
@@ -227,7 +227,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		if s.filterGauge != nil && s.filterGauge.Match(m.Name()) {
 			metricType = telegraf.Gauge
 		}
-		if s.fitlerHistogram != nil && s.fitlerHistogram.Match(m.Name()) {
+		if s.filterHistogram != nil && s.filterHistogram.Match(m.Name()) {
 			metricType = telegraf.Histogram
 		}
 

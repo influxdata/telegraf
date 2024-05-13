@@ -188,7 +188,7 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 }
 
 // TestPhpFpmCrashWithTimeout_From_Fcgi show issue #15175: when timeout is enabled
-// and nothing is listenning on specified port, a nil pointer was dereferenced.
+// and nothing is listening on specified port, a nil pointer was dereferenced.
 func TestPhpFpmCrashWithTimeout_From_Fcgi(t *testing.T) {
 	tcp, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "Cannot initialize test server")
