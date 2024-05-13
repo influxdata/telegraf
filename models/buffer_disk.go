@@ -1,30 +1,26 @@
 package models
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
-
 	"github.com/influxdata/telegraf"
 	"github.com/tidwall/wal"
 )
 
 type DiskBuffer struct {
 	BufferStats
-
 	walFile *wal.Log
 }
 
-func NewDiskBuffer(name string, capacity int, path string, stats BufferStats) *DiskBuffer {
+func NewDiskBuffer(name string, capacity int, path string, stats BufferStats) (*DiskBuffer, error) {
 	// todo capacity
 	walFile, err := wal.Open(path+"/"+name, nil)
 	if err != nil {
-		return nil // todo error handling
+		return nil, fmt.Errorf("failed to open wal file: %w", err)
 	}
 	return &DiskBuffer{
 		BufferStats: stats,
 		walFile:     walFile,
-	}
+	}, nil
 }
 
 func (b *DiskBuffer) Len() int {
@@ -62,9 +58,13 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 	return b.addBatch(metrics)
 }
 
-func (b *DiskBuffer) addSingle(metric telegraf.Metric) bool {
-	err := b.walFile.Write(b.writeIndex(), b.metricToBytes(metric))
-	metric.Accept()
+func (b *DiskBuffer) addSingle(m telegraf.Metric) bool {
+	data, err := m.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+	err = b.walFile.Write(b.writeIndex(), data)
+	m.Accept()
 	if err == nil {
 		b.metricAdded()
 		return true
@@ -76,7 +76,10 @@ func (b *DiskBuffer) addBatch(metrics []telegraf.Metric) int {
 	written := 0
 	batch := new(wal.Batch)
 	for _, m := range metrics {
-		data := b.metricToBytes(m)
+		data, err := m.ToBytes()
+		if err != nil {
+			panic(err)
+		}
 		m.Accept() // accept here, since the metric object is no longer retained from here
 		batch.Write(b.writeIndex(), data)
 		b.metricAdded()
@@ -101,7 +104,11 @@ func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
 		if err != nil {
 			// todo error handle
 		}
-		metrics[index] = b.bytesToMetric(data)
+		var m telegraf.Metric
+		if err = m.FromBytes(data); err != nil {
+			panic(err)
+		}
+		metrics[index] = m
 		index++
 	}
 	return metrics
@@ -127,25 +134,6 @@ func (b *DiskBuffer) Reject(batch []telegraf.Metric) {
 	}
 }
 
-func (b *DiskBuffer) metricToBytes(metric telegraf.Metric) []byte {
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	if err := encoder.Encode(metric); err != nil {
-		// todo error handle
-		fmt.Println("Error encoding:", err)
-		panic(1)
-	}
-	return buf.Bytes()
-}
-
-func (b *DiskBuffer) bytesToMetric(data []byte) telegraf.Metric {
-	buf := bytes.NewBuffer(data)
-	decoder := gob.NewDecoder(buf)
-	var m telegraf.Metric
-	if err := decoder.Decode(&m); err != nil {
-		// todo error handle
-		fmt.Println("Error decoding:", err)
-		panic(1)
-	}
-	return m
+func (b *DiskBuffer) Stats() BufferStats {
+	return b.BufferStats
 }

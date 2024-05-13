@@ -29,6 +29,8 @@ type Buffer interface {
 	// Reject returns the batch, acquired from Batch(), to the buffer and marks it
 	// as unsent.
 	Reject([]telegraf.Metric)
+
+	Stats() BufferStats
 }
 
 // BufferStats holds common metrics used for buffer implementations.
@@ -42,7 +44,7 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(name string, alias string, capacity int, strategy string, path string) Buffer {
+func NewBuffer(name string, alias string, capacity int, strategy string, path string) (Buffer, error) {
 	bm := NewBufferMetrics(name, alias, capacity)
 
 	switch strategy {

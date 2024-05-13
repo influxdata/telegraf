@@ -99,8 +99,12 @@ func NewRunningOutput(
 		batchSize = DefaultMetricBatchSize
 	}
 
+	b, err := NewBuffer(config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory)
+	if err != nil {
+		panic(err) // todo be more graceful here?
+	}
 	ro := &RunningOutput{
-		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory),
+		buffer:            b,
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            config,

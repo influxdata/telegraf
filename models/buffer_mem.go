@@ -21,15 +21,12 @@ type MemoryBuffer struct {
 	batchSize  int // number of metrics currently in the batch
 }
 
-func NewMemoryBuffer(capacity int, stats BufferStats) *MemoryBuffer {
+func NewMemoryBuffer(capacity int, stats BufferStats) (*MemoryBuffer, error) {
 	return &MemoryBuffer{
 		BufferStats: stats,
 		buf:         make([]telegraf.Metric, capacity),
-		first:       0,
-		last:        0,
-		size:        0,
 		cap:         capacity,
-	}
+	}, nil
 }
 
 func (b *MemoryBuffer) Len() int {
@@ -149,6 +146,10 @@ func (b *MemoryBuffer) Reject(batch []telegraf.Metric) {
 
 	b.resetBatch()
 	b.BufferSize.Set(int64(b.length()))
+}
+
+func (b *MemoryBuffer) Stats() BufferStats {
+	return b.BufferStats
 }
 
 // next returns the next index with wrapping.
