@@ -183,10 +183,3 @@ func (b *MemoryBuffer) resetBatch() {
 	b.batchFirst = 0
 	b.batchSize = 0
 }
-
-func min(a, b int) int {
-	if b < a {
-		return b
-	}
-	return a
-}
