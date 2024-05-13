@@ -5,7 +5,7 @@ are a curated set of Docker Images that also automatically get security updates
 from Docker, follow a set of best practices, and are available via a shortcut
 syntax which omits the organization.
 
-InfluxData maintains a Debian and Alpine based image across the last three
+InfluxData maintains Debian and Alpine based images across the last three
 minor releases. To pull the latest Telegraf images:
 
 ```shell
