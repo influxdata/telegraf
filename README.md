@@ -20,14 +20,16 @@ metrics, logs, and other arbitrary data.
 Users can choose plugins from a wide range of topics, including but not limited
 to:
 
-* Devices: OPC UA, Modbus
-* Logs: File, Tail, Directory Monitor
-* Messaging: AMQP, Kafka, MQTT
-* Monitoring: OpenTelemetry, Prometheus
-* Networking: Cisco TelemetryMDT, gNMI
-* System monitoring: CPU, Memory, Disk, Network, SMART, Docker, Nvidia SMI, etc.
-* Universal: Exec, HTTP, HTTP Listener, SNMP, SQL
-* Windows: Event Log, Management Instrumentation, Performance Counters
+* Devices: [OPC UA][], [Modbus][]
+* Logs: [File][], [Tail][], [Directory Monitor][]
+* Messaging: [AMQP][], [Kafka][], [MQTT][]
+* Monitoring: [OpenTelemetry][], [Prometheus][]
+* Networking: [Cisco TelemetryMDT][], [gNMI][]
+* System monitoring: [CPU][], [Memory][], [Disk][], [Network][], [SMART][],
+  [Docker][], [Nvidia SMI][], etc.
+* Universal: [Exec][], [HTTP][], [HTTP Listener][], [SNMP][], [SQL][]
+* Windows: [Event Log][], [Management Instrumentation][],
+  [Performance Counters][]
 
 ## 🔨 Installation
 
@@ -49,7 +51,7 @@ For a basic walkthrough see [quick start](/docs/QUICK_START.md).
 ## 📖 Documentation
 
 For a full list of documentation including tutorials, reference and other
-material, start with the [Docs directory](/docs/README.md).
+material, start with the [/docs directory](/docs/README.md).
 
 Additionally, each plugin has its own README that includes details about how to
 configure, use, and sometimes debug or troubleshoot. Look under the
@@ -90,3 +92,31 @@ and feature requests only.
 ## 📜 License
 
 [![MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/influxdata/telegraf/blob/master/LICENSE)
+
+[OPC UA]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/opcua
+[Modbus]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/modbus
+[File]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/file
+[Tail]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail
+[Directory Monitor]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/directory_monitor
+[AMQP]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/amqp_consumer
+[Kafka]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer
+[MQTT]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer
+[OpenTelemetry]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/opentelemetry
+[Prometheus]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/prometheus
+[Cisco TelemetryMDT]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cisco_telemetry_mdt
+[gNMI]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/gnmi
+[CPU]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cpu
+[Memory]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mem
+[Disk]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disk
+[Network]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net
+[SMART]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/smartctl
+[Docker]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/docker
+[Nvidia SMI]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nvidia_smi
+[Exec]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec
+[HTTP]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http
+[HTTP Listener]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_listener_v2
+[SNMP]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp
+[SQL]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sql
+[Event Log]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_eventlog
+[Management Instrumentation]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_wmi
+[Performance Counters]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_perf_counters
