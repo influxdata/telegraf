@@ -39,7 +39,7 @@ to use them.
   #
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
-  #
+
   # Maximum time that a session shall remain open without activity.
   # Default is 20 minutes.
   # session_timeout = "60s"
