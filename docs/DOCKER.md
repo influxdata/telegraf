@@ -57,7 +57,8 @@ Users have two options:
 1. Increase the ulimit in the container. The user does this with the `ulimit -l`
   command. To both see and set the value. For docker, there is a `--ulimit` flag
   that could be used, like `--ulimit memlock=8192:8192` as well.
-2. Add the `--unprotected` flag to the command arguments to not use reservable
-  memory and instead store secrets in memory. This is less secure as secrets
-  could find their way into paged out memory, and why this is opt-in. For docker
-  look at updating the CMD used to include this.
+2. Add the `--unprotected` flag to the command arguments to not use locked
+  memory and instead store secrets in unprotected memory. This is less secure
+  as secrets could find their way into paged out memory and can be written to
+  disk unencrypted, therefore this is opt-in. For docker look at updating the
+  `CMD` used to include this flag.
