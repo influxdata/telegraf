@@ -36,7 +36,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		labels = s.appendCommonLabels(labels[:0], metric)
 		var metrickey MetricKey
-		var prompts prompb.TimeSeries
+		var promts prompb.TimeSeries
 		for _, field := range metric.FieldList() {
 			metricName := prometheus.MetricName(metric.Name(), field.Key, metric.Type())
 			metricName, ok := prometheus.SanitizeMetricName(metricName)
@@ -54,7 +54,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				if !ok {
 					continue
 				}
-				metrickey, prompts = getPromTS(metricName, labels, value, metric.Time())
+				metrickey, promts = getPromTS(metricName, labels, value, metric.Time())
 			case telegraf.Histogram:
 				switch {
 				case strings.HasSuffix(field.Key, "_bucket"):
@@ -93,14 +93,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: fmt.Sprint(bound),
 					}
-					metrickey, prompts = getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
+					metrickey, promts = getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
 				case strings.HasSuffix(field.Key, "_sum"):
 					sum, ok := prometheus.SampleSum(field.Value)
 					if !ok {
 						continue
 					}
 
-					metrickey, prompts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
+					metrickey, promts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
@@ -117,7 +117,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						entries[metrickeyinf] = promtsinf
 					}
 
-					metrickey, prompts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
+					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					continue
 				}
@@ -129,14 +129,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						continue
 					}
 
-					metrickey, prompts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
+					metrickey, promts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
 						continue
 					}
 
-					metrickey, prompts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
+					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					quantileTag, ok := metric.GetTag("quantile")
 					if !ok {
@@ -155,7 +155,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "quantile",
 						Value: fmt.Sprint(quantile),
 					}
-					metrickey, prompts = getPromTS(metricName, labels, value, metric.Time(), extraLabel)
+					metrickey, promts = getPromTS(metricName, labels, value, metric.Time(), extraLabel)
 				}
 			default:
 				return nil, fmt.Errorf("unknown type %v", metric.Type())
@@ -170,14 +170,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					continue
 				}
 			}
-			entries[metrickey] = prompts
+			entries[metrickey] = promts
 		}
 	}
 
 	var promTS = make([]prompb.TimeSeries, len(entries))
 	var i int
-	for _, prompts := range entries {
-		promTS[i] = prompts
+	for _, promts := range entries {
+		promTS[i] = promts
 		i++
 	}
 
