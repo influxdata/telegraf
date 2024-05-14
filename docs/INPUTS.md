@@ -102,15 +102,16 @@ Check the [amqp_consumer][] for an example implementation.
 ### External Services
 
 Plugins that connect or require the use of external services should ensure that
-those servers are active.
+those servers are active. When may depend on the type of input plugin:
 
 For service input plugins, `Init` should be used to check for configuration
 issues (e.g. bad option) and for other non-recoverable errors. Then `Start`
-is used to create connections and other retry-able errors.
+is used to create connections or other retry-able operations.
 
-For other inputs, `Init` should also be used to check for configuration issues
+For normal inputs, `Init` should also be used to check for configuration issues
 as well as any other dependencies that the plugin will require. For example,
-any binaries that must exist for the plugin to function.
+any binaries that must exist for the plugin to function. If making a connection,
+this should also take place in `Init`.
 
 Developers may find that they switch to using service input plugins more and
 more to take advantage of the error on retry behavior features. This allows
