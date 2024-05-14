@@ -745,6 +745,7 @@ func TestUpdateNodeValue(t *testing.T) {
 		AuthMethod:     "",
 		ConnectTimeout: config.Duration(2 * time.Second),
 		RequestTimeout: config.Duration(2 * time.Second),
+		SessionTimeout: config.Duration(60 * time.Second),
 		Workarounds:    opcua.OpcUAWorkarounds{},
 	}
 	c, err := conf.CreateClient(testutil.Logger{})
