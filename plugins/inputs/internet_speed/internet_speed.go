@@ -125,9 +125,9 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	packetLoss := -1
+	packetLoss := -1.0
 	if pLoss != nil {
-		pLoss.LossPercent()
+		packetLoss = pLoss.LossPercent()
 	}
 
 	fields := map[string]any{
