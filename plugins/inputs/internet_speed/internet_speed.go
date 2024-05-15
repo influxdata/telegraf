@@ -89,7 +89,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		SamplingDuration:      time.Second * 15,
 	})
 
-	pLoss := -1.0
+	var pLoss *transport.PLoss
 
 	if is.TestMode == testModeMulti {
 		err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
@@ -117,22 +117,17 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 		// Not all servers are applicable for packet loss testing.
 		// If err != nil, we skip it and just report a warning.
-		err = analyzer.Run(is.server.Host, func(packetLoss *transport.PLoss) {
-			if packetLoss != nil && packetLoss.Sent != 0 {
-				pLoss = packetLoss.Loss()
-			}
+		err = analyzer.Run(is.server.Host, func(pl *transport.PLoss) {
+			pLoss = pl
 		})
 		if err != nil {
 			is.Log.Warnf("packet loss test failed: %s", err)
 		}
 	}
 
-	lossPercent := 0.0
-	if pLoss == -1 {
-		// If all servers are not applicable, returned -1.
-		lossPercent = -1
-	} else {
-		lossPercent = pLoss * 100.0
+	packetLoss := -1
+	if pLoss != nil {
+		pLoss.LossPercent()
 	}
 
 	fields := map[string]any{
@@ -140,7 +135,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		"upload":      is.server.ULSpeed.Mbps(),
 		"latency":     timeDurationMillisecondToFloat64(is.server.Latency),
 		"jitter":      timeDurationMillisecondToFloat64(is.server.Jitter),
-		"packet_loss": lossPercent,
+		"packet_loss": packetLoss,
 		"location":    is.server.Name,
 	}
 	tags := map[string]string{
