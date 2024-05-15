@@ -59,10 +59,12 @@ file and compare the value at each interval. No need to parse the value, just
 store the raw string. If there is a difference, trigger a reload.
 
 If anything other than 2xx response code is returned from the HEAD request,
-Telegraf would print a warning message and retry at the next interval.
+Telegraf would print a warning message and retry at the next interval. Telegraf
+will continue to run the existing configuration with no change.
 
 If the value of last-modified is empty, while very unlikely, then Telegraf would
-ignore this configuration file.
+ignore this configuration file. Telegraf will print a warning message once about
+the missing field.
 
 ## Relevant Issues
 
