@@ -41,7 +41,6 @@ to use them.
   # request_timeout = "5s"
 
   # Maximum time that a session shall remain open without activity.
-  # Default is 20 minutes.
   # session_timeout = "20m"
   #
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
