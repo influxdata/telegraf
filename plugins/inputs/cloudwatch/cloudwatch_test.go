@@ -198,6 +198,44 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
 }
 
+func TestGatherDenseMetric(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := config.Duration(duration)
+	c := &CloudWatch{
+		CredentialConfig: internalaws.CredentialConfig{
+			Region: "us-east-1",
+		},
+		Namespace:    "AWS/ELB",
+		Delay:        internalDuration,
+		Period:       internalDuration,
+		RateLimit:    200,
+		BatchSize:    500,
+		MetricFormat: "dense",
+		Log:          testutil.Logger{},
+	}
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, c.Init())
+	c.client = &mockGatherCloudWatchClient{}
+	require.NoError(t, acc.GatherError(c.Gather))
+
+	fields := map[string]interface{}{}
+	fields["minimum"] = 0.1
+	fields["maximum"] = 0.3
+	fields["average"] = 0.2
+	fields["sum"] = 123.0
+	fields["sample_count"] = 100.0
+
+	tags := map[string]string{}
+	tags["region"] = "us-east-1"
+	tags["load_balancer_name"] = "p-example1"
+	tags["metric_name"] = "latency"
+
+	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
+	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
+}
+
 func TestMultiAccountGather(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
