@@ -343,19 +343,14 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		}
 
 		if h.MaxUndeliveredMetrics > 0 {
-			h.writeTracking(res, metrics)
+			h.writeWithTracking(res, metrics)
 		} else {
-			for _, m := range metrics {
-				h.acc.AddMetric(m)
-			}
-
-			res.WriteHeader(http.StatusNoContent)
-			return
+			h.write(res, metrics)
 		}
 	}
 }
 
-func (h *InfluxDBV2Listener) writeTracking(res http.ResponseWriter, metrics []telegraf.Metric) {
+func (h *InfluxDBV2Listener) writeWithTracking(res http.ResponseWriter, metrics []telegraf.Metric) {
 	pending := h.totalUndeliveredMetrics.Load()
 	if pending+int64(len(metrics)) > int64(h.MaxUndeliveredMetrics) {
 		res.WriteHeader(http.StatusTooManyRequests)
@@ -363,10 +358,18 @@ func (h *InfluxDBV2Listener) writeTracking(res http.ResponseWriter, metrics []te
 	}
 
 	h.countLock.Lock()
-	trackingId := h.trackingAcc.AddTrackingMetricGroup(metrics)
-	h.trackingMetricCount[trackingId] = int64(len(metrics))
+	trackingID := h.trackingAcc.AddTrackingMetricGroup(metrics)
+	h.trackingMetricCount[trackingID] = int64(len(metrics))
 	h.totalUndeliveredMetrics.Add(int64(len(metrics)))
 	h.countLock.Unlock()
+
+	res.WriteHeader(http.StatusNoContent)
+}
+
+func (h *InfluxDBV2Listener) write(res http.ResponseWriter, metrics []telegraf.Metric) {
+	for _, m := range metrics {
+		h.acc.AddMetric(m)
+	}
 
 	res.WriteHeader(http.StatusNoContent)
 }

@@ -613,13 +613,13 @@ func TestRateLimitedConnectionDropsSecondRequest(t *testing.T) {
 	defer listener.Stop()
 
 	msg := "xyzzy value=42\n"
-	postUrl := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
-	resp, err := http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	postURL := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	resp, err = http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	resp, err = http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 429, resp.StatusCode)
@@ -633,8 +633,8 @@ func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
 	defer listener.Stop()
 
 	msg := "xyzzy value=42\n"
-	postUrl := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
-	resp, err := http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	postURL := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -644,7 +644,7 @@ func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
 		m.Accept()
 	}
 
-	resp, err = http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	resp, err = http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
