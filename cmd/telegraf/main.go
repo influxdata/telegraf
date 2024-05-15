@@ -374,7 +374,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	defer memguard.Purge()
 	defer logger.CloseLogging()
 
-	return app.Run(args)
+	if err := app.Run(args); err != nil {
+		log.Printf("E! %s", err)
+		return err
+	}
+	return nil
 }
 
 func main() {
@@ -385,6 +389,6 @@ func main() {
 	pprof := NewPprofServer()
 	c := config.NewConfig()
 	if err := runApp(os.Args, os.Stdout, pprof, c, &agent); err != nil {
-		log.Fatalf("E! %s", err)
+		os.Exit(1)
 	}
 }
