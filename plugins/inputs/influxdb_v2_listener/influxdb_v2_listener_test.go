@@ -67,6 +67,12 @@ func newTestAuthListener() *InfluxDBV2Listener {
 	return listener
 }
 
+func newRateLimitedTestListener(maxUndeliveredMetrics int) *InfluxDBV2Listener {
+	listener := newTestListener()
+	listener.MaxUndeliveredMetrics = maxUndeliveredMetrics
+	return listener
+}
+
 func newTestSecureListener() *InfluxDBV2Listener {
 	listener := &InfluxDBV2Listener{
 		Log:            testutil.Logger{},
@@ -597,6 +603,51 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	// specifies the precision.  The timestamp is set to the greatest
 	// integer unit less than the provided timestamp (floor).
 	require.Equal(t, time.Unix(42, 0), acc.Metrics[0].Time)
+}
+
+func TestRateLimitedConnectionDropsSecondRequest(t *testing.T) {
+	listener := newRateLimitedTestListener(1)
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	msg := "xyzzy value=42\n"
+	postUrl := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	resp, err = http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 429, resp.StatusCode)
+}
+
+func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
+	listener := newRateLimitedTestListener(1)
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	msg := "xyzzy value=42\n"
+	postUrl := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	ms := acc.GetTelegrafMetrics()
+	for _, m := range ms {
+		m.Accept()
+	}
+
+	resp, err = http.Post(postUrl, "", bytes.NewBuffer([]byte(msg)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
 }
 
 // The term 'master_repl' used here is archaic language from redis
