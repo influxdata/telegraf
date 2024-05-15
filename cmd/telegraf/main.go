@@ -373,7 +373,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 	// Make sure we safely erase secrets
 	defer memguard.Purge()
 
-	return app.Run(args)
+	if err := app.Run(args); err != nil {
+		log.Printf("E! %s", err)
+		return err
+	}
+	return nil
 }
 
 func main() {
@@ -383,8 +387,7 @@ func main() {
 	agent := Telegraf{}
 	pprof := NewPprofServer()
 	c := config.NewConfig()
-	err := runApp(os.Args, os.Stdout, pprof, c, &agent)
-	if err != nil {
-		log.Fatalf("E! %s", err)
+	if err := runApp(os.Args, os.Stdout, pprof, c, &agent); err != nil {
+		os.Exit(1)
 	}
 }
