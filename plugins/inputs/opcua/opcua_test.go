@@ -129,7 +129,6 @@ func TestReadClientIntegration(t *testing.T) {
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
-				SessionTimeout: config.Duration(1 * time.Minute),
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
