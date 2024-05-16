@@ -52,7 +52,7 @@ Telegraf supports releases supported by Apple. Release history is available from
 
 ## Microsoft Windows
 
-Telegraf intents to support current versions of [Windows][] and
+Telegraf intends to support current versions of [Windows][] and
 [Windows Server][]. The release must be under mainstream or generally supported
 and not under any paid or extended security support.
 
