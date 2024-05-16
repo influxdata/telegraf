@@ -21,6 +21,7 @@
   * [SQL Drivers Input][]
 * [Parsers: Input Data Formats][]
 * [Outputs][]
+* [Secret Stores][]
 * [Serializers: Output Data Formats][]
 * [Processors][]
 
@@ -73,6 +74,7 @@
 [Profiling]: /docs/PROFILING.md
 [Quick Start]: /docs/QUICK_START.md
 [Releases]: /docs/RELEASES.md
+[Secret Stores]: /docs/SECRETSTORES.md
 [SQL Drivers Input]: /docs/SQL_DRIVERS_INPUT.md
 [Supported Platforms]: /docs/SUPPORTED_PLATFORMS.md
 [Template Pattern]: /docs/TEMPLATE_PATTERN.md
