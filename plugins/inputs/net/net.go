@@ -39,7 +39,7 @@ func (n *NetIOStats) Init() error {
 			telegraf.DeprecationInfo{
 				Since:     "1.27.3",
 				RemovalIn: "1.36.0",
-				Notice:    "use the 'inputs.nstat' plugin instead",
+				Notice:    "use the 'inputs.nstat' plugin instead for protocol stats",
 			},
 		)
 	}
