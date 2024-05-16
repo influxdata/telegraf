@@ -82,6 +82,11 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 					namespace = n
 				}
 			}
+			if namespace == "" {
+				// IETF YANG entries require a namespace
+				continue
+			}
+
 			if a, b, found := strings.Cut(e.key[len(e.key)-1], ":"); !found {
 				identifier = a
 			} else {
