@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	gobin "encoding/binary"
 	"fmt"
-	"slices"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -21,8 +20,8 @@ type Parser struct {
 	DropOriginal bool            `toml:"drop_original"`
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
+	Base64Fields []string        `toml:"parse_fields_base64"`
 	ParseTags    []string        `toml:"parse_tags"`
-	Base64Fields []string        `toml:"base64_fields"`
 	Log          telegraf.Logger `toml:"-"`
 	parser       telegraf.Parser
 }
@@ -32,20 +31,6 @@ func (p *Parser) Init() error {
 	case "", "override", "override-with-timestamp":
 	default:
 		return fmt.Errorf("unrecognized merge value: %s", p.Merge)
-	}
-
-	// Validate that Base64Fields is a subset of ParseFields
-	for _, field64 := range p.Base64Fields {
-		var found bool
-		for _, field := range p.ParseFields {
-			if field64 == field {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("unrecognized base64 parse field '%s' found, should also be included in parse_fields", field64)
-		}
 	}
 
 	return nil
@@ -71,39 +56,12 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 		// parse fields
 		for _, key := range p.ParseFields {
-			b64 := slices.Contains(p.Base64Fields, key)
-			for _, field := range metric.FieldList() {
-				if field.Key != key {
-					continue
-				}
-				value, err := p.toBytes(field.Value, b64)
-				if err != nil {
-					p.Log.Errorf("could not convert field %s: %v; skipping", key, err)
-					continue
-				}
-				fromFieldMetric, err := p.parser.Parse(value)
-				if err != nil {
-					p.Log.Errorf("could not parse field %s: %v", key, err)
-					continue
-				}
+			newMetrics = append(newMetrics, p.parseField(key, metric, false)...)
+		}
 
-				for _, m := range fromFieldMetric {
-					// The parser get the parent plugin's name as
-					// default measurement name. Thus, in case the
-					// parsed metric does not provide a name itself,
-					// the parser  will return 'parser' as we are in
-					// processors.parser. In those cases we want to
-					// keep the original metric name.
-					if m.Name() == "" || m.Name() == "parser" {
-						m.SetName(metric.Name())
-					}
-				}
-
-				// multiple parsed fields shouldn't create multiple
-				// metrics so we'll merge tags/fields down into one
-				// prior to returning.
-				newMetrics = append(newMetrics, fromFieldMetric...)
-			}
+		// parse base64 fields
+		for _, key := range p.Base64Fields {
+			newMetrics = append(newMetrics, p.parseField(key, metric, true)...)
 		}
 
 		// parse tags
@@ -143,6 +101,43 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 	}
 	return results
+}
+
+func (p *Parser) parseField(key string, metric telegraf.Metric, b64 bool) []telegraf.Metric {
+	newMetrics := []telegraf.Metric{}
+	for _, field := range metric.FieldList() {
+		if field.Key != key {
+			continue
+		}
+		value, err := p.toBytes(field.Value, b64)
+		if err != nil {
+			p.Log.Errorf("could not convert field %s: %v; skipping", key, err)
+			continue
+		}
+		fromFieldMetric, err := p.parser.Parse(value)
+		if err != nil {
+			p.Log.Errorf("could not parse field %s: %v", key, err)
+			continue
+		}
+
+		for _, m := range fromFieldMetric {
+			// The parser get the parent plugin's name as
+			// default measurement name. Thus, in case the
+			// parsed metric does not provide a name itself,
+			// the parser  will return 'parser' as we are in
+			// processors.parser. In those cases we want to
+			// keep the original metric name.
+			if m.Name() == "" || m.Name() == "parser" {
+				m.SetName(metric.Name())
+			}
+		}
+
+		// multiple parsed fields shouldn't create multiple
+		// metrics so we'll merge tags/fields down into one
+		// prior to returning.
+		newMetrics = append(newMetrics, fromFieldMetric...)
+	}
+	return newMetrics
 }
 
 func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
