@@ -5,7 +5,7 @@ outside of Telegraf that can run through an `execd` plugin. These external
 plugins allow for more flexibility compared to internal Telegraf plugins.
 
 - External plugins can be written in any language (internal Telegraf plugins can
-  only written in Go)
+  only be written in Go)
 - External plugins can access to libraries not written in Go
 - Utilize licensed software that is not available to the open source community
 - Can include large dependencies that would otherwise bloat Telegraf
@@ -13,6 +13,7 @@ plugins allow for more flexibility compared to internal Telegraf plugins.
   working with it.
 - Using the [shim](/plugins/common/shim) you can easily convert plugins between
   internal and external use
+- Using 3rd-party libraries requiring CGO support
 
 ## External Plugin Guidelines
 
