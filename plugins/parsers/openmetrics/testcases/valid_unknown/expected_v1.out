@@ -1,0 +1,2 @@
+redis_connected_clients,_type=untyped,instance=rough-snowflake-web,port=6380 value=10.0
+redis_connected_clients,_type=untyped,instance=rough-snowflake-web,port=6381 value=12.0

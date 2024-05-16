@@ -14,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+func AcceptsContent(header http.Header) bool {
+	return expfmt.ResponseFormat(header).FormatType() != expfmt.TypeUnknown
+}
+
 type Parser struct {
 	IgnoreTimestamp bool              `toml:"prometheus_ignore_timestamp"`
 	MetricVersion   int               `toml:"prometheus_metric_version"`

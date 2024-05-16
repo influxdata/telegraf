@@ -1,0 +1,46 @@
+process_start_time_seconds,_type=gauge gauge=1606393397
+dovecot_build,revision=38ecc424a,version=2.4.devel info=1u
+dovecot_auth_success,_type=counter counter=892
+dovecot_auth_success_duration_seconds,_type=counter counter=0.085479
+dovecot_imap_command,_type=counter,cmd_name=LIST counter=423
+dovecot_imap_command,_type=counter,cmd_name=LIST,tagged_reply_state=OK counter=423
+dovecot_imap_command,_type=counter,cmd_name=STATUS counter=468
+dovecot_imap_command,_type=counter,cmd_name=STATUS,tagged_reply_state=OK counter=468
+dovecot_imap_command,_type=counter,cmd_name=SELECT counter=890
+dovecot_imap_command,_type=counter,cmd_name=SELECT,tagged_reply_state=OK counter=890
+dovecot_imap_command,_type=counter,cmd_name=APPEND counter=449
+dovecot_imap_command,_type=counter,cmd_name=APPEND,tagged_reply_state=OK counter=449
+dovecot_imap_command,_type=counter,cmd_name=LOGOUT counter=892
+dovecot_imap_command,_type=counter,cmd_name=LOGOUT,tagged_reply_state=OK counter=892
+dovecot_imap_command,_type=counter,cmd_name=UID\ FETCH counter=888
+dovecot_imap_command,_type=counter,cmd_name=UID\ FETCH,tagged_reply_state=OK counter=888
+dovecot_imap_command,_type=counter,cmd_name=FETCH counter=2148
+dovecot_imap_command,_type=counter,cmd_name=FETCH,tagged_reply_state=OK counter=2148
+dovecot_imap_command,_type=counter,cmd_name=STORE counter=794
+dovecot_imap_command,_type=counter,cmd_name=STORE,tagged_reply_state=OK counter=794
+dovecot_imap_command,_type=counter,cmd_name=EXPUNGE counter=888
+dovecot_imap_command,_type=counter,cmd_name=EXPUNGE,tagged_reply_state=OK counter=888
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=LIST counter=0.099115
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=LIST,tagged_reply_state=OK counter=0.099115
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=STATUS counter=0.161195
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=STATUS,tagged_reply_state=OK counter=0.161195
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=SELECT counter=0.184907
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=SELECT,tagged_reply_state=OK counter=0.184907
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=APPEND counter=0.273893
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=APPEND,tagged_reply_state=OK counter=0.273893
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=LOGOUT counter=0.033494
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=LOGOUT,tagged_reply_state=OK counter=0.033494
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=UID\ FETCH counter=0.181319
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=UID\ FETCH,tagged_reply_state=OK counter=0.181319
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=FETCH counter=1.169456
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=FETCH,tagged_reply_state=OK counter=1.169456
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=STORE counter=0.368621
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=STORE,tagged_reply_state=OK counter=0.368621
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=EXPUNGE counter=0.247657
+dovecot_imap_command_duration_seconds,_type=counter,cmd_name=EXPUNGE,tagged_reply_state=OK counter=0.247657
+dovecot_smtp_command,_type=histogram,cmd_name=LHLO,status_code=250 +Inf=1,10=0,100=1,1000=1,10000=1,100000=1,count=1,sum=0.00002
+dovecot_smtp_command,_type=histogram,cmd_name=MAIL,status_code=250 +Inf=1,10=0,100=1,1000=1,10000=1,100000=1,count=1,sum=0.000021
+dovecot_smtp_command,_type=histogram,cmd_name=RCPT,status_code=250 +Inf=1,10=0,100=0,1000=1,10000=1,100000=1,count=1,sum=0.000195
+dovecot_smtp_command,_type=histogram,cmd_name=DATA,status_code=250 +Inf=1,10=0,100=0,1000=0,10000=1,100000=1,count=1,sum=0.001249
+dovecot_smtp_command,_type=histogram,cmd_name=QUIT,status_code=221 +Inf=1,10=1,100=1,1000=1,10000=1,100000=1,count=1,sum=0.00001
+dovecot_mail_delivery,_type=histogram +Inf=1,10=0,100=0,1000=1,10000=1,100000=1,count=1,sum=0.000656

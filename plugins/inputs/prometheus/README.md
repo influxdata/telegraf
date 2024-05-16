@@ -32,6 +32,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If set to true, the gather time will be used.
   # ignore_timestamp = false
 
+  ## Override content-type of the returned message
+  ## Available options are for prometheus:
+  ##   text, protobuf-delimiter, protobuf-compact, protobuf-text,
+  ## and for openmetrics:
+  ##   openmetrics-text, openmetrics-protobuf
+  ## By default the content-type of the response is used.
+  # content_type_override = ""
+
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
