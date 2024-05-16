@@ -351,9 +351,19 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 }
 
 func (h *InfluxDBV2Listener) writeWithTracking(res http.ResponseWriter, metrics []telegraf.Metric) {
+	if len(metrics) > h.MaxUndeliveredMetrics {
+		res.WriteHeader(http.StatusRequestEntityTooLarge)
+		h.Log.Debugf("status %d, always rejecting batch of %d metrics: larger than max_undelivered_metrics %d",
+			http.StatusRequestEntityTooLarge, len(metrics), h.MaxUndeliveredMetrics)
+		return
+	}
+
 	pending := h.totalUndeliveredMetrics.Load()
-	if pending+int64(len(metrics)) > int64(h.MaxUndeliveredMetrics) {
+	remainingUndeliveredMetrics := int64(h.MaxUndeliveredMetrics) - pending
+	if int64(len(metrics)) > remainingUndeliveredMetrics {
 		res.WriteHeader(http.StatusTooManyRequests)
+		h.Log.Debugf("status %d, rejecting batch of %d metrics: larger than remaining undelivered metrics %d",
+			http.StatusTooManyRequests, len(metrics), remainingUndeliveredMetrics)
 		return
 	}
 

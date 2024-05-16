@@ -650,4 +650,19 @@ func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
+func TestRateLimitedConnectionRejectsBatchesLargerThanMaxUndeliveredMetrics(t *testing.T) {
+	listener := newRateLimitedTestListener(1)
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	msg := "xyzzy value=42\nxyzzy value=43"
+	postURL := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 413, resp.StatusCode)
+}
+
 // The term 'master_repl' used here is archaic language from redis
