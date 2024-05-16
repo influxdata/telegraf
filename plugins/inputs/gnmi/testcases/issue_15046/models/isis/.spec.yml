@@ -1,8 +1,0 @@
-- name: openconfig-isis
-  docs:
-    - yang/isis/openconfig-isis-lsdb-types.yang
-    - yang/isis/openconfig-isis-types.yang
-    - yang/isis/openconfig-isis.yang
-  build:
-    - yang/isis/openconfig-isis.yang
-  run-ci: true

@@ -1,8 +1,0 @@
-- name: openconfig-network-instance-srte-policy
-  docs:
-    - yang/network-instance/openconfig-network-instance-types.yang
-    - yang/network-instance/openconfig-network-instance.yang
-  build:
-    - yang/network-instance/openconfig-network-instance.yang
-    - yang/policy-forwarding/openconfig-pf-srte.yang
-  run-ci: true

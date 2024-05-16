@@ -10,7 +10,7 @@ module openconfig-platform-psu {
   // import some basic types
   import openconfig-extensions { prefix oc-ext; }
   import openconfig-types { prefix oc-types; }
-  import openconfig-platform { prefix oc-platform; }
+  //import openconfig-platform { prefix oc-platform; }
 
 
   // meta
@@ -49,12 +49,6 @@ module openconfig-platform-psu {
   oc-ext:catalog-organization "openconfig";
   oc-ext:origin "openconfig";
 
-  // identity statements
-
-  // typedef statements
-
-  // grouping statements
-
   grouping psu-config {
     description
       "Configuration data for power supply components";
@@ -72,9 +66,6 @@ module openconfig-platform-psu {
     description
       "Operational state data for power supply components";
 
-
-    // TODO(aashaikh): May need to convert some of these to
-    // interval statistics once decided on which leaves to include.
     leaf capacity {
       type oc-types:ieeefloat32;
       units watts;
@@ -117,30 +108,4 @@ module openconfig-platform-psu {
         "Output power supplied by the power supply.";
     }
   }
-
-  // data definition statements
-
-  // augment statements
-
-  augment "/oc-platform:components/oc-platform:component/" +
-    "oc-platform:power-supply/oc-platform:config" {
-    description
-      "Adds power supply data to component operational state.";
-
-    uses psu-config;
-  }
-
-  augment "/oc-platform:components/oc-platform:component/" +
-    "oc-platform:power-supply/oc-platform:state" {
-    description
-      "Adds power supply data to component operational state.";
-
-    uses psu-config;
-    uses psu-state;
-  }
-
-
-  // rpc statements
-
-  // notification statements
 }

@@ -1,9 +1,0 @@
-- name: openconfig-ospf
-  docs:
-    - yang/ospf/openconfig-ospf-types.yang
-    - yang/ospf/openconfig-ospfv2.yang
-  build:
-    - yang/network-instance/openconfig-network-instance.yang
-    - yang/policy/openconfig-routing-policy.yang
-    - yang/ospf/openconfig-ospf-policy.yang
-  run-ci: true

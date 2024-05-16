@@ -1,6 +1,0 @@
-- name: openconfig-relay-agent
-  docs:
-    - yang/relay-agent/openconfig-relay-agent.yang
-  build:
-    - yang/relay-agent/openconfig-relay-agent.yang
-  run-ci: true
