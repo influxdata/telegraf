@@ -1,11 +1,20 @@
 # Traffic Shaper Processor Plugin
 
-An in-memory traffic shaper processor which evens out traffic so that 
+An in-memory traffic shaper processor which evens out traffic so that
 output traffic is uniform
 
 Example of uneven traffic distribution
-![traffic_distribution](./docs/traffic_distribution.png)
-After applying traffic shaper the output traffic distribution is uniform
+
+12:00:01 - 1000 samples received
+
+12:00:02 - 0 samples received
+
+...
+
+12:00:10 - 0 samples received
+
+by using this processor and setting samples as 100 per second
+you can shape the outgoing traffic at 100 samples per second
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -22,11 +31,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Traffic Shaper outputs metrics at an uniform rate
 [[processors.traffic_shaper]]
 
-  ## No of samples to be emitted per time unit, default is seconds
-  ## This should be used in conjunction with number of telegraf instances.
-  samples = 20000
+  ## No of samples to be emitted in the specified rate
+  # samples = 20000
 
+  ## Rate at which the samples will be emitted
+  # rate = 1s
+   
   ## Buffer Size
   ## If buffer is full the incoming metrics will be dropped
-  buffer_size = 1000000
+  # buffer_size = 1000000
+  
+  ## Wait for queue to be drained before stopping
+  # wait_for_drain = true
 ```
