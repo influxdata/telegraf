@@ -4,8 +4,6 @@ Telegraf uses the standard package `net/http/pprof`. This package serves via
 its HTTP server runtime profiling data in the format expected by the pprof
 visualization tool.
 
-
-
 ## Enable profiling
 
 By default, the profiling is turned off. To enable profiling users need to
