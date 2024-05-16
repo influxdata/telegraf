@@ -32,7 +32,7 @@ go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
 
 ## Generate heap image
 
-It is very helpful to generate an image to visual see what heap memory is used.
+It is very helpful to generate an image to visualize what heap memory is used.
 It is best to capture an image a few moments after Telegraf starts and then at
 additional periods (e.g. 1min, 5min, etc.).
 
