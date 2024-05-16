@@ -55,5 +55,87 @@
                 }
             ]
         }
+    },
+    {
+        "update": {
+            "timestamp": "1715838159171548000",
+            "update": [
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "InletTempSensor1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJpbnN0YW50IjoiMzUuMDAwMDAwIiwiYXZnIjoiMjQuMDAwMDAwIiwibWluIjoiMC4wMDAwMDAiLCJtYXgiOiIzNi4wMDAwMDAiLCJpbnRlcnZhbCI6IjE4MDAwMDAwMDAwMCIsImFsYXJtLXN0YXR1cyI6ZmFsc2UsImFsYXJtLXRocmVzaG9sZCI6MCwiYWxhcm0tc2V2ZXJpdHkiOiJvcGVuY29uZmlnLWFsYXJtLXR5cGVzOk1JTk9SIn0="
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "OutletTempSensor1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJpbnN0YW50IjoiNDQuMDAwMDAwIiwiYXZnIjoiMjkuMDAwMDAwIiwibWluIjoiMC4wMDAwMDAiLCJtYXgiOiI0NC4wMDAwMDAiLCJpbnRlcnZhbCI6IjE4MDAwMDAwMDAwMCIsImFsYXJtLXN0YXR1cyI6ZmFsc2UsImFsYXJtLXRocmVzaG9sZCI6MCwiYWxhcm0tc2V2ZXJpdHkiOiJvcGVuY29uZmlnLWFsYXJtLXR5cGVzOk1JTk9SIn0="
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "HotSpotTempSensor1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJpbnN0YW50IjoiNTguMDAwMDAwIiwiYXZnIjoiMzkuMDAwMDAwIiwibWluIjoiMC4wMDAwMDAiLCJtYXgiOiI1OS4wMDAwMDAiLCJpbnRlcnZhbCI6IjE4MDAwMDAwMDAwMCIsImFsYXJtLXN0YXR1cyI6ZmFsc2UsImFsYXJtLXRocmVzaG9sZCI6MCwiYWxhcm0tc2V2ZXJpdHkiOiJvcGVuY29uZmlnLWFsYXJtLXR5cGVzOk1JTk9SIn0="
+                    }
+                }
+            ]
+        }
     }
 ]
