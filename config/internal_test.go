@@ -383,7 +383,7 @@ func TestURLRetries3Fails(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	expected := fmt.Sprintf("error loading config file %s: retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
+	expected := fmt.Sprintf("error loading config file %s: failed to fetch HTTP config: 404 Not Found", ts.URL)
 
 	c := NewConfig()
 	err := c.LoadConfig(ts.URL)
