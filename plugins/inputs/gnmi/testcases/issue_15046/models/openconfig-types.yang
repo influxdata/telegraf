@@ -28,6 +28,28 @@ module openconfig-types {
   oc-ext:catalog-organization "openconfig";
   oc-ext:origin "openconfig";
 
+  typedef stat-interval {
+    type uint64;
+    units nanoseconds;
+    description
+      "A time interval over which a set of statistics is computed.
+      A common usage is to report the interval over which
+      avg/min/max stats are computed and reported.";
+  }
+
+  grouping stat-interval-state {
+    description
+      "Reusable leaf definition for stats computation interval";
+
+    leaf interval {
+      type oc-types:stat-interval;
+      description
+        "If supported by the system, this reports the time interval
+        over which the min/max/average statistics are computed by
+        the system.";
+    }
+  }
+
   typedef ieeefloat32 {
     type binary {
       length "4";

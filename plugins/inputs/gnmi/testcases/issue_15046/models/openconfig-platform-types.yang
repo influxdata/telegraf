@@ -1,0 +1,80 @@
+module openconfig-platform-types {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/platform-types";
+
+  prefix "oc-platform-types";
+
+  import openconfig-types { prefix oc-types; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module defines data types (e.g., YANG identities)
+    to support the OpenConfig component inventory model.";
+
+  oc-ext:openconfig-version "1.6.0";
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+  grouping avg-min-max-instant-stats-precision1-celsius {
+    description
+      "Common grouping for recording temperature values in
+      Celsius with 1 decimal precision. Values include the
+      instantaneous, average, minimum, and maximum statistics";
+
+    leaf instant {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The instantaneous value of the statistic.";
+    }
+
+    leaf avg {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The arithmetic mean value of the statistic over the
+        sampling period.";
+    }
+
+    leaf min {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The minimum value of the statistic over the sampling
+        period";
+    }
+
+    leaf max {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      units celsius;
+      description
+        "The maximum value of the statistic over the sampling
+        period";
+    }
+
+    uses oc-types:stat-interval-state;
+  }
+}
