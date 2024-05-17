@@ -82,8 +82,9 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 					namespace = n
 				}
 			}
+
+			// IETF nodes referencing YANG entries require a namespace
 			if namespace == "" {
-				// IETF YANG entries require a namespace
 				continue
 			}
 
@@ -101,11 +102,24 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 		}
 	}
 
-	// Create an update-field with the complete path for all entries
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
+		p := path.appendSegments(entry.key...)
+
+		// Try to lookup the full path to decode the field according to the
+		// YANG model if any
+		if h.decoder != nil {
+			origin, fieldPath := p.Path()
+			if decoded, err := h.decoder.DecodePathElement(origin, fieldPath, entry.value); err != nil {
+				h.log.Debugf("Decoding %s failed: %v", p, err)
+			} else {
+				entry.value = decoded
+			}
+		}
+
+		// Create an update-field with the complete path for all entries
 		fields = append(fields, updateField{
-			path:  path.appendSegments(entry.key...),
+			path:  p,
 			value: entry.value,
 		})
 	}
