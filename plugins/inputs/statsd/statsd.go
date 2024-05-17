@@ -76,6 +76,7 @@ type Statsd struct {
 	DeleteSets      bool     `toml:"delete_sets"`
 	DeleteTimings   bool     `toml:"delete_timings"`
 	ConvertNames    bool     `toml:"convert_names"`
+	FloatCounters   bool     `toml:"float_counters"`
 
 	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
@@ -285,6 +286,11 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
 		}
 
+		if s.FloatCounters {
+			for key := range m.fields {
+				m.fields[key] = float64(m.fields[key].(int64))
+			}
+		}
 		acc.AddCounter(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteCounters {

@@ -532,6 +532,115 @@ func TestParse_Counters(t *testing.T) {
 	}
 }
 
+func TestParse_CountersAsFloat(t *testing.T) {
+	s := NewTestStatsd()
+	s.FloatCounters = true
+
+	// Test that counters work
+	validLines := []string{
+		"small.inc:1|c",
+		"big.inc:100|c",
+		"big.inc:1|c",
+		"big.inc:100000|c",
+		"big.inc:1000000|c",
+		"small.inc:1|c",
+		"zero.init:0|c",
+		"sample.rate:1|c|@0.1",
+		"sample.rate:1|c",
+		"scientific.notation:4.696E+5|c",
+		"negative.test:100|c",
+		"negative.test:-5|c",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"scientific_notation",
+			469600,
+		},
+		{
+			"small_inc",
+			2,
+		},
+		{
+			"big_inc",
+			1100101,
+		},
+		{
+			"zero_init",
+			0,
+		},
+		{
+			"sample_rate",
+			11,
+		},
+		{
+			"negative_test",
+			95,
+		},
+	}
+	for _, test := range validations {
+		require.NoError(t, testValidateCounter(test.name, test.value, s.counters))
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"small_inc",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 2.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"big_inc",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 1100101.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"zero_init",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 0.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"sample_rate",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 11.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"scientific_notation",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 469600.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"negative_test",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 95.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Gather(acc))
+	metrics := acc.GetTelegrafMetrics()
+	testutil.PrintMetrics(metrics)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
 	s := NewTestStatsd()

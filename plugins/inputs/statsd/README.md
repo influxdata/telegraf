@@ -117,6 +117,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Replace dots (.) with underscore (_) and dashes (-) with
   ## double underscore (__) in metric names.
   # convert_names = false
+
+  ## Convert all numeric counters to float
+  ## Enabling this would ensure that both counters and guages are both emitted
+  ## as floats.
+  # float_counters = false
 ```
 
 ## Description
