@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	gobin "encoding/binary"
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -55,13 +56,57 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		// parse fields
-		for _, key := range p.ParseFields {
-			newMetrics = append(newMetrics, p.parseField(key, metric, false)...)
-		}
+		for _, field := range metric.FieldList() {
+			plain := slices.Contains(p.ParseFields, field.Key)
+			b64 := slices.Contains(p.Base64Fields, field.Key)
 
-		// parse base64 fields
-		for _, key := range p.Base64Fields {
-			newMetrics = append(newMetrics, p.parseField(key, metric, true)...)
+			if !plain && !b64 {
+				continue
+			}
+
+			if plain && b64 {
+				p.Log.Errorf("field %s is listed in both parse fields and base64 fields; skipping", field.Key)
+				continue
+			}
+
+			value, err := p.toBytes(field.Value)
+			if err != nil {
+				p.Log.Errorf("could not convert field %s: %v; skipping", field.Key, err)
+				continue
+			}
+
+			if b64 {
+				decoded := make([]byte, base64.StdEncoding.DecodedLen(len(value)))
+				n, err := base64.StdEncoding.Decode(decoded, value)
+				if err != nil {
+					p.Log.Errorf("could not decode base64 field %s: %v; skipping", field.Key, err)
+					continue
+				}
+				value = decoded[:n]
+			}
+
+			fromFieldMetric, err := p.parser.Parse(value)
+			if err != nil {
+				p.Log.Errorf("could not parse field %s: %v", field.Key, err)
+				continue
+			}
+
+			for _, m := range fromFieldMetric {
+				// The parser get the parent plugin's name as
+				// default measurement name. Thus, in case the
+				// parsed metric does not provide a name itself,
+				// the parser  will return 'parser' as we are in
+				// processors.parser. In those cases we want to
+				// keep the original metric name.
+				if m.Name() == "" || m.Name() == "parser" {
+					m.SetName(metric.Name())
+				}
+			}
+
+			// multiple parsed fields shouldn't create multiple
+			// metrics so we'll merge tags/fields down into one
+			// prior to returning.
+			newMetrics = append(newMetrics, fromFieldMetric...)
 		}
 
 		// parse tags
@@ -103,43 +148,6 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return results
 }
 
-func (p *Parser) parseField(key string, metric telegraf.Metric, b64 bool) []telegraf.Metric {
-	newMetrics := []telegraf.Metric{}
-	for _, field := range metric.FieldList() {
-		if field.Key != key {
-			continue
-		}
-		value, err := p.toBytes(field.Value, b64)
-		if err != nil {
-			p.Log.Errorf("could not convert field %s: %v; skipping", key, err)
-			continue
-		}
-		fromFieldMetric, err := p.parser.Parse(value)
-		if err != nil {
-			p.Log.Errorf("could not parse field %s: %v", key, err)
-			continue
-		}
-
-		for _, m := range fromFieldMetric {
-			// The parser get the parent plugin's name as
-			// default measurement name. Thus, in case the
-			// parsed metric does not provide a name itself,
-			// the parser  will return 'parser' as we are in
-			// processors.parser. In those cases we want to
-			// keep the original metric name.
-			if m.Name() == "" || m.Name() == "parser" {
-				m.SetName(metric.Name())
-			}
-		}
-
-		// multiple parsed fields shouldn't create multiple
-		// metrics so we'll merge tags/fields down into one
-		// prior to returning.
-		newMetrics = append(newMetrics, fromFieldMetric...)
-	}
-	return newMetrics
-}
-
 func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
@@ -173,27 +181,17 @@ func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
 }
 
-func (p *Parser) toBytes(value interface{}, b64 bool) ([]byte, error) {
-	var raw []byte
+func (p *Parser) toBytes(value interface{}) ([]byte, error) {
 	if v, ok := value.(string); ok {
-		raw = []byte(v)
-	} else {
-		var buf bytes.Buffer
-		if err := gobin.Write(&buf, internal.HostEndianness, value); err != nil {
-			return nil, err
-		}
-		raw = buf.Bytes()
+		return []byte(v), nil
 	}
 
-	if b64 {
-		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(raw)))
-		n, err := base64.StdEncoding.Decode(decoded, raw)
-		if err != nil {
-			return nil, err
-		}
-		return decoded[:n], nil
+	var buf bytes.Buffer
+	if err := gobin.Write(&buf, internal.HostEndianness, value); err != nil {
+		return nil, err
 	}
-	return raw, nil
+
+	return buf.Bytes(), nil
 }
 
 func init() {

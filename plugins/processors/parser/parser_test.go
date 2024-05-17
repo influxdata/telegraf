@@ -711,7 +711,6 @@ func TestApply(t *testing.T) {
 		},
 		{
 			name:         "test base 64 field single",
-			parseFields:  []string{"sample"},
 			parseBase64:  []string{"sample"},
 			dropOriginal: true,
 			parser: &json.Parser{
@@ -740,7 +739,6 @@ func TestApply(t *testing.T) {
 		},
 		{
 			name:         "parse two base64 fields",
-			parseFields:  []string{"field_1", "field_2"},
 			parseBase64:  []string{"field_1", "field_2"},
 			dropOriginal: true,
 			parser: &json.Parser{
@@ -775,7 +773,7 @@ func TestApply(t *testing.T) {
 		},
 		{
 			name:         "parse two fields, one base64",
-			parseFields:  []string{"field_1", "field_2"},
+			parseFields:  []string{"field_2"},
 			parseBase64:  []string{"field_1"},
 			dropOriginal: true,
 			parser: &json.Parser{
@@ -914,19 +912,34 @@ func TestBadApply(t *testing.T) {
 }
 
 func TestBase64FieldValidation(t *testing.T) {
+	testMetric := metric.New(
+		"test",
+		map[string]string{},
+		map[string]interface{}{
+			"b": `eyJsdmwiOiJpbmZvIiwibXNnIjoiaHR0cCByZXF1ZXN0In0=`,
+		},
+		time.Unix(0, 0))
+
+	testLogger := &testutil.CaptureLogger{}
 	plugin := &Parser{
 		ParseFields:  []string{"a"},
 		Base64Fields: []string{"b"},
-	}
-	plugin.SetParser(&json.Parser{})
-	require.Error(t, plugin.Init())
-
-	plugin = &Parser{
-		ParseFields:  []string{"a"},
-		Base64Fields: []string{"a"},
+		Log:          testLogger,
 	}
 	plugin.SetParser(&json.Parser{})
 	require.NoError(t, plugin.Init())
+	plugin.Apply(testMetric)
+	require.Empty(t, testLogger.Errors())
+
+	plugin = &Parser{
+		ParseFields:  []string{"b"},
+		Base64Fields: []string{"b"},
+		Log:          testLogger,
+	}
+	plugin.SetParser(&json.Parser{})
+	require.NoError(t, plugin.Init())
+	plugin.Apply(testMetric)
+	require.NotEmpty(t, testLogger.Errors())
 }
 
 func TestTracking(t *testing.T) {
