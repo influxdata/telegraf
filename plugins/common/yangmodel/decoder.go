@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/openconfig/goyang/pkg/yang"
 )
@@ -18,7 +19,8 @@ var (
 )
 
 type Decoder struct {
-	modules *yang.Modules
+	modules   *yang.Modules
+	rootNodes map[string][]yang.Node
 }
 
 func NewDecoder(paths ...string) (*Decoder, error) {
@@ -84,7 +86,48 @@ func NewDecoder(paths ...string) (*Decoder, error) {
 		return nil, errors.Join(errs...)
 	}
 
-	return &Decoder{modules: modules}, nil
+	// Get all root nodes defined in models with their origin. We require
+	// those nodes to later resolve paths to YANG model leaf nodes...
+	moduleSeen := make(map[string]bool, len(modules.Modules))
+	moduleRootNodes := make(map[string][]yang.Node)
+	for _, m := range modules.Modules {
+		// Check if we processed the module already
+		if moduleSeen[m.Name] {
+			continue
+		}
+		moduleSeen[m.Name] = true
+
+		// Determine the origin defined in the module
+		var prefix string
+		for _, imp := range m.Import {
+			if imp.Name == "openconfig-extensions" {
+				prefix = imp.Name
+				if imp.Prefix != nil {
+					prefix = imp.Prefix.Name
+				}
+				break
+			}
+		}
+
+		var moduleOrigin string
+		if prefix != "" {
+			for _, e := range m.Extensions {
+				if e.Keyword == prefix+":origin" || e.Keyword == "origin" {
+					moduleOrigin = e.Argument
+					break
+				}
+			}
+		}
+		for _, u := range m.Uses {
+			root, err := yang.FindNode(m, u.Name)
+			if err != nil {
+				return nil, err
+			}
+			moduleRootNodes[moduleOrigin] = append(moduleRootNodes[moduleOrigin], root)
+		}
+	}
+
+	return &Decoder{modules: modules, rootNodes: moduleRootNodes}, nil
 }
 
 func (d *Decoder) FindLeaf(namespace, identifier string) (*yang.Leaf, error) {
@@ -112,31 +155,85 @@ func (d *Decoder) FindLeaf(namespace, identifier string) (*yang.Leaf, error) {
 func DecodeLeaf(leaf *yang.Leaf, value interface{}) (interface{}, error) {
 	schema := leaf.Type.YangType
 
-	if schema.Kind != yang.Ybinary {
-		return value, nil
-	}
-
-	// Binary values are encodes as base64 strings
+	// Ignore all non-string values as the types seem already converted...
 	s, ok := value.(string)
 	if !ok {
 		return value, nil
 	}
 
-	// Decode the encoded binary values
-	raw, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return value, err
-	}
-
-	switch schema.Name {
-	case "ieeefloat32":
-		if len(raw) != 4 {
-			return raw, fmt.Errorf("%w, expected 4 but got %d bytes", ErrInsufficientData, len(raw))
+	switch schema.Kind {
+	case yang.Ybinary:
+		// Binary values are encodes as base64 string, so decode the string
+		raw, err := base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			return value, err
 		}
-		return math.Float32frombits(binary.BigEndian.Uint32(raw)), nil
-	default:
-		return raw, nil
+
+		switch schema.Name {
+		case "ieeefloat32":
+			if len(raw) != 4 {
+				return raw, fmt.Errorf("%w, expected 4 but got %d bytes", ErrInsufficientData, len(raw))
+			}
+			return math.Float32frombits(binary.BigEndian.Uint32(raw)), nil
+		default:
+			return raw, nil
+		}
+	case yang.Yint8:
+		v, err := strconv.ParseInt(s, 10, 8)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return int8(v), nil
+	case yang.Yint16:
+		v, err := strconv.ParseInt(s, 10, 16)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return int16(v), nil
+	case yang.Yint32:
+		v, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return int32(v), nil
+	case yang.Yint64:
+		v, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return v, nil
+	case yang.Yuint8:
+		v, err := strconv.ParseUint(s, 10, 8)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return uint8(v), nil
+	case yang.Yuint16:
+		v, err := strconv.ParseUint(s, 10, 16)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return uint16(v), nil
+	case yang.Yuint32:
+		v, err := strconv.ParseUint(s, 10, 32)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return uint32(v), nil
+	case yang.Yuint64:
+		v, err := strconv.ParseUint(s, 10, 64)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return v, nil
+	case yang.Ydecimal64:
+		v, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return value, fmt.Errorf("parsing %s %q failed: %w", yang.TypeKindToName[schema.Kind], s, err)
+		}
+		return v, nil
 	}
+	return value, nil
 }
 
 func (d *Decoder) DecodeElement(namespace, identifier string, value interface{}) (interface{}, error) {
@@ -146,4 +243,25 @@ func (d *Decoder) DecodeElement(namespace, identifier string, value interface{})
 	}
 
 	return DecodeLeaf(leaf, value)
+}
+
+func (d *Decoder) DecodePathElement(origin, path string, value interface{}) (interface{}, error) {
+	rootNodes, found := d.rootNodes[origin]
+	if !found || len(rootNodes) == 0 {
+		return value, nil
+	}
+
+	for _, root := range rootNodes {
+		node, _ := yang.FindNode(root, path)
+		if node == nil {
+			// The path does not exist in this root node
+			continue
+		}
+		// We do expect a leaf node...
+		if leaf, ok := node.(*yang.Leaf); ok {
+			return DecodeLeaf(leaf, value)
+		}
+	}
+
+	return value, nil
 }
