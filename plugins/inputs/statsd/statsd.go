@@ -96,6 +96,11 @@ type Statsd struct {
 	// https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
 	DataDogDistributions bool `toml:"datadog_distributions"`
 
+	// Either to keep or drop the container id as tag.
+	// Requires the DataDogExtension flag to be enabled.
+	// https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#dogstatsd-protocol-v12
+	DataDogKeepContainerTag bool `toml:"datadog_keep_container_tag"`
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
@@ -577,6 +582,11 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
 				parseDataDogTags(lineTags, segment[1:])
+			} else if len(segment) > 0 && strings.HasPrefix(segment, "c:") {
+				// This is optional container ID field
+				if s.DataDogKeepContainerTag {
+					lineTags["container"] = segment[2:]
+				}
 			} else {
 				recombinedSegments = append(recombinedSegments, segment)
 			}

@@ -1206,6 +1206,157 @@ func TestParse_DataDogTags(t *testing.T) {
 	}
 }
 
+func TestParse_DataDogContainerID(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		keep     bool
+		expected []telegraf.Metric
+	}{
+		{
+			name: "counter",
+			line: "my_counter:1|c|#host:localhost,endpoint:/:tenant?/oauth/ro|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_counter",
+					map[string]string{
+						"endpoint":    "/:tenant?/oauth/ro",
+						"host":        "localhost",
+						"metric_type": "counter",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+		{
+			name: "gauge",
+			line: "my_gauge:10.1|g|#live|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_gauge",
+					map[string]string{
+						"live":        "true",
+						"metric_type": "gauge",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 10.1,
+					},
+					time.Now(),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "set",
+			line: "my_set:1|s|#host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_set",
+					map[string]string{
+						"host":        "localhost",
+						"metric_type": "set",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Now(),
+				),
+			},
+		},
+		{
+			name: "timer",
+			line: "my_timer:3|ms|@0.1|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_timer",
+					map[string]string{
+						"host":        "localhost",
+						"live":        "true",
+						"metric_type": "timing",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"count":  10,
+						"lower":  float64(3),
+						"mean":   float64(3),
+						"median": float64(3),
+						"stddev": float64(0),
+						"sum":    float64(30),
+						"upper":  float64(3),
+					},
+					time.Now(),
+				),
+			},
+		},
+		{
+			name: "empty tag set",
+			line: "cpu:42|c|#|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"metric_type": "counter",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+		{
+			name: "drop it",
+			line: "cpu:42|c|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: false,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"host":        "localhost",
+						"live":        "true",
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			s := NewTestStatsd()
+			s.DataDogExtensions = true
+			s.DataDogKeepContainerTag = tt.keep
+
+			require.NoError(t, s.parseStatsdLine(tt.line))
+			require.NoError(t, s.Gather(&acc))
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.SortMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
 // Test that statsd buckets are parsed to measurement names properly
 func TestParseName(t *testing.T) {
 	s := NewTestStatsd()
