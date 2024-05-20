@@ -28,7 +28,7 @@ For versions earlier than v1.13 and earlier see
 - [#15223](https://github.com/influxdata/telegraf/pull/15223) `makefile` Use go's dependency checker for per platform builds
 - [#15224](https://github.com/influxdata/telegraf/pull/15224) `outputs.graphite` Handle local address without port correctly
 - [#15277](https://github.com/influxdata/telegraf/pull/15277) `outputs.loki` Option to sanitize label names
-- [#15346](https://github.com/influxdata/telegraf/pull/15346) `windows` Make sure to log the final error message
+- [#15346](https://github.com/influxdata/telegraf/pull/15346) `windows` Make sure to log the final error message on exit
 
 ### Dependency Updates
 
