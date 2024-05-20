@@ -134,7 +134,6 @@ following works:
 - github.com/facebook/time [Apache License 2.0](https://github.com/facebook/time/blob/main/LICENSE)
 - github.com/fatih/color [MIT License](https://github.com/fatih/color/blob/master/LICENSE.md)
 - github.com/felixge/httpsnoop [MIT License](https://github.com/felixge/httpsnoop/blob/master/LICENSE.txt)
-- github.com/form3tech-oss/jwt-go [MIT License](https://github.com/form3tech-oss/jwt-go/blob/master/LICENSE)
 - github.com/fxamacker/cbor [MIT License](https://github.com/fxamacker/cbor/blob/master/LICENSE)
 - github.com/gabriel-vasile/mimetype [MIT License](https://github.com/gabriel-vasile/mimetype/blob/master/LICENSE)
 - github.com/go-asn1-ber/asn1-ber [MIT License](https://github.com/go-asn1-ber/asn1-ber/blob/v1.3/LICENSE)
