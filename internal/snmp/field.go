@@ -146,6 +146,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 
 	if f.Conversion == "int" {
 		v = ent.Value
+		err = nil
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
@@ -172,11 +173,11 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		case uint64:
 			v = int64(vt)
 		case []byte:
-			v, _ = strconv.ParseInt(string(vt), 10, 64)
+			v, err = strconv.ParseInt(string(vt), 10, 64)
 		case string:
-			v, _ = strconv.ParseInt(vt, 10, 64)
+			v, err = strconv.ParseInt(vt, 10, 64)
 		}
-		return v, nil
+		return v, err
 	}
 
 	if f.Conversion == "hwaddr" {
