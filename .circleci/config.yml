@@ -15,7 +15,7 @@ executors:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     resource_class: macos.m1.medium.gen1
     macos:
-      xcode: 14.2.0
+      xcode: 15.2.0
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=4
