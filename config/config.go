@@ -271,6 +271,10 @@ type AgentConfig struct {
 	// By default, processors are run a second time after aggregators. Changing
 	// this setting to true will skip the second run of processors.
 	SkipProcessorsAfterAggregators bool `toml:"skip_processors_after_aggregators"`
+
+	// Number of attempts to obtain a remote configuration via a URL during
+	// startup. Set to -1 for unlimited attempts.
+	ConfigURLRetryAttempts int `toml:"config-url-retry-attempts"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -449,7 +453,7 @@ func (c *Config) LoadConfig(path string) error {
 		log.Printf("I! Loading config: %s", path)
 	}
 
-	data, _, err := LoadConfigFile(path)
+	data, _, err := LoadConfigFileWithRetries(path, c.Agent.ConfigURLRetryAttempts)
 	if err != nil {
 		return fmt.Errorf("error loading config file %s: %w", path, err)
 	}
@@ -718,6 +722,10 @@ func trimBOM(f []byte) []byte {
 // together with a flag denoting if the file is from a remote location such
 // as a web server.
 func LoadConfigFile(config string) ([]byte, bool, error) {
+	return LoadConfigFileWithRetries(config, 0)
+}
+
+func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, bool, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
 		if err != nil {
@@ -726,7 +734,7 @@ func LoadConfigFile(config string) ([]byte, bool, error) {
 
 		switch u.Scheme {
 		case "https", "http":
-			data, err := fetchConfig(u)
+			data, err := fetchConfig(u, urlRetryAttempts)
 			return data, true, err
 		default:
 			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
@@ -747,7 +755,7 @@ func LoadConfigFile(config string) ([]byte, bool, error) {
 	return buffer, false, nil
 }
 
-func fetchConfig(u *url.URL) ([]byte, error) {
+func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -759,38 +767,53 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	req.Header.Add("Accept", "application/toml")
 	req.Header.Set("User-Agent", internal.ProductToken())
 
-	retries := 3
-	for i := 0; i <= retries; i++ {
-		body, err, retry := func() ([]byte, error, bool) {
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				return nil, fmt.Errorf("retry %d of %d failed connecting to HTTP config server: %w", i, retries, err), false
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				if i < retries {
-					log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
-					return nil, nil, true
-				}
-				return nil, fmt.Errorf("retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status), false
-			}
-			body, err := io.ReadAll(resp.Body)
-			return body, err, false
-		}()
+	var totalAttempts int
+	if urlRetryAttempts == -1 {
+		totalAttempts = -1
+		log.Printf("Using unlimited number of attempts to fetch HTTP config")
+	} else if urlRetryAttempts == 0 {
+		totalAttempts = 3
+		log.Printf("Using default number of attempts to fetch HTTP config: %d", totalAttempts)
+	} else if urlRetryAttempts > 0 {
+		totalAttempts = urlRetryAttempts
+	} else {
+		return nil, fmt.Errorf("invalid number of attempts: %d", urlRetryAttempts)
+	}
 
-		if err != nil {
+	attempt := 0
+	for {
+		body, err := requestURLConfig(req)
+		if err == nil {
+			return body, nil
+		}
+
+		log.Printf("Error getting HTTP config (attempt %d of %d): %s", attempt, totalAttempts, err)
+		if urlRetryAttempts != -1 && attempt >= totalAttempts {
 			return nil, err
 		}
 
-		if retry {
-			time.Sleep(httpLoadConfigRetryInterval)
-			continue
-		}
+		time.Sleep(httpLoadConfigRetryInterval)
+		attempt++
+	}
+}
 
-		return body, err
+func requestURLConfig(req *http.Request) ([]byte, error) {
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to HTTP config server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch HTTP config: %s", resp.Status)
 	}
 
-	return nil, nil
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return body, nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and
