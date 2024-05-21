@@ -94,7 +94,7 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 				identifier = b
 			}
 
-			if decoded, err := h.decoder.DecodeElement(namespace, identifier, e.value); err != nil {
+			if decoded, err := h.decoder.DecodeLeafElement(namespace, identifier, e.value); err != nil {
 				h.log.Debugf("Decoding %s:%s failed: %v", namespace, identifier, err)
 			} else {
 				entries[i].value = decoded

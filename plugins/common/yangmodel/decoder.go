@@ -19,7 +19,7 @@ var (
 )
 
 type Decoder struct {
-	modules   *yang.Modules
+	modules   map[string]*yang.Module
 	rootNodes map[string][]yang.Node
 }
 
@@ -88,14 +88,15 @@ func NewDecoder(paths ...string) (*Decoder, error) {
 
 	// Get all root nodes defined in models with their origin. We require
 	// those nodes to later resolve paths to YANG model leaf nodes...
-	moduleSeen := make(map[string]bool, len(modules.Modules))
+	moduleLUT := make(map[string]*yang.Module)
 	moduleRootNodes := make(map[string][]yang.Node)
 	for _, m := range modules.Modules {
 		// Check if we processed the module already
-		if moduleSeen[m.Name] {
+		if _, found := moduleLUT[m.Name]; found {
 			continue
 		}
-		moduleSeen[m.Name] = true
+		// Create a module mapping for easily finding modules by name
+		moduleLUT[m.Name] = m
 
 		// Determine the origin defined in the module
 		var prefix string
@@ -127,19 +128,14 @@ func NewDecoder(paths ...string) (*Decoder, error) {
 		}
 	}
 
-	return &Decoder{modules: modules, rootNodes: moduleRootNodes}, nil
+	return &Decoder{modules: moduleLUT, rootNodes: moduleRootNodes}, nil
 }
 
-func (d *Decoder) FindLeaf(namespace, identifier string) (*yang.Leaf, error) {
+func (d *Decoder) FindLeaf(name, identifier string) (*yang.Leaf, error) {
 	// Get module name from the element
-	entry, errs := d.modules.GetModule(namespace)
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("getting module %q failed: %w", namespace, errors.Join(errs...))
-	}
-
-	module, err := d.modules.FindModuleByNamespace(entry.Namespace().NName())
-	if err != nil {
-		return nil, fmt.Errorf("finding module %q failed: %w", namespace, err)
+	module, found := d.modules[name]
+	if !found {
+		return nil, fmt.Errorf("cannot find module %q", name)
 	}
 
 	for _, grp := range module.Grouping {
@@ -152,7 +148,7 @@ func (d *Decoder) FindLeaf(namespace, identifier string) (*yang.Leaf, error) {
 	return nil, ErrNotFound
 }
 
-func DecodeLeaf(leaf *yang.Leaf, value interface{}) (interface{}, error) {
+func DecodeLeafValue(leaf *yang.Leaf, value interface{}) (interface{}, error) {
 	schema := leaf.Type.YangType
 
 	// Ignore all non-string values as the types seem already converted...
@@ -236,13 +232,13 @@ func DecodeLeaf(leaf *yang.Leaf, value interface{}) (interface{}, error) {
 	return value, nil
 }
 
-func (d *Decoder) DecodeElement(namespace, identifier string, value interface{}) (interface{}, error) {
+func (d *Decoder) DecodeLeafElement(namespace, identifier string, value interface{}) (interface{}, error) {
 	leaf, err := d.FindLeaf(namespace, identifier)
 	if err != nil {
 		return nil, fmt.Errorf("finding %s failed: %w", identifier, err)
 	}
 
-	return DecodeLeaf(leaf, value)
+	return DecodeLeafValue(leaf, value)
 }
 
 func (d *Decoder) DecodePathElement(origin, path string, value interface{}) (interface{}, error) {
@@ -259,7 +255,7 @@ func (d *Decoder) DecodePathElement(origin, path string, value interface{}) (int
 		}
 		// We do expect a leaf node...
 		if leaf, ok := node.(*yang.Leaf); ok {
-			return DecodeLeaf(leaf, value)
+			return DecodeLeafValue(leaf, value)
 		}
 	}
 
