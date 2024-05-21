@@ -42,6 +42,11 @@ commands:
             equal: [ "386", << parameters.arch >> ]
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
+            - unless:
+                condition:
+                  equal: [ "darwin", << parameters.os >> ]
+                steps:
+                  - run: echo 'export RACE="-race -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
       - when:
           condition:
             equal: [ windows, << parameters.os >> ]
