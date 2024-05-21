@@ -7,7 +7,8 @@ import (
 )
 
 func TestEngineAlternateSeparator(t *testing.T) {
-	defaultTemplate, _ := NewDefaultTemplateWithPattern("topic*")
+	defaultTemplate, err := NewDefaultTemplateWithPattern("topic*")
+	require.NoError(t, err)
 	engine, err := NewEngine("_", defaultTemplate, []string{
 		"/ /*/*/* /measurement/origin/measurement*",
 	})

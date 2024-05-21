@@ -129,10 +129,16 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		case uint64:
 			v = float64(vt) / math.Pow10(d)
 		case []byte:
-			vf, _ := strconv.ParseFloat(string(vt), 64)
+			vf, err := strconv.ParseFloat(string(vt), 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert field to float with value %s: %w", vt, err)
+			}
 			v = vf / math.Pow10(d)
 		case string:
-			vf, _ := strconv.ParseFloat(vt, 64)
+			vf, err := strconv.ParseFloat(vt, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert field to float with value %s: %w", vt, err)
+			}
 			v = vf / math.Pow10(d)
 		}
 		return v, nil

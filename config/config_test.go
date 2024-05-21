@@ -519,7 +519,8 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("[agent]\ndebug = true"))
+		_, err := w.Write([]byte("[agent]\ndebug = true"))
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -1193,7 +1194,8 @@ func TestPersisterInputStoreLoad(t *testing.T) {
 		p.state.Version++
 		p.state.Offset += uint64(i + 1)
 		p.state.Bits = append(p.state.Bits, len(p.state.Bits))
-		p.state.Modified, _ = time.Parse(time.RFC3339, "2022-11-03T16:49:00+02:00")
+		p.state.Modified, err = time.Parse(time.RFC3339, "2022-11-03T16:49:00+02:00")
+		require.NoError(t, err)
 
 		// Store the state for later comparison
 		expected[plugin.ID()] = p.GetState()
@@ -1542,7 +1544,10 @@ type MockupStatePlugin struct {
 }
 
 func (m *MockupStatePlugin) Init() error {
-	t0, _ := time.Parse(time.RFC3339, "2021-04-24T23:42:00+02:00")
+	t0, err := time.Parse(time.RFC3339, "2021-04-24T23:42:00+02:00")
+	if err != nil {
+		return err
+	}
 	m.state = MockupState{
 		Name:     "mockup",
 		Bits:     []int{},
