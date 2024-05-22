@@ -828,9 +828,9 @@ func TestApply(t *testing.T) {
 
 			// check timestamp when using with-timestamp merge type
 			if tt.merge == "override-with-timestamp" {
-				testutil.RequireMetricsEqual(t, tt.expected, output)
+				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.SortMetrics())
 			} else {
-				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
+				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.SortMetrics(), testutil.IgnoreTime())
 			}
 		})
 	}
