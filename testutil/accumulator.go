@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -128,14 +127,6 @@ func (a *Accumulator) addMeasurement(
 		} else {
 			t = a.TimeFunc()
 		}
-	}
-
-	if a.debug {
-		pretty, _ := json.MarshalIndent(fields, "", "  ")
-		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
-		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
-			measurement, string(pretty), string(prettyTags))
-		fmt.Print(msg)
 	}
 
 	m := &Metric{

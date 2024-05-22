@@ -71,6 +71,7 @@ linters-settings:
       - "(*hash/maphash.Hash).Write"
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
+    check-blank: true
   gocritic:
     # Disable all checks.
     # Default: false
@@ -325,6 +326,9 @@ issues:
     - package comment should be of the form "(.+)...
     # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
     - should have a package comment
+    # nolintlint: directive `//nolint:errcheck` is unused for linter "errcheck"
+    # temporary while these are being fixed
+    - directive `//nolint:errcheck //.*` is unused for linter "errcheck"
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
@@ -334,6 +338,10 @@ issues:
 
     - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
+
+    - path: plugins/*
+      linters:
+        - errcheck # temporary as this linter is gradually being applied across the codebase
 
     - path: _test\.go
       text: "Potential hardcoded credentials" #gosec:G101
