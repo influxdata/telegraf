@@ -170,7 +170,7 @@ require (
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
-	github.com/shirou/gopsutil/v3 v3.24.4
+	github.com/shirou/gopsutil/v3 v3.24.5-0.20240523132159-edb58e3dd10d
 	github.com/showwin/speedtest-go v1.7.7
 	github.com/signalfx/golib/v3 v3.3.53
 	github.com/sirupsen/logrus v1.9.3
@@ -508,5 +508,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/shirou/gopsutil/v3 => github.com/powersj/gopsutil/v3 v3.0.0-20240514151642-919283ff5f48
