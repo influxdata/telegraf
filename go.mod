@@ -525,3 +525,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/netsampler/goflow2/v2 v2.1.3 => github.com/srebhan/goflow2/v2 v2.0.0-20240523133342-d920ef8e74d1

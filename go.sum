@@ -2297,6 +2297,8 @@ github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5q
 github.com/spf13/viper v1.7.1/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
 github.com/srebhan/cborquery v1.0.1 h1:cFG1falVzmlfyVI8tY6hYM7RQqLxFzt9STusdxHoy0U=
 github.com/srebhan/cborquery v1.0.1/go.mod h1:GgsaIoCW+qlqyU+cjSeOpaWhbiiMVkA0uU/H3+PWvjQ=
+github.com/srebhan/goflow2/v2 v2.0.0-20240523133342-d920ef8e74d1 h1:g6p2JDLY7E2o6RaE/amD4FzND6hy3yTvC3y5HNvik0Q=
+github.com/srebhan/goflow2/v2 v2.0.0-20240523133342-d920ef8e74d1/go.mod h1:r/Eap5wKmC1+LfVF30zewk1hsUpCycOyaZK6rKR8ft4=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55 h1:ksmbrLbJAm+8yxB7fJ245usD0b1v9JHBJrWF+WqGyjs=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55/go.mod h1:SIB3zq5pZq2Ff7aJtCdRpGiHc/meKyMLPEj8F5Tf1j8=
 github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
