@@ -25,6 +25,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/yangmodel"
 	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -44,6 +45,7 @@ type handler struct {
 	trimSlash           bool
 	tagPathPrefix       bool
 	guessPathStrategy   string
+	decoder             *yangmodel.Decoder
 	log                 telegraf.Logger
 	keepalive.ClientParameters
 }
@@ -172,7 +174,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	var valueFields []updateField
 	for _, update := range response.Update.Update {
 		fullPath := prefix.append(update.Path)
-		fields, err := newFieldsFromUpdate(fullPath, update)
+		if update.Path.Origin != "" {
+			fullPath.origin = update.Path.Origin
+		}
+
+		fields, err := h.newFieldsFromUpdate(fullPath, update)
 		if err != nil {
 			h.log.Errorf("Processing update %v failed: %v", update, err)
 		}

@@ -279,6 +279,14 @@ func (pi *pathInfo) String() string {
 	return out
 }
 
+func (pi *pathInfo) Path() (origin, path string) {
+	if len(pi.segments) == 0 {
+		return pi.origin, "/"
+	}
+
+	return pi.origin, "/" + strings.Join(pi.segments, "/")
+}
+
 func (pi *pathInfo) Tags(pathPrefix bool) map[string]string {
 	tags := make(map[string]string, len(pi.keyValues))
 	for _, s := range pi.keyValues {

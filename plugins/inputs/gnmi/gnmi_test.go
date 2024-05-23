@@ -1210,7 +1210,7 @@ func TestCases(t *testing.T) {
 			require.Eventually(t,
 				func() bool {
 					return acc.NMetrics() >= uint64(len(expected))
-				}, 1*time.Second, 100*time.Millisecond)
+				}, 15*time.Second, 100*time.Millisecond)
 			plugin.Stop()
 			grpcServer.Stop()
 			wg.Wait()

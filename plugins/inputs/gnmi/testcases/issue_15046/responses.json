@@ -1,0 +1,141 @@
+[
+    {
+        "update": {
+            "timestamp": "1711178737105194000",
+            "update": [
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "PowerSupply1/A"
+                                }
+                            },
+                            {
+                                "name": "power-supply"
+                            },
+                            {
+                                "name": "state"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJvcGVuY29uZmlnLXBsYXRmb3JtLXBzdTplbmFibGVkIjp0cnVlLCJvcGVuY29uZmlnLXBsYXRmb3JtLXBzdTpjYXBhY2l0eSI6IlJETEFBQT09Iiwib3BlbmNvbmZpZy1wbGF0Zm9ybS1wc3U6aW5wdXQtY3VycmVudCI6IlB2RW02UT09Iiwib3BlbmNvbmZpZy1wbGF0Zm9ybS1wc3U6aW5wdXQtdm9sdGFnZSI6IlExQ0FBQT09Iiwib3BlbmNvbmZpZy1wbGF0Zm9ybS1wc3U6b3V0cHV0LWN1cnJlbnQiOiJQNW43NXc9PSIsIm9wZW5jb25maWctcGxhdGZvcm0tcHN1Om91dHB1dC12b2x0YWdlIjoiUW1GM3p3PT0iLCJvcGVuY29uZmlnLXBsYXRmb3JtLXBzdTpvdXRwdXQtcG93ZXIiOiJRb2xBQUE9PSJ9"
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "PowerSupply1/B"
+                                }
+                            },
+                            {
+                                "name": "power-supply"
+                            },
+                            {
+                                "name": "state"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJvcGVuY29uZmlnLXBsYXRmb3JtLXBzdTplbmFibGVkIjp0cnVlLCJvcGVuY29uZmlnLXBsYXRmb3JtLXBzdTpjYXBhY2l0eSI6IlJETEFBQT09Iiwib3BlbmNvbmZpZy1wbGF0Zm9ybS1wc3U6aW5wdXQtY3VycmVudCI6IlBzazNUQT09Iiwib3BlbmNvbmZpZy1wbGF0Zm9ybS1wc3U6aW5wdXQtdm9sdGFnZSI6IlExSEFBQT09Iiwib3BlbmNvbmZpZy1wbGF0Zm9ybS1wc3U6b3V0cHV0LWN1cnJlbnQiOiJQM0FneFE9PSIsIm9wZW5jb25maWctcGxhdGZvcm0tcHN1Om91dHB1dC12b2x0YWdlIjoiUW1GM3p3PT0iLCJvcGVuY29uZmlnLXBsYXRmb3JtLXBzdTpvdXRwdXQtcG93ZXIiOiJRaytBQUE9PSJ9"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "update": {
+            "timestamp": "1715838159171548000",
+            "update": [
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "InletTempSensor1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJpbnN0YW50IjoiMzUuMDAwMDAwIiwiYXZnIjoiMjQuMDAwMDAwIiwibWluIjoiMC4wMDAwMDAiLCJtYXgiOiIzNi4wMDAwMDAiLCJpbnRlcnZhbCI6IjE4MDAwMDAwMDAwMCIsImFsYXJtLXN0YXR1cyI6ZmFsc2UsImFsYXJtLXRocmVzaG9sZCI6MCwiYWxhcm0tc2V2ZXJpdHkiOiJvcGVuY29uZmlnLWFsYXJtLXR5cGVzOk1JTk9SIn0="
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "OutletTempSensor1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJpbnN0YW50IjoiNDQuMDAwMDAwIiwiYXZnIjoiMjkuMDAwMDAwIiwibWluIjoiMC4wMDAwMDAiLCJtYXgiOiI0NC4wMDAwMDAiLCJpbnRlcnZhbCI6IjE4MDAwMDAwMDAwMCIsImFsYXJtLXN0YXR1cyI6ZmFsc2UsImFsYXJtLXRocmVzaG9sZCI6MCwiYWxhcm0tc2V2ZXJpdHkiOiJvcGVuY29uZmlnLWFsYXJtLXR5cGVzOk1JTk9SIn0="
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "openconfig",
+                        "elem": [
+                            {
+                                "name": "components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "HotSpotTempSensor1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "jsonIetfVal": "eyJpbnN0YW50IjoiNTguMDAwMDAwIiwiYXZnIjoiMzkuMDAwMDAwIiwibWluIjoiMC4wMDAwMDAiLCJtYXgiOiI1OS4wMDAwMDAiLCJpbnRlcnZhbCI6IjE4MDAwMDAwMDAwMCIsImFsYXJtLXN0YXR1cyI6ZmFsc2UsImFsYXJtLXRocmVzaG9sZCI6MCwiYWxhcm0tc2V2ZXJpdHkiOiJvcGVuY29uZmlnLWFsYXJtLXR5cGVzOk1JTk9SIn0="
+                    }
+                }
+            ]
+        }
+    }
+]
