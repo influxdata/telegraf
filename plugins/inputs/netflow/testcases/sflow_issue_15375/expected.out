@@ -1,0 +1,1 @@
+netflow,source=127.0.0.1,version=sFlowV5 sys_uptime=12414u,agent_ip="192.168.119.184",agent_subid=100000u,seq_number=2u,direction="ingress",in_snmp=1u,out_snmp=2u,out_queue=42u,reason=1u,sampling_drops=256u,ip_version="IPv4" 12414000000
