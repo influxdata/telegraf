@@ -1,6 +1,6 @@
 module github.com/influxdata/telegraf
 
-go 1.22
+go 1.22.0
 
 require (
 	cloud.google.com/go/bigquery v1.61.0
